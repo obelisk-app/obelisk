@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render as rtlRender, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { LocaleProvider, translator } from '@tests/support/intl';
+import type { Locale } from '@/i18n';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import Clip, { CLIP_META } from '@/components/guides/Clip';
@@ -25,12 +28,16 @@ function setReducedMotion(reduced: boolean) {
   );
 }
 
+const render = (ui: ReactElement, locale: Locale = 'en') =>
+  rtlRender(<LocaleProvider initialLocale={locale}>{ui}</LocaleProvider>);
+const label = (name: string, locale: Locale = 'en') => translator(locale)(CLIP_META[name].altKey);
+
 describe('Clip', () => {
   beforeEach(() => setReducedMotion(false));
 
   it('renders the clip with its poster, label and intrinsic size', () => {
     render(<Clip name="relay/install" />);
-    const video = screen.getByLabelText(CLIP_META['relay/install'].alt);
+    const video = screen.getByLabelText(label('relay/install'));
     expect(video.getAttribute('src')).toBe('/media-kit/video/relay/install.mp4');
     expect(video.getAttribute('poster')).toBe('/og/guides/relay/clip-install.jpg');
     expect(video.getAttribute('width')).toBe('640');
@@ -43,6 +50,12 @@ describe('Clip', () => {
     expect(screen.getByText('32s, no sound')).toBeTruthy();
   });
 
+  it('labels the clip and its runtime in the reader\'s language', () => {
+    render(<Clip name="relay/ladder" caption="Tres tiers y una lista de bloqueo" />, 'es');
+    expect(screen.getByLabelText(label('relay/ladder', 'es'))).toBeTruthy();
+    expect(screen.getByText('32 s, sin sonido')).toBeTruthy();
+  });
+
   it('renders nothing for an unknown clip rather than a broken player', () => {
     const { container } = render(<Clip name="not-a-clip" />);
     expect(container.firstChild).toBeNull();
@@ -50,7 +63,7 @@ describe('Clip', () => {
 
   it('loops silently with no controls by default', () => {
     render(<Clip name="relay/numbers" />);
-    const video = screen.getByLabelText(CLIP_META['relay/numbers'].alt) as HTMLVideoElement;
+    const video = screen.getByLabelText(label('relay/numbers')) as HTMLVideoElement;
     expect(video.hasAttribute('controls')).toBe(false);
     expect(video.hasAttribute('loop')).toBe(true);
     expect(video.hasAttribute('autoplay')).toBe(true);
@@ -64,7 +77,7 @@ describe('Clip', () => {
   it('does not autoplay or loop when the reader prefers reduced motion', () => {
     setReducedMotion(true);
     render(<Clip name="relay/snapshot" />);
-    const video = screen.getByLabelText(CLIP_META['relay/snapshot'].alt);
+    const video = screen.getByLabelText(label('relay/snapshot'));
     expect(video.hasAttribute('autoplay')).toBe(false);
     expect(video.hasAttribute('loop')).toBe(false);
     expect(video.hasAttribute('controls')).toBe(true);
@@ -83,7 +96,9 @@ describe('Clip', () => {
       expect(existsSync(poster), `${clipPosterPath(name)} is missing`).toBe(true);
       expect(readFileSync(video).length).toBeGreaterThan(10_000);
       expect(readFileSync(poster).length).toBeGreaterThan(1000);
-      expect(meta.alt.length).toBeGreaterThan(40);
+      for (const locale of ['en', 'es', 'pt'] as const) {
+        expect(label(name, locale).length, `${locale} ${name}`).toBeGreaterThan(40);
+      }
       expect(meta.seconds).toBeGreaterThan(0);
       expect(meta.width).toBeGreaterThan(0);
       expect(meta.height).toBeGreaterThan(0);

@@ -31,7 +31,7 @@ export default function GameSetupOptions({ form }: { form: NewGameForm }) {
                 }`}
                 data-testid={`game-size-${key}`}
               >
-                {CR_SIZES[key].label}
+                {t(`games.size.${key}`, { cols: CR_SIZES[key].cols, rows: CR_SIZES[key].rows })}
               </button>
             ))}
           </div>
@@ -95,7 +95,7 @@ export default function GameSetupOptions({ form }: { form: NewGameForm }) {
           </Button>
           {resume && (
             <p className="mt-2 text-[11px] text-lc-green" data-testid="vesta-resume-note">
-              Resuming {resume.name}: {resume.players} players. The table needs exactly that many seats.
+              {t('games.newGame.resuming', { name: resume.name, count: resume.players })}
             </p>
           )}
         </>

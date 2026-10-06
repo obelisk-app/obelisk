@@ -1,15 +1,20 @@
 import { gameCatalog } from '@/lib/games/catalog';
+import type { MessageKey, Translate } from '@/i18n/keys';
 
 export interface SlashCommandParam {
   name: string;
-  description: string;
+  /** What the argument is, in the reader's language. */
+  descriptionKey: MessageKey;
   kind: 'mention' | 'number' | 'string';
   optional?: boolean;
 }
 
 export interface SlashCommand {
   name: string;
-  description: string;
+  /** A built-in command's description, worded in the reader's language. */
+  descriptionKey?: MessageKey;
+  /** A bot command's description, as the bot advertised it. */
+  description?: string;
   params?: SlashCommandParam[];
   /** Bot commands: the literal text the bot parses (e.g. `!milugar`). */
   insert?: string;
@@ -36,31 +41,35 @@ export function botLabel(bot: { pubkey: string; name: string }, profiles?: BotPr
 /** A section's heading: the Recent label, `Obelisk`, or the bot's name. */
 export function sectionTitle(sec: SlashCommandSection, recentLabel: string, profiles?: BotProfiles): string {
   if (sec.key === 'recent') return recentLabel;
-  if (sec.key === 'obelisk') return 'Obelisk';
+  if (sec.key === 'obelisk') return 'Obelisk'; // i18n-exempt: the product's name
   return sec.bot ? botLabel(sec.bot, profiles) : sec.key;
 }
 
 export const SLASH_COMMANDS: SlashCommand[] = [
   {
     name: 'zap',
-    description: 'Send sats to a user in this channel',
+    descriptionKey: 'chat.slash.zap',
     params: [
-      { name: 'user', description: 'User to zap (mention, npub, or display name)', kind: 'mention', optional: true },
-      { name: 'amount', description: 'Amount in sats', kind: 'number', optional: true },
+      { name: 'user', descriptionKey: 'chat.slash.zapUser', kind: 'mention', optional: true },
+      { name: 'amount', descriptionKey: 'chat.slash.zapAmount', kind: 'number', optional: true },
     ],
   },
-  {
-    name: 'play',
-    // Built from the catalog rather than written out, so adding a game to the
-    // registry updates the command instead of leaving this line stale, which
-    // is exactly what happened when Vesta arrived and this still said
-    // "Chain Reaction".
-    description: `Play a game in this channel: ${playableGameNames()}`,
-  },
+  // `/play` lists the games from the catalog (see `commandDescription`), so
+  // adding a game to the registry updates the command instead of leaving it
+  // stale, which is exactly what happened when Vesta arrived and this still
+  // said "Chain Reaction".
+  { name: 'play', descriptionKey: 'chat.slash.play' },
 ];
 
-export function playableGameNames(): string {
+/** Every playable game, "⚛ Chain Reaction, 🏛 Vesta or 🧱 Stacker" in the reader's language. */
+export function playableGameNames(locale: string): string {
   const names = gameCatalog().map((g) => `${g.icon} ${g.displayName}`);
-  if (names.length <= 1) return names[0] ?? 'no games available';
-  return `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
+  return new Intl.ListFormat(locale, { style: 'long', type: 'disjunction' }).format(names);
+}
+
+/** A command's description as the list shows it: a built-in's in the reader's language, a bot's as advertised. */
+export function commandDescription(t: Translate, locale: string, cmd: SlashCommand): string {
+  if (cmd.descriptionKey === 'chat.slash.play') return t('chat.slash.play', { games: playableGameNames(locale) });
+  if (cmd.descriptionKey) return t(cmd.descriptionKey);
+  return cmd.description ?? '';
 }

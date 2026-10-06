@@ -62,7 +62,7 @@ describe('LandingPage hero', () => {
     );
 
     const hero = screen.getByTestId('landing-hero');
-    expect(within(hero).getByRole('heading', { level: 1 })).toHaveTextContent('Tus comunidades, bajo tu control');
+    expect(within(hero).getByRole('heading', { level: 1 })).toHaveTextContent('Your communities, under your control');
     expect(within(hero).getByText('Discord-style group chat built directly on Nostr relays.')).toBeInTheDocument();
     expect(within(hero).getByText('No accounts. No backend. Your keys, your relays.')).toBeInTheDocument();
 

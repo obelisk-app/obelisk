@@ -34,16 +34,16 @@ export default function PlayersAndClock({ form }: { form: NewGameForm }) {
             onClick={() => setLocalPlayers(n)}
             data-testid={`players-local-${n}`}
           >
-            {selected.realtime ? 'Just me' : `${n} on this machine`}
+            {selected.realtime ? t('games.newGame.justMe') : t('games.newGame.onThisMachine', { count: n })}
           </Chip>
         ))}
       </div>
       <p className="mt-1 text-[10px] text-lc-muted">
         {localPlayers === 0
-          ? 'The table waits in the channel until you start it.'
+          ? t('games.newGame.waitsInChannel')
           : selected.realtime
-            ? 'Starts straight away, on your own. Everyone else needs their own device: every board runs at the same time.'
-            : `Starts straight away with ${localPlayers} players taking turns at this keyboard.`}
+            ? t('games.newGame.startsSolo')
+            : t('games.newGame.startsHotSeat', { count: localPlayers })}
       </p>
 
       {selected.type !== 'stacker' && (
@@ -57,7 +57,7 @@ export default function PlayersAndClock({ form }: { form: NewGameForm }) {
                 state={timeout === option.seconds ? 'selected' : 'idle'}
                 onClick={() => setTimeoutS(option.seconds)}
               >
-                {option.label}
+                {option.label ?? t('games.newGame.noClock')}
               </Chip>
             ))}
           </div>

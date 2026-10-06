@@ -93,28 +93,31 @@ export const STEP_ICONS = [
 ];
 
 export const ROADMAP_PHASES = [
-  { key: 'phase0', phase: 'Phase 0', status: 'done' as const },
-  { key: 'phase1', phase: 'Phase 1', status: 'done' as const },
-  { key: 'phase1_5', phase: 'Phase 1.5', status: 'done' as const },
-  { key: 'phase2', phase: 'Phase 2', status: 'done' as const },
-  { key: 'phase3', phase: 'Phase 3', status: 'done' as const },
-  { key: 'phase6', phase: 'Phase 6', status: 'done' as const },
-  { key: 'phase4', phase: 'Phase 4', status: 'done' as const },
-  { key: 'phase5', phase: 'Phase 5', status: 'done' as const },
+  { key: 'phase0', num: '0', status: 'done' as const },
+  { key: 'phase1', num: '1', status: 'done' as const },
+  { key: 'phase1_5', num: '1.5', status: 'done' as const },
+  { key: 'phase2', num: '2', status: 'done' as const },
+  { key: 'phase3', num: '3', status: 'done' as const },
+  { key: 'phase6', num: '6', status: 'done' as const },
+  { key: 'phase4', num: '4', status: 'done' as const },
+  { key: 'phase5', num: '5', status: 'done' as const },
 ] as const;
 
-export const TECH_STACK: { name: string; desc: string; color: string; icon?: string; img?: string; href: string }[] = [
-  { name: 'Next.js 16', desc: 'React framework (frontend only)', color: 'text-white', icon: '▲', href: 'https://nextjs.org' },
-  { name: 'nostr-tools', desc: 'SimplePool, signing, encryption', color: 'text-purple-400', icon: '⚡', href: 'https://github.com/nbd-wtf/nostr-tools' },
-  { name: 'NIP-29', desc: 'Relay-managed groups', color: 'text-lc-green', icon: '◫', href: 'https://github.com/nostr-protocol/nips/blob/master/29.md' },
-  { name: 'NIP-17', desc: 'Gift-wrapped DMs', color: 'text-pink-400', icon: '✉', href: 'https://github.com/nostr-protocol/nips/blob/master/17.md' },
+import type { MessageKey } from '@/i18n/keys';
+
+/** `name` is the product's own name, the same in every language; `descKey` is its line of copy. */
+export const TECH_STACK: { name: string; descKey: MessageKey; color: string; icon?: string; img?: string; href: string }[] = [
+  { name: 'Next.js 16', descKey: 'marketing.stack.item.nextjs', color: 'text-white', icon: '▲', href: 'https://nextjs.org' }, // i18n-exempt: product and protocol names
+  { name: 'nostr-tools', descKey: 'marketing.stack.item.nostrTools', color: 'text-purple-400', icon: '⚡', href: 'https://github.com/nbd-wtf/nostr-tools' }, // i18n-exempt: product and protocol names
+  { name: 'NIP-29', descKey: 'marketing.stack.item.nip29', color: 'text-lc-green', icon: '◫', href: 'https://github.com/nostr-protocol/nips/blob/master/29.md' }, // i18n-exempt: product and protocol names
+  { name: 'NIP-17', descKey: 'marketing.stack.item.nip17', color: 'text-pink-400', icon: '✉', href: 'https://github.com/nostr-protocol/nips/blob/master/17.md' }, // i18n-exempt: product and protocol names
   // Six packages ship from this SDK (data, ui, dm, pq, signers, wallet), so the card
   // names the SDK rather than picking one of them. First entry to use `img` instead of
   // `icon`: the mark is white-on-transparent, so it reads on the lc-black card as is.
-  { name: 'Nostr WoT SDK', desc: 'Profiles, WoT, gift wrap, post-quantum', color: 'text-lc-green', img: '/nostr-wot-logo.svg', href: 'https://github.com/nostr-wot/nostr-wot-sdk' },
-  { name: 'NIP-57 + NIP-47', desc: 'Lightning zaps & NWC', color: 'text-orange-400', icon: '⚡', href: 'https://github.com/nostr-protocol/nips/blob/master/47.md' },
-  { name: 'Zustand', desc: 'Client state', color: 'text-amber-400', icon: '◇', href: 'https://github.com/pmndrs/zustand' },
-  { name: 'Tailwind v4', desc: 'Styling', color: 'text-cyan-400', icon: '~', href: 'https://tailwindcss.com' },
+  { name: 'Nostr WoT SDK', descKey: 'marketing.stack.item.nostrWot', color: 'text-lc-green', img: '/nostr-wot-logo.svg', href: 'https://github.com/nostr-wot/nostr-wot-sdk' }, // i18n-exempt: product and protocol names
+  { name: 'NIP-57 + NIP-47', descKey: 'marketing.stack.item.zaps', color: 'text-orange-400', icon: '⚡', href: 'https://github.com/nostr-protocol/nips/blob/master/47.md' }, // i18n-exempt: product and protocol names
+  { name: 'Zustand', descKey: 'marketing.stack.item.zustand', color: 'text-amber-400', icon: '◇', href: 'https://github.com/pmndrs/zustand' }, // i18n-exempt: product and protocol names
+  { name: 'Tailwind v4', descKey: 'marketing.stack.item.tailwind', color: 'text-cyan-400', icon: '~', href: 'https://tailwindcss.com' }, // i18n-exempt: product and protocol names
 ];
 
 

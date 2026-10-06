@@ -1,6 +1,7 @@
 'use client';
 
-import { gameCatalog, gameSummary, type GameInfo } from '@/lib/games/catalog';
+import { gameCatalog, type GameInfo } from '@/lib/games/catalog';
+import { gameDescription, gameSummary } from '@/utils/chat/games/game-copy';
 import { useTranslations } from 'next-intl';
 import { GameTypePreview } from '../GamePreviews';
 import Button from '@/components/ui/Button';
@@ -29,8 +30,8 @@ export default function GamePickList({ onChoose, onClose }: {
               <span className="block text-sm font-semibold text-lc-white">
                 {info.icon} {info.displayName}
               </span>
-              <span className="mt-0.5 block text-xs text-lc-muted">{info.description}</span>
-              <span className="mt-1 block text-[11px] text-lc-muted">{gameSummary(info)}</span>
+              <span className="mt-0.5 block text-xs text-lc-muted">{gameDescription(t, info.type)}</span>
+              <span className="mt-1 block text-[11px] text-lc-muted">{gameSummary(t, info)}</span>
             </span>
           </button>
         ))}

@@ -1,6 +1,8 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
+import type { MessageKey } from '@/i18n/keys';
 import { clipPath, clipPosterPath } from '@/utils/guides/clip-paths';
 
 /**
@@ -23,7 +25,8 @@ import { clipPath, clipPosterPath } from '@/utils/guides/clip-paths';
  * when the first frame arrives.
  */
 export interface ClipMeta {
-  alt: string;
+  /** The description, read as the video's label: `guides.clip.alt.*`. */
+  altKey: MessageKey;
   width: number;
   height: number;
   /** Runtime, for the "N seconds, no sound" affordance under the frame. */
@@ -35,25 +38,25 @@ export const CLIP_META: Record<string, ClipMeta> = {
     width: 640,
     height: 360,
     seconds: 32,
-    alt: 'Two commands are the whole install: ./setup.sh gives you a relay on localhost, ./expose.sh gives the world a way in, no SSH session and no YAML to hand-edit.',
+    altKey: 'guides.clip.alt.relayInstall',
   },
   'relay/ladder': {
     width: 640,
     height: 360,
     seconds: 32,
-    alt: 'Admission is a ladder, not a switch: Tier 1 is added by hand, Tier 2 is two hops away in the follow graph, Tier 3 is three hops, and a block list overrides all three.',
+    altKey: 'guides.clip.alt.relayLadder',
   },
   'relay/numbers': {
     width: 640,
     height: 360,
     seconds: 32,
-    alt: 'The reach of a single reference account on the public Obelisk relay: 166,735 keys admitted in total, split across Tier 1 at 1,062, Tier 2 at 45,966 and Tier 3 at 119,708 or more.',
+    altKey: 'guides.clip.alt.relayNumbers',
   },
   'relay/snapshot': {
     width: 640,
     height: 360,
     seconds: 32,
-    alt: 'A reported message still readable in the moderation queue after the author deleted it, because the relay captured its own copy when the report arrived.',
+    altKey: 'guides.clip.alt.relaySnapshot',
   },
 };
 
@@ -74,6 +77,7 @@ export default function Clip({
   caption?: string;
   maxWidth?: number;
 }) {
+  const t = useTranslations();
   const reduced = usePrefersReducedMotion();
   const meta = CLIP_META[name];
   if (!meta) return null;
@@ -85,7 +89,7 @@ export default function Clip({
           poster={clipPosterPath(name)}
           width={meta.width}
           height={meta.height}
-          aria-label={meta.alt}
+          aria-label={t(meta.altKey)}
           className="mx-auto block h-auto w-full"
           style={maxWidth ? { maxWidth } : undefined}
           preload="metadata"
@@ -100,7 +104,7 @@ export default function Clip({
         <figcaption className="mt-2 text-center text-sm text-lc-muted">
           {caption}
           <span className="ml-1.5 text-lc-muted/60">
-            {meta.seconds}s, no sound
+            {t('guides.clip.duration', { seconds: meta.seconds })}
           </span>
         </figcaption>
       )}

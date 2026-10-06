@@ -9,14 +9,28 @@ import type { GameState as VestaState } from 'vesta';
 import type { GameSession } from './session';
 import type { CRState } from './chain-reaction';
 
+/**
+ * A seat's final score, as data: each game counts something different, and
+ * the table words it in the reader's language (`scoreLabel` in
+ * `src/utils/chat/games/game-copy.ts`).
+ */
+export type Score =
+  | { kind: 'vp'; vp: number }
+  | { kind: 'stacker'; attacks: number; lines: number }
+  | { kind: 'orbs'; orbs: number }
+  | { kind: 'out' }
+  | { kind: 'winner' }
+  | { kind: 'none' };
+
+/** What a game's score means, shown once under the table. */
+export type ScoreDetail = 'vp' | 'stacker' | 'orbs';
+
 export interface Standing {
   seat: string;
-  /** Human-readable score, already formatted for its game. */
-  score: string;
+  score: Score;
   /** Sort key, descending. */
   sort: number;
-  /** What the score means, shown once under the table. */
-  detail?: string;
+  detail?: ScoreDetail;
 }
 
 export function standingsFor(session: GameSession): Standing[] {
@@ -25,11 +39,11 @@ export function standingsFor(session: GameSession): Standing[] {
   if (session.game === 'vesta' && session.state) {
     const state = session.state as VestaState;
     return seats
-      .map((seat, i) => ({
+      .map((seat, i): Standing => ({
         seat,
-        score: `${state.players[i]?.vp ?? 0} VP`,
+        score: { kind: 'vp', vp: state.players[i]?.vp ?? 0 },
         sort: state.players[i]?.vp ?? 0,
-        detail: 'Victory points at the end of the game',
+        detail: 'vp',
       }))
       .sort((a, b) => b.sort - a.sort);
   }
@@ -38,13 +52,13 @@ export function standingsFor(session: GameSession): Standing[] {
     // Stacker: garbage sent is the number that decided the match, with lines
     // as the tiebreak.
     return seats
-      .map((seat) => {
+      .map((seat): Standing => {
         const p = session.match!.progress[seat];
         return {
           seat,
-          score: `${p?.attacksSent ?? 0}⚔ · ${p?.linesCleared ?? 0}▤`,
+          score: { kind: 'stacker', attacks: p?.attacksSent ?? 0, lines: p?.linesCleared ?? 0 },
           sort: (p?.attacksSent ?? 0) * 1000 + (p?.linesCleared ?? 0),
-          detail: 'Garbage sent · lines cleared',
+          detail: 'stacker',
         };
       })
       .sort((a, b) => b.sort - a.sort);
@@ -59,24 +73,28 @@ export function standingsFor(session: GameSession): Standing[] {
       if (seat) owned.set(seat, (owned.get(seat) ?? 0) + cell.count);
     }
     return seats
-      .map((seat) => ({
+      .map((seat): Standing => ({
         seat,
-        score: session.eliminated.includes(seat) ? 'out' : `${owned.get(seat) ?? 0} orbs`,
+        score: session.eliminated.includes(seat)
+          ? { kind: 'out' }
+          : { kind: 'orbs', orbs: owned.get(seat) ?? 0 },
         sort: session.eliminated.includes(seat) ? -1 : (owned.get(seat) ?? 0),
-        detail: 'Orbs held when the board was taken',
+        detail: 'orbs',
       }))
       .sort((a, b) => b.sort - a.sort);
   }
 
-  return seats.map((seat) => ({
+  return seats.map((seat): Standing => ({
     seat,
-    score: seat === session.winner ? 'winner' : session.eliminated.includes(seat) ? 'out' : '-',
+    score: seat === session.winner
+      ? { kind: 'winner' }
+      : session.eliminated.includes(seat) ? { kind: 'out' } : { kind: 'none' },
     sort: seat === session.winner ? 1 : 0,
   }));
 }
 
 /** One seat's final score, or null if it wasn't at the table. */
-export function scoreFor(session: GameSession, seat: string | null): string | null {
+export function scoreFor(session: GameSession, seat: string | null): Score | null {
   if (!seat) return null;
   return standingsFor(session).find((row) => row.seat === seat)?.score ?? null;
 }

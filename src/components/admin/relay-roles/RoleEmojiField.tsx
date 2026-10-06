@@ -37,7 +37,7 @@ export default function RoleEmojiField({ role, onPick }: { role: RelayRole; onPi
         shape="square"
         ref={buttonRef}
         onClick={() => (anchor ? setAnchor(null) : open())}
-        aria-label={`${role.id} emoji`}
+        aria-label={t('admin.roles.emojiLabel', { role: role.id })}
         aria-expanded={!!anchor}
         title={t('admin.roles.badgeEmoji')}
         className="text-base"
@@ -48,7 +48,7 @@ export default function RoleEmojiField({ role, onPick }: { role: RelayRole; onPi
         <button
           type="button"
           onClick={() => onPick('')}
-          aria-label={`Clear ${role.id} emoji`}
+          aria-label={t('admin.roles.clearEmoji', { role: role.id })}
           className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border border-lc-border bg-lc-dark text-lc-muted hover:text-lc-white"
         >
           <CloseIcon size={8} strokeWidth={2.5} />

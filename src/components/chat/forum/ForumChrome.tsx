@@ -65,7 +65,7 @@ export function ForumChrome({
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={canCreate ? 'Press Enter to create…' : 'Search or create a publication…'}
+          placeholder={t(canCreate ? 'chat.forum.pressEnter' : 'chat.forum.searchOrCreate')}
           data-testid="forum-search-input"
           aria-label={t('chat.forum.searchPlaceholder')}
         />
@@ -76,7 +76,7 @@ export function ForumChrome({
           disabled={!ready}
           className="shrink-0"
           data-testid="forum-new-thread-btn"
-          title={ready ? 'New publication' : 'Sign in to start a publication'}
+          title={t(ready ? 'chat.forum.new' : 'chat.forum.signInToStart')}
         >
           <NewPostIcon />
           <span className="hidden sm:inline">{t('chat.forum.new')}</span>

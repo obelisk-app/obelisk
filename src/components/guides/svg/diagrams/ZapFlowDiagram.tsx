@@ -1,18 +1,21 @@
+import { useTranslations } from 'next-intl';
+
 export default function ZapFlowDiagram() {
+  const t = useTranslations();
   const rows = [
-    { y: 75,  from: 'C',  to: 'S',  label: '1. POST /api/wallet/zap { amountSats }',    dir: 'right' as const },
-    { y: 120, from: 'S',  to: 'RW', label: '2. NWC makeInvoice (o LNURL-pay)',          dir: 'right' as const },
-    { y: 165, from: 'RW', to: 'S',  label: '3. BOLT11 invoice',                         dir: 'left'  as const },
-    { y: 210, from: 'S',  to: 'SW', label: '4. NWC payInvoice',                         dir: 'right' as const },
-    { y: 255, from: 'SW', to: 'S',  label: '5. payment preimage (pagado por Lightning)', dir: 'left'  as const },
-    { y: 300, from: 'S',  to: 'C',  label: '6. Socket.io new-message ⚡',               dir: 'left'  as const },
+    { y: 75,  from: 'C',  to: 'S',  label: '1. POST /api/wallet/zap { amountSats }',    dir: 'right' as const }, // i18n-exempt: an API call, drawn as code
+    { y: 120, from: 'S',  to: 'RW', label: t('guides.art.zapFlow.makeInvoice'),         dir: 'right' as const },
+    { y: 165, from: 'RW', to: 'S',  label: t('guides.art.zapFlow.invoice'),             dir: 'left'  as const },
+    { y: 210, from: 'S',  to: 'SW', label: '4. NWC payInvoice',                         dir: 'right' as const }, // i18n-exempt: an NWC method name
+    { y: 255, from: 'SW', to: 'S',  label: t('guides.art.zapFlow.preimage'),            dir: 'left'  as const },
+    { y: 300, from: 'S',  to: 'C',  label: '6. Socket.io new-message ⚡',               dir: 'left'  as const }, // i18n-exempt: an event name, drawn as code
   ];
   const LANE_X = { C: 90, S: 340, RW: 590, SW: 810 };
   const LANE_LABEL: Record<keyof typeof LANE_X, string> = {
-    C: 'Client',
-    S: 'Obelisk server',
-    RW: 'Receiver wallet',
-    SW: 'Sender wallet',
+    C: t('guides.art.zapFlow.client'),
+    S: t('guides.art.zapFlow.server'),
+    RW: t('guides.art.zapFlow.receiver'),
+    SW: t('guides.art.zapFlow.sender'),
   };
 
   return (
@@ -20,7 +23,7 @@ export default function ZapFlowDiagram() {
       viewBox="0 0 900 360"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="Zap sequence diagram"
+      aria-label={t('guides.art.zapFlow.label')}
       className="w-full h-auto"
     >
       <rect width="900" height="360" fill="#0a0a0a" />

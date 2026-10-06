@@ -73,10 +73,10 @@ export const vesta: GameDefinition<GameState, VestaAction> = {
 
   validateAction(state, action, actorSeat, participants) {
     if (!action || typeof action !== 'object' || typeof action.type !== 'string') {
-      return { ok: false, error: 'Malformed move' };
+      return { ok: false, error: 'malformed-move' };
     }
     if (state.winner !== null && state.winner !== undefined) {
-      return { ok: false, error: 'Game is over' };
+      return { ok: false, error: 'game-over' };
     }
     // A dry run is the honest validator: upstream throws on anything illegal,
     // and it is pure, so running it costs us one discarded object.

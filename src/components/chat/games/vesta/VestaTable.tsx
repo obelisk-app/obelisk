@@ -9,6 +9,7 @@ import VestaPrompts from './VestaPrompts';
 import VestaTurnActions from './VestaTurnActions';
 import VestaTradePanel from './VestaTradePanel';
 import { useVestaTurn } from '@/hooks/chat/games/vesta/useVestaTurn';
+import { useTranslations } from 'next-intl';
 
 export interface VestaTableProps {
   session: GameSession;
@@ -30,6 +31,7 @@ export interface VestaTableProps {
  * offered, it is not legal.
  */
 export default function VestaTable({ session, state, mySeats, seatLabel, onAction, busy }: VestaTableProps) {
+  const t = useTranslations();
   const turn = useVestaTurn({ session, state, mySeats, onAction });
   const { mode, send, myTurn, turnSeat } = turn;
 
@@ -54,7 +56,7 @@ export default function VestaTable({ session, state, mySeats, seatLabel, onActio
 
       {!myTurn && state.winner === null && (
         <p className="text-center text-[11px] text-lc-muted">
-          Waiting for {seatLabel(turnSeat ?? '')}…
+          {t('games.vestaTable.waitingFor', { name: seatLabel(turnSeat ?? '') })}
         </p>
       )}
     </div>

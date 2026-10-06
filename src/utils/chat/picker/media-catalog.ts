@@ -1,10 +1,24 @@
 import type { JsMediaKind } from '@/services/nostr-bridge';
 import type { PickedCustomEmoji } from './picker-types';
+import type { MessageKey } from '@/i18n/keys';
 
 export type MediaPickerTab = 'emoji' | 'gif' | 'sticker';
 
 export const MEDIA_CATEGORIES = ['Recent', 'Trending', 'Reactions', 'Funny', 'Love', 'Celebration', 'Animals', 'Sports', 'Memes'] as const;
 export type MediaCategory = (typeof MEDIA_CATEGORIES)[number];
+
+/** What the category bar calls each category; the values above double as GIPHY query ids. */
+export const MEDIA_CATEGORY_LABEL: Record<MediaCategory, MessageKey> = {
+  Recent: 'chat.mediaPicker.category.recent',
+  Trending: 'chat.mediaPicker.category.trending',
+  Reactions: 'chat.mediaPicker.category.reactions',
+  Funny: 'chat.mediaPicker.category.funny',
+  Love: 'chat.mediaPicker.category.love',
+  Celebration: 'chat.mediaPicker.category.celebration',
+  Animals: 'chat.mediaPicker.category.animals',
+  Sports: 'chat.mediaPicker.category.sports',
+  Memes: 'chat.mediaPicker.category.memes',
+};
 export type MediaEntry = PickedCustomEmoji & { categories?: readonly MediaCategory[]; kind?: JsMediaKind };
 export type RecentMediaEntry = MediaEntry & { tab: Exclude<MediaPickerTab, 'emoji'> };
 

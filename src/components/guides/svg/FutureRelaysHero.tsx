@@ -1,4 +1,7 @@
+import { useTranslations } from 'next-intl';
+
 export default function FutureRelaysHero() {
+  const t = useTranslations();
   const relays = [
     { cx: 160, cy: 120, r: 36, label: 'relay.a' },
     { cx: 640, cy: 120, r: 36, label: 'relay.b' },
@@ -19,10 +22,8 @@ export default function FutureRelaysHero() {
       aria-labelledby="hero-future-title hero-future-desc"
       className="w-full h-auto"
     >
-      <title id="hero-future-title">Future: Nostr relay-based groups</title>
-      <desc id="hero-future-desc">
-        A mesh of Nostr relays exchanging encrypted group messages, with no central server.
-      </desc>
+      <title id="hero-future-title">{t('guides.art.futureRelays.title')}</title>
+      <desc id="hero-future-desc">{t('guides.art.futureRelays.desc')}</desc>
 
       <defs>
         <linearGradient id="sky-future" x1="0" y1="0" x2="0" y2="1">
@@ -119,8 +120,8 @@ export default function FutureRelaysHero() {
       {/* NIP-29 tag in the middle */}
       <g>
         <rect x="336" y="184" width="128" height="32" rx="16" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.5" />
-        <text x="400" y="204" textAnchor="middle" fontSize="13" fontWeight="700" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          NIP-29 group
+        <text x="400" y="204" textAnchor="middle" fontSize="13" fontWeight="700" fill="#b4f953" fontFamily="monospace">
+          {t('guides.art.futureRelays.group')}
         </text>
       </g>
 

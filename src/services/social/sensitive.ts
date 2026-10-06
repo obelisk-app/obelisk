@@ -63,7 +63,7 @@ export function sensitiveInfo(note: Pick<NostrEvent, 'tags'>): SensitiveInfo {
  * users get some signal, since Damus has no NIP-36 support at all.
  */
 export function contentWarningTags(reason: string, existingTags: readonly string[][] = []): string[][] {
-  const tags: string[][] = [['content-warning', reason.trim() || 'sensitive content']];
+  const tags: string[][] = [['content-warning', reason.trim() || 'sensitive content']]; // i18n-exempt: wire value other clients read, not UI copy
   const hasNsfw = existingTags.some(
     (tag) => tag[0] === 't' && tag[1]?.toLowerCase() === 'nsfw',
   );

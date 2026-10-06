@@ -2,20 +2,22 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import SlashCommandAutocomplete, { SLASH_COMMANDS } from '@/components/chat/SlashCommandAutocomplete';
 import { gameCatalog } from '@/lib/games/catalog';
-import { LocaleProvider } from '@tests/support/intl';
+import { LocaleProvider, translator } from '@tests/support/intl';
+import { commandDescription } from '@/utils/chat/slash/slash-commands';
 
 describe('/play command', () => {
   const play = SLASH_COMMANDS.find((c) => c.name === 'play')!;
+  const description = commandDescription(translator('en'), 'en', play);
 
   it('names every playable game, not just one of them', () => {
     for (const game of gameCatalog()) {
-      expect(play.description).toContain(game.displayName);
+      expect(description).toContain(game.displayName);
     }
     expect(gameCatalog().length).toBeGreaterThan(1);
   });
 
   it('does not claim the picker only opens Chain Reaction', () => {
-    expect(play.description).not.toMatch(/^Open a Chain Reaction/);
+    expect(description).not.toMatch(/^Open a Chain Reaction/);
   });
 
   it('shows that description in the autocomplete', () => {

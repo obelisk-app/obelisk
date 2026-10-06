@@ -58,5 +58,158 @@
     "skip": "Pular",
     "trade": "Trocar",
     "with": "Com"
+  },
+  "you": "(você)",
+  "host": "anfitrião",
+  "relayRejected": "O relay recusou",
+  "meta": {
+    "chainReaction": "Coloque orbes, dispare reações em cadeia e domine o tabuleiro.",
+    "vesta": "Funde vilas, negocie e domine o tabuleiro.",
+    "stacker": "Blocos caindo, a mesma ordem de peças para todos, e cada linha que você limpa soterra outra pessoa."
+  },
+  "summary": {
+    "players": "{count, plural, one {# jogador} other {# jogadores}}",
+    "playersRange": "{min}–{max} jogadores",
+    "realtime": "{players} · em tempo real, um dispositivo cada",
+    "turns": "{players} · turnos de {seconds} s",
+    "noClock": "{players} · sem relógio por turno"
+  },
+  "size": {
+    "small": "Pequeno ({cols}×{rows})",
+    "medium": "Médio ({cols}×{rows})",
+    "large": "Grande ({cols}×{rows})"
+  },
+  "newGame": {
+    "noClock": "Sem relógio",
+    "everyoneHere": "{summary}. Todos jogam aqui; o cartão no canal deixa os outros assistirem.",
+    "hostSeated": "{summary}. Você senta como anfitrião; os outros entram pelo cartão no chat.",
+    "creating": "Criando…",
+    "startPlaying": "Começar a jogar",
+    "createTable": "Criar mesa",
+    "justMe": "Só eu",
+    "onThisMachine": "{count} neste computador",
+    "waitsInChannel": "A mesa espera no canal até você iniciar.",
+    "startsSolo": "Começa na hora, só você. Os outros precisam do próprio dispositivo: todos os tabuleiros rodam ao mesmo tempo.",
+    "startsHotSeat": "Começa na hora com {count} jogadores se revezando neste teclado.",
+    "resuming": "Retomando {name}: {count, plural, one {# jogador} other {# jogadores}}. A mesa precisa exatamente desse número de lugares.",
+    "notVestaSave": "Esse arquivo não é um jogo salvo do Vesta.",
+    "readFailed": "Não foi possível ler esse arquivo.",
+    "createFailed": "Não foi possível criar a mesa",
+    "player": "Jogador {n}"
+  },
+  "startTable": {
+    "realtimeHelp": "Cada jogador precisa do próprio dispositivo: {game} roda todos os tabuleiros ao mesmo tempo, então é um lugar por conta.",
+    "resumeHelp": "Retomando um jogo salvo de {game} com {count, plural, one {# jogador} other {# jogadores}}. Atribua cada um a uma conta: vários lugares na mesma conta são jogados no teclado dessa pessoa.",
+    "assignHelp": "Atribua cada lugar a uma conta. Se uma conta tiver vários lugares, esses jogadores dividem o computador; com um lugar cada, todos jogam do próprio cliente.",
+    "seatName": "Nome do lugar {n}",
+    "ownDevice": "dispositivo próprio",
+    "onMachine": "no computador de {name}",
+    "remote": "remoto",
+    "takesOver": "Assume “{name}” do jogo salvo",
+    "addSeat": "+ adicionar um lugar",
+    "seatCount": "{count} de {min}–{max} lugares",
+    "needsMore": "faltam jogadores",
+    "tooMany": "jogadores demais",
+    "saveHas": "o jogo salvo tem {count}"
+  },
+  "card": {
+    "result": "Resultado",
+    "open": "Abrir",
+    "openTable": "Mesa aberta · {joined}/{max}",
+    "youWon": "🏆 você venceu",
+    "won": "🏆 {name} venceu"
+  },
+  "header": {
+    "waiting": "Esperando jogadores · {joined}/{max}",
+    "standing": "{count} ainda de pé",
+    "yourTurn": "Sua vez",
+    "seatTurn": "Vez de {name}",
+    "draw": "Empate",
+    "won": "{name} venceu",
+    "over": "Fim de jogo",
+    "cancelled": "Mesa cancelada",
+    "secondsLeft": "{seconds} s",
+    "fullscreen": "Tela cheia",
+    "exitFullscreen": "Sair da tela cheia"
+  },
+  "overlay": {
+    "draw": "EMPATE",
+    "youWon": "VOCÊ VENCEU",
+    "youLost": "VOCÊ PERDEU",
+    "over": "FIM DE JOGO",
+    "tookBoard": "{name} dominou o tabuleiro"
+  },
+  "results": {
+    "won": "{name} venceu",
+    "draw": "empate",
+    "over": "fim de jogo",
+    "winner": "Vencedor"
+  },
+  "score": {
+    "vp": "{count} PV",
+    "stacker": "{attacks}⚔ · {lines}▤",
+    "orbs": "{count, plural, one {# orbe} other {# orbes}}",
+    "out": "fora",
+    "winner": "vencedor",
+    "detail": {
+      "vp": "Pontos de vitória no fim do jogo",
+      "stacker": "Lixo enviado · linhas limpas",
+      "orbs": "Orbes no tabuleiro quando ele foi dominado"
+    }
+  },
+  "actions": {
+    "start": "Começar ({count})",
+    "needsPlayers": "São necessários {count} jogadores para começar."
+  },
+  "chainReaction": {
+    "cell": "Casa {index}"
+  },
+  "stacker": {
+    "action": {
+      "left": "Mover para a esquerda",
+      "right": "Mover para a direita",
+      "soft": "Descer",
+      "hard": "Soltar",
+      "cw": "Girar para a direita",
+      "ccw": "Girar para a esquerda",
+      "flip": "Girar 180°",
+      "hold": "Reservar"
+    },
+    "space": "Espaço",
+    "pressKey": "pressione uma tecla…",
+    "addKey": "+ tecla",
+    "linesIncoming": "{count, plural, one {# linha chegando} other {# linhas chegando}}",
+    "unverified": "⚠ não verificado",
+    "checked": "✓ verificado",
+    "mismatchAttacks": "Diz {claimed} linhas de ataque; as próprias jogadas dão {produced}",
+    "mismatchLines": "Diz {claimed} linhas; as próprias jogadas dão {produced}",
+    "controls": "⌨ controles",
+    "muted": "🔇 sem som",
+    "sound": "🔊 som",
+    "credit": "{track} - {author}, livre de royalties (Suno)",
+    "lastStanding": "{name} é o último de pé",
+    "allToppedOut": "Todos encheram o tabuleiro"
+  },
+  "vestaTable": {
+    "discardPrompt": "Saiu um sete: descarte {count} das suas {total} cartas.",
+    "discard": "Descartar {picked}/{count}",
+    "offers": "{name} oferece {give} por {take}",
+    "nothing": "nada",
+    "wins": "{name} vence",
+    "setupSettlement": "Preparação: {name} coloca uma vila",
+    "setupRoad": "Preparação: {name} coloca uma estrada",
+    "toRoll": "Vez de {name} rolar os dados",
+    "bank": "Banco",
+    "bankRates": "Taxas do banco: {rates}",
+    "tradeBank": "Trocar com o banco",
+    "offerTrade": "Propor troca",
+    "waitingFor": "Esperando {name}…",
+    "card": {
+      "victory": "Ponto de vitória",
+      "knight": "Cavaleiro",
+      "roadBuild": "Construção de estradas",
+      "yearOfPlenty": "Ano de fartura",
+      "monopoly": "Monopólio"
+    }
   }
 }

@@ -1,81 +1,81 @@
 {
   "mobile": {
     "hero": {
-      "badge": "Tour mobile",
+      "badge": "Recorrido en el celular",
       "title": "Chat grupal que entra en tu",
       "titleHighlight": "bolsillo",
       "subtitle": "Obelisk en Android, iOS y cualquier navegador móvil moderno. Canales NIP-29, voz con SFU, DMs encriptados y zaps Lightning. Todo respaldado por tus claves Nostr: sin email, sin contraseña.",
       "cta": "Entrar a la app",
-      "ctaSecondary": "Verlo en desktop →"
+      "ctaSecondary": "Verlo en la computadora →"
     },
     "shot1": {
       "badge": "Servidores y canales",
       "title": "Lista de servidores estilo Discord, pensada para el celular",
-      "alt": "Pantalla principal de Obelisk en mobile, con íconos de servidores arriba y después canales por categoría: General Chat, Publicaciones (Finanzas, Bitcoin, RUNSTR), Canal de voz, Feedback, Sin categoría.",
-      "desc": "Tus relays aparecen como servidores. Adentro de cada uno, los canales se agrupan en las categorías que publica el operador (chat general, publicaciones, voz, lo que quieras), con badges de no leídos e indicadores en vivo, como Discord.",
-      "features": "Rail de servidores fijo arriba|Categorías controladas por el operador|Publicaciones anidadas bajo su canal padre|Indicador 'live' en canales de voz activos"
+      "alt": "Pantalla principal de Obelisk en el celular, con los íconos de servidores arriba y después los canales por categoría: General Chat, Publicaciones (Finanzas, Bitcoin, RUNSTR), Canal de voz, Feedback, Sin categoría.",
+      "desc": "Tus relays aparecen como servidores. Adentro de cada uno, los canales se agrupan en las categorías que publica el operador (chat general, publicaciones, voz, lo que quieras), con contadores de no leídos e indicadores en vivo, igual que en Discord.",
+      "features": "Barra de servidores fija arriba|Categorías controladas por el operador|Publicaciones anidadas bajo su canal padre|Indicadores en vivo en los canales de voz activos"
     },
     "shot2": {
       "badge": "Voz • SFU",
-      "title": "Voz y video que escala más allá del mesh",
-      "alt": "Canal de voz de Obelisk en mobile en modo SFU con un peer de prueba transmitiendo un patrón de barras SMPTE.",
-      "desc": "Los canales chicos corren como mesh P2P; cuando un relay anuncia un SFU, el mismo canal cambia automáticamente y soporta decenas de participantes, todo señalizado por Nostr (kind 25050) sin revelar tu identidad al servidor de medios.",
-      "features": "Mesh hasta ~6 peers, SFU para más|Mutear, ensordecer, compartir pantalla y chatear desde una barra|La nav inferior queda fija mientras hablás"
+      "title": "Voz y video que escalan más allá de la malla P2P",
+      "alt": "Canal de voz de Obelisk en el celular, en modo SFU, con un participante de prueba que transmite barras de color SMPTE.",
+      "desc": "Los canales chicos funcionan como malla P2P; cuando un relay anuncia un SFU, el mismo canal cambia solo y soporta decenas de participantes, todo señalizado por Nostr (kind 25050) sin revelarle tu identidad a un servidor de medios.",
+      "features": "Malla de hasta ~6 participantes, SFU para más|Silenciar, ensordecer, compartir pantalla y chatear desde una sola barra|La navegación inferior queda fija mientras hablás"
     },
     "shot3": {
       "badge": "Login con Nostr",
       "title": "Sin email, sin contraseña, tres formas de entrar",
-      "alt": "Modal de login de Obelisk en mobile con tres opciones: signer remoto NIP-46, generar una nueva clave e importar una nsec existente.",
-      "desc": "Elegí el signer que mejor te calce: un bunker remoto vía NIP-46 (Amber, nsec.app), generá una clave nueva en el dispositivo o pegá una nsec que ya tengas. El onboarding es una sola pantalla.",
-      "features": "Bunker NIP-46 por QR o URL|Flujo de generar-y-respaldar para nuevos usuarios|Pegá tu nsec - tus claves, tu cuenta"
+      "alt": "Ventana de login de Obelisk en el celular con tres opciones: firmante remoto NIP-46, generar una clave nueva e importar una nsec existente.",
+      "desc": "Elegí el firmante que mejor se adapte a vos: un bunker remoto por NIP-46 (Amber, nsec.app), generar una clave nueva en el dispositivo o pegar una nsec que ya tengas. El onboarding es una sola pantalla.",
+      "features": "Bunker NIP-46 por QR o URL|Generar y respaldar una clave, para usuarios nuevos|Pegá tu nsec: tus claves, tu cuenta"
     },
     "shot4": {
       "badge": "Perfil e identidad",
       "title": "Tu perfil Nostr, tus ajustes",
-      "alt": "Pantalla de perfil de Obelisk en mobile: banner, avatar, npub y pubkey hex, botón Editar Perfil Nostr, botón Desconectar y una pestaña de Preferencias.",
+      "alt": "Pantalla de perfil de Obelisk en el celular: banner, avatar, npub y pubkey hex, botón Editar perfil Nostr, botón Desconectar y una pestaña de Preferencias.",
       "desc": "El mismo perfil kind 0 que usa todo cliente Nostr: nombre, banner, bio, NIP-05, dirección Lightning. Lo editás una vez y todas las apps Nostr ven el cambio.",
       "features": "Copiá npub o pubkey hex con un toque|Abrí tu perfil en cualquier otro cliente Nostr|Preferencias por dispositivo guardadas en localStorage"
     },
     "cta": {
       "heading": "Llevá Obelisk con vos",
-      "subtitle": "Abrí la web app en tu celu, instalala desde el menú del navegador y listo. Sin app store, sin revisiones, sin impuesto de plataforma.",
-      "button": "Abrir en mobile"
+      "subtitle": "Abrí la web app en tu celu, instalala desde el menú del navegador y listo. Sin tienda de apps, sin revisiones, sin comisión de plataforma.",
+      "button": "Abrir en el celular"
     }
   },
   "desktop": {
     "hero": {
-      "badge": "Tour desktop",
-      "title": "Un workspace nivel Discord, sobre",
-      "titleHighlight": "Nostr abierto",
-      "subtitle": "Obelisk en tu navegador: rail de servidores, canales por categoría, publicaciones, lista de miembros, salas de voz con mediasoup, DMs encriptados y zaps Lightning, todo sobre relays que vos controlás.",
+      "badge": "Recorrido en la computadora",
+      "title": "Un espacio de trabajo como Discord, sobre",
+      "titleHighlight": "el stack abierto de Nostr",
+      "subtitle": "Obelisk en tu navegador: barra de servidores, canales por categoría, publicaciones, lista de miembros, salas de voz con mediasoup, DMs cifrados y zaps Lightning, todo sobre relays que vos controlás.",
       "cta": "Entrar a la app",
-      "ctaSecondary": "Verlo en mobile →"
+      "ctaSecondary": "Verlo en el celular →"
     },
     "shot1": {
       "badge": "Chat grupal",
       "title": "Chat de tres paneles, lista de miembros y reacciones",
-      "alt": "Vista desktop de Obelisk en el General Chat público: rail de servidores, lista de canales, stream central de mensajes con reacciones y preview de link, y la lista de miembros a la derecha.",
-      "desc": "El layout familiar de Discord (rail de servidores, lista de canales, stream de mensajes, sidebar de miembros) conectado directo a eventos NIP-29 en el relay. Cada mensaje es un evento Nostr firmado: sin backend, sin formato propietario.",
-      "features": "Replies, reacciones y previews ricos de links|La lista de miembros refleja el roster NIP-29 del relay en vivo|Zap Lightning a cualquier mensaje vía NIP-57 + NWC"
+      "alt": "Obelisk en la computadora, en el General Chat público: barra de servidores, lista de canales, mensajes en el centro con reacciones y la vista previa de un link, y la lista de miembros a la derecha.",
+      "desc": "El diseño de siempre de Discord (barra de servidores, lista de canales, mensajes, lista de miembros al costado) conectado directo a los eventos NIP-29 del relay. Cada mensaje es un evento Nostr firmado: sin backend, sin formato propietario.",
+      "features": "Respuestas, reacciones y vistas previas de links|La lista de miembros refleja en vivo el padrón NIP-29 del relay|Mandá un zap Lightning a cualquier mensaje con NIP-57 + NWC"
     },
     "shot2": {
       "badge": "Publicaciones",
       "title": "Publicaciones para conversaciones más lentas y profundas",
-      "alt": "Vista desktop de publicaciones de plaza-publica en Obelisk: cuatro publicaciones (Politica y Economia, But why?, Only-Claws, Finanzas-Trading v2) con OP, cantidad de mensajes y tiempo de la última respuesta.",
-      "desc": "Los canales tipo publicaciones se convierten en un feed prolijo: una lista de posts, metadatos de OP y última respuesta, cada uno con su propio chat, y la misma moderación NIP-29 que el resto de los canales.",
-      "features": "'Nuevo thread' a un click para abrir un tema|Timestamps de última respuesta precisos vía cursors|Mismo modelo de admin: kicks y bans viven en el relay"
+      "alt": "Vista de publicaciones de plaza-publica en Obelisk, en la computadora: cuatro publicaciones (Politica y Economia, But why?, Only-Claws, Finanzas-Trading v2) con su autor, la cantidad de mensajes y la hora de la última respuesta.",
+      "desc": "Los canales de publicaciones se convierten en un feed prolijo: una lista de publicaciones con su autor y su última respuesta, cada una con su propio chat y la misma moderación NIP-29 que el resto de los canales.",
+      "features": "'Nuevo hilo' con un clic para abrir un tema|Las horas de la última respuesta se mantienen exactas gracias a los cursores|El mismo modelo de admin: las expulsiones y los baneos viven en el relay"
     },
     "shot3": {
       "badge": "Voz • SFU",
       "title": "Salas de voz grandes con mediasoup y compartir pantalla",
-      "alt": "Canal de voz desktop de Obelisk en modo SFU mostrando un peer de prueba transmitiendo un patrón SMPTE con sidebar de chat y controles de voz.",
-      "desc": "Los canales de voz arrancan como mesh P2P y pasan a un SFU mediasoup cuando el relay anuncia uno. Misma UI, mismo signaling kind 25050, solo más peers y screen-share sin fundir la CPU.",
-      "features": "Operadores de SFU por allow-list por relay|Screen share con encode acelerado por hardware|Todo el signaling viaja por Nostr, sin backend sticky-session"
+      "alt": "Canal de voz de Obelisk en la computadora, en modo SFU, con un participante de prueba que transmite barras de color SMPTE, el chat al costado y los controles de voz.",
+      "desc": "Los canales de voz arrancan como malla P2P y pasan a un SFU mediasoup cuando el relay anuncia uno. La misma interfaz, la misma señalización kind 25050, solo que con más participantes y pantalla compartida sin fundir la CPU.",
+      "features": "Operadores de SFU habilitados por relay|Pantalla compartida con codificación acelerada por hardware|Toda la señalización viaja por Nostr, sin backend con sesiones fijas"
     },
     "cta": {
       "heading": "Abrí Obelisk en cualquier navegador",
-      "subtitle": "Es un frontend estático sin registro. Abrilo local, instalá la PWA o self-hosteá el build. El mismo cliente en cualquier caso.",
-      "button": "Abrir en desktop"
+      "subtitle": "Es un frontend estático sin registro. Abrilo en local, instalá la PWA o hosteá el build vos mismo. Es el mismo cliente en cualquier caso.",
+      "button": "Abrir en la computadora"
     }
   }
 }

@@ -81,7 +81,30 @@
     "firstMessagePlaceholder": "First message…",
     "reset": "Reset to defaults",
     "emptyDesktop": "No publications yet.",
-    "startFirst": "Start the first publication →"
+    "startFirst": "Start the first publication →",
+    "pressEnter": "Press Enter to create…",
+    "searchOrCreate": "Search or create a publication…",
+    "signInToStart": "Sign in to start a publication",
+    "creating": "Creating…",
+    "create": "Create publication",
+    "tagsCount": "Tags ({count}/{max})",
+    "tagColor": "Tag color: {color}",
+    "tagColorAuto": "automatic",
+    "auto": "Auto",
+    "autoInUse": "Auto · in use",
+    "openLoading": "Open {name} (still loading)",
+    "openLoadingUntitled": "Open publication (still loading)",
+    "loadingTitle": "(loading publication)",
+    "untitled": "(untitled publication)",
+    "op": "OP {name}",
+    "messages": "{count, plural, one {# msg} other {# msgs}}",
+    "last": "last {name} · {time}",
+    "noMatchQuery": "No publications match <q>“{query}”</q>.",
+    "noMatchQueryTags": "No publications match <q>“{query}”</q> with the current tag filter.",
+    "noMatchTags": "No publications match the selected tags.",
+    "createFromSearch": "Create “{query}”",
+    "addTag": "+ Add tag",
+    "maxTags": "Maximum {count} tags reached."
   },
   "composer": {
     "dropFiles": "Drop files to attach",
@@ -102,7 +125,10 @@
     "bold": "Bold",
     "italic": "Italic",
     "preview": "Preview",
-    "link": "Link"
+    "link": "Link",
+    "joinFailed": "Could not join this channel",
+    "uploadFailed": "Upload failed",
+    "contactPrompt": "Enter a Nostr npub or hex public key"
   },
   "emoji": {
     "picker": "Emoji picker",
@@ -113,10 +139,28 @@
     "subtitle": "Server emojis, GIFs, and unicode",
     "noMatches": "No matches",
     "recent": "Recent",
-    "noRecent": "No recent emojis"
+    "noRecent": "No recent emojis",
+    "serverEmojis": "Server emojis",
+    "myEmojis": "My emojis",
+    "alreadyReacted": "Already reacted",
+    "section": {
+      "smileys": "Smileys & people",
+      "nature": "Animals & nature",
+      "food": "Food & drink",
+      "sports": "Sports",
+      "cars": "Cars & travel",
+      "ideas": "Ideas & objects",
+      "symbols": "Symbols",
+      "flags": "Flags"
+    }
   },
   "invoice": {
-    "expired": "Expired"
+    "expired": "Expired",
+    "invalid": "⚠️ Invalid invoice",
+    "paid": "✅ Paid",
+    "paidBy": "✅ Paid · {name}",
+    "pay": "Pay",
+    "paying": "Paying…"
   },
   "mentions": {
     "navigation": "Mention navigation",
@@ -130,12 +174,54 @@
   "voiceNote": {
     "progress": "Voice message progress",
     "sender": "Voice message sender",
-    "speed": "Change playback speed"
+    "speed": "Change playback speed",
+    "play": "Play voice message",
+    "pause": "Pause voice message",
+    "speedValue": "Playback speed {rate}x"
   },
   "mediaPicker": {
     "title": "Media picker",
     "categories": "Media categories",
-    "favorites": "Favorites & packs"
+    "favorites": "Favorites & packs",
+    "searchGifs": "Search GIFs",
+    "searchStickers": "Search stickers",
+    "recentGifs": "Recent GIFs",
+    "recentStickers": "Recent stickers",
+    "myGifs": "My GIFs",
+    "myStickers": "My stickers",
+    "defaultGifs": "Default GIFs",
+    "defaultStickers": "Default stickers",
+    "serverGifs": "Server GIFs",
+    "serverStickers": "Server stickers",
+    "noRecentGifs": "No recent GIFs",
+    "noRecentStickers": "No recent stickers",
+    "poweredByGiphy": "Powered by GIPHY",
+    "stickersByTwemoji": "Stickers by Twemoji",
+    "create": "Create",
+    "creating": "Creating…",
+    "createKind": {
+      "emoji": "Create emoji",
+      "gif": "Create GIF",
+      "sticker": "Create sticker"
+    },
+    "addFavorite": "Add :{name}: to favorites",
+    "removeFavorite": "Remove :{name}: from favorites",
+    "tab": {
+      "emoji": "Emoji",
+      "gif": "GIF",
+      "sticker": "Stickers"
+    },
+    "category": {
+      "recent": "Recent",
+      "trending": "Trending",
+      "reactions": "Reactions",
+      "funny": "Funny",
+      "love": "Love",
+      "celebration": "Celebration",
+      "animals": "Animals",
+      "sports": "Sports",
+      "memes": "Memes"
+    }
   },
   "zap": {
     "commentPlaceholder": "Nice post!",
@@ -149,7 +235,9 @@
     "sent": "⚡ Sent {amount} sats to {name}",
     "send": "Zap {amount} sats",
     "markerFailed": "Payment succeeded, but the group zap marker was not published: {error}",
-    "sendAmount": "⚡ Send {amount} sats"
+    "sendAmount": "⚡ Send {amount} sats",
+    "title": "Zap {name}",
+    "noBridge": "the app was not connected to the relay"
   },
   "profilePopover": {
     "zap": "Zap",
@@ -168,6 +256,51 @@
   },
   "slash": {
     "recent": "Recent",
-    "noMatch": "No commands match."
+    "noMatch": "No commands match.",
+    "optionalCount": "+{count} optional",
+    "optional": "opt",
+    "zap": "Send sats to a user in this channel",
+    "zapUser": "User to zap (mention, npub, or display name)",
+    "zapAmount": "Amount in sats",
+    "play": "Play a game in this channel: {games}"
+  },
+  "channelLink": {
+    "publication": "Publication in #{channel}",
+    "message": "Message in #{channel}",
+    "channel": "Channel #{channel}",
+    "noAccess": "No access to #{channel}"
+  },
+  "members": {
+    "online": "Online",
+    "offline": "Offline",
+    "admin": "Admin",
+    "member": "Member",
+    "offlineGroup": "Offline"
+  },
+  "roleBadge": "Role: {name}",
+  "spoilerReveal": "Spoiler: click to reveal",
+  "wot": {
+    "unresolved": "Out of WoT or unresolved",
+    "hops": "{count, plural, one {# hop} other {# hops}} from you"
+  },
+  "youtubeTitle": "YouTube video",
+  "zapCommand": {
+    "invalid": "Invalid /zap command.",
+    "ambiguous": "More than one member here is called “{name}”. Zap by npub instead.",
+    "unknownUser": "Unknown user: {name}",
+    "noTarget": "No message to zap. Reply to one or pass an npub.",
+    "self": "Cannot zap yourself."
+  },
+  "relayForm": {
+    "invalidUrl": "Invalid URL"
+  },
+  "channelSettings": {
+    "sfuUrlRequired": "SFU URL is required",
+    "notNpub": "Not an npub",
+    "badMember": "Provide an npub or 64-char hex pubkey"
+  },
+  "sticker": {
+    "open": "Open :{name}: details",
+    "alt": "Sticker :{name}:"
   }
 }

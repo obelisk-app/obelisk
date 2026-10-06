@@ -27,7 +27,7 @@ export default function VestaTradePanel({ state, seatLabel, busy, turn }: {
         <div className="mt-2 space-y-2">
           <div className="flex flex-wrap gap-1">
             <Text size="10" variant="label" tone="muted">{t('games.vesta.with')}</Text>
-            <Chip label={`Bank${rates ? '' : ''}`} active={tradePartner === 'bank'} onClick={() => setTradePartner('bank')} />
+            <Chip label={t('games.vestaTable.bank')} active={tradePartner === 'bank'} onClick={() => setTradePartner('bank')} />
             {participants.map((seat, i) => i === actingIdx ? null : (
               <Chip key={seat} label={seatLabel(seat)} active={tradePartner === i} onClick={() => setTradePartner(i)} />
             ))}
@@ -36,7 +36,9 @@ export default function VestaTradePanel({ state, seatLabel, busy, turn }: {
           <Row label={t('games.vesta.take')} values={take} setValues={setTake} max={() => 19} />
           {rates && tradePartner === 'bank' && (
             <p className="text-[10px] text-lc-muted">
-              Bank rates: {RESOURCES.map((r) => `${RESOURCE_EMOJI[r]}${rates[r]}:1`).join('  ')}
+              {t('games.vestaTable.bankRates', {
+                rates: RESOURCES.map((r) => `${RESOURCE_EMOJI[r]}${rates[r]}:1`).join('  '),
+              })}
             </p>
           )}
           <Button
@@ -52,7 +54,7 @@ export default function VestaTradePanel({ state, seatLabel, busy, turn }: {
               setTake({});
             }}
           >
-            {tradePartner === 'bank' ? 'Trade with bank' : 'Offer trade'}
+            {t(tradePartner === 'bank' ? 'games.vestaTable.tradeBank' : 'games.vestaTable.offerTrade')}
           </Button>
         </div>
       </details>

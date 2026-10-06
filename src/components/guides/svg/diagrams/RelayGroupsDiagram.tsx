@@ -1,16 +1,19 @@
+import { useTranslations } from 'next-intl';
+
 export default function RelayGroupsDiagram() {
+  const t = useTranslations();
   return (
     <svg
       viewBox="0 0 800 360"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="NIP-29 relay-based group"
+      aria-label={t('guides.art.relayGroups.label')}
       className="w-full h-auto"
     >
       <rect width="800" height="360" fill="#0a0a0a" />
 
-      <text x="400" y="34" textAnchor="middle" fontSize="16" fontWeight="700" fill="#fafafa"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        NIP-29: the relay hosts the group
+      <text x="400" y="34" textAnchor="middle" fontSize="16" fontWeight="700" fill="#fafafa">
+        {t('guides.art.relayGroups.heading')}
       </text>
 
       {/* relay in the center */}
@@ -32,12 +35,12 @@ export default function RelayGroupsDiagram() {
 
         {/* group metadata rows */}
         {[
-          { y: 180, k: 'members', v: '42' },
-          { y: 200, k: 'roles', v: 'admin / mod / member' },
-          { y: 220, k: 'events', v: 'kind 9 chat, kind 11 thread' },
-          { y: 240, k: 'admin check', v: 'relay enforces' },
+          { y: 180, k: t('guides.art.relayGroups.members'), v: '42' },
+          { y: 200, k: t('guides.art.relayGroups.roles'), v: t('guides.art.relayGroups.rolesValue') },
+          { y: 220, k: t('guides.art.relayGroups.events'), v: t('guides.art.relayGroups.eventsValue') },
+          { y: 240, k: t('guides.art.relayGroups.adminCheck'), v: t('guides.art.relayGroups.adminCheckValue') },
         ].map((r) => (
-          <g key={r.k}>
+          <g key={r.y}>
             <text x="302" y={r.y} fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace">
               {r.k}
             </text>
@@ -46,8 +49,8 @@ export default function RelayGroupsDiagram() {
             </text>
           </g>
         ))}
-        <text x="400" y="270" textAnchor="middle" fontSize="10" fill="#b4f953"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          no central Obelisk server needed
+        <text x="400" y="270" textAnchor="middle" fontSize="10" fill="#b4f953">
+          {t('guides.art.relayGroups.noServer')}
         </text>
       </g>
 
@@ -94,8 +97,8 @@ export default function RelayGroupsDiagram() {
       })}
 
       {/* footer */}
-      <text x="400" y="330" textAnchor="middle" fontSize="11" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        move off Postgres → keep Discord UX, gain Nostr portability
+      <text x="400" y="330" textAnchor="middle" fontSize="11" fill="#a3a3a3" fontFamily="monospace">
+        {t('guides.art.relayGroups.footer')}
       </text>
     </svg>
   );

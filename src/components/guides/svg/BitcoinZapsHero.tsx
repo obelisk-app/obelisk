@@ -1,4 +1,7 @@
+import { useTranslations } from 'next-intl';
+
 export default function BitcoinZapsHero() {
+  const t = useTranslations();
   const sparks = [
     { x: 230, y: 110, d: '0s', dur: '6s' },
     { x: 560, y: 90, d: '1.2s', dur: '7s' },
@@ -18,11 +21,8 @@ export default function BitcoinZapsHero() {
       aria-labelledby="hero-zaps-title hero-zaps-desc"
       className="w-full h-auto"
     >
-      <title id="hero-zaps-title">Bitcoin zaps in chat</title>
-      <desc id="hero-zaps-desc">
-        A chat message with a glowing lightning bolt flowing into it, orbited by sat particles
-        representing a Lightning zap sent over Nostr Wallet Connect.
-      </desc>
+      <title id="hero-zaps-title">{t('guides.art.bitcoinZaps.title')}</title>
+      <desc id="hero-zaps-desc">{t('guides.art.bitcoinZaps.desc')}</desc>
 
       <defs>
         <linearGradient id="sky-zaps" x1="0" y1="0" x2="0" y2="1">
@@ -74,8 +74,8 @@ export default function BitcoinZapsHero() {
         <rect x="48" y="174" width="74" height="16" rx="3" fill="#2b1f08" />
         <rect x="48" y="198" width="50" height="8" rx="2" fill="#f7b32b" opacity="0.7" />
         <rect x="48" y="212" width="34" height="8" rx="2" fill="#f7b32b" opacity="0.4" />
-        <text x="85" y="258" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          NWC wallet
+        <text x="85" y="258" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace">
+          {t('guides.art.bitcoinZaps.wallet')}
         </text>
       </g>
 
@@ -158,9 +158,9 @@ export default function BitcoinZapsHero() {
       {/* legend */}
       <g fontSize="11" fontWeight="600">
         <circle cx="40" cy="24" r="6" fill="#f7b32b" />
-        <text x="52" y="28" fill="#fafafa">Lightning (NIP-47)</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="52" y="28" fill="#fafafa">Lightning (NIP-47)</text> {/* i18n-exempt: protocol name */}
         <circle cx="220" cy="24" r="6" fill="#b4f953" />
-        <text x="232" y="28" fill="#fafafa">chat message</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="232" y="28" fill="#fafafa">{t('guides.art.bitcoinZaps.chatMessage')}</text>
       </g>
     </svg>
   );

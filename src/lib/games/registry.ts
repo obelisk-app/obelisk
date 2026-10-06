@@ -128,7 +128,6 @@ export function listGames(): Array<Omit<GameMeta, 'realtime'>> {
   return GAME_META.map((g) => ({
     type: g.type,
     displayName: g.displayName,
-    description: g.description,
     minPlayers: g.minPlayers,
     maxPlayers: g.maxPlayers,
     defaultTurnTimeoutS: g.defaultTurnTimeoutS,

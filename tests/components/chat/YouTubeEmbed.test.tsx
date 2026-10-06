@@ -5,7 +5,7 @@ import YouTubeEmbed from '@/components/chat/YouTubeEmbed';
 
 describe('YouTubeEmbed', () => {
   it('renders thumbnail by default', () => {
-    render(<YouTubeEmbed videoId="dQw4w9WgXcQ" />);
+    render(<YouTubeEmbed videoId="dQw4w9WgXcQ" title="YouTube video" />);
     const btn = screen.getByTestId('youtube-thumbnail');
     expect(btn).toBeInTheDocument();
     const img = btn.querySelector('img');
@@ -14,20 +14,20 @@ describe('YouTubeEmbed', () => {
 
   it('loads iframe on click', async () => {
     const user = userEvent.setup();
-    render(<YouTubeEmbed videoId="dQw4w9WgXcQ" />);
+    render(<YouTubeEmbed videoId="dQw4w9WgXcQ" title="YouTube video" />);
     await user.click(screen.getByTestId('youtube-thumbnail'));
     const iframe = screen.getByTestId('youtube-iframe').querySelector('iframe');
     expect(iframe?.src).toContain('youtube-nocookie.com/embed/dQw4w9WgXcQ');
   });
 
   it('defaults to the chat-bubble mq thumbnail', () => {
-    render(<YouTubeEmbed videoId="dQw4w9WgXcQ" />);
+    render(<YouTubeEmbed videoId="dQw4w9WgXcQ" title="YouTube video" />);
     const img = screen.getByTestId('youtube-thumbnail').querySelector('img');
     expect(img?.src).toContain('/mqdefault.jpg');
   });
 
   it('serves a maxres thumbnail when asked, for full-width surfaces', () => {
-    render(<YouTubeEmbed videoId="dQw4w9WgXcQ" thumbnailRes="maxres" />);
+    render(<YouTubeEmbed videoId="dQw4w9WgXcQ" title="YouTube video" thumbnailRes="maxres" />);
     const img = screen.getByTestId('youtube-thumbnail').querySelector('img');
     expect(img?.src).toContain('/maxresdefault.jpg');
   });
@@ -35,7 +35,7 @@ describe('YouTubeEmbed', () => {
   it('falls back to hqdefault when maxres does not exist for the upload', () => {
     // Not every video has a maxres still; YouTube 404s rather than
     // substituting, so the facade would render a broken image.
-    render(<YouTubeEmbed videoId="dQw4w9WgXcQ" thumbnailRes="maxres" />);
+    render(<YouTubeEmbed videoId="dQw4w9WgXcQ" title="YouTube video" thumbnailRes="maxres" />);
     const img = screen.getByTestId('youtube-thumbnail').querySelector('img')!;
     fireEvent.error(img);
     expect(img.src).toContain('/hqdefault.jpg');

@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render as rtlRender, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
+import type { Locale } from '@/i18n';
 import Callout from '@/components/guides/Callout';
+
+const render = (ui: ReactElement, locale: Locale = 'en') =>
+  rtlRender(<LocaleProvider initialLocale={locale}>{ui}</LocaleProvider>);
 
 describe('Callout', () => {
   it('renders children', () => {
@@ -11,6 +17,12 @@ describe('Callout', () => {
   it('applies variant data-testid', () => {
     render(<Callout type="warn">warn me</Callout>);
     expect(screen.getByTestId('callout-warn')).toBeInTheDocument();
+    expect(screen.getByText('Heads up')).toBeInTheDocument();
+  });
+
+  it('labels the variant in the reader\'s language', () => {
+    render(<Callout type="warn">ojo</Callout>, 'es');
+    expect(screen.getByText('Atención')).toBeInTheDocument();
   });
 
   it('shows custom title when provided', () => {

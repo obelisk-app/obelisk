@@ -26,9 +26,9 @@ export function EmojiCategoryNav({
             type="button"
             key={category}
             onClick={() => onJump(category)}
-            aria-label={meta.label}
+            aria-label={t(meta.labelKey)}
             aria-pressed={activeCategory === category}
-            title={meta.label}
+            title={t(meta.labelKey)}
             className={['flex h-10 min-w-0 items-center justify-center rounded-lg border-b-2 text-xl', activeCategory === category ? 'border-lc-green bg-lc-green/10' : 'border-transparent hover:bg-lc-border/60'].join(' ')}
           >
             {category === 'Recent' ? <RecentIcon /> : <span aria-hidden="true">{meta.icon}</span>}

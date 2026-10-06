@@ -1,16 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render as rtlRender, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { LocaleProvider, translator } from '@tests/support/intl';
+import type { Locale } from '@/i18n';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import Shot, { SHOT_META, shotPath } from '@/components/guides/Shot';
 
+const render = (ui: ReactElement, locale: Locale = 'en') =>
+  rtlRender(<LocaleProvider initialLocale={locale}>{ui}</LocaleProvider>);
+
 describe('Shot', () => {
   it('renders the screenshot with its alt text and intrinsic size', () => {
     render(<Shot name="games/chain-reaction-board" />);
-    const img = screen.getByAltText(SHOT_META['games/chain-reaction-board'].alt);
+    const img = screen.getByAltText(translator('en')(SHOT_META['games/chain-reaction-board'].altKey));
     expect(img.getAttribute('src')).toBe('/og/guides/games/chain-reaction-board.png');
     expect(img.getAttribute('width')).toBe('420');
     expect(img.getAttribute('height')).toBe('484');
+  });
+
+  it('describes the screenshot in the reader\'s language', () => {
+    render(<Shot name="games/vesta-board" />, 'pt');
+    expect(screen.getByAltText(translator('pt')(SHOT_META['games/vesta-board'].altKey))).toBeTruthy();
+    expect(translator('pt')(SHOT_META['games/vesta-board'].altKey)).toMatch(/^Tabuleiro do Vesta/);
   });
 
   it('renders a caption when given one', () => {
@@ -45,7 +57,9 @@ describe('Shot', () => {
         : 'it is a capture committed by hand - see the note in Shot.tsx';
       expect(existsSync(file), `${name}.png is missing - ${how}`).toBe(true);
       expect(readFileSync(file).length).toBeGreaterThan(1000);
-      expect(meta.alt.length).toBeGreaterThan(40);
+      for (const locale of ['en', 'es', 'pt'] as const) {
+        expect(translator(locale)(meta.altKey).length, `${locale} ${name}`).toBeGreaterThan(40);
+      }
       expect(meta.width).toBeGreaterThan(0);
       expect(meta.height).toBeGreaterThan(0);
     }

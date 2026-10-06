@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 
 export default function SpoilerText({ children }: { children: ReactNode }) {
+  const t = useTranslations();
   const [revealed, setRevealed] = useState(false);
 
   return (
@@ -17,7 +19,7 @@ export default function SpoilerText({ children }: { children: ReactNode }) {
           : 'bg-lc-muted/60 text-transparent select-none'
       }`}
       data-testid="spoiler-text"
-      aria-label={revealed ? undefined : 'Spoiler: click to reveal'}
+      aria-label={revealed ? undefined : t('chat.spoilerReveal')}
     >
       {children}
     </span>

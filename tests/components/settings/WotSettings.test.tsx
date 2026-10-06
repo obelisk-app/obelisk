@@ -91,4 +91,18 @@ describe('WotSettings', () => {
     expect(paths).toHaveAttribute('max', '3');
     expect(hops).toHaveClass('w-full', 'accent-lc-green');
   });
+
+  it('speaks the reader\'s language: status, legend and the stats rows', async () => {
+    const mod = await import('@/services/wot') as unknown as { __wotState: { enabled: boolean } };
+    mod.__wotState.enabled = true;
+    const { default: WotSettings } = await import('@/components/settings/WotSettings');
+
+    render(<LocaleProvider initialLocale="es"><WotSettings /></LocaleProvider>);
+
+    expect(screen.getByText(/Extensión detectada/)).toBeInTheDocument();
+    expect(screen.getByText('Seguido directo')).toBeInTheDocument();
+    expect(screen.getByText('Lejos / sin resolver')).toBeInTheDocument();
+    expect(screen.getByText('pendientes')).toBeInTheDocument();
+    expect(screen.queryByText('Direct follow')).not.toBeInTheDocument();
+  });
 });

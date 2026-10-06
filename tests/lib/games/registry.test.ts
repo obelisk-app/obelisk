@@ -92,7 +92,6 @@ describe('game registry', () => {
       expect({
         type: def.type,
         displayName: def.displayName,
-        description: def.description,
         minPlayers: def.minPlayers,
         maxPlayers: def.maxPlayers,
         defaultTurnTimeoutS: def.defaultTurnTimeoutS,

@@ -1,9 +1,13 @@
+import { useTranslations } from 'next-intl';
+
 export default function ObeliskBotsHero() {
+  const t = useTranslations();
+  /** Protocol labels riding the wires: event kinds and a NIP number, not copy. */
   const packets = [
     { x: 140, y: 98, label: '9735', delay: '0s', dur: '5.4s' },
-    { x: 640, y: 86, label: 'kind 7', delay: '0.8s', dur: '5.9s' },
+    { x: 640, y: 86, label: 'kind 7', delay: '0.8s', dur: '5.9s' }, // i18n-exempt: protocol term, an event kind
     { x: 95, y: 285, label: 'NIP-29', delay: '1.6s', dur: '6.2s' },
-    { x: 675, y: 286, label: 'kind 9', delay: '2.3s', dur: '5.7s' },
+    { x: 675, y: 286, label: 'kind 9', delay: '2.3s', dur: '5.7s' }, // i18n-exempt: protocol term, an event kind
   ];
 
   return (
@@ -14,11 +18,8 @@ export default function ObeliskBotsHero() {
       aria-labelledby="hero-bots-title hero-bots-desc"
       className="w-full h-auto"
     >
-      <title id="hero-bots-title">Obelisk Bots and the zap bot</title>
-      <desc id="hero-bots-desc">
-        A stylish zap bot with black sunglasses listening for Nostr zap receipts and
-        posting signed announcements into NIP-29 Obelisk groups.
-      </desc>
+      <title id="hero-bots-title">{t('guides.art.obeliskBots.title')}</title>
+      <desc id="hero-bots-desc">{t('guides.art.obeliskBots.desc')}</desc>
 
       <defs>
         <linearGradient id="sky-bots" x1="0" y1="0" x2="0" y2="1">
@@ -104,10 +105,10 @@ export default function ObeliskBotsHero() {
 
       <g>
         <rect x="44" y="78" width="156" height="86" rx="16" fill="#171717" stroke="#b4f953" strokeWidth="1.6" />
-        <text x="122" y="110" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fafafa" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          zap receipt
+        <text x="122" y="110" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fafafa" fontFamily="monospace">
+          {t('guides.art.obeliskBots.zapReceipt')}
         </text>
-        <text x="122" y="134" textAnchor="middle" fontSize="12" fontWeight="700" fill="#f7b32b" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="122" y="134" textAnchor="middle" fontSize="12" fontWeight="700" fill="#f7b32b" fontFamily="monospace"> {/* i18n-exempt: protocol term, the event kind */}
           kind 9735
         </text>
         <rect x="72" y="144" width="100" height="6" rx="3" fill="#b4f953" opacity="0.5" />
@@ -116,9 +117,9 @@ export default function ObeliskBotsHero() {
       <g>
         <rect x="600" y="78" width="156" height="86" rx="16" fill="#171717" stroke="#f7b32b" strokeWidth="1.6" />
         <text x="678" y="110" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fafafa" fontFamily="monospace">
-          reaction
+          {t('guides.art.obeliskBots.reaction')}
         </text>
-        <text x="678" y="134" textAnchor="middle" fontSize="12" fontWeight="700" fill="#f7b32b" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="678" y="134" textAnchor="middle" fontSize="12" fontWeight="700" fill="#f7b32b" fontFamily="monospace"> {/* i18n-exempt: protocol term, the event kind */}
           kind 7 zap
         </text>
         <rect x="628" y="144" width="100" height="6" rx="3" fill="#f7b32b" opacity="0.5" />
@@ -127,10 +128,10 @@ export default function ObeliskBotsHero() {
       <g>
         <rect x="44" y="238" width="156" height="86" rx="16" fill="#171717" stroke="#b4f953" strokeWidth="1.6" />
         <text x="122" y="270" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fafafa" fontFamily="monospace">
-          groups
+          {t('guides.art.obeliskBots.groups')}
         </text>
-        <text x="122" y="294" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          NIP-29 scan
+        <text x="122" y="294" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953" fontFamily="monospace">
+          {t('guides.art.obeliskBots.scan')}
         </text>
         <rect x="72" y="304" width="100" height="6" rx="3" fill="#b4f953" opacity="0.5" />
       </g>
@@ -138,10 +139,10 @@ export default function ObeliskBotsHero() {
       <g>
         <rect x="600" y="238" width="156" height="86" rx="16" fill="#171717" stroke="#b4f953" strokeWidth="1.6" />
         <text x="678" y="270" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fafafa" fontFamily="monospace">
-          announcement
+          {t('guides.art.obeliskBots.announcement')}
         </text>
-        <text x="678" y="294" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          kind 9 post
+        <text x="678" y="294" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953" fontFamily="monospace">
+          {t('guides.art.obeliskBots.post')}
         </text>
         <rect x="628" y="304" width="100" height="6" rx="3" fill="#b4f953" opacity="0.5" />
       </g>
@@ -173,7 +174,7 @@ export default function ObeliskBotsHero() {
           stroke="#b4f953"
           strokeWidth="1.5"
         />
-        <text x="400" y="301" textAnchor="middle" fontSize="13" fontWeight="900" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="400" y="301" textAnchor="middle" fontSize="13" fontWeight="900" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: the bot's name, lettered on the artwork */}
           ZAP BOT
         </text>
       </g>
@@ -241,7 +242,7 @@ export default function ObeliskBotsHero() {
 
       <g fontSize="11" fontWeight="700" fontFamily="monospace">
         <rect x="244" y="342" width="96" height="24" rx="12" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.4" />
-        <text x="292" y="358" textAnchor="middle" fill="#b4f953">own nsec</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="292" y="358" textAnchor="middle" fill="#b4f953">{t('guides.art.obeliskBots.ownNsec')}</text>
         <rect x="352" y="342" width="96" height="24" rx="12" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.4" />
         <text x="400" y="358" textAnchor="middle" fill="#b4f953">NIP-42</text>
         <rect x="460" y="342" width="96" height="24" rx="12" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.4" />

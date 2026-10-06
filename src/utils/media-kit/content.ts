@@ -1,19 +1,27 @@
 /**
  * The media kit's data: brand colours, copy, links, downloadable assets and
  * the embed snippets. Kept out of the components so the page reads as layout.
+ *
+ * The page's own labels are `mediaKit.*` keys. What stays as literal text
+ * here is the brand material itself: `COPY` (the pitches and taglines, offered
+ * in English and Spanish and labelled by language), the embed snippets and
+ * the banner lettering, which a journalist copies or downloads as they are.
  */
 
-type Color = { name: string; token: string; hex: string; usage: string };
+import type { MessageKey } from '@/i18n/keys';
+
+type Color = { nameKey: MessageKey; token: string; hex: string; usageKey: MessageKey };
 
 export const COLORS: Color[] = [
-  { name: 'Black', token: 'lc-black', hex: '#0a0a0a', usage: 'Background' },
-  { name: 'Dark', token: 'lc-dark', hex: '#171717', usage: 'Cards' },
-  { name: 'Border', token: 'lc-border', hex: '#262626', usage: 'Dividers' },
-  { name: 'Muted', token: 'lc-muted', hex: '#a3a3a3', usage: 'Secondary text' },
-  { name: 'White', token: 'lc-white', hex: '#fafafa', usage: 'Primary text' },
-  { name: 'Green', token: 'lc-green', hex: '#b4f953', usage: 'Accent / CTA' },
+  { nameKey: 'mediaKit.color.black.name', token: 'lc-black', hex: '#0a0a0a', usageKey: 'mediaKit.color.black.usage' },
+  { nameKey: 'mediaKit.color.dark.name', token: 'lc-dark', hex: '#171717', usageKey: 'mediaKit.color.dark.usage' },
+  { nameKey: 'mediaKit.color.border.name', token: 'lc-border', hex: '#262626', usageKey: 'mediaKit.color.border.usage' },
+  { nameKey: 'mediaKit.color.muted.name', token: 'lc-muted', hex: '#a3a3a3', usageKey: 'mediaKit.color.muted.usage' },
+  { nameKey: 'mediaKit.color.white.name', token: 'lc-white', hex: '#fafafa', usageKey: 'mediaKit.color.white.usage' },
+  { nameKey: 'mediaKit.color.green.name', token: 'lc-green', hex: '#b4f953', usageKey: 'mediaKit.color.green.usage' },
 ];
 
+/** Brand copy, offered as is: each language's version is its own deliverable. */
 export const COPY = {
   name: 'Obelisk',
   tagline: 'Group chat powered by Nostr identity',
@@ -40,76 +48,78 @@ export const LINKS = {
 // (both faces solid, ~8% wider at the base) and no longer matches the icon we
 // ship, so it is not offered for download. The file stays in /public so old
 // external links keep resolving.
-export const ASSETS = [
+type Asset = { src: string; labelKey: MessageKey; bg: string; download: string };
+
+export const ASSETS: ReadonlyArray<Asset> = [
   {
     src: '/icon-512.png',
-    label: 'Obelisk Logo (PNG)',
+    labelKey: 'mediaKit.asset.logo',
     bg: 'bg-lc-black',
     download: 'obelisk-logo.png',
   },
   {
     src: '/obelisk-favicon.png',
-    label: 'Favicon (PNG)',
+    labelKey: 'mediaKit.asset.favicon',
     bg: 'bg-lc-black',
     download: 'obelisk-favicon.png',
   },
   {
     src: '/icon-192.png',
-    label: 'App Icon - 192px (PNG)',
+    labelKey: 'mediaKit.asset.appIcon',
     bg: 'bg-lc-black',
     download: 'icon-192.png',
   },
   {
     src: '/obelisk.gif',
-    label: 'Animated Obelisk (GIF)',
+    labelKey: 'mediaKit.asset.animated',
     bg: 'bg-lc-black',
     download: 'obelisk.gif',
   },
   {
     src: '/obelisk-lg.gif',
-    label: 'Animated Obelisk - Large',
+    labelKey: 'mediaKit.asset.animatedLarge',
     bg: 'bg-lc-black',
     download: 'obelisk-lg.gif',
   },
   {
     src: '/obelisk-md.gif',
-    label: 'Animated Obelisk - Medium',
+    labelKey: 'mediaKit.asset.animatedMedium',
     bg: 'bg-lc-black',
     download: 'obelisk-md.gif',
   },
   {
     src: '/obelisk-sm.gif',
-    label: 'Animated Obelisk - Small',
+    labelKey: 'mediaKit.asset.animatedSmall',
     bg: 'bg-lc-black',
     download: 'obelisk-sm.gif',
   },
   {
     src: '/lacrypta-logo.png',
-    label: 'La Crypta Logo (PNG)',
+    labelKey: 'mediaKit.asset.laCryptaLogo',
     bg: 'bg-lc-black',
     download: 'lacrypta-logo.png',
   },
   {
     src: '/lacrypta-banner.png',
-    label: 'La Crypta Banner (PNG)',
+    labelKey: 'mediaKit.asset.laCryptaBanner',
     bg: 'bg-lc-black',
     download: 'lacrypta-banner.png',
   },
   {
     src: '/nostr-wot-logo.png',
-    label: 'Nostr WoT Logo (PNG)',
+    labelKey: 'mediaKit.asset.wotLogoPng',
     bg: 'bg-lc-black',
     download: 'nostr-wot-logo.png',
   },
   {
     src: '/nostr-wot-logo.svg',
-    label: 'Nostr WoT Logo (SVG)',
+    labelKey: 'mediaKit.asset.wotLogoSvg',
     bg: 'bg-lc-black',
     download: 'nostr-wot-logo.svg',
   },
   {
     src: '/nostr-wot-logo-clean.png',
-    label: 'Nostr WoT Logo - Clean (PNG)',
+    labelKey: 'mediaKit.asset.wotLogoClean',
     bg: 'bg-lc-black',
     download: 'nostr-wot-logo-clean.png',
   },
@@ -146,38 +156,41 @@ export const GRID_OVERLAY: React.CSSProperties = {
 export const GLOW_GRADIENT =
   'radial-gradient(circle, rgba(180,249,83,0.35) 0%, rgba(180,249,83,0.1) 40%, transparent 70%)';
 
-/** The about section's four pitches, each with its language label. */
-export const PITCHES: ReadonlyArray<readonly [label: string, text: string]> = [
-  ['EN - Short pitch', COPY.shortPitch],
-  ['ES - Pitch corto', COPY.shortPitchEs],
-  ['EN - Long pitch', COPY.longPitch],
-  ['ES - Pitch largo', COPY.longPitchEs],
+/**
+ * The about section's four pitches. `lang` is the pitch's own language, shown
+ * as a code in its label (`mediaKit.pitch.short`), not the page's.
+ */
+export const PITCHES: ReadonlyArray<{ lang: string; labelKey: MessageKey; text: string }> = [
+  { lang: 'EN', labelKey: 'mediaKit.pitch.short', text: COPY.shortPitch },
+  { lang: 'ES', labelKey: 'mediaKit.pitch.short', text: COPY.shortPitchEs },
+  { lang: 'EN', labelKey: 'mediaKit.pitch.long', text: COPY.longPitch },
+  { lang: 'ES', labelKey: 'mediaKit.pitch.long', text: COPY.longPitchEs },
 ];
 
 /** The in-page table of contents under the hero. */
-export const NAV_LINKS: ReadonlyArray<readonly [href: string, label: string]> = [
-  ['#about', 'About Obelisk'],
-  ['#logos', 'Logos & icons'],
-  ['#banners', 'Banners'],
-  ['#colors', 'Colors'],
-  ['#typography', 'Typography'],
-  ['#copy', 'Copy'],
-  ['#embeds', 'HTML embeds'],
-  ['#og', 'Open Graph'],
-  ['#contact', 'Contact'],
-  ['#guidelines', 'Guidelines'],
+export const NAV_LINKS: ReadonlyArray<readonly [href: string, labelKey: MessageKey]> = [
+  ['#about', 'mediaKit.nav.about'],
+  ['#logos', 'mediaKit.nav.logos'],
+  ['#banners', 'mediaKit.nav.banners'],
+  ['#colors', 'mediaKit.nav.colors'],
+  ['#typography', 'mediaKit.nav.typography'],
+  ['#copy', 'mediaKit.nav.copy'],
+  ['#embeds', 'mediaKit.nav.embeds'],
+  ['#og', 'mediaKit.nav.og'],
+  ['#contact', 'mediaKit.nav.contact'],
+  ['#guidelines', 'mediaKit.nav.guidelines'],
 ];
 
-/** Quick-use phrases, each with its copy button. */
-export const SHORT_COPY: ReadonlyArray<readonly [label: string, value: string]> = [
-  ['Name', COPY.name],
-  ['Tagline (EN)', COPY.tagline],
-  ['Tagline (ES)', COPY.taglineEs],
-  ['One-liner (EN)', COPY.oneLiner],
-  ['One-liner (ES)', COPY.oneLinerEs],
-  ['URL', LINKS.site],
-  ['Default relay', LINKS.defaultRelay],
-  ['GitHub', LINKS.github],
+/** Quick-use phrases, each with its copy button; `lang` fills the label's `{lang}`. */
+export const SHORT_COPY: ReadonlyArray<{ labelKey: MessageKey; lang?: string; value: string }> = [
+  { labelKey: 'mediaKit.shortCopyLabel.name', value: COPY.name },
+  { labelKey: 'mediaKit.shortCopyLabel.tagline', lang: 'EN', value: COPY.tagline },
+  { labelKey: 'mediaKit.shortCopyLabel.tagline', lang: 'ES', value: COPY.taglineEs },
+  { labelKey: 'mediaKit.shortCopyLabel.oneLiner', lang: 'EN', value: COPY.oneLiner },
+  { labelKey: 'mediaKit.shortCopyLabel.oneLiner', lang: 'ES', value: COPY.oneLinerEs },
+  { labelKey: 'mediaKit.shortCopyLabel.url', value: LINKS.site },
+  { labelKey: 'mediaKit.defaultRelay', value: LINKS.defaultRelay },
+  { labelKey: 'mediaKit.shortCopyLabel.github', value: LINKS.github },
 ];
 
 /** The print / merch banner's lettering: the wordmark itself, set in capitals. */

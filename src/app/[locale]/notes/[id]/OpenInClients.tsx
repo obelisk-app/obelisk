@@ -40,7 +40,7 @@ export default async function OpenInClients({ identifier }: { identifier: string
               }`}
               data-testid={`open-in-${client.id}`}
             >
-              {client.name}
+              {client.nameKey ? t(client.nameKey) : client.name}
             </a>
           </li>
         ))}

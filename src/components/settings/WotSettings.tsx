@@ -36,14 +36,15 @@ export default function WotSettings() {
     const refresh = () => setStats(wotEngine.stats());
     refresh();
     const a = wotEngine.on('verdicts-changed', refresh);
-    const t = setInterval(refresh, 1500);
-    return () => { a(); clearInterval(t); };
+    const timer = setInterval(refresh, 1500);
+    return () => { a(); clearInterval(timer); };
   }, []);
 
-  const statusLabel =
-    status === 'configured' ? 'Extension detected' :
-    status === 'error' ? 'Extension error' :
-    'No nostr-wot extension';
+  const statusLabel = t(
+    status === 'configured' ? 'settings.wot.status.configured' :
+    status === 'error' ? 'settings.wot.status.error' :
+    'settings.wot.status.missing',
+  );
   const statusTone =
     status === 'configured' ? 'text-lc-green' :
     status === 'error' ? 'text-red-400' :
@@ -76,7 +77,7 @@ export default function WotSettings() {
         <TextButton tone="muted"
           onClick={() => void refreshStatus()}
         >
-          re-check
+          {t('settings.wot.recheck')}
         </TextButton>
       </div>
 
@@ -96,7 +97,7 @@ export default function WotSettings() {
               onChange={(e) => setMaxHops(Number(e.target.value))}
             />
             <div className="mt-1 text-[11px] text-lc-muted">
-              1° = direct follows only · 2° = friends of follows · higher = wider net.
+              {t('settings.wot.hopsHelp')}
             </div>
           </div>
 
@@ -114,9 +115,7 @@ export default function WotSettings() {
               onChange={(e) => setMinPaths(Number(e.target.value))}
             />
             <div className="mt-1 text-[11px] text-lc-muted">
-              Require this many independent follow paths before trusting a pubkey.
-              Higher values reject single-shill follows; only effective when the
-              extension reports path counts.
+              {t('settings.wot.pathsHelp')}
             </div>
           </div>
 
@@ -132,7 +131,7 @@ export default function WotSettings() {
                       <span className={`inline-block w-8 text-center rounded-full border px-1 py-0 font-mono text-[10px] ${tier.badgeClass}`}>
                         {tier.label}
                       </span>
-                      <span className={`flex-1 ${tier.textClass}`}>{tier.description}</span>
+                      <span className={`flex-1 ${tier.textClass}`}>{t(tier.descriptionKey)}</span>
                     </li>
               ))}
               <li className="flex items-center gap-2 text-xs">
@@ -155,7 +154,7 @@ export default function WotSettings() {
             <span className="text-red-400">{stats.deny}</span>
           </div>
           <div className="flex justify-between">
-            <span>pending</span>
+            <span>{t('settings.wot.pending')}</span>
             <span className="text-lc-white">{stats.pending}</span>
           </div>
         </div>

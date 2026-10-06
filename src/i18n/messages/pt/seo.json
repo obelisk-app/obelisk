@@ -14,7 +14,7 @@
     "fallbackSubtitle": "Chat em grupo Nostr",
     "laCrypta": {
       "title": "La Crypta no Obelisk - chat em grupo Nostr",
-      "description": "Entre na La Crypta no Obelisk. Chat em grupo com identidade Nostr: sem email, sem senha.",
+      "description": "Entre na La Crypta no Obelisk. Chat em grupo com identidade Nostr: sem e-mail, sem senha.",
       "ogSubtitle": "no Obelisk - chat em grupo Nostr"
     }
   },
@@ -26,20 +26,20 @@
     "twitterDescription": "Chat em grupo para quem é de cripto e privacidade. Entre com suas chaves Nostr: sem e-mail, sem senha.",
     "ogImageAlt": "Obelisk - chat em grupo com identidade Nostr",
     "jsonLd": {
-      "websiteDescription": "Alternativa ao Discord com login Nostr: sem email, sem senha. Chat em grupo para comunidades cripto e de privacidade.",
-      "appDescription": "Alternativa ao Discord com identidade Nostr. Entre com suas chaves: sem email, sem senha. Inclui servidores, canais, voz, DMs criptografadas e resistência a spam por rede de confiança."
+      "websiteDescription": "Alternativa ao Discord com login Nostr: sem e-mail, sem senha. Chat em grupo para comunidades cripto e de privacidade.",
+      "appDescription": "Alternativa ao Discord com identidade Nostr. Entre com suas chaves: sem e-mail, sem senha. Inclui servidores, canais, voz, DMs criptografados e resistência a spam por rede de confiança."
     }
   },
   "app": {
     "title": "App",
-    "description": "Abra o Obelisk: chat em grupo, voz e DMs criptografadas sobre relays Nostr, assinados com suas próprias chaves."
+    "description": "Abra o Obelisk: chat em grupo, voz e DMs criptografados sobre relays Nostr, assinados com suas próprias chaves."
   },
   "desktop": {
-    "title": "Obelisk Desktop - a alternativa ao Discord para o stack aberto do Nostr",
-    "description": "Um tour pelo Obelisk no computador: uma alternativa ao Discord baseada em Nostr, com chat em grupo NIP-29, publicações, voz com SFU mediasoup, DMs criptografadas e zaps Lightning. Sem email, sem senha, só suas chaves.",
-    "ogDescription": "Um tour pelo Obelisk no computador: chat em grupo NIP-29, publicações, voz com SFU mediasoup, DMs criptografadas e zaps Lightning.",
-    "twitterDescription": "O Obelisk no computador: chat em grupo NIP-29, publicações, voz com SFU, DMs criptografadas e zaps Lightning. Sem email, sem senha.",
-    "imageAlt": "Obelisk no computador: canal de voz grande com transmissão de um par de teste via SFU",
+    "title": "Obelisk Desktop - a alternativa ao Discord para a stack aberta do Nostr",
+    "description": "Um tour pelo Obelisk no computador: uma alternativa ao Discord baseada em Nostr, com chat em grupo NIP-29, publicações, voz com SFU mediasoup, DMs criptografados e zaps Lightning. Sem e-mail, sem senha, só suas chaves.",
+    "ogDescription": "Um tour pelo Obelisk no computador: chat em grupo NIP-29, publicações, voz com SFU mediasoup, DMs criptografados e zaps Lightning.",
+    "twitterDescription": "O Obelisk no computador: chat em grupo NIP-29, publicações, voz com SFU, DMs criptografados e zaps Lightning. Sem e-mail, sem senha.",
+    "imageAlt": "Obelisk no computador: canal de voz grande com um participante de teste transmitindo via SFU",
     "gallery": {
       "name": "Obelisk no computador: tour em capturas de tela",
       "description": "Capturas de tela do Obelisk, uma alternativa ao Discord baseada em Nostr, feitas em um navegador de desktop.",
@@ -53,10 +53,10 @@
   },
   "mobile": {
     "title": "Obelisk Mobile - chat em grupo estilo Discord no seu celular",
-    "description": "Veja o Obelisk no celular: uma alternativa ao Discord baseada em Nostr, com chat em grupo NIP-29, canais de voz, DMs criptografadas e zaps Lightning. Sem email, sem senha, só suas chaves.",
+    "description": "Veja o Obelisk no celular: uma alternativa ao Discord baseada em Nostr, com chat em grupo NIP-29, canais de voz, DMs criptografados e zaps Lightning. Sem e-mail, sem senha, só suas chaves.",
     "ogTitle": "Obelisk Mobile - chat em grupo Nostr no seu celular",
-    "ogDescription": "Um tour pelo Obelisk no celular: login Nostr, canais NIP-29, voz com SFU, DMs criptografadas e zaps Lightning.",
-    "twitterDescription": "O Obelisk no celular: canais NIP-29, voz, DMs criptografadas e zaps Lightning. Sem email, sem senha.",
+    "ogDescription": "Um tour pelo Obelisk no celular: login Nostr, canais NIP-29, voz com SFU, DMs criptografados e zaps Lightning.",
+    "twitterDescription": "O Obelisk no celular: canais NIP-29, voz, DMs criptografados e zaps Lightning. Sem e-mail, sem senha.",
     "imageAlt": "Obelisk no celular: telas de login, canais, voz com SFU e perfil",
     "gallery": {
       "name": "Obelisk no celular: tour em capturas de tela",
@@ -87,7 +87,7 @@
   },
   "guides": {
     "title": "Guias · Obelisk",
-    "description": "Guias longos sobre o Obelisk, identidade Nostr, resistência a spam por Rede de Confiança e grupos Nostr baseados em relays.",
+    "description": "Guias aprofundados sobre o Obelisk, a identidade Nostr, a resistência a spam por rede de confiança e os grupos Nostr baseados em relays.",
     "ogLabel": "Guia",
     "ogAlt": "Guia do Obelisk"
   },
@@ -106,6 +106,6 @@
     "description": "Notas com a tag #{tag} no Nostr, via Obelisk."
   },
   "manifest": {
-    "description": "Chat em grupo estilo Discord com identidade criptográfica Nostr. Sem emails, sem senhas."
+    "description": "Chat em grupo estilo Discord com identidade criptográfica Nostr. Sem e-mail, sem senha."
   }
 }

@@ -140,7 +140,7 @@ export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth =
                 transition-colors
               `}
               style={color ? { color: color.hex } : undefined}
-              aria-label={`cell ${i}`}
+              aria-label={t('games.chainReaction.cell', { index: i })}
             >
               {color && <Orbs count={cell.count} hex={color.hex} orbit={cell.count >= 2} orb={orb} />}
               {burst && <Explosion key={burst.id} hex={burst.hex} />}
@@ -166,7 +166,7 @@ export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth =
               <span className={`w-2 h-2 rounded-full ${c.dot}`} />
               <span className={isMe ? 'text-lc-white' : 'text-lc-muted'}>
                 {seatLabel ? seatLabel(pk) : pk.slice(0, 6)}
-                {isMe && <span className="ml-1 opacity-70">(you)</span>}
+                {isMe && <span className="ml-1 opacity-70">{t('games.you')}</span>}
               </span>
             </span>
           );

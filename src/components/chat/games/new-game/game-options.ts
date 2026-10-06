@@ -2,8 +2,9 @@ import type { CRSizeKey } from '@/lib/games/chain-reaction';
 import { normalizeSeed } from '@/lib/games/vesta/resume';
 import type { GameInfo } from '@/lib/games/catalog';
 
-export const TIMEOUTS: Array<{ label: string; seconds: number }> = [
-  { label: 'No clock', seconds: 0 },
+/** The turn clocks offered, in seconds; 0 is no clock at all, which the picker words itself. */
+export const TIMEOUTS: Array<{ label: string | null; seconds: number }> = [
+  { label: null, seconds: 0 },
   { label: '30s', seconds: 30 },
   { label: '45s', seconds: 45 },
   { label: '2m', seconds: 120 },

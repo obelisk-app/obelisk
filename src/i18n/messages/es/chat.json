@@ -81,7 +81,30 @@
     "firstMessagePlaceholder": "Primer mensaje…",
     "reset": "Volver a los valores por defecto",
     "emptyDesktop": "Todavía no hay publicaciones.",
-    "startFirst": "Empezá la primera publicación →"
+    "startFirst": "Empezá la primera publicación →",
+    "pressEnter": "Apretá Enter para crearla…",
+    "searchOrCreate": "Buscar o crear una publicación…",
+    "signInToStart": "Iniciá sesión para empezar una publicación",
+    "creating": "Creando…",
+    "create": "Crear publicación",
+    "tagsCount": "Etiquetas ({count}/{max})",
+    "tagColor": "Color de la etiqueta: {color}",
+    "tagColorAuto": "automático",
+    "auto": "Automático",
+    "autoInUse": "Automático · en uso",
+    "openLoading": "Abrir {name} (todavía cargando)",
+    "openLoadingUntitled": "Abrir publicación (todavía cargando)",
+    "loadingTitle": "(cargando publicación)",
+    "untitled": "(publicación sin título)",
+    "op": "Autor: {name}",
+    "messages": "{count, plural, one {# mensaje} other {# mensajes}}",
+    "last": "último: {name} · {time}",
+    "noMatchQuery": "Ninguna publicación coincide con <q>“{query}”</q>.",
+    "noMatchQueryTags": "Ninguna publicación coincide con <q>“{query}”</q> con el filtro de etiquetas actual.",
+    "noMatchTags": "Ninguna publicación tiene las etiquetas elegidas.",
+    "createFromSearch": "Crear “{query}”",
+    "addTag": "+ Agregar etiqueta",
+    "maxTags": "Llegaste al máximo de {count} etiquetas."
   },
   "composer": {
     "dropFiles": "Soltá archivos para adjuntar",
@@ -102,7 +125,10 @@
     "bold": "Negrita",
     "italic": "Cursiva",
     "preview": "Vista previa",
-    "link": "Enlace"
+    "link": "Enlace",
+    "joinFailed": "No se pudo entrar a este canal",
+    "uploadFailed": "No se pudo subir",
+    "contactPrompt": "Ingresá un npub de Nostr o una clave pública en hex"
   },
   "emoji": {
     "picker": "Selector de emojis",
@@ -113,10 +139,28 @@
     "subtitle": "Emojis del servidor, GIFs y unicode",
     "noMatches": "Sin resultados",
     "recent": "Recientes",
-    "noRecent": "Todavía no usaste emojis"
+    "noRecent": "Todavía no usaste emojis",
+    "serverEmojis": "Emojis del servidor",
+    "myEmojis": "Mis emojis",
+    "alreadyReacted": "Ya reaccionaste",
+    "section": {
+      "smileys": "Caritas y personas",
+      "nature": "Animales y naturaleza",
+      "food": "Comida y bebida",
+      "sports": "Deportes",
+      "cars": "Autos y viajes",
+      "ideas": "Ideas y objetos",
+      "symbols": "Símbolos",
+      "flags": "Banderas"
+    }
   },
   "invoice": {
-    "expired": "Expirada"
+    "expired": "Expirada",
+    "invalid": "⚠️ Invoice inválida",
+    "paid": "✅ Pagada",
+    "paidBy": "✅ Pagada · {name}",
+    "pay": "Pagar",
+    "paying": "Pagando…"
   },
   "mentions": {
     "navigation": "Navegación de menciones",
@@ -130,12 +174,54 @@
   "voiceNote": {
     "progress": "Progreso del mensaje de voz",
     "sender": "Quien envió el mensaje de voz",
-    "speed": "Cambiar la velocidad de reproducción"
+    "speed": "Cambiar la velocidad de reproducción",
+    "play": "Reproducir mensaje de voz",
+    "pause": "Pausar mensaje de voz",
+    "speedValue": "Velocidad de reproducción {rate}x"
   },
   "mediaPicker": {
     "title": "Selector de medios",
     "categories": "Categorías de medios",
-    "favorites": "Favoritos y packs"
+    "favorites": "Favoritos y packs",
+    "searchGifs": "Buscar GIFs",
+    "searchStickers": "Buscar stickers",
+    "recentGifs": "GIFs recientes",
+    "recentStickers": "Stickers recientes",
+    "myGifs": "Mis GIFs",
+    "myStickers": "Mis stickers",
+    "defaultGifs": "GIFs predeterminados",
+    "defaultStickers": "Stickers predeterminados",
+    "serverGifs": "GIFs del servidor",
+    "serverStickers": "Stickers del servidor",
+    "noRecentGifs": "Todavía no usaste GIFs",
+    "noRecentStickers": "Todavía no usaste stickers",
+    "poweredByGiphy": "Con la tecnología de GIPHY",
+    "stickersByTwemoji": "Stickers de Twemoji",
+    "create": "Crear",
+    "creating": "Creando…",
+    "createKind": {
+      "emoji": "Crear emoji",
+      "gif": "Crear GIF",
+      "sticker": "Crear sticker"
+    },
+    "addFavorite": "Agregar :{name}: a favoritos",
+    "removeFavorite": "Quitar :{name}: de favoritos",
+    "tab": {
+      "emoji": "Emojis",
+      "gif": "GIF",
+      "sticker": "Stickers"
+    },
+    "category": {
+      "recent": "Recientes",
+      "trending": "Tendencias",
+      "reactions": "Reacciones",
+      "funny": "Humor",
+      "love": "Amor",
+      "celebration": "Festejos",
+      "animals": "Animales",
+      "sports": "Deportes",
+      "memes": "Memes"
+    }
   },
   "zap": {
     "commentPlaceholder": "¡Buen post!",
@@ -149,7 +235,9 @@
     "sent": "⚡ Enviaste {amount} sats a {name}",
     "send": "Zap de {amount} sats",
     "markerFailed": "El pago salió bien, pero no se publicó la marca de zap del grupo: {error}",
-    "sendAmount": "⚡ Enviar {amount} sats"
+    "sendAmount": "⚡ Enviar {amount} sats",
+    "title": "Zap a {name}",
+    "noBridge": "la app no estaba conectada al relay"
   },
   "profilePopover": {
     "zap": "Zap",
@@ -168,6 +256,51 @@
   },
   "slash": {
     "recent": "Usados recientemente",
-    "noMatch": "Ningún comando coincide."
+    "noMatch": "Ningún comando coincide.",
+    "optionalCount": "+{count} opcionales",
+    "optional": "opc.",
+    "zap": "Mandale sats a alguien de este canal",
+    "zapUser": "A quién hacerle el zap (mención, npub o nombre)",
+    "zapAmount": "Monto en sats",
+    "play": "Jugá en este canal: {games}"
+  },
+  "channelLink": {
+    "publication": "Publicación en #{channel}",
+    "message": "Mensaje en #{channel}",
+    "channel": "Canal #{channel}",
+    "noAccess": "Sin acceso a #{channel}"
+  },
+  "members": {
+    "online": "En línea",
+    "offline": "Desconectado",
+    "admin": "Admin",
+    "member": "Miembro",
+    "offlineGroup": "Desconectados"
+  },
+  "roleBadge": "Rol: {name}",
+  "spoilerReveal": "Spoiler: hacé clic para verlo",
+  "wot": {
+    "unresolved": "Fuera de tu WoT o sin resolver",
+    "hops": "A {count, plural, one {# salto} other {# saltos}} de vos"
+  },
+  "youtubeTitle": "Video de YouTube",
+  "zapCommand": {
+    "invalid": "Comando /zap inválido.",
+    "ambiguous": "Hay más de un miembro que se llama “{name}”. Hacé el zap por npub.",
+    "unknownUser": "Usuario desconocido: {name}",
+    "noTarget": "No hay ningún mensaje para el zap. Respondé a uno o pasá un npub.",
+    "self": "No podés hacerte un zap a vos mismo."
+  },
+  "relayForm": {
+    "invalidUrl": "URL inválida"
+  },
+  "channelSettings": {
+    "sfuUrlRequired": "Falta la URL del SFU",
+    "notNpub": "No es un npub",
+    "badMember": "Ingresá un npub o una clave pública hex de 64 caracteres"
+  },
+  "sticker": {
+    "open": "Ver detalles de :{name}:",
+    "alt": "Sticker :{name}:"
   }
 }

@@ -79,6 +79,8 @@ export default function MessageMediaPicker({
     onMediaLoad: picker.classifyEntry,
     onMediaError: picker.markBroken,
   };
+  // Section ids for tests; the titles change with the language.
+  const plural = tab === 'gif' ? 'gifs' : 'stickers';
 
   return (
     <div className={shellClass} data-testid="media-picker-shell">
@@ -88,34 +90,36 @@ export default function MessageMediaPicker({
         <MediaPickerSearch
           value={picker.query}
           onChange={picker.setQuery}
-          placeholder={tab === "gif" ? "Search GIFs" : "Search stickers"}
+          placeholder={t(tab === 'gif' ? 'chat.mediaPicker.searchGifs' : 'chat.mediaPicker.searchStickers')}
         />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto pr-1" data-testid="media-grid">
         {category === 'Recent' ? (
-          <MediaSection title={tab === 'gif' ? 'Recent GIFs' : 'Recent stickers'} entries={sections.recentVisible} {...tileHandlers} />
+          <MediaSection id={`recent_${plural}`} title={t(tab === 'gif' ? 'chat.mediaPicker.recentGifs' : 'chat.mediaPicker.recentStickers')} entries={sections.recentVisible} {...tileHandlers} />
         ) : (
           <>
             {(tab === "sticker" || tab === "gif" || sections.personalVisible.length > 0) && (
-              <MediaSection title={tab === 'gif' ? 'My GIFs' : 'My stickers'} entries={sections.personalVisible} {...tileHandlers}>
+              <MediaSection id={`my_${plural}`} title={t(tab === 'gif' ? 'chat.mediaPicker.myGifs' : 'chat.mediaPicker.myStickers')} entries={sections.personalVisible} {...tileHandlers}>
                 <CreateMediaControl kind={tab} uploading={picker.uploading} onFile={picker.createMedia} />
               </MediaSection>
             )}
-            <MediaSection title={tab === 'gif' ? 'Default GIFs' : 'Default stickers'} entries={sections.defaultVisible} {...tileHandlers} />
+            <MediaSection id={`default_${plural}`} title={t(tab === 'gif' ? 'chat.mediaPicker.defaultGifs' : 'chat.mediaPicker.defaultStickers')} entries={sections.defaultVisible} {...tileHandlers} />
             {sections.serverVisible.length > 0 && (
-              <MediaSection title={tab === 'gif' ? 'Server GIFs' : 'Server stickers'} entries={sections.serverVisible} {...tileHandlers} />
+              <MediaSection id={`server_${plural}`} title={t(tab === 'gif' ? 'chat.mediaPicker.serverGifs' : 'chat.mediaPicker.serverStickers')} entries={sections.serverVisible} {...tileHandlers} />
             )}
           </>
         )}
         {category === 'Recent' && sections.recentVisible.length === 0 && (
-          <EmptyState padding="none" className="py-12">No recent {tab === 'gif' ? 'GIFs' : 'stickers'}</EmptyState>
+          <EmptyState padding="none" className="py-12">
+            {t(tab === 'gif' ? 'chat.mediaPicker.noRecentGifs' : 'chat.mediaPicker.noRecentStickers')}
+          </EmptyState>
         )}
       </div>
       <div className="flex items-center justify-between gap-2 pb-1">
         <TextButton onClick={() => setLibraryOpen("mine")} className="text-xs font-medium" data-testid="manage-media-packs">
           {t('chat.mediaPicker.favorites')}
         </TextButton>
-        <span className="text-right text-[10px] text-lc-muted">{tab === 'gif' ? 'Powered by GIPHY' : 'Stickers by Twemoji'}</span>
+        <span className="text-right text-[10px] text-lc-muted">{t(tab === 'gif' ? 'chat.mediaPicker.poweredByGiphy' : 'chat.mediaPicker.stickersByTwemoji')}</span>
       </div>
       <PickerTabs tab={tab} onTab={setTab} />
       {libraryOpen && <MediaLibraryModal onClose={() => setLibraryOpen(null)} initialTab={libraryOpen} initialKind={tab} />}

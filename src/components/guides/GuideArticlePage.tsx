@@ -18,8 +18,8 @@ import {
   HERO_ASSET_META,
   DIAGRAM_ASSET_META,
   snapshotPaths,
-  type GuideAssetMeta,
 } from '@/utils/guides/asset-meta';
+import type { MessageKey } from '@/i18n/keys';
 import { SHOT_META, shotPath } from '@/components/guides/Shot';
 import Navbar from '@/components/marketing/Navbar';
 import Footer from '@/components/marketing/Footer';
@@ -34,20 +34,21 @@ function collectGuideImages(
   heroName: string | undefined,
   content: string,
   siteUrl: string,
-): Array<{ url: string; meta: GuideAssetMeta }> {
+  locale: Locale,
+): Array<{ url: string; width: number; height: number; altKey: MessageKey }> {
   const names = new Set<string>();
   if (heroName) names.add(heroName);
   for (const m of content.matchAll(ASSET_REF_RE)) names.add(m[1]);
-  const out: Array<{ url: string; meta: GuideAssetMeta }> = [];
+  const out: Array<{ url: string; width: number; height: number; altKey: MessageKey }> = [];
   for (const n of names) {
     const meta = HERO_ASSET_META[n] ?? DIAGRAM_ASSET_META[n];
     if (!meta) continue;
-    out.push({ url: `${siteUrl}${snapshotPaths(n).png}`, meta });
+    out.push({ url: `${siteUrl}${snapshotPaths(n, locale).png}`, ...meta });
   }
   for (const m of content.matchAll(SHOT_REF_RE)) {
     const meta = SHOT_META[m[1]];
     if (!meta) continue;
-    out.push({ url: `${siteUrl}${shotPath(m[1])}`, meta });
+    out.push({ url: `${siteUrl}${shotPath(m[1])}`, ...meta });
   }
   return out;
 }
@@ -68,14 +69,15 @@ export async function buildGuideArticleMetadata(
   if (!guide) return {};
 
   const fm = guide.frontmatter as GuideFrontmatter;
+  const t = await getTranslations({ locale });
   const canonical = absoluteUrl(locale, guidePath(slug));
   const heroMeta = HERO_ASSET_META[fm.heroComponent];
   const heroUrl = heroMeta
-    ? `${SITE_URL}${snapshotPaths(fm.heroComponent).png}`
+    ? `${SITE_URL}${snapshotPaths(fm.heroComponent, locale).png}`
     : `${canonical}/opengraph-image`;
   const heroWidth = heroMeta ? heroMeta.width * 2 : 1200;
   const heroHeight = heroMeta ? heroMeta.height * 2 : 630;
-  const heroAlt = heroMeta?.alt ?? fm.title;
+  const heroAlt = heroMeta ? t(heroMeta.altKey) : fm.title;
 
   return {
     title: fm.title,
@@ -125,14 +127,14 @@ export default async function GuideArticlePage({
   const readMinutes = fm.readMinutes ?? estimateReadMinutes(guide.content);
   const canonical = absoluteUrl(locale, guidePath(slug));
 
-  const guideImages = collectGuideImages(fm.heroComponent, guide.content, SITE_URL);
+  const guideImages = collectGuideImages(fm.heroComponent, guide.content, SITE_URL, locale);
   const heroMeta = HERO_ASSET_META[fm.heroComponent];
   const heroUrl = heroMeta
-    ? `${SITE_URL}${snapshotPaths(fm.heroComponent).png}`
+    ? `${SITE_URL}${snapshotPaths(fm.heroComponent, locale).png}`
     : `${canonical}/opengraph-image`;
   const heroWidth = heroMeta ? heroMeta.width * 2 : 1200;
   const heroHeight = heroMeta ? heroMeta.height * 2 : 630;
-  const heroAlt = heroMeta?.alt ?? fm.title;
+  const heroAlt = heroMeta ? t(heroMeta.altKey) : fm.title;
 
   const articleLd = {
     '@context': 'https://schema.org',
@@ -155,9 +157,9 @@ export default async function GuideArticlePage({
         .map((img) => ({
           '@type': 'ImageObject',
           url: img.url,
-          width: img.meta.width * 2,
-          height: img.meta.height * 2,
-          caption: img.meta.alt,
+          width: img.width * 2,
+          height: img.height * 2,
+          caption: t(img.altKey),
         })),
     ],
     author: {

@@ -1,22 +1,25 @@
+import { useTranslations } from 'next-intl';
+
 export default function SwapAnythingHero() {
+  const t = useTranslations();
   const projects = [
     {
       x: 90,
       title: 'obelisk-dex',
-      sub: 'Web chat client',
-      meta: 'browser · NIP-07',
+      sub: t('guides.art.swapAnything.dexRole'),
+      meta: t('guides.art.swapAnything.dexMeta'),
     },
     {
       x: 310,
       title: 'obelisk-sfu',
-      sub: 'Voice mixing server',
-      meta: 'WebRTC · large calls',
+      sub: t('guides.art.swapAnything.sfuRole'),
+      meta: t('guides.art.swapAnything.sfuMeta'),
     },
     {
       x: 530,
       title: 'obelisk-bots',
-      sub: 'Bot runtime',
-      meta: 'mod · games · ops',
+      sub: t('guides.art.swapAnything.botsRole'),
+      meta: t('guides.art.swapAnything.botsMeta'),
     },
   ];
 
@@ -28,11 +31,8 @@ export default function SwapAnythingHero() {
       aria-labelledby="hero-swap-title hero-swap-desc"
       className="w-full h-auto"
     >
-      <title id="hero-swap-title">Swap anything, trust nothing</title>
-      <desc id="hero-swap-desc">
-        The Obelisk ecosystem: one self-hostable relay at the top connected to a chat
-        client, a voice SFU, and a bot runtime, every piece independently replaceable.
-      </desc>
+      <title id="hero-swap-title">{t('guides.art.swapAnything.title')}</title>
+      <desc id="hero-swap-desc">{t('guides.art.swapAnything.desc')}</desc>
 
       <defs>
         <linearGradient id="sky-swap" x1="0" y1="0" x2="0" y2="1">
@@ -112,8 +112,8 @@ export default function SwapAnythingHero() {
           fontWeight="600"
           fill="#fafafa"
           opacity="0.85"
-        > {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          Self-hostable Nostr relay · whitelist · admin UI
+        >
+          {t('guides.art.swapAnything.relayRole')}
         </text>
 
         {/* dot ports along bottom of pill */}
@@ -250,8 +250,8 @@ export default function SwapAnythingHero() {
         fontWeight="600"
         fill="#a3a3a3"
         fontFamily="monospace"
-      > {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        four projects · one protocol · no central server
+      >
+        {t('guides.art.swapAnything.footer')}
       </text>
     </svg>
   );

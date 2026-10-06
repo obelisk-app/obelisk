@@ -12,9 +12,17 @@ export interface ParsedMessage {
   pubkey: string;
 }
 
+/**
+ * Why a `/zap` was refused, as a code the composer words for the reader:
+ * `invalid` (not a /zap at all), `ambiguous` (a name that fits more than one
+ * member, carried in `token`), `unknown-user` (nothing in `token` resolves),
+ * `no-target` (nobody to zap), `self`.
+ */
+export type ZapCommandError = 'invalid' | 'ambiguous' | 'unknown-user' | 'no-target' | 'self';
+
 export type ParseResult =
   | { ok: true; target: ZapTarget }
-  | { ok: false; error: string };
+  | { ok: false; error: ZapCommandError; token?: string };
 
 /**
  * Accepted forms (all frontend-only):
@@ -32,7 +40,7 @@ export function parseZapCommand(
   replyingTo: ParsedMessage | null,
 ): ParseResult {
   const m = /^\/zap(?:\s+(.+))?$/i.exec(content.trim());
-  if (!m) return { ok: false, error: 'Invalid /zap command.' };
+  if (!m) return { ok: false, error: 'invalid' };
   const args = (m[1] ?? '').trim().split(/\s+/).filter(Boolean);
 
   let amount: number | undefined;
@@ -51,20 +59,20 @@ export function parseZapCommand(
   if (userToken) {
     const resolved = resolveRecipient(userToken, memberList, metadata);
     if (resolved === 'ambiguous') {
-      return { ok: false, error: `More than one member here is called "${userToken}". Zap by npub instead.` };
+      return { ok: false, error: 'ambiguous', token: userToken };
     }
-    if (!resolved) return { ok: false, error: `Unknown user: ${userToken}` };
+    if (!resolved) return { ok: false, error: 'unknown-user', token: userToken };
     recipientPubkey = resolved;
   } else if (replyingTo) {
     recipientPubkey = replyingTo.pubkey;
   } else {
     const last = [...messages].reverse().find((x) => x.pubkey !== myPubkey);
     recipientPubkey = last?.pubkey ?? null;
-    if (!recipientPubkey) return { ok: false, error: 'No message to zap. Reply to one or pass an npub.' };
+    if (!recipientPubkey) return { ok: false, error: 'no-target' };
   }
 
   if (recipientPubkey === myPubkey) {
-    return { ok: false, error: 'Cannot zap yourself.' };
+    return { ok: false, error: 'self' };
   }
 
   // Find the message id to tag (`e`): explicit reply, else recipient's most

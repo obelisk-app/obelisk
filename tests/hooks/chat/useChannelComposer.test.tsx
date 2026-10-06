@@ -1,4 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRef } from 'react';
 import type { JsGroup, JsMessage, JsUserMetadata, RelayAccessState } from '@/services/nostr-bridge';
@@ -60,6 +62,9 @@ const MSG: JsMessage = {
   id: 'm1', pubkey: ALICE, content: 'hi', createdAt: 1_700_000_000, kind: 9, replyToId: null, mentions: [],
 } as JsMessage;
 
+/** The hook words its errors through next-intl, so it needs a provider. */
+const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
+
 function mount(overrides: Partial<Parameters<typeof useChannelComposer>[0]> = {}) {
   const inputRef = createRef<HTMLInputElement>();
   const setReplyingTo = vi.fn();
@@ -73,7 +78,7 @@ function mount(overrides: Partial<Parameters<typeof useChannelComposer>[0]> = {}
     inputRef,
     onOpenNewGame,
     ...overrides,
-  }));
+  }), { wrapper });
   return { ...hook, setReplyingTo, onOpenNewGame };
 }
 
@@ -192,7 +197,7 @@ describe('useChannelComposer: channel change', () => {
         groupId, group: GROUP, messages: [MSG], replyingTo: null,
         setReplyingTo: vi.fn(), inputRef, onOpenNewGame: vi.fn(),
       }),
-      { initialProps: { groupId: 'g' } },
+      { initialProps: { groupId: 'g' }, wrapper },
     );
     await act(async () => { await Promise.resolve(); });
     uploadToBlossom.mockRejectedValueOnce(new Error('offline'));

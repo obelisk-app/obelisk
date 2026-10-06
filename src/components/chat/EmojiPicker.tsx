@@ -130,12 +130,14 @@ export default function EmojiPicker({
       onPickCustom={picker.handlePickCustom}
     />
   );
+  const alreadyReacted = t('chat.emoji.alreadyReacted');
   const charButton = (e: { char: string; keywords: string[] }) => (
     <EmojiCharButton
       key={e.char}
       char={e.char}
       keyword={e.keywords[0]}
       disabled={disabled.has(e.char)}
+      disabledTitle={alreadyReacted}
       className={classes.emojiBtnClass}
       onPick={picker.handlePick}
     />
@@ -159,9 +161,9 @@ export default function EmojiPicker({
       <div ref={scrollRef} className={classes.scrollClass}>
         {filtered ? (
           <>
-            {section('Server GIFs', picker.filteredCustomGifEntries)}
-            {section('Server stickers', picker.filteredCustomStickerEntries)}
-            {section('Server emojis', picker.filteredCustomEmojiEntries)}
+            {section(t('chat.mediaPicker.serverGifs'), picker.filteredCustomGifEntries)}
+            {section(t('chat.mediaPicker.serverStickers'), picker.filteredCustomStickerEntries)}
+            {section(t('chat.emoji.serverEmojis'), picker.filteredCustomEmojiEntries)}
             <div className={classes.gridClass}>
               {filtered.length === 0 && picker.filteredCustomCount === 0 && (
                 <div className="col-span-8 py-4 text-center text-xs text-lc-muted">{t('chat.emoji.noMatches')}</div>
@@ -171,7 +173,7 @@ export default function EmojiPicker({
           </>
         ) : (
           <>
-            {section("My emojis", [], customEmojiAction)}
+            {section(t('chat.emoji.myEmojis'), [], customEmojiAction)}
             <RecentEmojiSection
               title={t('chat.emoji.recent')}
               emptyLabel={t('chat.emoji.noRecent')}
@@ -181,12 +183,12 @@ export default function EmojiPicker({
               onPick={picker.handlePick}
               onPickCustom={picker.handlePickCustom}
             />
-            {section('Server GIFs', picker.customGifEntries)}
-            {section('Server stickers', picker.customStickerEntries)}
-            {section('Server emojis', picker.customEmojiEntries)}
+            {section(t('chat.mediaPicker.serverGifs'), picker.customGifEntries)}
+            {section(t('chat.mediaPicker.serverStickers'), picker.customStickerEntries)}
+            {section(t('chat.emoji.serverEmojis'), picker.customEmojiEntries)}
             {EMOJI_SECTIONS.map((s) => (
               <div key={s.name} className="mb-2 scroll-mt-1" data-emoji-category={s.name}>
-                <div className={classes.sectionTitleClass}>{s.label}</div>
+                <div className={classes.sectionTitleClass}>{t(s.labelKey)}</div>
                 <div className={classes.gridClass}>
                   {s.categories.flatMap((category) => EMOJI_CATEGORIES[category] ?? []).map(charButton)}
                 </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import Modal from '@/components/ui/Modal';
-import { gameSummary } from '@/lib/games/catalog';
+import { gameDescription, gameSummary } from '@/utils/chat/games/game-copy';
 import { GameTypePreview } from './GamePreviews';
 import { useTranslations } from 'next-intl';
 import ErrorState from '@/components/ui/ErrorState';
@@ -34,7 +34,8 @@ export default function NewGameModal({
   /** Posts the in-channel card. Given the table id once the relay accepts it. */
   onPostMarker: (marker: string) => void;
 }) {
-  const t = useTranslations();  const form = useNewGameForm({ channelId, onClose, onPostMarker });
+  const t = useTranslations();
+  const form = useNewGameForm({ channelId, onClose, onPostMarker });
   const { selected, setSelected, choose, localPlayers, busy, error, create } = form;
 
   return (
@@ -53,7 +54,7 @@ export default function NewGameModal({
               <h2 className="text-sm font-semibold text-lc-white" data-testid="config-title">
                 {selected.icon} {selected.displayName}
               </h2>
-              <p className="text-[11px] text-lc-muted">{selected.description}</p>
+              <p className="text-[11px] text-lc-muted">{gameDescription(t, selected.type)}</p>
             </div>
           </div>
 
@@ -61,9 +62,9 @@ export default function NewGameModal({
           <PlayersAndClock form={form} />
 
           <p className="mt-3 text-[11px] text-lc-muted">
-            {localPlayers > 0
-              ? `${gameSummary(selected)}. Everyone plays here; the card in the channel lets others watch.`
-              : `${gameSummary(selected)}. You are seated as the host; everyone else joins from the chat card.`}
+            {t(localPlayers > 0 ? 'games.newGame.everyoneHere' : 'games.newGame.hostSeated', {
+              summary: gameSummary(t, selected),
+            })}
           </p>
 
           {error && <ErrorState className="mt-3">{error}</ErrorState>}
@@ -84,7 +85,7 @@ export default function NewGameModal({
               disabled={busy}
               data-testid="game-create"
             >
-              {busy ? 'Creating…' : localPlayers > 0 ? 'Start playing' : 'Create table'}
+              {t(busy ? 'games.newGame.creating' : localPlayers > 0 ? 'games.newGame.startPlaying' : 'games.newGame.createTable')}
             </Button>
           </div>
         </>

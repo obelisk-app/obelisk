@@ -2,10 +2,9 @@
 
 /**
  * The press and media kit page: logos, banners, palette, copy and embeds.
- * The data is `kit/content.ts`; each group of sections is its own component
- * under `kit/`. Typography and contact stay here: their specimens and labels
- * are the brand asset itself, which is why this file is in the hardcoded-copy
- * baseline (`src/i18n/hardcoded-baseline.json`).
+ * The data is `src/utils/media-kit/content.ts`; each group of sections is its
+ * own component under `kit/`. Typography and contact stay here; the type
+ * specimens are the brand asset itself and carry `i18n-exempt` markers.
  */
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
@@ -33,18 +32,17 @@ export default function MediaKit() {
             {t('mediaKit.title')}
           </h1>
           <p className="mt-4 max-w-2xl text-base sm:text-lg text-lc-muted">
-            Logos, banners, icons, palette and copy ready to use. Everything
-            you need to write about, embed or share Obelisk.
+            {t('mediaKit.intro')}
           </p>
 
           <nav className="mt-8 flex flex-wrap gap-2 text-sm">
-            {NAV_LINKS.map(([href, label]) => (
+            {NAV_LINKS.map(([href, labelKey]) => (
               <a
                 key={href}
                 href={href}
                 className="lc-pill-secondary px-3 py-1"
               >
-                {label}
+                {t(labelKey)}
               </a>
             ))}
           </nav>
@@ -62,7 +60,7 @@ export default function MediaKit() {
         <Section
           id="typography"
           title={t('mediaKit.typography')}
-          description="System UI / Inter for everything. Weights: 400, 600, 700, 800."
+          description={t('mediaKit.desc.typography')}
         >
           <div className="lc-card p-6 space-y-4">
             <div className="text-5xl font-extrabold tracking-tight"> {/* i18n-exempt: type specimen, the brand asset itself */}
@@ -89,7 +87,7 @@ export default function MediaKit() {
         <Section
           id="contact"
           title={t('mediaKit.contact')}
-          description="Where to find us if you need anything else for a story or integration."
+          description={t('mediaKit.desc.contact')}
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <a
@@ -136,7 +134,7 @@ export default function MediaKit() {
             {t('mediaKit.needAnythingElse')}
           </span>
           <Link href="/" className="lc-pill-secondary px-4 py-1">
-            ← Back to home
+            {t('mediaKit.backHome')}
           </Link>
         </footer>
       </div>

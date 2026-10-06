@@ -106,7 +106,7 @@ describe('RelayRolesAdminModal', () => {
     const publish = vi.spyOn(roles, 'publishRoleHolders').mockResolvedValue(undefined);
     renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: '1 members' }));
+    fireEvent.click(screen.getByRole('button', { name: '1 member' }));
     const panel = screen.getByTestId('role-members-mod');
     fireEvent.click(within(panel).getByRole('button', { name: 'Grant Moderator to Bob Builder' }));
 
@@ -119,7 +119,7 @@ describe('RelayRolesAdminModal', () => {
 
   it('labels a role holder by short npub, never by hex', () => {
     renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: '1 members' }));
+    fireEvent.click(screen.getByRole('button', { name: '1 member' }));
     const panel = screen.getByTestId('role-members-mod');
     const npub = nip19.npubEncode(ALICE);
     expect(within(panel).getByText(`${npub.slice(0, 10)}…${npub.slice(-4)}`)).toBeInTheDocument();
@@ -130,7 +130,7 @@ describe('RelayRolesAdminModal', () => {
   it('searches relay members by name and NIP-05', () => {
     renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: '1 members' }));
+    fireEvent.click(screen.getByRole('button', { name: '1 member' }));
     const panel = screen.getByTestId('role-members-mod');
     // Everyone on the relay is offered until the search narrows it.
     expect(within(panel).getByText('Bob Builder')).toBeInTheDocument();
@@ -161,7 +161,7 @@ describe('RelayRolesAdminModal', () => {
     const stranger = 'd'.repeat(64);
     renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: '1 members' }));
+    fireEvent.click(screen.getByRole('button', { name: '1 member' }));
     const panel = screen.getByTestId('role-members-mod');
     fireEvent.change(within(panel).getByLabelText('Grant Moderator to'), { target: { value: nip19.npubEncode(stranger) } });
     fireEvent.click(within(panel).getByRole('button', { name: /not a member of this relay yet/ }));
@@ -231,8 +231,17 @@ describe('RelayRolesAdminModal', () => {
     expect(screen.getByLabelText('mod color')).toHaveAttribute('type', 'color');
     const close = screen.getAllByRole('button', { name: 'Close' })[0];
     expect(close.querySelector('svg')).not.toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '1 members' }));
+    fireEvent.click(screen.getByRole('button', { name: '1 member' }));
     const carol = within(screen.getByTestId('role-candidates-mod')).getByRole('button', { name: /Carol Danvers/ });
     expect(carol).toHaveTextContent(/^CD/);
+  });
+
+  it('counts roles and members with plurals in the reader\'s language', () => {
+    render(<LocaleProvider initialLocale="pt"><RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} /></LocaleProvider>);
+
+    expect(screen.getByText('2 cargos · só o operador do relay')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1 membro' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'nenhum membro' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Salvar cargos' })).toBeDisabled();
   });
 });

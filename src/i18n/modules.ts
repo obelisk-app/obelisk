@@ -41,7 +41,7 @@ export const SCOPES = {
   /** `/app`, `/voice`, `/r/<code>`: everything but the public-page modules. */
   app: [
     'common', 'shell', 'mobile', 'chat', 'dm', 'calls', 'social', 'settings', 'media', 'games',
-    'voice', 'admin', 'errors',
+    'voice', 'admin', 'errors', 'guides',
   ],
 } as const satisfies Record<string, readonly Module[]>;
 

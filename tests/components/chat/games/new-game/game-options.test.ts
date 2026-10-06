@@ -36,5 +36,5 @@ describe('localPlayerChoices', () => {
 });
 
 it('starts the clock list with no clock', () => {
-  expect(TIMEOUTS[0]).toEqual({ label: 'No clock', seconds: 0 });
+  expect(TIMEOUTS[0]).toEqual({ label: null, seconds: 0 });
 });

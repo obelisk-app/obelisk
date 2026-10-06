@@ -1,4 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const addRelay = vi.fn();
@@ -20,9 +22,12 @@ afterEach(() => {
   switchRelay.mockReset();
 });
 
+/** The hook words its errors through next-intl, so it needs a provider. */
+const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
+
 describe('useAddRelayForm', () => {
   it('starts with the wss:// prefix and no error', () => {
-    const { result } = renderHook(() => useAddRelayForm(() => {}));
+    const { result } = renderHook(() => useAddRelayForm(() => {}), { wrapper });
     expect(result.current.url).toBe('wss://');
     expect(result.current.error).toBeNull();
   });
@@ -31,7 +36,7 @@ describe('useAddRelayForm', () => {
     addRelay.mockResolvedValueOnce(undefined);
     switchRelay.mockResolvedValueOnce(undefined);
     const onAdded = vi.fn();
-    const { result } = renderHook(() => useAddRelayForm(onAdded));
+    const { result } = renderHook(() => useAddRelayForm(onAdded), { wrapper });
     act(() => result.current.setUrl('relay.example'));
     await act(() => result.current.submit());
     expect(addRelay).toHaveBeenCalledWith('wss://relay.example');
@@ -41,7 +46,7 @@ describe('useAddRelayForm', () => {
   });
 
   it('rejects an unparseable address before touching the bridge', async () => {
-    const { result } = renderHook(() => useAddRelayForm(() => {}));
+    const { result } = renderHook(() => useAddRelayForm(() => {}), { wrapper });
     act(() => result.current.setUrl('wss://'));
     await act(() => result.current.submit());
     expect(result.current.error).toBe('Invalid URL');
@@ -51,7 +56,7 @@ describe('useAddRelayForm', () => {
   it('surfaces the bridge error and does not switch when add fails', async () => {
     addRelay.mockRejectedValueOnce(new Error('relay down'));
     const onAdded = vi.fn();
-    const { result } = renderHook(() => useAddRelayForm(onAdded));
+    const { result } = renderHook(() => useAddRelayForm(onAdded), { wrapper });
     act(() => result.current.setUrl('wss://relay.example'));
     await act(() => result.current.submit());
     expect(result.current.error).toBe('relay down');
@@ -65,7 +70,7 @@ describe('useSuggestedRelayAdd', () => {
   it('adds without switching', async () => {
     addRelay.mockResolvedValueOnce(undefined);
     const onAdded = vi.fn();
-    const { result } = renderHook(() => useSuggestedRelayAdd('wss://s.example', false, onAdded));
+    const { result } = renderHook(() => useSuggestedRelayAdd('wss://s.example', false, onAdded), { wrapper });
     await act(() => result.current.add());
     expect(addRelay).toHaveBeenCalledWith('wss://s.example');
     expect(switchRelay).not.toHaveBeenCalled();
@@ -73,7 +78,7 @@ describe('useSuggestedRelayAdd', () => {
   });
 
   it('is a no-op when the relay is already configured', async () => {
-    const { result } = renderHook(() => useSuggestedRelayAdd('wss://s.example', true, () => {}));
+    const { result } = renderHook(() => useSuggestedRelayAdd('wss://s.example', true, () => {}), { wrapper });
     await act(() => result.current.add());
     expect(addRelay).not.toHaveBeenCalled();
   });

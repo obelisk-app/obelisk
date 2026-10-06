@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { registerTranslator } from '@/i18n/runtime';
+import { translator } from '@tests/support/intl';
 import { classifyGroupPing, groupPingTitle, previewText, replyTargetId } from '@/services/notifications/classify';
 
 const ME = 'a'.repeat(64);
@@ -46,9 +48,20 @@ describe('classifyGroupPing', () => {
 });
 
 describe('alert text', () => {
+  beforeAll(() => registerTranslator(translator('en')));
+  afterAll(() => registerTranslator(null));
+
   it('builds titles', () => {
     expect(groupPingTitle('reply', 'Ana', '#general')).toBe('Ana replied to you in #general');
     expect(groupPingTitle('mention', 'Ana', null)).toBe('Ana mentioned you');
+  });
+
+  it('builds titles in the reader\'s language', () => {
+    registerTranslator(translator('es'));
+    expect(groupPingTitle('reply', 'Ana', '#general')).toBe('Ana te respondió en #general');
+    registerTranslator(translator('pt'));
+    expect(groupPingTitle('mention', 'Ana', null)).toBe('Ana mencionou você');
+    registerTranslator(translator('en'));
   });
 
   it('collapses nostr URIs and whitespace, and truncates', () => {

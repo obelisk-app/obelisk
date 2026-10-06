@@ -30,11 +30,44 @@
       "member": "Miembro"
     },
     "confirmDelete": "¿Eliminar “{name}”?",
-    "confirmDeleteBody": "Todos los que lo tienen pierden la insignia."
+    "confirmDeleteBody": "Todos los que lo tienen pierden la insignia.",
+    "help": "Ordenados del más alto al más bajo. Un miembro puede tener varios roles: el más alto que tenga es la insignia que se ve en el chat y en la lista de miembros, hasta que se lo revoques.",
+    "save": "Guardar roles",
+    "saving": "Guardando…",
+    "footer": "{count, plural, one {# rol} other {# roles}} · solo el operador del relay",
+    "nameLabel": "Nombre de {role}",
+    "colorLabel": "Color de {role}",
+    "emojiLabel": "Emoji de {role}",
+    "clearEmoji": "Quitar el emoji de {role}",
+    "moveUp": "Subir {name}",
+    "moveDown": "Bajar {name}",
+    "delete": "Eliminar {name}",
+    "members": "{count, plural, one {# miembro} other {# miembros}}",
+    "saveFirst": "Guardá los roles antes de asignar miembros.",
+    "grantTo": "Otorgar {role} a",
+    "grantToPerson": "Otorgar {role} a {name}",
+    "grantToStranger": "Otorgar a {npub}, que todavía no es miembro de este relay",
+    "revokeFrom": "Revocar {role} a {npub}",
+    "noMatch": "Sin resultados: buscá por nombre o pegá una npub o una pubkey hex.",
+    "loadingMembers": "Cargando los miembros del relay…",
+    "noMembersMatch": "Ningún miembro coincide con esa búsqueda.",
+    "holders": "Tienen este rol: {count}",
+    "adminBadge": "admin",
+    "unreachable": "No se pudo conectar con el relay.",
+    "nameInvalid": "Ponele al rol un nombre con al menos una letra o un número.",
+    "exists": "“{name}” ya existe.",
+    "tooMany": "Un relay puede definir hasta {max} roles.",
+    "saved": "Roles guardados.",
+    "granted": "Se otorgó “{name}”.",
+    "revoked": "Se revocó “{name}”."
   },
   "bulk": {
     "confirmRemove": "¿Quitar {count} entradas?",
     "confirmDemote": "¿Degradar {count} entradas?",
     "more": "y {count} más"
-  }
+  },
+  "subtitle": "Limpieza masiva en todos los canales de este relay. Expulsar saca al usuario (kind 9001); quitar admin solo le saca el rol de admin (kind 9003).",
+  "emptyRelay": "Todavía no hay admins ni miembros en este relay.",
+  "emptyFiltered": "Ninguna entrada coincide con los filtros actuales.",
+  "counts": "{selected} seleccionadas · {shown} visibles · {total} en total"
 }

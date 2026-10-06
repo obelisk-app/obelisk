@@ -5,56 +5,33 @@ import Footer from '@/components/marketing/Footer';
 import Navbar from '@/components/marketing/Navbar';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { HELP_TOPICS } from '@/utils/guides/help-topics';
-import { useLocale } from 'next-intl';
-import type { Locale } from '@/i18n';
-
-const COPY = {
-  en: {
-    title: 'How can we help?',
-    subtitle: 'Start with the basics or jump straight to the topic you need.',
-    back: '← Back to Obelisk',
-    all: 'Browse all guides →',
-  },
-  es: {
-    title: '¿Cómo podemos ayudarte?',
-    subtitle: 'Empezá por lo básico o andá directo al tema que necesitás.',
-    back: '← Volver a Obelisk',
-    all: 'Ver todas las guías →',
-  },
-  pt: {
-    title: 'Como podemos ajudar?',
-    subtitle: 'Comece pelo básico ou vá direto ao assunto que você precisa.',
-    back: '← Voltar ao Obelisk',
-    all: 'Ver todos os guias →',
-  },
-} as const satisfies Record<Locale, Record<string, string>>;
+import { useTranslations } from 'next-intl';
 
 export default function HelpPage() {
-  const locale = useLocale();
-  const copy = COPY[locale];
+  const t = useTranslations();
 
   return (
     <div className="min-h-screen bg-lc-black lc-grid-bg">
       <Navbar />
       <main className="mx-auto max-w-5xl px-6 pb-24 pt-28">
         <Link href="/app" className="text-sm font-medium text-lc-green hover:text-lc-green-dark">
-          {copy.back}
+          {t('guides.help.back')}
         </Link>
         <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-lc-white md:text-5xl">
-          {copy.title}
+          {t('guides.help.title')}
         </h1>
-        <p className="mt-3 max-w-2xl text-lg text-lc-muted">{copy.subtitle}</p>
+        <p className="mt-3 max-w-2xl text-lg text-lc-muted">{t('guides.help.subtitle')}</p>
 
         <div className="mt-10 grid gap-4 md:grid-cols-2">
-          {HELP_TOPICS[locale].map((topic) => (
+          {HELP_TOPICS.map((topic) => (
             <Link
               key={topic.slug}
               href={guidePath(topic.slug)}
               data-testid={`help-topic-${topic.slug}`}
               className="lc-card group p-6 transition-colors hover:border-lc-green/50"
             >
-              <h2 className="text-lg font-bold text-lc-white group-hover:text-lc-green">{topic.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-lc-muted">{topic.description}</p>
+              <h2 className="text-lg font-bold text-lc-white group-hover:text-lc-green">{t(topic.titleKey)}</h2>
+              <p className="mt-2 text-sm leading-6 text-lc-muted">{t(topic.descriptionKey)}</p>
             </Link>
           ))}
         </div>
@@ -63,7 +40,7 @@ export default function HelpPage() {
           href={guidePath()}
           className="lc-pill-primary mt-8 inline-flex px-6 py-3 text-sm font-semibold"
         >
-          {copy.all}
+          {t('guides.help.all')}
         </Link>
       </main>
       <Footer />

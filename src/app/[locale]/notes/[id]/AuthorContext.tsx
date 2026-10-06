@@ -63,7 +63,7 @@ export default async function AuthorContext({
   return (
     <div className="min-w-0 space-y-8" data-testid="author-context">
       {notes.length > 0 && (
-        <Section title={`More from ${name}`} testId="author-more-notes">
+        <Section title={t('social.viewer.moreFrom', { name })} testId="author-more-notes">
           <ul className="space-y-2">
             {notes.map((note) => {
               // Markdown and bech32 read as noise at two lines; this is the
@@ -76,7 +76,7 @@ export default async function AuthorContext({
                     className="block min-w-0 rounded-xl border border-lc-border bg-lc-dark p-3 transition-colors hover:border-lc-green/40"
                   >
                     <p className="line-clamp-2 break-words text-sm text-lc-white">
-                      {text || 'Shared media'}
+                      {text || t('social.viewer.sharedMedia')}
                     </p>
                     <time
                       className="mt-1 block text-[10px] text-lc-muted"

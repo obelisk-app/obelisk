@@ -49,7 +49,7 @@ export function useRelayRolesDraft(relayUrl: string, roles: RelayRoles) {
       await action();
       setMessage(label);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Could not reach the relay.');
+      setMessage(error instanceof Error && error.message ? error.message : t('admin.roles.unreachable'));
     } finally {
       setBusy(false);
     }
@@ -58,9 +58,9 @@ export function useRelayRolesDraft(relayUrl: string, roles: RelayRoles) {
   const addRole = () => {
     const name = newName.trim().slice(0, 32);
     const id = normalizeRoleId(name);
-    if (!id) return setMessage('Give the role a name with at least one letter or number.');
-    if (draft.some((role) => role.id === id)) return setMessage(`“${name}” already exists.`);
-    if (draft.length >= MAX_ROLES) return setMessage(`A relay can define up to ${MAX_ROLES} roles.`);
+    if (!id) return setMessage(t('admin.roles.nameInvalid'));
+    if (draft.some((role) => role.id === id)) return setMessage(t('admin.roles.exists', { name }));
+    if (draft.length >= MAX_ROLES) return setMessage(t('admin.roles.tooMany', { max: MAX_ROLES }));
     // New roles start at the bottom of the ladder; the operator moves them up.
     setDraft(retier([...draft, { id, name, tier: 0, color: DEFAULT_ROLE_COLOR, emoji: '' }]));
     setNewName('');
@@ -92,17 +92,17 @@ export function useRelayRolesDraft(relayUrl: string, roles: RelayRoles) {
     if (expanded === role.id) setExpanded(null);
   };
 
-  const saveRoles = () => run('Roles saved.', async () => {
+  const saveRoles = () => run(t('admin.roles.saved'), async () => {
     await publishRoleCatalog(relayUrl, retier(draft));
   });
 
-  const grant = (role: RelayRole, pubkey: string) => run(`Granted “${role.name}”.`, async () => {
+  const grant = (role: RelayRole, pubkey: string) => run(t('admin.roles.granted', { name: role.name }), async () => {
     const current = roles.holders[role.id] ?? [];
     if (current.includes(pubkey)) return;
     await publishRoleHolders(relayUrl, role.id, [...current, pubkey]);
   });
 
-  const revoke = (role: RelayRole, pubkey: string) => run(`Revoked “${role.name}”.`, async () => {
+  const revoke = (role: RelayRole, pubkey: string) => run(t('admin.roles.revoked', { name: role.name }), async () => {
     await publishRoleHolders(relayUrl, role.id, (roles.holders[role.id] ?? []).filter((value) => value !== pubkey));
   });
 

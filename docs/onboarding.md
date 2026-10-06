@@ -29,8 +29,9 @@ it for good.
    card at the middle of the screen.
 2. Add an entry to `HINTS` with a `surface` (the screen that reveals it) and
    an `order` within that surface.
-3. Add `hints.<id>.title` and `hints.<id>.body` to **both** locales.
-   `src/i18n/locales.test.ts` fails the build if either is missing.
+3. Add `hints.<id>.title` and `hints.<id>.body` to the `shell` module in
+   **all three** languages (`src/i18n/messages/{en,es,pt}/shell.json`).
+   `tests/i18n/locales.test.ts` fails the build if one is missing.
 4. Optionally render `<HintDot hintId="<id>" />` inside a `relative` parent
    on the control, so it advertises itself before the screen is reached.
 

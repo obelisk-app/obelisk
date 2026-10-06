@@ -1,4 +1,8 @@
+import { useTranslations } from 'next-intl';
+
 export default function AdminCliHero() {
+  const t = useTranslations();
+  /** A terminal transcript: commands and the CLI's own output, which it prints in English. */
   const lines = [
     { text: '$ npm run admin -- login --bunker bunker://...', color: '#a3a3a3', delay: '0s' },
     { text: '✓ authenticated as npub1agent…', color: '#b4f953', delay: '0.6s' },
@@ -16,11 +20,8 @@ export default function AdminCliHero() {
       aria-labelledby="hero-cli-title hero-cli-desc"
       className="w-full h-auto"
     >
-      <title id="hero-cli-title">Admin CLI for coding agents</title>
-      <desc id="hero-cli-desc">
-        A terminal window streaming admin commands, wired to an AI agent avatar that signs
-        Nostr challenges and publishes NIP-29 events to the relay.
-      </desc>
+      <title id="hero-cli-title">{t('guides.art.adminCli.title')}</title>
+      <desc id="hero-cli-desc">{t('guides.art.adminCli.desc')}</desc>
 
       <defs>
         <linearGradient id="sky-cli" x1="0" y1="0" x2="0" y2="1">
@@ -51,7 +52,7 @@ export default function AdminCliHero() {
         <circle cx="198" cy="74" r="5" fill="#b45353" />
         <circle cx="214" cy="74" r="5" fill="#f7b32b" />
         <circle cx="230" cy="74" r="5" fill="#b4f953" />
-        <text x="400" y="78" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="400" y="78" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: the program's name in its window title */}
           obelisk admin cli
         </text>
 
@@ -98,8 +99,8 @@ export default function AdminCliHero() {
         />
         {/* mouth */}
         <rect x="78" y="212" width="24" height="4" rx="2" fill="#b4f953" opacity="0.7" />
-        <text x="90" y="276" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          AI agent
+        <text x="90" y="276" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace">
+          {t('guides.art.adminCli.agent')}
         </text>
       </g>
 
@@ -108,8 +109,8 @@ export default function AdminCliHero() {
         <rect x="670" y="150" width="90" height="100" rx="12" fill="#171717" stroke="#b4f953" strokeWidth="1.6" />
         <polygon points="715,168 705,232 725,232" fill="#b4f953" opacity="0.85" />
         <rect x="700" y="232" width="30" height="4" fill="#b4f953" opacity="0.7" />
-        <text x="715" y="268" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          NIP-29 relay
+        <text x="715" y="268" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace">
+          {t('guides.art.adminCli.relay')}
         </text>
       </g>
 
@@ -131,17 +132,17 @@ export default function AdminCliHero() {
       {/* signed-challenge badge */}
       <g>
         <rect x="320" y="348" width="160" height="26" rx="13" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.5" />
-        <text x="400" y="365" textAnchor="middle" fontSize="11" fontWeight="700" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          signed with nsec / NIP-46
+        <text x="400" y="365" textAnchor="middle" fontSize="11" fontWeight="700" fill="#b4f953" fontFamily="monospace">
+          {t('guides.art.adminCli.signed')}
         </text>
       </g>
 
       {/* legend */}
       <g fontSize="11" fontWeight="600">
         <rect x="34" y="18" width="12" height="12" rx="2" fill="#b4f953" />
-        <text x="52" y="28" fill="#fafafa">relay-authorized events</text>
+        <text x="52" y="28" fill="#fafafa">{t('guides.art.adminCli.legendEvents')}</text>
         <rect x="220" y="18" width="12" height="12" rx="2" fill="#171717" stroke="#b4f953" strokeWidth="1.5" />
-        <text x="238" y="28" fill="#fafafa">same NIP-29 protocol</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="238" y="28" fill="#fafafa">{t('guides.art.adminCli.legendProtocol')}</text>
       </g>
     </svg>
   );

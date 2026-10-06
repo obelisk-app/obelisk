@@ -1,13 +1,13 @@
 import type { GameSession } from '@/lib/games/session';
-import { standingsFor } from '@/lib/games/standings';
+import { standingsFor, type Score, type ScoreDetail } from '@/lib/games/standings';
 import { SEAT_COLORS } from './chain-reaction/seat-colors';
 import { VESTA_PLAYER_COLORS } from './vesta/palette';
 
 export interface Row {
   seat: string;
-  score: string;
+  score: Score;
   color: string;
-  detail?: string;
+  detail?: ScoreDetail;
 }
 
 /** Standings from the shared scorer, painted in each game's seat colours. */

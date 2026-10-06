@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { botLabel, playableGameNames, sectionTitle, SLASH_COMMANDS } from '@/utils/chat/slash/slash-commands';
+import { botLabel, commandDescription, playableGameNames, sectionTitle, SLASH_COMMANDS } from '@/utils/chat/slash/slash-commands';
+import { translator } from '@tests/support/intl';
 import { tokenize } from '@/utils/chat/slash/slash-scaffold';
 
 describe('slash command helpers', () => {
@@ -18,8 +19,15 @@ describe('slash command helpers', () => {
   });
 
   it('lists the playable games in the /play description', () => {
-    const play = SLASH_COMMANDS.find((c) => c.name === 'play');
-    expect(play?.description).toContain(playableGameNames());
+    const play = SLASH_COMMANDS.find((c) => c.name === 'play')!;
+    expect(commandDescription(translator('en'), 'en', play)).toContain(playableGameNames('en'));
+    expect(playableGameNames('en')).toMatch(/, .* or /);
+    expect(commandDescription(translator('es'), 'es', play)).toContain(playableGameNames('es'));
+    expect(playableGameNames('es')).toMatch(/ o /);
+  });
+
+  it('shows a bot command as the bot advertised it', () => {
+    expect(commandDescription(translator('es'), 'es', { name: 'milugar', description: 'Tu lugar' })).toBe('Tu lugar');
   });
 
   it('tokenizes arguments with their offsets', () => {

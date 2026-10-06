@@ -61,7 +61,7 @@ describe('MessageMediaPicker', () => {
     expect(screen.queryByAltText(':dance:')).not.toBeInTheDocument();
     expect(screen.getByAltText(':wave:')).toBeInTheDocument();
     const categoryNav = screen.getByRole('navigation', { name: 'Emoji categories' });
-    const emojiTab = screen.getByRole('button', { name: 'emoji' });
+    const emojiTab = screen.getByRole('button', { name: 'Emoji' });
     expect(categoryNav).toHaveClass('grid-cols-9');
     expect(categoryNav.compareDocumentPosition(emojiTab) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Close emoji picker' })).not.toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('MessageMediaPicker', () => {
     expect(screen.getByTitle('grinning').parentElement).toHaveClass('grid-cols-12');
     expect(screen.getByText('Smileys & people')).toHaveClass('sticky', 'border-b');
     expect(screen.getByText('Smileys & people').parentElement?.parentElement).toHaveClass('overflow-y-auto');
-    fireEvent.click(screen.getByRole('button', { name: 'gif' }));
+    fireEvent.click(screen.getByRole('button', { name: 'GIF' }));
     expect(screen.getByRole('button', { name: 'Create GIF' })).toBeInTheDocument();
     expect(screen.getByTestId('media-picker-shell')).toHaveAttribute('class', shellClass);
     const mediaCategories = screen.getByRole('navigation', { name: 'Media categories' });
@@ -96,7 +96,7 @@ describe('MessageMediaPicker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Recent' }));
     expect(screen.getByAltText(':dance:')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Trending' }));
-    const gifTab = screen.getByRole('button', { name: 'gif' });
+    const gifTab = screen.getByRole('button', { name: 'GIF' });
     expect(screen.getByTestId('media-grid').compareDocumentPosition(gifTab) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Stickers' }));

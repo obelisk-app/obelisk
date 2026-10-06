@@ -11,11 +11,15 @@
  * screenshots inside the article carry that, and this does not pretend to be
  * one of them.
  */
+
+import { useTranslations } from 'next-intl';
+
 export default function RelayHero() {
+  const t = useTranslations();
   const tiers = [
-    { r: 135, label: 'TIER 1', sub: 'added by hand', budget: '6,000/min', opacity: 1 },
-    { r: 195, label: 'TIER 2', sub: 'two hops', budget: '3,000/min', opacity: 0.72 },
-    { r: 255, label: 'TIER 3', sub: 'three hops', budget: '1,500/min', opacity: 0.46 },
+    { r: 135, n: 1, sub: t('guides.art.relay.byHand'), perMinute: 6000, opacity: 1 },
+    { r: 195, n: 2, sub: t('guides.art.relay.twoHops'), perMinute: 3000, opacity: 0.72 },
+    { r: 255, n: 3, sub: t('guides.art.relay.threeHops'), perMinute: 1500, opacity: 0.46 },
   ];
 
   /** Keys sitting on each arc - fewer drawn than exist, further out, dimmer. */
@@ -43,12 +47,8 @@ export default function RelayHero() {
       aria-labelledby="hero-relay-title hero-relay-desc"
       className="w-full h-auto"
     >
-      <title id="hero-relay-title">Admission is a ladder, not a switch</title>
-      <desc id="hero-relay-desc">
-        A self-hosted Nostr relay with three widening tiers of admitted keys around
-        it, added by hand, two hops away, three hops away, each publishing on a
-        smaller share of the rate budget, with a block list cutting across all three.
-      </desc>
+      <title id="hero-relay-title">{t('guides.art.relay.title')}</title>
+      <desc id="hero-relay-desc">{t('guides.art.relay.desc')}</desc>
 
       <defs>
         <linearGradient id="sky-relay" x1="0" y1="0" x2="0" y2="1">
@@ -79,16 +79,16 @@ export default function RelayHero() {
 
       {/* the tier arcs, widening away from the relay */}
       <g fill="none" strokeLinecap="round">
-        {tiers.map((t, i) => {
-          const a = pt(t.r, -SPAN);
-          const b = pt(t.r, SPAN);
+        {tiers.map((tier, i) => {
+          const a = pt(tier.r, -SPAN);
+          const b = pt(tier.r, SPAN);
           return (
           <path
-            key={t.label}
-            d={`M ${a.x.toFixed(1)} ${a.y.toFixed(1)} A ${t.r} ${t.r} 0 0 1 ${b.x.toFixed(1)} ${b.y.toFixed(1)}`}
+            key={tier.n}
+            d={`M ${a.x.toFixed(1)} ${a.y.toFixed(1)} A ${tier.r} ${tier.r} 0 0 1 ${b.x.toFixed(1)} ${b.y.toFixed(1)}`}
             stroke="#b4f953"
             strokeWidth={2.4 - i * 0.5}
-            opacity={t.opacity * 0.85}
+            opacity={tier.opacity * 0.85}
             strokeDasharray={i === 0 ? undefined : i === 1 ? '10 7' : '4 9'}
             className={i === 0 ? undefined : 'animate-dash-flow'}
             style={{ animationDelay: `${(i * 0.4).toFixed(2)}s` } as React.CSSProperties}
@@ -151,7 +151,7 @@ export default function RelayHero() {
         relay
       </text>
       <text x={cx} y={cy + 12} textAnchor="middle" fontSize="10" fontWeight="600" fill="#fafafa" opacity="0.8">
-        yours
+        {t('guides.art.relay.yours')}
       </text>
       {/* ports */}
       <g>
@@ -174,19 +174,19 @@ export default function RelayHero() {
 
       {/* tier legend */}
       <g>
-        {tiers.map((t, i) => {
+        {tiers.map((tier, i) => {
           const y = 96 + i * 62;
           return (
-            <g key={`legend-${t.label}`} opacity={t.opacity}>
+            <g key={`legend-${tier.n}`} opacity={tier.opacity}>
               <rect x="470" y={y - 24} width="290" height="48" rx="12" fill="#171717" stroke="#b4f953" strokeWidth="1.4" />
               <text x="490" y={y - 4} fontSize="14" fontWeight="800" fill="#b4f953" fontFamily="monospace">
-                {t.label}
+                {t('guides.art.relay.tier', { n: tier.n })}
               </text>
               <text x="490" y={y + 13} fontSize="11" fontWeight="600" fill="#fafafa" opacity="0.75">
-                {t.sub}
+                {tier.sub}
               </text>
               <text x="742" y={y + 4} textAnchor="end" fontSize="13" fontWeight="700" fill="#fafafa">
-                {t.budget}
+                {t('guides.art.relay.perMinute', { count: tier.perMinute })}
               </text>
             </g>
           );
@@ -196,13 +196,13 @@ export default function RelayHero() {
         <g>
           <rect x="470" y={282} width="290" height="48" rx="12" fill="#1a0f0f" stroke="#f87171" strokeWidth="1.4" />
           <text x="490" y={302} fontSize="14" fontWeight="800" fill="#f87171" fontFamily="monospace">
-            BLOCKED
+            {t('guides.art.relay.blocked')}
           </text>
-          <text x="490" y={319} fontSize="11" fontWeight="600" fill="#fafafa" opacity="0.7"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-            checked first, overrides every tier
+          <text x="490" y={319} fontSize="11" fontWeight="600" fill="#fafafa" opacity="0.7">
+            {t('guides.art.relay.blockedRule')}
           </text>
           <text x="742" y={310} textAnchor="end" fontSize="13" fontWeight="700" fill="#f87171">
-            nothing
+            {t('guides.art.relay.nothing')}
           </text>
         </g>
       </g>
@@ -215,11 +215,11 @@ export default function RelayHero() {
         <line x1="355.5" y1="332.5" x2="348.5" y2="339.5" stroke="#f87171" strokeWidth="2" strokeLinecap="round" />
       </g>
 
-      <text x="470" y={356} fontSize="11.5" fontWeight="600" fill="#a3a3a3"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        Distance from your reference accounts
+      <text x="470" y={356} fontSize="11.5" fontWeight="600" fill="#a3a3a3">
+        {t('guides.art.relay.distance')}
       </text>
-      <text x="470" y={373} fontSize="11.5" fontWeight="600" fill="#a3a3a3"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        is how much evidence you have.
+      <text x="470" y={373} fontSize="11.5" fontWeight="600" fill="#a3a3a3">
+        {t('guides.art.relay.evidence')}
       </text>
     </svg>
   );

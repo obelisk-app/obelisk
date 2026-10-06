@@ -58,5 +58,158 @@
     "skip": "Skip",
     "trade": "Trade",
     "with": "With"
+  },
+  "you": "(you)",
+  "host": "host",
+  "relayRejected": "Relay rejected that",
+  "meta": {
+    "chainReaction": "Place orbs, set off chain reactions and take the board.",
+    "vesta": "Expanding Settlements Through Accord: build, trade, and take the board.",
+    "stacker": "Falling blocks, shared piece order, and every line you clear buries somebody else."
+  },
+  "summary": {
+    "players": "{count, plural, one {# player} other {# players}}",
+    "playersRange": "{min}–{max} players",
+    "realtime": "{players} · real time, one device each",
+    "turns": "{players} · {seconds}s turns",
+    "noClock": "{players} · no turn clock"
+  },
+  "size": {
+    "small": "Small ({cols}×{rows})",
+    "medium": "Medium ({cols}×{rows})",
+    "large": "Large ({cols}×{rows})"
+  },
+  "newGame": {
+    "noClock": "No clock",
+    "everyoneHere": "{summary}. Everyone plays here; the card in the channel lets others watch.",
+    "hostSeated": "{summary}. You are seated as the host; everyone else joins from the chat card.",
+    "creating": "Creating…",
+    "startPlaying": "Start playing",
+    "createTable": "Create table",
+    "justMe": "Just me",
+    "onThisMachine": "{count} on this machine",
+    "waitsInChannel": "The table waits in the channel until you start it.",
+    "startsSolo": "Starts straight away, on your own. Everyone else needs their own device: every board runs at the same time.",
+    "startsHotSeat": "Starts straight away with {count} players taking turns at this keyboard.",
+    "resuming": "Resuming {name}: {count, plural, one {# player} other {# players}}. The table needs exactly that many seats.",
+    "notVestaSave": "That file is not a Vesta save.",
+    "readFailed": "Could not read that file.",
+    "createFailed": "Could not create the table",
+    "player": "Player {n}"
+  },
+  "startTable": {
+    "realtimeHelp": "Every player needs their own device: {game} runs all the boards at once, so one seat per account.",
+    "resumeHelp": "Resuming a saved {game} game with {count, plural, one {# player} other {# players}}. Assign each one to an account: several seats on the same account are played at that person's keyboard.",
+    "assignHelp": "Assign each seat to an account. Give one account several seats and those players share that machine; one seat each means everyone plays from their own client.",
+    "seatName": "Seat {n} name",
+    "ownDevice": "own device",
+    "onMachine": "on {name}'s machine",
+    "remote": "remote",
+    "takesOver": "Takes over “{name}” from the save",
+    "addSeat": "+ add a seat",
+    "seatCount": "{count} of {min}–{max} seats",
+    "needsMore": "needs more players",
+    "tooMany": "too many",
+    "saveHas": "the save has {count}"
+  },
+  "card": {
+    "result": "Result",
+    "open": "Open",
+    "openTable": "Open table · {joined}/{max}",
+    "youWon": "🏆 you won",
+    "won": "🏆 {name} won"
+  },
+  "header": {
+    "waiting": "Waiting for players · {joined}/{max}",
+    "standing": "{count} still standing",
+    "yourTurn": "Your turn",
+    "seatTurn": "{name}'s turn",
+    "draw": "Draw",
+    "won": "{name} won",
+    "over": "Game over",
+    "cancelled": "Table cancelled",
+    "secondsLeft": "{seconds}s",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen"
+  },
+  "overlay": {
+    "draw": "DRAW",
+    "youWon": "YOU WON",
+    "youLost": "YOU LOST",
+    "over": "GAME OVER",
+    "tookBoard": "{name} took the board"
+  },
+  "results": {
+    "won": "{name} won",
+    "draw": "draw",
+    "over": "game over",
+    "winner": "Winner"
+  },
+  "score": {
+    "vp": "{count} VP",
+    "stacker": "{attacks}⚔ · {lines}▤",
+    "orbs": "{count, plural, one {# orb} other {# orbs}}",
+    "out": "out",
+    "winner": "winner",
+    "detail": {
+      "vp": "Victory points at the end of the game",
+      "stacker": "Garbage sent · lines cleared",
+      "orbs": "Orbs held when the board was taken"
+    }
+  },
+  "actions": {
+    "start": "Start ({count})",
+    "needsPlayers": "Needs {count} players to start."
+  },
+  "chainReaction": {
+    "cell": "Cell {index}"
+  },
+  "stacker": {
+    "action": {
+      "left": "Move left",
+      "right": "Move right",
+      "soft": "Soft drop",
+      "hard": "Hard drop",
+      "cw": "Rotate right",
+      "ccw": "Rotate left",
+      "flip": "Rotate 180°",
+      "hold": "Hold"
+    },
+    "space": "Space",
+    "pressKey": "press a key…",
+    "addKey": "+ key",
+    "linesIncoming": "{count, plural, one {# line incoming} other {# lines incoming}}",
+    "unverified": "⚠ unverified",
+    "checked": "✓ checked",
+    "mismatchAttacks": "Claims {claimed} attack lines; its own moves produce {produced}",
+    "mismatchLines": "Claims {claimed} lines; its own moves produce {produced}",
+    "controls": "⌨ controls",
+    "muted": "🔇 muted",
+    "sound": "🔊 sound",
+    "credit": "{track} - {author}, royalty-free (Suno)",
+    "lastStanding": "{name} is the last one standing",
+    "allToppedOut": "Everybody topped out"
+  },
+  "vestaTable": {
+    "discardPrompt": "A seven: discard {count} of your {total} cards.",
+    "discard": "Discard {picked}/{count}",
+    "offers": "{name} offers {give} for {take}",
+    "nothing": "nothing",
+    "wins": "{name} wins",
+    "setupSettlement": "Setup: {name} places a settlement",
+    "setupRoad": "Setup: {name} places a road",
+    "toRoll": "{name} to roll",
+    "bank": "Bank",
+    "bankRates": "Bank rates: {rates}",
+    "tradeBank": "Trade with bank",
+    "offerTrade": "Offer trade",
+    "waitingFor": "Waiting for {name}…",
+    "card": {
+      "victory": "Victory point",
+      "knight": "Knight",
+      "roadBuild": "Road building",
+      "yearOfPlenty": "Year of plenty",
+      "monopoly": "Monopoly"
+    }
   }
 }

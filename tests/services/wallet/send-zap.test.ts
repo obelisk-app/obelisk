@@ -139,7 +139,7 @@ describe('sendZap', () => {
   // so the modal showed an error and stayed open with Zap pressable again.
   it('does not report a paid zap as failed when the bridge is not ready', async () => {
     bridge.getBridgeImpl.mockReturnValue(null);
-    await expect(sendZap(ready())).resolves.toEqual({ markerError: 'Nostr bridge is not ready.' });
+    await expect(sendZap(ready())).resolves.toEqual({ markerError: 'no-bridge' });
     expect(webln.sendPayment).toHaveBeenCalledTimes(1);
   });
 });

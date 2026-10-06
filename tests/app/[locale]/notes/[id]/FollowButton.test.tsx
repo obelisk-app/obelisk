@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 
@@ -24,6 +25,12 @@ vi.mock('@/hooks/usePreferences', () => ({
 }));
 
 import FollowButton from '@/app/[locale]/notes/[id]/FollowButton';
+import { LocaleProvider } from '@tests/support/intl';
+
+/** The button reads its labels through next-intl, in English here. */
+const render = (ui: ReactElement) => rtlRender(ui, {
+  wrapper: ({ children }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>,
+});
 
 const TARGET = 'a'.repeat(64);
 

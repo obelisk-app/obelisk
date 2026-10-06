@@ -1,20 +1,23 @@
+import { useTranslations } from 'next-intl';
+
 export default function WotGraphDiagram() {
+  const t = useTranslations();
   return (
     <svg
       viewBox="0 0 800 320"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="Web of Trust score computation"
+      aria-label={t('guides.art.wotGraph.label')}
       className="w-full h-auto"
     >
       <rect width="800" height="320" fill="#0a0a0a" />
 
       {/* steps */}
       {[
-        { x: 60, title: 'kind 3', sub: 'follow list', n: 1 },
-        { x: 260, title: 'graph walk', sub: '1–2 hops', n: 2 },
-        { x: 460, title: 'score', sub: 'weighted sum', n: 3 },
-        { x: 660, title: 'gate', sub: 'allow / filter', n: 4 },
+        { x: 60, title: 'kind 3', sub: t('guides.art.wotGraph.followList'), n: 1 }, // i18n-exempt: protocol term, the event kind
+        { x: 260, title: t('guides.art.wotGraph.graphWalk'), sub: t('guides.art.wotGraph.hops'), n: 2 },
+        { x: 460, title: t('guides.art.wotGraph.score'), sub: t('guides.art.wotGraph.weightedSum'), n: 3 },
+        { x: 660, title: t('guides.art.wotGraph.gate'), sub: t('guides.art.wotGraph.allowFilter'), n: 4 },
       ].map((step, i) => (
         <g key={i}>
           <rect
@@ -89,20 +92,20 @@ export default function WotGraphDiagram() {
           fontWeight="700"
           fill="#b4f953"
           fontFamily="monospace"
-        > {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        > {/* i18n-exempt: the formula, its terms are variable names */}
           score = Σ (hop_weight × mutual_bonus × activity)
         </text>
-        <text x="400" y="284" textAnchor="middle" fontSize="10" fill="#a3a3a3"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          Higher = trusted. Below threshold → posts hidden on public channels.
+        <text x="400" y="284" textAnchor="middle" fontSize="10" fill="#a3a3a3">
+          {t('guides.art.wotGraph.threshold')}
         </text>
       </g>
 
       {/* title */}
-      <text x="400" y="40" textAnchor="middle" fontSize="16" fontWeight="700" fill="#fafafa"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        How a trust score is computed
+      <text x="400" y="40" textAnchor="middle" fontSize="16" fontWeight="700" fill="#fafafa">
+        {t('guides.art.wotGraph.heading')}
       </text>
-      <text x="400" y="62" textAnchor="middle" fontSize="11" fill="#a3a3a3"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        Pure Nostr data: no KYC, no CAPTCHA, no phone number.
+      <text x="400" y="62" textAnchor="middle" fontSize="11" fill="#a3a3a3">
+        {t('guides.art.wotGraph.subheading')}
       </text>
     </svg>
   );

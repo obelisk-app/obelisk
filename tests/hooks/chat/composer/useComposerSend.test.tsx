@@ -1,4 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
 import { groupFixture } from '@tests/support/mocks/nostr-bridge';
@@ -38,12 +40,15 @@ function state(draft: string): ComposerDraftState {
   };
 }
 
+/** The hook words its errors through next-intl, so it needs a provider. */
+const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
+
 function run(draft: string, group: JsGroup | null = groupFixture({ id: 'g', isOpen: false }), onOpenNewGame = vi.fn()) {
   const s = state(draft);
   const setReplyingTo = vi.fn();
   const { result } = renderHook(() => useComposerSend({
     groupId: 'g', group, relay: 'wss://r', messages: [] as JsMessage[], replyingTo: null, setReplyingTo, onOpenNewGame, state: s,
-  }));
+  }), { wrapper });
   return { send: result.current, s, setReplyingTo, onOpenNewGame };
 }
 

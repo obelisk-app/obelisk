@@ -197,7 +197,7 @@ describe('checkpoint verification: the honesty check', () => {
       linesCleared: truth.linesCleared,
     });
     expect(v.ok).toBe(false);
-    expect(v.reason).toMatch(/claimed .* attack lines/);
+    expect(v.reason).toEqual({ claim: 'attacks', claimed: truth.attacksSent + 40, produced: truth.attacksSent });
   });
 
   it('catches an inflated line count', () => {
@@ -208,7 +208,7 @@ describe('checkpoint verification: the honesty check', () => {
       linesCleared: truth.linesCleared + 100,
     });
     expect(v.ok).toBe(false);
-    expect(v.reason).toMatch(/claimed .* lines/);
+    expect(v.reason).toEqual({ claim: 'lines', claimed: truth.linesCleared + 100, produced: truth.linesCleared });
   });
 
   it('catches a log replayed against the wrong seed', () => {
@@ -241,7 +241,7 @@ describe('checkpoint verification: the honesty check', () => {
     expect(match.progress[A].verified).toBe(true);
     expect(match.progress[A].suspect).toBeNull();
     expect(match.progress[B].verified).toBe(false);
-    expect(match.progress[B].suspect).toMatch(/attack lines/);
+    expect(match.progress[B].suspect?.claim).toBe('attacks');
   });
 
   it('leaves verification unknown when a checkpoint carries no log', () => {

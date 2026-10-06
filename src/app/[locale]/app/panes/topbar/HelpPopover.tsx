@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import { BookIcon, LayersIcon, SparklesIcon, TerminalIcon, ZapIcon } from '@/components/ui/icons';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { localizedPath } from '@/utils/seo/alternates';
-import { HELP_TOPICS, HELP_VIEW_MORE } from '@/utils/guides/help-topics';
+import { HELP_TOPICS } from '@/utils/guides/help-topics';
 import { useLocale, useTranslations } from 'next-intl';
 
 /**
@@ -42,7 +42,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
           contrast /help gets for free from the black page behind it. */}
       <div className="overflow-y-auto flex-1 bg-lc-black/50 p-3">
         <ul className="flex flex-col gap-2">
-          {HELP_TOPICS[locale].map((topic) => (
+          {HELP_TOPICS.map((topic) => (
             <li key={topic.slug}>
               <a
                 href={localizedPath(locale, guidePath(topic.slug))}
@@ -53,10 +53,10 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
                 <HelpTopicIcon slug={topic.slug} />
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-lc-white group-hover:text-lc-green">
-                    {topic.title}
+                    {t(topic.titleKey)}
                   </span>
                   <span className="mt-1 block text-xs leading-5 text-lc-muted">
-                    {topic.description}
+                    {t(topic.descriptionKey)}
                   </span>
                 </span>
               </a>
@@ -72,7 +72,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
           className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-lc-green/40 bg-lc-green/10 px-4 py-2 text-xs font-semibold text-lc-green transition-colors hover:border-lc-green/70 hover:bg-lc-green/20"
         >
           <BookIcon size={14} />
-          {HELP_VIEW_MORE[locale]}
+          {t('guides.help.viewMore')}
         </a>
         {/*
           The in-app hints are one-shot by design, so this is the only

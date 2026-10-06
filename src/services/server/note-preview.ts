@@ -82,16 +82,10 @@ export type NotePreviewLabels = {
   sharedMedia: string;
 };
 
-const ENGLISH: NotePreviewLabels = {
-  noteTitle: (name) => `${name} on Obelisk`,
-  untitledArticle: 'Untitled article',
-  sharedMedia: 'Shared media',
-};
-
 export function buildNotePreview(
   note: Pick<NostrEvent, 'content' | 'tags' | 'kind'>,
   authorName: string,
-  labels: NotePreviewLabels = ENGLISH,
+  labels: NotePreviewLabels,
 ): NotePreview {
   const isArticle = note.kind >= 30000 && note.kind < 40000;
   const articleTitle = tagValue(note, 'title');

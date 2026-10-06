@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
@@ -10,10 +11,11 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
  * longer throws out of the click handler.
  */
 export function CopyButton({ text }: { text: string }) {
+  const t = useTranslations();
   const { copied, copy } = useCopyToClipboard();
   return (
     <Button variant="pillSecondary" size="xs" onClick={() => { void copy(text); }}>
-      {copied ? 'Copied ✓' : 'Copy'}
+      {copied ? t('mediaKit.copied') : t('mediaKit.copy')}
     </Button>
   );
 }

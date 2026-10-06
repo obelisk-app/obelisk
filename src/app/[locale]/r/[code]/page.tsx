@@ -9,7 +9,7 @@ import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 
 const RELAY_BRANDING: Record<string, { logo: string; alt: string }> = {
-  'wss://lacrypta-relay.obelisk.ar': { logo: '/lacrypta-logo.png', alt: 'La Crypta' },
+  'wss://lacrypta-relay.obelisk.ar': { logo: '/lacrypta-logo.png', alt: 'La Crypta' }, // i18n-exempt: the relay's brand name
 };
 
 export default function RelayShareLinkPage({ params }: { params: Promise<{ code: string }> }) {
@@ -20,7 +20,7 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
   // is state.
   const relayUrl = useMemo(() => decodeRelayShareCode(code), [code]);
   const [joinError, setJoinError] = useState<string | null>(null);
-  const error = relayUrl ? joinError : 'Invalid relay share link.';
+  const error = relayUrl ? joinError : t('settings.relayShare.invalid');
 
   useEffect(() => {
     const url = relayUrl;
@@ -48,13 +48,13 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
         })();
         router.replace(`/app?relay=${encodeURIComponent(host)}`);
       } catch (e) {
-        if (!cancelled) setJoinError((e as Error).message || 'Failed to add relay.');
+        if (!cancelled) setJoinError((e as Error).message || t('settings.relayShare.failed'));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [relayUrl, router]);
+  }, [relayUrl, router, t]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-lc-black p-6">

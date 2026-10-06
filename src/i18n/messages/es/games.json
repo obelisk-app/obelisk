@@ -58,5 +58,158 @@
     "skip": "Saltear",
     "trade": "Intercambiar",
     "with": "Con"
+  },
+  "you": "(vos)",
+  "host": "anfitrión",
+  "relayRejected": "El relay lo rechazó",
+  "meta": {
+    "chainReaction": "Colocá orbes, detoná reacciones en cadena y quedate con el tablero.",
+    "vesta": "Fundá poblados, comerciá y quedate con el tablero.",
+    "stacker": "Bloques que caen, el mismo orden de piezas para todos, y cada línea que borrás entierra a otro."
+  },
+  "summary": {
+    "players": "{count, plural, one {# jugador} other {# jugadores}}",
+    "playersRange": "{min}–{max} jugadores",
+    "realtime": "{players} · en tiempo real, un dispositivo cada uno",
+    "turns": "{players} · turnos de {seconds} s",
+    "noClock": "{players} · sin reloj por turno"
+  },
+  "size": {
+    "small": "Chico ({cols}×{rows})",
+    "medium": "Mediano ({cols}×{rows})",
+    "large": "Grande ({cols}×{rows})"
+  },
+  "newGame": {
+    "noClock": "Sin reloj",
+    "everyoneHere": "{summary}. Todos juegan acá; la tarjeta en el canal deja que los demás miren.",
+    "hostSeated": "{summary}. Te sentás como anfitrión; los demás se suman desde la tarjeta del chat.",
+    "creating": "Creando…",
+    "startPlaying": "Empezar a jugar",
+    "createTable": "Crear la mesa",
+    "justMe": "Solo yo",
+    "onThisMachine": "{count} en esta compu",
+    "waitsInChannel": "La mesa espera en el canal hasta que la arranques.",
+    "startsSolo": "Arranca enseguida, solo vos. Los demás necesitan su propio dispositivo: todos los tableros corren al mismo tiempo.",
+    "startsHotSeat": "Arranca enseguida con {count} jugadores turnándose en este teclado.",
+    "resuming": "Retomando {name}: {count, plural, one {# jugador} other {# jugadores}}. La mesa necesita exactamente esa cantidad de asientos.",
+    "notVestaSave": "Ese archivo no es una partida guardada de Vesta.",
+    "readFailed": "No se pudo leer ese archivo.",
+    "createFailed": "No se pudo crear la mesa",
+    "player": "Jugador {n}"
+  },
+  "startTable": {
+    "realtimeHelp": "Cada jugador necesita su propio dispositivo: {game} corre todos los tableros a la vez, así que va un asiento por cuenta.",
+    "resumeHelp": "Retomando una partida guardada de {game} con {count, plural, one {# jugador} other {# jugadores}}. Asigná cada uno a una cuenta: varios asientos en la misma cuenta se juegan en el teclado de esa persona.",
+    "assignHelp": "Asigná cada asiento a una cuenta. Si una cuenta tiene varios asientos, esos jugadores comparten la compu; con un asiento cada uno, todos juegan desde su propio cliente.",
+    "seatName": "Nombre del asiento {n}",
+    "ownDevice": "su dispositivo",
+    "onMachine": "en la compu de {name}",
+    "remote": "remoto",
+    "takesOver": "Toma el lugar de “{name}” en la partida guardada",
+    "addSeat": "+ sumar un asiento",
+    "seatCount": "{count} de {min}–{max} asientos",
+    "needsMore": "faltan jugadores",
+    "tooMany": "sobran jugadores",
+    "saveHas": "la partida guardada tiene {count}"
+  },
+  "card": {
+    "result": "Resultado",
+    "open": "Abrir",
+    "openTable": "Mesa abierta · {joined}/{max}",
+    "youWon": "🏆 ganaste",
+    "won": "🏆 ganó {name}"
+  },
+  "header": {
+    "waiting": "Esperando jugadores · {joined}/{max}",
+    "standing": "Quedan {count} en pie",
+    "yourTurn": "Es tu turno",
+    "seatTurn": "Turno de {name}",
+    "draw": "Empate",
+    "won": "Ganó {name}",
+    "over": "Fin de la partida",
+    "cancelled": "Mesa cancelada",
+    "secondsLeft": "{seconds} s",
+    "fullscreen": "Pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa"
+  },
+  "overlay": {
+    "draw": "EMPATE",
+    "youWon": "GANASTE",
+    "youLost": "PERDISTE",
+    "over": "FIN DE LA PARTIDA",
+    "tookBoard": "{name} se quedó con el tablero"
+  },
+  "results": {
+    "won": "ganó {name}",
+    "draw": "empate",
+    "over": "fin de la partida",
+    "winner": "Ganador"
+  },
+  "score": {
+    "vp": "{count} PV",
+    "stacker": "{attacks}⚔ · {lines}▤",
+    "orbs": "{count, plural, one {# orbe} other {# orbes}}",
+    "out": "afuera",
+    "winner": "ganador",
+    "detail": {
+      "vp": "Puntos de victoria al final de la partida",
+      "stacker": "Basura enviada · líneas borradas",
+      "orbs": "Orbes en el tablero cuando se terminó"
+    }
+  },
+  "actions": {
+    "start": "Empezar ({count})",
+    "needsPlayers": "Hacen falta {count} jugadores para empezar."
+  },
+  "chainReaction": {
+    "cell": "Casilla {index}"
+  },
+  "stacker": {
+    "action": {
+      "left": "Mover a la izquierda",
+      "right": "Mover a la derecha",
+      "soft": "Bajar",
+      "hard": "Soltar",
+      "cw": "Girar a la derecha",
+      "ccw": "Girar a la izquierda",
+      "flip": "Girar 180°",
+      "hold": "Reservar"
+    },
+    "space": "Espacio",
+    "pressKey": "apretá una tecla…",
+    "addKey": "+ tecla",
+    "linesIncoming": "{count, plural, one {# línea en camino} other {# líneas en camino}}",
+    "unverified": "⚠ sin verificar",
+    "checked": "✓ verificado",
+    "mismatchAttacks": "Dice {claimed} líneas de ataque; sus propias jugadas dan {produced}",
+    "mismatchLines": "Dice {claimed} líneas; sus propias jugadas dan {produced}",
+    "controls": "⌨ controles",
+    "muted": "🔇 sin sonido",
+    "sound": "🔊 sonido",
+    "credit": "{track} - {author}, libre de regalías (Suno)",
+    "lastStanding": "{name} es el último en pie",
+    "allToppedOut": "Todos llenaron el tablero"
+  },
+  "vestaTable": {
+    "discardPrompt": "Salió un siete: descartá {count} de tus {total} cartas.",
+    "discard": "Descartar {picked}/{count}",
+    "offers": "{name} ofrece {give} por {take}",
+    "nothing": "nada",
+    "wins": "Gana {name}",
+    "setupSettlement": "Preparación: {name} coloca un poblado",
+    "setupRoad": "Preparación: {name} coloca un camino",
+    "toRoll": "Le toca tirar a {name}",
+    "bank": "Banco",
+    "bankRates": "Tasas del banco: {rates}",
+    "tradeBank": "Intercambiar con el banco",
+    "offerTrade": "Ofrecer intercambio",
+    "waitingFor": "Esperando a {name}…",
+    "card": {
+      "victory": "Punto de victoria",
+      "knight": "Caballero",
+      "roadBuild": "Construcción de caminos",
+      "yearOfPlenty": "Año de abundancia",
+      "monopoly": "Monopolio"
+    }
   }
 }

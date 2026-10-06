@@ -1,6 +1,6 @@
 'use client';
 
-
+import { useTranslations } from 'next-intl';
 
 interface Props {
   slug: string;
@@ -22,6 +22,7 @@ interface Props {
  * `src/app/chat/page.tsx` listens for `popstate` and re-applies URL state.
  */
 export default function ChannelLinkPill({ slug, messageId, postId, href }: Props) {
+  const t = useTranslations();
   const channelName = slug;
   const postTitle = null;
   const noAccess = false;
@@ -32,15 +33,15 @@ export default function ChannelLinkPill({ slug, messageId, postId, href }: Props
   if (postId) {
     prefix = '📋 ';
     label = postTitle ?? channelName ?? slug;
-    title = `Publicación en #${channelName ?? slug}`;
+    title = t('chat.channelLink.publication', { channel: channelName ?? slug });
   } else if (messageId) {
     prefix = '↩ ';
     label = channelName ?? slug;
-    title = `Mensaje en #${channelName ?? slug}`;
+    title = t('chat.channelLink.message', { channel: channelName ?? slug });
   } else {
     prefix = '#';
     label = channelName ?? slug;
-    title = `Canal #${channelName ?? slug}`;
+    title = t('chat.channelLink.channel', { channel: channelName ?? slug });
   }
 
   const onClick = (e: React.MouseEvent) => {
@@ -71,7 +72,7 @@ export default function ChannelLinkPill({ slug, messageId, postId, href }: Props
       onClick={onClick}
       className={`${baseClass} ${variantClass}`}
       data-testid="channel-link-pill"
-      title={noAccess ? `Sin acceso a #${channelName ?? slug}` : title}
+      title={noAccess ? t('chat.channelLink.noAccess', { channel: channelName ?? slug }) : title}
       aria-disabled={noAccess || undefined}
     >
       {noAccess && <span aria-hidden>🔒 </span>}

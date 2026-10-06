@@ -55,11 +55,11 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
       </p>
 
       <ul className="mt-3 space-y-1.5" data-testid="stacker-key-list">
-        {BINDABLE.map(({ action, label }) => {
+        {BINDABLE.map(({ action }) => {
           const bound = keysFor(map, action);
           return (
             <li key={action} className="flex items-center gap-2">
-              <span className="flex-1 text-xs text-lc-white">{label}</span>
+              <span className="flex-1 text-xs text-lc-white">{t(`games.stacker.action.${action}`)}</span>
               {bound.map((code) => (
                 <button
                   key={code}
@@ -72,7 +72,7 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
                   title={t('games.removeKey')}
                   className="rounded border border-lc-border px-1.5 py-0.5 font-mono text-[10px] text-lc-muted hover:border-red-400 hover:text-red-400"
                 >
-                  {keyLabel(code)}
+                  {code === 'Space' ? t('games.stacker.space') : keyLabel(code)}
                 </button>
               ))}
               <Chip
@@ -81,7 +81,7 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
                 onClick={() => setListening(action)}
                 data-testid={`bind-${action}`}
               >
-                {listening === action ? 'press a key…' : '+ key'}
+                {t(listening === action ? 'games.stacker.pressKey' : 'games.stacker.addKey')}
               </Chip>
             </li>
           );

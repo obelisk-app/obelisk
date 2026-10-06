@@ -132,7 +132,7 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
     <Modal onClose={onClose} panelClassName="w-full max-w-3xl mx-4 rounded-xl bg-lc-dark border border-lc-border shadow-xl flex flex-col max-h-[85vh]">
       <ModalHeader
         title={t('admin.title')}
-        subtitle="Bulk cleanup across every channel on this relay. Kick removes the user (kind 9001); demote strips the admin role only (kind 9003)."
+        subtitle={t('admin.subtitle')}
         onClose={onClose}
       />
 
@@ -181,15 +181,13 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
           emptyPlacement="replace"
           emptyPadding="none"
           emptyClassName="px-5 py-8"
-          empty={rows.length === 0
-            ? 'No admin or member entries on this relay yet.'
-            : 'No entries match the current filters.'}
+          empty={t(rows.length === 0 ? 'admin.emptyRelay' : 'admin.emptyFiltered')}
         />
       </div>
 
       <footer className="flex items-center justify-between gap-3 border-t border-lc-border px-5 py-3">
         <div className="text-xs text-lc-muted">
-          {selectedRows.length} selected · {filtered.length} shown · {rows.length} total
+          {t('admin.counts', { selected: selectedRows.length, shown: filtered.length, total: rows.length })}
         </div>
         <div className="flex gap-2">
           <Button

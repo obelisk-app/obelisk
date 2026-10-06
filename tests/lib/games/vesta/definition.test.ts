@@ -146,7 +146,7 @@ describe('vesta engine adapter', () => {
     const state = createGame({ players: 2, roll: 42 });
     const v = vesta.validateAction(state, { type: 'end-turn' } as never, 'pk-stranger', [HOST, B]);
     expect(v.ok).toBe(false);
-    expect(v.error).toMatch(/not seated/i);
+    expect(v.error).toBe('not-seated');
   });
 
   describe('dice', () => {

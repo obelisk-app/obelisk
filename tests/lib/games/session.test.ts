@@ -382,7 +382,6 @@ describe('an engine that throws', () => {
   const volatile: GameDefinition<{ n: number }, { boom?: boolean }> = {
     type: 'volatile',
     displayName: 'Volatile',
-    description: 'throws on demand',
     minPlayers: 2,
     maxPlayers: 2,
     defaultTurnTimeoutS: 10,

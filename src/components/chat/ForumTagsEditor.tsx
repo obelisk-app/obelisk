@@ -113,10 +113,10 @@ export default function ForumTagsEditor({
         disabled={value.length >= MAX}
         data-testid="forum-tag-add"
       >
-        + Add tag
+        {t('chat.forum.addTag')}
       </Button>
       {value.length >= MAX && (
-        <p className="text-[11px] text-lc-muted">Maximum {MAX} tags reached.</p>
+        <p className="text-[11px] text-lc-muted">{t('chat.forum.maxTags', { count: MAX })}</p>
       )}
     </div>
   );

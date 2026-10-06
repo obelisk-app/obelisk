@@ -120,7 +120,7 @@ export default function StackerTable({
         <div className="relative flex items-stretch gap-1.5">
           <div
             className="flex w-2 flex-col-reverse overflow-hidden rounded-full bg-white/5"
-            title={`${stats.incoming} lines incoming`}
+            title={t('games.stacker.linesIncoming', { count: stats.incoming })}
             data-testid="stacker-garbage-meter"
           >
             <div
@@ -179,12 +179,19 @@ export default function StackerTable({
                 <div className="mt-1 max-w-[72px] truncate text-[10px] text-lc-white">{seatLabel(seat)}</div>
                 <div className="text-[10px] text-lc-muted">{p.attacksSent}⚔ · {p.linesCleared}▤</div>
                 {p.verified === false && (
-                  <div className="text-[9px] text-red-400" title={p.suspect ?? undefined} data-testid={`stacker-suspect-${seat}`}>
-                    ⚠ unverified
+                  <div
+                    className="text-[9px] text-red-400"
+                    title={p.suspect ? t(p.suspect.claim === 'attacks' ? 'games.stacker.mismatchAttacks' : 'games.stacker.mismatchLines', {
+                      claimed: p.suspect.claimed,
+                      produced: p.suspect.produced,
+                    }) : undefined}
+                    data-testid={`stacker-suspect-${seat}`}
+                  >
+                    {t('games.stacker.unverified')}
                   </div>
                 )}
                 {p.verified === true && (
-                  <div className="text-[9px] text-lc-green" data-testid={`stacker-verified-${seat}`}>✓ checked</div>
+                  <div className="text-[9px] text-lc-green" data-testid={`stacker-verified-${seat}`}>{t('games.stacker.checked')}</div>
                 )}
               </div>
             );
@@ -199,7 +206,7 @@ export default function StackerTable({
           onClick={() => setKeysOpen(true)}
           data-testid="stacker-keys-open"
         >
-          ⌨ controls
+          {t('games.stacker.controls')}
         </Button>
         <Button
           variant="outlinePill"
@@ -207,7 +214,7 @@ export default function StackerTable({
           onClick={toggleMuted}
           data-testid="stacker-mute"
         >
-          {prefs.muted ? '🔇 muted' : '🔊 sound'}
+          {t(prefs.muted ? 'games.stacker.muted' : 'games.stacker.sound')}
         </Button>
         {!prefs.muted && (
           <a
@@ -215,7 +222,7 @@ export default function StackerTable({
             target="_blank"
             rel="noreferrer noopener"
             className="text-[10px] text-lc-muted underline decoration-dotted hover:text-lc-white"
-            title={`${track} - ${MUSIC_CREDIT.author}, ${MUSIC_CREDIT.note}`}
+            title={t('games.stacker.credit', { track, author: MUSIC_CREDIT.author })}
             data-testid="stacker-music-credit"
           >
             ♫ {track} - {MUSIC_CREDIT.author}
@@ -230,8 +237,8 @@ export default function StackerTable({
       {match.over && (
         <p className="text-center text-xs text-lc-white" data-testid="stacker-result">
           {match.winner
-            ? `${seatLabel(match.winner)} is the last one standing`
-            : 'Everybody topped out'}
+            ? t('games.stacker.lastStanding', { name: seatLabel(match.winner) })
+            : t('games.stacker.allToppedOut')}
         </p>
       )}
     </div>

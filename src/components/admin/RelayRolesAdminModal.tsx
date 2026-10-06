@@ -37,10 +37,7 @@ export default function RelayRolesAdminModal({
       <header className="flex items-start justify-between gap-4 border-b border-lc-border px-5 py-4">
         <div>
           <h2 className="text-base font-bold text-lc-white">{t('admin.roles.title')}</h2>
-          <p className="mt-1 text-xs text-lc-muted">
-            Ordered most senior first. Members can hold several roles: the top one they hold is the badge
-            shown in chat and the member list, until you revoke it.
-          </p>
+          <p className="mt-1 text-xs text-lc-muted">{t('admin.roles.help')}</p>
         </div>
         <CloseButton onClick={onClose} />
       </header>
@@ -72,11 +69,11 @@ export default function RelayRolesAdminModal({
 
       {draft.message && <div className="border-t border-lc-border px-5 py-2 text-xs text-lc-green" role="status">{draft.message}</div>}
       <footer className="flex items-center justify-between gap-3 border-t border-lc-border px-5 py-3">
-        <span className="text-xs text-lc-muted">{draft.draft.length} roles {'·'} relay operator only</span>
+        <span className="text-xs text-lc-muted">{t('admin.roles.footer', { count: draft.draft.length })}</span>
         <div className="flex gap-2">
           <Button variant="pillSecondary" size="xs" onClick={onClose}>{t('common.close')}</Button>
           <Button variant="pill" size="xs" onClick={() => { void draft.saveRoles(); }} disabled={draft.busy || !draft.dirty}>
-            {draft.busy ? 'Saving…' : 'Save roles'}
+            {t(draft.busy ? 'admin.roles.saving' : 'admin.roles.save')}
           </Button>
         </div>
       </footer>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { CRSizeKey } from '@/lib/games/chain-reaction';
 import { readResumeState, playerCountOf } from '@/lib/games/vesta/resume';
 import type { GameInfo } from '@/lib/games/catalog';
@@ -25,6 +26,7 @@ export function useNewGameForm({
   onClose: () => void;
   onPostMarker: (marker: string) => void;
 }) {
+  const t = useTranslations();
   const [selected, setSelected] = useState<GameInfo | null>(null);
   const [size, setSize] = useState<CRSizeKey>('medium');
   const [seed, setSeed] = useState(() => String(Math.floor(Date.now() / 1000) % 100000));
@@ -54,12 +56,12 @@ export function useNewGameForm({
       const parsed: unknown = JSON.parse(await file.text());
       const state = readResumeState(parsed);
       if (!state) {
-        setError('That file is not a Vesta save.');
+        setError(t('games.newGame.notVestaSave'));
         return;
       }
       setResume({ data: parsed, players: playerCountOf(parsed) ?? state.players.length, name: file.name });
     } catch {
-      setError('Could not read that file.');
+      setError(t('games.newGame.readFailed'));
     }
   }
 
@@ -84,7 +86,7 @@ export function useNewGameForm({
         await publishStart(channelId, gameId, Array.from({ length: localPlayers }, (_, i) => ({
           id: localSeatId(myPubkey, i),
           by: myPubkey,
-          label: `Player ${i + 1}`,
+          label: t('games.newGame.player', { n: i + 1 }),
         })));
       }
 
@@ -92,7 +94,7 @@ export function useNewGameForm({
       setOpenGame(gameId);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create the table');
+      setError(err instanceof Error ? err.message : t('games.newGame.createFailed'));
       setBusy(false);
     }
   }

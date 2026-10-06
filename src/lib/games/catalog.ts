@@ -2,7 +2,8 @@
  * Display metadata for the games in the registry.
  *
  * The registry knows the RULES; this knows what a game looks like in the UI:
- * its name, its one-line pitch, its thumbnail. Everything user-facing reads
+ * its name, its glyph, its limits. (Its one-line pitch and the summary line
+ * are copy: `src/utils/chat/games/game-copy.ts` words them.) Everything user-facing reads
  * from here and is keyed by `session.game`, so a table can never be labelled
  * as a different game than the one it is running. (It could, once: the card
  * and the modal both hardcoded "Chain Reaction", which made a Vesta table
@@ -16,7 +17,6 @@ import { GAME_META, gameMeta } from './game-meta';
 export interface GameInfo {
   type: string;
   displayName: string;
-  description: string;
   minPlayers: number;
   maxPlayers: number;
   defaultTurnTimeoutS: number;
@@ -41,7 +41,6 @@ export function gameInfo(type: string): GameInfo | null {
   return {
     type: def.type,
     displayName: def.displayName,
-    description: def.description,
     minPlayers: def.minPlayers,
     maxPlayers: def.maxPlayers,
     defaultTurnTimeoutS: def.defaultTurnTimeoutS,
@@ -64,14 +63,4 @@ export function gameName(type: string): string {
 
 export function gameIcon(type: string): string {
   return gameInfo(type)?.icon ?? '🎲';
-}
-
-/** "2–8 players · 45s turns": the line under a game's name in the picker. */
-export function gameSummary(info: GameInfo): string {
-  const players = info.minPlayers === info.maxPlayers
-    ? `${info.minPlayers} players`
-    : `${info.minPlayers}–${info.maxPlayers} players`;
-  if (info.realtime) return `${players} · real time, one device each`;
-  const clock = info.defaultTurnTimeoutS > 0 ? `${info.defaultTurnTimeoutS}s turns` : 'no turn clock';
-  return `${players} · ${clock}`;
 }

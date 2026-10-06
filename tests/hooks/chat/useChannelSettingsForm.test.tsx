@@ -1,4 +1,9 @@
+/** The hook words its errors through next-intl, so it needs a provider. */
+const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
+
 import { act, renderHook, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { JsGroup } from '@/services/nostr-bridge';
 
@@ -53,7 +58,7 @@ afterEach(() => {
 
 async function mount(group: JsGroup = GROUP, onSaved = vi.fn()) {
   resolveSfuPin.mockResolvedValue(null);
-  const hook = renderHook(() => useChannelSettingsForm(group, onSaved));
+  const hook = renderHook(() => useChannelSettingsForm(group, onSaved), { wrapper });
   // The SFU URL is seeded asynchronously from the pin (or the default).
   await waitFor(() => expect(hook.result.current.sfuUrl).not.toBe(''));
   return { ...hook, onSaved };

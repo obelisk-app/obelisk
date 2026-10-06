@@ -50,7 +50,7 @@ export default function GameActionsBar({
           onClick={onOpenSeatPicker}
           data-testid="game-start"
         >
-          Start ({session.joined.length})
+          {t('games.actions.start', { count: session.joined.length })}
         </Button>
       )}
       {session.status === 'waiting' && myPubkey === session.createdBy && (
@@ -76,7 +76,7 @@ export default function GameActionsBar({
       )}
       {session.status === 'waiting' && session.joined.length < session.minPlayers && (
         <span className="text-[11px] text-lc-muted">
-          Needs {session.minPlayers} players to start.
+          {t('games.actions.needsPlayers', { count: session.minPlayers })}
         </span>
       )}
     </div>

@@ -5,6 +5,7 @@ import { gameIcon, gameName } from '@/lib/games/catalog';
 import Button from '@/components/ui/Button';
 import CloseButton from '@/components/ui/CloseButton';
 import { MaximizeIcon, MinimizeIcon } from '@/components/ui/icons';
+import { useTranslations } from 'next-intl';
 
 /** Title, the one-line status (waiting, whose turn, result) and the fullscreen and close buttons. */
 export default function GameModalHeader({
@@ -26,6 +27,7 @@ export default function GameModalHeader({
   onToggleFullscreen: () => void;
   onClose: () => void;
 }) {
+  const t = useTranslations();
   return (
     <div className="flex items-start justify-between gap-3">
       <div>
@@ -33,19 +35,23 @@ export default function GameModalHeader({
           {gameIcon(session.game)} {gameName(session.game)}
         </h2>
         <p className="text-[11px] text-lc-muted">
-          {session.status === 'waiting' && `Waiting for players · ${session.joined.length}/${session.maxPlayers}`}
+          {session.status === 'waiting'
+            && t('games.header.waiting', { joined: session.joined.length, max: session.maxPlayers })}
           {session.status === 'in_progress' && (
             session.match
-              ? `${session.match.alive.length} still standing`
+              ? t('games.header.standing', { count: session.match.alive.length })
               : session.currentTurn && mySeats.includes(session.currentTurn)
-                ? 'Your turn'
-                : `${seatLabelFor(session.currentTurn ?? '')}'s turn`
+                ? t('games.header.yourTurn')
+                : t('games.header.seatTurn', { name: seatLabelFor(session.currentTurn ?? '') })
           )}
           {session.status === 'finished' && (
-            session.draw ? 'Draw' : session.winner ? `${nameOf(session.winner)} won` : 'Game over'
+            session.draw
+              ? t('games.header.draw')
+              : session.winner ? t('games.header.won', { name: nameOf(session.winner) }) : t('games.header.over')
           )}
-          {session.status === 'cancelled' && 'Table cancelled'}
-          {session.status === 'in_progress' && secondsLeft !== null && ` · ${secondsLeft}s`}
+          {session.status === 'cancelled' && t('games.header.cancelled')}
+          {session.status === 'in_progress' && secondsLeft !== null
+            && ` · ${t('games.header.secondsLeft', { seconds: secondsLeft })}`}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -53,7 +59,7 @@ export default function GameModalHeader({
           variant="ghost"
           size="icon"
           onClick={onToggleFullscreen}
-          aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          aria-label={t(fullscreen ? 'games.header.exitFullscreen' : 'games.header.fullscreen')}
           data-testid="game-fullscreen"
         >
           {fullscreen ? <MinimizeIcon size={16} /> : <MaximizeIcon size={16} />}

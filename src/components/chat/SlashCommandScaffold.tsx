@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { SlashCommand } from '@/utils/chat/slash/slash-commands';
 import { activeParamIndex, tokenize } from '@/utils/chat/slash/slash-scaffold';
 
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function SlashCommandScaffold({ command, content, caret }: Props) {
+  const t = useTranslations();
   const params = command.params;
   if (!params || params.length === 0) return null;
 
@@ -55,7 +57,7 @@ export default function SlashCommandScaffold({ command, content, caret }: Props)
               }
             >
               {filled ? token!.value : p.name}
-              {p.optional && !filled && <span className="ml-1 text-[9px] opacity-60">opt</span>}
+              {p.optional && !filled && <span className="ml-1 text-[9px] opacity-60">{t('chat.slash.optional')}</span>}
             </span>
           );
         })}
@@ -64,7 +66,7 @@ export default function SlashCommandScaffold({ command, content, caret }: Props)
         <div className="mt-1.5 text-[11px] text-lc-muted">
           <span className="font-semibold text-lc-white">{activeParam.name}</span>
           <span className="mx-1.5">-</span>
-          <span>{activeParam.description}</span>
+          <span>{t(activeParam.descriptionKey)}</span>
         </div>
       )}
     </div>

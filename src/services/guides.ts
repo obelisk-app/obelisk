@@ -47,7 +47,7 @@ const FALLBACK_LOCALE: Locale = 'en';
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function assertSlug(slug: string): string {
-  if (!SLUG.test(slug)) throw new Error(`Invalid guide slug: ${JSON.stringify(slug)}`);
+  if (!SLUG.test(slug)) throw new Error(`Invalid guide slug: ${JSON.stringify(slug)}`); // i18n-exempt: developer error, never shown (every caller catches it and 404s)
   return slug;
 }
 

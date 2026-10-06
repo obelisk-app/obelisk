@@ -5,6 +5,7 @@ import UserAvatar from '@/components/ui/UserAvatar';
 import type { GameSession } from '@/lib/games/session';
 import { isDraw, scoreFor } from '@/lib/games/standings';
 import { SEAT_COLORS } from './ChainReactionBoard';
+import { scoreLabel } from '@/utils/chat/games/game-copy';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 
@@ -50,7 +51,7 @@ export default function GameOverOverlay({
   const winnerSeat = winner ? session.participants.indexOf(winner) : -1;
   const accent = winnerSeat >= 0 ? SEAT_COLORS[winnerSeat]?.hex ?? '#b4f953' : '#a3a3a3';
 
-  const headline = draw ? 'DRAW' : iWon ? 'YOU WON' : iLost ? 'YOU LOST' : 'GAME OVER';
+  const headline = t(draw ? 'games.overlay.draw' : iWon ? 'games.overlay.youWon' : iLost ? 'games.overlay.youLost' : 'games.overlay.over');
 
   const dismiss = () => {
     setDismissedResult(resultKey);
@@ -81,7 +82,7 @@ export default function GameOverOverlay({
         <div className="mt-4 flex items-center gap-2">
           <UserAvatar pubkey={winner} picture={pictureOf(winner)} size={8} name={nameOf(winner)} />
           <span className="text-sm text-lc-white" data-testid="game-over-winner">
-            {nameOf(winner)} took the board
+            {t('games.overlay.tookBoard', { name: nameOf(winner) })}
           </span>
         </div>
       )}
@@ -95,7 +96,7 @@ export default function GameOverOverlay({
       {/* What you finished with: the thing you actually want to see. */}
       {myScore && (
         <p className="mt-2 font-mono text-sm text-lc-white" data-testid="game-over-score">
-          {myScore}
+          {scoreLabel(t, myScore)}
         </p>
       )}
 

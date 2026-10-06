@@ -1,4 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useTranslations } from 'next-intl';
 import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
 import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
 import { appendMediaUrls } from './draft-text';
@@ -18,6 +19,7 @@ export interface ComposerUploadTargets {
  * failures land in `sendError` for the skin to show.
  */
 export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNote, setSendError }: ComposerUploadTargets) {
+  const t = useTranslations();
   const [uploading, setUploading] = useState(false);
 
   async function onPickFiles(files: File[]) {
@@ -32,7 +34,7 @@ export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNot
       const urls = await Promise.all(batch.map((f) => uploadToBlossom(f)));
       setDraft((d) => appendMediaUrls(d, urls));
     } catch (err) {
-      setSendError((err as Error).message || 'Upload failed');
+      setSendError((err as Error).message || t('chat.composer.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -49,7 +51,7 @@ export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNot
       setDraftSticker(null);
       setDraftVoiceNote({ url, durationSeconds });
     } catch (err) {
-      setSendError((err as Error).message || 'Upload failed');
+      setSendError((err as Error).message || t('chat.composer.uploadFailed'));
     } finally {
       setUploading(false);
     }

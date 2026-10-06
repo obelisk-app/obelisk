@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useWotDistance, useWotEnabled } from '@/hooks/wot/useWot';
 
 /**
@@ -7,6 +8,7 @@ import { useWotDistance, useWotEnabled } from '@/hooks/wot/useWot';
  * the verdict is unresolved (avoids visual noise during cold-start).
  */
 export default function WotBadge({ pubkey, className = '' }: { pubkey: string; className?: string }) {
+  const t = useTranslations();
   const enabled = useWotEnabled();
   const distance = useWotDistance(pubkey);
   if (!enabled) return null;
@@ -18,7 +20,7 @@ export default function WotBadge({ pubkey, className = '' }: { pubkey: string; c
     'border-lc-border text-lc-muted';
   return (
     <span
-      title={distance === null ? 'Out of WoT or unresolved' : `${distance} hop${distance === 1 ? '' : 's'} from you`}
+      title={distance === null ? t('chat.wot.unresolved') : t('chat.wot.hops', { count: distance })}
       className={`inline-flex items-center rounded-full border px-1.5 py-0 text-[10px] font-mono ${tone} ${className}`}
     >
       {label}

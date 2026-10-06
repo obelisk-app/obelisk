@@ -1,15 +1,10 @@
+import { useTranslations } from 'next-intl';
+
 interface Row {
   layer: string;
   ours: string;
   alts: string[];
 }
-
-const ROWS: Row[] = [
-  { layer: 'Client', ours: 'obelisk-dex', alts: ['other clients', 'your own fork'] },
-  { layer: 'Voice', ours: 'obelisk-sfu', alts: ['any SFU', 'peer-to-peer'] },
-  { layer: 'Bots', ours: 'obelisk-bots', alts: ['your own bot', 'any keypair'] },
-  { layer: 'Relay', ours: 'obelisk-relay', alts: ['strfry', 'nostr-rs-relay'] },
-];
 
 const ROW_HEIGHT = 64;
 const TOP = 60;
@@ -19,14 +14,22 @@ const LABEL_X = 24;
 const COL_X = [LABEL_X + 110, LABEL_X + 110 + (COL_W + COL_GAP), LABEL_X + 110 + 2 * (COL_W + COL_GAP)];
 
 export default function SwapMatrixDiagram() {
-  const height = TOP + ROWS.length * ROW_HEIGHT + 36;
+  const t = useTranslations();
+  /** Project names (ours, strfry, nostr-rs-relay) stay as they are; the rest is copy. */
+  const rows: Row[] = [
+    { layer: t('guides.art.swapMatrix.client'), ours: 'obelisk-dex', alts: [t('guides.art.swapMatrix.otherClients'), t('guides.art.swapMatrix.ownFork')] },
+    { layer: t('guides.art.swapMatrix.voice'), ours: 'obelisk-sfu', alts: [t('guides.art.swapMatrix.anySfu'), t('guides.art.swapMatrix.peerToPeer')] },
+    { layer: t('guides.art.swapMatrix.bots'), ours: 'obelisk-bots', alts: [t('guides.art.swapMatrix.ownBot'), t('guides.art.swapMatrix.anyKeypair')] },
+    { layer: t('guides.art.swapMatrix.relay'), ours: 'obelisk-relay', alts: ['strfry', 'nostr-rs-relay'] },
+  ];
+  const height = TOP + rows.length * ROW_HEIGHT + 36;
 
   return (
     <svg
       viewBox={`0 0 ${COL_X[2] + COL_W + 24} ${height}`}
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="Swap matrix: every layer of the Obelisk stack is replaceable"
+      aria-label={t('guides.art.swapMatrix.label')}
       className="w-full h-auto"
     >
       <rect width="100%" height="100%" fill="#0a0a0a" />
@@ -37,8 +40,8 @@ export default function SwapMatrixDiagram() {
         fontSize="14"
         fontWeight="700"
         fill="#fafafa"
-      > {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        Every layer is replaceable
+      >
+        {t('guides.art.swapMatrix.heading')}
       </text>
       <text
         x={COL_X[0] + COL_W / 2}
@@ -50,7 +53,7 @@ export default function SwapMatrixDiagram() {
         fontFamily="monospace"
         letterSpacing="0.5"
       >
-        OURS
+        {t('guides.art.swapMatrix.ours')}
       </text>
       <text
         x={COL_X[1] + COL_W / 2}
@@ -62,7 +65,7 @@ export default function SwapMatrixDiagram() {
         fontFamily="monospace"
         letterSpacing="0.5"
       >
-        ALTERNATIVE
+        {t('guides.art.swapMatrix.alternative')}
       </text>
       <text
         x={COL_X[2] + COL_W / 2}
@@ -74,10 +77,10 @@ export default function SwapMatrixDiagram() {
         fontFamily="monospace"
         letterSpacing="0.5"
       >
-        ALTERNATIVE
+        {t('guides.art.swapMatrix.alternative')}
       </text>
 
-      {ROWS.map((row, i) => {
+      {rows.map((row, i) => {
         const y = TOP + i * ROW_HEIGHT;
         const cells = [
           { x: COL_X[0], label: row.ours, primary: true },
@@ -156,13 +159,13 @@ export default function SwapMatrixDiagram() {
 
       <text
         x={LABEL_X}
-        y={TOP + ROWS.length * ROW_HEIGHT + 22}
+        y={TOP + rows.length * ROW_HEIGHT + 22}
         fontSize="11"
         fontWeight="600"
         fill="#a3a3a3"
         fontFamily="monospace"
-      > {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        same wire format · same signatures · the pieces don&apos;t care
+      >
+        {t('guides.art.swapMatrix.footer')}
       </text>
     </svg>
   );

@@ -1,3 +1,6 @@
+import { useTranslations } from 'next-intl';
+import type { MessageKey } from '@/i18n/keys';
+
 /**
  * A screenshot of the running app, for guides that describe the app itself.
  *
@@ -17,7 +20,8 @@
  * here. The namespace is the directory under `public/og/guides/`.
  */
 export interface ShotMeta {
-  alt: string;
+  /** The image's alt text: `guides.shot.alt.*`. */
+  altKey: MessageKey;
   width: number;
   height: number;
 }
@@ -26,32 +30,32 @@ export const SHOT_META: Record<string, ShotMeta> = {
   'games/chain-reaction-board': {
     width: 420,
     height: 484,
-    alt: 'Chain Reaction board in Obelisk: a 6×9 grid of dark cells holding glowing red, lime and cyan orbs, with a legend naming the three players and whose turn it is.',
+    altKey: 'guides.shot.alt.chainReactionBoard',
   },
   'games/chain-reaction-result': {
     width: 380,
     height: 181,
-    alt: 'Chain Reaction final standings in Obelisk: first place with a trophy and an orb count, second place marked out, under the heading "Final result".',
+    altKey: 'guides.shot.alt.chainReactionResult',
   },
   'games/vesta-board': {
     width: 860,
     height: 870,
-    alt: 'Vesta board in Obelisk: a hexagonal island of resource tiles with numbered dice tokens, player settlements and roads on the edges, a robber on the desert, and each player’s hand and victory points below.',
+    altKey: 'guides.shot.alt.vestaBoard',
   },
   'games/stacker-well': {
     width: 340,
     height: 475,
-    alt: 'A Stacker playfield in Obelisk: a ten-column well part-filled with coloured tetromino blocks and the ghost outline of the falling piece near the top.',
+    altKey: 'guides.shot.alt.stackerWell',
   },
   'games/stacker-table': {
     width: 760,
     height: 874,
-    alt: 'A live three-player Stacker match in Obelisk: the player’s own well with grey garbage lines at the bottom, hold and next-piece rails, and two opponents shown as miniature boards with their attack and line counts.',
+    altKey: 'guides.shot.alt.stackerTable',
   },
   'games/game-picker': {
     width: 448,
     height: 444,
-    alt: 'The Obelisk "Pick a game" dialog listing Chain Reaction, Vesta and Stacker, each with a thumbnail, a one-line description, its player range and its turn clock.',
+    altKey: 'guides.shot.alt.gamePicker',
   },
 
   /*
@@ -65,42 +69,42 @@ export const SHOT_META: Record<string, ShotMeta> = {
   'relay/landing': {
     width: 700,
     height: 300,
-    alt: 'The connect card on an Obelisk Relay landing page: counters reading 28 groups and 9 supported NIPs, above the relay address wss://public.obelisk.ar with a copy button.',
+    altKey: 'guides.shot.alt.relayLanding',
   },
   'relay/sign-in': {
     width: 450,
     height: 530,
-    alt: 'The Obelisk Relay admin sign-in card offering three Nostr identities: a NIP-07 browser extension, a NIP-46 remote signer, or a pasted private key marked risky in browsers.',
+    altKey: 'guides.shot.alt.relaySignIn',
   },
   'relay/overview': {
     width: 800,
     height: 500,
-    alt: 'The Overview screen of the Obelisk Relay console: hourly graphs of active connections and disk used, live counters for connections, uptime and last event received, and a configured summary showing retention, database size and the access mode.',
+    altKey: 'guides.shot.alt.relayOverview',
   },
   'relay/access-tabs': {
     width: 800,
     height: 500,
-    alt: 'The Access screen of the Obelisk Relay console: a box for checking whether an account is allowed, five tabs counting Tier 1, Tier 2, Tier 3, Blocked and Policies, and the reference accounts every tier is measured from.',
+    altKey: 'guides.shot.alt.relayAccessTabs',
   },
   'relay/budget-ladder': {
     width: 800,
     height: 500,
-    alt: 'The rate budget in the Obelisk Relay console: bars showing what each tier may publish: 6,000 events a minute for Tier 1, 3,000 for Tier 2, 1,500 for Tier 3 and 600 for no tier at all.',
+    altKey: 'guides.shot.alt.relayBudgetLadder',
   },
   'relay/key-search': {
     width: 800,
     height: 500,
-    alt: 'Checking one account in the Obelisk Relay console: a pasted npub answered with "Allowed", admitted by web of trust at two hops from a reference account, with a Block button beside the verdict.',
+    altKey: 'guides.shot.alt.relayKeySearch',
   },
   'relay/reports': {
     width: 800,
     height: 500,
-    alt: 'The Reports screen of the Obelisk Relay console: moderation reports grouped one row per reported thing, each tagged nudity or spam with its reporter count, a note field, and buttons to dismiss or block the reported account.',
+    altKey: 'guides.shot.alt.relayReports',
   },
   'relay/storage': {
     width: 800,
     height: 500,
-    alt: 'The Storage screen of the Obelisk Relay console: 227.1 MB on disk holding 12,831 events, nothing deleted, with a warning that pruning stops the database file growing but does not shrink it.',
+    altKey: 'guides.shot.alt.relayStorage',
   },
 };
 
@@ -118,6 +122,7 @@ export default function Shot({
   caption?: string;
   maxWidth?: number;
 }) {
+  const t = useTranslations();
   const meta = SHOT_META[name];
   if (!meta) return null;
   return (
@@ -128,7 +133,7 @@ export default function Shot({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={shotPath(name)}
-          alt={meta.alt}
+          alt={t(meta.altKey)}
           width={meta.width}
           height={meta.height}
           className="mx-auto block h-auto w-full"

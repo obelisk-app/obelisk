@@ -84,9 +84,7 @@ function GameCard({ gameId }: { gameId: string }) {
         ))}
       </span>
       <span className="shrink-0 rounded-full border border-lc-border px-2 py-0.5 text-[10px] text-lc-white">
-        {canJoin(session, myPubkey) ? 'Join'
-          : session.status === 'finished' ? 'Result'
-          : 'Open'}
+        <ActionLabel session={session} myPubkey={myPubkey} />
       </span>
     </button>
   );
@@ -96,18 +94,24 @@ function GameCard({ gameId }: { gameId: string }) {
 // on plenty a card does not care about.
 export default memo(GameCard);
 
+function ActionLabel({ session, myPubkey }: { session: GameSession; myPubkey: string | null }) {
+  const t = useTranslations();
+  if (canJoin(session, myPubkey)) return <>{t('games.join')}</>;
+  return <>{t(session.status === 'finished' ? 'games.card.result' : 'games.card.open')}</>;
+}
+
 function StatusLabel({ session, myPubkey }: { session: GameSession; myPubkey: string | null }) {
   const t = useTranslations();
   switch (session.status) {
     case 'waiting':
-      return <>{`Open table · ${session.joined.length}/${session.maxPlayers}`}</>;
+      return <>{t('games.card.openTable', { joined: session.joined.length, max: session.maxPlayers })}</>;
     case 'in_progress':
       return <>{t('games.inProgress')}</>;
     case 'finished':
       if (session.draw || !session.winner) return <>{t('games.draw')}</>;
       // Naming the reader is safe here: this is rendered per viewer and never
       // published, unlike the seat labels that travel in the `start` event.
-      if (controllerOf(session, session.winner) === myPubkey) return <>🏆 you won</>;
+      if (controllerOf(session, session.winner) === myPubkey) return <>{t('games.card.youWon')}</>;
       return <WinnerLabel session={session} winner={session.winner} />;
     default:
       return <>{t('games.cancelled')}</>;
@@ -124,6 +128,7 @@ function StatusLabel({ session, myPubkey }: { session: GameSession; myPubkey: st
  * kind 0 that arrived, to resolve a string that most of them never showed.
  */
 function WinnerLabel({ session, winner }: { session: GameSession; winner: string }) {
+  const t = useTranslations();
   const memberList = useGroupMemberInfo(session.channelId);
   // `winner` is a SEAT id, which on a hot-seat table is `pubkey#1`, and looking
   // that up in the member list misses and leaves a mangled hex prefix on
@@ -133,5 +138,5 @@ function WinnerLabel({ session, winner }: { session: GameSession; winner: string
   const profileName = memberList.find((m) => m.pubkey === controller)?.displayName
     ?? controller.slice(0, 8);
   const label = seatDisplayLabel(session.seats.find((s) => s.id === winner)?.label, profileName);
-  return <>{`🏆 ${label} won`}</>;
+  return <>{t('games.card.won', { name: label })}</>;
 }

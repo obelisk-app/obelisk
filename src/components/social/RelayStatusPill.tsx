@@ -109,7 +109,7 @@ export default function RelayStatusPill({
     ? `${shortHost(activeRelay)} · ${t(`social.auth.${access}`)}`
     : summary.state === 'offline'
       ? t('social.relayOffline')
-      : `${summary.connected}/${summary.total} ${t('social.relayCount')}`;
+      : t('social.relaysConnected', { connected: summary.connected, total: summary.total });
 
   return (
     <>

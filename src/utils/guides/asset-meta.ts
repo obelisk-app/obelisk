@@ -1,5 +1,9 @@
+import { DEFAULT_LOCALE, type Locale } from '@/i18n';
+import type { MessageKey } from '@/i18n/keys';
+
 export interface GuideAssetMeta {
-  alt: string;
+  /** The image's alt text, also its JSON-LD caption: `guides.asset.alt.*`. */
+  altKey: MessageKey;
   width: number;
   height: number;
   /**
@@ -13,67 +17,67 @@ export const HERO_ASSET_META: Record<string, GuideAssetMeta> = {
   'what-is-obelisk': {
     width: 800,
     height: 400,
-    alt: 'Obelisk overview: an obelisk monument surrounded by orbiting Nostr keys and floating chat bubbles, illustrating a Discord-like group chat where identity is a Nostr keypair.',
+    altKey: 'guides.asset.alt.whatIsObelisk',
   },
   'how-obelisk-works': {
     width: 800,
     height: 400,
-    alt: 'How Obelisk works: a browser client, the Obelisk app, and Nostr relays connected by flowing data lines that show NIP-29 group messages travelling over the relay network.',
+    altKey: 'guides.asset.alt.howObeliskWorks',
   },
   wot: {
     width: 800,
     height: 400,
-    alt: 'Nostr Web of Trust graph for spam protection: your pubkey at the center, lime-green high-trust nodes connected through your follows, and red-outlined spam nodes pushed to the periphery.',
+    altKey: 'guides.asset.alt.wot',
   },
   'future-relays': {
     width: 800,
     height: 400,
-    alt: 'The future of Nostr: a mesh of relay-based groups exchanging encrypted NIP-29 messages with no central server, every relay equal.',
+    altKey: 'guides.asset.alt.futureRelays',
   },
   'bitcoin-zaps': {
     width: 800,
     height: 400,
-    alt: 'Bitcoin Lightning zaps in chat: a chat message with a glowing lightning bolt flowing into it, orbited by satoshi particles, representing a zap sent over Nostr Wallet Connect (NIP-47).',
+    altKey: 'guides.asset.alt.bitcoinZaps',
   },
   'admin-cli': {
     width: 800,
     height: 400,
-    alt: 'Obelisk admin CLI for coding agents: a terminal streaming admin commands wired to an AI agent that signs Nostr challenges and publishes NIP-29 events to the relay.',
+    altKey: 'guides.asset.alt.adminCli',
   },
   'swap-anything': {
     width: 800,
     height: 400,
-    alt: 'The Obelisk ecosystem: one self-hostable Nostr relay connected to a chat client, a voice SFU, and a bot runtime: every component independently replaceable, nothing locked together.',
+    altKey: 'guides.asset.alt.swapAnything',
   },
   'obelisk-bots': {
     width: 800,
     height: 400,
-    alt: 'Obelisk zap bot hero: a stylish robot with black sunglasses listening for Nostr zap receipts and group reactions, then posting signed kind 9 announcements into NIP-29 groups.',
+    altKey: 'guides.asset.alt.obeliskBots',
   },
   'quantum-safe': {
     width: 800,
     height: 400,
-    alt: 'Quantum-safe DMs hero: a sealed message at the center wrapped in two shells, an inner classic secp256k1 key exchange and an outer post-quantum layer, illustrating hybrid protection.',
+    altKey: 'guides.asset.alt.quantumSafe',
   },
   'chain-reaction': {
     width: 800,
     height: 400,
-    alt: 'Chain Reaction hero: a dark grid of cells holding red, lime and cyan orbs with one cell bursting and pushing an orb into each of its four neighbours, the cascade played over a Nostr relay.',
+    altKey: 'guides.asset.alt.chainReaction',
   },
   vesta: {
     width: 800,
     height: 400,
-    alt: 'Vesta hero: a hexagonal island of forest, brick, wool, grain and ore tiles with numbered dice tokens and player settlements, beside the event-log entropy the dice roll is derived from.',
+    altKey: 'guides.asset.alt.vesta',
   },
   stacker: {
     width: 800,
     height: 400,
-    alt: 'Stacker hero: two ten-column wells of falling coloured blocks, a cleared line in the left well sending grey garbage rows into the right one over a Nostr relay.',
+    altKey: 'guides.asset.alt.stacker',
   },
   'run-your-own-relay': {
     width: 800,
     height: 400,
-    alt: 'Admission to a self-hosted Nostr relay drawn as a ladder: the relay at the left, three widening arcs of admitted keys around it, added by hand, two hops away, three hops away, publishing at 6,000, 3,000 and 1,500 events a minute, and a block list that is checked first and overrides every tier.',
+    altKey: 'guides.asset.alt.runYourOwnRelay',
   },
 };
 
@@ -81,46 +85,46 @@ export const DIAGRAM_ASSET_META: Record<string, GuideAssetMeta> = {
   'wot-graph': {
     width: 800,
     height: 320,
-    alt: 'Web of Trust score computation: how Obelisk derives a trust score for a Nostr pubkey by walking the follow graph from your own follows outward.',
+    altKey: 'guides.asset.alt.wotGraph',
   },
   'relay-groups': {
     width: 800,
     height: 360,
-    alt: 'NIP-29 relay-based group: the relay holds the membership list (kind 39002), admin list (kind 39001), and message events (kind 9), and the client subscribes by group id.',
+    altKey: 'guides.asset.alt.relayGroups',
   },
   'zap-flow': {
     width: 900,
     height: 360,
-    alt: 'Lightning Zap sequence on Obelisk: client requests a zap, the Obelisk server brokers NWC make-invoice and pay-invoice between the receiver and sender wallets, then publishes the ⚡ message to the chat.',
+    altKey: 'guides.asset.alt.zapFlow',
   },
   'swap-matrix': {
     width: 790,
     height: 352,
-    alt: 'Obelisk swap matrix: every layer of the stack - client, voice, bots, relay - has independent alternatives, so any one component can be replaced without changing the others.',
+    altKey: 'guides.asset.alt.swapMatrix',
   },
   'mark-dex': {
     width: 120,
     height: 120,
     bannerWidth: 1600,
-    alt: 'obelisk-dex logo mark: a chat bubble containing the Obelisk monument, representing the browser chat client that signs Nostr events and posts them to a relay.',
+    altKey: 'guides.asset.alt.markDex',
   },
   'mark-sfu': {
     width: 120,
     height: 120,
     bannerWidth: 1600,
-    alt: 'obelisk-sfu logo mark: a central voice mixer hub connected by spokes to five peers, representing the Selective Forwarding Unit that mixes streams for large group calls.',
+    altKey: 'guides.asset.alt.markSfu',
   },
   'mark-bots': {
     width: 120,
     height: 120,
     bannerWidth: 1600,
-    alt: 'obelisk-bots logo mark: a small robot head with an antenna, representing the bot runtime where each bot has its own Nostr keypair and posts messages like any user.',
+    altKey: 'guides.asset.alt.markBots',
   },
   'mark-relay': {
     width: 120,
     height: 120,
     bannerWidth: 1600,
-    alt: 'obelisk-relay logo mark: a relay tower broadcasting concentric signal arcs, representing the self-hostable Nostr relay with built-in whitelisting and admin UI.',
+    altKey: 'guides.asset.alt.markRelay',
   },
 };
 
@@ -132,10 +136,16 @@ export function getAssetMeta(name: string): GuideAssetMeta | undefined {
   return HERO_ASSET_META[name] ?? DIAGRAM_ASSET_META[name];
 }
 
-export function snapshotPaths(name: string): { svg: string; png: string } {
+/**
+ * The still-frame snapshots `npm run snap-guides` writes for one asset. The
+ * artwork carries words, so each language has its own: English at the top
+ * of `/og/guides/`, Spanish and Portuguese under `/og/guides/<locale>/`.
+ */
+export function snapshotPaths(name: string, locale: Locale = DEFAULT_LOCALE): { svg: string; png: string } {
+  const dir = locale === DEFAULT_LOCALE ? '/og/guides' : `/og/guides/${locale}`;
   return {
-    svg: `/og/guides/${name}.svg`,
-    png: `/og/guides/${name}.png`,
+    svg: `${dir}/${name}.svg`,
+    png: `${dir}/${name}.png`,
   };
 }
 

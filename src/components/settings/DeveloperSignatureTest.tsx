@@ -23,10 +23,10 @@ export default function DeveloperSignatureTest({ mobile = false }: { mobile?: bo
       try {
         await nostrActions.signEventTemplate({
           kind,
-          content: kind === 22242 ? '' : `Obelisk mock signature test for kind ${kind}. This event is not published.`,
+          content: kind === 22242 ? '' : t('settings.developer.mockContent', { kind: String(kind) }),
           tags: kind === 22242
             ? [['relay', 'wss://public.obelisk.ar'], ['challenge', 'obelisk-developer-signature-test'], ['client', 'Obelisk']]
-            : [['client', 'Obelisk'], ['alt', 'Developer signature permission test']],
+            : [['client', 'Obelisk'], ['alt', t('settings.developer.mockAlt')]],
         });
         setResults((current) => ({ ...current, [kind]: 'accepted' }));
       } catch {
@@ -74,11 +74,13 @@ export default function DeveloperSignatureTest({ mobile = false }: { mobile?: bo
           className={mobile ? 'settings-btn-secondary mt-3 w-full' : 'rounded-md border border-lc-green/50 bg-lc-green/10 px-3 py-2 text-sm font-semibold text-lc-green hover:bg-lc-green/20 disabled:opacity-50'}
           data-testid="request-mock-signatures"
         >
-          {running ? `Waiting · ${accepted + rejected}/${OBELISK_SIGNING_KINDS.length}` : `Request all ${OBELISK_SIGNING_KINDS.length} signatures`}
+          {running
+            ? t('settings.developer.waiting', { done: accepted + rejected, total: OBELISK_SIGNING_KINDS.length })
+            : t('settings.developer.requestAll', { count: OBELISK_SIGNING_KINDS.length })}
         </button>
         {requested > 0 && !running && (
           <div className={mobile ? 'settings-row-meta muted mt-2' : 'text-xs text-lc-muted'} role="status">
-            {accepted} accepted · {rejected} rejected
+            {t('settings.developer.results', { accepted, rejected })}
           </div>
         )}
       </div>

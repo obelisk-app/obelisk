@@ -108,7 +108,7 @@ export function parseRelayEmojiSet(ev: NostrEvent): RelayEmojiSet {
 export function toRelayEmojiSetTags(set: RelayEmojiSet, relayUrl: string): string[][] {
   const tags: string[][] = [
     ['d', relayEmojiSetDTag(relayUrl)],
-    ['title', set.title.trim() || 'Obelisk emojis'],
+    ['title', set.title.trim() || 'Obelisk emojis'], // i18n-exempt: default set title published on the wire, read by every client
     ...Array.from(new Set(set.packAddresses ?? []))
       .filter((address) => isPackAddress(address))
       .map((address) => ['a', address]),
@@ -127,7 +127,7 @@ export function toRelayEmojiSetTags(set: RelayEmojiSet, relayUrl: string): strin
 
 export function relayEmojiSetFromMap(
   map: CustomEmojiMap,
-  title = 'Obelisk emojis',
+  title = 'Obelisk emojis', // i18n-exempt: default set title published on the wire
 ): RelayEmojiSet {
   return {
     title,

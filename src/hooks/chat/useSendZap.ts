@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import {
   checkZap,
+  MARKER_NO_BRIDGE,
   sendZap,
   ZapError,
   type ZapErrorCode,
@@ -52,7 +53,12 @@ export function useSendZap({ recipient, amountSats, comment, lud16, displayName,
       const { markerError } = await sendZap(check.zap);
       const title = t('chat.zap.sent', { amount: formatNumber(amountSats), name: displayName });
       useToastStore.getState().pushToast(markerError
-        ? { title, body: t('chat.zap.markerFailed', { error: markerError }) }
+        ? {
+          title,
+          body: t('chat.zap.markerFailed', {
+            error: markerError === MARKER_NO_BRIDGE ? t('chat.zap.noBridge') : markerError,
+          }),
+        }
         : { title, body: comment.trim() || '' });
       onSent();
     } catch (e) {

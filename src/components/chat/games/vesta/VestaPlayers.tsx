@@ -4,6 +4,7 @@ import type { GameState } from 'vesta';
 import { VESTA_PLAYER_COLORS } from './palette';
 import { RESOURCES, RESOURCE_EMOJI } from './resources';
 import type { VestaTurn } from '@/hooks/chat/games/vesta/useVestaTurn';
+import { useTranslations } from 'next-intl';
 
 /** One tile per seat (colour, name, points, cards) and the status line under them. */
 export default function VestaPlayers({ state, mySeats, seatLabel, turn }: {
@@ -12,6 +13,7 @@ export default function VestaPlayers({ state, mySeats, seatLabel, turn }: {
   seatLabel: (seatId: string) => string;
   turn: Pick<VestaTurn, 'participants' | 'turnIdx' | 'turnSeat' | 'isSetup'>;
 }) {
+  const t = useTranslations();
   const { participants, turnIdx, turnSeat, isSetup } = turn;
   return (
     <>
@@ -35,7 +37,7 @@ export default function VestaPlayers({ state, mySeats, seatLabel, turn }: {
                 </span>
               </div>
               <div className="mt-1 flex items-center justify-between text-[10px] text-lc-muted">
-                <span>{p.vp} VP</span>
+                <span>{t('games.score.vp', { count: p.vp })}</span>
                 <span>
                   {mine
                     ? RESOURCES.map((r) => `${RESOURCE_EMOJI[r]}${p.resources[r] ?? 0}`).join(' ')
@@ -50,12 +52,14 @@ export default function VestaPlayers({ state, mySeats, seatLabel, turn }: {
       {/* Status line */}
       <div className="rounded-lg border border-lc-border bg-lc-black/40 p-2 text-center text-[11px] text-lc-muted">
         {state.winner !== null && state.winner !== undefined
-          ? `${seatLabel(participants[state.winner] ?? '')} wins`
+          ? t('games.vestaTable.wins', { name: seatLabel(participants[state.winner] ?? '') })
           : isSetup
-            ? `Setup: ${seatLabel(turnSeat ?? '')} places a ${state.setupStep}`
+            ? t(state.setupStep === 'road' ? 'games.vestaTable.setupRoad' : 'games.vestaTable.setupSettlement', {
+              name: seatLabel(turnSeat ?? ''),
+            })
             : state.dice
               ? `🎲 ${state.dice[0]} + ${state.dice[1]} = ${state.dice[0] + state.dice[1]}`
-              : `${seatLabel(turnSeat ?? '')} to roll`}
+              : t('games.vestaTable.toRoll', { name: seatLabel(turnSeat ?? '') })}
       </div>
     </>
   );

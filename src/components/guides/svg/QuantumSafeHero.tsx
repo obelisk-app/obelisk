@@ -1,4 +1,7 @@
+import { useTranslations } from 'next-intl';
+
 export default function QuantumSafeHero() {
+  const t = useTranslations();
   return (
     <svg
       viewBox="0 0 800 400"
@@ -7,11 +10,8 @@ export default function QuantumSafeHero() {
       aria-labelledby="hero-quantum-safe-title hero-quantum-safe-desc"
       className="w-full h-auto"
     >
-      <title id="hero-quantum-safe-title">A message sealed by two layers of protection</title>
-      <desc id="hero-quantum-safe-desc">
-        A classic Nostr key exchange wrapped in an outer post-quantum shell, with a
-        locked envelope at the center representing a hybrid-protected direct message.
-      </desc>
+      <title id="hero-quantum-safe-title">{t('guides.art.quantumSafe.title')}</title>
+      <desc id="hero-quantum-safe-desc">{t('guides.art.quantumSafe.desc')}</desc>
 
       <defs>
         <radialGradient id="bg-quantum-safe" cx="0.5" cy="0.5" r="0.7">
@@ -58,9 +58,9 @@ export default function QuantumSafeHero() {
       {/* legend */}
       <g fontSize="11" fontWeight="600">
         <rect x="40" y="18" width="16" height="12" rx="3" fill="none" stroke="#b4f953" strokeOpacity="0.75" strokeWidth="1.5" />
-        <text x="64" y="28" fill="#fafafa">classic key exchange</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="64" y="28" fill="#fafafa">{t('guides.art.quantumSafe.classic')}</text>
         <rect x="230" y="18" width="16" height="12" rx="3" fill="none" stroke="#b4f953" strokeOpacity="0.35" strokeWidth="1.5" />
-        <text x="254" y="28" fill="#fafafa">post-quantum layer</text>
+        <text x="254" y="28" fill="#fafafa">{t('guides.art.quantumSafe.postQuantum')}</text>
       </g>
     </svg>
   );

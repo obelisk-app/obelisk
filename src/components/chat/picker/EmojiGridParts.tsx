@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import MediaThumb from '@/components/media/MediaThumb';
 import type { RecentPickerEntry } from '@/utils/chat/picker/custom-emoji-entries';
 import type { CustomEmojiEntry, PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
@@ -13,12 +14,15 @@ export function EmojiCharButton({
   char,
   keyword,
   disabled,
+  disabledTitle,
   className,
   onPick,
 }: {
   char: string;
   keyword: string;
   disabled: boolean;
+  /** The title of a disabled button, already in the reader's language. */
+  disabledTitle: string;
   className: string;
   onPick: (char: string) => void;
 }) {
@@ -28,7 +32,7 @@ export function EmojiCharButton({
       onClick={() => onPick(char)}
       disabled={disabled}
       className={className}
-      title={disabled ? 'Already reacted' : keyword}
+      title={disabled ? disabledTitle : keyword}
     >
       {char}
     </button>
@@ -51,6 +55,7 @@ export function CustomEmojiSection({
   classes: GridClasses;
   onPickCustom: (emoji: PickedCustomEmoji) => void;
 }) {
+  const t = useTranslations();
   if (!action && entries.length === 0) return null;
   return (
     <div className="mb-2">
@@ -67,7 +72,7 @@ export function CustomEmojiSection({
               onClick={() => onPickCustom(e)}
               disabled={mine}
               className={classes.emojiBtnClass}
-              title={mine ? 'Already reacted' : shortcode}
+              title={mine ? t('chat.emoji.alreadyReacted') : shortcode}
             >
               <MediaThumb src={e.url} alt={shortcode} className={classes.customImageClass} />
             </button>

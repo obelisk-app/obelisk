@@ -1,10 +1,15 @@
 import { act, renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const uploadToBlossom = vi.fn<(f: File) => Promise<string>>();
 vi.mock('@/services/blossom', () => ({ uploadToBlossom: (f: File) => uploadToBlossom(f) }));
 
 import { useComposerUploads } from '@/hooks/chat/composer/useComposerUploads';
+
+/** The hook words its errors through next-intl, so it needs a provider. */
+const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
 
 function setup(initial = '') {
   let draft = initial;
@@ -14,7 +19,7 @@ function setup(initial = '') {
     setDraftVoiceNote: vi.fn(),
     setSendError: vi.fn(),
   };
-  const hook = renderHook(() => useComposerUploads(targets));
+  const hook = renderHook(() => useComposerUploads(targets), { wrapper });
   return { hook, targets, draft: () => draft };
 }
 

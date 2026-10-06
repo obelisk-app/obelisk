@@ -89,14 +89,13 @@ function ThreadGalleryCard({
       </div>
       <div className="p-3 flex-1 flex flex-col gap-1.5">
         <div className="text-sm font-semibold text-lc-white truncate">
-          {thread.name || '(untitled publication)'}
+          {thread.name || t('chat.forum.untitled')}
         </div>
         <div className="text-xs text-lc-muted line-clamp-3 break-words">{op.content}</div>
         <div className="mt-auto flex items-center justify-between gap-2 text-[11px] text-lc-muted pt-1">
-          <span className="truncate">OP {opName}</span>
+          <span className="truncate">{t('chat.forum.op', { name: opName })}</span>
           <span className="shrink-0">
-            {messages.length} {messages.length === 1 ? 'msg' : 'msgs'} ·{' '}
-            {relativeTime(lastMsg.createdAt, t, locale)}
+            {t('chat.forum.messages', { count: messages.length })} · {relativeTime(lastMsg.createdAt, t, locale)}
           </span>
         </div>
       </div>

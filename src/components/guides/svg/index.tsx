@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import WhatIsObeliskHero from './WhatIsObeliskHero';
 import HowObeliskWorksHero from './HowObeliskWorksHero';
 import WotHero from './WotHero';
@@ -63,14 +64,16 @@ function IndexableSvg({
   Component: ComponentType;
   meta: GuideAssetMeta;
 }) {
-  const paths = snapshotPaths(name);
+  const t = useTranslations();
+  const locale = useLocale();
+  const paths = snapshotPaths(name, locale);
   return (
     <div className="relative w-full">
       {/* Plain <img>: hidden under the live <svg>, exists only as the indexable asset; next/image would re-encode lossily. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={paths.png}
-        alt={meta.alt}
+        alt={t(meta.altKey)}
         width={meta.width}
         height={meta.height}
         className="block w-full h-auto"
@@ -96,10 +99,12 @@ export function SvgHero({ name }: { name: string }) {
 }
 
 export function Mark({ name, size = 40 }: { name: string; size?: number }) {
+  const t = useTranslations();
+  const locale = useLocale();
   const C = DIAGRAM_REGISTRY[name];
   const meta = DIAGRAM_ASSET_META[name];
   if (!C || !meta) return null;
-  const paths = snapshotPaths(name);
+  const paths = snapshotPaths(name, locale);
   return (
     <span
       className="relative inline-block align-middle mr-2 rounded-md overflow-hidden border border-lc-border bg-lc-dark"
@@ -108,7 +113,7 @@ export function Mark({ name, size = 40 }: { name: string; size?: number }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={paths.png}
-        alt={meta.alt}
+        alt={t(meta.altKey)}
         width={size}
         height={size}
         className="block w-full h-full"

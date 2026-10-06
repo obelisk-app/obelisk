@@ -47,7 +47,6 @@ export interface RealtimeRules<M = unknown, E = unknown> {
 export interface GameDefinition<S = unknown, A = unknown> {
   type: string;
   displayName: string;
-  description: string;
   minPlayers: number;
   maxPlayers: number;
   defaultTurnTimeoutS: number;

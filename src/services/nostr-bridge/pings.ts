@@ -5,6 +5,7 @@
  * from `client.ts` (round 4 plan, step 9). The watcher's REQs and its
  * `'watch'` AUTH leases are the hub's (step 6), reached through `deps`.
  */
+import { translate } from '@/i18n/runtime';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { KIND_GROUP_CHAT_MESSAGE, KIND_GROUP_METADATA } from '@/utils/nip-kinds';
 import { getPreferences } from '@/services/preferences';
@@ -190,7 +191,9 @@ export class PingsModule {
       kind: 'mention',
       id: ev.id,
       createdAt: ev.created_at * 1000,
-      title: where ? `${this.deps.displayNameFor(ev.pubkey)} in ${where}` : this.deps.displayNameFor(ev.pubkey),
+      title: where
+        ? translate('common.ping.postedIn', { sender: this.deps.displayNameFor(ev.pubkey), where })
+        : this.deps.displayNameFor(ev.pubkey),
       body: previewText(ev.content),
     });
   }

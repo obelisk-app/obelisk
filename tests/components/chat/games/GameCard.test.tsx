@@ -246,7 +246,7 @@ describe('ChainReactionBoard', () => {
     const mySeats = [HOST, `${HOST}#1`];
 
     renderLocalized(<ChainReactionBoard game={session} mySeats={mySeats} onAction={onAction} />);
-    screen.getByLabelText('cell 0').click();
+    screen.getByLabelText('Cell 0').click();
     expect(onAction).toHaveBeenCalledWith({ cell: 0 }, HOST);
 
     // After Ana's move the turn is Beto's: same keyboard, different seat.
@@ -259,7 +259,7 @@ describe('ChainReactionBoard', () => {
 
     onAction.mockClear();
     renderLocalized(<ChainReactionBoard game={next} mySeats={mySeats} onAction={onAction} />);
-    screen.getAllByLabelText('cell 5')[1].click();
+    screen.getAllByLabelText('Cell 5')[1].click();
     expect(onAction).toHaveBeenCalledWith({ cell: 5 }, `${HOST}#1`);
   });
 
@@ -269,11 +269,11 @@ describe('ChainReactionBoard', () => {
 
     const { rerender } = renderLocalized(<ChainReactionBoard game={session} mySeats={[B]} onAction={onAction} />);
     // B is not on move, so every cell is disabled.
-    screen.getByLabelText('cell 0').click();
+    screen.getByLabelText('Cell 0').click();
     expect(onAction).not.toHaveBeenCalled();
 
     rerender(<LocaleProvider initialLocale="en">{<><ChainReactionBoard game={session} mySeats={[HOST]} onAction={onAction} /></>}</LocaleProvider>);
-    screen.getByLabelText('cell 0').click();
+    screen.getByLabelText('Cell 0').click();
     expect(onAction).toHaveBeenCalledWith({ cell: 0 }, HOST);
   });
 
@@ -286,10 +286,10 @@ describe('ChainReactionBoard', () => {
     const onAction = vi.fn().mockResolvedValue(undefined);
 
     renderLocalized(<ChainReactionBoard game={session} mySeats={[B]} onAction={onAction} />);
-    screen.getByLabelText('cell 0').click();
+    screen.getByLabelText('Cell 0').click();
     expect(onAction).not.toHaveBeenCalled();
 
-    screen.getByLabelText('cell 5').click();
+    screen.getByLabelText('Cell 5').click();
     expect(onAction).toHaveBeenCalledWith({ cell: 5 }, B);
   });
 });

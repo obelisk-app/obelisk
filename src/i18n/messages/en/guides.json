@@ -11,5 +11,259 @@
     "back": "All guides",
     "readTime": "min read",
     "updated": "Updated"
+  },
+  "related": {
+    "heading": "See also"
+  },
+  "help": {
+    "title": "How can we help?",
+    "subtitle": "Start with the basics or jump straight to the topic you need.",
+    "back": "← Back to Obelisk",
+    "all": "Browse all guides →",
+    "viewMore": "View more guides",
+    "topics": {
+      "start": {
+        "title": "Getting started",
+        "description": "Learn what Obelisk is and how your Nostr identity works."
+      },
+      "how": {
+        "title": "How Obelisk works",
+        "description": "Understand groups, relays, messages, and privacy."
+      },
+      "community": {
+        "title": "Run a community",
+        "description": "Moderate a group with NIP-29 roles, kicks and bans."
+      },
+      "payments": {
+        "title": "Payments and zaps",
+        "description": "Send Lightning payments without leaving the conversation."
+      }
+    }
+  },
+  "callout": {
+    "info": "Info",
+    "warn": "Heads up",
+    "note": "Note"
+  },
+  "clip": {
+    "duration": "{seconds}s, no sound",
+    "alt": {
+      "relayInstall": "Two commands are the whole install: ./setup.sh gives you a relay on localhost, ./expose.sh gives the world a way in, no SSH session and no YAML to hand-edit.",
+      "relayLadder": "Admission is a ladder, not a switch: Tier 1 is added by hand, Tier 2 is two hops away in the follow graph, Tier 3 is three hops, and a block list overrides all three.",
+      "relayNumbers": "The reach of a single reference account on the public Obelisk relay: 166,735 keys admitted in total, split across Tier 1 at 1,062, Tier 2 at 45,966 and Tier 3 at 119,708 or more.",
+      "relaySnapshot": "A reported message still readable in the moderation queue after the author deleted it, because the relay captured its own copy when the report arrived."
+    }
+  },
+  "shot": {
+    "alt": {
+      "chainReactionBoard": "Chain Reaction board in Obelisk: a 6×9 grid of dark cells holding glowing red, lime and cyan orbs, with a legend naming the three players and whose turn it is.",
+      "chainReactionResult": "Chain Reaction final standings in Obelisk: first place with a trophy and an orb count, second place marked out, under the heading \"Final result\".",
+      "vestaBoard": "Vesta board in Obelisk: a hexagonal island of resource tiles with numbered dice tokens, player settlements and roads on the edges, a robber on the desert, and each player’s hand and victory points below.",
+      "stackerWell": "A Stacker playfield in Obelisk: a ten-column well part-filled with coloured tetromino blocks and the ghost outline of the falling piece near the top.",
+      "stackerTable": "A live three-player Stacker match in Obelisk: the player’s own well with grey garbage lines at the bottom, hold and next-piece rails, and two opponents shown as miniature boards with their attack and line counts.",
+      "gamePicker": "The Obelisk \"Pick a game\" dialog listing Chain Reaction, Vesta and Stacker, each with a thumbnail, a one-line description, its player range and its turn clock.",
+      "relayLanding": "The connect card on an Obelisk Relay landing page: counters reading 28 groups and 9 supported NIPs, above the relay address wss://public.obelisk.ar with a copy button.",
+      "relaySignIn": "The Obelisk Relay admin sign-in card offering three Nostr identities: a NIP-07 browser extension, a NIP-46 remote signer, or a pasted private key marked risky in browsers.",
+      "relayOverview": "The Overview screen of the Obelisk Relay console: hourly graphs of active connections and disk used, live counters for connections, uptime and last event received, and a configured summary showing retention, database size and the access mode.",
+      "relayAccessTabs": "The Access screen of the Obelisk Relay console: a box for checking whether an account is allowed, five tabs counting Tier 1, Tier 2, Tier 3, Blocked and Policies, and the reference accounts every tier is measured from.",
+      "relayBudgetLadder": "The rate budget in the Obelisk Relay console: bars showing what each tier may publish: 6,000 events a minute for Tier 1, 3,000 for Tier 2, 1,500 for Tier 3 and 600 for no tier at all.",
+      "relayKeySearch": "Checking one account in the Obelisk Relay console: a pasted npub answered with \"Allowed\", admitted by web of trust at two hops from a reference account, with a Block button beside the verdict.",
+      "relayReports": "The Reports screen of the Obelisk Relay console: moderation reports grouped one row per reported thing, each tagged nudity or spam with its reporter count, a note field, and buttons to dismiss or block the reported account.",
+      "relayStorage": "The Storage screen of the Obelisk Relay console: 227.1 MB on disk holding 12,831 events, nothing deleted, with a warning that pruning stops the database file growing but does not shrink it."
+    }
+  },
+  "asset": {
+    "alt": {
+      "whatIsObelisk": "Obelisk overview: an obelisk monument surrounded by orbiting Nostr keys and floating chat bubbles, illustrating a Discord-like group chat where identity is a Nostr keypair.",
+      "howObeliskWorks": "How Obelisk works: a browser client, the Obelisk app, and Nostr relays connected by flowing data lines that show NIP-29 group messages travelling over the relay network.",
+      "wot": "Nostr Web of Trust graph for spam protection: your pubkey at the center, lime-green high-trust nodes connected through your follows, and red-outlined spam nodes pushed to the periphery.",
+      "futureRelays": "The future of Nostr: a mesh of relay-based groups exchanging encrypted NIP-29 messages with no central server, every relay equal.",
+      "bitcoinZaps": "Bitcoin Lightning zaps in chat: a chat message with a glowing lightning bolt flowing into it, orbited by satoshi particles, representing a zap sent over Nostr Wallet Connect (NIP-47).",
+      "adminCli": "Obelisk admin CLI for coding agents: a terminal streaming admin commands wired to an AI agent that signs Nostr challenges and publishes NIP-29 events to the relay.",
+      "swapAnything": "The Obelisk ecosystem: one self-hostable Nostr relay connected to a chat client, a voice SFU, and a bot runtime: every component independently replaceable, nothing locked together.",
+      "obeliskBots": "Obelisk zap bot hero: a stylish robot with black sunglasses listening for Nostr zap receipts and group reactions, then posting signed kind 9 announcements into NIP-29 groups.",
+      "quantumSafe": "Quantum-safe DMs hero: a sealed message at the center wrapped in two shells, an inner classic secp256k1 key exchange and an outer post-quantum layer, illustrating hybrid protection.",
+      "chainReaction": "Chain Reaction hero: a dark grid of cells holding red, lime and cyan orbs with one cell bursting and pushing an orb into each of its four neighbours, the cascade played over a Nostr relay.",
+      "vesta": "Vesta hero: a hexagonal island of forest, brick, wool, grain and ore tiles with numbered dice tokens and player settlements, beside the event-log entropy the dice roll is derived from.",
+      "stacker": "Stacker hero: two ten-column wells of falling coloured blocks, a cleared line in the left well sending grey garbage rows into the right one over a Nostr relay.",
+      "runYourOwnRelay": "Admission to a self-hosted Nostr relay drawn as a ladder: the relay at the left, three widening arcs of admitted keys around it, added by hand, two hops away, three hops away, publishing at 6,000, 3,000 and 1,500 events a minute, and a block list that is checked first and overrides every tier.",
+      "wotGraph": "Web of Trust score computation: how Obelisk derives a trust score for a Nostr pubkey by walking the follow graph from your own follows outward.",
+      "relayGroups": "NIP-29 relay-based group: the relay holds the membership list (kind 39002), admin list (kind 39001), and message events (kind 9), and the client subscribes by group id.",
+      "zapFlow": "Lightning Zap sequence on Obelisk: client requests a zap, the Obelisk server brokers NWC make-invoice and pay-invoice between the receiver and sender wallets, then publishes the ⚡ message to the chat.",
+      "swapMatrix": "Obelisk swap matrix: every layer of the stack - client, voice, bots, relay - has independent alternatives, so any one component can be replaced without changing the others.",
+      "markDex": "obelisk-dex logo mark: a chat bubble containing the Obelisk monument, representing the browser chat client that signs Nostr events and posts them to a relay.",
+      "markSfu": "obelisk-sfu logo mark: a central voice mixer hub connected by spokes to five peers, representing the Selective Forwarding Unit that mixes streams for large group calls.",
+      "markBots": "obelisk-bots logo mark: a small robot head with an antenna, representing the bot runtime where each bot has its own Nostr keypair and posts messages like any user.",
+      "markRelay": "obelisk-relay logo mark: a relay tower broadcasting concentric signal arcs, representing the self-hostable Nostr relay with built-in whitelisting and admin UI."
+    }
+  },
+  "art": {
+    "whatIsObelisk": {
+      "title": "What is Obelisk",
+      "desc": "An obelisk monument surrounded by orbiting Nostr keys and floating chat bubbles."
+    },
+    "howObeliskWorks": {
+      "title": "How Obelisk works",
+      "desc": "A browser client, Obelisk server, and Nostr relays connected with flowing data lines.",
+      "sign": "Sign",
+      "client": "Client",
+      "server": "Obelisk server",
+      "serverRoles": "Channels · Messages · Realtime",
+      "relays": "Nostr relays",
+      "relayRoles": "Identity · Profiles",
+      "flowSession": "session + messages",
+      "flowSign": "sign kind 0 / auth challenge",
+      "flowProfile": "profile fetch"
+    },
+    "quantumSafe": {
+      "title": "A message sealed by two layers of protection",
+      "desc": "A classic Nostr key exchange wrapped in an outer post-quantum shell, with a locked envelope at the center representing a hybrid-protected direct message.",
+      "classic": "classic key exchange",
+      "postQuantum": "post-quantum layer"
+    },
+    "bitcoinZaps": {
+      "title": "Bitcoin zaps in chat",
+      "desc": "A chat message with a glowing lightning bolt flowing into it, orbited by sat particles representing a Lightning zap sent over Nostr Wallet Connect.",
+      "wallet": "NWC wallet",
+      "chatMessage": "chat message"
+    },
+    "adminCli": {
+      "title": "Admin CLI for coding agents",
+      "desc": "A terminal window streaming admin commands, wired to an AI agent avatar that signs Nostr challenges and publishes NIP-29 events to the relay.",
+      "agent": "AI agent",
+      "relay": "NIP-29 relay",
+      "signed": "signed with nsec / NIP-46",
+      "legendEvents": "relay-authorized events",
+      "legendProtocol": "same NIP-29 protocol"
+    },
+    "futureRelays": {
+      "title": "Future: Nostr relay-based groups",
+      "desc": "A mesh of Nostr relays exchanging encrypted group messages, with no central server.",
+      "group": "NIP-29 group"
+    },
+    "chainReaction": {
+      "title": "A cell going critical on a Chain Reaction board",
+      "desc": "A dark grid of cells holding red, lime and cyan orbs. One cell is bursting and sending an orb into each of its four neighbours, the cascade that gives Chain Reaction its name, played over a Nostr relay in Obelisk.",
+      "headline": "One orb over the limit",
+      "spread": "every neighbour takes one,",
+      "burst": "and may burst in turn",
+      "replayed": "the cascade is replayed,",
+      "neverPublished": "never published",
+      "seat": "seat {n}"
+    },
+    "vesta": {
+      "title": "A Vesta island with dice derived from the event log",
+      "desc": "A hexagonal island of forest, brick, wool, grain and ore tiles with numbered dice tokens and player settlements, beside the line of the Nostr event log the dice roll is derived from: nobody at the table rolls their own numbers.",
+      "headline": "Nobody rolls their own dice",
+      "subline": "the numbers come out of the event log",
+      "derive": "…and every client derives the same",
+      "sameLog": "roll from the same log."
+    },
+    "stacker": {
+      "title": "Two Stacker wells trading garbage lines",
+      "desc": "Two ten-column wells of falling coloured blocks side by side. A completed line in the left well sends grey garbage rows into the right one: the only thing that crosses the Nostr relay in a real-time Obelisk Stacker match.",
+      "clear": "Clear a line…",
+      "digs": "…and somebody else digs",
+      "footer": "Every board runs locally at sixty frames a second; only the consequences are published."
+    },
+    "wot": {
+      "title": "Web of Trust graph",
+      "desc": "A trust graph with your node at the center, connected nodes in lime green for high trust, and red-outlined spam nodes at the periphery.",
+      "you": "YOU",
+      "direct": "direct follow",
+      "friendOfFriend": "friend-of-friend",
+      "filtered": "filtered (spam)"
+    },
+    "relay": {
+      "title": "Admission is a ladder, not a switch",
+      "desc": "A self-hosted Nostr relay with three widening tiers of admitted keys around it, added by hand, two hops away, three hops away, each publishing on a smaller share of the rate budget, with a block list cutting across all three.",
+      "tier": "TIER {n}",
+      "byHand": "added by hand",
+      "twoHops": "two hops",
+      "threeHops": "three hops",
+      "perMinute": "{count, number}/min",
+      "yours": "yours",
+      "blocked": "BLOCKED",
+      "blockedRule": "checked first, overrides every tier",
+      "nothing": "nothing",
+      "distance": "Distance from your reference accounts",
+      "evidence": "is how much evidence you have."
+    },
+    "swapAnything": {
+      "title": "Swap anything, trust nothing",
+      "desc": "The Obelisk ecosystem: one self-hostable relay at the top connected to a chat client, a voice SFU, and a bot runtime, every piece independently replaceable.",
+      "dexRole": "Web chat client",
+      "dexMeta": "browser · NIP-07",
+      "sfuRole": "Voice mixing server",
+      "sfuMeta": "WebRTC · large calls",
+      "botsRole": "Bot runtime",
+      "botsMeta": "mod · games · ops",
+      "relayRole": "Self-hostable Nostr relay · whitelist · admin UI",
+      "footer": "four projects · one protocol · no central server"
+    },
+    "obeliskBots": {
+      "title": "Obelisk Bots and the zap bot",
+      "desc": "A stylish zap bot with black sunglasses listening for Nostr zap receipts and posting signed announcements into NIP-29 Obelisk groups.",
+      "zapReceipt": "zap receipt",
+      "reaction": "reaction",
+      "groups": "groups",
+      "scan": "NIP-29 scan",
+      "announcement": "announcement",
+      "post": "kind 9 post",
+      "ownNsec": "own nsec"
+    },
+    "wotGraph": {
+      "label": "Web of Trust score computation",
+      "heading": "How a trust score is computed",
+      "subheading": "Pure Nostr data: no KYC, no CAPTCHA, no phone number.",
+      "followList": "follow list",
+      "graphWalk": "graph walk",
+      "hops": "1–2 hops",
+      "score": "score",
+      "weightedSum": "weighted sum",
+      "gate": "gate",
+      "allowFilter": "allow / filter",
+      "threshold": "Higher = trusted. Below threshold → posts hidden on public channels."
+    },
+    "relayGroups": {
+      "label": "NIP-29 relay-based group",
+      "heading": "NIP-29: the relay hosts the group",
+      "members": "members",
+      "roles": "roles",
+      "rolesValue": "admin / mod / member",
+      "events": "events",
+      "eventsValue": "chat + publications",
+      "adminCheck": "admin check",
+      "adminCheckValue": "relay enforces",
+      "noServer": "no central Obelisk server needed",
+      "footer": "move off Postgres → keep Discord UX, gain Nostr portability"
+    },
+    "zapFlow": {
+      "label": "Zap sequence diagram",
+      "makeInvoice": "2. NWC makeInvoice (or LNURL-pay)",
+      "invoice": "3. BOLT11 invoice",
+      "preimage": "5. payment preimage (paid over Lightning)",
+      "client": "Client",
+      "server": "Obelisk server",
+      "receiver": "Receiver wallet",
+      "sender": "Sender wallet"
+    },
+    "swapMatrix": {
+      "label": "Swap matrix: every layer of the Obelisk stack is replaceable",
+      "heading": "Every layer is replaceable",
+      "ours": "OURS",
+      "alternative": "ALTERNATIVE",
+      "client": "Client",
+      "voice": "Voice",
+      "bots": "Bots",
+      "relay": "Relay",
+      "otherClients": "other clients",
+      "ownFork": "your own fork",
+      "anySfu": "any SFU",
+      "peerToPeer": "peer-to-peer",
+      "ownBot": "your own bot",
+      "anyKeypair": "any keypair",
+      "footer": "same wire format · same signatures · the pieces don't care"
+    }
   }
 }

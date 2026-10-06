@@ -40,7 +40,7 @@ function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: bool
           className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-lc-dark ${
             isOnline ? 'bg-lc-green' : 'bg-lc-muted'
           }`}
-          title={isOnline ? 'Online' : 'Offline'}
+          title={t(isOnline ? 'chat.members.online' : 'chat.members.offline')}
         />
       </div>
       {member.role === 'admin' && <span title={t('mobile.members.admin')} aria-label={t('shell.members.roleAdmin')}>🛡️</span>}
@@ -53,6 +53,7 @@ function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: bool
 }
 
 export default function MemberList({ groupId }: { groupId: string }) {
+  const t = useTranslations();
   const memberList = useGroupMemberInfo(groupId);
   const relayUrl = useCurrentRelayUrl();
   const lastActivityAt = useChatStore((state) => state.lastActivityAt);
@@ -108,13 +109,13 @@ export default function MemberList({ groupId }: { groupId: string }) {
 
     return {
       onlineGroups: [
-        { key: 'admin', label: 'Admin', members: admins },
+        { key: 'admin', label: t('chat.members.admin'), members: admins },
         ...ranked,
-        { key: 'member', label: 'Member', members: plain },
+        { key: 'member', label: t('chat.members.member'), members: plain },
       ].filter((group) => group.members.length > 0),
       offline: away,
     };
-  }, [memberList, onlinePubkeys, rolesByPubkey]);
+  }, [memberList, onlinePubkeys, rolesByPubkey, t]);
 
   return (
     <div className="w-60 h-full bg-lc-dark border-l border-lc-border flex flex-col shrink-0">
@@ -138,7 +139,7 @@ export default function MemberList({ groupId }: { groupId: string }) {
             >
               <span className="text-[10px] text-lc-muted">{offlineCollapsed ? '▸' : '▾'}</span>
               <Text size="10" weight="semibold" variant="label" tone="muted">
-                Offline - {offline.length}
+                {t('chat.members.offlineGroup')} - {offline.length}
               </Text>
             </button>
             {!offlineCollapsed && offline.map((member) => (

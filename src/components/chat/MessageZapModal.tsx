@@ -50,7 +50,7 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
     >
         <div className="mb-3 flex items-center gap-2">
           <ZapIcon filled className="h-5 w-5 text-yellow-400" />
-          <h3 className="font-semibold text-lc-white">Zap {displayName}</h3>
+          <h3 className="font-semibold text-lc-white">{t('chat.zap.title', { name: displayName })}</h3>
         </div>
         <label htmlFor={amountId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.amount')}</label>
         <Input

@@ -82,8 +82,8 @@ export default function FeedToolbar({
             value,
             label: <>{value === 'following' ? <FollowingIcon /> : <GlobeIcon />}{t(`social.${value}`)}</>,
             title: value === 'following'
-              ? `${followCount} ${t('social.followingCount')}`
-              : `${relayCount} ${t('social.relayCount')}`,
+              ? t('social.followingN', { count: followCount })
+              : t('social.relaysCount', { count: relayCount }),
             testId: `feed-tab-${value}`,
           }))}
         />

@@ -1,7 +1,12 @@
 import { act, renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
 import { describe, expect, it } from 'vitest';
 import type { GameSession } from '@/lib/games/session';
 import { seatSpecsFor, useSeatRows } from '@/hooks/chat/games/start-table/useSeatRows';
+
+/** The hook words its defaults through next-intl, so it needs a provider. */
+const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
 
 const nameOf = (pubkey: string) => `name-${pubkey}`;
 
@@ -30,13 +35,13 @@ describe('seatSpecsFor', () => {
 
 describe('useSeatRows', () => {
   it('starts with one seat per joined account', () => {
-    const { result } = renderHook(() => useSeatRows(session(), nameOf));
+    const { result } = renderHook(() => useSeatRows(session(), nameOf), { wrapper });
     expect(result.current.rows.map((r) => r.by)).toEqual(['alice', 'bob']);
     expect(result.current.tooFew).toBe(false);
   });
 
   it('adds, moves, renames, reassigns and removes seats', () => {
-    const { result } = renderHook(() => useSeatRows(session(), nameOf));
+    const { result } = renderHook(() => useSeatRows(session(), nameOf), { wrapper });
     act(() => result.current.addRow());
     expect(result.current.rows).toHaveLength(3);
     expect(result.current.rows[2].by).toBe('alice');
@@ -51,7 +56,7 @@ describe('useSeatRows', () => {
   });
 
   it('flags a table with too few seats', () => {
-    const { result } = renderHook(() => useSeatRows(session({ joined: ['alice'] }), nameOf));
+    const { result } = renderHook(() => useSeatRows(session({ joined: ['alice'] }), nameOf), { wrapper });
     expect(result.current.tooFew).toBe(true);
   });
 });

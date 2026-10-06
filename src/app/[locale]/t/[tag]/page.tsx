@@ -93,9 +93,7 @@ export default async function HashtagPage({ params }: Params) {
           <FollowTagButton tag={clean} />
         </div>
         <p className="mt-1 text-xs text-lc-muted">
-          {notes.length > 0
-            ? `${notes.length} recent note${notes.length === 1 ? '' : 's'} on the public relays`
-            : 'No recent notes found on the public relays.'}
+          {notes.length > 0 ? t('social.tagPage.recent', { count: notes.length }) : t('social.tagPage.none')}
         </p>
       </div>
 
@@ -119,7 +117,7 @@ export default async function HashtagPage({ params }: Params) {
                     {formatDate(locale, note.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}
                   </time>
                 </div>
-                <p className="line-clamp-3 text-sm text-lc-white">{text || 'Shared media'}</p>
+                <p className="line-clamp-3 text-sm text-lc-white">{text || t('social.viewer.sharedMedia')}</p>
                 {image && (
                   <RemoteImage
                     src={image}

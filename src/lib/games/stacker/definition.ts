@@ -24,7 +24,7 @@ export const stacker: GameDefinition<null, never> = {
 
   initialState: () => null,
   firstTurn: (participants) => participants[0],
-  validateAction: () => ({ ok: false, error: 'Stacker is played in real time' }),
+  validateAction: () => ({ ok: false, error: 'realtime-only' }),
   applyAction: (state): ApplyResult<null> => ({ state, nextTurn: null }),
   onTimeout: (state): ApplyResult<null> => ({ state, nextTurn: null }),
 };

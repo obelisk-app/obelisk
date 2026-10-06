@@ -52,7 +52,7 @@ export function VoiceMessage({
         onTimeUpdate={(event) => setCurrent(event.currentTarget.currentTime)}
         onLoadedMetadata={(event) => { if (Number.isFinite(event.currentTarget.duration)) setDuration(event.currentTarget.duration); }}
       />
-      <button type="button" onClick={toggle} className={`flex shrink-0 items-center justify-center text-white ${compact ? "h-11 w-9" : "h-14 w-10"}`} aria-label={playing ? "Pause voice message" : "Play voice message"}>
+      <button type="button" onClick={toggle} className={`flex shrink-0 items-center justify-center text-white ${compact ? "h-11 w-9" : "h-14 w-10"}`} aria-label={t(playing ? 'chat.voiceNote.pause' : 'chat.voiceNote.play')}>
         {playing ? (
           <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>
         ) : (
@@ -111,7 +111,7 @@ export function VoiceMessage({
               type="button"
               onClick={cyclePlaybackRate}
               className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-black/60 text-sm font-bold text-white backdrop-blur-[1px]"
-              aria-label={`Playback speed ${playbackRate}x`}
+              aria-label={t('chat.voiceNote.speedValue', { rate: playbackRate })}
               title={t('chat.voiceNote.speed')}
             >
               {playbackRate}x

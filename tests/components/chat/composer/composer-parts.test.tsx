@@ -10,12 +10,14 @@ describe('promptForContact', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('returns the trimmed answer, or null when blank or cancelled', () => {
-    vi.stubGlobal('prompt', vi.fn(() => '  npub1abc  '));
-    expect(promptForContact()).toBe('npub1abc');
+    const prompt = vi.fn(() => '  npub1abc  ');
+    vi.stubGlobal('prompt', prompt);
+    expect(promptForContact('Which key?')).toBe('npub1abc');
+    expect(prompt).toHaveBeenCalledWith('Which key?');
     vi.stubGlobal('prompt', vi.fn(() => '   '));
-    expect(promptForContact()).toBeNull();
+    expect(promptForContact('Which key?')).toBeNull();
     vi.stubGlobal('prompt', vi.fn(() => null));
-    expect(promptForContact()).toBeNull();
+    expect(promptForContact('Which key?')).toBeNull();
   });
 });
 

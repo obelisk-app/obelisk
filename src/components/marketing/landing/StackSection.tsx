@@ -42,7 +42,7 @@ export default function StackSection() {
                   <h3 className={`text-sm font-bold ${tech.color} group-hover:scale-105 transition-transform origin-left`}>
                     {tech.name}
                   </h3>
-                  <p className="text-xs text-lc-muted">{tech.desc}</p>
+                  <p className="text-xs text-lc-muted">{t(tech.descKey)}</p>
                 </div>
               </div>
             </a>

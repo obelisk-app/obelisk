@@ -54,7 +54,7 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
   if (!parsed) {
     return (
       <span className="block mt-1 px-3 py-2 rounded-lg border border-lc-border text-xs text-lc-muted">
-        ⚠️ Invoice inválida
+        {t('chat.invoice.invalid')}
       </span>
     );
   }
@@ -98,7 +98,7 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
         </span>
         {paid ? (
           <span className="shrink-0 text-[11px] text-lc-green font-semibold" data-testid="invoice-paid">
-            ✅ Pagada{payerName ? ` · ${payerName}` : ''}
+            {payerName ? t('chat.invoice.paidBy', { name: payerName }) : t('chat.invoice.paid')}
           </span>
         ) : expired ? (
           <span className="shrink-0 text-[11px] text-lc-muted">{t('chat.invoice.expired')}</span>
@@ -111,7 +111,7 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
             className="shrink-0"
             data-testid="invoice-pay-btn"
           >
-            {busy ? 'Pagando…' : 'Pagar'}
+            {t(busy ? 'chat.invoice.paying' : 'chat.invoice.pay')}
           </Button>
         )}
       </span>

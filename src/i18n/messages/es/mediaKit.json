@@ -32,7 +32,102 @@
     "capital": "Escribí “Obelisk” con O mayúscula.",
     "noSkew": "No deformes ni rotes el logo.",
     "noColors": "No reemplaces el verde por otros colores brillantes.",
-    "noEffects": "No agregues sombras, contornos ni degradados propios."
+    "noEffects": "No agregues sombras, contornos ni degradados propios.",
+    "clearSpace": "Respetá el área de resguardo: al menos la altura del símbolo alrededor.",
+    "lowContrast": "No pongas el logo sobre fondos de poco contraste (grises medios)."
   },
-  "needAnythingElse": "¿Necesitás algo más? Abrí un issue o escribinos por Nostr."
+  "needAnythingElse": "¿Necesitás algo más? Abrí un issue o escribinos por Nostr.",
+  "intro": "Logos, banners, íconos, paleta y textos listos para usar. Todo lo que necesitás para escribir sobre Obelisk, embeberlo o compartirlo.",
+  "backHome": "← Volver al inicio",
+  "copy": "Copiar",
+  "copied": "Copiado ✓",
+  "downloadPng": "Descargar PNG",
+  "rendering": "Generando…",
+  "poweredByBadge": "Insignia \"Powered by Obelisk\"",
+  "do": "✓ Sí",
+  "dont": "✕ No",
+  "desc": {
+    "about": "Pitch corto y largo: en inglés y en español, listos para copiar.",
+    "logos": "Clic derecho → Guardar imagen como… o usá el botón Descargar.",
+    "banners": "Banners hechos en HTML/CSS: copiá los snippets, sacales una captura o usá los PNG enlazados.",
+    "palette": "Tokens del design system. Tocá el HEX para copiarlo.",
+    "typography": "System UI / Inter para todo. Pesos: 400, 600, 700, 800.",
+    "shortCopy": "Frases de uso rápido.",
+    "embeds": "Pegá estos snippets donde quieras para enlazar a Obelisk con estilo.",
+    "og": "Vista previa para compartir, generada en tiempo de ejecución, y meta tags listos para pegar.",
+    "contact": "Dónde encontrarnos si necesitás algo más para una nota o una integración.",
+    "guidelines": "Reglas simples para que la marca se mantenga consistente."
+  },
+  "nav": {
+    "about": "Sobre Obelisk",
+    "logos": "Logos e íconos",
+    "banners": "Banners",
+    "colors": "Colores",
+    "typography": "Tipografía",
+    "copy": "Textos",
+    "embeds": "Embeds HTML",
+    "og": "Open Graph",
+    "contact": "Contacto",
+    "guidelines": "Guía de marca"
+  },
+  "spec": {
+    "hero": "1200 × 630 - vista previa al compartir",
+    "xHeader": "1500 × 500 - portada de perfil (3:1)",
+    "linkedin": "1584 × 396 - fondo de perfil (4:1)",
+    "github": "1280 × 640 - vista previa del repositorio",
+    "square": "1080 × 1080 - posteo o avatar",
+    "widePill": "pie de página / fila de sponsors",
+    "mono": "para imprimir / merch"
+  },
+  "pitch": {
+    "short": "{lang} - Pitch corto",
+    "long": "{lang} - Pitch largo"
+  },
+  "shortCopyLabel": {
+    "name": "Nombre",
+    "tagline": "Eslogan ({lang})",
+    "oneLiner": "Frase corta ({lang})",
+    "url": "URL",
+    "github": "GitHub"
+  },
+  "color": {
+    "black": {
+      "name": "Negro",
+      "usage": "Fondo"
+    },
+    "dark": {
+      "name": "Oscuro",
+      "usage": "Tarjetas"
+    },
+    "border": {
+      "name": "Borde",
+      "usage": "Separadores"
+    },
+    "muted": {
+      "name": "Atenuado",
+      "usage": "Texto secundario"
+    },
+    "white": {
+      "name": "Blanco",
+      "usage": "Texto principal"
+    },
+    "green": {
+      "name": "Verde",
+      "usage": "Acento / CTA"
+    }
+  },
+  "asset": {
+    "logo": "Logo de Obelisk (PNG)",
+    "favicon": "Favicon (PNG)",
+    "appIcon": "Ícono de la app - 192px (PNG)",
+    "animated": "Obelisk animado (GIF)",
+    "animatedLarge": "Obelisk animado - Grande",
+    "animatedMedium": "Obelisk animado - Mediano",
+    "animatedSmall": "Obelisk animado - Chico",
+    "laCryptaLogo": "Logo de La Crypta (PNG)",
+    "laCryptaBanner": "Banner de La Crypta (PNG)",
+    "wotLogoPng": "Logo de Nostr WoT (PNG)",
+    "wotLogoSvg": "Logo de Nostr WoT (SVG)",
+    "wotLogoClean": "Logo de Nostr WoT - Limpio (PNG)"
+  }
 }

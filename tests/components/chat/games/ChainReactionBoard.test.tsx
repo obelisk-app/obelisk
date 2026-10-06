@@ -126,6 +126,6 @@ describe('ChainReactionBoard reveal reporting', () => {
 
   it('renders the board without a reveal listener at all', () => {
     renderLocalized(<ChainReactionBoard game={table()} mySeats={[A]} onAction={vi.fn()} />);
-    expect(screen.getByLabelText('cell 0')).toBeTruthy();
+    expect(screen.getByLabelText('Cell 0')).toBeTruthy();
   });
 });

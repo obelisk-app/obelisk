@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import type { Locale } from '@/i18n';
 import { readGuide } from '@/services/guides';
@@ -13,12 +14,6 @@ interface Props {
   locale: Locale;
   items: Item[];
 }
-
-const HEADING: Record<Locale, string> = {
-  en: 'See also',
-  es: 'Ver también',
-  pt: 'Veja também',
-};
 
 async function resolveItem(locale: Locale, slug: string, note?: string) {
   try {
@@ -40,6 +35,7 @@ export default async function RelatedGuides({ locale, items }: Props) {
   ).filter(<T,>(x: T | null): x is T => x !== null);
 
   if (resolved.length === 0) return null;
+  const t = await getTranslations({ locale });
 
   return (
     <section className="my-12 not-prose" aria-labelledby="related-guides-heading">
@@ -47,7 +43,7 @@ export default async function RelatedGuides({ locale, items }: Props) {
         id="related-guides-heading"
         className="text-2xl font-bold text-lc-white tracking-tight mb-4"
       >
-        {HEADING[locale]}
+        {t('guides.related.heading')}
       </h2>
       <div
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-6 px-6 pb-4 [scrollbar-width:thin]"

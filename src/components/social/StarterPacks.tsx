@@ -145,8 +145,8 @@ export default function StarterPacks({
                   <p className="mt-0.5 line-clamp-2 text-[13px] text-lc-muted">{pack.description}</p>
                 )}
                 <p className="mt-1 text-[11px] text-lc-muted">
-                  {pack.members.length} {t('social.packPeople')}
-                  {already > 0 && ` · ${already} ${t('social.packAlreadyFollowing')}`}
+                  {t('social.packPeopleCount', { count: pack.members.length })}
+                  {already > 0 && ` · ${t('social.packAlreadyCount', { count: already })}`}
                 </p>
               </div>
               <Button

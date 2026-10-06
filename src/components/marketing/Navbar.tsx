@@ -32,15 +32,15 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
   const [showMenu, setShowMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [guidesOpen, setGuidesOpen] = useState(false);
+  const t = useTranslations();
   // The saved session and cached profile, not the bridge: the marketing pages
   // must not download the relay client just to draw this pill.
   const account = useSavedAccount();
   const npub = account ? shortNpubLabel(account.pubkey) : '';
-  const name = account?.name || 'Anon';
+  const name = account?.name || t('marketing.nav.anon');
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   useDismiss({ refs: [menuRef, triggerRef], onDismiss: () => setShowMenu(false), enabled: showMenu });
-  const t = useTranslations();
   const router = useRouter();
 
   useEffect(() => {

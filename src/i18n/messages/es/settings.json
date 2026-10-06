@@ -244,7 +244,13 @@
     "relayLogs": "Logs de relay para desarrollo",
     "console": "Consola del navegador.",
     "signatureHelp": "Pide firmas de prueba para cada kind de evento que usa Obelisk. Los eventos firmados se descartan y nunca se publican.",
-    "section": "Desarrollo"
+    "section": "Desarrollo",
+    "relayLogsHelp": "Registra las llamadas al relay en la consola.",
+    "mockContent": "Prueba de firma de Obelisk para el kind {kind}. Este evento no se publica.",
+    "mockAlt": "Prueba de permisos de firma para desarrollo",
+    "requestAll": "Pedir las {count} firmas",
+    "waiting": "Esperando · {done}/{total}",
+    "results": "{accepted} aceptadas · {rejected} rechazadas"
   },
   "wot": {
     "title": "Red de confianza",
@@ -254,7 +260,23 @@
     "channelColors": "Colores del canal",
     "outOfGraph": "Fuera de la red o sin resolver",
     "resolvedAllow": "permitidos resueltos",
-    "resolvedDeny": "bloqueados resueltos"
+    "resolvedDeny": "bloqueados resueltos",
+    "status": {
+      "configured": "Extensión detectada",
+      "error": "Error de la extensión",
+      "missing": "No hay extensión nostr-wot"
+    },
+    "recheck": "volver a verificar",
+    "hopsHelp": "1° = solo a quienes seguís · 2° = amigos de quienes seguís · más = red más amplia.",
+    "pathsHelp": "Exige esta cantidad de caminos de seguimiento independientes antes de confiar en una pubkey. Los valores altos rechazan los follows de una sola cuenta comprada; solo funciona cuando la extensión informa la cantidad de caminos.",
+    "pending": "pendientes",
+    "tier": {
+      "you": "Vos",
+      "direct": "Seguido directo",
+      "friend": "Amigo de un seguido",
+      "three": "A tres saltos",
+      "far": "Lejos / sin resolver"
+    }
   },
   "calls": {
     "title": "Llamadas",
@@ -279,5 +301,9 @@
     "reset": "Restablecer",
     "saved": "Guardado",
     "invalid": "Solo direcciones de relé wss://"
+  },
+  "relayShare": {
+    "invalid": "El link para compartir el relay no es válido.",
+    "failed": "No se pudo agregar el relay."
   }
 }

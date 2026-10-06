@@ -3,6 +3,9 @@
  * about playing it on a relay - the dice are not rolled by the roller. The
  * hero pairs the board with the line of the log those numbers come from.
  */
+
+import { useTranslations } from 'next-intl';
+
 const RESOURCES = [
   { hex: '#15803d', label: '10' }, // lumber
   { hex: '#b45309', label: '5' },  // brick
@@ -40,6 +43,7 @@ function corner(cx: number, cy: number, i: number): [number, number] {
 }
 
 export default function VestaHero() {
+  const t = useTranslations();
   return (
     <svg
       viewBox="0 0 800 400"
@@ -48,12 +52,8 @@ export default function VestaHero() {
       aria-labelledby="hero-vesta-title hero-vesta-desc"
       className="w-full h-auto"
     >
-      <title id="hero-vesta-title">A Vesta island with dice derived from the event log</title>
-      <desc id="hero-vesta-desc">
-        A hexagonal island of forest, brick, wool, grain and ore tiles with numbered
-        dice tokens and player settlements, beside the line of the Nostr event log the
-        dice roll is derived from: nobody at the table rolls their own numbers.
-      </desc>
+      <title id="hero-vesta-title">{t('guides.art.vesta.title')}</title>
+      <desc id="hero-vesta-desc">{t('guides.art.vesta.desc')}</desc>
 
       <defs>
         <radialGradient id="bg-vesta" cx="0.4" cy="0.5" r="0.8">
@@ -115,12 +115,12 @@ export default function VestaHero() {
 
       {/* where the numbers come from */}
       <g fontSize="12" fontWeight="600">
-        <text x="516" y="120" fill="#fafafa" fontSize="15">Nobody rolls their own dice</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        <text x="516" y="142" fill="#a3a3a3" fontSize="11">the numbers come out of the event log</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="516" y="120" fill="#fafafa" fontSize="15">{t('guides.art.vesta.headline')}</text>
+        <text x="516" y="142" fill="#a3a3a3" fontSize="11">{t('guides.art.vesta.subline')}</text>
 
         <g fontFamily="ui-monospace, monospace">
           <rect x="516" y="164" width="236" height="30" rx="8" fill="#171717" stroke="#262626" />
-          <text x="530" y="184" fill="#a3a3a3" fontSize="11">entropy = 3f9c…a12 : 14</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+          <text x="530" y="184" fill="#a3a3a3" fontSize="11">entropy = 3f9c…a12 : 14</text> {/* i18n-exempt: a log value, drawn as code */}
 
           <line x1="634" y1="196" x2="634" y2="216" stroke="#b4f953" strokeOpacity="0.6" strokeWidth="2" />
 
@@ -128,8 +128,8 @@ export default function VestaHero() {
           <text x="536" y="244" fill="#b4f953" fontSize="17" fontWeight="700">4 + 3 = 7</text>
         </g>
         <g fontFamily="ui-monospace, monospace">
-          <text x="516" y="282" fill="#a3a3a3" fontSize="11">…and every client derives the same</text>
-          <text x="516" y="298" fill="#a3a3a3" fontSize="11">roll from the same log.</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+          <text x="516" y="282" fill="#a3a3a3" fontSize="11">{t('guides.art.vesta.derive')}</text>
+          <text x="516" y="298" fill="#a3a3a3" fontSize="11">{t('guides.art.vesta.sameLog')}</text>
         </g>
       </g>
     </svg>

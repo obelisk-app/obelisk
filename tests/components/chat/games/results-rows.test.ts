@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/games/standings', () => ({
   standingsFor: () => [
-    { seat: 'b', score: '10', detail: 'winner' },
-    { seat: 'a', score: '3' },
-    { seat: 'ghost', score: '0' },
+    { seat: 'b', score: { kind: 'vp', vp: 10 }, detail: 'vp' },
+    { seat: 'a', score: { kind: 'vp', vp: 3 } },
+    { seat: 'ghost', score: { kind: 'none' } },
   ],
 }));
 
@@ -18,7 +18,7 @@ const session = (game: string) => ({ game, participants: ['a', 'b'] }) as unknow
 describe('rowsFor', () => {
   it('paints each standing in its seat colour', () => {
     const rows = rowsFor(session('chain-reaction'));
-    expect(rows[0]).toEqual({ seat: 'b', score: '10', detail: 'winner', color: SEAT_COLORS[1].hex });
+    expect(rows[0]).toEqual({ seat: 'b', score: { kind: 'vp', vp: 10 }, detail: 'vp', color: SEAT_COLORS[1].hex });
     expect(rows[1].color).toBe(SEAT_COLORS[0].hex);
   });
 

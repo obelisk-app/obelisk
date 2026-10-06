@@ -1,26 +1,15 @@
 'use client';
 
 import { memo } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import ObeliskIcon from '@/components/ui/ObeliskIcon';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { RecentIcon } from '../picker/RecentIcon';
-import type { BotProfiles, SlashCommand, SlashCommandSection } from '@/utils/chat/slash/slash-commands';
+import { commandDescription, type BotProfiles, type SlashCommand, type SlashCommandSection } from '@/utils/chat/slash/slash-commands';
 import OptionRow from '@/components/ui/OptionRow';
 
-export function BotAvatar({ picture, size }: { picture?: string | null; size: 'sm' | 'md' }) {
-  const cls = size === 'sm' ? 'h-8 w-8' : 'h-9 w-9';
-  if (picture) {
-    return <RemoteImage src={picture} alt="" width={36} height={36} decoding="async" className={`${cls} shrink-0 rounded-full object-cover`} />;
-  }
-  return <span className={`flex ${cls} shrink-0 items-center justify-center rounded-full bg-lc-border text-sm`}>🤖</span>;
-}
-
-export function RailIcon({ sec, profiles }: { sec: SlashCommandSection; profiles?: BotProfiles }) {
-  if (sec.key === 'recent') return <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lc-border text-lc-white"><RecentIcon /></span>;
-  if (sec.key === 'obelisk') return <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lc-black text-lc-green"><ObeliskIcon className="h-6 w-6" /></span>;
-  return <BotAvatar picture={profiles?.[sec.key]?.picture} size="md" />;
-}
-
+// CommandRow comes first: the hook-order guard reads a file top-down and
+// does not see `memo(function ...)` as a new component.
 export const CommandRow = memo(function CommandRow({
   cmd, index, selected, label, picture, onSelect, registerRef,
 }: {
@@ -32,6 +21,9 @@ export const CommandRow = memo(function CommandRow({
   onSelect: (cmd: SlashCommand) => void;
   registerRef: (index: number, el: HTMLButtonElement | null) => void;
 }) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const description = commandDescription(t, locale, cmd);
   const required = (cmd.params ?? []).filter((p) => !p.optional);
   const optional = (cmd.params ?? []).filter((p) => p.optional);
   return (
@@ -55,11 +47,11 @@ export const CommandRow = memo(function CommandRow({
             </span>
           ))}
           {optional.length > 0 && (
-            <span className="text-[10px] text-lc-muted">+{optional.length} optional</span>
+            <span className="text-[10px] text-lc-muted">{t('chat.slash.optionalCount', { count: optional.length })}</span>
           )}
         </span>
-        {cmd.description && (
-          <span className="block truncate text-xs text-lc-muted">{cmd.description}</span>
+        {description && (
+          <span className="block truncate text-xs text-lc-muted">{description}</span>
         )}
       </span>
       <span className="max-w-[9rem] shrink-0 truncate text-xs text-lc-muted">{label}</span>
@@ -67,3 +59,16 @@ export const CommandRow = memo(function CommandRow({
   );
 });
 
+export function BotAvatar({ picture, size }: { picture?: string | null; size: 'sm' | 'md' }) {
+  const cls = size === 'sm' ? 'h-8 w-8' : 'h-9 w-9';
+  if (picture) {
+    return <RemoteImage src={picture} alt="" width={36} height={36} decoding="async" className={`${cls} shrink-0 rounded-full object-cover`} />;
+  }
+  return <span className={`flex ${cls} shrink-0 items-center justify-center rounded-full bg-lc-border text-sm`}>🤖</span>;
+}
+
+export function RailIcon({ sec, profiles }: { sec: SlashCommandSection; profiles?: BotProfiles }) {
+  if (sec.key === 'recent') return <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lc-border text-lc-white"><RecentIcon /></span>;
+  if (sec.key === 'obelisk') return <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lc-black text-lc-green"><ObeliskIcon className="h-6 w-6" /></span>;
+  return <BotAvatar picture={profiles?.[sec.key]?.picture} size="md" />;
+}

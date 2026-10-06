@@ -244,7 +244,13 @@
     "relayLogs": "Logs de relay para desenvolvimento",
     "console": "Console do navegador.",
     "signatureHelp": "Pede assinaturas de teste para cada kind de evento que o Obelisk usa. Os eventos assinados são descartados e nunca publicados.",
-    "section": "Desenvolvedor"
+    "section": "Desenvolvedor",
+    "relayLogsHelp": "Registra as chamadas ao relay no console.",
+    "mockContent": "Teste de assinatura do Obelisk para o kind {kind}. Este evento não é publicado.",
+    "mockAlt": "Teste de permissão de assinatura para desenvolvimento",
+    "requestAll": "Pedir as {count} assinaturas",
+    "waiting": "Aguardando · {done}/{total}",
+    "results": "{accepted} aceitas · {rejected} recusadas"
   },
   "wot": {
     "title": "Rede de confiança",
@@ -254,7 +260,23 @@
     "channelColors": "Cores do canal",
     "outOfGraph": "Fora da rede ou sem resolver",
     "resolvedAllow": "permitidos resolvidos",
-    "resolvedDeny": "bloqueados resolvidos"
+    "resolvedDeny": "bloqueados resolvidos",
+    "status": {
+      "configured": "Extensão detectada",
+      "error": "Erro na extensão",
+      "missing": "Nenhuma extensão nostr-wot"
+    },
+    "recheck": "verificar de novo",
+    "hopsHelp": "1° = só quem você segue · 2° = amigos de quem você segue · mais = rede mais ampla.",
+    "pathsHelp": "Exige este número de caminhos de seguidores independentes antes de confiar numa chave pública. Valores mais altos rejeitam follows de uma única conta comprada; só tem efeito quando a extensão informa o número de caminhos.",
+    "pending": "pendentes",
+    "tier": {
+      "you": "Você",
+      "direct": "Seguido diretamente",
+      "friend": "Amigo de quem você segue",
+      "three": "A três saltos",
+      "far": "Longe / sem resolver"
+    }
   },
   "calls": {
     "title": "Chamadas",
@@ -279,5 +301,9 @@
     "reset": "Restaurar padrão",
     "saved": "Salvo",
     "invalid": "Apenas endereços de relé wss://"
+  },
+  "relayShare": {
+    "invalid": "O link de compartilhamento do relay não é válido.",
+    "failed": "Não foi possível adicionar o relay."
   }
 }

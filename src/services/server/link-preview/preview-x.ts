@@ -59,12 +59,14 @@ async function previewXSyndication(url: string, id: string): Promise<LinkPreview
     }
 
     const handle = data.user?.screen_name ? `@${data.user.screen_name}` : undefined;
-    const name = data.user?.name ?? handle ?? 'Post';
+    const name = data.user?.name ?? handle;
 
+    // No English glue ("on X", "Post"): the card already labels itself with
+    // the site name, and this response is cached for every reader's language.
     return {
       url,
       kind: 'post',
-      title: handle ? `${name} (${handle})` : `${name} on X`,
+      title: name && handle && name !== handle ? `${name} (${handle})` : name,
       description: data.text?.trim().slice(0, 400) || undefined,
       image,
       siteName: 'X',
@@ -103,7 +105,7 @@ async function previewXOembed(url: string): Promise<LinkPreview | null> {
     return {
       url,
       kind: 'post',
-      title: data.author_name ? `${data.author_name} on X` : 'Post on X',
+      title: data.author_name || undefined,
       description: (body || text).slice(0, 400) || undefined,
       siteName: data.provider_name ?? 'X',
       author: data.author_name,

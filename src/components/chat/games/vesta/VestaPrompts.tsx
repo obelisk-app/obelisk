@@ -30,7 +30,7 @@ export default function VestaPrompts({ state, seatLabel, busy, turn }: {
       {mustDiscard && (
         <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3" data-testid="vesta-discard">
           <p className="text-[11px] text-lc-white">
-            A seven: discard {Math.floor(myHandSize / 2)} of your {myHandSize} cards.
+            {t('games.vestaTable.discardPrompt', { count: Math.floor(myHandSize / 2), total: myHandSize })}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {RESOURCES.map((r) => (
@@ -53,7 +53,7 @@ export default function VestaPrompts({ state, seatLabel, busy, turn }: {
             }}
             className="mt-2"
           >
-            Discard {sum(discard)}/{Math.floor(myHandSize / 2)}
+            {t('games.vestaTable.discard', { picked: sum(discard), count: Math.floor(myHandSize / 2) })}
           </Button>
         </div>
       )}
@@ -62,8 +62,11 @@ export default function VestaPrompts({ state, seatLabel, busy, turn }: {
       {pendingTrade && (iAmTradeTarget || iAmProposer) && (
         <div className="rounded-lg border border-lc-border p-3" data-testid="vesta-trade-offer">
           <p className="text-[11px] text-lc-white">
-            {seatLabel(participants[pendingTrade.from] ?? '')} offers{' '}
-            {describe(pendingTrade.give)} for {describe(pendingTrade.take)}
+            {t('games.vestaTable.offers', {
+              name: seatLabel(participants[pendingTrade.from] ?? ''),
+              give: describe(pendingTrade.give) ?? t('games.vestaTable.nothing'),
+              take: describe(pendingTrade.take) ?? t('games.vestaTable.nothing'),
+            })}
           </p>
           <div className="mt-2 flex gap-2">
             {iAmTradeTarget && (

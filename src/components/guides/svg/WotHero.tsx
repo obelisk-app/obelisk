@@ -1,4 +1,7 @@
+import { useTranslations } from 'next-intl';
+
 export default function WotHero() {
+  const t = useTranslations();
   const nodes = [
     { id: 'you', x: 400, y: 200, r: 28, label: 'you', trust: 100, primary: true },
     { id: 'a', x: 260, y: 120, r: 18, label: '', trust: 82 },
@@ -39,11 +42,8 @@ export default function WotHero() {
       aria-labelledby="hero-wot-title hero-wot-desc"
       className="w-full h-auto"
     >
-      <title id="hero-wot-title">Web of Trust graph</title>
-      <desc id="hero-wot-desc">
-        A trust graph with your node at the center, connected nodes in lime green for
-        high trust, and red-outlined spam nodes at the periphery.
-      </desc>
+      <title id="hero-wot-title">{t('guides.art.wot.title')}</title>
+      <desc id="hero-wot-desc">{t('guides.art.wot.desc')}</desc>
 
       <defs>
         <radialGradient id="bg-wot" cx="0.5" cy="0.5" r="0.7">
@@ -134,7 +134,7 @@ export default function WotHero() {
                 fontWeight="700"
                 fill="#0a0a0a"
               >
-                YOU
+                {t('guides.art.wot.you')}
               </text>
             )}
             {!n.primary && n.trust < 20 && (
@@ -170,11 +170,11 @@ export default function WotHero() {
       {/* legend */}
       <g fontSize="11" fontWeight="600">
         <circle cx="40" cy="20" r="6" fill="#b4f953" />
-        <text x="52" y="24" fill="#fafafa">direct follow</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="52" y="24" fill="#fafafa">{t('guides.art.wot.direct')}</text>
         <circle cx="160" cy="20" r="6" fill="#8bc34a" />
-        <text x="172" y="24" fill="#fafafa">friend-of-friend</text>
+        <text x="172" y="24" fill="#fafafa">{t('guides.art.wot.friendOfFriend')}</text>
         <circle cx="310" cy="20" r="6" fill="#3a1a1a" stroke="#b45353" strokeWidth="1.5" />
-        <text x="322" y="24" fill="#fafafa">filtered (spam)</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="322" y="24" fill="#fafafa">{t('guides.art.wot.filtered')}</text>
       </g>
     </svg>
   );

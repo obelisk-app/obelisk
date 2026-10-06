@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { npubToHex } from '@nostr-wot/data';
 import { nostrActions, useAdmins, useMembers, type JsForumTag, type JsGroup } from '@/services/nostr-bridge';
 
@@ -67,6 +68,7 @@ const DEFAULT_SFU_URL = 'https://sfu.obelisk.ar';
  * implementation, with desktop's guard, so the phone sheet gets it too.
  */
 export function useChannelSettingsForm(group: JsGroup, onSaved: () => void): ChannelSettingsForm {
+  const t = useTranslations();
   const [name, setName] = useState(group.name ?? '');
   const [about, setAbout] = useState(group.about ?? '');
   const [picture, setPicture] = useState(group.picture ?? '');
@@ -112,7 +114,11 @@ export function useChannelSettingsForm(group: JsGroup, onSaved: () => void): Cha
 
   async function verifySfu() {
     const url = sfuUrl.trim();
-    if (!url) throw new Error('SFU URL is required');
+    if (!url) {
+      const message = t('chat.channelSettings.sfuUrlRequired');
+      setMetaError(message);
+      throw new Error(message);
+    }
     setSfuChecking(true);
     setMetaError(null);
     try {
@@ -182,13 +188,13 @@ export function useChannelSettingsForm(group: JsGroup, onSaved: () => void): Cha
     if (hex.startsWith('npub1')) {
       const decoded = npubToHex(hex);
       if (!decoded) {
-        setMemberError('Not an npub');
+        setMemberError(t('chat.channelSettings.notNpub'));
         return;
       }
       hex = decoded;
     }
     if (!/^[0-9a-f]{64}$/i.test(hex)) {
-      setMemberError('Provide an npub or 64-char hex pubkey');
+      setMemberError(t('chat.channelSettings.badMember'));
       return;
     }
     setMemberBusy(true);

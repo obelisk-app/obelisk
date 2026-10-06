@@ -13,7 +13,7 @@ describe('vesta resource helpers', () => {
 
   it('describes a bundle, or says nothing', () => {
     expect(describeCounts({ brick: 2 })).toBe('2🧱');
-    expect(describeCounts({})).toBe('nothing');
+    expect(describeCounts({})).toBeNull();
   });
 
   it('builds a bank trade or a proposal to a player', () => {

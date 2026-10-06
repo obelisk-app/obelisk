@@ -56,9 +56,9 @@ function PickerInput({
   );
 }
 
-/** Ask for an npub or hex key; the trimmed answer, or null when cancelled or blank. */
-export function promptForContact(): string | null {
-  const value = window.prompt('Enter a Nostr npub or hex public key');
+/** Ask for an npub or hex key with `question`; the trimmed answer, or null when cancelled or blank. */
+export function promptForContact(question: string): string | null {
+  const value = window.prompt(question);
   return value?.trim() ? value.trim() : null;
 }
 
@@ -87,7 +87,7 @@ export function AttachmentMenu({
   };
   const contact = () => {
     setOpen(false);
-    const value = promptForContact();
+    const value = promptForContact(t('chat.composer.contactPrompt'));
     if (value) onContact(value);
   };
 

@@ -96,7 +96,7 @@ export function AdvancedSettingsSection() {
         <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">{t('settings.developer.section')}</div>
         <ToggleRow
           label={t('settings.developer.relayLogs')}
-          description="Log relay calls to the console."
+          description={t('settings.developer.relayLogsHelp')}
           checked={prefs.developerRelayDebug}
           onChange={(v) => setPreference('developerRelayDebug', v)}
         />

@@ -4,9 +4,9 @@ import { CHAIN_REACTION_META } from './game-meta';
 export const CR_MAX_PLAYERS = CHAIN_REACTION_META.maxPlayers;
 
 export const CR_SIZES = {
-  small: { rows: 7, cols: 5, label: 'Chico (5×7)' },
-  medium: { rows: 9, cols: 6, label: 'Mediano (6×9)' },
-  large: { rows: 12, cols: 8, label: 'Grande (8×12)' },
+  small: { rows: 7, cols: 5 },
+  medium: { rows: 9, cols: 6 },
+  large: { rows: 12, cols: 8 },
 } as const;
 export type CRSizeKey = keyof typeof CR_SIZES;
 
@@ -165,18 +165,18 @@ export const chainReaction: GameDefinition<CRState, CRAction> = {
   },
 
   validateAction(state, action, actorPubkey) {
-    if (!(actorPubkey in state.seats)) return { ok: false, error: 'Not a participant' };
-    if (state.eliminated.includes(actorPubkey)) return { ok: false, error: 'Eliminated' };
+    if (!(actorPubkey in state.seats)) return { ok: false, error: 'not-participant' };
+    if (state.eliminated.includes(actorPubkey)) return { ok: false, error: 'eliminated' };
     const total = state.rows * state.cols;
     // Integer, not merely a number: `cells[1.5]` is undefined, and reading
     // `.owner` off it threw out of the replay for every client at the table.
     if (!Number.isInteger(action?.cell) || action.cell < 0 || action.cell >= total) {
-      return { ok: false, error: 'Invalid cell' };
+      return { ok: false, error: 'invalid-cell' };
     }
     const seat = state.seats[actorPubkey];
     const cell = state.cells[action.cell];
     if (cell.owner !== null && cell.owner !== seat) {
-      return { ok: false, error: 'Cell owned by opponent' };
+      return { ok: false, error: 'cell-owned-by-opponent' };
     }
     return { ok: true };
   },

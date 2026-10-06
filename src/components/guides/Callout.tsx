@@ -1,25 +1,27 @@
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
+import type { MessageKey } from '@/i18n/keys';
 
 type Variant = 'info' | 'warn' | 'note';
 
-const STYLES: Record<Variant, { bg: string; border: string; icon: string; label: string }> = {
+const STYLES: Record<Variant, { bg: string; border: string; icon: string; label: MessageKey }> = {
   info: {
     bg: 'bg-[rgba(180,249,83,0.06)]',
     border: 'border-lc-green/40',
     icon: '◈',
-    label: 'Info',
+    label: 'guides.callout.info',
   },
   warn: {
     bg: 'bg-[rgba(245,158,11,0.06)]',
     border: 'border-amber-500/40',
     icon: '△',
-    label: 'Heads up',
+    label: 'guides.callout.warn',
   },
   note: {
     bg: 'bg-[rgba(163,163,163,0.06)]',
     border: 'border-lc-border',
     icon: '·',
-    label: 'Note',
+    label: 'guides.callout.note',
   },
 };
 
@@ -32,6 +34,7 @@ export default function Callout({
   title?: string;
   children: ReactNode;
 }) {
+  const t = useTranslations();
   const style = STYLES[type];
   return (
     <aside
@@ -48,7 +51,7 @@ export default function Callout({
         <div className="flex-1">
           {(title || type !== 'note') && (
             <div className="text-xs font-bold uppercase tracking-wider text-lc-green mb-1">
-              {title || style.label}
+              {title || t(style.label)}
             </div>
           )}
           <div className="text-sm text-lc-white/90 leading-relaxed">{children}</div>

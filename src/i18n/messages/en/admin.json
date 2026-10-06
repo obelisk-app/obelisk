@@ -30,11 +30,44 @@
       "member": "Member"
     },
     "confirmDelete": "Delete “{name}”?",
-    "confirmDeleteBody": "Everyone holding it loses the badge."
+    "confirmDeleteBody": "Everyone holding it loses the badge.",
+    "help": "Ordered most senior first. Members can hold several roles: the top one they hold is the badge shown in chat and the member list, until you revoke it.",
+    "save": "Save roles",
+    "saving": "Saving…",
+    "footer": "{count, plural, one {# role} other {# roles}} · relay operator only",
+    "nameLabel": "{role} name",
+    "colorLabel": "{role} color",
+    "emojiLabel": "{role} emoji",
+    "clearEmoji": "Clear {role} emoji",
+    "moveUp": "Move {name} up",
+    "moveDown": "Move {name} down",
+    "delete": "Delete {name}",
+    "members": "{count, plural, one {# member} other {# members}}",
+    "saveFirst": "Save roles before assigning members.",
+    "grantTo": "Grant {role} to",
+    "grantToPerson": "Grant {role} to {name}",
+    "grantToStranger": "Grant to {npub}, not a member of this relay yet",
+    "revokeFrom": "Revoke {role} from {npub}",
+    "noMatch": "No match: search by name, or paste an npub or hex pubkey.",
+    "loadingMembers": "Loading relay members…",
+    "noMembersMatch": "No members match that search.",
+    "holders": "Holds this role: {count}",
+    "adminBadge": "admin",
+    "unreachable": "Could not reach the relay.",
+    "nameInvalid": "Give the role a name with at least one letter or number.",
+    "exists": "“{name}” already exists.",
+    "tooMany": "A relay can define up to {max} roles.",
+    "saved": "Roles saved.",
+    "granted": "Granted “{name}”.",
+    "revoked": "Revoked “{name}”."
   },
   "bulk": {
     "confirmRemove": "Remove {count} entries?",
     "confirmDemote": "Demote {count} entries?",
     "more": "and {count} more"
-  }
+  },
+  "subtitle": "Bulk cleanup across every channel on this relay. Kick removes the user (kind 9001); demote strips the admin role only (kind 9003).",
+  "emptyRelay": "No admin or member entries on this relay yet.",
+  "emptyFiltered": "No entries match the current filters.",
+  "counts": "{selected} selected · {shown} shown · {total} total"
 }

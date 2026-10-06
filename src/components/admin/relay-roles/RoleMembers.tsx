@@ -40,7 +40,7 @@ export default function RoleMembers({ role, holders, busy, onGrant, onRevoke, on
 
   const grantPasted = () => {
     if (!pasted) {
-      onError('No match: search by name, or paste an npub or hex pubkey.');
+      onError(t('admin.roles.noMatch'));
       return;
     }
     onGrant(pasted);
@@ -54,12 +54,12 @@ export default function RoleMembers({ role, holders, busy, onGrant, onRevoke, on
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => { if (event.key === 'Enter' && pastedIsNew) grantPasted(); }}
         placeholder={t('admin.roles.searchPlaceholder')}
-        aria-label={`Grant ${role.name} to`}
+        aria-label={t('admin.roles.grantTo', { role: role.name })}
       />
 
       {pastedIsNew && (
         <Button variant="outline" tone="accent" size="xs" onClick={grantPasted} disabled={busy} className="mt-2 w-full">
-          <span className="flex-1 text-left">Grant to {shortNpubLabel(pasted)}, not a member of this relay yet</span>
+          <span className="flex-1 text-left">{t('admin.roles.grantToStranger', { npub: shortNpubLabel(pasted) })}</span>
         </Button>
       )}
 
@@ -76,7 +76,7 @@ export default function RoleMembers({ role, holders, busy, onGrant, onRevoke, on
           ))}
           {matches.length === 0 && !pastedIsNew && (
             <li className="py-3 text-center text-xs text-lc-muted">
-              {people.length === 0 ? 'Loading relay members…' : 'No members match that search.'}
+              {t(people.length === 0 ? 'admin.roles.loadingMembers' : 'admin.roles.noMembersMatch')}
             </li>
           )}
         </ul>
@@ -84,7 +84,7 @@ export default function RoleMembers({ role, holders, busy, onGrant, onRevoke, on
 
       <div className="mt-3 border-t border-lc-border/60 pt-2">
         <Text as="div" variant="label" size="10" weight="semibold" tone="muted" className="mb-1">
-          Holds this role: {holders.length}
+          {t('admin.roles.holders', { count: holders.length })}
         </Text>
         <ul className="grid gap-1">
           {holders.map((pubkey) => (
@@ -110,7 +110,7 @@ function RolePersonRow({ person, busy, roleName, onClick }: {
         type="button"
         onClick={onClick}
         disabled={busy}
-        aria-label={`Grant ${roleName} to ${person.displayName}`}
+        aria-label={t('admin.roles.grantToPerson', { role: roleName, name: person.displayName })}
         className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-lc-card disabled:opacity-40"
       >
         <UserAvatar
@@ -126,7 +126,7 @@ function RolePersonRow({ person, busy, roleName, onClick }: {
           <span className="block truncate text-[10px] text-lc-muted">{person.nip05 ?? shortNpubLabel(person.pubkey)}</span>
         </span>
         {person.role === 'admin' && (
-          <span className="shrink-0 rounded-full bg-lc-green/15 px-1.5 py-px text-[9px] font-bold uppercase text-lc-green">admin</span>
+          <span className="shrink-0 rounded-full bg-lc-green/15 px-1.5 py-px text-[9px] font-bold uppercase text-lc-green">{t('admin.roles.adminBadge')}</span>
         )}
         <span className="shrink-0 text-xs font-semibold text-lc-green">{t('admin.roles.grant')}</span>
       </button>
@@ -157,7 +157,7 @@ function RoleHolderRow({ pubkey, roleName, busy, onRevoke }: {
         size="xs"
         onClick={onRevoke}
         disabled={busy}
-        aria-label={`Revoke ${roleName} from ${npub}`}
+        aria-label={t('admin.roles.revokeFrom', { role: roleName, npub })}
       >
         {t('admin.roles.revoke')}
       </Button>

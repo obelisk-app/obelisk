@@ -35,7 +35,7 @@ export default function RoleRow({ role, index, holders, roles }: {
         <Input
           value={role.name}
           onChange={(event) => roles.updateRole(role.id, { name: event.target.value.slice(0, 32) })}
-          aria-label={`${role.id} name`}
+          aria-label={t('admin.roles.nameLabel', { role: role.id })}
           className="min-w-[120px] flex-1"
         />
         <Input
@@ -43,13 +43,13 @@ export default function RoleRow({ role, index, holders, roles }: {
           type="color"
           value={normalizeRoleColor(role.color)}
           onChange={(event) => roles.updateRole(role.id, { color: normalizeRoleColor(event.target.value) })}
-          aria-label={`${role.id} color`}
+          aria-label={t('admin.roles.colorLabel', { role: role.id })}
           className="h-9 w-10 shrink-0 cursor-pointer rounded border border-lc-border bg-lc-black"
         />
-        <Button variant="outline" size="xs" onClick={() => roles.move(index, -1)} disabled={index === 0} aria-label={`Move ${role.name} up`}>
+        <Button variant="outline" size="xs" onClick={() => roles.move(index, -1)} disabled={index === 0} aria-label={t('admin.roles.moveUp', { name: role.name })}>
           <ChevronUpIcon size={14} />
         </Button>
-        <Button variant="outline" size="xs" onClick={() => roles.move(index, 1)} disabled={index === roles.draft.length - 1} aria-label={`Move ${role.name} down`}>
+        <Button variant="outline" size="xs" onClick={() => roles.move(index, 1)} disabled={index === roles.draft.length - 1} aria-label={t('admin.roles.moveDown', { name: role.name })}>
           <ChevronDownIcon size={14} />
         </Button>
         <Button
@@ -59,12 +59,12 @@ export default function RoleRow({ role, index, holders, roles }: {
           onClick={() => roles.toggleExpanded(role.id)}
           disabled={!saved}
           aria-expanded={open}
-          title={saved ? undefined : 'Save roles before assigning members.'}
+          title={saved ? undefined : t('admin.roles.saveFirst')}
         >
           <MembersIcon />
-          {holders.length} members
+          {t('admin.roles.members', { count: holders.length })}
         </Button>
-        <Button variant="outline" tone="danger" size="xs" onClick={() => { void roles.removeRole(role); }} aria-label={`Delete ${role.name}`}>
+        <Button variant="outline" tone="danger" size="xs" onClick={() => { void roles.removeRole(role); }} aria-label={t('admin.roles.delete', { name: role.name })}>
           {t('mobile.layout.delete')}
         </Button>
       </div>

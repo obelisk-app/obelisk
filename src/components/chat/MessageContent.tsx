@@ -15,7 +15,7 @@ import { useGroupMemberInfo } from '@/services/nostr-bridge';
 import type { CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
 import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
 import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
-import YouTubeEmbed from './YouTubeEmbed';
+import { ChatYouTubeEmbed } from './message/ChatYouTubeEmbed';
 import LinkPreview from './LinkPreview';
 import { RemoteMediaPlaceholder } from './RemoteMediaPlaceholder';
 import ImageGallery from './ImageGallery';
@@ -108,7 +108,7 @@ export default function MessageContent({
           (the player swaps in a <div> on click, which is invalid inside <p>) */}
       {youtubeUrls.map((url) => {
         const id = extractYouTubeId(url);
-        return id ? <YouTubeEmbed key={url} videoId={id} /> : null;
+        return id ? <ChatYouTubeEmbed key={url} videoId={id} /> : null;
       })}
       {/* Ordinary links, unfurled. Renders nothing until (and unless) the
           preview resolves, so a link that cannot be unfurled just stays a link.

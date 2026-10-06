@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useSignerReady } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
@@ -44,16 +45,18 @@ export function NoMatchingThreads({
   hasTagFilter: boolean;
   onCreate: () => void;
 }) {
+  const t = useTranslations();
   const ready = useSignerReady();
+  const quoted = (chunks: ReactNode) => <span className="text-lc-white">{chunks}</span>;
   return (
     <div
       className="flex flex-col items-center justify-center h-full text-center text-lc-muted py-12 gap-2"
       data-testid="forum-no-matches"
     >
       <div className="text-sm">
-        No publications match{' '}
-        {query ? <span className="text-lc-white">&ldquo;{query}&rdquo;</span> : 'the selected tags'}
-        {query && hasTagFilter ? ' with the current tag filter' : ''}.
+        {!query
+          ? t('chat.forum.noMatchTags')
+          : t.rich(hasTagFilter ? 'chat.forum.noMatchQueryTags' : 'chat.forum.noMatchQuery', { query, q: quoted })}
       </div>
       {ready && query && (
         <Button
@@ -63,7 +66,7 @@ export function NoMatchingThreads({
           className="mt-2"
           data-testid="forum-create-from-search"
         >
-          Create &ldquo;{query}&rdquo;
+          {t('chat.forum.createFromSearch', { query })}
         </Button>
       )}
     </div>

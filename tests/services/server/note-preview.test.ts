@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { buildNotePreview, plainTextForPreview, previewImage } from '@/services/server/note-preview';
+import { buildNotePreview, plainTextForPreview, previewImage, type NotePreviewLabels } from '@/services/server/note-preview';
+import { translator } from '@tests/support/intl';
+import type { Locale } from '@/i18n';
+
+/** The labels the note page builds from `seo.notes.*`. */
+function labels(locale: Locale = 'en'): NotePreviewLabels {
+  const t = translator(locale);
+  return {
+    noteTitle: (name) => t('seo.notes.title', { name }),
+    untitledArticle: t('seo.notes.untitledArticle'),
+    sharedMedia: t('seo.notes.sharedMedia'),
+  };
+}
 
 const ev = (over: Partial<NostrEvent> = {}): NostrEvent => ({
   id: 'a'.repeat(64),
@@ -57,7 +69,7 @@ describe('previewImage', () => {
 
 describe('buildNotePreview', () => {
   it('titles a plain note with its author, since notes have no title', () => {
-    const preview = buildNotePreview(ev({ content: 'gm nostr' }), 'Alice');
+    const preview = buildNotePreview(ev({ content: 'gm nostr' }), 'Alice', labels());
     expect(preview.title).toBe('Alice on Obelisk');
     expect(preview.description).toBe('gm nostr');
     expect(preview.isArticle).toBe(false);
@@ -68,7 +80,7 @@ describe('buildNotePreview', () => {
       kind: 30023,
       content: '## Body',
       tags: [['title', 'On Relays'], ['summary', 'Why they matter.']],
-    }), 'Alice');
+    }), 'Alice', labels());
     expect(preview).toMatchObject({
       title: 'On Relays',
       description: 'Why they matter.',
@@ -77,14 +89,14 @@ describe('buildNotePreview', () => {
   });
 
   it('says something for an image-only post rather than going blank', () => {
-    const preview = buildNotePreview(ev({ content: 'https://cdn.example/a.jpg' }), 'Alice');
+    const preview = buildNotePreview(ev({ content: 'https://cdn.example/a.jpg' }), 'Alice', labels());
     expect(preview.description).toBe('Shared media');
     expect(preview.image).toBe('https://cdn.example/a.jpg');
   });
 
   it('truncates on a word boundary', () => {
     const long = `${'word '.repeat(80)}end`;
-    const preview = buildNotePreview(ev({ content: long }), 'Alice');
+    const preview = buildNotePreview(ev({ content: long }), 'Alice', labels());
     expect(preview.description.length).toBeLessThanOrEqual(201);
     expect(preview.description.endsWith('…')).toBe(true);
     // Not cut mid-word.
@@ -93,14 +105,8 @@ describe('buildNotePreview', () => {
 });
 
 describe('buildNotePreview in another language', () => {
-  it('takes its own words from the labels the page passes', async () => {
-    const { translator } = await import('@tests/support/intl');
-    const t = translator('es');
-    const preview = buildNotePreview(
-      { kind: 1, tags: [], content: 'https://cdn.example/a.jpg' },
-      'Ana',
-      { noteTitle: (name) => t('seo.notes.title', { name }), untitledArticle: t('seo.notes.untitledArticle'), sharedMedia: t('seo.notes.sharedMedia') },
-    );
+  it('takes its own words from the labels the page passes', () => {
+    const preview = buildNotePreview({ kind: 1, tags: [], content: 'https://cdn.example/a.jpg' }, 'Ana', labels('es'));
     expect(preview.title).toBe('Ana en Obelisk');
     expect(preview.description).toBe('Contenido multimedia compartido');
   });

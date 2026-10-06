@@ -30,15 +30,15 @@ export const MUSIC_AUTHOR = 'soyezequiel';
  * the same song.
  */
 export const MUSIC_TRACKS: Array<{ url: string; title: string }> = [
-  { url: '/games/stacker/retro-game-ncc.mp3', title: 'Retro Game' },
-  { url: '/games/stacker/digital-circus-ncc.mp3', title: 'Digital Circus' },
-  { url: '/games/stacker/shoebody-bop-ncc.mp3', title: 'Shoebody Bop' },
+  { url: '/games/stacker/retro-game-ncc.mp3', title: 'Retro Game' }, // i18n-exempt: song title
+  { url: '/games/stacker/digital-circus-ncc.mp3', title: 'Digital Circus' }, // i18n-exempt: song title
+  { url: '/games/stacker/shoebody-bop-ncc.mp3', title: 'Shoebody Bop' }, // i18n-exempt: song title
 ];
 
+/** Who made the music and where it lives. The table adds the licence note in the reader's language. */
 export const MUSIC_CREDIT = {
   author: MUSIC_AUTHOR,
   source: MUSIC_SOURCE,
-  note: 'royalty-free (Suno)',
 };
 
 let trackEl: HTMLAudioElement | null = null;

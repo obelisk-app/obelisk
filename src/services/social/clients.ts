@@ -15,9 +15,14 @@
  * can give.
  */
 
+import type { MessageKey } from '@/i18n/keys';
+
 export type NostrClient = {
   id: string;
-  name: string;
+  /** A client's own name, the same in every language. */
+  name?: string;
+  /** Copy rather than a brand (the OS handler), read in the page's language. */
+  nameKey?: MessageKey;
   /** Build a URL for an event identifier (nevent/naddr/note). */
   event: (identifier: string) => string;
   /** Build a URL for a profile identifier (npub/nprofile). */
@@ -29,7 +34,7 @@ export type NostrClient = {
 export const NOSTR_CLIENTS: NostrClient[] = [
   {
     id: 'default',
-    name: 'Your default app',
+    nameKey: 'social.defaultApp',
     event: (id) => `nostr:${id}`,
     profile: (id) => `nostr:${id}`,
     isHandler: true,

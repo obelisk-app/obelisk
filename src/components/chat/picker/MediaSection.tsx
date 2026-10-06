@@ -1,13 +1,18 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { normalizeCustomEmojiName } from '@/utils/media-tags/custom-emoji-tags';
+import { useTranslations } from 'next-intl';
 import MediaThumb from '@/components/media/MediaThumb';
 import { StarIcon } from '@/components/ui/icons';
 import type { MediaEntry } from '@/utils/chat/picker/media-catalog';
 
-/** A titled grid of media tiles, each with a favourite star; an optional leading tile (the create control). */
-export function MediaSection({ title, entries, onPick, favoriteUrls, onFavorite, onMediaLoad, onMediaError, children }: {
+/**
+ * A titled grid of media tiles, each with a favourite star; an optional
+ * leading tile (the create control). `id` names the section for tests, since
+ * the title changes with the language.
+ */
+export function MediaSection({ id, title, entries, onPick, favoriteUrls, onFavorite, onMediaLoad, onMediaError, children }: {
+  id: string;
   title: string;
   entries: readonly MediaEntry[];
   onPick: (entry: MediaEntry) => void;
@@ -17,9 +22,10 @@ export function MediaSection({ title, entries, onPick, favoriteUrls, onFavorite,
   onMediaError: (entry: MediaEntry) => void;
   children?: ReactNode;
 }) {
+  const t = useTranslations();
   if (!children && entries.length === 0) return null;
   return (
-    <section className="mb-3" data-testid={'media-section-' + normalizeCustomEmojiName(title)}>
+    <section className="mb-3" data-testid={'media-section-' + id}>
       <h3 className="sticky top-0 z-10 mb-2 border-b border-lc-border bg-[var(--picker-surface,var(--color-lc-dark))] py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted">{title}</h3>
       <div className="grid grid-cols-4 auto-rows-[82px] content-start gap-2">
         {children}
@@ -43,7 +49,7 @@ export function MediaSection({ title, entries, onPick, favoriteUrls, onFavorite,
               <button
                 type="button"
                 onClick={() => onFavorite(entry)}
-                aria-label={(favorite ? 'Remove :' : 'Add :') + entry.name + ': ' + (favorite ? 'from favorites' : 'to favorites')}
+                aria-label={t(favorite ? 'chat.mediaPicker.removeFavorite' : 'chat.mediaPicker.addFavorite', { name: entry.name })}
                 aria-pressed={favorite}
                 className={"absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full border bg-lc-black/85 transition-colors " + (favorite ? "border-lc-green text-lc-green" : "border-lc-border text-lc-white hover:border-lc-green/50")}
               >

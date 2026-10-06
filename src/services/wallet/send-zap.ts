@@ -57,8 +57,14 @@ export function checkZap(draft: ZapDraft): ZapCheck {
   return { ok: true, zap: { ...draft, lud16: draft.lud16, signer: draft.signer } };
 }
 
+/** `markerError` when there was no bridge to post the marker with; the UI words it. */
+export const MARKER_NO_BRIDGE = 'no-bridge';
+
 export interface ZapResult {
-  /** Set when the payment went through but the in-channel marker could not be posted. */
+  /**
+   * Set when the payment went through but the in-channel marker could not be
+   * posted: the relay's own reason, or `MARKER_NO_BRIDGE`.
+   */
   markerError: string | null;
 }
 
@@ -110,7 +116,7 @@ async function postZapMarker(
   const bridge = getBridgeImpl();
   // The money has already moved. Reporting this as a failed zap would invite
   // the user to press Zap again and pay twice.
-  if (!bridge) return { markerError: 'Nostr bridge is not ready.' };
+  if (!bridge) return { markerError: MARKER_NO_BRIDGE };
   try {
     await bridge.publishEvent(
       { kind: KIND_REACTION, content: '⚡', tags },

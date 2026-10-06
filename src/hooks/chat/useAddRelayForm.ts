@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { nostrActions } from '@/services/nostr-bridge';
 import { normalizeRelayInput } from '@/utils/relay-url/relay-url-input';
 
@@ -19,6 +20,7 @@ export interface AddRelayForm {
  * `CustomRelayForm` and the phone `AddRelaySheet` both render this.
  */
 export function useAddRelayForm(onAdded: () => void): AddRelayForm {
+  const t = useTranslations();
   const [url, setUrl] = useState('wss://');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export function useAddRelayForm(onAdded: () => void): AddRelayForm {
     if (!url.trim()) return;
     const value = normalizeRelayInput(url);
     if (!value) {
-      setError('Invalid URL');
+      setError(t('chat.relayForm.invalidUrl'));
       return;
     }
     setBusy(true);

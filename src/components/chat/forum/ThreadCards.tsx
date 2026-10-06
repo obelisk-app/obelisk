@@ -73,7 +73,7 @@ export function ThreadCard({
         )}
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-lc-white truncate">
-            {thread.name || '(untitled publication)'}
+            {thread.name || t('chat.forum.untitled')}
           </div>
           <div className="text-xs text-lc-muted line-clamp-2 mt-0.5 break-words">
             {op.content}
@@ -86,9 +86,9 @@ export function ThreadCard({
             </div>
           )}
           <div className="flex flex-wrap gap-x-3 text-[11px] text-lc-muted mt-1.5">
-            <span>OP {opName}</span>
-            <span>{messages.length} {messages.length === 1 ? 'msg' : 'msgs'}</span>
-            <span>last {lastName} · {relativeTime(lastMsg.createdAt, t, locale)}</span>
+            <span>{t('chat.forum.op', { name: opName })}</span>
+            <span>{t('chat.forum.messages', { count: messages.length })}</span>
+            <span>{t('chat.forum.last', { name: lastName, time: relativeTime(lastMsg.createdAt, t, locale) })}</span>
           </div>
         </div>
         {thread.picture && (

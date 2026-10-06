@@ -6,7 +6,7 @@
       "titleHighlight": "bolso",
       "subtitle": "Obelisk no Android, no iOS e em qualquer navegador móvel moderno. Canais NIP-29, voz com SFU, DMs criptografados e zaps Lightning. Tudo apoiado nas suas chaves Nostr: sem e-mail, sem senha.",
       "cta": "Abrir o app",
-      "ctaSecondary": "Ver no desktop →"
+      "ctaSecondary": "Ver no computador →"
     },
     "shot1": {
       "badge": "Servidores e canais",
@@ -17,10 +17,10 @@
     },
     "shot2": {
       "badge": "Voz • SFU",
-      "title": "Voz e vídeo que crescem além da malha",
-      "alt": "Canal de voz do Obelisk no celular em modo SFU, com um par de teste transmitindo uma carta de cores SMPTE.",
+      "title": "Voz e vídeo que crescem além da malha P2P",
+      "alt": "Canal de voz do Obelisk no celular em modo SFU, com um participante de teste transmitindo barras de cores SMPTE.",
       "desc": "Salas pequenas rodam como malha P2P; assim que um relay anuncia um SFU, o mesmo canal muda sozinho e a sala escala para dezenas de participantes, tudo sinalizado por Nostr (kind 25050), sem revelar a sua identidade para um servidor de mídia.",
-      "features": "Malha até ~6 pares, SFU acima disso|Silenciar, ensurdecer, compartilhar tela e conversar numa barra só|A navegação de baixo continua no lugar enquanto você fala"
+      "features": "Malha de até ~6 participantes, SFU acima disso|Silenciar, ensurdecer, compartilhar tela e conversar numa barra só|A navegação de baixo continua no lugar enquanto você fala"
     },
     "shot3": {
       "badge": "Entrar com Nostr",
@@ -38,13 +38,13 @@
     },
     "cta": {
       "heading": "Leve o Obelisk com você",
-      "subtitle": "Abra o app web no celular, instale pelo menu do navegador, e pronto. Sem loja de aplicativos, sem revisão, sem imposto de plataforma.",
+      "subtitle": "Abra o app web no celular, instale pelo menu do navegador e pronto. Sem loja de aplicativos, sem revisão, sem taxa de plataforma.",
       "button": "Abrir no celular"
     }
   },
   "desktop": {
     "hero": {
-      "badge": "Tour no desktop",
+      "badge": "Tour no computador",
       "title": "Um workspace nível Discord, na stack aberta do",
       "titleHighlight": "Nostr",
       "subtitle": "Obelisk no seu navegador: barra de servidores, canais por categoria, publicações, lista de membros, salas de voz com mediasoup, DMs criptografados e zaps Lightning, tudo em relays que você controla.",
@@ -54,28 +54,28 @@
     "shot1": {
       "badge": "Chat em grupo",
       "title": "Chat em três painéis, lista de membros e reações",
-      "alt": "Obelisk no desktop no Chat Geral público: barra de servidores, lista de canais, fluxo central de mensagens com reações e prévia de link, e a lista de membros à direita.",
+      "alt": "Obelisk no computador, no Chat Geral público: barra de servidores, lista de canais, mensagens no centro com reações e prévia de link, e a lista de membros à direita.",
       "desc": "O layout familiar do Discord (barra de servidores, lista de canais, fluxo de mensagens, barra lateral de membros) ligado direto aos eventos NIP-29 do relay. Cada mensagem é um evento Nostr assinado: sem backend, sem formato proprietário.",
-      "features": "Respostas, reações e prévias de link|A lista de membros reflete o quadro NIP-29 do relay ao vivo|Mande um zap Lightning em qualquer mensagem via NIP-57 + NWC"
+      "features": "Respostas, reações e prévias de link|A lista de membros mostra ao vivo os membros NIP-29 do relay|Mande um zap Lightning em qualquer mensagem via NIP-57 + NWC"
     },
     "shot2": {
       "badge": "Publicações",
       "title": "Publicações para conversas mais longas e profundas",
-      "alt": "Visão de publicações do Obelisk no desktop em plaza-publica: quatro publicações (Politica y Economia, But why?, Only-Claws, Finanzas-Trading v2) com autor, número de mensagens e horário da última resposta.",
+      "alt": "Visão de publicações do Obelisk no computador em plaza-publica: quatro publicações (Politica y Economia, But why?, Only-Claws, Finanzas-Trading v2) com autor, número de mensagens e horário da última resposta.",
       "desc": "Canais do tipo publicação viram um feed organizado: uma lista de posts, quem abriu e quando foi a última resposta, cada um com o seu próprio chat e a mesma moderação NIP-29 dos outros canais.",
-      "features": "Um clique em 'Nova conversa' para abrir um assunto|Os horários da última mensagem continuam certos graças aos cursores|Mesmo modelo de administração: kicks e bans vivem no relay"
+      "features": "Um clique em 'Nova conversa' para abrir um assunto|Os horários da última mensagem continuam certos graças aos cursores|Mesmo modelo de administração: expulsões e banimentos vivem no relay"
     },
     "shot3": {
       "badge": "Voz • SFU",
       "title": "Salas de voz grandes com mediasoup e compartilhamento de tela",
-      "alt": "Canal de voz do Obelisk no desktop em modo SFU, com um par de teste transmitindo uma carta de cores SMPTE, a barra lateral de chat e os controles de voz.",
+      "alt": "Canal de voz do Obelisk no computador em modo SFU, com um participante de teste transmitindo barras de cores SMPTE, a barra lateral de chat e os controles de voz.",
       "desc": "Canais de voz começam como malha P2P e mudam para um SFU mediasoup quando o relay anuncia um. Mesma interface, mesma sinalização kind 25050, só que com mais gente e compartilhamento de tela sem derreter a CPU.",
-      "features": "Operadores de SFU liberados por relay|Compartilhamento de tela com codificação acelerada por hardware|Toda a sinalização viaja pelo Nostr, sem backend com sessão presa"
+      "features": "Operadores de SFU liberados por relay|Compartilhamento de tela com codificação acelerada por hardware|Toda a sinalização viaja pelo Nostr, sem backend com sessões fixas"
     },
     "cta": {
       "heading": "Abra o Obelisk em qualquer navegador",
-      "subtitle": "É um frontend estático, sem cadastro. Abra local, instale o PWA ou hospede o build você mesmo. É o mesmo cliente de qualquer jeito.",
-      "button": "Abrir no desktop"
+      "subtitle": "É um frontend estático, sem cadastro. Abra localmente, instale o PWA ou hospede o build por conta própria. É o mesmo cliente de qualquer jeito.",
+      "button": "Abrir no computador"
     }
   }
 }

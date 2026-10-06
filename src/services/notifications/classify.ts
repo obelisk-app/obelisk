@@ -15,6 +15,7 @@
  * Our own events never ping.
  */
 import type { MentionReason } from '@/store/notifications';
+import { translate } from '@/i18n/runtime';
 
 export interface ClassifyInput {
   readonly pubkey: string;
@@ -40,14 +41,20 @@ export function classifyGroupPing(ev: ClassifyInput, me: string | null): Mention
   return null;
 }
 
-/** Human title for an OS popup about a group ping. */
+/**
+ * Human title for an OS popup about a group ping, in the reader's language
+ * (`common`, the one module every route ships, since the bridge that calls
+ * this is reachable from every route).
+ */
 export function groupPingTitle(
   reason: MentionReason,
   sender: string,
   where: string | null,
 ): string {
-  const verb = reason === 'reply' ? 'replied to you' : 'mentioned you';
-  return where ? `${sender} ${verb} in ${where}` : `${sender} ${verb}`;
+  if (reason === 'reply') {
+    return where ? translate('common.ping.repliedIn', { sender, where }) : translate('common.ping.replied', { sender });
+  }
+  return where ? translate('common.ping.mentionedIn', { sender, where }) : translate('common.ping.mentioned', { sender });
 }
 
 /** Strip `nostr:` URIs down to something readable for a popup body. */

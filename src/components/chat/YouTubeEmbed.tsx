@@ -18,8 +18,8 @@ interface YouTubeEmbedProps {
    * only: the frame, radius and border are constant across surfaces.
    */
   className?: string;
-  /** Accessible title for the player and thumbnail. */
-  title?: string;
+  /** Accessible title for the player and thumbnail, in the reader's language. */
+  title: string;
   /**
    * Thumbnail resolution. `mq` (320×180) is right for a chat bubble;
    * `maxres` (1280×720) for a full-width hero. `maxres` does not exist
@@ -33,7 +33,7 @@ const DEFAULT_WRAPPER = 'max-w-lg w-full mt-1';
 export default function YouTubeEmbed({
   videoId,
   className = DEFAULT_WRAPPER,
-  title = 'YouTube video',
+  title,
   thumbnailRes = 'mq',
 }: YouTubeEmbedProps) {
   const [loaded, setLoaded] = useState(false);

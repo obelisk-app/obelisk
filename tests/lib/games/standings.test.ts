@@ -40,7 +40,7 @@ describe('a solo run that ends', () => {
 
   it('still knows what the player finished with', () => {
     const session = soloRun();
-    expect(scoreFor(session, A)).toBe('9⚔ · 31▤');
+    expect(scoreFor(session, A)).toEqual({ kind: 'stacker', attacks: 9, lines: 31 });
   });
 });
 

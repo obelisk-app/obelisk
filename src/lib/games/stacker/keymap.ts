@@ -11,16 +11,21 @@ import { DEFAULT_STACKER_KEYS } from './runner';
 
 const STORAGE_KEY = 'obelisk-dex/stacker/keys';
 
-/** The actions a player can bind, in the order the settings list shows them. */
-export const BINDABLE: Array<{ action: InputKind; label: string }> = [
-  { action: 'left', label: 'Move left' },
-  { action: 'right', label: 'Move right' },
-  { action: 'soft', label: 'Soft drop' },
-  { action: 'hard', label: 'Hard drop' },
-  { action: 'cw', label: 'Rotate right' },
-  { action: 'ccw', label: 'Rotate left' },
-  { action: 'flip', label: 'Rotate 180°' },
-  { action: 'hold', label: 'Hold' },
+/**
+ * The actions a player can bind, in the order the settings list shows them.
+ * The panel names each one in the reader's language, keyed by `action`.
+ */
+export type BindableAction = Exclude<InputKind, 'gravity' | 'garbage'>;
+
+export const BINDABLE: ReadonlyArray<{ action: BindableAction }> = [
+  { action: 'left' },
+  { action: 'right' },
+  { action: 'soft' },
+  { action: 'hard' },
+  { action: 'cw' },
+  { action: 'ccw' },
+  { action: 'flip' },
+  { action: 'hold' },
 ];
 
 export type KeyMap = Record<string, InputKind>;
@@ -36,7 +41,7 @@ export function loadKeyMap(): KeyMap {
     if (!raw) return defaultKeyMap();
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return defaultKeyMap();
-    const valid = new Set(BINDABLE.map((b) => b.action));
+    const valid = new Set<InputKind>(BINDABLE.map((b) => b.action));
     const map: KeyMap = {};
     for (const [code, action] of Object.entries(parsed as Record<string, unknown>)) {
       if (typeof action === 'string' && valid.has(action as InputKind)) {
@@ -91,16 +96,20 @@ export function keysFor(map: KeyMap, action: InputKind): string[] {
   return Object.entries(map).filter(([, a]) => a === action).map(([code]) => code);
 }
 
-/** "ArrowLeft" → "←", "KeyX" → "X": what a person recognises. */
+/**
+ * "ArrowLeft" → "←", "KeyX" → "X": what a person recognises. These are the
+ * legends printed on the keys, so they stay as they are in every language;
+ * the panel words the space bar itself, which has no legend.
+ */
 export function keyLabel(code: string): string {
   const named: Record<string, string> = {
     ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
-    Space: 'Space', ShiftLeft: 'L-Shift', ShiftRight: 'R-Shift',
-    ControlLeft: 'L-Ctrl', ControlRight: 'R-Ctrl', Enter: 'Enter', Tab: 'Tab',
+    Space: 'Space', ShiftLeft: 'L-Shift', ShiftRight: 'R-Shift', // i18n-exempt: keyboard key legends
+    ControlLeft: 'L-Ctrl', ControlRight: 'R-Ctrl', Enter: 'Enter', Tab: 'Tab', // i18n-exempt: keyboard key legends
   };
   if (named[code]) return named[code];
-  if (code.startsWith('Key')) return code.slice(3);
-  if (code.startsWith('Digit')) return code.slice(5);
-  if (code.startsWith('Numpad')) return `Num ${code.slice(6)}`;
+  if (code.startsWith('Key')) return code.slice(3); // i18n-exempt: KeyboardEvent.code prefix
+  if (code.startsWith('Digit')) return code.slice(5); // i18n-exempt: KeyboardEvent.code prefix
+  if (code.startsWith('Numpad')) return `Num ${code.slice(6)}`; // i18n-exempt: KeyboardEvent.code prefix and keypad legend
   return code;
 }

@@ -1,6 +1,6 @@
 /**
- * What every game is, without its rules: name, pitch, player limits and
- * clock. Listing games, labelling a card and filling the picker read this;
+ * What every game is, without its rules: name, player limits and clock. The
+ * one-line pitch is copy, so it lives in the `games` messages, keyed by type. Listing games, labelling a card and filling the picker read this;
  * none of them needs an engine.
  *
  * This is the single source for those fields. Each definition spreads its
@@ -11,7 +11,6 @@
 export interface GameMeta {
   type: string;
   displayName: string;
-  description: string;
   minPlayers: number;
   maxPlayers: number;
   defaultTurnTimeoutS: number;
@@ -22,7 +21,6 @@ export interface GameMeta {
 export const CHAIN_REACTION_META = {
   type: 'chain-reaction',
   displayName: 'Chain Reaction',
-  description: 'Colocá orbes, detoná cadenas y capturá el tablero. 2–8 jugadores.',
   minPlayers: 2,
   maxPlayers: 8,
   defaultTurnTimeoutS: 45,
@@ -31,7 +29,6 @@ export const CHAIN_REACTION_META = {
 export const VESTA_META = {
   type: 'vesta',
   displayName: 'Vesta',
-  description: 'Expanding Settlements Through Accord: build, trade, and take the board. 2–4 players.',
   minPlayers: 2,
   maxPlayers: 4,
   // No clock by default. Our clock is per ACTION, and a Vesta turn is many
@@ -43,7 +40,6 @@ export const VESTA_META = {
 export const STACKER_META = {
   type: 'stacker',
   displayName: 'Stacker',
-  description: 'Falling blocks, shared piece order, and every line you clear buries somebody else. 1–6 players.',
   minPlayers: 1,
   maxPlayers: 6,
   // The clock here is gravity, not a turn timer.

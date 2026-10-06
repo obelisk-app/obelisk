@@ -110,7 +110,7 @@ describe('parseZapCommand', () => {
     );
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.error).toMatch(/cannot zap yourself/i);
+    expect(r.error).toBe('self');
   });
 
   it('refuses a display name that fits more than one member', () => {
@@ -123,8 +123,8 @@ describe('parseZapCommand', () => {
     const r = parseZapCommand('/zap @dum 21', 'group-1', [], MY_PUBKEY, null);
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.error).toMatch(/more than one/i);
-    expect(r.error).toMatch(/npub/i);
+    expect(r.error).toBe('ambiguous');
+    expect(r.token).toBe('@dum');
     // The npub form is unaffected: that IS the identity.
     const byKey = parseZapCommand(`/zap nostr:${RECIPIENT_NPUB} 21`, 'group-1', [], MY_PUBKEY, null);
     expect(byKey.ok).toBe(true);
@@ -145,6 +145,7 @@ describe('parseZapCommand', () => {
     const r = parseZapCommand('/zap nobody', 'group-1', [], MY_PUBKEY, null);
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.error).toMatch(/unknown user/i);
+    expect(r.error).toBe('unknown-user');
+    expect(r.token).toBe('nobody');
   });
 });

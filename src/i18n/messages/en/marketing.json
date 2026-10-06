@@ -8,7 +8,8 @@
     "launchApp": "Launch App",
     "app": "App",
     "disconnect": "Disconnect",
-    "profile": "Profile"
+    "profile": "Profile",
+    "anon": "Anon"
   },
   "learn": {
     "heading": "Learn",
@@ -86,8 +87,8 @@
     }
   },
   "hero": {
-    "title": "Tus comunidades,",
-    "titleHighlight": "bajo tu control",
+    "title": "Your communities,",
+    "titleHighlight": "under your control",
     "subtitle": "Discord-style group chat built directly on Nostr relays.",
     "trustLine": "No accounts. No backend. Your keys, your relays.",
     "launchApp": "Launch App",
@@ -130,7 +131,7 @@
     },
     "adminCli": {
       "title": "Open source",
-      "desc": "MIT-licensed, every line on GitHub. Read it, fork it, audit it, run it. The whole app is the client you can see."
+      "desc": "AGPL-3.0 licensed, every line on GitHub. Read it, fork it, audit it, run it. The whole app is the client you can see."
     },
     "eyebrow": "The comeback",
     "headline": "Discord-style community chat.",
@@ -138,7 +139,7 @@
     "subhead": "Your Nostr key is your account. The browser talks directly to relays: no email, password, chat backend, or platform database.",
     "openApp": "Open Obelisk",
     "viewSource": "View source",
-    "number": "Feature",
+    "number": "Feature {n}",
     "ctaTitle": "Bring your keys. Keep your identity.",
     "ctaBody": "Join the public relay or point Obelisk at another NIP-29 community.",
     "ctaButton": "Launch the app",
@@ -238,11 +239,22 @@
     "phase5": {
       "title": "Voice & PWA",
       "items": "P2P voice channels with relay signaling|Installable PWA with push notifications|Offline-first message cache"
-    }
+    },
+    "phaseLabel": "Phase {n}"
   },
   "stack": {
     "heading": "Tech stack",
-    "subtitle": "Modern, open-source, no proprietary backend."
+    "subtitle": "Modern, open-source, no proprietary backend.",
+    "item": {
+      "nextjs": "React framework (frontend only)",
+      "nostrTools": "SimplePool, signing, encryption",
+      "nip29": "Relay-managed groups",
+      "nip17": "Gift-wrapped DMs",
+      "nostrWot": "Profiles, WoT, gift wrap, post-quantum",
+      "zaps": "Lightning zaps & NWC",
+      "zustand": "Client state",
+      "tailwind": "Styling"
+    }
   },
   "cta": {
     "heading": "Ready to chat without a server",

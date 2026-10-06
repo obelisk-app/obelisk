@@ -50,14 +50,14 @@ describe('hardcoded user-visible strings', () => {
     expect(stale, 'remove these from hardcoded-baseline.json').toEqual([]);
   });
 
-  it('reports a shrinking total', () => {
-    // Not an assertion about the number itself, just proof the scanner is
-    // still finding things, so an accidentally-broken regex can't turn the
-    // whole ratchet into a no-op that passes.
+  it('keeps the total at or under the baseline, which is now zero', () => {
+    // Proof that the scanner still finds things (so a broken regex cannot
+    // pass vacuously) lives in 'the scanner rules' below, which feeds it
+    // known strings. The baseline reached zero in round 19.
     const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
     const allowed = Object.values(BASELINE).reduce((sum, n) => sum + n, 0);
     expect(total).toBeLessThanOrEqual(allowed);
-    expect(allowed).toBeGreaterThan(0);
+    expect(allowed).toBe(0);
   });
 });
 

@@ -19,7 +19,6 @@ export function CreateMediaControl({
 }) {
   const t = useTranslations();
   const fileRef = useRef<HTMLInputElement>(null);
-  const label = kind === "gif" ? "GIF" : kind;
   return <>
     <FileInput
       ref={fileRef}
@@ -35,10 +34,10 @@ export function CreateMediaControl({
       disabled={uploading}
       onClick={() => fileRef.current?.click()}
       className={(square ? "aspect-square w-full " : "h-full ") + "flex min-h-0 min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-dashed border-lc-border bg-lc-card/60 text-lc-white transition-colors hover:border-lc-green/60 hover:text-lc-green disabled:opacity-50"}
-      aria-label={"Create " + label}
+      aria-label={t(`chat.mediaPicker.createKind.${kind}`)}
     >
       <span className="text-3xl font-light leading-none" aria-hidden="true">+</span>
-      <span className="text-xs">{uploading ? "Creating…" : "Create"}</span>
+      <span className="text-xs">{t(uploading ? 'chat.mediaPicker.creating' : 'chat.mediaPicker.create')}</span>
     </button>
   </>;
 }

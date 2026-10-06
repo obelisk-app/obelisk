@@ -1,4 +1,7 @@
+import { useTranslations } from 'next-intl';
+
 export default function WhatIsObeliskHero() {
+  const t = useTranslations();
   return (
     <svg
       viewBox="0 0 800 400"
@@ -7,10 +10,8 @@ export default function WhatIsObeliskHero() {
       aria-labelledby="hero-what-title hero-what-desc"
       className="w-full h-auto"
     >
-      <title id="hero-what-title">What is Obelisk</title>
-      <desc id="hero-what-desc">
-        An obelisk monument surrounded by orbiting Nostr keys and floating chat bubbles.
-      </desc>
+      <title id="hero-what-title">{t('guides.art.whatIsObelisk.title')}</title>
+      <desc id="hero-what-desc">{t('guides.art.whatIsObelisk.desc')}</desc>
 
       <defs>
         <linearGradient id="sky-what" x1="0" y1="0" x2="0" y2="1">

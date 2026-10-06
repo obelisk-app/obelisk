@@ -45,7 +45,6 @@
   "relaySettings": "Feed relays",
   "loadMore": "Load more",
   "endOfFeed": "That's everything the relays had.",
-  "newNotes": "new notes",
   "backToTop": "Back to the newest",
   "loadFailed": "The feed relays could not load this feed.",
   "followNobody": "You're not following anyone yet. Try the Global tab.",
@@ -82,10 +81,7 @@
   "loadingMore": "Loading more…",
   "showMore": "Show more",
   "showLess": "Show less",
-  "minRead": "min read",
   "untitledArticle": "Untitled article",
-  "followingCount": "following",
-  "relayCount": "relays",
   "shareNote": "Share note",
   "viewRaw": "View raw event",
   "rawEvent": "Raw event",
@@ -163,14 +159,17 @@
   "packsTitle": "Find people to follow",
   "packsSubtitle": "Curated packs from the relays you read. Follow one and your feed fills up.",
   "packsEmpty": "No starter packs on your relays yet. The Global tab is the other way in.",
-  "packPeople": "people",
-  "packAlreadyFollowing": "already followed",
   "packAllFollowed": "Following all",
   "packFollowed": "Followed the pack",
   "highlights": "Highlights",
   "searchScope": "All Nostr",
   "viewer": {
-    "openInObelisk": "Open in Obelisk"
+    "openInObelisk": "Open in Obelisk",
+    "moreFrom": "More from {name}",
+    "sharedMedia": "Shared media",
+    "follow": "Follow",
+    "following": "Following",
+    "retry": "Retry"
   },
   "author": {
     "writesAbout": "Writes about",
@@ -187,9 +186,18 @@
   },
   "tagPage": {
     "notFound": "Tag not found",
-    "notFoundHelp": "That doesn’t look like a hashtag."
+    "notFoundHelp": "That doesn’t look like a hashtag.",
+    "recent": "{count, plural, one {# recent note on the public relays} other {# recent notes on the public relays}}",
+    "none": "No recent notes found on the public relays."
   },
   "copyAuthorLink": "Copy author profile link",
   "highlightsHint": "Show passages people marked in these articles",
-  "openThread": "Open thread"
+  "openThread": "Open thread",
+  "newNotesCount": "{count, plural, one {# new note} other {# new notes}}",
+  "relaysConnected": "{connected}/{total} relays",
+  "relaysCount": "{count, plural, one {# relay} other {# relays}}",
+  "followingN": "{count} following",
+  "packPeopleCount": "{count, plural, one {# person} other {# people}}",
+  "packAlreadyCount": "{count} already followed",
+  "minReadCount": "{minutes} min read"
 }

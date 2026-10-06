@@ -133,7 +133,7 @@ export default async function FeaturesPage({ params }: LocaleParams) {
                 </div>
               </figure>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lc-green">{t('marketing.features.number')} {String(index + 1).padStart(2, '0')}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lc-green">{t('marketing.features.number', { n: String(index + 1).padStart(2, '0') })}</p>
                 <h2 className="mt-3 text-3xl font-bold tracking-tight text-lc-white md:text-4xl">{t(`marketing.features.item.${feature.id}.title`)}</h2>
                 <p className="mt-4 text-base leading-relaxed text-lc-muted md:text-lg">{t(`marketing.features.item.${feature.id}.description`)}</p>
               </div>

@@ -23,6 +23,7 @@ import {
 } from '@/services/nostr-bridge';
 import { toggledFollowTags } from '@/services/social/profile-feed';
 import { usePreferences } from '@/hooks/usePreferences';
+import { useTranslations } from 'next-intl';
 
 export default function FollowButton({
   pubkey,
@@ -31,6 +32,7 @@ export default function FollowButton({
   pubkey: string;
   className?: string;
 }) {
+  const t = useTranslations();
   const myPubkey = useMyPubkey();
   const contactEvent = useMyContactList();
   const ready = useMyContactListReady();
@@ -81,7 +83,7 @@ export default function FollowButton({
       } ${className}`}
       data-testid="follow-button"
     >
-      {busy ? '…' : failed ? 'Retry' : following ? 'Following' : 'Follow'}
+      {busy ? '…' : t(failed ? 'social.viewer.retry' : following ? 'social.viewer.following' : 'social.viewer.follow')}
     </button>
   );
 }

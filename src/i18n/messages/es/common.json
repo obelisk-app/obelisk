@@ -56,5 +56,13 @@
     "title": "Página no encontrada",
     "body": "Esta página no existe, o se mudó.",
     "home": "Volver al inicio"
+  },
+  "ping": {
+    "newDm": "Nuevo mensaje directo",
+    "replied": "{sender} te respondió",
+    "repliedIn": "{sender} te respondió en {where}",
+    "mentioned": "{sender} te mencionó",
+    "mentionedIn": "{sender} te mencionó en {where}",
+    "postedIn": "{sender} en {where}"
   }
 }

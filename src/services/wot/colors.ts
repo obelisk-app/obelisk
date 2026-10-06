@@ -1,13 +1,17 @@
 /**
  * Shared color tiers for WoT hop distances. Kept out of any React
  * component so the channel rail (`AppShell` GroupNode) and the legend in
- * the Preferences panel render with one source of truth.
+ * the Preferences panel render with one source of truth. The legend's
+ * words are message keys (`settings.wot.tier.*`), read where it renders.
  */
+
+import type { MessageKey } from '@/i18n/keys';
+
 export interface WotTier {
   /** Hop distance this tier covers (`null` when 4+ groups together). */
   distance: number | null;
   label: string;
-  description: string;
+  descriptionKey: MessageKey;
   /** Tailwind classes for inline text (channel-name color). */
   textClass: string;
   /** Tailwind classes for outlined badge (legend swatches). */
@@ -18,35 +22,35 @@ export const WOT_TIERS: ReadonlyArray<WotTier> = [
   {
     distance: 0,
     label: '0°',
-    description: 'You',
+    descriptionKey: 'settings.wot.tier.you',
     textClass: 'text-lc-green font-semibold',
     badgeClass: 'border-lc-green/60 text-lc-green',
   },
   {
     distance: 1,
     label: '1°',
-    description: 'Direct follow',
+    descriptionKey: 'settings.wot.tier.direct',
     textClass: 'text-emerald-400',
     badgeClass: 'border-emerald-400/60 text-emerald-400',
   },
   {
     distance: 2,
     label: '2°',
-    description: 'Friend of a follow',
+    descriptionKey: 'settings.wot.tier.friend',
     textClass: 'text-yellow-400',
     badgeClass: 'border-yellow-400/60 text-yellow-400',
   },
   {
     distance: 3,
     label: '3°',
-    description: 'Three hops away',
+    descriptionKey: 'settings.wot.tier.three',
     textClass: 'text-orange-400',
     badgeClass: 'border-orange-400/60 text-orange-400',
   },
   {
     distance: null,
     label: '4°+',
-    description: 'Far / unresolved',
+    descriptionKey: 'settings.wot.tier.far',
     textClass: 'text-red-400',
     badgeClass: 'border-red-400/60 text-red-400',
   },

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import type { JsForumTag } from '@/services/nostr-bridge';
 import { paletteForTag, TAG_PALETTES } from '@/utils/forum-tag-colors';
 import { useDismiss } from '@/hooks/useDismiss';
+import { useTranslations } from 'next-intl';
 
 /**
  * Swatch button + popover for a publication tag's color.
@@ -18,6 +19,7 @@ export function TagColorPicker({
   tag: JsForumTag;
   onPick: (color: string | null) => void;
 }) {
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const close = () => setOpen(false);
@@ -30,7 +32,7 @@ export function TagColorPicker({
         onClick={() => setOpen((v) => !v)}
         className="flex h-7 w-7 items-center justify-center rounded-md border border-lc-border bg-lc-dark hover:border-lc-muted"
         style={{ borderColor: current.border }}
-        aria-label={`Tag color: ${tag.color ? current.label : 'automatic'}`}
+        aria-label={t('chat.forum.tagColor', { color: tag.color ? current.label : t('chat.forum.tagColorAuto') })}
         aria-haspopup="menu"
         aria-expanded={open}
         data-testid={`forum-tag-color-${tag.id}`}
@@ -73,7 +75,7 @@ export function TagColorPicker({
             }
             data-testid={`forum-tag-color-auto-${tag.id}`}
           >
-            Auto {tag.color === null && '·  in use'}
+            {t(tag.color === null ? 'chat.forum.autoInUse' : 'chat.forum.auto')}
           </button>
         </div>
       )}

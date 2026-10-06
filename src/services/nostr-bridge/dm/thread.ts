@@ -4,6 +4,7 @@
  * for an incoming message the user is not watching. Both protocols' ingest
  * paths end here. Pure move from `client.ts` (`ingestDM`).
  */
+import { translate } from '@/i18n/runtime';
 import type { DMProtocol } from '@/store/dm';
 import { useNotificationsStore } from '@/store/notifications';
 import { isUserWatchingDM } from '@/services/read-gates';
@@ -118,7 +119,7 @@ export class DmThreadModule {
       title: this.deps.displayNameFor(counterparty),
       // The OS shade is visible to anyone looking at the screen and may be
       // mirrored to other devices; never put DM plaintext there.
-      body: 'New direct message',
+      body: translate('common.ping.newDm'),
     });
   }
 }

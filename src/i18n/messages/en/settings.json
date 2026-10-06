@@ -244,7 +244,13 @@
     "relayLogs": "Developer relay logs",
     "console": "Browser console.",
     "signatureHelp": "Request mock signatures for every event kind Obelisk uses. Signed events are discarded and never published.",
-    "section": "Developer"
+    "section": "Developer",
+    "relayLogsHelp": "Log relay calls to the console.",
+    "mockContent": "Obelisk mock signature test for kind {kind}. This event is not published.",
+    "mockAlt": "Developer signature permission test",
+    "requestAll": "Request all {count} signatures",
+    "waiting": "Waiting · {done}/{total}",
+    "results": "{accepted} accepted · {rejected} rejected"
   },
   "wot": {
     "title": "Web of Trust",
@@ -254,7 +260,23 @@
     "channelColors": "Channel colors",
     "outOfGraph": "Out of WoT or unresolved",
     "resolvedAllow": "resolved allow",
-    "resolvedDeny": "resolved deny"
+    "resolvedDeny": "resolved deny",
+    "status": {
+      "configured": "Extension detected",
+      "error": "Extension error",
+      "missing": "No nostr-wot extension"
+    },
+    "recheck": "re-check",
+    "hopsHelp": "1° = direct follows only · 2° = friends of follows · higher = wider net.",
+    "pathsHelp": "Require this many independent follow paths before trusting a pubkey. Higher values reject single-shill follows; only effective when the extension reports path counts.",
+    "pending": "pending",
+    "tier": {
+      "you": "You",
+      "direct": "Direct follow",
+      "friend": "Friend of a follow",
+      "three": "Three hops away",
+      "far": "Far / unresolved"
+    }
   },
   "calls": {
     "title": "Calls",
@@ -279,5 +301,9 @@
     "reset": "Reset to defaults",
     "saved": "Saved",
     "invalid": "Only wss:// relay addresses"
+  },
+  "relayShare": {
+    "invalid": "Invalid relay share link.",
+    "failed": "Failed to add relay."
   }
 }

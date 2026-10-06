@@ -12,7 +12,7 @@ export function PaletteSection() {
     <Section
       id="colors"
       title={t('mediaKit.palette')}
-      description="Design-system tokens. Tap the HEX to copy it."
+      description={t('mediaKit.desc.palette')}
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {COLORS.map((c) => (
@@ -23,9 +23,9 @@ export function PaletteSection() {
             />
             <div className="p-4 flex items-center justify-between gap-2">
               <div>
-                <div className="font-semibold">{c.name}</div>
+                <div className="font-semibold">{t(c.nameKey)}</div>
                 <div className="text-xs text-lc-muted">
-                  {c.token} · {c.usage}
+                  {c.token} · {t(c.usageKey)}
                 </div>
               </div>
               <CopyButton text={c.hex} />
@@ -47,17 +47,17 @@ export function ShortCopySection() {
     <Section
       id="copy"
       title={t('mediaKit.shortCopy')}
-      description="Quick-use phrases."
+      description={t('mediaKit.desc.shortCopy')}
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        {SHORT_COPY.map(([label, value]) => (
+        {SHORT_COPY.map(({ labelKey, lang, value }) => (
           <div
-            key={label}
+            key={value}
             className="lc-card p-4 flex items-center justify-between gap-3"
           >
             <div className="min-w-0">
               <div className="text-xs uppercase tracking-widest text-lc-green">
-                {label}
+                {t(labelKey, lang ? { lang } : undefined)}
               </div>
               <div className="text-sm truncate">{value}</div>
             </div>
@@ -78,7 +78,7 @@ export function EmbedSections() {
       <Section
         id="embeds"
         title={t('mediaKit.embeds')}
-        description="Paste these snippets anywhere to link to Obelisk with style."
+        description={t('mediaKit.desc.embeds')}
       >
         <div className="space-y-6">
           <EmbedPreview
@@ -88,7 +88,7 @@ export function EmbedSections() {
             pixelWidth={1200}
           />
           <EmbedPreview
-            title='"Powered by Obelisk" badge'
+            title={t('mediaKit.poweredByBadge')}
             html={EMBED_BADGE}
             filename="obelisk-powered-by-badge.png"
             pixelWidth={600}
@@ -100,7 +100,7 @@ export function EmbedSections() {
       <Section
         id="og"
         title={t('mediaKit.openGraph')}
-        description="Runtime-generated share preview and ready-to-paste meta tags."
+        description={t('mediaKit.desc.og')}
       >
         <div className="lc-card overflow-hidden mb-4">
           <div className="aspect-[1200/630] relative bg-lc-black">
@@ -112,7 +112,7 @@ export function EmbedSections() {
             />
           </div>
           <div className="border-t border-lc-border p-3 flex items-center justify-between text-xs text-lc-muted">
-            <span>1200 × 630 · /og/obelisk.png</span>
+            <span>1200 × 630 · /og/obelisk.png</span> {/* i18n-exempt: the image's size and path */}
             <a
               href={OG_IMAGE_URL}
               target="_blank"

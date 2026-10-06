@@ -75,7 +75,7 @@ export function NewThreadModal({
         {forumTags.length > 0 && (
           <div className="space-y-1.5" data-testid="new-thread-tag-picker">
             <Text as="div" size="11" variant="label" tone="muted">
-              Tags ({selectedTagIds.length}/{MAX_TAGS})
+              {t('chat.forum.tagsCount', { count: selectedTagIds.length, max: MAX_TAGS })}
             </Text>
             <div className="flex flex-wrap gap-1.5">
               {forumTags.map((tag) => {
@@ -114,7 +114,7 @@ export function NewThreadModal({
             disabled={!canSubmit}
             data-testid="new-thread-submit"
           >
-            {submitting ? 'Creating…' : 'Create publication'}
+            {t(submitting ? 'chat.forum.creating' : 'chat.forum.create')}
           </Button>
         </div>
       </form>

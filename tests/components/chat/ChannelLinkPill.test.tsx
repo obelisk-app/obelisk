@@ -1,7 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ChannelLinkPill from '@/components/chat/ChannelLinkPill';
 
+
+/** The component reads its copy from the dictionary, so it needs a provider. */
+const Wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
+const renderLocalized = (ui: ReactElement) => render(ui, { wrapper: Wrapper });
 describe('ChannelLinkPill', () => {
   const originalPush = window.history.pushState;
 
@@ -15,12 +21,12 @@ describe('ChannelLinkPill', () => {
   });
 
   it('uses the relay channel slug directly', () => {
-    render(<ChannelLinkPill slug="general" href="/app?c=general" />);
+    renderLocalized(<ChannelLinkPill slug="general" href="/app?c=general" />);
     expect(screen.getByTestId('channel-link-pill')).toHaveTextContent('#general');
   });
 
   it('keeps post and message link prefixes', () => {
-    const { rerender } = render(
+    const { rerender } = renderLocalized(
       <ChannelLinkPill slug="forum" postId="post" href="/app?c=forum&p=post" />,
     );
     expect(screen.getByTestId('channel-link-pill')).toHaveTextContent('📋 forum');
@@ -32,7 +38,7 @@ describe('ChannelLinkPill', () => {
   it('navigates without remounting unless a modifier key is held', () => {
     const listener = vi.fn();
     window.addEventListener('popstate', listener);
-    render(<ChannelLinkPill slug="general" href="/app?c=general" />);
+    renderLocalized(<ChannelLinkPill slug="general" href="/app?c=general" />);
 
     fireEvent.click(screen.getByTestId('channel-link-pill'));
     expect(window.history.pushState).toHaveBeenCalledWith(null, '', '/app?c=general');

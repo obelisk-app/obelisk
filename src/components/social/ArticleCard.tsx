@@ -73,7 +73,7 @@ export function ArticleCard({
           <span>{t('social.article')}</span>
           <span aria-hidden="true">·</span>
           <span className="normal-case tracking-normal text-lc-muted">
-            {minutes} {t('social.minRead')}
+            {t('social.minReadCount', { minutes })}
           </span>
         </Text>
         <h3 className="line-clamp-2 text-base font-bold leading-snug text-lc-white">
@@ -148,7 +148,7 @@ export default function ArticleReader({
         <span className="ml-auto text-[11px] text-lc-muted">
           {meta.publishedAt ? articleDate(locale, meta.publishedAt) : null}
           {' · '}
-          {minutes} {t('social.minRead')}
+          {t('social.minReadCount', { minutes })}
         </span>
         {/*
           Highlights belong here rather than in the feed: as feed rows they

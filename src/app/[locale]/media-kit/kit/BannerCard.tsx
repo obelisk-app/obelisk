@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { CodeBlock } from './kit-ui';
 import { usePngDownload } from '@/hooks/media-kit/kit/usePngDownload';
 import Button from '@/components/ui/Button';
@@ -9,17 +10,16 @@ function DownloadPngButton({
   targetRef,
   filename,
   pixelWidth,
-  label = 'Download PNG',
 }: {
   targetRef: React.RefObject<HTMLElement | null>;
   filename: string;
   pixelWidth?: number;
-  label?: string;
 }) {
+  const t = useTranslations();
   const { busy, download } = usePngDownload(targetRef, filename, pixelWidth);
   return (
     <Button variant="pill" size="xs" disabled={busy} onClick={download}>
-      {busy ? 'Rendering…' : label}
+      {busy ? t('mediaKit.rendering') : t('mediaKit.downloadPng')}
     </Button>
   );
 }

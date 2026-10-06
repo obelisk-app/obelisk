@@ -61,10 +61,10 @@ export default function StartTableModal({
       <h2 className="text-sm font-semibold text-lc-white">{t('games.seats')}</h2>
       <p className="mt-1 text-[11px] text-lc-muted">
         {realtime
-          ? `Every player needs their own device: ${gameName(session.game)} runs all the boards at once, so one seat per account.`
+          ? t('games.startTable.realtimeHelp', { game: gameName(session.game) })
           : savedPlayers
-            ? `Resuming a saved ${gameName(session.game)} game with ${savedPlayers.length} players. Assign each one to an account: several seats on the same account are played at that person's keyboard.`
-            : 'Assign each seat to an account. Give one account several seats and those players share that machine; one seat each means everyone plays from their own client.'}
+            ? t('games.startTable.resumeHelp', { game: gameName(session.game), count: savedPlayers.length })
+            : t('games.startTable.assignHelp')}
       </p>
 
       <ul className="mt-4 space-y-2" data-testid="seat-list">
@@ -80,7 +80,7 @@ export default function StartTableModal({
                   value={row.label}
                   onChange={(e) => rename(row.rowId, e.target.value)}
                   className="min-w-0 flex-1"
-                  aria-label={`Seat ${i + 1} name`}
+                  aria-label={t('games.startTable.seatName', { n: i + 1 })}
                 />
                 <span
                   className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] ${
@@ -88,7 +88,9 @@ export default function StartTableModal({
                   }`}
                   data-testid={`seat-mode-${i}`}
                 >
-                  {realtime ? 'own device' : shared ? `on ${nameOf(row.by)}'s machine` : 'remote'}
+                  {realtime
+                    ? t('games.startTable.ownDevice')
+                    : shared ? t('games.startTable.onMachine', { name: nameOf(row.by) }) : t('games.startTable.remote')}
                 </span>
                 <div className="flex shrink-0 items-center gap-0.5">
                   <Button variant="ghost" size="icon" onClick={() => move(i, -1)} aria-label={t('shell.desktop.layout.moveUp')}>↑</Button>
@@ -126,7 +128,7 @@ export default function StartTableModal({
 
               {row.savedName && (
                 <p className="mt-1 pl-7 text-[10px] text-lc-muted">
-                  Takes over “{row.savedName}” from the save
+                  {t('games.startTable.takesOver', { name: row.savedName })}
                 </p>
               )}
             </li>
@@ -142,15 +144,17 @@ export default function StartTableModal({
           onClick={addRow} className="mt-3"
           data-testid="add-seat"
         >
-          + add a seat
+          {t('games.startTable.addSeat')}
         </Button>
       )}
 
       <p className="mt-3 text-[11px] text-lc-muted">
-        {rows.length} of {session.minPlayers}–{session.maxPlayers} seats
-        {tooFew && ' · needs more players'}
-        {tooMany && ' · too many'}
-        {wrongForSave && ` · the save has ${savedPlayers!.length}`}
+        {[
+          t('games.startTable.seatCount', { count: rows.length, min: session.minPlayers, max: session.maxPlayers }),
+          tooFew && t('games.startTable.needsMore'),
+          tooMany && t('games.startTable.tooMany'),
+          wrongForSave && t('games.startTable.saveHas', { count: savedPlayers!.length }),
+        ].filter(Boolean).join(' · ')}
       </p>
 
       <div className="mt-4 flex justify-end gap-2">

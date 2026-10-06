@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { GameSession } from '@/lib/games/session';
 import { localSeatId, type SeatSpec } from '@/lib/games/protocol';
 import { readResumeState } from '@/lib/games/vesta/resume';
@@ -35,6 +36,7 @@ export function seatSpecsFor(rows: readonly Row[], nameOf: (pubkey: string) => s
  * (who signs, name, order, add, remove) and what they add up to.
  */
 export function useSeatRows(session: GameSession, nameOf: (pubkey: string) => string) {
+  const t = useTranslations();
   // A resumed table's shape is decided by the save, not by the host.
   const savedPlayers = useMemo(() => {
     const state = readResumeState((session.opts as { resume?: unknown }).resume);
@@ -47,7 +49,7 @@ export function useSeatRows(session: GameSession, nameOf: (pubkey: string) => st
       // can carry on a whole hot-seat game they imported.
       return savedPlayers.map((name, i) => ({
         rowId: `saved-${i}`,
-        label: name || `Player ${i + 1}`,
+        label: name || t('games.newGame.player', { n: i + 1 }),
         by: session.joined[Math.min(i, session.joined.length - 1)] ?? session.createdBy,
         savedName: name,
       }));
@@ -71,7 +73,7 @@ export function useSeatRows(session: GameSession, nameOf: (pubkey: string) => st
     if (rows.length >= session.maxPlayers) return;
     setRows((cur) => [...cur, {
       rowId: `extra-${cur.length}-${cur.length}`,
-      label: `Player ${cur.length + 1}`,
+      label: t('games.newGame.player', { n: cur.length + 1 }),
       by: session.createdBy,
     }]);
   };

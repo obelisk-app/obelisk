@@ -4,6 +4,7 @@ import type { GameSession } from '@/lib/games/session';
 import { gameIcon, gameName } from '@/lib/games/catalog';
 import { isDraw } from '@/lib/games/standings';
 import { rowsFor } from './results-rows';
+import { scoreDetail, scoreLabel } from '@/utils/chat/games/game-copy';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -33,12 +34,13 @@ export default function GameResults({
         <div className="text-[10px] uppercase tracking-[0.14em] text-lc-muted">{t('games.finalResult')}</div>
         <div className="mt-0.5 text-sm font-semibold text-lc-white">
           {gameIcon(session.game)} {gameName(session.game)}
+          {' · '}
           {session.winner
-            ? ` · ${seatLabel(session.winner)} won`
+            ? t('games.results.won', { name: seatLabel(session.winner) })
             : isDraw(session)
-              ? ' · draw'
+              ? t('games.results.draw')
               // A solo run has no winner and no draw: it simply ended.
-              : ' · game over'}
+              : t('games.results.over')}
         </div>
       </div>
 
@@ -57,11 +59,11 @@ export default function GameResults({
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: row.color }} />
               <span className={`min-w-0 flex-1 truncate text-xs ${isWinner ? 'text-lc-white' : 'text-lc-muted'}`}>
                 {seatLabel(row.seat)}
-                {mine.includes(row.seat) && <span className="ml-1 text-[10px] text-lc-muted">(you)</span>}
+                {mine.includes(row.seat) && <span className="ml-1 text-[10px] text-lc-muted">{t('games.you')}</span>}
               </span>
-              {isWinner && <span className="shrink-0 text-sm" aria-label="winner">🏆</span>}
+              {isWinner && <span className="shrink-0 text-sm" aria-label={t('games.results.winner')}>🏆</span>}
               <span className="shrink-0 font-mono text-[11px] text-lc-white" data-testid={`result-score-${row.seat}`}>
-                {row.score}
+                {scoreLabel(t, row.score)}
               </span>
             </li>
           );
@@ -69,7 +71,7 @@ export default function GameResults({
       </ol>
 
       {rows.length > 0 && rows[0].detail && (
-        <p className="text-center text-[10px] text-lc-muted">{rows[0].detail}</p>
+        <p className="text-center text-[10px] text-lc-muted">{scoreDetail(t, rows[0].detail)}</p>
       )}
     </div>
   );

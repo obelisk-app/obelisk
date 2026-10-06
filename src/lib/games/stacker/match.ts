@@ -60,7 +60,17 @@ export interface SeatProgress {
   /** null until a checkpoint with a log arrives, then true/false. */
   verified: boolean | null;
   /** Set when a checkpoint's claims do not match its own input log. */
-  suspect: string | null;
+  suspect: CheckpointMismatch | null;
+}
+
+/**
+ * Which claim of a checkpoint its own input log does not back up, and by how
+ * much. A code and two numbers: the table words it in the reader's language.
+ */
+export interface CheckpointMismatch {
+  claim: 'attacks' | 'lines';
+  claimed: number;
+  produced: number;
 }
 
 export interface MatchState {
@@ -265,7 +275,7 @@ export function verifyCheckpoint(
   seed: number,
   encodedInputs: string,
   claim: { attacksSent: number; linesCleared: number },
-): { ok: boolean; reason?: string; actual: { attacksSent: number; linesCleared: number } } {
+): { ok: boolean; reason?: CheckpointMismatch; actual: { attacksSent: number; linesCleared: number } } {
   const inputs = decodeInputs(encodedInputs);
   const state = replay(seed, inputs);
   const actual = { attacksSent: state.attacksSent, linesCleared: state.linesCleared };
@@ -273,14 +283,14 @@ export function verifyCheckpoint(
   if (claim.attacksSent > actual.attacksSent) {
     return {
       ok: false,
-      reason: `claimed ${claim.attacksSent} attack lines, log produces ${actual.attacksSent}`,
+      reason: { claim: 'attacks', claimed: claim.attacksSent, produced: actual.attacksSent },
       actual,
     };
   }
   if (claim.linesCleared > actual.linesCleared) {
     return {
       ok: false,
-      reason: `claimed ${claim.linesCleared} lines, log produces ${actual.linesCleared}`,
+      reason: { claim: 'lines', claimed: claim.linesCleared, produced: actual.linesCleared },
       actual,
     };
   }

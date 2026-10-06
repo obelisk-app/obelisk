@@ -1,8 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render as rtlRender } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
+import type { Locale } from '@/i18n';
 import SwapAnythingHero from '@/components/guides/svg/SwapAnythingHero';
 import SwapMatrixDiagram from '@/components/guides/svg/diagrams/SwapMatrixDiagram';
 import { HERO_REGISTRY, DIAGRAM_REGISTRY, SvgHero, Diagram } from '@/components/guides/svg/index';
+
+/** The artwork's words come from the `guides` messages, so it renders inside a provider. */
+const render = (ui: ReactElement, locale: Locale = 'en') =>
+  rtlRender(<LocaleProvider initialLocale={locale}>{ui}</LocaleProvider>);
 
 describe('SwapAnythingHero', () => {
   it('renders the four ecosystem pieces', () => {
@@ -32,6 +39,16 @@ describe('SwapMatrixDiagram', () => {
     expect(text).toContain('Voice');
     expect(text).toContain('Bots');
     expect(text).toContain('Relay');
+  });
+
+  it('names the layers in the page\'s language', () => {
+    const { container } = render(<SwapMatrixDiagram />, 'pt');
+    const text = container.textContent ?? '';
+    expect(text).toContain('Cliente');
+    expect(text).toContain('Voz');
+    expect(text).toContain('NOSSO');
+    expect(text).toContain('strfry');
+    expect(container.querySelector('svg')?.getAttribute('aria-label')).toMatch(/^Matriz de troca/);
   });
 
   it('shows the obelisk projects in the OURS column', () => {
@@ -70,6 +87,14 @@ describe('SvgHero / Diagram indexable wrappers', () => {
     expect(img?.getAttribute('alt')?.length ?? 0).toBeGreaterThan(40);
     expect(container.querySelector('svg')).not.toBeNull();
     expect(container.querySelector('figcaption')?.textContent).toBe('Test caption');
+  });
+
+  it('serves a Portuguese page the Portuguese snapshot and alt text', () => {
+    const { container } = render(<SvgHero name="swap-anything" />, 'pt');
+    const img = container.querySelector('img');
+    expect(img?.getAttribute('src')).toBe('/og/guides/pt/swap-anything.png');
+    expect(img?.getAttribute('alt')).toMatch(/^O ecossistema Obelisk/);
+    expect(container.querySelector('title')?.textContent).toBe('Troque tudo, confie em nada');
   });
 
   it('hides the live <svg> from screen readers so the <img> alt is the only label', () => {

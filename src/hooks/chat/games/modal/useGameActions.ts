@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { GameSession } from '@/lib/games/session';
 import { publishMove } from '@/services/games/transport';
 import type { VestaAction } from '@/lib/games/vesta/definition';
@@ -11,6 +12,7 @@ import type { VestaAction } from '@/lib/games/vesta/definition';
  * nothing; the UI updates when the event comes back off the relay.
  */
 export function useGameActions(session: GameSession | null | undefined) {
+  const t = useTranslations();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,11 +22,11 @@ export function useGameActions(session: GameSession | null | undefined) {
     try {
       await fn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Relay rejected that');
+      setError(err instanceof Error ? err.message : t('games.relayRejected'));
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [t]);
 
   const onAction = useCallback(async (action: { cell: number }, seat: string) => {
     if (!session) return;

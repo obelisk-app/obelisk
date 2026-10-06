@@ -3,6 +3,9 @@
  * lines does not score points here - it sends rows, so the hero draws the
  * attack crossing the gap rather than a scoreboard.
  */
+
+import { useTranslations } from 'next-intl';
+
 const PIECES = ['#22d3ee', '#3b82f6', '#f97316', '#facc15', '#b4f953', '#a855f7', '#ef4444'];
 
 const CELL = 22;
@@ -108,6 +111,7 @@ function Well({
 }
 
 export default function StackerHero() {
+  const t = useTranslations();
   const leftX = 96;
   const rightX = 484;
   const bottom = TOP + ROWS * CELL;
@@ -120,12 +124,8 @@ export default function StackerHero() {
       aria-labelledby="hero-stacker-title hero-stacker-desc"
       className="w-full h-auto"
     >
-      <title id="hero-stacker-title">Two Stacker wells trading garbage lines</title>
-      <desc id="hero-stacker-desc">
-        Two ten-column wells of falling coloured blocks side by side. A completed line in
-        the left well sends grey garbage rows into the right one: the only thing that
-        crosses the Nostr relay in a real-time Obelisk Stacker match.
-      </desc>
+      <title id="hero-stacker-title">{t('guides.art.stacker.title')}</title>
+      <desc id="hero-stacker-desc">{t('guides.art.stacker.desc')}</desc>
 
       <defs>
         <radialGradient id="bg-stacker" cx="0.5" cy="0.5" r="0.78">
@@ -154,17 +154,17 @@ export default function StackerHero() {
       />
 
       <g fontWeight="600">
-        <text x={leftX} y="72" fill="#fafafa" fontSize="15">Clear a line…</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-        <text x={rightX} y="72" fill="#fafafa" fontSize="15">…and somebody else digs</text>
+        <text x={leftX} y="72" fill="#fafafa" fontSize="15">{t('guides.art.stacker.clear')}</text>
+        <text x={rightX} y="72" fill="#fafafa" fontSize="15">{t('guides.art.stacker.digs')}</text>
 
         <g fontFamily="ui-monospace, monospace">
           <rect x="336" y="176" width="132" height="52" rx="9" fill="#171717" stroke="#262626" />
-          <text x="352" y="199" fill="#b4f953" fontSize="12">op: attack</text>
-          <text x="352" y="217" fill="#a3a3a3" fontSize="11">lines 3 · hole 6</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+          <text x="352" y="199" fill="#b4f953" fontSize="12">op: attack</text> {/* i18n-exempt: the wire payload, drawn as code */}
+          <text x="352" y="217" fill="#a3a3a3" fontSize="11">lines 3 · hole 6</text> {/* i18n-exempt: the wire payload, drawn as code */}
         </g>
 
-        <text x={leftX} y="368" fill="#a3a3a3" fontSize="11"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
-          Every board runs locally at sixty frames a second; only the consequences are published.
+        <text x={leftX} y="368" fill="#a3a3a3" fontSize="11">
+          {t('guides.art.stacker.footer')}
         </text>
       </g>
     </svg>

@@ -56,5 +56,13 @@
     "title": "Page not found",
     "body": "This page doesn't exist, or it moved.",
     "home": "Back to home"
+  },
+  "ping": {
+    "newDm": "New direct message",
+    "replied": "{sender} replied to you",
+    "repliedIn": "{sender} replied to you in {where}",
+    "mentioned": "{sender} mentioned you",
+    "mentionedIn": "{sender} mentioned you in {where}",
+    "postedIn": "{sender} in {where}"
   }
 }
