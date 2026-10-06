@@ -152,6 +152,7 @@ Forum-kind channels are **Publications** in every user-facing string, in all thr
 - **Event kinds** come from `src/utils/nip-kinds.ts`. Add a missing kind there instead of a local constant or a raw number in a filter.
 - **Keys are never labels.** Show NIP-05 or `shortNpubLabel` (`src/utils/identity/short-npub.ts`), never raw hex.
 - **Design.** Use the `lc-*` tokens and classes (`src/app/globals.css`) and the primitives in `src/components/ui/` (`Button`, `IconButton`, `menu.tsx`, ...) rather than a raw `<button>`. Anything clickable reads as clickable (`lc-white` or `lc-green`, never `lc-muted`; aim for WCAG AA on the surface it sits on). UI chrome uses SVG icons from `src/components/ui/icons.tsx`, not emoji or text glyphs; emoji belong in content. Data-fetching components get a skeleton state.
+- **Google Analytics loads only after the person allows it** (`src/services/analytics/`; the question is `AnalyticsConsentRoot` in the `[locale]` layout). Never put a third-party script or pixel in a layout or page; anything new that reports to a third party goes behind the same answer. See [docs/data-system.md §11](docs/data-system.md).
 - **Anything stored in the browser** (a localStorage key, a persisted store, IndexedDB, Cache Storage, a cookie) is listed in the local-data inventory, `src/services/local-data/inventory-*.ts`, in the category a person would look for it under. Settings > Data on this device and `/help/local-data` read that list, and `tests/services/local-data/inventory-guard.test.ts` fails on a key it does not hold. See [docs/data-system.md §11](docs/data-system.md).
 - **Persisted per-user state** is a Zustand `persist` store with an `ensureXForAccount(pubkey)` helper registered in `PER_ACCOUNT_STORES` (`src/services/read-state/root.tsx`). See [docs/read-state.md](docs/read-state.md).
 - **Voice.** `VoiceClient` (`src/services/voice/client.ts`) is the only surface the UI sees; it picks mesh or SFU (`topology.ts`: SFU for a `voice-sfu` channel). See [docs/voice/README.md](docs/voice/README.md) and [docs/sfu-system.md](docs/sfu-system.md).
@@ -198,6 +199,7 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | `tests/app/[locale]/app/navigation-invariants.test.ts`, `deep-link-gate.test.ts` | Desktop navigation goes through the shell's view state; `?relay=` deep links go through `useRelayDeepLink` |
 | `tests/csp.test.ts`, `tests/service-worker-cache.test.ts` | The CSP from `src/proxy.ts`; what `public/sw.js` may cache |
 | `tests/services/local-data/inventory-guard.test.ts` | Every storage key, persisted store and IndexedDB database in `src/` is in the local-data inventory; `NOT_STORAGE` is shrink-only |
+| `tests/services/analytics/gtag.test.ts` | Only `src/services/analytics/gtag.ts` loads gtag.js; no layout or page carries it |
 
 `scripts/check-source-bytes.sh` (CI) rejects raw control bytes in tracked files.
 

@@ -157,8 +157,7 @@ export function renderScreenBody(nav: NavState, p: MobileScreenProps): ReactNode
       body = <EditProfileScreen go={p.go} />;
       break;
     case 'msg-actions':
-    case 'zap-modal':
-      // Sheets float over the underlying screen (typically `channel`). Render
+      // The sheet floats over the underlying screen (typically `channel`). Render
       // that base screen as the body here so it stays mounted in the same
       // sub-overlay slot - otherwise opening the actions sheet remounts
       // ChannelScreen and wipes local state like `replyingTo`.

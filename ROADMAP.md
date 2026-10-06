@@ -45,9 +45,10 @@ mirror the pieces each repo owns.
   watchdog still consumes a slot until backoff expires. Add a short
   cool-down where same-relay subs that got quota-rejected don't re-fire
   for 30s instead of immediately retrying with backoff.
-- [ ] **Production CSP hardening.** Drop GTM (currently in `src/proxy.ts`
-  CSP) so we don't need `'unsafe-eval'` or the `googletagmanager.com`
-  exception. Replace with self-hosted plausible / nostr-native analytics.
+- [ ] **Production CSP hardening.** Google Analytics now loads only after
+  consent (`src/services/analytics/`), but the CSP still names
+  `googletagmanager.com` as a script host. Replace it with self-hosted
+  plausible / nostr-native analytics and drop that exception.
 - [ ] **NIP-65 self-republish UX.** Detect when the user's own NIP-65
   contains a CSP-unsafe relay (`ws://`, localhost) and offer a one-click
   "fix and republish" button in profile settings. Many users carry these

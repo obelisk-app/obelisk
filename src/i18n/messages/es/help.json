@@ -39,7 +39,7 @@
     },
     "server": {
       "title": "Nada de esto va a un servidor de Obelisk",
-      "body": "Todo lo de esta página queda en tu navegador. Obelisk no tiene un servidor que guarde cuentas ni mensajes. Lo que publicás (mensajes, reacciones, tu perfil, archivos que subís) va a los relays y servidores de archivos que usás, incluidos los dos relays que opera el equipo de Obelisk, y vive ahí. El servidor web de obelisk.ar solo te manda la app y busca las vistas previas de los enlaces; no guarda cuentas ni copias de tus mensajes. Una excepción va a un tercero: el sitio carga Google Analytics, que pone sus propias cookies y le avisa a Google qué páginas se abren."
+      "body": "Todo lo de esta página queda en tu navegador. Obelisk no tiene un servidor que guarde cuentas ni mensajes. Lo que publicás (mensajes, reacciones, tu perfil, archivos que subís) va a los relays y servidores de archivos que usás, incluidos los dos relays que opera el equipo de Obelisk, y vive ahí. El servidor web de obelisk.ar solo te manda la app y busca las vistas previas de los enlaces; no guarda cuentas ni copias de tus mensajes. Una excepción puede ir a un tercero, y solo si decís que sí: el sitio pregunta si puede usar Google Analytics. Si lo permitís, Analytics pone sus propias cookies y le avisa a Google qué páginas abrís (dentro de la app, eso incluye en qué relay y en qué canal estás) y, por tu dirección IP, más o menos dónde estás. Si no lo permitís, o no respondés, no se carga nada de Google."
     },
     "categories": {
       "title": "Qué se guarda y para qué sirve",
@@ -85,8 +85,8 @@
         "purpose": "Una cookie chiquita que recuerda el idioma que elegiste. Sin ella, Obelisk usa el idioma de tu navegador."
       },
       "analytics": {
-        "title": "Cookies de analítica",
-        "purpose": "Dos cookies que pone Google Analytics para que el equipo de Obelisk cuente las visitas: un identificador de visitante al azar y la visita actual. No tienen tu clave ni tus mensajes, pero Google recibe las páginas que abrís. Vuelven en la próxima carga de página; el bloqueo de rastreadores de tu navegador las mantiene afuera."
+        "title": "Google Analytics (solo si lo permitís)",
+        "purpose": "Tu respuesta a la pregunta sobre Analytics, para que Obelisk no te pregunte en cada visita. Solo si permitiste Analytics, también dos cookies que pone Google Analytics: un identificador al azar de este dispositivo y la visita actual. No tienen tu clave ni tus mensajes, pero Google recibe las páginas que abrís (dentro de la app, en qué relay y en qué canal estás) y tu ubicación aproximada a partir de tu dirección IP. Cambiá tu respuesta cuando quieras en Ajustes > Datos en este dispositivo o desde el enlace al pie de las páginas del sitio: elegir \"No permitir\" corta Analytics en el momento y borra sus cookies, y no vuelven. Borrar esta categoría elimina las cookies y tu respuesta, así que Obelisk vuelve a preguntar."
       }
     },
     "settings": {

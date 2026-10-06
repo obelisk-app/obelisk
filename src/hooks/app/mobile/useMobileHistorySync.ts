@@ -6,7 +6,7 @@ import { useConfiguredRelays } from '@/services/nostr-bridge';
 import { classifyDeepLinkRelay, useRelayDeepLink } from '@/hooks/chat/useRelayDeepLink';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
-import { type NavState, urlFor, parseUrl } from '@/utils/shell/mobile/url-state';
+import { type NavState, urlFor, parseUrl, restoredNav } from '@/utils/shell/mobile/url-state';
 import { buildSeedHistory } from '@/utils/shell/mobile/swipe-nav';
 import type { SlideDir } from './useScreenCarousel';
 
@@ -112,19 +112,17 @@ export function useMobileHistorySync({
         return;
       }
       if (s?.nav) {
-        const next = s.nav;
+        const next = restoredNav(s.nav);
         const prev = navRef.current.screen;
         const isSettingsTabSwitch =
           (prev === 'settings-profile' && next.screen === 'settings-prefs') ||
           (prev === 'settings-prefs' && next.screen === 'settings-profile');
-        // Sheets (msg-actions / zap-modal) float over a base screen with their
-        // own vertical slide-up animation. Any popstate that opens or closes a
-        // sheet (or hops between two sheets) must NOT also animate the base
+        // The msg-actions sheet floats over a base screen with its own
+        // vertical slide-up animation. Any popstate that opens or closes it
+        // must NOT also animate the base
         // layer, otherwise the channel underneath slides laterally while the
         // sheet appears/disappears, which reads as a glitchy refresh.
-        const isSheetTransition =
-          prev === 'msg-actions' || prev === 'zap-modal' ||
-          next.screen === 'msg-actions' || next.screen === 'zap-modal';
+        const isSheetTransition = prev === 'msg-actions' || next.screen === 'msg-actions';
         if (isSettingsTabSwitch || isSheetTransition) {
           suppressSlideRef.current = true;
           setSlideDir(null);

@@ -237,11 +237,6 @@
   "channels": {
     "empty": "Ainda não há canais aqui."
   },
-  "zap": {
-    "title": "Enviar um zap",
-    "walletHint": "Carteira · NWC ou WebLN · confira nas Preferências",
-    "custom": "outro"
-  },
   "relay": {
     "confirmLeave": "Sair de {name}?"
   },

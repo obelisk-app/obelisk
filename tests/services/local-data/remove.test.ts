@@ -20,6 +20,7 @@ let env: RemovalEnv & {
   reload: Spy<() => void>;
   relocate: Spy<() => void>;
   disconnectWallet: Spy<() => Promise<void>>;
+  forgetAnalytics: Spy<() => void>;
 };
 
 async function databaseNames(): Promise<string[]> {
@@ -41,6 +42,7 @@ beforeEach(async () => {
     reload: vi.fn<() => void>(),
     relocate: vi.fn<() => void>(),
     disconnectWallet: vi.fn<() => Promise<void>>(async () => undefined),
+    forgetAnalytics: vi.fn<() => void>(),
     indexedDB: idb,
     caches: cachesDouble.asCacheStorage(),
     document,
@@ -104,6 +106,15 @@ describe('removing one category', () => {
     expect(env.reload).not.toHaveBeenCalled();
   });
 
+  it('forgets the Analytics answer too, so Analytics stops and the question is asked again', async () => {
+    localStorage.setItem('obelisk:analytics-consent', 'granted');
+    localStorage.setItem('obelisk:preferences', '{}');
+    await removeLocalDataCategory('analytics', env);
+    expect(env.forgetAnalytics).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('obelisk:analytics-consent')).toBeNull();
+    expect(localStorage.getItem('obelisk:preferences')).toBe('{}');
+  });
+
   it('expires the language cookie and reloads without the language prefix', async () => {
     expect(document.cookie).toContain('locale=es');
     await removeLocalDataCategory('language', env);
@@ -147,6 +158,7 @@ describe('removing everything', () => {
     expect(document.cookie).not.toContain('locale=');
     expect(env.logout).toHaveBeenCalledTimes(1);
     expect(env.relocate).toHaveBeenCalledTimes(1);
+    expect(env.forgetAnalytics).toHaveBeenCalledTimes(1);
   });
 
   it('still clears everything when the logout fails, and lets nothing write afterwards', async () => {
@@ -166,5 +178,11 @@ describe('measuring', () => {
     expect(usage.channels).toEqual({ bytes: 0, present: false });
     expect(usage.offline).toEqual({ bytes: 3072, present: true });
     expect(usage.language.present).toBe(true);
+  });
+
+  it('counts the Analytics answer as stored, cookies or not', async () => {
+    expect((await measureLocalData(cachesDouble.asCacheStorage(), document)).analytics.present).toBe(false);
+    localStorage.setItem('obelisk:analytics-consent', 'denied');
+    expect((await measureLocalData(cachesDouble.asCacheStorage(), document)).analytics).toEqual({ bytes: null, present: true });
   });
 });

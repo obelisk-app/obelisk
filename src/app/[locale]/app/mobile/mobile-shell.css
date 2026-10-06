@@ -196,7 +196,7 @@
 /* ===== screen container ===== */
 /*
  * The active screen fills the screens-host. We keep absolute positioning so
- * sheets (msg-actions / zap-modal) can sit on top of a "base" screen, but we
+ * the msg-actions sheet can sit on top of a "base" screen, but we
  * also pin the height/width so iOS Safari doesn't collapse the absolute
  * element to 0 when the parent's height is computed late.
  */
@@ -3548,50 +3548,6 @@
   color: var(--presence-dnd);
 }
 
-.obelisk-mobile .zap-amounts {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-.obelisk-mobile .zap-amount {
-  padding: 14px 4px;
-  background: var(--app-surface);
-  border: 1px solid var(--app-line);
-  border-radius: 10px;
-  color: var(--app-text);
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-  text-align: center;
-}
-.obelisk-mobile .zap-amount-sub {
-  display: block;
-  font-size: 9.5px;
-  color: var(--app-text-mute);
-  font-weight: 400;
-  margin-top: 2px;
-  font-family: 'JetBrains Mono', monospace;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-.obelisk-mobile .zap-amount.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
-  box-shadow: 0 0 18px rgba(180, 249, 83, 0.18);
-}
-.obelisk-mobile .zap-amount.active .zap-amount-sub {
-  color: var(--accent-deep);
-}
-.obelisk-mobile .zap-recipient {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: var(--app-surface);
-  border: 1px solid var(--app-line);
-  border-radius: 12px;
-}
 .obelisk-mobile .zap-title {
   font-weight: 800;
   font-size: 18px;
@@ -3606,27 +3562,6 @@
 .obelisk-mobile .zap-title svg {
   width: 18px;
   height: 18px;
-  color: var(--accent);
-}
-.obelisk-mobile .zap-memo {
-  background: var(--app-surface);
-  border: 1px solid var(--app-line);
-  border-radius: 10px;
-  padding: 10px 12px;
-  color: var(--app-text-dim);
-  font-size: 13px;
-  font-style: italic;
-}
-.obelisk-mobile .zap-wallet {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background: rgba(180, 249, 83, 0.06);
-  border: 1px solid rgba(180, 249, 83, 0.18);
-  border-radius: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
   color: var(--accent);
 }
 .obelisk-mobile .settings-status-dot {
@@ -4529,7 +4464,6 @@
 .obelisk-mobile .composer-mention-row,
 .obelisk-mobile .ma-action,
 .obelisk-mobile .ma-quick-react,
-.obelisk-mobile .zap-amount,
 .obelisk-mobile .filter-tab,
 .obelisk-mobile .mark-all-read,
 .obelisk-mobile .compose-dm-next,
@@ -4575,7 +4509,6 @@
 .obelisk-mobile .composer-mention-row:active,
 .obelisk-mobile .ma-action:active,
 .obelisk-mobile .ma-quick-react:active,
-.obelisk-mobile .zap-amount:active,
 .obelisk-mobile .filter-tab:active,
 .obelisk-mobile .mark-all-read:active,
 .obelisk-mobile .compose-dm-next:active,
@@ -4592,7 +4525,6 @@
   transform: scale(0.97);
 }
 .obelisk-mobile .ma-action:active,
-.obelisk-mobile .zap-amount:active,
 .obelisk-mobile .btn-cancel:active {
   background: var(--app-surface);
   border-color: rgba(180, 249, 83, 0.22);
@@ -4632,7 +4564,6 @@
   .obelisk-mobile .composer-mention-row:active,
   .obelisk-mobile .ma-action:active,
   .obelisk-mobile .ma-quick-react:active,
-  .obelisk-mobile .zap-amount:active,
   .obelisk-mobile .filter-tab:active,
   .obelisk-mobile .mark-all-read:active,
   .obelisk-mobile .compose-dm-next:active,

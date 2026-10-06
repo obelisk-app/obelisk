@@ -343,6 +343,12 @@
     "remove": "Apagar",
     "removing": "Apagando...",
     "learnMore": "Para que serve, e outras formas de apagar",
+    "analytics": {
+      "title": "Google Analytics",
+      "granted": "Permitido. O Google recebe as páginas que você abre (no app, em qual relay e em qual canal você está) e sua localização aproximada a partir do seu endereço IP, e guarda um cookie com um identificador deste dispositivo. Escolha \"Não permitir\" para parar agora; os cookies dele são apagados na hora.",
+      "denied": "Não permitido. Nada do Google carrega, e nenhum cookie do Analytics fica guardado.",
+      "unset": "Ainda sem resposta. Nada do Google carrega até você permitir."
+    },
     "removeAll": {
       "title": "Apagar tudo deste dispositivo",
       "description": "Desconecta você, apaga o seu login criptografado e tudo o que está acima, e depois recarrega.",
@@ -352,7 +358,7 @@
       "action": "Apagar",
       "titleAll": "Apagar tudo deste dispositivo?",
       "actionAll": "Apagar tudo",
-      "all": "Tudo o que o Obelisk guarda aqui é apagado: seu login, a conexão da carteira, o cache de mensagens e perfis, posições de leitura e alertas, preferências, silenciados, bloqueados e figurinhas salvas, arquivos para uso sem conexão, o idioma escolhido e os cookies de análise. Você é desconectado e a página recarrega. Para entrar de novo você precisa da sua chave, da extensão do navegador ou do seu app assinador. O que você publicou nos relays não é afetado.",
+      "all": "Tudo o que o Obelisk guarda aqui é apagado: seu login, a conexão da carteira, o cache de mensagens e perfis, posições de leitura e alertas, preferências, silenciados, bloqueados e figurinhas salvas, arquivos para uso sem conexão, o idioma escolhido, sua resposta sobre o Google Analytics e os cookies dele. Você é desconectado e a página recarrega. Para entrar de novo você precisa da sua chave, da extensão do navegador ou do seu app assinador. O que você publicou nos relays não é afetado.",
       "channels": "Os canais e mensagens em cache são apagados deste dispositivo e a página recarrega. Tudo volta a carregar pelos relays; nada do que você publicou é afetado.",
       "profiles": "Os nomes e fotos salvos são apagados e a página recarrega. Eles voltam a carregar pelos relays.",
       "readState": "As posições de leitura, contagens de não lidas e alertas deste dispositivo são apagados e a página recarrega. As posições sincronizadas pelos seus relays voltam; os alertas não.",
@@ -363,7 +369,7 @@
       "wallet": "A conexão da carteira é apagada deste dispositivo e a página recarrega. Para fazer zaps ou pagar de novo pelo Obelisk, cole o link de conexão do app da sua carteira. A carteira e o saldo dela não são afetados.",
       "offline": "Os arquivos salvos do app são apagados. O Obelisk baixa tudo de novo da próxima vez que carregar, e até lá não abre sem conexão.",
       "language": "O Obelisk esquece o idioma que você escolheu e volta ao idioma do seu navegador. A página recarrega.",
-      "analytics": "Os cookies do Google Analytics são apagados. Eles voltam da próxima vez que uma página carregar; para evitá-los, bloqueie rastreadores no seu navegador."
+      "analytics": "Sua resposta sobre o Google Analytics e os cookies dele são apagados. O Analytics para, e o Obelisk pergunta de novo; nada do Google carrega se você não permitir."
     }
   }
 }

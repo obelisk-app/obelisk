@@ -24,7 +24,7 @@ describe('slotRoleFor', () => {
 describe('overlayScreenKeyFor', () => {
   it('keys a sheet by the screen underneath, so opening it does not remount that screen', () => {
     expect(overlayScreenKeyFor(at({ screen: 'msg-actions', baseScreen: 'forum' }))).toBe('forum');
-    expect(overlayScreenKeyFor(at({ screen: 'zap-modal', baseScreen: null }))).toBe('channel');
+    expect(overlayScreenKeyFor(at({ screen: 'msg-actions', baseScreen: null }))).toBe('channel');
   });
 
   it('is the screen itself otherwise', () => {

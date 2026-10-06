@@ -47,6 +47,36 @@ describe('the local data help page', () => {
   });
 });
 
+describe('what the help and FAQ say about Google Analytics', () => {
+  const OLD: Record<(typeof LOCALES)[number], RegExp> = {
+    en: /come back on the next page load|set again the next time/i,
+    es: /vuelven en la próxima carga|se vuelven a poner/i,
+    pt: /voltam no próximo carregamento|eles voltam da próxima vez/i,
+  };
+  const ONLY_IF: Record<(typeof LOCALES)[number], RegExp> = {
+    en: /only if you/i,
+    es: /solo si/i,
+    pt: /só se você/i,
+  };
+
+  it.each(LOCALES)('says it loads only if you allow it, and no longer that its cookies come back (%s)', (locale) => {
+    const t = translator(locale);
+    const texts = [
+      t('help.localData.server.body'),
+      t('help.localData.categories.analytics.title'),
+      t('help.localData.categories.analytics.purpose'),
+      t('settings.localData.confirm.analytics'),
+      t('marketing.faq.q11.answer'),
+    ];
+    for (const text of texts) expect(text).not.toMatch(OLD[locale]);
+    expect(t('help.localData.server.body')).toMatch(ONLY_IF[locale]);
+    expect(t('help.localData.categories.analytics.title')).toMatch(ONLY_IF[locale]);
+    expect(t('marketing.faq.q11.answer')).toContain('Google Analytics');
+    // Where to change the answer: the settings screen, by its own name.
+    expect(t('help.localData.categories.analytics.purpose')).toContain(t('settings.section.data.label'));
+  });
+});
+
 describe('the local data FAQ entry', () => {
   it('is in the FAQ list', () => {
     vi.stubGlobal('IntersectionObserver', class { observe() {} disconnect() {} });

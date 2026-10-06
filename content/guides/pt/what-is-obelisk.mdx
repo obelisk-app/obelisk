@@ -3,7 +3,7 @@ title: O que é o Obelisk?
 description: O Obelisk é um cliente de chat em grupo no estilo do Discord, sem backend. Não há banco de dados, não há servidor do Obelisk. Sua conta é um par de chaves Nostr, seus grupos vivem em relays Nostr, e o app é só um frontend que assina e lê eventos.
 heroComponent: what-is-obelisk
 publishedAt: '2026-04-16'
-updatedAt: '2026-08-17'
+updatedAt: '2026-10-06'
 tags: [intro, nostr, identity, nip-29]
 ---
 
@@ -13,7 +13,7 @@ O Obelisk é um cliente de chat que se parece com o Discord (servidores numa bar
 
 ## O que isso significa na prática
 
-- **Sem cadastro.** Você entra com uma chave Nostr (extensão NIP-07 ou nsec). Não há e-mail, não há senha, não há conta do Obelisk para criar ou recuperar.
+- **Sem cadastro.** Você entra com uma chave Nostr (uma extensão NIP-07 do navegador, um nsec colado ou um app de assinatura NIP-46). Não há e-mail, não há senha, não há conta do Obelisk para criar ou recuperar.
 - **Sem servidor de aplicação.** O cliente fala direto com relays NIP-29. Instalações novas já vêm com dois relays públicos operados pelo Obelisk, e você pode remover ou trocar qualquer um deles.
 - **Sem banco de dados.** Canais, membros, admins, expulsões e banimentos não são linhas num banco nosso: são eventos NIP-29 padrão que o relay aplica.
 - **Seus dados são portáteis.** Troque de relay, rode o seu, espelhe seu grupo em vários. O app não é dono de nada.
@@ -28,20 +28,26 @@ O cliente não tem backend de contas nem banco de mensagens. Operadores de relay
 
 ## O que já funciona hoje
 
-- **Login** com NIP-07 ou nsec
+- **Login** com uma extensão NIP-07, um nsec ou um app de assinatura NIP-46 (link de bunker ou QR code)
 - **Grupos NIP-29**: criar, entrar, hierarquia de canais, respostas, reações, admins, membros
 - **UX multi-relay**: cada relay que você adiciona aparece como um servidor próprio na barra
 - **DMs criptografados** via NIP-04 e NIP-17 (gift wrap)
 - **Zaps Lightning** a partir de qualquer mensagem, via NIP-57, pagos por uma carteira Nostr Wallet Connect (NIP-47) ou uma extensão WebLN do navegador
 - **Editor de perfil** que publica um evento kind 0
 
-## O que vem por aí
+## Já saiu
 
-- Login por **bunker NIP-46** (assinador remoto)
-- Migração para criptografia **NIP-44 v2**
-- **Canais de voz** reconstruídos como WebRTC P2P com sinalização por Nostr
-- **Build de exportação estática**, para hospedar no GitHub Pages ou em qualquer CDN
-- **PWA instalável** com notificações push
+Esta página listava estes itens como próximos. Eles já estão no app:
+
+- **Login com app de assinatura NIP-46**: sua chave fica num app de assinatura separado (um link de bunker ou um QR code), e o Obelisk pede as assinaturas a ele por um relay
+- **Criptografia NIP-44 v2**: os DMs NIP-17 são selados com ela, e o NIP-17 é o padrão em toda conversa nova
+- **Canais de voz**: WebRTC com sinalização por Nostr, numa malha peer-to-peer de até quatro pessoas ou por um SFU mediasoup para salas maiores, com áudio, câmera e compartilhamento de tela, além de chamadas individuais nos DMs
+- **App instalável (PWA)**: instale pelo menu do navegador; enquanto ele está aberto, DMs e menções novas aparecem como notificações do sistema
+
+## O que ainda falta
+
+- **Build de exportação estática**, para hospedar no GitHub Pages ou em qualquer hospedagem estática
+- **Notificações push** que chegam com o app fechado (Web Push)
 
 ## O que ler em seguida
 

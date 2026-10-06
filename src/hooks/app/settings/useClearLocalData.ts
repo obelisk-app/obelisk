@@ -18,12 +18,14 @@ import {
 } from '@/services/local-data';
 import { unlocalizedPath } from '@/utils/seo/alternates';
 import { disconnectNwcWallet } from '@/services/wallet/nwc-wallet';
+import { forgetAnalyticsConsent, subscribeAnalyticsConsent } from '@/services/analytics/consent';
 
 /** The page-level steps a removal needs: log out, reload, reload without the language prefix. */
 export function browserRemovalEnv(): RemovalEnv {
   return {
     logout: () => nostrActions.logout(),
     disconnectWallet: () => disconnectNwcWallet(),
+    forgetAnalytics: () => forgetAnalyticsConsent(),
     reload: () => window.location.reload(),
     relocate: () => {
       const { pathname, search, hash } = window.location;
@@ -52,6 +54,8 @@ export function useClearLocalData(env: RemovalEnv = browserRemovalEnv()) {
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+  // A changed Analytics answer adds or deletes cookies: measure again.
+  useEffect(() => subscribeAnalyticsConsent(refresh), [refresh]);
 
   const removeCategory = useCallback(async (id: LocalDataCategoryId): Promise<boolean> => {
     const category = categoryById(id);

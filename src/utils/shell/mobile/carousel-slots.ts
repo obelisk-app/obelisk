@@ -32,13 +32,13 @@ export function slotRoleFor(
 }
 
 /**
- * Sheet screens (msg-actions / zap-modal) render the underlying screen as the
+ * The sheet screen (msg-actions) renders the underlying screen as the
  * body so the sub-overlay slot stays mounted. The key for that slot is
  * derived from `baseScreen` so opening/closing a sheet doesn't remount the
  * underlying screen and lose its local state.
  */
 export function overlayScreenKeyFor(nav: NavState): ScreenName {
-  return nav.screen === 'msg-actions' || nav.screen === 'zap-modal'
+  return nav.screen === 'msg-actions'
     ? (nav.baseScreen ?? 'channel')
     : nav.screen;
 }

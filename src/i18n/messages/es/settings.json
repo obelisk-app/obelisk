@@ -343,6 +343,12 @@
     "remove": "Borrar",
     "removing": "Borrando...",
     "learnMore": "Para qué está y otras formas de borrarlo",
+    "analytics": {
+      "title": "Google Analytics",
+      "granted": "Permitido. Google recibe las páginas que abrís (en la app, en qué relay y en qué canal estás) y tu ubicación aproximada a partir de tu dirección IP, y guarda una cookie con un identificador de este dispositivo. Elegí \"No permitir\" para cortarlo ya; sus cookies se borran en el momento.",
+      "denied": "No permitido. No se carga nada de Google y no queda ninguna cookie de Analytics.",
+      "unset": "Todavía no respondiste. No se carga nada de Google hasta que lo permitas."
+    },
     "removeAll": {
       "title": "Borrar todo de este dispositivo",
       "description": "Cierra tu sesión, borra tu login cifrado y todo lo de arriba, y después recarga.",
@@ -352,7 +358,7 @@
       "action": "Borrar",
       "titleAll": "¿Borrar todo de este dispositivo?",
       "actionAll": "Borrar todo",
-      "all": "Se borra todo lo que Obelisk guarda acá: tu login, la conexión de billetera, la caché de mensajes y perfiles, las posiciones de lectura y los avisos, las preferencias, los silenciados, bloqueados y stickers guardados, los archivos sin conexión, el idioma elegido y las cookies de analítica. Se cierra tu sesión y la página se recarga. Para volver a entrar necesitás tu clave, la extensión del navegador o tu app firmadora. Lo que publicaste en los relays no se toca.",
+      "all": "Se borra todo lo que Obelisk guarda acá: tu login, la conexión de billetera, la caché de mensajes y perfiles, las posiciones de lectura y los avisos, las preferencias, los silenciados, bloqueados y stickers guardados, los archivos sin conexión, el idioma elegido, tu respuesta sobre Google Analytics y sus cookies. Se cierra tu sesión y la página se recarga. Para volver a entrar necesitás tu clave, la extensión del navegador o tu app firmadora. Lo que publicaste en los relays no se toca.",
       "channels": "Se borran de este dispositivo los canales y mensajes en caché y la página se recarga. Todo vuelve a cargar desde los relays; nada de lo que publicaste se toca.",
       "profiles": "Se borran los nombres y fotos guardados y la página se recarga. Vuelven a cargar desde los relays.",
       "readState": "Se borran las posiciones de lectura, los no leídos y los avisos de este dispositivo y la página se recarga. Las posiciones sincronizadas en tus relays vuelven; los avisos no.",
@@ -363,7 +369,7 @@
       "wallet": "Se borra la conexión de billetera de este dispositivo y la página se recarga. Para volver a hacer zaps o pagar desde Obelisk, pegá el enlace de conexión de la app de tu billetera. La billetera y sus fondos no se tocan.",
       "offline": "Se borran los archivos guardados de la app. Obelisk los vuelve a descargar la próxima vez que cargue, y hasta entonces no abre sin conexión.",
       "language": "Obelisk se olvida del idioma que elegiste y vuelve al idioma de tu navegador. La página se recarga.",
-      "analytics": "Se borran las cookies de Google Analytics. Se vuelven a poner la próxima vez que cargue una página; para evitarlas, bloqueá los rastreadores en tu navegador."
+      "analytics": "Se borran tu respuesta sobre Google Analytics y sus cookies. Analytics se detiene y Obelisk vuelve a preguntar; no se carga nada de Google si no lo permitís."
     }
   }
 }

@@ -4,6 +4,7 @@
  * Unlike the caches, some of it exists nowhere else.
  */
 import { VAULT_DB } from '@/lib/crypto/session-vault';
+import { GA_COOKIE, GA_COOKIE_PREFIX } from '@/services/analytics/gtag';
 import type { LocalDataEntry } from './types';
 
 const LS = 'localStorage' as const;
@@ -146,15 +147,21 @@ export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
   },
   // ---- analytics ----------------------------------------------------------
   {
-    id: 'ga-client', area: 'cookie', key: '_ga', match: 'exact', category: 'analytics',
-    holds: 'Google Analytics\' random client id, set by gtag.js (G-BZ4NB66WY0) on the site\'s domain for two years.',
-    why: 'Counts returning visitors. Set again on every page load while the layout loads gtag.js.',
-    perAccount: false, sensitive: false, source: 'src/app/[locale]/layout.tsx',
+    id: 'analytics-consent', area: LS, key: 'obelisk:analytics-consent', match: 'exact', category: 'analytics',
+    holds: 'The answer to the Google Analytics question: `granted` or `denied`.',
+    why: 'Analytics loads only after `granted`; without an answer the banner asks again and nothing from Google loads.',
+    perAccount: false, sensitive: false, source: 'src/services/analytics/consent.ts',
   },
   {
-    id: 'ga-session', area: 'cookie', key: '_ga_', match: 'prefix', category: 'analytics',
+    id: 'ga-client', area: 'cookie', key: GA_COOKIE, match: 'exact', category: 'analytics',
+    holds: 'Google Analytics\' random client id, set by gtag.js (G-BZ4NB66WY0) on the site\'s domain for two years.',
+    why: 'Counts returning visitors. Only after the person allowed Analytics; deleted when they change to "don\'t allow".',
+    perAccount: false, sensitive: false, source: 'src/services/analytics/gtag.ts',
+  },
+  {
+    id: 'ga-session', area: 'cookie', key: GA_COOKIE_PREFIX, match: 'prefix', category: 'analytics',
     holds: 'Google Analytics\' session state for the property (`_ga_<id>`).',
-    why: 'Groups page views into visits. Set again on every page load.',
-    perAccount: false, sensitive: false, source: 'src/app/[locale]/layout.tsx',
+    why: 'Groups page views into visits. Only after the person allowed Analytics.',
+    perAccount: false, sensitive: false, source: 'src/services/analytics/gtag.ts',
   },
 ];

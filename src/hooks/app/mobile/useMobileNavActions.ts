@@ -2,7 +2,7 @@
 
 /**
  * What the phone's screens ask the shell to do: open a channel, a peer, a
- * profile, the member list, the message-actions sheet or the zap sheet, and
+ * profile, the member list, the message-actions sheet or the zap modal, and
  * go back. Every action is a `pushNav` with the right `NavState` shape and
  * the matching chat/dm store mirror, so the read-state gates know where the
  * user is. The shell owns `pushNav`; this hook owns the shapes.
@@ -188,7 +188,7 @@ export function useMobileNavActions({
       displayName: shortNpubLabel(msg.pubkey),
       groupId,
     });
-    if (navRef.current.screen === 'msg-actions' || navRef.current.screen === 'zap-modal') {
+    if (navRef.current.screen === 'msg-actions') {
       closeSheet();
     }
   }, [closeSheet, myPubkey, openSharedZap, navRef]);

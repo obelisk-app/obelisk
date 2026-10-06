@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Button from '@/components/ui/Button';
+import AnalyticsSetting from './AnalyticsSetting';
 import { useClearLocalData } from '@/hooks/app/settings/useClearLocalData';
 import type { CategoryUsage, LocalDataCategory } from '@/services/local-data';
 import { formatBytes } from '@/utils/format/format-bytes';
@@ -11,7 +12,8 @@ import { formatBytes } from '@/utils/format/format-bytes';
  * Settings > Data on this device, on both shells: every category of local
  * data with what it is for and roughly how much it takes, a Remove per
  * category, and "Remove everything from this device". The copy of each
- * category is the help page's (`help.localData.categories.*`).
+ * category is the help page's (`help.localData.categories.*`). Above the
+ * list, the Google Analytics answer, which can be changed here at any time.
  */
 export default function LocalDataPanel({ mobile = false }: { mobile?: boolean }) {
   const t = useTranslations();
@@ -20,6 +22,7 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
   return (
     <div className={mobile ? 'space-y-3 px-4 py-3' : 'space-y-4'} data-testid="local-data-panel">
       <p className="text-sm leading-6 text-lc-muted">{t('settings.localData.intro')}</p>
+      <AnalyticsSetting />
       <ul className="divide-y divide-lc-border overflow-hidden rounded-lg border border-lc-border">
         {categories.map((category) => (
           <CategoryRow

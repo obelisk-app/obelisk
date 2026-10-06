@@ -237,11 +237,6 @@
   "channels": {
     "empty": "No channels here yet."
   },
-  "zap": {
-    "title": "Send a zap",
-    "walletHint": "Wallet · NWC or WebLN · see Preferences",
-    "custom": "custom"
-  },
   "relay": {
     "confirmLeave": "Leave {name}?"
   },

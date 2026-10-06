@@ -11,6 +11,7 @@ import { PWA_ROUTE_GUARD, siteJsonLd, siteMetadata } from '@/utils/seo/site';
 import ToastStack from '@/components/feedback/ToastStack';
 import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
 import AppearancePreferencesRoot from '@/components/settings/AppearancePreferencesRoot';
+import AnalyticsConsentRoot from '@/components/analytics/AnalyticsConsentRoot';
 // SDK styles first so our globals.css overrides win at equal specificity
 // (e.g. the la-crypta `--nui-overlay-bg` override that lets the login
 // backdrop animation bleed through the modal overlay).
@@ -72,11 +73,6 @@ export default async function LocaleLayout({ children, params }: LocaleParams & 
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-BZ4NB66WY0"
-          strategy="afterInteractive"
-          nonce={nonce}
-        />
         {/* PWA route guard (see PWA_ROUTE_GUARD): an installed app opened
             on the landing page jumps to the chat shell in the same
             language. Rendered as a
@@ -90,14 +86,6 @@ export default async function LocaleLayout({ children, params }: LocaleParams & 
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: PWA_ROUTE_GUARD }}
         />
-        <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-BZ4NB66WY0');
-          `}
-        </Script>
         {/* Register the minimal service worker so Chrome / Edge / Brave
             offer the "Install app" prompt. The worker itself is
             pass-through (see /public/sw.js); registering it is the
@@ -136,6 +124,9 @@ export default async function LocaleLayout({ children, params }: LocaleParams & 
           {children}
           <ToastStack />
           <ConfirmDialogHost />
+          {/* Google Analytics: nothing in this HTML; loaded from the
+              browser only after the person allows it (src/services/analytics/). */}
+          <AnalyticsConsentRoot />
         </IntlScope>
       </body>
     </html>

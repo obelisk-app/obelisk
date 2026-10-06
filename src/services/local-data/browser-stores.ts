@@ -4,6 +4,7 @@
  * Each removal is best effort and never throws; each takes its browser API
  * as an optional argument so tests can hand in a double.
  */
+import { cookieNamesOn, expireCookie } from '@/services/cookies';
 import { LOCAL_DATA, entryMatches } from './inventory';
 import type { LocalDataCategoryId } from './types';
 
@@ -78,14 +79,6 @@ export async function removeOfflineFiles(
   } catch { /* cache storage refused */ }
 }
 
-function cookieNames(doc: Document): string[] {
-  try {
-    return doc.cookie.split(';').map((part) => part.trim().split('=')[0]).filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
 /** The cookies on this page that belong to `categories`. */
 export function cookiesIn(
   categories: ReadonlyArray<LocalDataCategoryId>,
@@ -93,19 +86,7 @@ export function cookiesIn(
 ): string[] {
   if (!doc) return [];
   const entries = COOKIES.filter((e) => categories.includes(e.category));
-  return cookieNames(doc).filter((name) => entries.some((e) => entryMatches(e, 'cookie', name)));
-}
-
-/**
- * Every domain a cookie for `hostname` may have been set on: Google
- * Analytics writes its cookies on the registrable domain (`.obelisk.ar`),
- * and a cookie only expires when the domain attribute matches.
- */
-function cookieDomains(hostname: string): string[] {
-  const labels = hostname.split('.');
-  const out: string[] = [];
-  for (let i = 0; i < labels.length - 1; i++) out.push(labels.slice(i).join('.'));
-  return out;
+  return cookieNamesOn(doc).filter((name) => entries.some((e) => entryMatches(e, 'cookie', name)));
 }
 
 /** Expire the cookies of `categories`, on the host and on each parent domain. */
@@ -114,11 +95,5 @@ export function removeCookies(
   doc: Document | undefined = typeof document === 'undefined' ? undefined : document,
 ): void {
   if (!doc) return;
-  const host = doc.location?.hostname ?? '';
-  for (const name of cookiesIn(categories, doc)) {
-    try {
-      doc.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax`;
-      for (const domain of cookieDomains(host)) doc.cookie = `${name}=; Max-Age=0; Path=/; Domain=${domain}`;
-    } catch { /* cookies disabled */ }
-  }
+  for (const name of cookiesIn(categories, doc)) expireCookie(name, doc);
 }

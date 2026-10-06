@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialNav, parseUrl, urlFor, type NavState } from '@/utils/shell/mobile/url-state';
+import { initialNav, parseUrl, restoredNav, urlFor, type NavState } from '@/utils/shell/mobile/url-state';
 
 const make = (over: Partial<NavState>): NavState => ({ ...initialNav, ...over });
 
@@ -61,5 +61,30 @@ describe('mobile url-state', () => {
   it('rejects unknown parentScreen values silently (parentScreen becomes null)', () => {
     const parsed = parseUrl('?u=pk&pr=evil');
     expect(parsed.nav.parentScreen).toBe(null);
+  });
+});
+
+describe('restoredNav (history entries saved by older builds)', () => {
+  const msg = { id: 'm1', pubkey: 'b'.repeat(64), content: 'gm' };
+
+  it('turns a saved zap-modal sheet back into the screen it floated over', () => {
+    const saved = { ...make({ groupId: 'g1', baseScreen: 'channel', msgContext: msg }), screen: 'zap-modal' } as unknown as NavState;
+    expect(restoredNav(saved)).toMatchObject({ screen: 'channel', groupId: 'g1', baseScreen: null, msgContext: null });
+  });
+
+  it('falls back to the channel, or the server list, when the entry kept no base screen', () => {
+    const inChannel = { ...make({ groupId: 'g1' }), screen: 'zap-modal' } as unknown as NavState;
+    const bare = { ...make({}), screen: 'zap-modal' } as unknown as NavState;
+    expect(restoredNav(inChannel).screen).toBe('channel');
+    expect(restoredNav(bare).screen).toBe('server');
+  });
+
+  it('leaves every current screen as it was saved', () => {
+    const sheet = make({ screen: 'msg-actions', groupId: 'g1', baseScreen: 'channel', msgContext: msg });
+    expect(restoredNav(sheet)).toBe(sheet);
+  });
+
+  it('a URL cannot name the old zap sheet either', () => {
+    expect(parseUrl('?s=zap-modal&c=g1').nav.screen).toBe('channel');
   });
 });

@@ -24,9 +24,10 @@ import { describe, expect, it } from 'vitest';
  * hooks that moved to `useBridge()` (the voice room's four, the follow
  * buttons, the profile, the member lists, the deep link, presence, the
  * slash catalog); 97 after round 21 moved the invoice card's suite to
- * `fakeBridge`.
+ * `fakeBridge`; 96 after round 23 deleted the phone's mock zap sheet and
+ * its suite.
  */
-const BUDGET = 97;
+const BUDGET = 96;
 
 const TESTS = join(process.cwd(), 'tests');
 /** The front door itself, not a path inside it (`/client` and friends are counted elsewhere, if at all). */

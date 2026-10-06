@@ -64,5 +64,14 @@
     "mentioned": "{sender} te mencionó",
     "mentionedIn": "{sender} te mencionó en {where}",
     "postedIn": "{sender} en {where}"
+  },
+  "analyticsConsent": {
+    "title": "Google Analytics",
+    "body": "¿Obelisk puede usar Google Analytics? Solo se usa para ver cómo se usa Obelisk. Si lo permitís, Google recibe las páginas que visitás (dentro de la app, eso incluye en qué relay y en qué canal estás) y tu ubicación aproximada, que calcula a partir de tu dirección IP, y guarda una cookie con un identificador de este dispositivo. Nada de Google se carga si no lo permitís. Podés cambiar tu respuesta cuando quieras en Ajustes o al pie de las páginas del sitio.",
+    "allow": "Permitir",
+    "decline": "No permitir",
+    "currentGranted": "Ahora: permitido.",
+    "currentDenied": "Ahora: no permitido.",
+    "more": "Qué guarda Obelisk en tu dispositivo"
   }
 }

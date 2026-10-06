@@ -64,5 +64,14 @@
     "mentioned": "{sender} mentioned you",
     "mentionedIn": "{sender} mentioned you in {where}",
     "postedIn": "{sender} in {where}"
+  },
+  "analyticsConsent": {
+    "title": "Google Analytics",
+    "body": "Can Obelisk use Google Analytics? It is only used to see how Obelisk is used. If you allow it, Google receives the pages you visit (inside the app, that includes which relay and channel you are in) and your approximate location, worked out from your IP address, and it stores a cookie with an identifier for this device. Nothing from Google loads unless you allow it. You can change your answer any time in Settings or at the bottom of the site's pages.",
+    "allow": "Allow",
+    "decline": "Don't allow",
+    "currentGranted": "Right now: allowed.",
+    "currentDenied": "Right now: not allowed.",
+    "more": "What Obelisk keeps on your device"
   }
 }

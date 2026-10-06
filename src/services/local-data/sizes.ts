@@ -26,10 +26,13 @@ export function measureWebStorage(doc?: Document): LocalDataUsage {
     const tabKeys = keysIn('sessionStorage', [id]).length;
     out[id] = { bytes, present: bytes > 0 || tabKeys > 0 };
   }
-  // Cookies are a few bytes each: reported as present or not.
-  for (const id of ['language', 'analytics'] as const) {
-    out[id] = { bytes: null, present: cookiesIn([id], doc).length > 0 };
-  }
+  // Cookies are a few bytes each: reported as present or not. The
+  // Analytics answer is a few bytes of localStorage beside its cookies.
+  out.language = { bytes: null, present: cookiesIn(['language'], doc).length > 0 };
+  out.analytics = {
+    bytes: null,
+    present: out.analytics.present || cookiesIn(['analytics'], doc).length > 0,
+  };
   // The vault key (IndexedDB) is not sized: it exists exactly when the
   // session record does, which `login` already counts.
   return out;

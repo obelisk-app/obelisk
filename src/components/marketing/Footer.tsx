@@ -4,6 +4,8 @@ import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { guidePath } from '@/utils/guides/guide-urls';
 import ObeliskIcon from '@/components/ui/ObeliskIcon';
+import TextButton from '@/components/ui/TextButton';
+import { reviewAnalyticsConsent } from '@/services/analytics/consent';
 
 export const GUIDE_SLUGS = [
   { slug: 'what-is-obelisk', tKey: 'marketing.learn.card.whatIsObelisk.title' },
@@ -172,6 +174,17 @@ export default function Footer() {
                 >
                   {t('marketing.footer.security')}
                 </a>
+              </li>
+              <li>
+                {/* Reopens the Analytics question so the answer can be changed. */}
+                <TextButton
+                  tone="plain"
+                  className="text-left text-sm text-lc-muted transition-colors hover:text-lc-green hover:no-underline"
+                  onClick={reviewAnalyticsConsent}
+                  data-testid="footer-analytics-choice"
+                >
+                  {t('marketing.footer.analytics')}
+                </TextButton>
               </li>
             </ul>
           </nav>

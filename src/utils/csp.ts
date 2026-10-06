@@ -85,14 +85,17 @@ export function cspDirectives({ nonce, isDev }: CspOptions): string[] {
   const evalSrc = isDev ? " 'unsafe-eval'" : '';
   return [
     "default-src 'self'",
-    // Google Analytics: src/app/layout.tsx loads gtag.js from
-    // googletagmanager. Allow that origin here and in connect-src (gtag
-    // posts beacons too).
+    // Google Analytics: src/services/analytics/gtag.ts adds gtag.js as a
+    // plain <script src> from googletagmanager, and only after the person
+    // allows Analytics. It is allowed by host (no nonce, no inline config
+    // script), and it is the only third-party script host. Its beacons go
+    // to *.google-analytics.com and its pixel to googletagmanager, which
+    // connect-src and img-src already allow through `https:`.
     `script-src 'self' 'wasm-unsafe-eval'${evalSrc} ${inlineScripts} https://www.googletagmanager.com`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob: https:",
-    "connect-src 'self' wss: https: https://www.google-analytics.com https://www.googletagmanager.com",
+    "connect-src 'self' wss: https:",
     "font-src 'self' data:",
     `frame-src ${CSP_FRAME_SRC.join(' ')}`,
     "frame-ancestors 'none'",

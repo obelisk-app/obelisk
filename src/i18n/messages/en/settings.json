@@ -343,6 +343,12 @@
     "remove": "Remove",
     "removing": "Removing...",
     "learnMore": "Why it is there, and other ways to remove it",
+    "analytics": {
+      "title": "Google Analytics",
+      "granted": "Allowed. Google receives the pages you open (in the app, which relay and channel you are in) and your approximate location from your IP address, and keeps a cookie with an identifier for this device. Choose \"Don't allow\" to stop it now; its cookies are deleted at once.",
+      "denied": "Not allowed. Nothing from Google loads, and no Analytics cookie is kept.",
+      "unset": "Not answered yet. Nothing from Google loads until you allow it."
+    },
     "removeAll": {
       "title": "Remove everything from this device",
       "description": "Logs you out, deletes your encrypted login and everything listed above, then reloads.",
@@ -352,7 +358,7 @@
       "action": "Remove",
       "titleAll": "Remove everything from this device?",
       "actionAll": "Remove everything",
-      "all": "Everything Obelisk keeps here is deleted: your login, the wallet connection, cached messages and profiles, read positions and alerts, preferences, mutes, blocks and saved stickers, offline files, your language choice and the analytics cookies. You are logged out and the page reloads. To log in again you need your key, your browser extension or your signer app. What you published to relays is not affected.",
+      "all": "Everything Obelisk keeps here is deleted: your login, the wallet connection, cached messages and profiles, read positions and alerts, preferences, mutes, blocks and saved stickers, offline files, your language choice, your Google Analytics answer and its cookies. You are logged out and the page reloads. To log in again you need your key, your browser extension or your signer app. What you published to relays is not affected.",
       "channels": "Cached channels and messages are deleted from this device and the page reloads. Everything loads again from the relays; nothing you published is affected.",
       "profiles": "Saved names and pictures are deleted and the page reloads. They load again from the relays.",
       "readState": "Read positions, unread counts and alerts on this device are deleted and the page reloads. Read positions synced through your relays come back; alerts do not.",
@@ -363,7 +369,7 @@
       "wallet": "The wallet connection is deleted from this device and the page reloads. To zap or pay again from Obelisk, paste the connection link from your wallet's app. The wallet itself and its funds are not affected.",
       "offline": "The saved app files are deleted. Obelisk downloads them again the next time it loads, and will not open offline until then.",
       "language": "Obelisk forgets the language you picked and goes back to your browser's language. The page reloads.",
-      "analytics": "The Google Analytics cookies are deleted. They are set again the next time a page loads; to keep them away, block trackers in your browser."
+      "analytics": "Your answer about Google Analytics and its cookies are deleted. Analytics stops, and Obelisk asks again; nothing from Google loads unless you allow it."
     }
   }
 }

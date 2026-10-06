@@ -428,12 +428,34 @@ Preferences > Data on this device) and on `/help/local-data`:
 | `wallet` | `obelisk-dex/nwc:*`, the sealed Nostr Wallet Connect link | `disconnectNwcWallet()` (memory and the `wallet-key`), then reload |
 | `offline` | the service worker's `obelisk-v*` caches, `obelisk-sw-version` | delete caches, unregister the worker |
 | `language` | the `locale` cookie | reload without the language prefix |
-| `analytics` | the `_ga` and `_ga_<id>` cookies Google Analytics (gtag.js, loaded by `src/app/[locale]/layout.tsx`) sets | expire them; they return on the next page load |
+| `analytics` | the Analytics answer (`obelisk:analytics-consent`) and, only if it is "allow", the `_ga` and `_ga_<id>` cookies gtag.js sets | `forgetAnalyticsConsent()` (opt-out flag, answer gone), expire the cookies; the question is asked again |
 
 **Remove everything from this device** logs out, empties localStorage and
 sessionStorage, deletes the vault database, the offline caches and the
-service worker registration, expires the language and analytics cookies,
-and reloads.
+service worker registration, forgets the Analytics answer, expires the
+language and analytics cookies, and reloads.
+
+### Google Analytics only after consent
+
+Nothing from Google is in any page's HTML. `AnalyticsConsentRoot`
+(`src/components/analytics/`, mounted in the `[locale]` layout) renders
+nothing on the server; in the browser it reads the answer
+(`src/services/analytics/consent.ts`) and:
+
+- no answer: shows the question (en, es, pt; `common.analyticsConsent`),
+  with "Allow" and "Don't allow" as two equal buttons, and loads nothing;
+- `granted`: `startAnalytics()` (`gtag.ts`) defines `dataLayer` and `gtag`
+  from the bundle and appends one `<script src>` from
+  `www.googletagmanager.com`, the CSP's only third-party script host
+  (allowed by host, so no nonce reaches client code);
+- `denied`: nothing. Changing to `denied` on a page where gtag.js runs sets
+  Google's opt-out property `ga-disable-<id>` (the tag checks it before every
+  hit and cookie write) and expires the `_ga*` cookies, without a reload.
+
+The answer is changed in Settings > Data on this device
+(`AnalyticsSetting`) or from the marketing footer's link, which reopens the
+question (`reviewAnalyticsConsent()`). Another tab's change arrives through
+the `storage` event.
 
 A removal that reloads first raises a **write fence**
 (`write-fence.ts`): until the page goes away, `setItem` for a key of the

@@ -79,4 +79,14 @@ describe('the static CSP floor is a superset of the nonce policy', () => {
     expect(scriptSrc.has('https:')).toBe(false);
     expect(scriptSrc.has('*')).toBe(false);
   });
+
+  it('allows exactly what Google Analytics needs once allowed: one script host, beacons over https', () => {
+    const strict = parse(buildCsp({ nonce: NONCE, isDev: false }));
+    const scriptHosts = [...strict.get('script-src')!].filter((v) => v.startsWith('https://'));
+    expect(scriptHosts).toEqual(['https://www.googletagmanager.com']);
+    // gtag.js beacons to region*.google-analytics.com (fetch / sendBeacon) and
+    // may fall back to an image: both covered by the scheme source.
+    expect(strict.get('connect-src')!.has('https:')).toBe(true);
+    expect(strict.get('img-src')!.has('https:')).toBe(true);
+  });
 });

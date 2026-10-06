@@ -17,7 +17,7 @@ subs + connection lifecycle) and [`read-state.md`](./read-state.md)
 ┌──────────────────────────────────────────────────────────┐
 │  ┌────────────────────────────────────────────────────┐  │
 │  │ 3. Modal sheet                                     │  │
-│  │    msg-actions / zap-modal                         │  │
+│  │    msg-actions                                     │  │
 │  │    Slides up from bottom (`obelisk-sheet-up`)      │  │
 │  └────────────────────────────────────────────────────┘  │
 │  ┌────────────────────────────────────────────────────┐  │
@@ -46,7 +46,12 @@ Layer 1 never remounts during a session: the five `<ServerScreen />`
 CSS roles. Layer 2
 remounts whenever the sub-screen changes (different `key` on
 `.drag-overlay`). Layer 3 is a separate React subtree that mounts/un-
-mounts on `nav.screen === 'msg-actions' | 'zap-modal'`.
+mounts on `nav.screen === 'msg-actions'`. The zap button (on a message,
+or "zap" in the actions sheet) opens the shared `MessageZapModal` through
+`useMessageZapStore`, the same modal the desktop uses; it is not a screen
+and pushes no history entry. An entry saved by an older build that still
+names a `zap-modal` screen restores the screen under it (`restoredNav` in
+`url-state.ts`).
 
 ## 2. Screen catalog
 
@@ -92,13 +97,12 @@ cold deep-link reload of `/app?u=<pubkey>`).
 | Screen | Default parent | Entry point | Notes |
 |---|---|---|---|
 | `msg-actions` | dynamic | long-press on message | floats over base screen, base never animates underneath |
-| `zap-modal` | dynamic | msg-actions → "zap", message zap button | same lateral-suppression rule |
 
-Sheets keep the underlying screen mounted (the sub-screen
-overlay's `key` is derived from `nav.baseScreen`, so opening a sheet
-doesn't remount the screen below). Both sheets push a history entry
-but are **not** encoded in the URL; opening a sheet doesn't change
-the address bar.
+The sheet keeps the underlying screen mounted (the sub-screen
+overlay's `key` is derived from `nav.baseScreen`, so opening it
+doesn't remount the screen below). It pushes a history entry but is
+**not** encoded in the URL; opening it doesn't change the address bar.
+Zapping is not a sheet: see §1.
 
 ### Guest screens
 
@@ -158,7 +162,7 @@ history pop).
 | Swipe horizontal commit | tabA / subA → adjacent tab | drag-layer carousel translate 240ms, direction follows swipe | `pushState` |
 | Swipe horizontal revert | unchanged | drag-layer translate back to 0 (240ms) | none |
 | Settings sub-tab switch (`settings-profile ↔ settings-prefs`) | settings-profile ↔ settings-prefs | suppressed (the two tabs visually share a strip) | `pushState` |
-| Open `msg-actions` / `zap-modal` | sub → sheet | `obelisk-sheet-up` 280ms; underlying screen does not slide | `pushState` |
+| Open `msg-actions` | sub → sheet | `obelisk-sheet-up` 280ms; underlying screen does not slide | `pushState` |
 | Close sheet | sheet → base | sheet-down; underlying screen does not slide | `history.back()` |
 | Browser back on guard sentinel | guard → guard | exit toast (`"Press back again to exit"`) | re-pushes current nav |
 | Browser back, second within 2 s on guard | guard → landing | none | `router.push('/')` |

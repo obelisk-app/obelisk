@@ -16,7 +16,6 @@ export type ScreenName =
   | 'search'
   | 'forum'
   | 'msg-actions'
-  | 'zap-modal'
   | 'settings-profile'
   | 'settings-prefs'
   | 'profile-edit';
@@ -39,7 +38,7 @@ export interface NavState {
   // The top-level tab (or sub-screen) the user came from when this screen
   // was opened. Drives the bottom-nav active highlight and swipe-back target
   // for screens reachable from multiple contexts (profile-view, member-list,
-  // search, msg-actions, zap-modal). See docs/mobile-navigation.md §3.
+  // search, msg-actions). See docs/mobile-navigation.md §3.
   parentScreen: ScreenName | null;
 }
 
@@ -94,7 +93,7 @@ export function urlFor(nav: NavState, relay: string | null, pathname = currentAp
   if (nav.dmPeer) params.set('p', nav.dmPeer);
   if (nav.profilePubkey) params.set('u', nav.profilePubkey);
   if (relay) params.set('relay', shortHost(relay));
-  if (nav.screen !== 'server' && nav.screen !== 'msg-actions' && nav.screen !== 'zap-modal') {
+  if (nav.screen !== 'server' && nav.screen !== 'msg-actions') {
     params.set('s', nav.screen);
   }
   if (nav.parentScreen) params.set('pr', nav.parentScreen);
@@ -128,5 +127,22 @@ export function parseUrl(search: string): { nav: NavState; relay: string | null 
       parentScreen,
     },
     relay: relay ? (/^wss?:\/\//.test(relay) ? relay : `wss://${relay}`) : null,
+  };
+}
+
+/**
+ * A nav read back from `history.state` on back or forward. Builds before
+ * round 23 had a `zap-modal` sheet screen (a mock that could not pay); the
+ * zap button now opens the real zap modal without a history entry, so no
+ * screen of that name exists. A saved entry that still names it restores
+ * the screen the sheet floated over.
+ */
+export function restoredNav(saved: NavState): NavState {
+  if ((saved.screen as string) !== 'zap-modal') return saved;
+  return {
+    ...saved,
+    screen: saved.baseScreen ?? (saved.groupId ? 'channel' : 'server'),
+    baseScreen: null,
+    msgContext: null,
   };
 }

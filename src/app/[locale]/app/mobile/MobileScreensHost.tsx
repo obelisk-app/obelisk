@@ -6,7 +6,6 @@ import { NAV_ORDER } from '@/utils/shell/mobile/swipe-nav';
 import { overlayScreenKeyFor, slotRoleFor } from '@/utils/shell/mobile/carousel-slots';
 import { renderTopLevelScreen, type MobileScreenProps } from './MobileScreens';
 import { MessageActionsSheet } from './sheets/MessageActionsSheet';
-import { ZapModalSheet } from './sheets/ZapModalSheet';
 
 type Props = {
   hostRef: RefObject<HTMLDivElement | null>;
@@ -62,9 +61,6 @@ export function MobileScreensHost({
           close={closeSheet}
           onZap={() => openZap(nav.msgContext!)}
         />
-      )}
-      {nav.screen === 'zap-modal' && nav.msgContext && (
-        <ZapModalSheet msg={nav.msgContext} close={closeSheet} />
       )}
     </div>
   );

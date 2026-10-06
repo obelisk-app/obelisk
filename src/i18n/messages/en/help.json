@@ -39,7 +39,7 @@
     },
     "server": {
       "title": "None of it goes to an Obelisk server",
-      "body": "Everything on this page stays in your browser. Obelisk has no server that stores accounts or messages. What you publish (messages, reactions, your profile, files you upload) goes to the relays and file servers you use, including the two relays the Obelisk team runs, and lives there. The obelisk.ar web server only sends you the app and fetches link previews; it keeps no accounts and no copy of your messages. One exception goes to a third party: the site loads Google Analytics, which sets its own cookies and tells Google which pages are opened."
+      "body": "Everything on this page stays in your browser. Obelisk has no server that stores accounts or messages. What you publish (messages, reactions, your profile, files you upload) goes to the relays and file servers you use, including the two relays the Obelisk team runs, and lives there. The obelisk.ar web server only sends you the app and fetches link previews; it keeps no accounts and no copy of your messages. One exception can go to a third party, and only if you say yes: the site asks whether it may use Google Analytics. If you allow it, Analytics sets its own cookies and tells Google which pages you open (inside the app, that includes which relay and channel you are in) and, from your IP address, roughly where you are. If you decline, or never answer, nothing from Google loads."
     },
     "categories": {
       "title": "What is kept, and what it is for",
@@ -85,8 +85,8 @@
         "purpose": "A small cookie that remembers the language you picked. Without it, Obelisk goes by your browser's language."
       },
       "analytics": {
-        "title": "Analytics cookies",
-        "purpose": "Two cookies Google Analytics sets so the Obelisk team can count visits: a random visitor id and the current visit. They hold no key and no messages, but Google receives the pages you open. They come back on the next page load; your browser's tracker blocking keeps them away."
+        "title": "Google Analytics (only if you allow it)",
+        "purpose": "Your answer to the Analytics question, so Obelisk does not ask on every visit. Only if you allowed Analytics, also two cookies Google Analytics sets: a random identifier for this device and the current visit. They hold no key and no messages, but Google receives the pages you open (inside the app, which relay and channel you are in) and your approximate location from your IP address. Change your answer any time in Settings > Data on this device or from the link at the bottom of the site's pages: choosing \"Don't allow\" stops Analytics at once and deletes its cookies, and they do not come back. Removing this category deletes the cookies and your answer, so Obelisk asks again."
       }
     },
     "settings": {
