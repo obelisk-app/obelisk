@@ -1,21 +1,16 @@
-import en from './locales/en.json';
-import es from './locales/es.json';
-import pt from './locales/pt.json';
+/**
+ * The three languages, and how a first-time visitor's one is guessed.
+ *
+ * English is the default and lives at the unprefixed URLs (`/`, `/app`);
+ * Spanish and Portuguese live under `/es` and `/pt`. The copy itself is in
+ * `messages/<locale>/<module>.json`, loaded through next-intl (`request.ts`
+ * on the server, `IntlScope` for each route's client tree).
+ */
 
-export type Locale = 'en' | 'es' | 'pt';
-export type TranslationKey = keyof typeof en;
-
-const dictionaries: Record<Locale, Record<string, string>> = { en, es, pt };
-
-export function getTranslation(locale: Locale) {
-  const dict = dictionaries[locale] || dictionaries.es;
-  return (key: string): string => dict[key] || key;
-}
-
-export const LOCALES: Locale[] = ['es', 'en', 'pt'];
-export const DEFAULT_LOCALE: Locale = 'es';
+export const LOCALES = ['en', 'es', 'pt'] as const;
+export type Locale = (typeof LOCALES)[number];
+export const DEFAULT_LOCALE: Locale = 'en';
 export const LOCALE_COOKIE = 'locale';
-export const LOCALE_HEADER = 'x-obelisk-locale';
 
 /**
  * Where each language is spoken, for geo defaults.
@@ -34,7 +29,7 @@ export const LUSOPHONE_COUNTRIES = new Set([
 ]);
 
 export function isLocale(value: string | null | undefined): value is Locale {
-  return typeof value === 'string' && (LOCALES as string[]).includes(value);
+  return typeof value === 'string' && (LOCALES as readonly string[]).includes(value);
 }
 
 export function countryToLocale(countryCode: string | null): Locale {
@@ -69,6 +64,12 @@ export function acceptLanguageToLocale(acceptLanguage: string | null): Locale | 
   return null;
 }
 
+/**
+ * A first-time visitor's language: the explicit cookie, then the country
+ * the CDN says the request came from, then the browser's Accept-Language.
+ * With no signal at all (a crawler) the answer is English, so `/` is
+ * indexed in English.
+ */
 export function detectLocale(options: {
   cookieLocale?: string | null;
   countryCode?: string | null;

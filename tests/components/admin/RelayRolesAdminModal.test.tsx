@@ -4,7 +4,7 @@ import { nip19 } from 'nostr-tools';
 import RelayRolesAdminModal from '@/components/admin/RelayRolesAdminModal';
 import * as roles from '@/services/relay-roles';
 import type { RelayRoles } from '@/services/relay-roles';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
 const renderLocalized = (ui: React.ReactElement) => render(

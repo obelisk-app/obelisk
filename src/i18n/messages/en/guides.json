@@ -1,0 +1,15 @@
+{
+  "publishedOn": "Published {date}",
+  "index": {
+    "title": "Guides",
+    "heading": "Obelisk Guides",
+    "subtitle": "Everything about Obelisk: what it is, how it works, and where it's going. Written plain, no jargon walls.",
+    "backHome": "← Back to home",
+    "empty": "No guides yet."
+  },
+  "article": {
+    "back": "All guides",
+    "readTime": "min read",
+    "updated": "Updated"
+  }
+}

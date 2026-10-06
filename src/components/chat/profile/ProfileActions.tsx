@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import { cn } from '@/utils/style/cn';
 
@@ -24,7 +24,7 @@ export function ProfileActions({
   onToggleFollow: () => void;
   onMessage?: (pubkey: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <>
       {!isMe ? (
@@ -41,7 +41,7 @@ export function ProfileActions({
               ? '…'
               : followBusy
                 ? t('common.saving')
-                : t(following ? 'profileFeed.unfollow' : 'mobile.profile.follow')}
+                : t(following ? 'social.profileFeed.unfollow' : 'mobile.profile.follow')}
           </Button>
           {onMessage && (
             <Button variant="pillSecondary" size="xs" className="flex-1" onClick={() => onMessage(pubkey)}>
@@ -56,7 +56,7 @@ export function ProfileActions({
         bug.
       */}
 
-      {followError && <p className="px-5 pb-2 text-xs text-red-400">{t('profileFeed.followFailed')}</p>}
+      {followError && <p className="px-5 pb-2 text-xs text-red-400">{t('social.profileFeed.followFailed')}</p>}
     </>
   );
 }

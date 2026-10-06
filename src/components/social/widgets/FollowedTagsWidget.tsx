@@ -1,7 +1,7 @@
 'use client';
 
 import { useInterests } from '@/hooks/social/useInterests';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import WidgetCard, { WidgetEmpty } from './WidgetCard';
 import Button from '@/components/ui/Button';
 
@@ -12,7 +12,7 @@ import Button from '@/components/ui/Button';
  * bookmark bar: a tag followed on a phone in another client shows up here.
  */
 export default function FollowedTagsWidget({ onOpenTag }: { onOpenTag?: (tag: string) => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { tags, ready } = useInterests();
 
   return (

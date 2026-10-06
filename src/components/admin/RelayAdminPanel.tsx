@@ -9,7 +9,7 @@ import {
   useGroups,
 } from '@/services/nostr-bridge';
 import { useUserMetadata as useProfile } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { confirmDialog } from '@/services/confirm-dialog';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useMembersByGroupBulk } from '@/hooks/useMembersByGroupBulk';
@@ -29,7 +29,7 @@ interface Row {
 const rowKey = (r: Row) => `${r.groupId}/${r.pubkey}`;
 
 export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const groups = useGroups();
   const adminsByGroup = useAdminsByGroup();
   const membersByGroup = useMembersByGroupBulk();
@@ -100,12 +100,12 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
     const count = String(selectedRows.length);
     const sample = selectedRows.slice(0, 3).map((r) => `${shortNpubLabel(r.pubkey)} · ${r.groupName}`).join('\n');
     const more = selectedRows.length > 3
-      ? '\n' + t('admin.bulk.more').replace('{count}', String(selectedRows.length - 3))
+      ? '\n' + t('admin.bulk.more', { count: String(selectedRows.length - 3) })
       : '';
     const ok = await confirmDialog({
-      title: t(action === 'kick' ? 'admin.bulk.confirmRemove' : 'admin.bulk.confirmDemote').replace('{count}', count),
+      title: t(action === 'kick' ? 'admin.bulk.confirmRemove' : 'admin.bulk.confirmDemote', { count }),
       message: sample + more,
-      confirmLabel: t(action === 'kick' ? 'confirm.remove' : 'confirm.demote'),
+      confirmLabel: t(action === 'kick' ? 'common.confirm.remove' : 'common.confirm.demote'),
       icon: action === 'kick' ? 'trash' : 'none',
     });
     if (!ok) return;
@@ -216,14 +216,14 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
 }
 
 function SelectCell({ row, selected, onToggle }: { row: Row; selected: boolean; onToggle: () => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const meta = useProfile(row.pubkey);
   const user = meta?.displayName || meta?.name || shortNpubLabel(row.pubkey);
   return (
     <Checkbox
       checked={selected}
       onChange={onToggle}
-      aria-label={t('admin.selectRow').replace('{user}', user)}
+      aria-label={t('admin.selectRow', { user })}
       className="cursor-pointer"
     />
   );
@@ -242,7 +242,7 @@ function UserCell({ pubkey }: { pubkey: string }) {
 }
 
 function RoleCell({ isAdmin }: { isAdmin: boolean }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return isAdmin ? (
     <span className="rounded-full bg-lc-green/20 px-2 py-0.5 text-[10px] font-bold uppercase text-lc-green">
       {t('mobile.members.admin')}

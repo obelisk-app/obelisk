@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { useConfiguredRelays } from '@/services/nostr-bridge';
 import { classifyDeepLinkRelay, useRelayDeepLink } from '@/hooks/chat/useRelayDeepLink';
 import { useChatStore } from '@/store/chat';

@@ -1,15 +1,15 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { useHintsStore } from '@/store/hints';
 
 vi.mock('@/utils/hints/registry', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/utils/hints/registry')>();
   const HINTS = [
-    { id: 'first', surface: 'server', anchor: 'a-first', titleKey: 'hints.gotIt', bodyKey: 'hints.dismissAll', order: 10 },
-    { id: 'second', surface: 'server', anchor: 'a-second', titleKey: 'hints.replay', bodyKey: 'hints.dismissAll', order: 20 },
-    { id: 'desk', surface: 'server', anchor: 'a-desk', titleKey: 'hints.gotIt', bodyKey: 'hints.dismissAll', shell: 'desktop', order: 30 },
-    { id: 'elsewhere', surface: 'feed', anchor: 'a-feed', titleKey: 'hints.gotIt', bodyKey: 'hints.dismissAll', order: 10 },
+    { id: 'first', surface: 'server', anchor: 'a-first', titleKey: 'shell.hints.gotIt', bodyKey: 'shell.hints.dismissAll', order: 10 },
+    { id: 'second', surface: 'server', anchor: 'a-second', titleKey: 'shell.hints.replay', bodyKey: 'shell.hints.dismissAll', order: 20 },
+    { id: 'desk', surface: 'server', anchor: 'a-desk', titleKey: 'shell.hints.gotIt', bodyKey: 'shell.hints.dismissAll', shell: 'desktop', order: 30 },
+    { id: 'elsewhere', surface: 'feed', anchor: 'a-feed', titleKey: 'shell.hints.gotIt', bodyKey: 'shell.hints.dismissAll', order: 10 },
   ] as typeof actual.HINTS;
   return {
     ...actual,

@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
 import Text from '@/components/ui/Text';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 /** One pack in the library grid: a strip of its first items and its actions. */
 export default function PackCard({ pack, mine, favorite, itemFavorites, busy, server, serverSelected, onView, onOpenItem, onEdit, onDelete, onFavorite, onServer }: {
@@ -24,7 +24,7 @@ export default function PackCard({ pack, mine, favorite, itemFavorites, busy, se
   onFavorite: () => void;
   onServer: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const serverLabel = serverSelected ? "Remove pack from server" : "Add pack to server";
   return (
     <Card as="article" surface="translucent" padding="none" className="overflow-hidden">

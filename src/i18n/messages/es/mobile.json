@@ -1,0 +1,191 @@
+{
+  "settings": {
+    "identity": "Identidad",
+    "openOtherClient": "Abrir en otro cliente",
+    "editNostrProfile": "Editar perfil Nostr",
+    "disconnect": "Desconectar",
+    "disconnectTitle": "¿Desconectar de Nostr?",
+    "disconnectDescription": "Tu sesión va a cerrarse en este dispositivo. Vas a necesitar tu nsec, extensión signer o bunker para volver a entrar.",
+    "disconnectConfirm": "Sí, desconectar",
+    "editProfile": "Editar perfil",
+    "changeBanner": "Cambiar banner",
+    "addBanner": "Tocá para agregar banner",
+    "changeBannerImage": "Cambiar imagen de banner",
+    "changeProfilePicture": "Cambiar foto de perfil",
+    "uploadTip": "Tocá tu avatar o banner para subir una imagen nueva. Tus cambios se publican como metadata kind:0.",
+    "displayName": "Nombre visible",
+    "yourName": "Tu nombre",
+    "aboutPlaceholder": "Una breve bio...",
+    "lightningAddress": "Dirección Lightning",
+    "saveChanges": "Guardar cambios",
+    "imageOnly": "Seleccioná un archivo de imagen",
+    "imageTooLarge": "La imagen es demasiado grande (máx. 10MB)",
+    "publishFailed": "No se pudo publicar el perfil",
+    "relays": "Relays",
+    "packs": "Emojis, GIFs y stickers",
+    "packsHint": "Creá packs y gestioná favoritos."
+  },
+  "nav": {
+    "servers": "Servidores"
+  },
+  "inbox": {
+    "mentions": "@menciones",
+    "caughtUp": "Estás al día",
+    "emptyDms": "Los mensajes directos que no abriste aparecen acá.",
+    "emptyMentions": "Cuando alguien te mencione con @ en este relay, aparecerá acá.",
+    "type": {
+      "mention": "@ Te mencionó",
+      "reply": "↩ Te respondió"
+    }
+  },
+  "members": {
+    "label": "miembros",
+    "admins": "Admins",
+    "members": "Miembros",
+    "loading": "Cargando miembros...",
+    "empty": "Sin miembros",
+    "emptyDescription": "Todavía no hay miembros 39002 publicados por el relay.",
+    "admin": "admin",
+    "addPlaceholder": "npub1… o hex de 64 caracteres",
+    "addHelp": "Agregar miembro · NIP-29 kind 9000",
+    "promote": "Hacer admin",
+    "emptyHelp": "Todavía no hay miembros listados. Los canales públicos no necesitan lista de miembros.",
+    "demote": "Quitar admin",
+    "kick": "Expulsar"
+  },
+  "channel": {
+    "loadingMessages": "Cargando mensajes...",
+    "loadingEarlier": "Cargando mensajes anteriores...",
+    "noEarlierMessages": "No hay mensajes anteriores",
+    "noMessages": "Todavía no hay mensajes",
+    "noMessagesDescription": "Sé el primero en saludar.",
+    "messagePlaceholder": "Mensaje #{name}",
+    "replyingTo": "Respondiendo a",
+    "cancelReply": "Cancelar respuesta",
+    "descriptionPlaceholder": "¿De qué trata este canal?",
+    "access": "Acceso",
+    "public": "Público",
+    "publicHint": "todos leen y escriben",
+    "readOnly": "Solo lectura",
+    "readOnlyHint": "escriben los miembros",
+    "private": "Privado",
+    "privateHint": "oculto; solo miembros",
+    "type": "Tipo de canal"
+  },
+  "profile": {
+    "more": "Más",
+    "follow": "Seguir",
+    "message": "Mensaje",
+    "postsComing": "Posts y respuestas van a aparecer acá",
+    "timelineComing": "(timeline kind 1 · próximamente)"
+  },
+  "search": {
+    "aria": "Buscar mensajes, personas y canales",
+    "placeholder": "Buscar mensajes, personas, canales...",
+    "all": "Todo",
+    "channelsHelp": "Escribí para filtrar canales.",
+    "serverSideHelp": "La búsqueda de mensajes del servidor usa from:, in:#, has:."
+  },
+  "empty": {
+    "noChannelSelected": "No hay canal seleccionado",
+    "noVoiceChannel": "No hay canal de voz",
+    "noConversation": "No hay conversación",
+    "noProfileSelected": "No hay perfil seleccionado",
+    "noChannel": "No hay canal",
+    "noForum": "No hay publicaciones",
+    "unknownScreen": "Pantalla desconocida",
+    "backHome": "Volver al inicio"
+  },
+  "navigation": {
+    "pressBackAgain": "Presioná atrás otra vez para salir"
+  },
+  "signing": {
+    "label": "Estado de firma",
+    "title": "Firma Nostr",
+    "idle": "Listo",
+    "pending": "Esperando aprobación",
+    "ok": "Firmado",
+    "error": "Falló la firma",
+    "none": "No hay una solicitud de firma activa."
+  },
+  "branding": {
+    "iconAlt": "Icono",
+    "bannerAlt": "Portada",
+    "descriptionPlaceholder": "¿De qué trata este espacio?",
+    "edit": "Editar identidad",
+    "help": "Visible para todos en este relay · NIP-78 kind 30078.",
+    "hint": "nombre · ícono · portada",
+    "iconHint": "Logo cuadrado que se muestra junto al nombre del relay.",
+    "bannerHint": "Imagen ancha que se muestra sobre el nombre del relay."
+  },
+  "layout": {
+    "categoryPlaceholder": "p. ej. General, Trading, Voz",
+    "moveUp": "Subir categoría",
+    "moveDown": "Bajar categoría",
+    "deleteCategory": "Eliminar categoría",
+    "title": "Categorías y orden",
+    "help": "Diseño compartido por todos en este relay · cualquier admin del grupo puede editarlo · NIP-78 kind 30078.",
+    "newCategory": "Nueva categoría",
+    "categories": "Categorías",
+    "empty": "Todavía no hay categorías. Los canales aparecen en “Sin categoría” hasta que agregues una.",
+    "delete": "Eliminar"
+  },
+  "rail": {
+    "addRelay": "Agregar relay",
+    "addTitle": "Agregar un relay",
+    "addHelp": "Pegá la URL de un relay de grupos NIP-29. Cada relay es un “servidor” distinto en la barra."
+  },
+  "header": {
+    "search": "Buscar en este servidor",
+    "createChannel": "Crear canal",
+    "spaceMenu": "Menú del espacio"
+  },
+  "composer": {
+    "openPicker": "Abrir emojis, GIFs y stickers",
+    "emoji": "Emojis"
+  },
+  "message": {
+    "actions": "Acciones del mensaje",
+    "dismissFailed": "Descartar mensaje fallido",
+    "failed": "No se pudo enviar",
+    "zap": "Enviar zap"
+  },
+  "voice": {
+    "sfuTitle": "Enrutado por un SFU",
+    "minimize": "Minimizar llamada"
+  },
+  "forum": {
+    "clearSearch": "Limpiar búsqueda",
+    "bodyPlaceholder": "¿De qué trata la publicación?",
+    "empty": "Todavía no hay publicaciones",
+    "emptyHint": "Tocá + para crear una.",
+    "firstMessage": "Primer mensaje"
+  },
+  "space": {
+    "newChannel": "Nuevo canal",
+    "noChannels": "Todavía no hay canales en este relay.",
+    "invite": "Invitar gente…",
+    "share": "Compartir este espacio",
+    "copyUrl": "Copiar URL del relay",
+    "layoutHint": "diseño",
+    "roles": "Roles y rangos",
+    "rolesHint": "insignias por nivel",
+    "people": "Admins y miembros",
+    "peopleHint": "limpieza masiva",
+    "leave": "Salir de este espacio"
+  },
+  "field": {
+    "description": "Descripción",
+    "name": "Nombre"
+  },
+  "channels": {
+    "empty": "Todavía no hay canales acá."
+  },
+  "zap": {
+    "title": "Enviar un zap",
+    "walletHint": "Billetera · NWC · revisá en preferencias"
+  },
+  "relay": {
+    "confirmLeave": "¿Salir de {name}?"
+  }
+}

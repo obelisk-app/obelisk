@@ -7,12 +7,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * imported, which `vi.resetModules()` below makes a live question.
  */
 const renderLocalized = async (ui: React.ReactElement) => {
-  const { LocaleProvider } = await import('@/i18n/context');
+  const { LocaleProvider } = await import('@tests/support/intl');
   return render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
 };
 
 
-vi.mock('@/app/app/RelayStatusBanner', () => ({ default: () => 'relay status' }));
+vi.mock('@/app/[locale]/app/RelayStatusBanner', () => ({ default: () => 'relay status' }));
 
 describe('ActivityIndicator', () => {
   beforeEach(() => {

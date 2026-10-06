@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useCurrentRelayUrl } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { parseImeta } from '@/services/social/imeta';
 import type { renderModeFor } from '@/services/social/kinds';
 import { groupNoteUrl } from '@/services/social/note-links';
@@ -32,7 +32,7 @@ export default function NoteBody({
   onOpenArticle?: (note: NostrEvent) => void;
   onOpenTag?: (tag: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const activeRelay = useCurrentRelayUrl();
   const [expanded, setExpanded] = useState(false);
   const groupHref = mode === 'group' ? groupNoteUrl(note, activeRelay) : null;

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useCurrentRelayUrl, useNipSigner } from '@/services/nostr-bridge';
 import { useToastStore } from '@/store/toast';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import {
   checkZap,
@@ -14,10 +14,10 @@ import {
 } from '@/services/wallet/send-zap';
 
 const ERROR_KEY = {
-  noAddress: 'zap.errorNoAddress',
-  noWallet: 'zap.errorNoWallet',
-  invalidAmount: 'zap.errorInvalidAmount',
-  noSigner: 'zap.errorNoSigner',
+  noAddress: 'chat.zap.errorNoAddress',
+  noWallet: 'chat.zap.errorNoWallet',
+  invalidAmount: 'chat.zap.errorInvalidAmount',
+  noSigner: 'chat.zap.errorNoSigner',
 } as const satisfies Record<ZapErrorCode, string>;
 
 export interface UseSendZapArgs {
@@ -33,7 +33,7 @@ export interface UseSendZapArgs {
 
 /** The zap modal's send button: checks, pays, toasts, and reports a translated error. */
 export function useSendZap({ recipient, amountSats, comment, lud16, displayName, onSent }: UseSendZapArgs) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { formatNumber } = useFormat();
   const signer = useNipSigner();
   const currentRelay = useCurrentRelayUrl();
@@ -50,11 +50,9 @@ export function useSendZap({ recipient, amountSats, comment, lud16, displayName,
     setError(null);
     try {
       const { markerError } = await sendZap(check.zap);
-      const title = t('zap.sent')
-        .replace('{amount}', formatNumber(amountSats))
-        .replace('{name}', displayName);
+      const title = t('chat.zap.sent', { amount: formatNumber(amountSats), name: displayName });
       useToastStore.getState().pushToast(markerError
-        ? { title, body: t('zap.markerFailed').replace('{error}', markerError) }
+        ? { title, body: t('chat.zap.markerFailed', { error: markerError }) }
         : { title, body: comment.trim() || '' });
       onSent();
     } catch (e) {

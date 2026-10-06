@@ -37,7 +37,7 @@ export default function SwapMatrixDiagram() {
         fontSize="14"
         fontWeight="700"
         fill="#fafafa"
-      >
+      > {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         Every layer is replaceable
       </text>
       <text
@@ -161,7 +161,7 @@ export default function SwapMatrixDiagram() {
         fontWeight="600"
         fill="#a3a3a3"
         fontFamily="monospace"
-      >
+      > {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         same wire format · same signatures · the pieces don&apos;t care
       </text>
     </svg>

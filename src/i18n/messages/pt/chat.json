@@ -1,0 +1,173 @@
+{
+  "profile": {
+    "title": "Perfil",
+    "nostrSection": "Perfil Nostr",
+    "obeliskSection": "Configurações do Obelisk",
+    "nickname": "Apelido no servidor",
+    "nicknamePlaceholder": "Deixe vazio para usar o seu nome do Nostr",
+    "save": "Salvar",
+    "saved": "Salvo",
+    "about": "Sobre",
+    "nip05": "NIP-05",
+    "logout": "Desconectar",
+    "editNostr": "Editar perfil Nostr"
+  },
+  "channelMenu": {
+    "markRead": "Marcar como lido",
+    "unfollow": "Deixar de seguir canal",
+    "unfollowHint": "Sem contador de não lidas pela atividade, mas @menções e respostas continuam te avisando",
+    "follow": "Seguir canal",
+    "mute": {
+      "label": "Silenciar canal",
+      "15m": "Por 15 minutos",
+      "1h": "Por 1 hora",
+      "8h": "Por 8 horas",
+      "24h": "Por 24 horas",
+      "forever": "Até eu reativar"
+    },
+    "unmute": "Reativar som do canal",
+    "mutedUntil": "Silenciado até {time}",
+    "mutedForever": "Silenciado até você reativar",
+    "notify": {
+      "label": "Configurações de notificação",
+      "all": "Todas as mensagens",
+      "mentions": "Só @menções e respostas",
+      "nothing": "Nada"
+    },
+    "copyLink": "Copiar link",
+    "muted": "Silenciado"
+  },
+  "message": {
+    "forward": "Encaminhar",
+    "forwarded": "Encaminhada",
+    "forwardedTo": "Encaminhada para #{channel}",
+    "forwardFailed": "Não foi possível encaminhar a mensagem",
+    "forwardTitle": "Encaminhar para um canal",
+    "forwardSearch": "Buscar canais",
+    "forwardEmpty": "Não há outros canais aqui"
+  },
+  "pq": {
+    "level": {
+      "quantum": "Extra seguro",
+      "quantumDetail": "As suas mensagens estão trancadas e ninguém vê com quem você fala. Nem um computador quântico do futuro conseguiria abrir.",
+      "wrapped": "Seguro",
+      "wrappedDetail": "As suas mensagens estão trancadas e ninguém vê com quem você fala. Só que um dia um computador quântico poderia abrir.",
+      "basic": "Básico",
+      "basicDetail": "As suas mensagens estão trancadas, mas os servidores que as carregam veem com quem você fala."
+    },
+    "learnHow": "Como ficar extra seguro",
+    "markNoGiftwrap": "Dá para ver com quem você fala",
+    "markNoGiftwrapDetail": "Os servidores que carregaram esta mensagem conseguiram ver com quem você estava falando.",
+    "markNoPq": "Não é extra seguro",
+    "markNoPqDetail": "Esta mensagem está trancada hoje, mas alguém poderia guardá-la agora e abrir daqui a anos, quando os computadores quânticos chegarem."
+  },
+  "forum": {
+    "searchPlaceholder": "Buscar ou criar uma publicação",
+    "new": "Nova publicação",
+    "sortActive": "Atividade recente",
+    "sortCreated": "Data de criação",
+    "matchAny": "Qualquer etiqueta",
+    "matchAll": "Todas as etiquetas",
+    "titlePlaceholder": "Título da publicação",
+    "sort": "Ordenar",
+    "loading": "Carregando publicações…",
+    "sortTitle": "Ordem e visualização",
+    "sortBy": "Ordenar por",
+    "tagMatching": "Correspondência de etiquetas",
+    "titleLabel": "Título",
+    "viewAs": "Ver como",
+    "viewList": "Lista",
+    "viewGallery": "Galeria",
+    "firstMessagePlaceholder": "Primeira mensagem…",
+    "reset": "Restaurar os padrões",
+    "emptyDesktop": "Ainda não há publicações.",
+    "startFirst": "Comece a primeira publicação →"
+  },
+  "composer": {
+    "dropFiles": "Solte arquivos para anexar",
+    "addAttachment": "Anexar",
+    "document": "Documento",
+    "photos": "Fotos e vídeos",
+    "camera": "Câmera",
+    "contact": "Contato",
+    "newSticker": "Nova figurinha",
+    "poll": "Enquete",
+    "event": "Evento",
+    "later": "Em breve",
+    "discardVoice": "Descartar áudio",
+    "discardRecording": "Descartar gravação",
+    "stopVoice": "Parar áudio",
+    "finishRecording": "Terminar gravação",
+    "recordVoice": "Gravar áudio",
+    "bold": "Negrito",
+    "italic": "Itálico",
+    "preview": "Pré-visualização",
+    "link": "Link"
+  },
+  "emoji": {
+    "picker": "Seletor de emojis",
+    "categories": "Categorias de emojis",
+    "close": "Fechar o seletor de emojis",
+    "search": "Buscar emojis",
+    "title": "Emojis",
+    "subtitle": "Emojis do servidor, GIFs e unicode",
+    "noMatches": "Nenhum resultado",
+    "recent": "Recentes",
+    "noRecent": "Você ainda não usou emojis"
+  },
+  "invoice": {
+    "expired": "Expirada"
+  },
+  "mentions": {
+    "navigation": "Navegação de menções",
+    "previousTitle": "Menção ou resposta anterior (Shift+F7)",
+    "previous": "Anterior (Shift+F7)",
+    "nextTitle": "Próxima menção ou resposta (F7)",
+    "next": "Próxima (F7)",
+    "latestTitle": "Ir para a última mensagem",
+    "latest": "Ir para a última"
+  },
+  "voiceNote": {
+    "progress": "Progresso da mensagem de voz",
+    "sender": "Quem enviou a mensagem de voz",
+    "speed": "Mudar a velocidade de reprodução"
+  },
+  "mediaPicker": {
+    "title": "Seletor de mídia",
+    "categories": "Categorias de mídia",
+    "favorites": "Favoritos e pacotes"
+  },
+  "zap": {
+    "commentPlaceholder": "Belo post!",
+    "amount": "Valor (sats)",
+    "comment": "Comentário (opcional)",
+    "noAddress": "O destinatário não tem endereço Lightning, então o zap vai falhar.",
+    "errorNoAddress": "Este usuário não tem endereço Lightning (lud16).",
+    "errorNoWallet": "Nenhuma extensão WebLN detectada. Instale o Alby (ou similar) para enviar zaps.",
+    "errorInvalidAmount": "Digite um valor válido.",
+    "errorNoSigner": "Nenhum assinante ativo: faça login primeiro.",
+    "sent": "⚡ Você enviou {amount} sats para {name}",
+    "send": "Zap de {amount} sats",
+    "markerFailed": "O pagamento deu certo, mas a marca de zap do grupo não foi publicada: {error}",
+    "sendAmount": "⚡ Enviar {amount} sats"
+  },
+  "profilePopover": {
+    "zap": "Zap",
+    "roles": "Cargos",
+    "muteHint": "Silenciar notificações deste usuário (somente neste dispositivo)",
+    "hideHint": "Ocultar as mensagens deste usuário (somente neste dispositivo)",
+    "muted": "Usuário silenciado",
+    "unmuted": "Silêncio removido",
+    "mutedBody": "Você não verá mais notificações de {name}",
+    "unmutedBody": "Você voltará a receber notificações de {name}",
+    "blocked": "Usuário bloqueado",
+    "unblocked": "Bloqueio removido",
+    "blockedBody": "As mensagens de {name} ficarão ocultas",
+    "unblockedBody": "Você voltará a ver as mensagens de {name}",
+    "blockConfirm": "Bloquear {name}? As mensagens dessa pessoa ficarão ocultas neste dispositivo."
+  },
+  "slash": {
+    "recent": "Usados recentemente",
+    "noMatch": "Nenhum comando corresponde."
+  }
+}

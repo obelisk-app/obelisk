@@ -48,7 +48,7 @@ write synchronously from the cached box, open on reload) and `./vault.ts`.
   `sessionNotice` (`vault-unavailable`, `key-missing`, `unlock-failed`) is
   explained above the login methods.
 - **The SDK login widget** gets memory-only signer storage
-  (`src/app/app/login/signer-storage.ts`), so its NIP-46 pairing record and
+  (`src/app/[locale]/app/login/signer-storage.ts`), so its NIP-46 pairing record and
   "remembered" nsec never reach localStorage; the bridge erases the two
   `@nostr-wot/ui:*` keys older builds left behind on every load and logout.
 
@@ -285,7 +285,7 @@ fires for the new relay automatically.
 `relay.onclose` flips the state to `'Disconnected'` (or keeps `'Offline'`) and kicks
 `reconnectInBackground()` with capped, jittered exponential backoff. Native relay pings detect half-open sockets; browser `online` and visible-tab events wake a pending retry immediately, while `offline` pauses retry traffic.
 
-UI surface: `src/app/app/RelayStatusBanner.tsx` (desktop, inside
+UI surface: `src/app/[locale]/app/RelayStatusBanner.tsx` (desktop, inside
 `ActivityIndicator`) folds connection state and relay access into one
 line. Connection problems win, then access: `authenticating` (yellow
 spinner), `auth-required` (yellow "Not authenticated"), `restricted` (red

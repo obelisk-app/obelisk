@@ -3,7 +3,9 @@
 // Cached:
 //   - same-origin hashed Next static assets (`/_next/static/*`)
 //   - same-origin public image/font assets and the web manifest
-//   - the `/app` navigation shell as a network-first offline fallback
+//   - the `/app` navigation shell as a network-first offline fallback, one
+//     copy per language (`/app`, `/es/app`, `/pt/app`), so a Portuguese
+//     reader offline gets the Portuguese shell
 //
 // Not cached:
 //   - non-GET requests
@@ -13,10 +15,12 @@
 //
 // Bump CACHE_VERSION to force every installed client to re-evaluate the
 // cache namespace and reload once after activation.
-const CACHE_VERSION = 'obelisk-v8-static-shell-cache';
+const CACHE_VERSION = 'obelisk-v9-localized-shell-cache';
 const STATIC_CACHE = `${CACHE_VERSION}:static`;
 const SHELL_CACHE = `${CACHE_VERSION}:shell`;
 const APP_SHELL_KEY = '/app';
+// Spanish and Portuguese live under a prefix; English is unprefixed.
+const LOCALE_PREFIX_RE = /^\/(es|pt)(?=\/|$)/;
 const PRECACHE_URLS = [
   APP_SHELL_KEY,
   '/manifest.webmanifest',
@@ -33,7 +37,9 @@ function sameOrigin(url) {
 }
 
 function isCacheableResponse(response) {
-  return response && response.ok && (response.type === 'basic' || response.type === 'default');
+  // A redirected response cannot answer a navigation (its redirect mode is
+  // `manual`), and `/app` redirects a Spanish-cookie visitor to `/es/app`.
+  return response && response.ok && !response.redirected && (response.type === 'basic' || response.type === 'default');
 }
 
 function shouldBypassRequest(request, url) {
@@ -53,8 +59,22 @@ function isStaticAsset(request, url) {
   return ['font', 'image', 'manifest', 'script', 'style'].includes(request.destination);
 }
 
+/** `/es/app?c=x` -> `/app` and the `/es` prefix. */
+function splitLocale(pathname) {
+  const match = pathname.match(LOCALE_PREFIX_RE);
+  return match
+    ? { prefix: match[0], rest: pathname.slice(match[0].length) || '/' }
+    : { prefix: '', rest: pathname };
+}
+
 function isAppShellNavigation(url) {
-  return url.pathname === '/' || url.pathname === '/app' || url.pathname.startsWith('/app/');
+  const { rest } = splitLocale(url.pathname);
+  return rest === '/' || rest === '/app' || rest.startsWith('/app/');
+}
+
+/** The shell cache key for this navigation's language: `/app`, `/es/app`, `/pt/app`. */
+function shellKeyFor(url) {
+  return splitLocale(url.pathname).prefix + APP_SHELL_KEY;
 }
 
 async function putIfCacheable(cache, key, response) {
@@ -118,12 +138,14 @@ async function handleNavigation(event, url) {
   if (!isAppShellNavigation(url)) return fetch(event.request);
 
   const cache = await caches.open(SHELL_CACHE);
+  const shellKey = shellKeyFor(url);
   try {
     const response = await fetch(event.request);
-    await putIfCacheable(cache, APP_SHELL_KEY, response);
+    await putIfCacheable(cache, shellKey, response);
     return response;
   } catch (err) {
-    const cached = await cache.match(APP_SHELL_KEY) || await caches.match(APP_SHELL_KEY);
+    const cached = await cache.match(shellKey) || await caches.match(shellKey)
+      || await cache.match(APP_SHELL_KEY) || await caches.match(APP_SHELL_KEY);
     if (cached) return cached;
     throw err;
   }

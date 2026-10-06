@@ -10,7 +10,7 @@ import { gameIcon, gameName } from '@/lib/games/catalog';
 import { seedGameFromCache } from '@/services/games/cache';
 import { requestGameLoad } from '@/services/games/resolve';
 import { SEAT_COLORS } from './ChainReactionBoard';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 /**
  * How long a card without a session waits before asking the relay for its own
@@ -97,7 +97,7 @@ function GameCard({ gameId }: { gameId: string }) {
 export default memo(GameCard);
 
 function StatusLabel({ session, myPubkey }: { session: GameSession; myPubkey: string | null }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   switch (session.status) {
     case 'waiting':
       return <>{`Open table · ${session.joined.length}/${session.maxPlayers}`}</>;

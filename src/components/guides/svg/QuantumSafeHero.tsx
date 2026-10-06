@@ -58,7 +58,7 @@ export default function QuantumSafeHero() {
       {/* legend */}
       <g fontSize="11" fontWeight="600">
         <rect x="40" y="18" width="16" height="12" rx="3" fill="none" stroke="#b4f953" strokeOpacity="0.75" strokeWidth="1.5" />
-        <text x="64" y="28" fill="#fafafa">classic key exchange</text>
+        <text x="64" y="28" fill="#fafafa">classic key exchange</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         <rect x="230" y="18" width="16" height="12" rx="3" fill="none" stroke="#b4f953" strokeOpacity="0.35" strokeWidth="1.5" />
         <text x="254" y="28" fill="#fafafa">post-quantum layer</text>
       </g>

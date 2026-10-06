@@ -1,10 +1,10 @@
 'use client';
 
 import CopyButton from '@/components/ui/CopyButton';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 export default function CodeBlock({ code, language }: { code: string; language?: string }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const label = language || 'text';
 
   return (
@@ -14,7 +14,7 @@ export default function CodeBlock({ code, language }: { code: string; language?:
         {/* Revealed on hover, and on keyboard focus so a tab stop is never invisible. */}
         <CopyButton
           text={code}
-          label={t('common.copy').replace('{label}', label)}
+          label={t('common.copy', { label })}
           copiedLabel={t('common.copied')}
           className="opacity-0 transition-opacity group-hover/code:opacity-100 focus-visible:opacity-100"
           data-testid="copy-code-btn"

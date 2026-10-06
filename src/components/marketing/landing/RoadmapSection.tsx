@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import RevealSection from './RevealSection';
 import { ROADMAP_PHASES } from './landing-data';
 
@@ -8,16 +8,16 @@ import { ROADMAP_PHASES } from './landing-data';
  * The roadmap as a vertical timeline.
  */
 export default function RoadmapSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <RevealSection id="roadmap" className="py-24 px-6">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('roadmap.heading')}<span className="text-lc-green">.</span>
+            {t('marketing.roadmap.heading')}<span className="text-lc-green">.</span>
           </h2>
           <p className="text-lc-muted text-lg max-w-xl mx-auto">
-            {t('roadmap.subtitle')}
+            {t('marketing.roadmap.subtitle')}
           </p>
         </div>
         <div className="relative">
@@ -26,7 +26,7 @@ export default function RoadmapSection() {
 
           <div className="space-y-8">
             {ROADMAP_PHASES.map((r) => {
-              const items = t(`roadmap.${r.key}.items`).split('|');
+              const items = t(`marketing.roadmap.${r.key}.items`).split('|');
               return (
                 <div key={r.key} className="relative pl-12 md:pl-16">
                   {/* Timeline dot */}
@@ -44,10 +44,10 @@ export default function RoadmapSection() {
                           ? 'bg-lc-green/20 text-lc-green'
                           : 'bg-lc-border text-lc-muted'
                       }`}>
-                        {r.status === 'done' ? `✓ ${t('roadmap.done')}` : t('roadmap.upcoming')}
+                        {r.status === 'done' ? `✓ ${t('marketing.roadmap.done')}` : t('marketing.roadmap.upcoming')}
                       </span>
                     </div>
-                    <h4 className="text-lg font-semibold text-lc-white mb-2">{t(`roadmap.${r.key}.title`)}</h4>
+                    <h4 className="text-lg font-semibold text-lc-white mb-2">{t(`marketing.roadmap.${r.key}.title`)}</h4>
                     <ul className="space-y-1">
                       {items.map((item) => (
                         <li key={item} className="text-sm text-lc-muted flex items-start gap-2">

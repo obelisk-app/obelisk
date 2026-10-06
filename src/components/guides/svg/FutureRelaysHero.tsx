@@ -119,7 +119,7 @@ export default function FutureRelaysHero() {
       {/* NIP-29 tag in the middle */}
       <g>
         <rect x="336" y="184" width="128" height="32" rx="16" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.5" />
-        <text x="400" y="204" textAnchor="middle" fontSize="13" fontWeight="700" fill="#b4f953" fontFamily="monospace">
+        <text x="400" y="204" textAnchor="middle" fontSize="13" fontWeight="700" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           NIP-29 group
         </text>
       </g>

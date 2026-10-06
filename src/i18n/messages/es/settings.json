@@ -1,0 +1,283 @@
+{
+  "preferences": {
+    "backup": {
+      "advanced": "Avanzado",
+      "action": "Descargar backup de la cuenta",
+      "description": "Eventos, perfil, seguidos, packs, favoritos y archivos subidos recuperables. Nunca incluye claves privadas.",
+      "working": "Preparando backup…",
+      "done": "Backup descargado.",
+      "partial": "Backup descargado. No se pudieron incluir {count} archivo(s); sus URLs y hashes Blossom siguen guardados.",
+      "error": "Falló el backup."
+    },
+    "relays": {
+      "status": {
+        "active": "activo",
+        "switch": "cambiar"
+      }
+    },
+    "activity": {
+      "label": "Mostrar indicador de actividad",
+      "description": "Notificaciones abajo a la derecha para login, firmas y publicación en relays."
+    },
+    "notifications": {
+      "title": "Notificaciones",
+      "sounds": {
+        "label": "Sonidos de notificación",
+        "description": "Suena cuando alguien te menciona, te responde o te envía un DM."
+      },
+      "desktop": {
+        "label": "Notificaciones del navegador",
+        "description": "Notificaciones del sistema para menciones, respuestas y DMs: suenan aunque Obelisk esté en otra pestaña. Tu navegador pide permiso en tu primer clic. Nunca se muestra el texto de los DMs.",
+        "denied": "Bloqueadas en tu navegador. Permití las notificaciones para este sitio en la configuración del sitio (el ícono a la izquierda de la barra de direcciones) y volvé.",
+        "unsupported": "Este navegador no admite notificaciones."
+      },
+      "background": {
+        "label": "Escuchar en relays recientes",
+        "description": "Seguí conectado a los últimos 3 relays que usaste y recibí avisos de menciones y respuestas también ahí."
+      },
+      "test": "Probar sonido",
+      "ringtone": {
+        "label": "Tono",
+        "crystal": {
+          "label": "Cristal",
+          "hint": "Campana de vidrio con brillo"
+        },
+        "marimba": {
+          "label": "Marimba",
+          "hint": "Golpe cálido de madera"
+        },
+        "aurora": {
+          "label": "Aurora",
+          "hint": "Suave y etéreo"
+        },
+        "bubble": {
+          "label": "Burbuja",
+          "hint": "Gota de agua juguetona"
+        }
+      }
+    },
+    "localData": {
+      "title": "Datos locales",
+      "clear": {
+        "title": "Limpiar caché local",
+        "description": "Borra canales, perfiles, branding, miembros, posiciones de lectura y DMs cacheados. Los datos vuelven a streamearse desde el relay. Tu sesión y preferencias se conservan.",
+        "button": "Limpiar caché"
+      },
+      "confirm": {
+        "title": "¿Limpiar caché local?",
+        "description": "Esto borra todas las respuestas del relay cacheadas localmente (canales, perfiles, branding, miembros, lecturas, DMs y flags de UI) y recarga la página. Tu sesión y preferencias quedan; seguís logueado.",
+        "cancel": "Cancelar",
+        "action": "Limpiar y recargar",
+        "clearing": "Limpiando..."
+      }
+    },
+    "mobile": {
+      "app": "App",
+      "theme": "Tema",
+      "version": "Versión"
+    },
+    "language": {
+      "label": "Idioma",
+      "description": "Elegí el idioma de la interfaz de la app."
+    },
+    "directMessages": {
+      "label": "Mensajes directos",
+      "description": "Permití que este dispositivo abra suscripciones de DMs encriptados de Nostr y muestre conversaciones.",
+      "mobileDescription": "DMs encriptados de Nostr en este dispositivo"
+    },
+    "profileFeed": {
+      "title": "Relays del feed de perfiles",
+      "description": "Relays públicos de Nostr para tu feed y los perfiles. Se guardan en caché local para cargar al instante.",
+      "relay": "Relay del feed de perfiles",
+      "invalid": "Ingresá tres URLs wss:// válidas y diferentes.",
+      "saved": "Guardado"
+    },
+    "appearance": {
+      "title": "Apariencia",
+      "reset": "Restablecer apariencia",
+      "accent": {
+        "label": "Acento",
+        "description": "Destacados, links y estados activos"
+      },
+      "background": {
+        "label": "Fondo",
+        "description": "Fondo principal de la app"
+      },
+      "buttons": {
+        "label": "Botones",
+        "description": "Acciones principales"
+      },
+      "bubbles": {
+        "label": "Burbujas",
+        "description": "Burbujas animadas del fondo"
+      },
+      "bubbleMotion": {
+        "label": "Movimiento de burbujas",
+        "description": "Estilo de animación para las burbujas decorativas del fondo",
+        "aria": "Estilo de animación de burbujas",
+        "float": "Subir",
+        "drift": "Deriva lenta",
+        "orbit": "Orbitar",
+        "still": "Quietas"
+      },
+      "colorAria": "Color de {label}",
+      "hexAria": "Color hex de {label}"
+    },
+    "socialRelays": {
+      "title": "Relays del feed",
+      "description": "Relays públicos de Nostr para tu feed y los perfiles, distintos de los relays de grupo del riel. Entre 1 y 8.",
+      "relay": "Relay del feed",
+      "add": "Añadir relay",
+      "remove": "Quitar",
+      "import": "Importar desde NIP-65",
+      "importing": "Importando…",
+      "importEmpty": "No se encontró una lista de relays para tu cuenta.",
+      "reset": "Restablecer valores por defecto",
+      "invalid": "Introduce al menos una URL wss:// válida.",
+      "suggested": "Relays sugeridos",
+      "added": "Agregado",
+      "preset": {
+        "general": "Uso general",
+        "index": "Índice grande, rápido",
+        "search": "Búsqueda y archivo",
+        "paid": "Pago, poco spam",
+        "profiles": "Solo perfiles"
+      }
+    }
+  },
+  "profileEditor": {
+    "setupTitle": "Configurar tu perfil",
+    "setupDesc": "Agregale un nombre y una foto para que los demas te reconozcan.",
+    "randomName": "Generar un nombre al azar",
+    "nameRequired": "Obligatorio",
+    "nameRequiredHint": "Necesitás un nombre para continuar. Tocá el dado para generar uno.",
+    "editTitle": "Editar Perfil Nostr",
+    "displayName": "Nombre",
+    "namePlaceholder": "Como te van a ver los demas",
+    "picture": "Foto de perfil",
+    "clickToUpload": "Click para subir o arrastra una imagen",
+    "imageOnly": "Solo se permiten imagenes",
+    "fileTooLarge": "La imagen debe ser menor a 10 MB",
+    "uploading": "Subiendo a Blossom...",
+    "picturePlaceholder": "https://ejemplo.com/avatar.jpg",
+    "aboutLabel": "Sobre mi",
+    "aboutPlaceholder": "Una breve bio...",
+    "invalidUrl": "No se pudo cargar la imagen desde esta URL",
+    "publish": "Publicar en Nostr",
+    "publishing": "Publicando...",
+    "publishError": "No se pudo publicar el perfil. Intenta de nuevo.",
+    "skip": "Saltar por ahora",
+    "cancel": "Cancelar",
+    "confirmTitle": "Confirmar cambios de perfil",
+    "confirmDesc": "Esto va a publicar tu perfil actualizado (kind 0) en los relays de Nostr. Los demas campos (NIP-05, Lightning, etc.) se mantienen.",
+    "confirmPublish": "Publicar cambios",
+    "changed": "actualizado",
+    "avatarAlt": "Avatar"
+  },
+  "you": "Vos",
+  "profile": "Perfil",
+  "preferencesTitle": "Preferencias",
+  "group": {
+    "user": "Ajustes de usuario",
+    "app": "Ajustes de la app"
+  },
+  "section": {
+    "profile": {
+      "label": "Perfil",
+      "desc": "Tu nombre, foto, portada y enlaces, publicados en Nostr como tu perfil kind-0."
+    },
+    "general": {
+      "label": "General",
+      "desc": "Idioma y el indicador de actividad."
+    },
+    "appearance": {
+      "label": "Apariencia",
+      "desc": "Colores de acento, fondo, botones y burbujas."
+    },
+    "notifications": {
+      "label": "Notificaciones",
+      "desc": "Sonidos, tono, notificaciones del navegador y escucha en segundo plano."
+    },
+    "relays": {
+      "label": "Relays",
+      "desc": "Los relays públicos de donde se leen tus feeds y perfiles."
+    },
+    "privacy": {
+      "label": "Privacidad y seguridad",
+      "desc": "Mensajes directos, protección post-cuántica, personas silenciadas y bloqueadas, y red de confianza."
+    },
+    "media": {
+      "label": "Emojis y stickers",
+      "desc": "Tus paquetes y favoritos."
+    },
+    "advanced": {
+      "label": "Avanzado",
+      "desc": "Copias de seguridad, datos locales y herramientas de desarrollo."
+    }
+  },
+  "openPreferences": "Preferencias",
+  "editProfile": "Editar perfil",
+  "postQuantum": "Protección post-cuántica",
+  "postQuantumHint": "Sellá los mensajes directos con claves post-cuánticas cuando vos y la otra persona las tengan y tu firmante las pueda usar. Lo que no se pueda sellar igual se envía, con cifrado común. Mientras esté activado, cada conversación también te muestra si está protegida contra ataques cuánticos.",
+  "postQuantumChecking": "Buscando claves post-cuánticas…",
+  "postQuantumDetected": "Se detectaron claves post-cuánticas en esta cuenta.",
+  "postQuantumReady": "Tu firmante puede mandar mensajes post-cuánticos. Mientras esta opción esté activada, las conversaciones con gente que también publica claves post-cuánticas llevan el sello extra.",
+  "postQuantumSignerUnknown": "Tu firmante no informa soporte post-cuántico, así que los mensajes se siguen enviando con cifrado común. Obelisk empieza a usar post-cuántico solo, en cuanto el firmante lo informe.",
+  "postQuantumNotDetected": "No se detectaron claves post-cuánticas en esta cuenta.",
+  "postQuantumSetupLink": "Configurar claves post-cuánticas",
+  "profileAppearance": {
+    "changeBanner": "Cambiar banner",
+    "addBanner": "Añadir banner",
+    "changeAvatar": "Cambiar foto de perfil",
+    "notImage": "Ese archivo no es una imagen.",
+    "tooLarge": "Las imágenes deben pesar menos de 10 MB.",
+    "fileSelected": "Archivo seleccionado, se guarda al publicar"
+  },
+  "moderation": {
+    "title": "Silenciados y bloqueados",
+    "empty": "No has silenciado ni bloqueado a nadie.",
+    "muted": "Silenciado",
+    "blocked": "Bloqueado"
+  },
+  "developer": {
+    "title": "Ajustes de desarrollo",
+    "relayLogs": "Logs de relay para desarrollo",
+    "console": "Consola del navegador.",
+    "signatureHelp": "Pide firmas de prueba para cada kind de evento que usa Obelisk. Los eventos firmados se descartan y nunca se publican.",
+    "section": "Desarrollo"
+  },
+  "wot": {
+    "title": "Red de confianza",
+    "help": "Descarta los eventos de cuentas fuera de tu grafo social antes de que lleguen al caché.",
+    "maxHops": "Saltos máximos",
+    "minPaths": "Caminos de confianza mínimos",
+    "channelColors": "Colores del canal",
+    "outOfGraph": "Fuera de la red o sin resolver",
+    "resolvedAllow": "permitidos resueltos",
+    "resolvedDeny": "bloqueados resueltos"
+  },
+  "calls": {
+    "title": "Llamadas",
+    "from": {
+      "label": "Quién puede llamarte",
+      "contacts": "Personas que sigues",
+      "anyone": "Cualquiera"
+    },
+    "fromHint": "Las llamadas de cualquier otra persona se ignoran sin sonar.",
+    "ip": {
+      "label": "Ocultar mi dirección IP",
+      "auto": "Con quienes no sigo",
+      "always": "Siempre",
+      "never": "Nunca"
+    },
+    "ipHint": "Una llamada directa le muestra a cada lado la IP del otro. Pasar por nuestro servidor TURN la oculta, con algo de pérdida de calidad.",
+    "relays": "Relés de llamadas",
+    "relaysHint": "Donde se establece la llamada. Solo ven dos claves descartables intercambiando datos cifrados, así que deben aceptar eventos de claves desconocidas: un relé con lista blanca no puede llevar una llamada.",
+    "relay": "Relé de llamada",
+    "addRelay": "Agregar relé",
+    "removeRelay": "Quitar",
+    "reset": "Restablecer",
+    "saved": "Guardado",
+    "invalid": "Solo direcciones de relé wss://"
+  }
+}

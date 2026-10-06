@@ -22,7 +22,7 @@ import { useRef, useState } from 'react';
 import AnchoredMenu from '@/components/social/AnchoredMenu';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useModerationStore } from '@/store/moderation';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { safeNpub } from '@/utils/identity/short-npub';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
 import { BanIcon, BellIcon, BellOffIcon, CheckBadgeIcon, KeyIcon, MoreIcon, UserIcon } from '@/components/ui/icons';
@@ -38,7 +38,7 @@ export default function DMThreadMenu({
   /** Lets each shell position it with its own spacing utilities. */
   className?: string;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   // Flash "Copied!", then close: the menu staying open after a copy reads
@@ -90,14 +90,14 @@ export default function DMThreadMenu({
         )}
         <MenuItem
           icon={copied ? <CheckBadgeIcon /> : <KeyIcon />}
-          label={copied ? t('common.copied') : t('user.copyNpub')}
+          label={copied ? t('common.copied') : t('shell.user.copyNpub')}
           onClick={() => void copy(npub)}
           testId="dm-menu-copy-npub"
         />
         <MenuDivider />
         <MenuItem
           icon={muted ? <BellIcon /> : <BellOffIcon />}
-          label={t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
+          label={t(muted ? 'social.profileFeed.unmute' : 'social.profileFeed.mute')}
           onClick={() => { toggleMute(peer); setOpen(false); }}
           testId="dm-menu-mute"
         />
@@ -105,7 +105,7 @@ export default function DMThreadMenu({
             something harmless. */}
         <MenuItem
           icon={<BanIcon />}
-          label={t(blocked ? 'profileFeed.unblock' : 'profileFeed.block')}
+          label={t(blocked ? 'social.profileFeed.unblock' : 'social.profileFeed.block')}
           onClick={() => { toggleBlock(peer); setOpen(false); }}
           danger={!blocked}
           testId="dm-menu-block"

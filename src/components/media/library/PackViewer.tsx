@@ -5,7 +5,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
 import CloseButton from '@/components/ui/CloseButton';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import MediaItemGrid from './MediaItemGrid';
 
 /** Every item in one pack, with save (or add-to-server) in the footer. */
@@ -22,7 +22,7 @@ export default function PackViewer({ pack, favorite, itemFavorites, busy, server
   onFavorite: () => void;
   onServer: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const serverLabel = serverSelected ? "Remove pack from server" : "Add pack to server";
   return (
     <Modal onClose={onClose} closeOnEscape={closeOnEscape} testId="media-pack-viewer" panelClassName="lc-card mx-3 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden bg-lc-dark">

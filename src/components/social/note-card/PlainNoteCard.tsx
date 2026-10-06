@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useMyFollows, useMyPubkey } from '@/services/nostr-bridge';
 import { useAuthor } from '@/hooks/social/useAuthor';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { replyParentOf } from '@/services/social/feed';
 import { parseImeta } from '@/services/social/imeta';
 import { renderModeFor } from '@/services/social/kinds';
@@ -30,7 +30,7 @@ export default function PlainNoteCard({
   nested = false,
 }: NoteCardProps) {
   const quoted = variant === 'quoted';
-  const { t } = useTranslation();
+  const t = useTranslations();
   const meta = useAuthor(note.pubkey);
   const myPubkey = useMyPubkey();
   const follows = useMyFollows();

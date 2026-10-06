@@ -7,8 +7,8 @@ export const FEATURE_KEYS = [
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
     ),
-    titleKey: 'features.nostrIdentity.title',
-    descKey: 'features.nostrIdentity.desc',
+    titleKey: 'marketing.features.nostrIdentity.title',
+    descKey: 'marketing.features.nostrIdentity.desc',
   },
   {
     icon: (
@@ -16,8 +16,8 @@ export const FEATURE_KEYS = [
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
       </svg>
     ),
-    titleKey: 'features.realtimeChat.title',
-    descKey: 'features.realtimeChat.desc',
+    titleKey: 'marketing.features.realtimeChat.title',
+    descKey: 'marketing.features.realtimeChat.desc',
   },
   {
     icon: (
@@ -26,8 +26,8 @@ export const FEATURE_KEYS = [
         <path d="M7 11V7a5 5 0 0110 0v4"/>
       </svg>
     ),
-    titleKey: 'features.encryptedDMs.title',
-    descKey: 'features.encryptedDMs.desc',
+    titleKey: 'marketing.features.encryptedDMs.title',
+    descKey: 'marketing.features.encryptedDMs.desc',
   },
   {
     icon: (
@@ -38,8 +38,8 @@ export const FEATURE_KEYS = [
         <line x1="8" y1="22" x2="16" y2="22"/>
       </svg>
     ),
-    titleKey: 'features.voice.title',
-    descKey: 'features.voice.desc',
+    titleKey: 'marketing.features.voice.title',
+    descKey: 'marketing.features.voice.desc',
   },
   {
     icon: (
@@ -49,8 +49,8 @@ export const FEATURE_KEYS = [
         <path d="M2 12l10 5 10-5"/>
       </svg>
     ),
-    titleKey: 'features.selfHosted.title',
-    descKey: 'features.selfHosted.desc',
+    titleKey: 'marketing.features.selfHosted.title',
+    descKey: 'marketing.features.selfHosted.desc',
   },
   {
     icon: (
@@ -58,8 +58,8 @@ export const FEATURE_KEYS = [
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
       </svg>
     ),
-    titleKey: 'features.zaps.title',
-    descKey: 'features.zaps.desc',
+    titleKey: 'marketing.features.zaps.title',
+    descKey: 'marketing.features.zaps.desc',
   },
   {
     icon: (
@@ -73,10 +73,10 @@ export const FEATURE_KEYS = [
         <circle cx="15.5" cy="15.5" r="1.1" fill="currentColor" stroke="none" />
       </svg>
     ),
-    titleKey: 'features.games.title',
-    descKey: 'features.games.desc',
+    titleKey: 'marketing.features.games.title',
+    descKey: 'marketing.features.games.desc',
   },
-];
+] as const;
 
 export const STEP_ICONS = [
   <svg key="s1" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -101,7 +101,7 @@ export const ROADMAP_PHASES = [
   { key: 'phase6', phase: 'Phase 6', status: 'done' as const },
   { key: 'phase4', phase: 'Phase 4', status: 'done' as const },
   { key: 'phase5', phase: 'Phase 5', status: 'done' as const },
-];
+] as const;
 
 export const TECH_STACK: { name: string; desc: string; color: string; icon?: string; img?: string; href: string }[] = [
   { name: 'Next.js 16', desc: 'React framework (frontend only)', color: 'text-white', icon: '▲', href: 'https://nextjs.org' },

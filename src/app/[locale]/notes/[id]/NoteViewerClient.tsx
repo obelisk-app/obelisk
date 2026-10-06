@@ -1,0 +1,149 @@
+'use client';
+
+/**
+ * Interactive half of the public note viewer.
+ *
+ * The server resolves the event so the HTML (and the link preview) is
+ * complete without JS. This island re-renders it with the real components -
+ * clickable mentions, media galleries, article typography - and falls back to
+ * fetching client-side when the server's bounded query came up empty, which
+ * happens when the relays were slow rather than when the note is gone.
+ */
+
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from '@/i18n/navigation';
+import type { Event as NostrEvent } from 'nostr-tools';
+import { nip19 } from 'nostr-tools';
+import { fetchNote } from '@nostr-wot/data';
+import { initSocial, querySocial } from '@/services/social/pool';
+import { DEFAULT_SOCIAL_RELAYS } from '@/services/social/relays';
+import { KIND_NOTE, renderModeFor } from '@/services/social/kinds';
+import { getPreferences } from '@/services/preferences';
+import { useLocale, useTranslations } from 'next-intl';
+import { localizedPath } from '@/utils/seo/alternates';
+import NoteCard from '@/components/social/NoteCard';
+import ArticleReader from '@/components/social/ArticleCard';
+import type { ViewerTarget } from '@/services/social/identifier';
+
+export default function NoteViewerClient({
+  target,
+  initialNote,
+}: {
+  target: ViewerTarget | null;
+  initialNote: NostrEvent | null;
+}) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const [note, setNote] = useState<NostrEvent | null>(initialNote);
+  const [state, setState] = useState<'loading' | 'ready' | 'missing'>(
+    initialNote ? 'ready' : target ? 'loading' : 'missing',
+  );
+
+  useEffect(() => {
+    // Server already found it, or there was nothing to look for.
+    if (initialNote || !target) return;
+    let cancelled = false;
+
+    // A visitor may never have opened the app, so fall back to defaults.
+    const configured = getPreferences().socialRelays;
+    const relays = [...new Set([
+      ...target.relays,
+      ...(configured.length ? configured : DEFAULT_SOCIAL_RELAYS),
+    ])];
+    initSocial(relays);
+
+    (async () => {
+      if (target.kind === 'address') {
+        const events = await querySocial([{
+          kinds: [target.eventKind],
+          authors: [target.pubkey],
+          '#d': [target.identifier],
+          limit: 1,
+        }], { relays });
+        if (cancelled) return;
+        const newest = events.sort((a, b) => b.created_at - a.created_at)[0] ?? null;
+        setNote(newest);
+        setState(newest ? 'ready' : 'missing');
+        return;
+      }
+
+      if (target.kind === 'profile') {
+        setState('missing');
+        return;
+      }
+
+      const entry = await fetchNote(target.id, relays);
+      if (cancelled) return;
+      if (!entry) {
+        setState('missing');
+        return;
+      }
+      setNote({
+        id: entry.id,
+        pubkey: entry.pubkey,
+        content: entry.content,
+        created_at: entry.createdAt,
+        tags: entry.tags,
+        kind: KIND_NOTE,
+        sig: '',
+      });
+      setState('ready');
+    })().catch(() => {
+      if (!cancelled) setState('missing');
+    });
+
+    return () => { cancelled = true; };
+  }, [target, initialNote]);
+
+  const isArticle = useMemo(
+    () => (note ? renderModeFor(note.kind) === 'article' : false),
+    [note],
+  );
+
+  if (state === 'loading') {
+    return (
+      <div className="space-y-3 p-5" data-testid="note-viewer-loading">
+        {[0, 1, 2].map((item) => <div key={item} className="lc-skeleton h-24 rounded-xl" />)}
+      </div>
+    );
+  }
+
+  if (state === 'missing' || !note) {
+    return (
+      <div className="px-5 py-20 text-center" data-testid="note-viewer-missing">
+        <h1 className="text-lg font-semibold text-lc-white">{t('social.noteNotFoundTitle')}</h1>
+        <p className="mt-2 text-sm text-lc-muted">{t('social.noteNotFound')}</p>
+        <Link href="/app?s=feed" className="lc-pill-primary mt-6 inline-block px-5 py-2 text-xs">
+          {t('social.noteViewer.openApp')}
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div data-testid="note-viewer">
+      {isArticle ? (
+        <ArticleReader
+          note={note}
+          // The reader's author button was a dead click here: this page has no
+          // in-app profile pane, so send them to the public profile viewer.
+          onOpenProfile={(pubkey) => {
+            // Full-page navigation between two public viewers. `router.push`
+            // would make it client-side, which is a behaviour change (the
+            // profile viewer is server-rendered for its link preview) and
+            // not a lint fix; left as is in rounds 7 and 9.
+            try {
+              window.location.assign(localizedPath(locale, `/p/${nip19.npubEncode(pubkey)}`));
+            } catch {
+              window.location.assign(localizedPath(locale, `/p/${pubkey}`));
+            }
+          }}
+        />
+      ) : (
+        <div className="border-b border-lc-border">
+          <NoteCard note={note} />
+        </div>
+      )}
+    </div>
+  );
+}

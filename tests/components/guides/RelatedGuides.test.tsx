@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
+import { LocaleProvider } from '@tests/support/intl';
 import RelatedGuides from '@/components/guides/RelatedGuides';
 
 vi.mock('@/services/guides', () => ({
@@ -9,7 +10,7 @@ vi.mock('@/services/guides', () => ({
 async function renderAsync(node: Promise<React.ReactElement | null> | React.ReactElement | null) {
   const resolved = await node;
   if (resolved === null) throw new Error('expected the component to render, it returned null');
-  return render(resolved);
+  return render(<LocaleProvider initialLocale="en">{resolved}</LocaleProvider>);
 }
 
 describe('RelatedGuides', () => {

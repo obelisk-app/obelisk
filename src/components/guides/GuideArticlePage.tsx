@@ -2,15 +2,16 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
-import { LOCALES, type Locale } from '@/i18n';
+import { getTranslations } from 'next-intl/server';
+import type { Locale } from '@/i18n';
 import {
   readGuide,
   estimateReadMinutes,
   type GuideFrontmatter,
 } from '@/services/guides';
-import { guideAlternates, guidesHref, OG_LOCALE } from '@/utils/guides/guide-urls';
+import { guidePath } from '@/utils/guides/guide-urls';
+import { HREFLANG, SITE_URL, absoluteUrl, localizedAlternates, ogLocales } from '@/utils/seo/alternates';
 import ArticleShell from '@/components/guides/ArticleShell';
-import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
 import { mdxComponents } from '@/components/guides/mdx-components';
 import RelatedGuides from '@/components/guides/RelatedGuides';
 import {
@@ -51,26 +52,6 @@ function collectGuideImages(
   return out;
 }
 
-const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
-
-const CHROME: Record<Locale, Record<string, string>> = {
-  en: {
-    back: 'All guides',
-    readTime: 'min read',
-    updated: 'Updated',
-  },
-  es: {
-    back: 'Todas las guías',
-    readTime: 'min de lectura',
-    updated: 'Actualizado',
-  },
-  pt: {
-    back: 'Todos os guias',
-    readTime: 'min de leitura',
-    updated: 'Atualizado',
-  },
-};
-
 async function safeRead(locale: Locale, slug: string) {
   try {
     return await readGuide(locale, slug);
@@ -87,11 +68,11 @@ export async function buildGuideArticleMetadata(
   if (!guide) return {};
 
   const fm = guide.frontmatter as GuideFrontmatter;
-  const canonical = guidesHref(locale, slug);
+  const canonical = absoluteUrl(locale, guidePath(slug));
   const heroMeta = HERO_ASSET_META[fm.heroComponent];
   const heroUrl = heroMeta
     ? `${SITE_URL}${snapshotPaths(fm.heroComponent).png}`
-    : `${SITE_URL}${canonical}/opengraph-image`;
+    : `${canonical}/opengraph-image`;
   const heroWidth = heroMeta ? heroMeta.width * 2 : 1200;
   const heroHeight = heroMeta ? heroMeta.height * 2 : 630;
   const heroAlt = heroMeta?.alt ?? fm.title;
@@ -99,17 +80,13 @@ export async function buildGuideArticleMetadata(
   return {
     title: fm.title,
     description: fm.description,
-    alternates: {
-      canonical,
-      languages: guideAlternates(slug),
-    },
+    alternates: localizedAlternates(locale, guidePath(slug)),
     openGraph: {
       title: fm.title,
       description: fm.description,
-      url: `${SITE_URL}${canonical}`,
+      url: canonical,
       siteName: 'Obelisk',
-      locale: OG_LOCALE[locale],
-      alternateLocale: LOCALES.filter((l) => l !== locale).map((l) => OG_LOCALE[l]),
+      ...ogLocales(locale),
       type: 'article',
       publishedTime: fm.publishedAt,
       modifiedTime: fm.updatedAt,
@@ -144,15 +121,15 @@ export default async function GuideArticlePage({
   if (!guide) notFound();
 
   const fm = guide.frontmatter as GuideFrontmatter;
-  const chrome = CHROME[locale];
+  const t = await getTranslations({ locale });
   const readMinutes = fm.readMinutes ?? estimateReadMinutes(guide.content);
-  const canonical = guidesHref(locale, slug);
+  const canonical = absoluteUrl(locale, guidePath(slug));
 
   const guideImages = collectGuideImages(fm.heroComponent, guide.content, SITE_URL);
   const heroMeta = HERO_ASSET_META[fm.heroComponent];
   const heroUrl = heroMeta
     ? `${SITE_URL}${snapshotPaths(fm.heroComponent).png}`
-    : `${SITE_URL}${canonical}/opengraph-image`;
+    : `${canonical}/opengraph-image`;
   const heroWidth = heroMeta ? heroMeta.width * 2 : 1200;
   const heroHeight = heroMeta ? heroMeta.height * 2 : 630;
   const heroAlt = heroMeta?.alt ?? fm.title;
@@ -164,7 +141,7 @@ export default async function GuideArticlePage({
     description: fm.description,
     datePublished: fm.publishedAt,
     dateModified: fm.updatedAt,
-    inLanguage: locale === 'en' ? 'en' : 'es-AR',
+    inLanguage: HREFLANG[locale],
     image: [
       {
         '@type': 'ImageObject',
@@ -198,14 +175,13 @@ export default async function GuideArticlePage({
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `${SITE_URL}${canonical}`,
+      '@id': canonical,
     },
     keywords: fm.tags?.join(', '),
   };
 
   return (
     <div className="min-h-screen bg-lc-black lc-grid-bg">
-      <GuideLocaleSync locale={locale} />
       <Navbar />
       <script
         type="application/ld+json"
@@ -216,10 +192,10 @@ export default async function GuideArticlePage({
         locale={locale}
         slug={slug}
         readMinutes={readMinutes}
-        backHref={guidesHref(locale)}
-        backLabel={chrome.back}
-        readTimeLabel={chrome.readTime}
-        updatedLabel={chrome.updated}
+        backHref={guidePath()}
+        backLabel={t('guides.article.back')}
+        readTimeLabel={t('guides.article.readTime')}
+        updatedLabel={t('guides.article.updated')}
       >
         <MDXRemote
           source={guide.content}
@@ -232,7 +208,7 @@ export default async function GuideArticlePage({
           options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
         />
       </ArticleShell>
-      <Footer localeOverride={locale} />
+      <Footer />
     </div>
   );
 }

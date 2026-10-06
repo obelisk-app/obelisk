@@ -1,7 +1,7 @@
 'use client';
 
 import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import Range from '@/components/ui/Range';
 import RemoteImage from '@/components/ui/RemoteImage';
@@ -30,7 +30,7 @@ export function VoiceMessage({
   autoLoad?: boolean;
 }) {
   const { formatTime } = useFormat();
-  const { t } = useTranslation();
+  const t = useTranslations();
   const {
     audioRef, playing, setPlaying, playbackRate, current, setCurrent,
     duration, setDuration, progress, toggle, cyclePlaybackRate, seek,
@@ -82,7 +82,7 @@ export function VoiceMessage({
             step={0.1}
             value={Math.min(current, Math.max(duration, 1))}
             onChange={(event) => seek(Number(event.target.value))}
-            aria-label={t('voiceNote.progress')}
+            aria-label={t('chat.voiceNote.progress')}
           />
         </span>
         <span className={`flex justify-between text-[11px] leading-none text-[#aebac1] ${compact ? "mt-0.5" : "absolute bottom-0 left-0 right-3"}`} data-testid="voice-time-row">
@@ -97,7 +97,7 @@ export function VoiceMessage({
       {!compact && (
         <span className="relative h-14 w-14 shrink-0" data-testid="voice-avatar">
           {authorPicture ? (
-            <RemoteImage src={authorPicture} alt={t('voiceNote.sender')} className="h-14 w-14 rounded-full object-cover" />
+            <RemoteImage src={authorPicture} alt={t('chat.voiceNote.sender')} className="h-14 w-14 rounded-full object-cover" />
           ) : (
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#6b7c85] text-white/80">
               <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm-8 9a8 8 0 0 1 16 0Z" /></svg>
@@ -112,7 +112,7 @@ export function VoiceMessage({
               onClick={cyclePlaybackRate}
               className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-black/60 text-sm font-bold text-white backdrop-blur-[1px]"
               aria-label={`Playback speed ${playbackRate}x`}
-              title={t('voiceNote.speed')}
+              title={t('chat.voiceNote.speed')}
             >
               {playbackRate}x
             </button>

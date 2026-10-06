@@ -15,7 +15,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { copyWithToast } from '@/services/clipboard';
 import { safeNpub } from '@/utils/identity/short-npub';
 import { usePreferences } from '@/hooks/usePreferences';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
 import Button from '@/components/ui/Button';
@@ -42,7 +42,7 @@ export default function NoteMenu({
   isMine: boolean;
   onDeleted?: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const relays = usePreferences().socialRelays;
   const activeRelay = useCurrentRelayUrl();
   // A note that came from a NIP-29 group is only fully meaningful inside it:
@@ -139,7 +139,7 @@ export default function NoteMenu({
             anywhere and have it open as a page with a name on it.
           */}
           <MenuItem
-            onClick={() => copy(profileUrl(note.pubkey, relays), t('profileFeed.linkCopied'))}
+            onClick={() => copy(profileUrl(note.pubkey, relays), t('social.profileFeed.linkCopied'))}
             testId="note-menu-copy-author-link"
             label={t('social.copyAuthorLink')}
           />
@@ -164,7 +164,7 @@ export default function NoteMenu({
               <MenuItem
                 onClick={() => { toggleMute(note.pubkey); setOpen(false); }}
                 testId="note-menu-mute"
-                label={t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
+                label={t(muted ? 'social.profileFeed.unmute' : 'social.profileFeed.mute')}
               />
             </>
           )}

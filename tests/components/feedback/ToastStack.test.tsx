@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import ToastStack from '@/components/feedback/ToastStack';
 import { useToastStore } from '@/store/toast';
 

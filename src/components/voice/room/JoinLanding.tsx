@@ -6,7 +6,7 @@
  * from the last attempt. Pure presentation.
  */
 import type { ActiveCallInfo } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import { PassiveCallRoster, StageBackdrop } from './chrome';
 import { RoomHeader } from './header';
@@ -26,7 +26,7 @@ export function JoinLanding({
   chatSlot?: React.ReactNode;
   isChatOpen?: boolean;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <div className="relative flex-1 flex min-h-0 p-2 sm:p-3 gap-2" data-testid="voice-channel">
       <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden rounded-2xl border border-lc-border bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-800 shadow-2xl">

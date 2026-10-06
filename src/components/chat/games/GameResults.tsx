@@ -4,7 +4,7 @@ import type { GameSession } from '@/lib/games/session';
 import { gameIcon, gameName } from '@/lib/games/catalog';
 import { isDraw } from '@/lib/games/standings';
 import { rowsFor } from './results-rows';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 /**
  * How a match ended, for everyone.
@@ -23,7 +23,7 @@ export default function GameResults({
   seatLabel: (seatId: string) => string;
   myPubkey: string | null;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const rows = rowsFor(session);
   const mine = session.seats.filter((s) => s.by === myPubkey).map((s) => s.id);
 

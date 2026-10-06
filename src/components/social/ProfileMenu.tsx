@@ -17,7 +17,7 @@
 import { useRef, useState } from 'react';
 import { copyWithToast } from '@/services/clipboard';
 import { safeNpub } from '@/utils/identity/short-npub';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { usePreferences } from '@/hooks/usePreferences';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
@@ -45,7 +45,7 @@ export default function ProfileMenu({
   /** Lets a popover host close itself when the menu navigates away. */
   onBeforeAction?: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const relays = usePreferences().socialRelays;
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -69,7 +69,7 @@ export default function ProfileMenu({
     try {
       if (navigator.share) await navigator.share({ title: displayName, url });
       else await navigator.clipboard?.writeText(url);
-      toast(t('profileFeed.profileShared'));
+      toast(t('social.profileFeed.profileShared'));
     } catch {
       // Share sheet dismissed: not an error worth surfacing.
     }
@@ -104,21 +104,21 @@ export default function ProfileMenu({
         panelClassName={MENU_PANEL_CLASS}
       >
         <>
-          <MenuItem icon={<ShareIcon />} label={t('profileFeed.shareProfile')} onClick={() => void share()} testId="profile-menu-share" />
-          <MenuItem icon={<LinkIcon />} label={t('profileFeed.copyProfileLink')} onClick={() => copy(url, t('profileFeed.linkCopied'))} testId="profile-menu-copy-link" />
-          <MenuLink icon={<ExternalIcon />} label={t('profileFeed.openProfilePage')} href={url} testId="profile-menu-open-page" />
+          <MenuItem icon={<ShareIcon />} label={t('social.profileFeed.shareProfile')} onClick={() => void share()} testId="profile-menu-share" />
+          <MenuItem icon={<LinkIcon />} label={t('social.profileFeed.copyProfileLink')} onClick={() => copy(url, t('social.profileFeed.linkCopied'))} testId="profile-menu-copy-link" />
+          <MenuLink icon={<ExternalIcon />} label={t('social.profileFeed.openProfilePage')} href={url} testId="profile-menu-open-page" />
 
           <MenuDivider />
 
-          <MenuItem icon={<KeyIcon />} label={t('profileFeed.copyNpub')} onClick={() => copy(npub, t('profileFeed.npubCopied'))} testId="profile-menu-copy-npub" />
-          <MenuItem icon={<HashIcon />} label={t('profileFeed.copyHex')} onClick={() => copy(pubkey, t('profileFeed.hexCopied'))} testId="profile-menu-copy-hex" />
+          <MenuItem icon={<KeyIcon />} label={t('social.profileFeed.copyNpub')} onClick={() => copy(npub, t('social.profileFeed.npubCopied'))} testId="profile-menu-copy-npub" />
+          <MenuItem icon={<HashIcon />} label={t('social.profileFeed.copyHex')} onClick={() => copy(pubkey, t('social.profileFeed.hexCopied'))} testId="profile-menu-copy-hex" />
 
           {onZap && (
             <>
               <MenuDivider />
               <MenuItem
                 icon={<ZapIcon />}
-                label={t('profilePopover.zap')}
+                label={t('chat.profilePopover.zap')}
                 onClick={() => { setOpen(false); onBeforeAction?.(); onZap(); }}
                 testId="profile-menu-zap"
               />
@@ -130,14 +130,14 @@ export default function ProfileMenu({
               <MenuDivider />
               <MenuItem
                 icon={<BellOffIcon />}
-                label={t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
+                label={t(muted ? 'social.profileFeed.unmute' : 'social.profileFeed.mute')}
                 onClick={() => { toggleMute(pubkey); setOpen(false); }}
                 testId="profile-menu-mute"
               />
               <MenuItem
                 icon={<BanIcon />}
                 danger
-                label={t(blocked ? 'profileFeed.unblock' : 'profileFeed.block')}
+                label={t(blocked ? 'social.profileFeed.unblock' : 'social.profileFeed.block')}
                 onClick={() => { toggleBlock(pubkey); setOpen(false); }}
                 testId="profile-menu-block"
               />

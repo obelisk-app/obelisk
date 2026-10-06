@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import SlashCommandAutocomplete, { SLASH_COMMANDS } from '@/components/chat/SlashCommandAutocomplete';
 import { gameCatalog } from '@/lib/games/catalog';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 describe('/play command', () => {
   const play = SLASH_COMMANDS.find((c) => c.name === 'play')!;

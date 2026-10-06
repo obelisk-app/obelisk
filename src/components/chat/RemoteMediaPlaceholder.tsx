@@ -9,11 +9,11 @@
  * paragraph) and reachable from the keyboard.
  */
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 
 export function RemoteMediaPlaceholder({ onReveal, compact = false }: { onReveal: () => void; compact?: boolean }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <Button
       variant="outline"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type ReactNode } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { DEFAULT_FORUM_PREFS, type ForumPrefs } from '@/services/forum-prefs';
 import { useDismiss } from '@/hooks/useDismiss';
 import { MenuItem } from '@/components/ui/menu';
@@ -18,7 +18,7 @@ export function SortViewMenu({
   prefs: ForumPrefs;
   onChange: (p: Partial<ForumPrefs>) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const close = () => setOpen(false);
@@ -34,7 +34,7 @@ export function SortViewMenu({
         aria-expanded={open}
       >
         <SortIcon />
-        <span>{t('forum.sortTitle')}</span>
+        <span>{t('chat.forum.sortTitle')}</span>
         <ChevronDownIcon />
       </Button>
       {open && (
@@ -43,43 +43,43 @@ export function SortViewMenu({
           className="absolute left-0 top-full mt-1.5 z-30 w-60 rounded-xl border border-lc-border bg-lc-dark p-3 shadow-xl space-y-3"
           data-testid="forum-sortview-menu"
         >
-          <MenuSection title={t('forum.sortBy')}>
+          <MenuSection title={t('chat.forum.sortBy')}>
             <RadioRow
-              label={t('forum.sortActive')}
+              label={t('chat.forum.sortActive')}
               checked={prefs.sortBy === 'recent'}
               onClick={() => onChange({ sortBy: 'recent' })}
               testId="forum-sort-recent"
             />
             <RadioRow
-              label={t('forum.sortCreated')}
+              label={t('chat.forum.sortCreated')}
               checked={prefs.sortBy === 'created'}
               onClick={() => onChange({ sortBy: 'created' })}
               testId="forum-sort-created"
             />
           </MenuSection>
-          <MenuSection title={t('forum.viewAs')}>
+          <MenuSection title={t('chat.forum.viewAs')}>
             <RadioRow
-              label={t('forum.viewList')}
+              label={t('chat.forum.viewList')}
               checked={prefs.viewMode === 'list'}
               onClick={() => onChange({ viewMode: 'list' })}
               testId="forum-view-list"
             />
             <RadioRow
-              label={t('forum.viewGallery')}
+              label={t('chat.forum.viewGallery')}
               checked={prefs.viewMode === 'gallery'}
               onClick={() => onChange({ viewMode: 'gallery' })}
               testId="forum-view-gallery"
             />
           </MenuSection>
-          <MenuSection title={t('forum.tagMatching')}>
+          <MenuSection title={t('chat.forum.tagMatching')}>
             <RadioRow
-              label={t('forum.matchAny')}
+              label={t('chat.forum.matchAny')}
               checked={prefs.tagMatch === 'any'}
               onClick={() => onChange({ tagMatch: 'any' })}
               testId="forum-match-any"
             />
             <RadioRow
-              label={t('forum.matchAll')}
+              label={t('chat.forum.matchAll')}
               checked={prefs.tagMatch === 'all'}
               onClick={() => onChange({ tagMatch: 'all' })}
               testId="forum-match-all"
@@ -90,7 +90,7 @@ export function SortViewMenu({
             onClick={() => onChange(DEFAULT_FORUM_PREFS)} className="text-xs"
             data-testid="forum-sortview-reset"
           >
-            {t('forum.reset')}
+            {t('chat.forum.reset')}
           </TextButton>
         </div>
       )}

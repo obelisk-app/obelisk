@@ -1,0 +1,111 @@
+{
+  "features": {
+    "title": "Features - Nostr group chat, video calls, games, stickers, and mobile PWA",
+    "description": "Explore Obelisk features: NIP-29 groups, voice messages, sticker packs, relay-native multiplayer games, mobile PWA, P2P video, large SFU calls, and portable Nostr profiles.",
+    "ogTitle": "Obelisk Features - relay-native group chat and calls",
+    "ogDescription": "Relay-native groups, voice messages, sticker packs, multiplayer games, mobile PWA, P2P video, large calls, and portable Nostr profiles.",
+    "twitterTitle": "Obelisk Features - Nostr group chat, calls, stickers, and PWA",
+    "twitterDescription": "Explore relay-native groups, voice messages, stickers, games, mobile PWA, P2P video, SFU calls, and portable Nostr profiles."
+  },
+  "relay": {
+    "ogTagline": "No emails. No passwords. Cryptographic identity.",
+    "ogAlt": "Relay on Obelisk",
+    "fallbackTitle": "Obelisk relay",
+    "fallbackSubtitle": "Nostr group chat",
+    "laCrypta": {
+      "title": "La Crypta on Obelisk - Nostr group chat",
+      "description": "Join La Crypta on Obelisk. Group chat powered by Nostr identity: no email, no password.",
+      "ogSubtitle": "on Obelisk - Nostr group chat"
+    }
+  },
+  "site": {
+    "title": "Obelisk - Discord alternative with Nostr login. No email, no password.",
+    "description": "The Discord alternative for crypto and privacy communities. Log in with your Nostr keys: no email, no password, no phone number. Servers, channels, voice and encrypted DMs, with Web of Trust spam resistance.",
+    "ogTitle": "Obelisk - Discord alternative with Nostr login",
+    "ogDescription": "Group chat for crypto and privacy folks. Log in with your Nostr keys: no email, no password. Servers, voice, encrypted DMs, Web of Trust spam resistance.",
+    "twitterDescription": "Group chat for crypto and privacy folks. Log in with your Nostr keys: no email, no password.",
+    "ogImageAlt": "Obelisk - Group chat powered by Nostr identity",
+    "jsonLd": {
+      "websiteDescription": "Discord alternative with Nostr login: no email, no password. Group chat for crypto and privacy communities.",
+      "appDescription": "Discord alternative powered by Nostr identity. Log in with your keys: no email, no password. Includes servers, channels, voice, encrypted DMs and Web of Trust spam resistance."
+    }
+  },
+  "app": {
+    "title": "App",
+    "description": "Open Obelisk: group chat, voice and encrypted DMs over Nostr relays, signed with your own keys."
+  },
+  "desktop": {
+    "title": "Obelisk Desktop - Discord alternative for the open Nostr stack",
+    "description": "A guided tour of Obelisk on desktop: a Nostr-powered Discord alternative with NIP-29 group chat, publications, mediasoup SFU voice, encrypted DMs, and Lightning zaps. No email, no password, just your keys.",
+    "ogDescription": "A guided tour of Obelisk on desktop: NIP-29 group chat, publications, mediasoup SFU voice, encrypted DMs and Lightning zaps.",
+    "twitterDescription": "A desktop tour of Obelisk: NIP-29 group chat, publications, SFU voice, encrypted DMs and Lightning zaps. No email, no password.",
+    "imageAlt": "Obelisk desktop: large voice channel with SFU test peer transmission",
+    "gallery": {
+      "name": "Obelisk on desktop: screenshot tour",
+      "description": "Screenshots of Obelisk, a Nostr-powered Discord alternative, captured in a desktop browser.",
+      "shot": "Obelisk desktop: {name}"
+    },
+    "shots": {
+      "chat": "Group chat with member list on desktop",
+      "publications": "NIP-29 publications on desktop",
+      "voice": "Large voice channel via SFU on desktop"
+    }
+  },
+  "mobile": {
+    "title": "Obelisk Mobile - Discord-style group chat for your phone",
+    "description": "See Obelisk on mobile: a Nostr-powered Discord alternative with NIP-29 group chat, voice channels, encrypted DMs, and Lightning zaps. No email, no password, just your keys.",
+    "ogTitle": "Obelisk Mobile - Nostr group chat on your phone",
+    "ogDescription": "A guided tour of Obelisk on mobile: Nostr login, NIP-29 channels, voice with SFU, encrypted DMs and Lightning zaps.",
+    "twitterDescription": "A mobile tour of Obelisk: NIP-29 channels, voice, encrypted DMs and Lightning zaps. No email, no password.",
+    "imageAlt": "Obelisk mobile: login, channels, voice with SFU, and profile screens",
+    "gallery": {
+      "name": "Obelisk on mobile: screenshot tour",
+      "description": "Screenshots of Obelisk, a Nostr-powered Discord alternative, captured on a phone.",
+      "shot": "Obelisk mobile: {name}"
+    },
+    "shots": {
+      "channels": "Servers and channels on mobile",
+      "voice": "Voice channel with video on mobile (SFU)",
+      "login": "Sign in with Nostr on mobile",
+      "profile": "Your Nostr profile on mobile"
+    }
+  },
+  "help": {
+    "title": "Help - Nostr login, relays, communities, and Bitcoin zaps",
+    "description": "Get help with Obelisk: learn Nostr identity, relay-based groups, community administration, privacy, Lightning payments, and Bitcoin zaps.",
+    "ogTitle": "Obelisk Help - guides for Nostr chat and communities",
+    "ogDescription": "Guides for Nostr identity, relay-based groups, community administration, privacy, Lightning payments, and Bitcoin zaps.",
+    "twitterTitle": "Obelisk Help - Nostr chat and community guides",
+    "twitterDescription": "Learn Nostr identity, relay-based groups, community administration, privacy, Lightning payments, and Bitcoin zaps.",
+    "imageAlt": "Obelisk: group chat powered by Nostr identity"
+  },
+  "mediaKit": {
+    "title": "Media Kit - Obelisk",
+    "description": "Press & media kit for Obelisk: logos, banners, icons, color tokens, copy and ready-to-embed HTML banners.",
+    "ogTitle": "Obelisk - Media Kit",
+    "ogDescription": "Logos, banners, icons, brand colors and embed snippets for Obelisk."
+  },
+  "guides": {
+    "title": "Guides · Obelisk",
+    "description": "Long-form guides about Obelisk, Nostr identity, Web of Trust spam resistance, and relay-based Nostr groups.",
+    "ogLabel": "Guide",
+    "ogAlt": "Obelisk guide"
+  },
+  "notes": {
+    "notFound": "Note not found",
+    "title": "{name} on Obelisk",
+    "untitledArticle": "Untitled article",
+    "sharedMedia": "Shared media"
+  },
+  "profile": {
+    "notFound": "Profile not found",
+    "onNostr": "{name} on Nostr"
+  },
+  "tag": {
+    "notFound": "Tag not found",
+    "description": "Notes tagged #{tag} on Nostr, via Obelisk."
+  },
+  "manifest": {
+    "description": "Discord-style group chat with Nostr cryptographic identity. No emails, no passwords."
+  }
+}

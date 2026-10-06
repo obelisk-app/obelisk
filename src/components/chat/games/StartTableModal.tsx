@@ -5,7 +5,7 @@ import Input from '@/components/ui/Input';
 import type { GameSession } from '@/lib/games/session';
 import type { SeatSpec } from '@/lib/games/protocol';
 import { gameInfo, gameName } from '@/lib/games/catalog';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useSeatRows } from '@/hooks/chat/games/start-table/useSeatRows';
 import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
@@ -42,7 +42,7 @@ export default function StartTableModal({
   onClose: () => void;
   onStart: (seats: SeatSpec[]) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   // Real-time games give every player their own board, running at the same
   // time, so an account can hold exactly one seat. Hot-seat is meaningless
   // there: you cannot pass a keyboard between people who are all playing.
@@ -91,8 +91,8 @@ export default function StartTableModal({
                   {realtime ? 'own device' : shared ? `on ${nameOf(row.by)}'s machine` : 'remote'}
                 </span>
                 <div className="flex shrink-0 items-center gap-0.5">
-                  <Button variant="ghost" size="icon" onClick={() => move(i, -1)} aria-label={t('desktop.layout.moveUp')}>↑</Button>
-                  <Button variant="ghost" size="icon" onClick={() => move(i, 1)} aria-label={t('desktop.layout.moveDown')}>↓</Button>
+                  <Button variant="ghost" size="icon" onClick={() => move(i, -1)} aria-label={t('shell.desktop.layout.moveUp')}>↑</Button>
+                  <Button variant="ghost" size="icon" onClick={() => move(i, 1)} aria-label={t('shell.desktop.layout.moveDown')}>↓</Button>
                   {!savedPlayers && rows.length > session.minPlayers && (
                     <Button
                       variant="ghost"

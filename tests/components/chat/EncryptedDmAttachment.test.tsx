@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EncryptedDmAttachment } from '@/components/chat/EncryptedDmAttachment';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { encryptFile } from '@/lib/crypto/file-cipher';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 

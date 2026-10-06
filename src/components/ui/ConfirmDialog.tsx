@@ -16,7 +16,7 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import Button from './Button';
 import Modal from './Modal';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { LogOutIcon, TrashIcon } from './icons';
 import {
   getPendingConfirm, settleConfirm, subscribeConfirm, type PendingConfirm,
@@ -34,7 +34,7 @@ export function ConfirmDialogHost() {
 }
 
 function ConfirmDialogPanel({ pending }: { pending: PendingConfirm }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const tone = pending.tone ?? 'danger';
   const icon = pending.icon ?? (tone === 'danger' ? 'trash' : 'none');
@@ -95,7 +95,7 @@ function ConfirmDialogPanel({ pending }: { pending: PendingConfirm }) {
             onClick={() => settleConfirm(true)}
             data-testid="confirm-dialog-confirm"
           >
-            {pending.confirmLabel ?? t('confirm.delete')}
+            {pending.confirmLabel ?? t('common.confirm.delete')}
           </Button>
         </div>
       </div>

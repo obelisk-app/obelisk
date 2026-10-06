@@ -18,7 +18,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { uploadToBlossom } from '@/services/blossom';
 import { publishNote, publishQuote, publishReply, type Attachment } from '@/services/social/publish';
 
@@ -95,7 +95,7 @@ export function useNoteDraft({
   onPublished?: (event: NostrEvent) => void;
   autoFocus?: boolean;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [draft, setDraft] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [busy, setBusy] = useState(false);

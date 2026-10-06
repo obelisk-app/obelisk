@@ -16,9 +16,9 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 | `src/services/dm/opt-in.ts` | The `directMessagesEnabled` preference gate. The only surviving file under `src/services/dm/`. |
 | `src/store/dm.ts` | Zustand UI state: `activeDMPubkey`, `isDMMode`, and the persisted per-peer `protocolOverrides`. |
 | `src/services/pq/` | Post-quantum: attestation lookup, own-capability detection, status computation, send-plan resolution. |
-| `src/app/app/DMList.tsx`, `DMComposer.tsx`, `DMOptInGate.tsx` | Shared DM UI. |
-| `src/app/app/DesktopShell.tsx` (`DMPanel`) | Desktop thread view. |
-| `src/app/app/mobile/PhoneShell.tsx` (`DmThreadScreen`) | Mobile thread view. |
+| `src/app/[locale]/app/DMList.tsx`, `DMComposer.tsx`, `DMOptInGate.tsx` | Shared DM UI. |
+| `src/app/[locale]/app/DesktopShell.tsx` (`DMPanel`) | Desktop thread view. |
+| `src/app/[locale]/app/mobile/PhoneShell.tsx` (`DmThreadScreen`) | Mobile thread view. |
 | `src/components/chat/PqConversationNotice.tsx`, `PqMessageMark.tsx` | Post-quantum indicators. |
 | `src/components/chat/DmComposer.tsx` | The thread's message bar: the channel bar's widgets (attach, voice note, emoji / GIF / sticker picker, drop, paste) with encrypted uploads. Both shells mount it with `key={peer}`. |
 | `src/components/chat/DmMessageBody.tsx`, `EncryptedDmAttachment.tsx` | What goes inside a bubble; the fetch → verify → decrypt path for file messages. |
@@ -260,6 +260,6 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - `tests/lib/crypto/file-cipher.test.ts`, `tests/utils/attachments/dm-file.test.ts`, `tests/services/dm-attachments.test.ts`, `tests/services/blossom.test.ts`: the file path end to end, without a relay.
 - `src/components/chat/DmComposer.test.tsx`, `DmMessageBody.test.tsx`, `EncryptedDmAttachment.test.tsx`: the bar, the bubble body, decrypt / integrity failure / revoke.
 - `src/services/pq/*.test.ts`: attestations, capability, status lattice, send-plan resolution.
-- `src/app/app/DMPanel.pq.test.tsx`: indicator mounting, mark aggregation, on-accent contrast.
-- `src/app/app/DMList.identity.test.tsx`: the peer resolves through the social tier, and one batched lookup per list.
+- `src/app/[locale]/app/DMPanel.pq.test.tsx`: indicator mounting, mark aggregation, on-accent contrast.
+- `src/app/[locale]/app/DMList.identity.test.tsx`: the peer resolves through the social tier, and one batched lookup per list.
 - `src/components/chat/DMThreadMenu.test.tsx`: the ⋯ actions, and that they close after acting.

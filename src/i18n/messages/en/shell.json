@@ -1,0 +1,374 @@
+{
+  "inbox": {
+    "title": "Inbox",
+    "empty": "No notifications yet",
+    "markAllRead": "Mark all read",
+    "type": {
+      "mention": "Mentioned you",
+      "dm": "Direct message"
+    },
+    "tab": {
+      "dms": "DMs",
+      "mentions": "Mentions"
+    },
+    "timeAgo": {
+      "now": "now",
+      "minutes": "{n}m",
+      "hours": "{n}h",
+      "days": "{n}d"
+    }
+  },
+  "rail": {
+    "backgroundUnread": "{count} unread mentions or replies",
+    "directMessages": "Direct messages",
+    "nostrFeed": "Nostr feed",
+    "addRelay": "Add relay",
+    "unreadTitle": "Unread mentions or replies",
+    "unreadAria": "Unread mentions or replies on this relay",
+    "switchTo": "Switch to relay",
+    "copyShareLink": "Copy share link",
+    "copyPrompt": "Copy this link",
+    "remove": "Remove",
+    "confirmRemove": "Remove relay {host}?",
+    "addModal": {
+      "title": "Add a relay",
+      "subtitle": "Pick a popular relay or enter a custom URL to connect.",
+      "suggested": "Suggested",
+      "custom": "Custom URL",
+      "urlLabel": "Relay URL",
+      "urlHint": "Paste a NIP-29 group relay URL. Each relay is a separate “server” in the rail.",
+      "adding": "Adding…",
+      "add": "Add",
+      "added": "Added"
+    },
+    "confirmRemoveBody": "You can add it back later."
+  },
+  "user": {
+    "settings": "User settings",
+    "editProfile": "Edit profile",
+    "appPreferences": "App preferences",
+    "about": "About",
+    "copyNpub": "Copy npub",
+    "copyPubkeyHex": "Copy pubkey (hex)",
+    "openNostrClient": "Open in another Nostr client",
+    "logOut": "Log out",
+    "field": {
+      "name": "Name",
+      "picture": "Picture",
+      "banner": "Banner",
+      "website": "Website",
+      "lud16": "Lightning address",
+      "nip05": "NIP-05"
+    },
+    "nameRequired": "Name is required",
+    "notSignedIn": "Not signed in",
+    "publishFailed": "Failed to publish"
+  },
+  "desktop": {
+    "empty": {
+      "title": "Pick a channel or DM",
+      "description": "Choose from the sidebar, or hit + to create a new channel."
+    },
+    "channel": {
+      "loadingInfo": "Loading channel info...",
+      "loadingMessages": "Loading messages...",
+      "loadingEarlier": "Loading earlier messages...",
+      "noEarlierMessages": "No earlier messages",
+      "welcome": "Welcome to #{name}",
+      "noMessages": "No messages yet. Be the first.",
+      "notVisible": "Channel not visible on this relay",
+      "notVisibleDescription": "The link points to {id}, but this relay isn't exposing it to you. You may need to be added as a member, or switch to the relay that hosts it.",
+      "settings": "Channel settings",
+      "hideMembers": "Hide member list",
+      "showMembers": "Show member list",
+      "namePlaceholder": "channel name",
+      "closed": "Closed (invite only)",
+      "kindText": "Text",
+      "kindVoice": "Voice / Video",
+      "kindSfu": "Big-room voice",
+      "kindForum": "Publications",
+      "forumTags": "Publication tags",
+      "members": "Members",
+      "saveHelp": "Changes publish as NIP-29 kind 9002.",
+      "accessHint": "Relay-enforced NIP-29 permissions",
+      "publicHint": "Everyone can read and post",
+      "readOnlyHint": "Everyone reads; members post",
+      "privateHint": "Hidden; members only",
+      "textHint": "Messages, replies, reactions",
+      "voiceHint": "P2P mesh, up to 8 people",
+      "sfuHint": "SFU-routed, up to 50 people",
+      "forumHint": "A feed of publications, each with its own chat",
+      "voiceHelp": "Adds a <tag></tag> tag. Members open <url></url> to join.",
+      "sfuHelp": "Adds a <tag></tag> tag. Same join surface as voice, but the channel signals to operators “expect a big room”. An authorized SFU joins and forwards everyone’s media so the room scales past the 8-peer mesh ceiling.",
+      "forumHelp": "Adds a <tag></tag> tag (the wire value keeps its original name). The channel renders as a feed of publications instead of a chat stream: each publication is its own channel, with its own conversation."
+    },
+    "composer": {
+      "replyingTo": "Replying to",
+      "cancelReply": "Cancel reply",
+      "removeAttachment": "Remove attachment",
+      "attachMedia": "Attach media",
+      "placeholder": "Message #{name}",
+      "addEmoji": "Add emoji"
+    },
+    "invite": {
+      "copy": "Copy invite link",
+      "copiedTitle": "Link copied. Only members of this relay can open it"
+    },
+    "voiceChat": {
+      "dragResize": "Drag to resize",
+      "chat": "Chat",
+      "hideChat": "Hide chat"
+    },
+    "message": {
+      "jumpToReply": "Jump to replied message",
+      "muteFailed": "Could not mute",
+      "cannotZapSelf": "Cannot zap yourself",
+      "confirmDeleteEveryone": "Delete this message for everyone?",
+      "confirmDeleteOwn": "Delete your message?",
+      "replyingToMessage": "replying to a message",
+      "moreActions": "More actions",
+      "copyText": "Copy text",
+      "textCopied": "Text copied",
+      "reply": "Reply",
+      "zap": "Zap",
+      "linkCopied": "Link copied",
+      "copyLink": "Copy link",
+      "unmuteUser": "Unmute user",
+      "muteUser": "Mute user",
+      "deleteEveryone": "Delete for everyone",
+      "deleteMessage": "Delete message",
+      "confirmDeleteEveryoneBody": "It will be removed from the channel for everyone.",
+      "confirmDeleteOwnBody": "It will be removed from the channel."
+    },
+    "reactions": {
+      "addReaction": "Add reaction",
+      "andMore": "...and {count} more",
+      "removeEveryone": "Remove reactions for everyone",
+      "removeOwn": "Remove your reaction",
+      "react": "React",
+      "alreadyReacted": "Already reacted",
+      "reactEmoji": "React {emoji}",
+      "moreEmojis": "More emojis...",
+      "openEmojiPicker": "Open emoji picker",
+      "count": "{count, plural, one {# reaction} other {# reactions}}"
+    },
+    "inbox": {
+      "markRead": "Mark read",
+      "caughtUpDms": "No new direct messages.",
+      "caughtUpMentions": "No mentions on this relay.",
+      "markReadDmsTitle": "Mark all direct messages as read",
+      "markReadMentionsTitle": "Mark all mentions on this relay as read",
+      "type": {
+        "mention": "@ Mention",
+        "reply": "↩ Reply"
+      }
+    },
+    "channels": {
+      "loading": "Loading channels…",
+      "empty": "No channels on this relay yet."
+    },
+    "header": {
+      "openMenu": "Open menu"
+    },
+    "pane": {
+      "resize": "Drag to resize"
+    },
+    "server": {
+      "settings": "Server settings",
+      "settingsHelp": "Available only to the relay operator."
+    },
+    "branding": {
+      "appearance": "Appearance",
+      "title": "Relay branding"
+    },
+    "layout": {
+      "dragCategory": "Drag category",
+      "categoryName": "Category name",
+      "channelCategory": "Category for {channel}",
+      "dragChannel": "Drag channel",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "grabHint": "Grab ⠿ to arrange",
+      "empty": "No categories yet. Add one above to start organizing.",
+      "dropHere": "Drop channels here",
+      "allPlaced": "All channels are placed in categories.",
+      "saveHelp": "Saved as a single replaceable kind 30078 event signed by you."
+    },
+    "me": {
+      "profile": "Profile",
+      "settings": "Settings"
+    },
+    "members": {
+      "addPlaceholder": "npub1… or hex pubkey",
+      "addLabel": "Member npub or hex pubkey",
+      "loading": "Loading members…",
+      "demoteHelp": "Strip admin role; keep them in the channel as a regular member.",
+      "remove": "Remove"
+    },
+    "tags": {
+      "emoji": "Tag emoji",
+      "name": "Tag name",
+      "remove": "Remove tag",
+      "empty": "No tags yet. Add one to give publication authors something to pick."
+    },
+    "sfu": {
+      "operator": "SFU operator (kind 30078 pin)",
+      "url": "SFU URL",
+      "verified": "Verified",
+      "help": "Enter one SFU URL. Obelisk verifies its <info></info> descriptor and stores the returned identity automatically. Calls authenticate directly to the SFU; Nostr relays are only a compatibility fallback.",
+      "verifyHelp": "The SFU checks your signed Nostr identity and whitelist when you join. The full pubkey above is available for advanced verification."
+    },
+    "voice": {
+      "liveTitle": "Live call in progress",
+      "live": "Live"
+    },
+    "gotIt": "Got it",
+    "zaps": {
+      "count": "{count, plural, one {# zap} other {# zaps}}"
+    }
+  },
+  "search": {
+    "open": "Open search",
+    "close": "Close search",
+    "filters": {
+      "title": "Filters",
+      "fromUser": {
+        "title": "From a specific user",
+        "example": "from: user"
+      },
+      "inChannel": {
+        "title": "Sent in a specific channel",
+        "example": "in: channel"
+      },
+      "has": {
+        "title": "Includes a specific type of data",
+        "example": "has: link, embed or file"
+      },
+      "mentions": {
+        "title": "Mentions a specific user",
+        "example": "mentions: user"
+      },
+      "date": {
+        "title": "Sent before or after a date",
+        "example": "after: 2026-01-31"
+      }
+    },
+    "history": {
+      "title": "History",
+      "clear": "Clear history"
+    },
+    "searching": "Searching...",
+    "placeholderIn": "Search {server}",
+    "messagesHeader": "Messages · {count}",
+    "messagesSearching": "Searching messages...",
+    "messagesPrompt": "Type to search messages. Try filters (from:, in:, mentions:, has:, before:, after:).",
+    "users": "Users",
+    "channels": "Channels",
+    "noMatches": "No matches.",
+    "in": "in",
+    "scope": {
+      "relay": "All channels",
+      "channel": "This channel"
+    },
+    "unresolved": "Couldn't resolve {token}: no matching user or channel.",
+    "noNip50": "This relay doesn't support server-side search, so only recent messages were scanned.",
+    "loadMore": "Load more results",
+    "localFilterNote": "Some terms were matched on this device.",
+    "scopeThisRelay": "in {server}"
+  },
+  "hints": {
+    "gotIt": "Got it",
+    "dismissAll": "Don't show tips",
+    "replay": "Show tips again",
+    "replayed": "Tips are back",
+    "railRelay": {
+      "title": "Relays are communities",
+      "body": "Each one holds its own channels, members and history. You don't have an account on it. Your key is the same everywhere."
+    },
+    "railAdd": {
+      "title": "Add another",
+      "body": "Paste any NIP-29 relay address to join its channels. Leaving is removing it from this list."
+    },
+    "channels": {
+      "title": "Channels",
+      "body": "Text, voice and publications on this relay. What you read here comes from this relay only."
+    },
+    "railFeed": {
+      "title": "The feed is all of Nostr",
+      "body": "Posts from the whole network over your own relays, not the relay you are chatting on."
+    },
+    "railDm": {
+      "title": "Private messages",
+      "body": "Encrypted end to end and delivered over the relay list you publish, not this one."
+    },
+    "composer": {
+      "title": "Everything you send is signed",
+      "body": "Messages are events signed by your key, so other Nostr clients can read this channel too."
+    },
+    "feedSource": {
+      "title": "Following or everyone",
+      "body": "Following is the people you follow; Global is whatever your feed relays are carrying right now."
+    },
+    "feedSearch": {
+      "title": "Search the network",
+      "body": "People, posts and #tags across Nostr (different from the search in a relay, which only covers its channels)."
+    },
+    "feedCompose": {
+      "title": "Post to Nostr",
+      "body": "This goes to your feed relays and reaches every Nostr client, not just Obelisk."
+    },
+    "dms": {
+      "title": "Only you two can read these",
+      "body": "Conversations are encrypted with your keys. Relays store them without being able to open them."
+    },
+    "inbox": {
+      "title": "Mentions and messages",
+      "body": "Mentions come from the relay you have open; direct messages follow you across all of them."
+    },
+    "voice": {
+      "title": "Voice runs between you",
+      "body": "Calls are peer to peer where they can be, with the relay used only to introduce you."
+    },
+    "identity": {
+      "title": "Your key is your account",
+      "body": "No email, no password, nothing to recover. Back up your nsec and you can sign in anywhere."
+    },
+    "relayStatus": {
+      "title": "What is connected",
+      "body": "Open it to see which relays are answering, how fast, and whether this one has let you in."
+    }
+  },
+  "members": {
+    "roleAdmin": "Role: Admin"
+  },
+  "login": {
+    "shareProfile": "Share your Nostr profile",
+    "profileReady": "Your profile is ready",
+    "copyNpub": "Copy my npub",
+    "pastedKey": {
+      "title": "You pasted your private key",
+      "body": "This is the least safe way to log in. A signer extension or a bunker keeps your key out of this page.",
+      "continue": "Continue with this key",
+      "useSigner": "Use an extension or bunker"
+    },
+    "notice": {
+      "notRemembered": {
+        "title": "Logged in for this visit only",
+        "body": "This browser can't keep your key safely, so you'll need to log in again next time."
+      },
+      "vaultUnavailable": "This browser can't keep your key safely between visits, so you were logged out. A signer extension or a bunker keeps you signed in without storing a key here.",
+      "unlockFailed": "We couldn't unlock your saved key, so you were logged out. Log in again."
+    }
+  },
+  "channel": {
+    "create": {
+      "header": "Channels · {count}",
+      "submit": "Create channel",
+      "submitShort": "Create",
+      "creating": "Creating…",
+      "help": "Channels are public and open by default: anyone the relay accepts can read and post. You can lock it down later in <settings></settings>.",
+      "nameOn": "Channel name · on {relay}",
+      "examplePlaceholder": "general"
+    }
+  }
+}

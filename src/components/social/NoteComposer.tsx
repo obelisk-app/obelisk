@@ -14,7 +14,7 @@
  */
 
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import Text from '@/components/ui/Text';
 import MessageContent from '@/components/chat/MessageContent';
@@ -36,7 +36,7 @@ export default function NoteComposer({
   onCancel?: () => void;
   autoFocus?: boolean;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const composer = useNoteDraft({ mode, onPublished, autoFocus });
   const {
     draft, setDraft, busy, error, sensitive, setSensitive, dragging, setDragging,
@@ -77,7 +77,7 @@ export default function NoteComposer({
           data-testid="composer-preview"
         >
           <Text as="p" size="10" weight="semibold" variant="label" className="mb-1.5 text-lc-muted/70">
-            {t('composer.preview')}
+            {t('chat.composer.preview')}
           </Text>
           <MessageContent content={linkifyHashtags(draft)} wideMedia />
         </div>
@@ -87,9 +87,9 @@ export default function NoteComposer({
 
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-lc-border/60 pt-3">
         <div className="lc-toolgroup">
-          <Button variant="tool" className="font-bold" onClick={() => wrapSelection('**')} title={t('composer.bold')} aria-label={t('composer.bold')}>B</Button>
-          <Button variant="tool" className="italic" onClick={() => wrapSelection('_')} title={t('composer.italic')} aria-label={t('composer.italic')}>I</Button>
-          <Button variant="tool" onClick={() => wrapSelection('[', '](https://)')}>{t('composer.link')}</Button>
+          <Button variant="tool" className="font-bold" onClick={() => wrapSelection('**')} title={t('chat.composer.bold')} aria-label={t('chat.composer.bold')}>B</Button>
+          <Button variant="tool" className="italic" onClick={() => wrapSelection('_')} title={t('chat.composer.italic')} aria-label={t('chat.composer.italic')}>I</Button>
+          <Button variant="tool" onClick={() => wrapSelection('[', '](https://)')}>{t('chat.composer.link')}</Button>
         </div>
 
         <Button
@@ -98,7 +98,7 @@ export default function NoteComposer({
           disabled={busy}
         >
           <span aria-hidden="true" className="text-sm leading-none">+</span>
-          {t('profileFeed.upload')}
+          {t('social.profileFeed.upload')}
         </Button>
         <Button
           variant="tool"
@@ -113,14 +113,14 @@ export default function NoteComposer({
           ref={fileRef}
           accept="image/*,video/*,audio/*"
           multiple
-          aria-label={t('profileFeed.upload')}
+          aria-label={t('social.profileFeed.upload')}
           onChange={(event) => void uploadFiles(event.target.files)}
           data-testid="composer-files"
         />
 
         {/* Guidance, not a control: first thing to go when space is tight. */}
         <span className="ml-auto hidden text-[10px] text-lc-muted/70 xl:inline">
-          {t('profileFeed.markdownHint')}
+          {t('social.profileFeed.markdownHint')}
         </span>
 
         <div className="ml-auto flex gap-2 xl:ml-3">
@@ -130,7 +130,7 @@ export default function NoteComposer({
             </Button>
           )}
           <Button type="submit" variant="pill" size="xs" disabled={!canPost}>
-            {busy ? t('common.saving') : t('profileFeed.publish')}
+            {busy ? t('common.saving') : t('social.profileFeed.publish')}
           </Button>
         </div>
       </div>

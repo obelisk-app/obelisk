@@ -6,6 +6,7 @@ import { useChatStore } from '@/store/chat';
 import { emojiTagsForContent, mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
 import { groupReactions } from '@/utils/message-text/emoji-shortcodes';
 import { confirmDialog } from '@/services/confirm-dialog';
+import type { Translate } from '@/i18n/keys';
 
 export interface MessageReactionInput {
   readonly id: string;
@@ -94,13 +95,13 @@ export interface ModerationLabels {
 }
 
 /** The confirm copy both shells already use for message deletion. */
-export function moderationLabelsFrom(t: (key: string) => string): ModerationLabels {
+export function moderationLabelsFrom(t: Translate): ModerationLabels {
   return {
-    confirmDeleteEveryone: t('desktop.message.confirmDeleteEveryone'),
-    confirmDeleteEveryoneBody: t('desktop.message.confirmDeleteEveryoneBody'),
-    confirmDeleteOwn: t('desktop.message.confirmDeleteOwn'),
-    confirmDeleteOwnBody: t('desktop.message.confirmDeleteOwnBody'),
-    confirmLabel: t('confirm.delete'),
+    confirmDeleteEveryone: t('shell.desktop.message.confirmDeleteEveryone'),
+    confirmDeleteEveryoneBody: t('shell.desktop.message.confirmDeleteEveryoneBody'),
+    confirmDeleteOwn: t('shell.desktop.message.confirmDeleteOwn'),
+    confirmDeleteOwnBody: t('shell.desktop.message.confirmDeleteOwnBody'),
+    confirmLabel: t('common.confirm.delete'),
   };
 }
 

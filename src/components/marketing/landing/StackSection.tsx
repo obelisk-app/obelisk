@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import RevealSection from './RevealSection';
 import { TECH_STACK } from './landing-data';
@@ -9,16 +9,16 @@ import { TECH_STACK } from './landing-data';
  * The tech stack cards, each linking out.
  */
 export default function StackSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <RevealSection id="stack" className="py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('stack.heading')}<span className="text-lc-green">.</span>
+            {t('marketing.stack.heading')}<span className="text-lc-green">.</span>
           </h2>
           <p className="text-lc-muted text-lg max-w-xl mx-auto">
-            {t('stack.subtitle')}
+            {t('marketing.stack.subtitle')}
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

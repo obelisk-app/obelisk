@@ -13,7 +13,7 @@
  */
 import { getPreferences, setPreference } from '@/services/preferences';
 import { useToastStore } from '@/store/toast';
-import { getTranslation, isLocale } from '@/i18n';
+import { translate } from '@/i18n/runtime';
 import { playNotificationSound, startRingLoop, type NotificationSoundKind, type PlayResult } from './sound';
 
 export const ALERT_FRESH_WINDOW_MS = 2 * 60 * 1000;
@@ -34,11 +34,6 @@ export interface IncomingAlert {
 const seen = new Set<string>();
 let blockedHintShown = false;
 
-function tr(): (key: string) => string {
-  const lang = typeof document !== 'undefined' ? document.documentElement.lang : '';
-  return getTranslation(isLocale(lang) ? lang : 'en');
-}
-
 /**
  * The browser wouldn't let the chime play (no click/keypress on this page
  * since it loaded) and no system notification could stand in for it. Say so
@@ -48,10 +43,10 @@ function tr(): (key: string) => string {
 function showSoundsBlockedHint(): void {
   if (blockedHintShown) return;
   blockedHintShown = true;
-  const t = tr();
+  const t = translate;
   useToastStore.getState().pushToast({
-    title: t('notifications.soundBlocked.title'),
-    body: t('notifications.soundBlocked.body'),
+    title: t('common.soundBlocked.title'),
+    body: t('common.soundBlocked.body'),
     onClick: () => {
       void requestDesktopNotificationPermission().then((granted) => {
         if (granted) setPreference('browserNotifications', true);

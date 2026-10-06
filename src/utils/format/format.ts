@@ -17,7 +17,7 @@
  * from `serverLocale()`.
  */
 
-import { HREFLANG } from '@/utils/guides/guide-urls';
+import { HREFLANG } from '@/utils/seo/alternates';
 import { DEFAULT_LOCALE, type Locale } from '@/i18n';
 
 /** The BCP-47 tag `Intl` expects for one of our locales. */

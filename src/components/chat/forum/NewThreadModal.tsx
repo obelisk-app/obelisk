@@ -2,7 +2,7 @@
 
 import type { JsForumTag } from '@/services/nostr-bridge';
 import { tagChipStyle } from '@/utils/forum-tag-colors';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { MAX_THREAD_TAGS, useNewThreadForm } from '@/hooks/chat/useNewThreadForm';
 import { TagDot } from './TagDot';
 import Input from '@/components/ui/Input';
@@ -32,7 +32,7 @@ export function NewThreadModal({
   onClose: () => void;
   onCreated: (childId: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const {
     title, body, selectedTagIds, submitting, error, canSubmit,
     setTitle, setBody, toggleTag, submit,
@@ -51,7 +51,7 @@ export function NewThreadModal({
         className="lc-card w-full max-w-xl max-h-[85vh] overflow-y-auto p-4 space-y-3"
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-lc-white">{t('forum.new')}</h3>
+          <h3 className="text-sm font-semibold text-lc-white">{t('chat.forum.new')}</h3>
           <CloseButton onClick={onClose} />
         </div>
         <Input
@@ -59,15 +59,15 @@ export function NewThreadModal({
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder={t('forum.titlePlaceholder')}
-          aria-label={t('forum.titleLabel')}
+          placeholder={t('chat.forum.titlePlaceholder')}
+          aria-label={t('chat.forum.titleLabel')}
           maxLength={140}
           data-testid="new-thread-title"
         />
         <TextArea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder={t('forum.firstMessagePlaceholder')}
+          placeholder={t('chat.forum.firstMessagePlaceholder')}
           aria-label={t('mobile.forum.firstMessage')}
           rows={6}
           data-testid="new-thread-body"

@@ -25,7 +25,7 @@ import { usePqConversationStatus } from '@/hooks/pq/usePqConversationStatus';
 import { protectionLevel, threadMarks } from '@/services/pq/status';
 import { usePreferences } from '@/hooks/usePreferences';
 import { useDMStore } from '@/store/dm';
-import { useTranslation } from '@/i18n/context';
+import { useLocale, useTranslations } from 'next-intl';
 
 export type DmThreadItem =
   | { readonly type: 'divider'; readonly key: string; readonly label: string }
@@ -92,7 +92,8 @@ export function useDmThreadScroll(peer: string | null, length: number): RefObjec
 }
 
 export function useDmThread(peer: string | null): DmThread {
-  const { t, locale } = useTranslation();
+  const t = useTranslations();
+  const locale = useLocale();
   const dms = useDirectMessages();
   // Two-tier identity, same as the feed (see `useAuthor`): the bridge alone
   // only knows people from your NIP-29 rooms, so a DM peer from the wider

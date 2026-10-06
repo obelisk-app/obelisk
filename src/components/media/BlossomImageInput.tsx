@@ -11,7 +11,7 @@
  */
 
 import { useId } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import ErrorState from '@/components/ui/ErrorState';
 import FileInput from '@/components/ui/FileInput';
 import Input from '@/components/ui/Input';
@@ -44,7 +44,7 @@ export function ChannelAppearanceInput({
   onPictureChange: (url: string) => void;
   onBannerChange: (url: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { uploading, error, upload } = useBlossomUpload<'picture' | 'banner'>();
 
   const onPick = (file: File, kind: 'picture' | 'banner') => upload(
@@ -60,11 +60,11 @@ export function ChannelAppearanceInput({
         data-testid="channel-appearance-preview"
       >
         {banner && (
-          <RemoteImage src={banner} alt={t('upload.bannerPreview')} className="h-full w-full rounded-xl object-cover" />
+          <RemoteImage src={banner} alt={t('common.upload.bannerPreview')} className="h-full w-full rounded-xl object-cover" />
         )}
         <div className="absolute -bottom-11 left-5 h-24 w-24 overflow-hidden rounded-full border-4 border-lc-dark bg-lc-card">
           {picture && (
-            <RemoteImage src={picture} alt={t('upload.avatarPreview')} className="h-full w-full object-cover" />
+            <RemoteImage src={picture} alt={t('common.upload.avatarPreview')} className="h-full w-full object-cover" />
           )}
         </div>
       </div>

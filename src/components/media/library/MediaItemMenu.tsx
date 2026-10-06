@@ -4,7 +4,7 @@ import MediaThumb from '@/components/media/MediaThumb';
 import Button from '@/components/ui/Button';
 import CloseButton from '@/components/ui/CloseButton';
 import Modal from '@/components/ui/Modal';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import type { SelectedMedia } from '@/utils/media-library/types';
 
 /** What can be done with one item: view its pack, start a pack with it, favourite it. */
@@ -18,7 +18,7 @@ export default function MediaItemMenu({ selection, favorite, busy, server, onClo
   onFavorite: () => void;
   onCreatePack?: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { item, pack } = selection;
   return (
     <Modal onClose={onClose} testId="media-item-menu" panelClassName="lc-card mx-3 w-full max-w-sm overflow-hidden bg-lc-dark">

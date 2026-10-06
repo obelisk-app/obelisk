@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type RefObject } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { nostrActions } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
@@ -29,7 +29,7 @@ import {
  * the text field, focused again after a pick.
  */
 export function useDmComposer(peer: string, inputRef: RefObject<HTMLInputElement | null>) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const serverEmojis = useChatStore((s) => s.serverEmojis);
   const protocol = useDMStore((s) => s.protocolOverrides[peer]) ?? 'nip17';
   const mediaAllowed = protocol === 'nip17';

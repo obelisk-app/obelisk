@@ -27,7 +27,7 @@ import {
   useMessageReactions,
   type MessageReactionInput,
 } from '@/hooks/chat/useMessageActions';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { messageLink } from '@/utils/channel-link';
 
 /**
@@ -45,7 +45,7 @@ export function useMessageRowActions({
   reactions: ReadonlyArray<MessageReactionInput>;
   meta: JsUserMetadata | null | undefined;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const relay = useCurrentRelayUrl();
   // Quick reactions = your most recent picks (shared snapshot across rows).
   const recentEmojis = useSyncExternalStore(subscribeRecentEmojis, getRecentEmojisSnapshot, getServerRecentEmojisSnapshot);
@@ -59,7 +59,7 @@ export function useMessageRowActions({
       await nostrActions.setMuted(msg.pubkey, !isMuted);
     } catch (e) {
       useToastStore.getState().pushToast({
-        title: t('desktop.message.muteFailed'),
+        title: t('shell.desktop.message.muteFailed'),
         body: e instanceof Error ? e.message : String(e),
       });
     }
@@ -79,7 +79,7 @@ export function useMessageRowActions({
   const openZap = useMessageZapStore((s) => s.open);
   const onZapClick = () => {
     if (isOwn) {
-      useToastStore.getState().pushToast({ title: `⚠️ ${t('desktop.message.cannotZapSelf')}`, body: '' });
+      useToastStore.getState().pushToast({ title: `⚠️ ${t('shell.desktop.message.cannotZapSelf')}`, body: '' });
       return;
     }
     openZap({
@@ -92,12 +92,12 @@ export function useMessageRowActions({
   };
   const copyText = () => {
     void Promise.resolve(navigator.clipboard?.writeText(msg.content)).catch(() => {});
-    useToastStore.getState().pushToast({ title: t('desktop.message.textCopied'), body: '' });
+    useToastStore.getState().pushToast({ title: t('shell.desktop.message.textCopied'), body: '' });
   };
   const copyLink = () => {
     if (typeof window === 'undefined') return;
     void Promise.resolve(navigator.clipboard?.writeText(messageLink(window.location.href, groupId, msg.id, relay))).catch(() => {});
-    useToastStore.getState().pushToast({ title: t('desktop.message.linkCopied'), body: '' });
+    useToastStore.getState().pushToast({ title: t('shell.desktop.message.linkCopied'), body: '' });
   };
   const moderation = useMessageModeration(msg, groupId, isAdmin, isOwn, moderationLabelsFrom(t));
 

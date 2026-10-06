@@ -1,7 +1,7 @@
 'use client';
 
 import { useId } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Chip from '@/components/ui/Chip';
 import Text from '@/components/ui/Text';
 import { TIMEOUTS, localPlayerChoices } from './game-options';
@@ -9,7 +9,7 @@ import type { NewGameForm } from '@/hooks/chat/games/new-game/useNewGameForm';
 
 /** Who plays (people in the channel, or N on this machine) and the turn clock. */
 export default function PlayersAndClock({ form }: { form: NewGameForm }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const whoId = useId();
   const clockId = useId();
   const { selected, localPlayers, setLocalPlayers, timeout, setTimeoutS } = form;

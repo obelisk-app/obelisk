@@ -4,14 +4,14 @@ import { useState } from 'react';
 // Note: do NOT auto-redirect logged-in visitors to /app here.
 // The landing page must remain reachable from /app and via direct URL,
 // even when a session exists in localStorage.
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter } from '@/i18n/navigation';
+import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import Navbar from './Navbar';
 import ShootingStars from './ShootingStars';
 import Footer from './Footer';
-import { useTranslation } from '@/i18n/context';
-import { guidesHref } from '@/utils/guides/guide-urls';
+import { useTranslations } from 'next-intl';
+import { guidePath } from '@/utils/guides/guide-urls';
 import CtaSection from './landing/CtaSection';
 import DemoVideoSection from './landing/DemoVideoSection';
 import FaqSection from './landing/FaqSection';
@@ -34,7 +34,7 @@ import StepsSection from './landing/StepsSection';
 export default function LandingPage() {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
-  const { t, locale } = useTranslation();
+  const t = useTranslations();
   const launch = () => router.push('/app');
 
   const handleLoginSuccess = () => {
@@ -80,13 +80,13 @@ export default function LandingPage() {
       <RevealSection id="post-quantum" className="py-24 px-6 border-t border-lc-border">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('pqc.heading')}<span className="text-lc-green">.</span>
+            {t('marketing.pqc.heading')}<span className="text-lc-green">.</span>
           </h2>
-          <p className="text-lc-muted text-lg mb-4">{t('pqc.subtitle')}</p>
-          <p className="text-sm text-lc-muted/80 mb-12">{t('pqc.status')}</p>
+          <p className="text-lc-muted text-lg mb-4">{t('marketing.pqc.subtitle')}</p>
+          <p className="text-sm text-lc-muted/80 mb-12">{t('marketing.pqc.status')}</p>
 
           <p className="text-xs uppercase tracking-widest text-lc-muted mb-6">
-            {t('pqc.collab')}
+            {t('marketing.pqc.collab')}
           </p>
           <div className="grid sm:grid-cols-2 gap-4 text-left">
             {/* Both marks are monochrome white-on-transparent, which is the sanctioned
@@ -105,7 +105,7 @@ export default function LandingPage() {
                 <Image src="/nostr-wot-logo.svg" alt="" aria-hidden="true" width={36} height={36} className="w-9 h-9 shrink-0" />
                 <span className="font-semibold">Nostr WoT</span>
               </div>
-              <span className="block text-sm text-lc-muted">{t('pqc.nostrwot.desc')}</span>
+              <span className="block text-sm text-lc-muted">{t('marketing.pqc.nostrwot.desc')}</span>
             </a>
             <a
               href="https://quantakrypto.com"
@@ -117,15 +117,15 @@ export default function LandingPage() {
                 <Image src="/quantakrypto-mark.svg" alt="" aria-hidden="true" width={36} height={36} className="w-9 h-9 shrink-0" />
                 <span className="font-semibold">QuantaKrypto</span>
               </div>
-              <span className="block text-sm text-lc-muted">{t('pqc.quantakrypto.desc')}</span>
+              <span className="block text-sm text-lc-muted">{t('marketing.pqc.quantakrypto.desc')}</span>
             </a>
           </div>
           <div className="mt-10">
             <Link
-              href={guidesHref(locale, 'quantum-safe-dms')}
+              href={guidePath('quantum-safe-dms')}
               className="lc-pill lc-pill-secondary text-sm inline-flex items-center gap-2"
             >
-              {t('pqc.guide')} <span aria-hidden="true">→</span>
+              {t('marketing.pqc.guide')} <span aria-hidden="true">→</span>
             </Link>
           </div>
         </div>

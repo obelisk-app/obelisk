@@ -9,7 +9,7 @@ import StackerBoard, { MiniBoard, PieceChip } from './StackerBoard';
 import StackerKeysPanel from './StackerKeysPanel';
 import { useStackerCellSize } from '@/hooks/chat/games/stacker/useStackerCellSize';
 import { useTrackTitle } from '@/hooks/chat/games/stacker/useTrackTitle';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 
 export interface StackerTableProps {
@@ -50,7 +50,7 @@ export default function StackerTable({
   onTopOut,
   fullscreen,
 }: StackerTableProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const mySeat = mySeats[0] ?? null;
   const alive = match.alive;
   const iAmAlive = !!mySeat && alive.includes(mySeat);

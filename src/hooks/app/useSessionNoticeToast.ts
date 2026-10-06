@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useSessionNotice, type SessionNotice } from '@/services/nostr-bridge';
 import { useToastStore } from '@/store/toast';
 
@@ -12,13 +12,13 @@ import { useToastStore } from '@/store/toast';
  */
 export function useSessionNoticeToast(): void {
   const notice = useSessionNotice();
-  const { t } = useTranslation();
+  const t = useTranslations();
   const last = useRef<SessionNotice | null>(null);
   useEffect(() => {
     if (notice === 'not-remembered' && last.current !== notice) {
       useToastStore.getState().pushToast({
-        title: t('login.notice.notRemembered.title'),
-        body: t('login.notice.notRemembered.body'),
+        title: t('shell.login.notice.notRemembered.title'),
+        body: t('shell.login.notice.notRemembered.body'),
       });
     }
     last.current = notice;

@@ -1,0 +1,355 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useState } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
+import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
+import { fireEvent, render, screen } from '@testing-library/react';
+
+// PhoneShell imports the whole bridge surface. The two components under
+// test (ChannelMessage, MessageActionsSheet) only consume a small slice of
+// it, so the rest are stubbed wholesale so the module factory satisfies
+// every named import.
+vi.mock('@/services/nostr-bridge', async () => {
+  const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
+  return bridgeMock({
+    nostrActions: {
+      sendReaction: vi.fn().mockResolvedValue(undefined),
+      removeReaction: vi.fn().mockResolvedValue(undefined),
+      removeMessage: vi.fn().mockResolvedValue(undefined),
+      deleteGroupEvent: vi.fn().mockResolvedValue(undefined),
+      sendMessage: vi.fn().mockResolvedValue(undefined),
+      createGroup: vi.fn(),
+      switchRelay: vi.fn(),
+      removeRelay: vi.fn(),
+    },
+    useConfiguredRelays: () => ['wss://lacrypta-relay.obelisk.ar'],
+    useMyPubkey: () => null,
+    useCurrentRelayUrl: () => 'wss://lacrypta-relay.obelisk.ar',
+  });
+});
+
+vi.mock('@/services/relay-info', () => ({
+  faviconFor: (url: string) => `https://favicon/${url}`,
+  fetchRelayInfo: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('@/services/relay-branding', () => ({
+  publishBranding: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/hooks/relay/useRelayBranding', () => ({
+  useRelayBranding: () => ({}),
+}));
+
+vi.mock('@/services/channel-layout', () => ({
+  applyLayout: () => ({ categories: [], uncategorized: [] }),
+  publishLayout: vi.fn().mockResolvedValue(undefined),
+  newCategoryId: () => 'cat-test',
+}));
+vi.mock('@/hooks/relay/useChannelLayout', () => ({
+  useChannelLayout: () => ({ categories: [], channels: [], updatedAt: 0 }),
+}));
+vi.mock('@/hooks/relay/useRelayOperatorPubkey', () => ({
+  useRelayOperatorPubkey: () => null,
+}));
+
+vi.mock('@/components/media/BlossomImageInput', () => ({
+  default: () => <div />,
+}));
+
+vi.mock('@/components/admin/RelayAdminPanel', () => ({
+  default: () => <div />,
+}));
+
+// MessageContent does its own bridge lookups; stub it out so the test
+// renders the raw text only. It also counts renders: the markdown pass is
+// what ChannelMessage's memo exists to spare.
+const contentRenders = vi.hoisted(() => ({ count: 0 }));
+vi.mock('@/components/chat/MessageContent', () => ({
+  default: ({ content }: { content: string }) => {
+    contentRenders.count += 1;
+    return <span>{content}</span>;
+  },
+}));
+
+vi.mock('@/components/chat/EmojiPicker', () => ({
+  default: ({
+    onPick,
+    onClose,
+  }: {
+    onPick: (emoji: string, custom?: { name: string; url: string }) => void;
+    onClose: () => void;
+  }) => (
+    <div role="dialog" aria-label="Emoji picker">
+      <button onClick={() => onPick(':party:', { name: 'party', url: 'https://example.com/party.webp' })}>
+        Pick custom
+      </button>
+      <button onClick={onClose}>Close picker</button>
+    </div>
+  ),
+}));
+
+import { nostrActions } from '@/services/nostr-bridge';
+import { ChannelMessage } from '@/app/[locale]/app/mobile/screens/ChannelMessage';
+import { MessageActionsSheet } from '@/app/[locale]/app/mobile/sheets/MessageActionsSheet';
+/** Every screen in the shell reads copy from the dictionary now. */
+const renderLocalized = (ui: React.ReactElement) => render(
+  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+);
+
+
+const sampleMsg = {
+  id: 'msg-1',
+  pubkey: 'a'.repeat(64),
+  content: 'hello world',
+  createdAt: Math.floor(Date.now() / 1000),
+  kind: 9,
+  replyToId: null,
+  mentions: [] as string[],
+};
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('ChannelMessage kebab button', () => {
+  it('renders the three-dots button on every message tile', () => {
+    renderLocalized(
+      <ChannelMessage
+        msg={sampleMsg}
+        myPubkey={null}
+        groupId="rly/group"
+        reactions={[]}
+        onLongPress={() => {}}
+        onAvatar={() => {}}
+      />,
+    );
+    expect(screen.getByTestId('mobile-msg-more')).toBeTruthy();
+  });
+
+  it('calls onLongPress when the kebab button is tapped (no 500ms hold required)', () => {
+    const onLongPress = vi.fn();
+    renderLocalized(
+      <ChannelMessage
+        msg={sampleMsg}
+        myPubkey={null}
+        groupId="rly/group"
+        reactions={[]}
+        onLongPress={onLongPress}
+        onAvatar={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('mobile-msg-more'));
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes my reaction when tapping a reaction I already sent', async () => {
+    renderLocalized(
+      <ChannelMessage
+        msg={sampleMsg}
+        myPubkey={'b'.repeat(64)}
+        groupId="rly/group"
+        reactions={[{
+          id: 'reaction-1',
+          pubkey: 'b'.repeat(64),
+          emoji: '🔥',
+        }]}
+        onLongPress={() => {}}
+        onAvatar={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByText(/🔥/));
+    await vi.waitFor(() => {
+      expect(nostrActions.removeReaction).toHaveBeenCalledWith('rly/group', 'reaction-1');
+    });
+    expect(nostrActions.sendReaction).not.toHaveBeenCalled();
+  });
+
+  it('removes another user reaction for everyone when I am an admin', async () => {
+    renderLocalized(
+      <ChannelMessage
+        msg={sampleMsg}
+        myPubkey={'b'.repeat(64)}
+        isAdmin
+        groupId="rly/group"
+        reactions={[{
+          id: 'reaction-2',
+          pubkey: 'c'.repeat(64),
+          emoji: '👀',
+        }]}
+        onLongPress={() => {}}
+        onAvatar={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByText(/👀/));
+    await vi.waitFor(() => {
+      expect(nostrActions.deleteGroupEvent).toHaveBeenCalledWith('rly/group', 'reaction-2');
+    });
+    expect(nostrActions.removeReaction).not.toHaveBeenCalled();
+    expect(nostrActions.sendReaction).not.toHaveBeenCalled();
+  });
+});
+
+describe('MessageActionsSheet Reply', () => {
+  it('dispatches obelisk-mobile:reply with the msg id and closes the sheet', () => {
+    const close = vi.fn();
+    const onZap = vi.fn();
+    const listener = vi.fn();
+    window.addEventListener('obelisk-mobile:reply', listener as EventListener);
+
+    try {
+      renderLocalized(
+        <MessageActionsSheet
+          msg={{ id: 'msg-7', pubkey: 'b'.repeat(64), content: 'hi' }}
+          close={close}
+          onZap={onZap}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('mobile-msg-actions-reply'));
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      const ev = listener.mock.calls[0][0] as CustomEvent<{ msgId: string }>;
+      expect(ev.detail.msgId).toBe('msg-7');
+      expect(close).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener('obelisk-mobile:reply', listener as EventListener);
+    }
+  });
+});
+
+describe('MessageActionsSheet reactions', () => {
+  it('opens the emoji picker from the + quick reaction and dispatches the picked emoji', () => {
+    const close = vi.fn();
+    const listener = vi.fn();
+    window.addEventListener('obelisk-mobile:react', listener as EventListener);
+
+    try {
+      renderLocalized(
+        <MessageActionsSheet
+          msg={{ id: 'msg-8', pubkey: 'c'.repeat(64), content: 'hi' }}
+          close={close}
+          onZap={() => {}}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('+'));
+      expect(screen.getByRole('dialog', { name: 'Emoji picker' })).toBeTruthy();
+
+      fireEvent.click(screen.getByText('Pick custom'));
+      expect(listener).toHaveBeenCalledTimes(1);
+      const ev = listener.mock.calls[0][0] as CustomEvent<{
+        emoji: string;
+        customEmojis?: Record<string, string>;
+      }>;
+      expect(ev.detail.emoji).toBe(':party:');
+      expect(ev.detail.customEmojis).toEqual({ party: 'https://example.com/party.webp' });
+      expect(close).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener('obelisk-mobile:react', listener as EventListener);
+    }
+  });
+});
+
+describe('MessageActionsSheet deletion', () => {
+  it('deletes a message for everyone when moderation is allowed', async () => {
+    const close = vi.fn();
+
+    renderLocalized(
+      <MessageActionsSheet
+        msg={{
+          id: 'msg-9',
+          pubkey: 'c'.repeat(64),
+          content: 'hi',
+          groupId: 'rly/group',
+          canModerate: true,
+        }}
+        close={close}
+        onZap={() => {}}
+      />,
+    );
+    render(<LocaleProvider initialLocale="en"><ConfirmDialogHost /></LocaleProvider>);
+
+    fireEvent.click(screen.getByTestId('mobile-msg-actions-delete'));
+    fireEvent.click(await screen.findByTestId('confirm-dialog-confirm'));
+    await vi.waitFor(() => {
+      expect(nostrActions.deleteGroupEvent).toHaveBeenCalledWith('rly/group', 'msg-9');
+    });
+    expect(nostrActions.removeMessage).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes my own message with NIP-09 when I am not a moderator', async () => {
+    const close = vi.fn();
+
+    renderLocalized(
+      <MessageActionsSheet
+        msg={{
+          id: 'msg-10',
+          pubkey: 'c'.repeat(64),
+          content: 'hi',
+          groupId: 'rly/group',
+          canDeleteOwn: true,
+        }}
+        close={close}
+        onZap={() => {}}
+      />,
+    );
+    render(<LocaleProvider initialLocale="en"><ConfirmDialogHost /></LocaleProvider>);
+
+    fireEvent.click(screen.getByTestId('mobile-msg-actions-delete'));
+    fireEvent.click(await screen.findByTestId('confirm-dialog-confirm'));
+    await vi.waitFor(() => {
+      expect(nostrActions.removeMessage).toHaveBeenCalledWith('rly/group', 'msg-10');
+    });
+    expect(nostrActions.deleteGroupEvent).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ChannelMessage memoization', () => {
+  const STABLE_REACTIONS: never[] = [];
+  const onLongPress = vi.fn();
+  const onAvatar = vi.fn();
+
+  function Parent({ stableProps }: { stableProps: boolean }) {
+    const [, force] = useState(0);
+    return (
+      <>
+        <button data-testid="force" onClick={() => force((n) => n + 1)} />
+        <ChannelMessage
+          msg={sampleMsg}
+          myPubkey={null}
+          groupId="rly/group"
+          reactions={stableProps ? STABLE_REACTIONS : []}
+          onLongPress={stableProps ? onLongPress : () => {}}
+          onAvatar={stableProps ? onAvatar : () => {}}
+        />
+      </>
+    );
+  }
+
+  it('does not re-run the markdown pass when the screen re-renders with the same props', () => {
+    contentRenders.count = 0;
+    render(<LocaleProvider initialLocale="en"><Parent stableProps /></LocaleProvider>);
+    expect(contentRenders.count).toBe(1);
+    fireEvent.click(screen.getByTestId('force'));
+    fireEvent.click(screen.getByTestId('force'));
+    expect(contentRenders.count).toBe(1);
+  });
+
+  it('re-renders when handed a fresh array or closure, which is why ChannelScreen uses useCallback and EMPTY_REACTIONS', () => {
+    contentRenders.count = 0;
+    render(<LocaleProvider initialLocale="en"><Parent stableProps={false} /></LocaleProvider>);
+    fireEvent.click(screen.getByTestId('force'));
+    expect(contentRenders.count).toBe(2);
+  });
+
+  it('passes the message to onLongPress so the screen can build the action-sheet context without a per-row closure', () => {
+    const spy = vi.fn();
+    renderLocalized(
+      <ChannelMessage msg={sampleMsg} myPubkey={null} groupId="rly/group" reactions={[]} onLongPress={spy} onAvatar={() => {}} />,
+    );
+    fireEvent.click(screen.getByTestId('mobile-msg-more'));
+    expect(spy).toHaveBeenCalledWith(sampleMsg);
+  });
+});

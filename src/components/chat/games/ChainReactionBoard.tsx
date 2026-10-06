@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { GameSession } from '@/lib/games/session';
 import type { CRState } from '@/lib/games/chain-reaction';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { SEAT_COLORS } from './chain-reaction/seat-colors';
 import type { CSSVars } from './chain-reaction/css-vars';
 import type { CellSnapshot } from './chain-reaction/cascade';
@@ -53,7 +53,7 @@ const CELL_FULLSCREEN_MAX = 92;
 const ORB_RATIO = 0.23;
 
 export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth = 320, maxHeight, seatLabel, onRevealChange }: Props) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [busy, setBusy] = useState(false);
   const state = (game.state ?? {}) as Partial<CRState>;
   const rows: number = state.rows ?? 9;

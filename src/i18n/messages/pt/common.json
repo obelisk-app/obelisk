@@ -1,0 +1,60 @@
+{
+  "soundBlocked": {
+    "title": "🔔 Os sons de notificação estão pausados",
+    "body": "Os navegadores só permitem som depois que você clica ou digita na página. Clique aqui para ativar as notificações da área de trabalho: elas tocam mesmo com o Obelisk em outra aba."
+  },
+  "close": "Fechar",
+  "cancel": "Cancelar",
+  "save": "Salvar",
+  "saving": "Salvando...",
+  "sending": "Enviando",
+  "uploading": "Enviando...",
+  "back": "Voltar",
+  "retry": "Tentar de novo",
+  "send": "Enviar",
+  "search": "Buscar",
+  "clear": "Limpar",
+  "notifications": "Notificações",
+  "help": "Ajuda",
+  "reconnecting": "Reconectando...",
+  "copied": "Copiado!",
+  "copy": "Copiar {label}",
+  "channel": "canal",
+  "loading": "Carregando…",
+  "done": "Pronto",
+  "previous": "Anterior",
+  "next": "Próximo",
+  "dismiss": "Dispensar",
+  "upload": {
+    "bannerPreview": "Prévia da capa do canal",
+    "avatarPreview": "Prévia da foto do canal"
+  },
+  "relayLanding": {
+    "failed": "Não foi possível abrir o relay",
+    "goToApp": "Ir para o app",
+    "connecting": "Conectando ao relay…"
+  },
+  "time": {
+    "justNow": "agora",
+    "today": "Hoje · {time}",
+    "yesterday": "Ontem"
+  },
+  "confirm": {
+    "delete": "Excluir",
+    "remove": "Remover",
+    "leave": "Sair",
+    "demote": "Rebaixar"
+  },
+  "deeplink": {
+    "relay": {
+      "title": "Conectar a {host}?",
+      "body": "Este link abre um relay que você não adicionou. Ao conectar, o relay recebe sua chave pública e vê seu endereço IP. Você também pode ficar onde está.",
+      "connect": "Conectar"
+    }
+  },
+  "notFound": {
+    "title": "Página não encontrada",
+    "body": "Esta página não existe, ou mudou de lugar.",
+    "home": "Voltar ao início"
+  }
+}

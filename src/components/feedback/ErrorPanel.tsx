@@ -75,7 +75,7 @@ const COPY: Record<'en' | 'es' | 'pt', Copy> = {
 function readLocale(): 'en' | 'es' | 'pt' {
   if (typeof document === 'undefined') return 'es';
   const lang = document.documentElement.lang;
-  return lang === 'en' || lang === 'pt' ? lang : 'es';
+  return lang === 'es' || lang === 'pt' ? lang : 'en';
 }
 
 /** `<html lang>` is fixed for the life of the document: nothing to watch. */
@@ -83,7 +83,7 @@ const subscribeToNothing = () => () => {};
 // Mirrors i18n's DEFAULT_LOCALE, duplicated on purpose: importing it would
 // pull both JSON dictionaries into the error chunk, and this component's
 // whole contract is that it loads and renders with nothing else available.
-const serverLocale = (): 'en' | 'es' | 'pt' => 'es';
+const serverLocale = (): 'en' | 'es' | 'pt' => 'en';
 
 export default function ErrorPanel({
   error,
@@ -174,8 +174,7 @@ export default function ErrorPanel({
               carry the broken JS state into the landing page, and the
               router is exactly what we cannot assume is healthy here. */}
           <TextButton tone="muted"
-            // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate hard navigation, see the comment above
-            onClick={() => { window.location.href = '/'; }}
+            onClick={() => { window.location.href = locale === 'en' ? '/' : `/${locale}`; }}
             data-testid="error-home"
           >
             {t.home}

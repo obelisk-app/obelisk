@@ -2,7 +2,7 @@
 
 ## Flow
 
-The chat composer in `src/app/app/AppShell.tsx` accepts media three ways:
+The chat composer in `src/app/[locale]/app/AppShell.tsx` accepts media three ways:
 
 1. **Attach button**: opens the OS file picker (`<input type="file" multiple accept="image/*,video/*">`).
 2. **Paste**: `onPaste` on the message input scans `clipboardData.items` for files with an `image/*` or `video/*` MIME type.

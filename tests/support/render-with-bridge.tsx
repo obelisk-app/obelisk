@@ -6,7 +6,7 @@
  */
 import { render, type RenderOptions } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import type { Locale } from '@/i18n/index';
 import { BridgeProvider, type BridgeImpl } from '@/services/nostr-bridge';
 

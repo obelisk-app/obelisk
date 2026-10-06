@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { CompassIcon, EditIcon, MessageIcon, SettingsIcon } from '@/components/ui/icons';
 import { openSettings } from '@/utils/open-settings';
 import Button from '@/components/ui/Button';
@@ -20,7 +20,7 @@ export function PopoverActions({
   onExplore: (pubkey: string) => void;
   onMessage?: (pubkey: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <div className="space-y-2 border-t border-lc-border pt-3" data-testid="profile-compact-actions">
       {isSelf ? (
@@ -68,7 +68,7 @@ export function PopoverActions({
         className="w-full"
         data-testid="profile-explore-btn"
       >
-        <CompassIcon size={15} /> {t('profileFeed.explore')}
+        <CompassIcon size={15} /> {t('social.profileFeed.explore')}
       </Button>
     </div>
   );

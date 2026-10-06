@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
@@ -40,7 +40,7 @@ export default function MediaLibraryModal({
   initialKind?: MediaFilter;
   initialSelection?: SelectedMedia;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const uploadRef = useRef<HTMLInputElement>(null);
   const launchedFromItem = !!initialSelection;
   const {

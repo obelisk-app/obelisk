@@ -72,7 +72,22 @@ const KNOWN_SCREENS: ReadonlySet<ScreenName> = new Set<ScreenName>([
   'profile-edit',
 ]);
 
-export function urlFor(nav: NavState, relay: string | null, pathname = '/app'): string {
+/**
+ * The chat shell's path in the current language: `/app`, `/es/app` or
+ * `/pt/app`. Every history write in the phone shell rebuilds the URL from
+ * this, so a Spanish reader on `/es/app` stays on it instead of being
+ * rewritten to the English `/app` on the first navigation.
+ */
+export function appShellPath(locationPathname?: string): string {
+  const match = locationPathname?.match(/^\/(es|pt)\/app(?:\/|$)/);
+  return match ? `/${match[1]}/app` : '/app';
+}
+
+function currentAppShellPath(): string {
+  return appShellPath(typeof window === 'undefined' ? undefined : window.location.pathname);
+}
+
+export function urlFor(nav: NavState, relay: string | null, pathname = currentAppShellPath()): string {
   const params = new URLSearchParams();
   if (nav.groupId) params.set('c', nav.groupId);
   if (nav.forumGroupId && nav.forumGroupId !== nav.groupId) params.set('f', nav.forumGroupId);

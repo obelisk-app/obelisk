@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import { useVoiceStore } from '@/store/voice';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import type { ActiveCallInfo } from '@/services/nostr-bridge';
 
 /** The slice of VoiceClient the room reaches; `join` only exists on a client the room built. */
@@ -40,7 +40,7 @@ const bridgeHarness = vi.hoisted(() => ({
   bridge: null as unknown,
 }));
 
-vi.mock('next/navigation', () => ({
+vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({
   useRouter: () => ({ push: vi.fn() }),
 }));
 

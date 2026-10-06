@@ -1,7 +1,9 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { dayKey, dayLabel } from '@/utils/format/day-label';
 
-const t = (key: string) => (key === 'time.today' ? 'Today {time}' : key === 'time.yesterday' ? 'Yesterday' : key);
+// A translator that interpolates the way next-intl does.
+const t = (key: string, values?: Record<string, unknown>) =>
+  key === 'common.time.today' ? `Today ${values?.time}` : key === 'common.time.yesterday' ? 'Yesterday' : key;
 const secs = (d: Date) => Math.floor(d.getTime() / 1000);
 
 afterEach(() => vi.useRealTimers());

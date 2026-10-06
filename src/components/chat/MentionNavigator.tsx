@@ -18,7 +18,7 @@
  * `ring-1 ring-lc-green` flash on the focused row.
  */
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import { useMentionNavigation } from '@/hooks/chat/mentions/useMentionNavigation';
 import IconButton from '@/components/ui/IconButton';
@@ -31,7 +31,7 @@ export interface MentionNavigatorProps {
 }
 
 export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigatorProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { index, showJumpToLatest, goNext, goPrev, jumpToLatest } = useMentionNavigation(scrollRef, eventIds);
 
   const hasHighlights = eventIds.length > 0;
@@ -44,15 +44,15 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
         <div
           className="pointer-events-auto flex items-center gap-1 rounded-full border border-lc-border bg-lc-dark/90 px-2 py-1 text-xs text-lc-white shadow-lg backdrop-blur"
           role="group"
-          aria-label={t('mentions.navigation')}
+          aria-label={t('chat.mentions.navigation')}
         >
           <Button
             variant="ghost"
             size="icon"
             onClick={goPrev}
             disabled={index === 0}
-            aria-label={t('mentions.previousTitle')}
-            title={t('mentions.previous')}
+            aria-label={t('chat.mentions.previousTitle')}
+            title={t('chat.mentions.previous')}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="18 15 12 9 6 15" />
@@ -69,8 +69,8 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
             size="icon"
             onClick={goNext}
             disabled={index >= eventIds.length - 1}
-            aria-label={t('mentions.nextTitle')}
-            title={t('mentions.next')}
+            aria-label={t('chat.mentions.nextTitle')}
+            title={t('chat.mentions.next')}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="6 9 12 15 18 9" />
@@ -83,8 +83,8 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
           tone="outline"
           onClick={jumpToLatest}
           className="pointer-events-auto shadow-lg backdrop-blur"
-          aria-label={t('mentions.latestTitle')}
-          title={t('mentions.latest')}
+          aria-label={t('chat.mentions.latestTitle')}
+          title={t('chat.mentions.latest')}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="6 9 12 15 18 9" />

@@ -1,0 +1,43 @@
+{
+  "searchPlaceholder": "Buscar pacotes e mídias",
+  "close": "Fechar a biblioteca",
+  "filterByType": "Filtrar pacotes por tipo",
+  "openActions": "Abrir ações da mídia",
+  "closeViewer": "Fechar o visualizador do pacote",
+  "closeActions": "Fechar as ações da mídia",
+  "closeEditor": "Fechar o editor do pacote",
+  "packName": "Nome do pacote",
+  "packDescription": "Descrição do pacote",
+  "newItemType": "Tipo do novo item",
+  "title": "Biblioteca de mídia",
+  "subtitle": "Emojis · GIFs · Figurinhas",
+  "upload": "Enviar mídia",
+  "createPack": "Criar pacote",
+  "serverPacks": "Pacotes do servidor",
+  "serverPacksHelp": "Crie e edite pacotes em Meus pacotes, nas suas preferências de mídia.",
+  "legacyHelp": "Os itens soltos do formato antigo serão removidos na próxima mudança de pacote.",
+  "individualFavorites": "Favoritos soltos",
+  "viewPack": "Ver o pacote",
+  "edit": "Editar",
+  "delete": "Excluir",
+  "createPackWithItem": "Criar um pacote com este item",
+  "editPack": "Editar o pacote",
+  "newItemsAre": "Os novos itens são",
+  "addUrl": "Adicionar URL",
+  "remove": "Remover",
+  "uploadHelp": "Envie emojis, GIFs ou figurinhas para este pacote.",
+  "kind": {
+    "emoji": "Emoji",
+    "gif": "GIF",
+    "sticker": "Figurinha"
+  },
+  "itemShortcode": "Atalho do item {n}",
+  "itemType": "Tipo do item {n}",
+  "itemUrl": "URL do item {n}",
+  "confirmDeletePack": "Excluir “{title}”?",
+  "confirmDeletePackBody": "Isso envia uma solicitação de exclusão do Nostr e não pode ser desfeito.",
+  "remote": {
+    "show": "Mostrar mídia",
+    "hint": "Oculta até você pedir. Carregá-la revelaria seu endereço IP ao servidor que a hospeda."
+  }
+}

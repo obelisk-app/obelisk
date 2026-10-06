@@ -12,7 +12,7 @@
 import { useRef, type ReactNode } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMyPubkey } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/Modal';
 import NoteComposer from './NoteComposer';
 import MobileComposer from './MobileComposer';
@@ -59,7 +59,7 @@ export default function FeedScreen({
    */
   actions?: ReactNode;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const myPubkey = useMyPubkey();
   const feed = useFeedScreen({ onOpenThread, onOpenArticle });
   const { state, composer } = feed;

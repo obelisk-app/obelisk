@@ -8,7 +8,7 @@ import {
   requestDesktopNotificationPermission,
 } from '@/services/notifications/alert';
 import { previewRingtone, RINGTONES } from '@/services/notifications/sound';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import SettingRow from '@/components/ui/SettingRow';
 import Toggle from '@/components/ui/Toggle';
 import Button from '@/components/ui/Button';
@@ -22,7 +22,7 @@ type BoolPref = 'notificationSounds' | 'browserNotifications' | 'backgroundRelay
  * `SocialRelaySettings`.
  */
 export default function NotificationSettings({ mobile = false }: { mobile?: boolean }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const prefs = usePreferences();
   const [permission, setPermission] = useState<ReturnType<typeof desktopNotificationPermission>>('default');
 
@@ -57,10 +57,10 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
   };
 
   const desktopHint = permission === 'unsupported'
-    ? t('preferences.notifications.desktop.unsupported')
+    ? t('settings.preferences.notifications.desktop.unsupported')
     : permission === 'denied'
-      ? t('preferences.notifications.desktop.denied')
-      : t('preferences.notifications.desktop.description');
+      ? t('settings.preferences.notifications.desktop.denied')
+      : t('settings.preferences.notifications.desktop.description');
 
   const rows: Array<{
     key: BoolPref;
@@ -71,21 +71,21 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
   }> = [
     {
       key: 'notificationSounds',
-      label: t('preferences.notifications.sounds.label'),
-      description: t('preferences.notifications.sounds.description'),
+      label: t('settings.preferences.notifications.sounds.label'),
+      description: t('settings.preferences.notifications.sounds.description'),
       onToggle: () => setPreference('notificationSounds', !prefs.notificationSounds),
     },
     {
       key: 'browserNotifications',
-      label: t('preferences.notifications.desktop.label'),
+      label: t('settings.preferences.notifications.desktop.label'),
       description: desktopHint,
       onToggle: () => { void toggleDesktop(); },
       disabled: permission === 'unsupported' || permission === 'denied',
     },
     {
       key: 'backgroundRelayWatch',
-      label: t('preferences.notifications.background.label'),
-      description: t('preferences.notifications.background.description'),
+      label: t('settings.preferences.notifications.background.label'),
+      description: t('settings.preferences.notifications.background.description'),
       onToggle: () => setPreference('backgroundRelayWatch', !prefs.backgroundRelayWatch),
     },
   ];
@@ -98,9 +98,9 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
     previewRingtone(id, 'mention');
   };
   const ringtonePicker = (
-    <div data-testid="ringtone-picker" role="radiogroup" aria-label={t('preferences.notifications.ringtone.label')}>
+    <div data-testid="ringtone-picker" role="radiogroup" aria-label={t('settings.preferences.notifications.ringtone.label')}>
       <div className={mobile ? 'settings-row-meta muted' : 'text-xs text-lc-muted'} style={mobile ? { marginBottom: 8 } : undefined}>
-        {t('preferences.notifications.ringtone.label')}
+        {t('settings.preferences.notifications.ringtone.label')}
       </div>
       <div className={mobile ? '' : 'mt-1.5 grid grid-cols-2 gap-2'} style={mobile ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } : undefined}>
         {RINGTONES.map((id) => {
@@ -118,9 +118,9 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
                 : `rounded-lg border px-3 py-2 text-left text-sm transition-colors ${selected ? 'border-lc-green bg-lc-green/10 text-lc-white' : 'border-lc-border bg-lc-card/40 text-lc-white hover:border-lc-green/50 hover:bg-lc-green/5'}`}
               style={mobile && selected ? { borderColor: 'var(--app-accent)', color: 'var(--app-accent)' } : undefined}
             >
-              <span className="block font-semibold">{t(`preferences.notifications.ringtone.${id}`)}</span>
+              <span className="block font-semibold">{t(`settings.preferences.notifications.ringtone.${id}.label`)}</span>
               <span className={mobile ? 'settings-row-meta muted' : 'block text-[11px] text-lc-muted'}>
-                {t(`preferences.notifications.ringtone.${id}.hint`)}
+                {t(`settings.preferences.notifications.ringtone.${id}.hint`)}
               </span>
             </button>
           );
@@ -132,7 +132,7 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
   if (mobile) {
     return (
       <div className="settings-section" data-testid="notification-settings">
-        <div className="settings-section-title">{t('preferences.notifications.title')}</div>
+        <div className="settings-section-title">{t('settings.preferences.notifications.title')}</div>
         {rows.map((row) => (
           <button
             key={row.key}
@@ -164,7 +164,7 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
           onClick={() => previewRingtone(prefs.notificationRingtone, 'dm')}
           data-testid="notif-test-sound"
         >
-          <span>{t('preferences.notifications.test')}</span>
+          <span>{t('settings.preferences.notifications.test')}</span>
         </button>
       </div>
     );
@@ -174,7 +174,7 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
     <section className="space-y-3 rounded-lg border border-lc-border bg-lc-dark/30 p-3" data-testid="notification-settings">
       <div className="flex items-center justify-between gap-2">
         <Text as="h3" variant="label" size="xs" weight="semibold" tone="muted">
-          {t('preferences.notifications.title')}
+          {t('settings.preferences.notifications.title')}
         </Text>
         <Button
           variant="outlinePill"
@@ -182,7 +182,7 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
           onClick={() => previewRingtone(prefs.notificationRingtone, 'dm')}
           data-testid="notif-test-sound"
         >
-          {t('preferences.notifications.test')}
+          {t('settings.preferences.notifications.test')}
         </Button>
       </div>
       {rows.map((row) => (

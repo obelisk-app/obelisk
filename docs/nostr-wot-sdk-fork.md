@@ -121,7 +121,7 @@ For tight inner-loop work, do iteration in the playground (instant HMR,
 no rebuild), then rebuild only when ready to wire into the chat shell.
 
 > **Status (2026-05-07):** the cutover has shipped.
-> `src/app/app/LoginModal.tsx` is a thin wrapper around the SDK's
+> `src/app/[locale]/app/LoginModal.tsx` is a thin wrapper around the SDK's
 > `<LoginModal>`. The bridge (`src/services/nostr-bridge/client.ts`) still
 > owns the session: the SDK constructs the signer, hands the bridging
 > material to the host via `onLogin`, and the host adapts each method
@@ -209,14 +209,14 @@ client pubkey the remote signer never authorized → `connect` request
 rejected ("no secret"). The bridge persists `bunkerLocalSecretHex`
 either way, so silent rehydrate on reload still works.
 
-`src/app/app/LoginModal.tsx` wires this together: it pulls
+`src/app/[locale]/app/LoginModal.tsx` wires this together: it pulls
 `{ nsec, bunkerUri, clientNsec }` out of `onLogin`, decodes
 nsec → hex via `nostr-tools/nip19`, and routes to the corresponding
 bridge entrypoint.
 
 ## Migration history - obelisk-dex login modal
 
-**Decided 2026-05-04, shipped 2026-05-07.** `src/app/app/LoginModal.tsx`
+**Decided 2026-05-04, shipped 2026-05-07.** `src/app/[locale]/app/LoginModal.tsx`
 now wraps the SDK's `<LoginModal>` and forwards `onLogin` extras to the
 bridge (see "Fork-only API" above). The bridge stays authoritative for
 session state; the SDK only owns the login UI and signer construction.

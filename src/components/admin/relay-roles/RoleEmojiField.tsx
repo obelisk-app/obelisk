@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import EmojiPicker from '@/components/chat/EmojiPicker';
 import { CloseIcon } from '@/components/ui/icons';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { normalizeRoleEmoji, type RelayRole } from '@/services/relay-roles';
 import IconButton from '@/components/ui/IconButton';
 
@@ -12,7 +12,7 @@ const EMOJI_POPOVER_H = 430;
 
 /** The role's badge emoji: a square button that opens the picker, with a small clear badge. */
 export default function RoleEmojiField({ role, onPick }: { role: RelayRole; onPick: (emoji: string) => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [anchor, setAnchor] = useState<{ left: number; top: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -39,7 +39,7 @@ export default function RoleEmojiField({ role, onPick }: { role: RelayRole; onPi
         onClick={() => (anchor ? setAnchor(null) : open())}
         aria-label={`${role.id} emoji`}
         aria-expanded={!!anchor}
-        title={t('roles.badgeEmoji')}
+        title={t('admin.roles.badgeEmoji')}
         className="text-base"
       >
         {role.emoji || <span className="text-xs text-lc-muted">+</span>}

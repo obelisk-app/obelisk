@@ -28,7 +28,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import Text from '@/components/ui/Text';
 import { useDismiss } from '@/hooks/useDismiss';
@@ -52,7 +52,7 @@ export default function HintCallout({
   onDismiss: () => void;
   onMuteAll: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const cardRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; below: boolean } | null>(null);
 
@@ -125,7 +125,7 @@ export default function HintCallout({
         <Text as="p" size="13" tone="muted" className="mt-1 leading-relaxed">{body}</Text>
         <div className="mt-3 flex items-center justify-between gap-2">
           <Button variant="ghost" size="xs" onClick={onMuteAll} data-testid="hint-mute">
-            {t('hints.dismissAll')}
+            {t('shell.hints.dismissAll')}
           </Button>
           <Button
             variant="pill"
@@ -136,7 +136,7 @@ export default function HintCallout({
             autoFocus
             data-testid="hint-dismiss"
           >
-            {t('hints.gotIt')}
+            {t('shell.hints.gotIt')}
           </Button>
         </div>
       </div>

@@ -3,7 +3,7 @@
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMemo } from 'react';
 import { trendingTags } from '@/services/social/trending';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import FollowTagButton from '../FollowTagButton';
 import WidgetCard, { WidgetEmpty } from './WidgetCard';
 
@@ -21,7 +21,7 @@ export default function TrendingWidget({
   notes: readonly NostrEvent[];
   onOpenTag?: (tag: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const tags = useMemo(() => trendingTags(notes, { limit: 8 }), [notes]);
 
   return (

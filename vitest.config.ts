@@ -30,7 +30,9 @@ export default defineConfig({
         // handshake open a real WebSocket.
         // `vesta` ships TypeScript source, so it has to be inlined for
         // Vitest to transform it rather than hand it to Node as-is.
-        inline: [/@nostr-wot\//, 'vesta'],
+        // next-intl and use-intl are inlined so a test's `vi.mock('next/navigation')`
+        // also reaches the router and pathname hooks next-intl wraps.
+        inline: [/@nostr-wot\//, 'vesta', 'next-intl', 'use-intl'],
       },
     },
   },
@@ -39,6 +41,8 @@ export default defineConfig({
       '@tests': path.resolve(__dirname, './tests'),
       '@': path.resolve(__dirname, './src'),
       'server-only': path.resolve(__dirname, './tests/support/server-only-stub.ts'),
+      // The real module needs React's `react-server` condition; see the stub.
+      'next-intl/server': path.resolve(__dirname, './tests/support/next-intl-server.ts'),
       // Dedupe React across the symlinked SDK packages. Without these,
       // `@nostr-wot/data/react` (loaded as raw TS via file: deps) imports
       // its own copy of React from nostr-wot-sdk/node_modules, breaking

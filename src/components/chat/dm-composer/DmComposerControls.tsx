@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import MessageMediaPicker from '../MessageMediaPicker';
 import { AttachmentMenu, StickerIcon, VoiceNoteButton } from '../ComposerActions';
 import { useDismiss } from '@/hooks/useDismiss';
@@ -15,7 +15,7 @@ import IconButton from '@/components/ui/IconButton';
  * by DmComposer).
  */
 export function DmComposerActions({ state, variant }: { state: DmComposerState; variant: 'desktop' | 'mobile' }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const pickerRef = useRef<HTMLDivElement>(null);
   useDismiss({ refs: [pickerRef], onDismiss: state.closePicker, enabled: state.pickerOpen && variant === 'desktop', escape: 'ignore' });
   if (state.voice) return null;
@@ -67,7 +67,7 @@ export function DmComposerActions({ state, variant }: { state: DmComposerState; 
  * otherwise the voice-note recorder, on threads that take files.
  */
 export function DmSendControl({ state, variant }: { state: DmComposerState; variant: 'desktop' | 'mobile' }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { canSend, draft, files, voice } = state;
   if (canSend || draft.trim() || files.length > 0 || voice) {
     const icon = (

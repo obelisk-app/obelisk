@@ -4,11 +4,11 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 const push = vi.fn();
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({ useRouter: () => ({ push }) }));
 vi.mock('@/components/marketing/ShootingStars', () => ({ default: () => null }));
 vi.mock('@/components/voice/VoiceControls', () => ({ default: () => null }));
 vi.mock('@/components/voice/DebugOverlay', () => ({ DebugOverlay: () => null }));

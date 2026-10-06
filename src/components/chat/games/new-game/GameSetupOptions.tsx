@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { CR_SIZES, type CRSizeKey } from '@/lib/games/chain-reaction';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import FileInput from '@/components/ui/FileInput';
 import Input from '@/components/ui/Input';
 import type { NewGameForm } from '@/hooks/chat/games/new-game/useNewGameForm';
@@ -11,7 +11,7 @@ import Button from '@/components/ui/Button';
 
 /** The chosen game's own options: board size, piece seed, or board seed and a save to resume. */
 export default function GameSetupOptions({ form }: { form: NewGameForm }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const fileRef = useRef<HTMLInputElement>(null);
   const { selected, size, setSize, seed, setSeed, editVestaSeed, resume, loadSave } = form;
   if (!selected) return null;

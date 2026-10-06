@@ -1,4 +1,4 @@
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 /**
  * Thumbnails for the game picker.
  *
@@ -9,7 +9,7 @@ import { useTranslation } from '@/i18n/context';
  */
 
 export function ChainReactionPreview({ size = 56 }: { size?: number }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const cols = 4;
   const rows = 5;
   const gap = 1.5;
@@ -69,7 +69,7 @@ function OrbGroup({ x, y, cell, count, color }: { x: number; y: number; cell: nu
 }
 
 export function VestaPreview({ size = 56 }: { size?: number }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   // Seven hexes in a flower, in the board's own resource colours, with two
   // settlements on the vertices between them.
   const r = size * 0.17;

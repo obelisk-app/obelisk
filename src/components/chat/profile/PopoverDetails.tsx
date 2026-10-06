@@ -1,19 +1,19 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { GlobeIcon, ZapIcon } from '@/components/ui/icons';
 import { BASE_ROLE, websiteHref, type PopoverMember } from '@/hooks/chat/profile/usePopoverMember';
 
 /** Roles + links, recessed so they read as details, not actions. */
 export function PopoverDetails({ member }: { member: PopoverMember | undefined }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const baseRole = member?.role ? BASE_ROLE[member.role] : undefined;
   if (!(baseRole || member?.website || member?.lud16)) return null;
   return (
     <div className="space-y-2.5 rounded-lg border border-lc-border bg-lc-black/50 p-3">
       {baseRole && (
         <div className="flex flex-wrap items-center gap-1.5" data-testid="profile-roles">
-          <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">{t('profilePopover.roles')}</span>
+          <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">{t('chat.profilePopover.roles')}</span>
           <span
             className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
             style={{ borderColor: baseRole.color, color: baseRole.color }}

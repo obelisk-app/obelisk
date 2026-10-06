@@ -1,7 +1,7 @@
 'use client';
 
 import type { Nip05State } from '@/services/nip05-verify';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { CheckBadgeIcon, CopyIcon } from '@/components/ui/icons';
 import Spinner from '@/components/ui/Spinner';
 import WotBadge from '../WotBadge';
@@ -28,7 +28,7 @@ export function PopoverIdentity({
   npubShort: string;
   onCopyNpub: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <div className="min-w-0">
       <h3 className="flex items-center gap-2 break-words text-lg font-semibold leading-tight text-lc-white" data-testid="profile-name">
@@ -62,7 +62,7 @@ export function PopoverIdentity({
             type="button"
             onClick={onCopyNpub}
             className="flex max-w-full items-center gap-1.5 rounded-full border border-lc-border bg-lc-black/60 px-2 py-0.5 font-mono text-[11px] text-lc-white/85 transition-colors hover:border-lc-green/50 hover:text-lc-white"
-            title={t('profileFeed.copyNpub')}
+            title={t('social.profileFeed.copyNpub')}
             data-testid="profile-copy-npub-btn"
           >
             <span className="truncate">{npubShort}</span>

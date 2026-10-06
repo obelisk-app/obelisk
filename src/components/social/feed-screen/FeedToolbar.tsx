@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Chip from '@/components/ui/Chip';
 import SegmentedControl from '@/components/ui/SegmentedControl';
 import { CONTENT_FILTERS, type ContentFilter } from '@/services/social/kinds';
@@ -47,7 +47,7 @@ export default function FeedToolbar({
   onOpenSettings?: () => void;
   actions?: ReactNode;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <>
     {/*

@@ -20,7 +20,7 @@ vi.mock('@/utils/bolt11', () => ({
 }));
 
 import InvoiceCard from '@/components/chat/InvoiceCard';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 const renderLocalized = (ui: React.ReactElement) => render(
   <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,

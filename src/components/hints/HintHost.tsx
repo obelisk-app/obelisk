@@ -27,7 +27,7 @@ import {
   type SurfaceId,
 } from '@/utils/hints/registry';
 import { useHintsStore } from '@/store/hints';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import HintCallout from './HintCallout';
 
 /**
@@ -45,7 +45,7 @@ export default function HintHost({
   surface: SurfaceId | null;
   shell: Shell;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const seen = useHintsStore((state) => state.seen);
   const muted = useHintsStore((state) => state.muted);
   const markSeen = useHintsStore((state) => state.markSeen);

@@ -1,6 +1,26 @@
 import type { NextConfig } from "next";
 import { networkInterfaces } from "os";
+import createNextIntlPlugin from "next-intl/plugin";
 import { buildCsp } from "./src/utils/csp";
+
+// next-intl's request config: the URL's locale and its message modules.
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+/**
+ * The guides used to live at `/guides/es/...` and `/guides/pt/...` (and
+ * `/guides/en/...` redirected to the unprefixed English). Every page now
+ * sits under the language prefix (`/es/guides/...`), so the old URLs, their
+ * OG images included, answer with a permanent redirect and keep whatever
+ * search ranking and shared links they earned.
+ */
+const GUIDE_REDIRECTS = [
+  { source: "/guides/en", destination: "/guides" },
+  { source: "/guides/en/:path+", destination: "/guides/:path+" },
+  { source: "/guides/es", destination: "/es/guides" },
+  { source: "/guides/es/:path+", destination: "/es/guides/:path+" },
+  { source: "/guides/pt", destination: "/pt/guides" },
+  { source: "/guides/pt/:path+", destination: "/pt/guides/:path+" },
+].map((r) => ({ ...r, permanent: true }));
 
 // Dynamically collect all local IPs so any device on the network can access dev
 const localIPs = Object.values(networkInterfaces())
@@ -38,6 +58,17 @@ if (process.env.NODE_ENV === 'development') pageExtensions.unshift('dev.tsx');
 
 const nextConfig: NextConfig = {
   pageExtensions,
+  /*
+   * The proxy sees the request's own URL. Normalised, Next rebuilds it from
+   * the server's fetch hostname (`localhost`) while it resolves rewrites
+   * against the listen hostname (`next start -H 127.0.0.1`), so next-intl's
+   * internal rewrite of `/app` to `/en/app` looked like a rewrite to another
+   * origin, was proxied back through the proxy as `/en/app`, and came out
+   * as a redirect to `/app`: a loop on every unprefixed English URL. The
+   * normalisation only matters for the pages router's `/_next/data` URLs,
+   * which this app does not have.
+   */
+  skipProxyUrlNormalize: true,
   // `vesta` is consumed straight from its GitHub source (its package `main`
   // is `src/vesta.ts`), so Next has to compile it like first-party code.
   // That is deliberate: it keeps us tracking upstream by version range
@@ -72,6 +103,17 @@ const nextConfig: NextConfig = {
         destination: '/app/:path*',
         permanent: true,
       },
+      {
+        source: '/:locale(es|pt)/chat',
+        destination: '/:locale/app',
+        permanent: true,
+      },
+      {
+        source: '/:locale(es|pt)/chat/:path*',
+        destination: '/:locale/app/:path*',
+        permanent: true,
+      },
+      ...GUIDE_REDIRECTS,
     ];
   },
   async headers() {
@@ -144,4 +186,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

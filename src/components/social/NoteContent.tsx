@@ -15,7 +15,7 @@ import { displayNameFor } from '@/utils/identity/display-name';
 import { useMemo } from 'react';
 import { useAuthor } from '@/hooks/social/useAuthor';
 import { useNotePreview } from '@/hooks/social/useNotePreview';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { tokenizeContent, type NostrRef } from '@/services/social/nip27';
 import { linkifyHashtags } from '@/services/social/profile-feed';
 import MessageContent from '@/components/chat/MessageContent';
@@ -131,7 +131,7 @@ function AddressRefChip({
 }: {
   refValue: Extract<NostrRef, { type: 'address' }>;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const meta = useAuthor(refValue.pubkey);
   const name = displayNameFor(refValue.pubkey, meta);
   const slug = refValue.identifier.replace(/^\d+-/, '').replace(/[-_]+/g, ' ').trim();
@@ -172,7 +172,7 @@ function EventRefChip({
   refValue: Extract<NostrRef, { type: 'event' }>;
   onOpenNote?: (id: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const preview = useNotePreview(refValue.id, refValue.relays);
   const authorPubkey = refValue.author ?? preview?.pubkey ?? null;
   const meta = useAuthor(authorPubkey);

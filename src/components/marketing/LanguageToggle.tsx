@@ -9,16 +9,14 @@
  * written in its own name, because someone looking for Português cannot be
  * expected to recognise "Portuguese" in a language they don't read.
  *
- * It also keeps the guides-URL rewrite the toggle did: English articles are
- * unprefixed and the rest live under `/guides/<locale>`, so switching
- * language on a guide has to move you to the same article in the new one.
+ * Picking a language navigates to the same page in that language
+ * (`/guides/vesta` to `/es/guides/vesta`); see `useSwitchLocale`.
  */
 
 import { useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useTranslation } from '@/i18n/context';
+import { useLocale } from 'next-intl';
 import { LOCALES, type Locale } from '@/i18n';
-import { guidesHref } from '@/utils/guides/guide-urls';
+import { useSwitchLocale } from '@/hooks/i18n/useSwitchLocale';
 import Button from '@/components/ui/Button';
 import { CheckIcon, ChevronDownIcon } from '@/components/ui/icons';
 import { MenuItem } from '@/components/ui/menu';
@@ -39,28 +37,14 @@ const LANGUAGE_CODES: Record<Locale, string> = {
 };
 
 export default function LanguageToggle() {
-  const { locale, setLocale } = useTranslation();
-  const pathname = usePathname();
-  const router = useRouter();
+  const locale = useLocale();
+  const switchLocale = useSwitchLocale();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
 
   const pick = (next: Locale) => {
     setOpen(false);
-    if (next === locale) return;
-    setLocale(next);
-
-    // On a URL-localised guides route, rewrite the URL so the article
-    // matches the language that was just chosen. English has no prefix;
-    // everything else is `/guides/<locale>`.
-    if (!pathname) return;
-    const prefixed = pathname.match(new RegExp(`^/guides/(?:${LOCALES.join('|')})(?:/(.*))?$`));
-    if (prefixed) {
-      router.push(guidesHref(next, prefixed[1] || undefined));
-      return;
-    }
-    const english = pathname.match(/^\/guides(?:\/([^/]+))?$/);
-    if (english) router.push(guidesHref(next, english[1] || undefined));
+    switchLocale(next);
   };
 
   return (

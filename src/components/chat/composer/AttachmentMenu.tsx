@@ -1,14 +1,14 @@
 'use client';
 
 import { useRef, useState, type RefObject } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import FileInput from '@/components/ui/FileInput';
 import { useDismiss } from '@/hooks/useDismiss';
 import { MenuIcon, type MenuIconKind } from './composer-icons';
 import IconButton from '@/components/ui/IconButton';
 
 function MenuItem({ label, icon, onClick, disabled }: { label: string; icon: MenuIconKind; onClick?: () => void; disabled?: boolean }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <button
       type="button"
@@ -21,7 +21,7 @@ function MenuItem({ label, icon, onClick, disabled }: { label: string; icon: Men
         <MenuIcon kind={icon} />
       </span>
       <span>{label}</span>
-      {disabled && <span className="ml-auto text-[10px] uppercase tracking-wide text-lc-muted">{t('composer.later')}</span>}
+      {disabled && <span className="ml-auto text-[10px] uppercase tracking-wide text-lc-muted">{t('chat.composer.later')}</span>}
     </button>
   );
 }
@@ -73,7 +73,7 @@ export function AttachmentMenu({
   onContact: (value: string) => void;
   onNewSticker: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
@@ -93,26 +93,26 @@ export function AttachmentMenu({
 
   return (
     <div ref={rootRef} className="relative">
-      <PickerInput inputRef={mediaRef} label={t('composer.photos')} accept="image/*,video/*" onFiles={onFiles} />
-      <PickerInput inputRef={documentRef} label={t('composer.document')} onFiles={onFiles} />
-      <PickerInput inputRef={cameraRef} label={t('composer.camera')} accept="image/*" capture="environment" onFiles={onFiles} />
+      <PickerInput inputRef={mediaRef} label={t('chat.composer.photos')} accept="image/*,video/*" onFiles={onFiles} />
+      <PickerInput inputRef={documentRef} label={t('chat.composer.document')} onFiles={onFiles} />
+      <PickerInput inputRef={cameraRef} label={t('chat.composer.camera')} accept="image/*" capture="environment" onFiles={onFiles} />
       <IconButton
         disabled={disabled}
         onClick={() => setOpen((value) => !value)}
-        aria-label={t('composer.addAttachment')}
+        aria-label={t('chat.composer.addAttachment')}
         aria-expanded={open}
       >
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
       </IconButton>
       {open && (
         <div className="absolute bottom-full left-0 z-40 mb-2 w-56 overflow-hidden rounded-2xl border border-lc-border bg-lc-dark p-2 text-sm text-lc-white shadow-2xl" role="menu">
-          <MenuItem label={t('composer.document')} icon="document" onClick={() => pick(documentRef)} />
-          <MenuItem label={t('composer.photos')} icon="media" onClick={() => pick(mediaRef)} />
-          <MenuItem label={t('composer.camera')} icon="camera" onClick={() => pick(cameraRef)} />
-          <MenuItem label={t('composer.contact')} icon="contact" onClick={contact} />
-          <MenuItem label={t('composer.newSticker')} icon="sticker" onClick={() => { setOpen(false); onNewSticker(); }} />
-          <MenuItem label={t('composer.poll')} icon="poll" disabled />
-          <MenuItem label={t('composer.event')} icon="event" disabled />
+          <MenuItem label={t('chat.composer.document')} icon="document" onClick={() => pick(documentRef)} />
+          <MenuItem label={t('chat.composer.photos')} icon="media" onClick={() => pick(mediaRef)} />
+          <MenuItem label={t('chat.composer.camera')} icon="camera" onClick={() => pick(cameraRef)} />
+          <MenuItem label={t('chat.composer.contact')} icon="contact" onClick={contact} />
+          <MenuItem label={t('chat.composer.newSticker')} icon="sticker" onClick={() => { setOpen(false); onNewSticker(); }} />
+          <MenuItem label={t('chat.composer.poll')} icon="poll" disabled />
+          <MenuItem label={t('chat.composer.event')} icon="event" disabled />
         </div>
       )}
     </div>

@@ -1,8 +1,8 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import Link from 'next/link';
-import { useTranslation } from '@/i18n/context';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import type { PqProtectionLevel } from '@/services/pq/status';
 import { useDismiss } from '@/hooks/useDismiss';
 import { ICONS } from './pq/pq-shield-icons';
@@ -37,7 +37,7 @@ export default function PqShield({
   level: PqProtectionLevel;
   guideHref: string;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement | null>(null);
   const panelId = useId();
@@ -50,8 +50,8 @@ export default function PqShield({
   useDismiss({ refs: [wrapRef], onDismiss: close, enabled: open, outside: 'pointerdown' });
 
   const Icon = ICONS[level];
-  const label = t(`pq.level.${level}`);
-  const detail = t(`pq.level.${level}Detail`);
+  const label = t(`chat.pq.level.${level}`);
+  const detail = t(`chat.pq.level.${level}Detail`);
 
   return (
     <span
@@ -96,7 +96,7 @@ export default function PqShield({
               href={guideHref}
               className="mt-2 inline-block text-xs font-medium text-lc-green underline underline-offset-2 hover:text-lc-green/80"
             >
-              {t('pq.learnHow')}
+              {t('chat.pq.learnHow')}
             </Link>
           )}
         </span>

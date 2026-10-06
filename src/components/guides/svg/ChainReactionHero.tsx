@@ -114,17 +114,17 @@ export default function ChainReactionHero() {
 
       {/* the right-hand column: what the move actually is on the wire */}
       <g fontWeight="600">
-        <text x="540" y="118" fill="#fafafa" fontSize="15">One orb over the limit</text>
-        <text x="540" y="140" fill="#a3a3a3" fontSize="11">every neighbour takes one,</text>
-        <text x="540" y="156" fill="#a3a3a3" fontSize="11">and may burst in turn</text>
+        <text x="540" y="118" fill="#fafafa" fontSize="15">One orb over the limit</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="540" y="140" fill="#a3a3a3" fontSize="11">every neighbour takes one,</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="540" y="156" fill="#a3a3a3" fontSize="11">and may burst in turn</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
 
         <g fontFamily="ui-monospace, monospace">
           <rect x="540" y="186" width="216" height="58" rx="10" fill="#171717" stroke="#262626" />
-          <text x="558" y="210" fill="#b4f953" fontSize="12">kind 2390</text>
+          <text x="558" y="210" fill="#b4f953" fontSize="12">kind 2390</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           <text x="558" y="230" fill="#a3a3a3" fontSize="11">{'{"op":"move","cell":11}'}</text>
         </g>
-        <text x="540" y="266" fill="#a3a3a3" fontSize="11">the cascade is replayed,</text>
-        <text x="540" y="282" fill="#a3a3a3" fontSize="11">never published</text>
+        <text x="540" y="266" fill="#a3a3a3" fontSize="11">the cascade is replayed,</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="540" y="282" fill="#a3a3a3" fontSize="11">never published</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
 
         {/* seat legend */}
         {SEATS.map((hex, i) => (

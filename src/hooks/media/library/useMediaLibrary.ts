@@ -7,7 +7,7 @@ import { nostrActions, useMediaPacks, useMyMediaFavorites, useMyPubkey } from '@
 import type { JsMediaItem, JsMediaPack } from '@/services/nostr-bridge';
 import { publishRelayEmojiSet, type RelayEmojiSet } from '@/services/relay-emojis';
 import { inferMediaKind } from '@/utils/media-tags/media-kind';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { confirmDialog } from '@/services/confirm-dialog';
 import { filterVisiblePacks, sortedPacks } from '@/utils/media-library/pack-utils';
 import type { EditablePack, LibraryTab, MediaFilter, SelectedMedia } from '@/utils/media-library/types';
@@ -30,7 +30,7 @@ export function useMediaLibrary({
   initialKind: MediaFilter;
   initialSelection?: SelectedMedia;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const myPubkey = useMyPubkey();
   const packsByAddress = useMediaPacks();
   const favorites = useMyMediaFavorites();
@@ -110,9 +110,9 @@ export function useMediaLibrary({
 
   const deletePack = async (pack: JsMediaPack) => {
     const ok = await confirmDialog({
-      title: t('media.confirmDeletePack').replace('{title}', pack.title),
+      title: t('media.confirmDeletePack', { title: pack.title }),
       message: t('media.confirmDeletePackBody'),
-      confirmLabel: t('confirm.delete'),
+      confirmLabel: t('common.confirm.delete'),
     });
     if (!ok) return;
     setBusy(true);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { RecentIcon } from './picker/RecentIcon';
 import { useDismiss } from '@/hooks/useDismiss';
 import { botLabel, sectionTitle, type BotProfiles, type SlashCommand, type SlashCommandSection } from '@/utils/chat/slash/slash-commands';
@@ -33,7 +33,7 @@ interface Props {
 export default function SlashCommandAutocomplete({
   sections, rail, filter = 'all', onFilter, selectedIndex, onSelect, onClose, botProfiles,
 }: Props) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const ref = useRef<HTMLDivElement>(null);
   const { select, registerRef } = useSlashList(onSelect, selectedIndex);
   // Escape stays with the composer, which owns the keyboard while this is open.
@@ -57,7 +57,7 @@ export default function SlashCommandAutocomplete({
               <button
                 key={sec.key}
                 type="button"
-                title={sectionTitle(sec, t('slash.recent'), botProfiles)}
+                title={sectionTitle(sec, t('chat.slash.recent'), botProfiles)}
                 aria-pressed={active}
                 onMouseDown={(e) => { e.preventDefault(); onFilter!(active ? 'all' : sec.key); }}
                 className={`rounded-full ring-2 transition-opacity ${active ? 'ring-lc-green opacity-100' : 'ring-transparent opacity-70 hover:opacity-100'}`}
@@ -71,13 +71,13 @@ export default function SlashCommandAutocomplete({
       )}
       <div className="min-w-0 flex-1 overflow-y-auto overscroll-contain [contain:content]">
         {sections.length === 0 && (
-          <div className="px-3 py-4 text-xs text-lc-muted">{t('slash.noMatch')}</div>
+          <div className="px-3 py-4 text-xs text-lc-muted">{t('chat.slash.noMatch')}</div>
         )}
         {sections.map((sec) => (
           <div key={sec.key}>
             <div className="sticky top-0 z-10 flex items-center gap-2 bg-lc-dark px-3 pb-1 pt-2 text-xs font-semibold text-lc-white">
               {sec.key === 'recent' && <RecentIcon className="h-4 w-4" />}
-              {sectionTitle(sec, t('slash.recent'), botProfiles)}
+              {sectionTitle(sec, t('chat.slash.recent'), botProfiles)}
             </div>
             {sec.commands.map((cmd) => {
               const i = flat++;

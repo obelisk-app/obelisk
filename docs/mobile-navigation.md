@@ -1,6 +1,6 @@
 # Mobile navigation
 
-The mobile shell (`src/app/app/mobile/PhoneShell.tsx`) is a state
+The mobile shell (`src/app/[locale]/app/mobile/PhoneShell.tsx`) is a state
 machine driven by `window.history`. Every visible transition between
 screens corresponds to one history entry; there is no React Router,
 no NavController object, just `pushState` + `popstate`. This doc is the
@@ -312,7 +312,7 @@ pending cleanup timer from the previous animation so its
 ## 9. Where the logic lives
 
 ```
-src/app/app/mobile/
+src/app/[locale]/app/mobile/
 ├── PhoneShell.tsx       (the state machine: go, pushNav, BottomNav,
 │                         onTabPress, popstate handler, drag carousel,
 │                         openers, screen renderers, seed/init)

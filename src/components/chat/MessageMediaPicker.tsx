@@ -8,7 +8,7 @@
  */
 import type { CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import EmptyState from '@/components/ui/EmptyState';
 import EmojiPicker, { MediaPickerSearch, type PickedCustomEmoji } from './EmojiPicker';
 import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
@@ -38,7 +38,7 @@ export default function MessageMediaPicker({
   customEmojis?: CustomEmojiMap;
   initialTab?: MediaPickerTab;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const picker = useMediaPicker({ initialTab, customEmojis, onPick });
   const { tab, setTab, category, sections, favoriteUrls, libraryOpen, setLibraryOpen } = picker;
   const isSheet = variant === 'sheet';
@@ -82,7 +82,7 @@ export default function MessageMediaPicker({
 
   return (
     <div className={shellClass} data-testid="media-picker-shell">
-      <div role="dialog" aria-label={t('mediaPicker.title')} className="flex h-full w-full flex-col overflow-hidden p-2 text-lc-white" onClick={(event) => event.stopPropagation()}>
+      <div role="dialog" aria-label={t('chat.mediaPicker.title')} className="flex h-full w-full flex-col overflow-hidden p-2 text-lc-white" onClick={(event) => event.stopPropagation()}>
       <MediaCategoryNav category={category} onCategory={picker.chooseCategory} />
       <div className="my-2 flex items-center gap-2">
         <MediaPickerSearch
@@ -113,7 +113,7 @@ export default function MessageMediaPicker({
       </div>
       <div className="flex items-center justify-between gap-2 pb-1">
         <TextButton onClick={() => setLibraryOpen("mine")} className="text-xs font-medium" data-testid="manage-media-packs">
-          {t('mediaPicker.favorites')}
+          {t('chat.mediaPicker.favorites')}
         </TextButton>
         <span className="text-right text-[10px] text-lc-muted">{tab === 'gif' ? 'Powered by GIPHY' : 'Stickers by Twemoji'}</span>
       </div>

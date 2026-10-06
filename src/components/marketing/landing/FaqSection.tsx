@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import FAQItem from '../FAQItem';
 import RevealSection from './RevealSection';
 import { FAQ_IDS } from './landing-data';
@@ -9,11 +9,11 @@ import { FAQ_IDS } from './landing-data';
  * The FAQ accordion, with its FAQPage JSON-LD for search engines.
  */
 export default function FaqSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const faqItems = FAQ_IDS.map((id) => ({
     id,
-    question: t(`faq.${id}.question`),
-    answer: t(`faq.${id}.answer`),
+    question: t(`marketing.faq.${id}.question`),
+    answer: t(`marketing.faq.${id}.answer`),
   }));
   const faqJsonLd = {
     '@context': 'https://schema.org',
@@ -36,10 +36,10 @@ export default function FaqSection() {
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('faq.heading')}<span className="text-lc-green">.</span>
+            {t('marketing.faq.heading')}<span className="text-lc-green">.</span>
           </h2>
           <p className="text-lc-muted text-lg max-w-xl mx-auto">
-            {t('faq.subtitle')}
+            {t('marketing.faq.subtitle')}
           </p>
         </div>
         <div className="space-y-3">

@@ -1,0 +1,40 @@
+{
+  "filterPlaceholder": "Filtrar por pubkey ou nome de canal…",
+  "demoteHelp": "Remove o cargo de admin das linhas selecionadas. Os membros são ignorados.",
+  "title": "Admins e membros do relay",
+  "allRoles": "Todos os cargos",
+  "adminsOnly": "Somente admins",
+  "membersOnly": "Somente membros",
+  "allChannels": "Todos os canais",
+  "colUser": "Usuário",
+  "colChannel": "Canal",
+  "colRole": "Cargo",
+  "member": "Membro",
+  "selectRow": "Selecionar {user}",
+  "roles": {
+    "newPlaceholder": "Nome do novo cargo…",
+    "newLabel": "Nome do novo cargo",
+    "tier": "Nível: o mais alto vence",
+    "badgeEmoji": "Emoji do selo",
+    "searchPlaceholder": "Buscar membros por nome, NIP-05 ou npub…",
+    "title": "Cargos e níveis",
+    "add": "Adicionar cargo",
+    "empty": "Ainda não há cargos. Crie um acima.",
+    "nobody": "Ninguém tem este cargo ainda.",
+    "grant": "Conceder",
+    "revoke": "Revogar",
+    "base": {
+      "owner": "Dono",
+      "admin": "Admin",
+      "mod": "Moderador",
+      "member": "Membro"
+    },
+    "confirmDelete": "Excluir “{name}”?",
+    "confirmDeleteBody": "Todos que o possuem perdem a insígnia."
+  },
+  "bulk": {
+    "confirmRemove": "Remover {count} entradas?",
+    "confirmDemote": "Rebaixar {count} entradas?",
+    "more": "e mais {count}"
+  }
+}

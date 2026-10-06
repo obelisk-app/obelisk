@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { HEIGHT, WIDTH } from '@/lib/games/stacker/engine';
 import type { StackerRunner } from '@/lib/games/stacker/runner';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { canvasDpr } from './block-paint';
 import { drawWell } from './draw-well';
 
@@ -33,7 +33,7 @@ export default function StackerBoard({
   cell?: number;
   dimmed?: boolean;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const ref = useRef<HTMLCanvasElement>(null);
   const dimmedRef = useRef(dimmed);
   useEffect(() => { dimmedRef.current = dimmed; }, [dimmed]);

@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { useRelayRolesDraft } from '@/hooks/admin/useRelayRolesDraft';
 import * as roles from '@/services/relay-roles';
 import type { RelayRoles } from '@/services/relay-roles';

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { initializeWot, useWotStore, wotEngine } from '@/services/wot';
 import { WOT_TIERS } from '@/services/wot/colors';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Range from '@/components/ui/Range';
 import Toggle from '@/components/ui/Toggle';
 import Text from '@/components/ui/Text';
@@ -17,7 +17,7 @@ import TextButton from '@/components/ui/TextButton';
  * `initializeWot`'s visibilitychange listener).
  */
 export default function WotSettings() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const enabled = useWotStore((s) => s.enabled);
   const maxHops = useWotStore((s) => s.maxHops);
   const minPaths = useWotStore((s) => s.minPaths);
@@ -56,15 +56,15 @@ export default function WotSettings() {
     <section className="space-y-3 rounded-xl border border-lc-border bg-lc-dark p-4">
       <header className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-semibold text-lc-white">{t('wot.title')}</div>
+          <div className="text-sm font-semibold text-lc-white">{t('settings.wot.title')}</div>
           {active && (
             <div className="mt-0.5 text-xs text-lc-muted">
-              {t('wot.help')}
+              {t('settings.wot.help')}
             </div>
           )}
         </div>
         <Toggle
-          aria-label={t('wot.title')}
+          aria-label={t('settings.wot.title')}
           checked={active}
           disabled={!canEnable}
           onChange={() => setEnabled(!enabled)}
@@ -84,11 +84,11 @@ export default function WotSettings() {
         <>
           <div>
             <div className="mb-1 flex items-center justify-between text-xs text-lc-muted">
-              <span>{t('wot.maxHops')}</span>
+              <span>{t('settings.wot.maxHops')}</span>
               <span className="font-mono text-lc-white">{maxHops}°</span>
             </div>
             <Range
-              aria-label={t('wot.maxHops')}
+              aria-label={t('settings.wot.maxHops')}
               min={1}
               max={4}
               step={1}
@@ -102,11 +102,11 @@ export default function WotSettings() {
 
           <div>
             <div className="mb-1 flex items-center justify-between text-xs text-lc-muted">
-              <span>{t('wot.minPaths')}</span>
+              <span>{t('settings.wot.minPaths')}</span>
               <span className="font-mono text-lc-white">{minPaths}</span>
             </div>
             <Range
-              aria-label={t('wot.minPaths')}
+              aria-label={t('settings.wot.minPaths')}
               min={1}
               max={3}
               step={1}
@@ -124,7 +124,7 @@ export default function WotSettings() {
               principal's hop distance. */}
           <div className="rounded-md border border-lc-border bg-lc-black/40 p-2">
             <Text as="div" variant="label" size="10" weight="semibold" tone="muted" className="mb-1.5">
-              {t('wot.channelColors')}
+              {t('settings.wot.channelColors')}
             </Text>
             <ul className="space-y-1">
               {WOT_TIERS.map((tier) => (
@@ -137,7 +137,7 @@ export default function WotSettings() {
               ))}
               <li className="flex items-center gap-2 text-xs">
                     <span className="inline-block w-8 text-center rounded-full border border-lc-border px-1 py-0 font-mono text-[10px] text-lc-muted">-</span>
-                    <span className="flex-1 text-lc-muted">{t('wot.outOfGraph')}</span>
+                    <span className="flex-1 text-lc-muted">{t('settings.wot.outOfGraph')}</span>
               </li>
             </ul>
           </div>
@@ -147,11 +147,11 @@ export default function WotSettings() {
       {active && (
         <div className="rounded-md border border-lc-border bg-lc-black/40 p-2 text-[11px] font-mono text-lc-muted">
           <div className="flex justify-between">
-            <span>{t('wot.resolvedAllow')}</span>
+            <span>{t('settings.wot.resolvedAllow')}</span>
             <span className="text-lc-green">{stats.allow}</span>
           </div>
           <div className="flex justify-between">
-            <span>{t('wot.resolvedDeny')}</span>
+            <span>{t('settings.wot.resolvedDeny')}</span>
             <span className="text-red-400">{stats.deny}</span>
           </div>
           <div className="flex justify-between">

@@ -1,7 +1,6 @@
 import { formatDate } from '@/utils/format/format';
 import type { Locale } from '@/i18n';
-
-type Translate = (key: string) => string;
+import type { MessageKey, Translate } from '@/i18n/keys';
 
 /**
  * "just now", `5m`, `3h`, `2d`, then a short date: the compact age shown on
@@ -21,7 +20,7 @@ export function relativeTime(
   unixSeconds: number,
   t: Translate,
   locale: Locale,
-  justNowKey = 'time.justNow',
+  justNowKey: MessageKey = 'common.time.justNow',
 ): string {
   const date = new Date(unixSeconds * 1000);
   const diff = Date.now() - date.getTime();

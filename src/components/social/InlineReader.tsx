@@ -18,7 +18,7 @@
  */
 
 import { useHistoryDismiss } from '@/hooks/app/useHistoryDismiss';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 
 export default function InlineReader({
@@ -32,7 +32,7 @@ export default function InlineReader({
   children: React.ReactNode;
   testId?: string;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const dismiss = useHistoryDismiss(true, onBack);
 
   return (

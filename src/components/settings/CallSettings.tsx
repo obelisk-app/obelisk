@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { CALL_RELAY_MAX, DEFAULT_CALL_RELAYS, normalizeCallRelays, setPreference, type CallIpProtection, type CallsFrom } from '@/services/preferences';
 import { usePreferences } from '@/hooks/usePreferences';
 import { CloseIcon } from '@/components/ui/icons';
@@ -53,7 +53,7 @@ function CallRelayEditor({
 }: {
   saved: readonly string[]; onStatus: (s: 'idle' | 'saved' | 'invalid') => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   // Seeded from the saved list; the parent remounts this (`key`) whenever the
   // saved list changes, so there is nothing to re-sync.
   const [draft, setDraft] = useState<string[]>(() => [...saved]);
@@ -120,14 +120,14 @@ function CallRelayEditor({
 }
 
 export default function CallSettings({ mobile = false }: { mobile?: boolean }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const prefs = usePreferences();
   const [status, setStatus] = useState<'idle' | 'saved' | 'invalid'>('idle');
 
   const body = (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <div className="text-sm font-semibold text-lc-white">{t('settings.calls.from')}</div>
+        <div className="text-sm font-semibold text-lc-white">{t('settings.calls.from.label')}</div>
         <p className="text-xs text-lc-muted">{t('settings.calls.fromHint')}</p>
         <Choice<CallsFrom>
           name="calls-from"
@@ -141,7 +141,7 @@ export default function CallSettings({ mobile = false }: { mobile?: boolean }) {
         />
       </div>
       <div className="space-y-1.5">
-        <div className="text-sm font-semibold text-lc-white">{t('settings.calls.ip')}</div>
+        <div className="text-sm font-semibold text-lc-white">{t('settings.calls.ip.label')}</div>
         <p className="text-xs text-lc-muted">{t('settings.calls.ipHint')}</p>
         <Choice<CallIpProtection>
           name="call-ip"

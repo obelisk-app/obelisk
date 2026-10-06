@@ -11,7 +11,7 @@ vi.mock('@/services/nostr-bridge', async (orig) => {
 
 import { DmCallLayer } from '@/components/call/DmCallLayer';
 import { DmCallButtons } from '@/components/call/DmCallButtons';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { useDmCallStore } from '@/store/dm-call';
 import { setPreference } from '@/services/preferences';
 

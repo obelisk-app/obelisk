@@ -3,8 +3,8 @@
 import { dismissActivity, type ActivityEntry } from '@/services/activity-log';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { usePreferences } from '@/hooks/usePreferences';
-import RelayStatusBanner from '@/app/app/RelayStatusBanner';
-import { useTranslation } from '@/i18n/context';
+import RelayStatusBanner from '@/app/[locale]/app/RelayStatusBanner';
+import { useTranslations } from 'next-intl';
 import { CloseIcon } from '@/components/ui/icons';
 
 export default function ActivityIndicator({ hideSigning = false }: { hideSigning?: boolean }) {
@@ -33,7 +33,7 @@ export default function ActivityIndicator({ hideSigning = false }: { hideSigning
 }
 
 function ActivityRow({ entry }: { entry: ActivityEntry }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const color =
     entry.status === 'error'
       ? 'border-red-500/40 bg-red-950/80 text-red-100'

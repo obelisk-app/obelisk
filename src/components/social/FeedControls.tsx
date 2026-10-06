@@ -18,7 +18,7 @@
  * a button duplicating a gesture people already make was just chrome.
  */
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import UserAvatar from '@/components/ui/UserAvatar';
 
 export function ComposeButton({
@@ -36,7 +36,7 @@ export function ComposeButton({
   testId?: string;
   placeholder?: string;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <button
       type="button"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import RevealSection from './RevealSection';
 import { FEATURE_KEYS } from './landing-data';
 
@@ -8,16 +8,16 @@ import { FEATURE_KEYS } from './landing-data';
  * The feature grid.
  */
 export default function FeaturesSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <RevealSection id="features" className="py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('features.heading')}<span className="text-lc-green">.</span>
+            {t('marketing.features.heading')}<span className="text-lc-green">.</span>
           </h2>
           <p className="text-lc-muted text-lg max-w-xl mx-auto">
-            {t('features.subtitle')}
+            {t('marketing.features.subtitle')}
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -17,7 +17,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { hexToNpub } from '@nostr-wot/data';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
 import { usePreferences } from '@/hooks/usePreferences';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import FeedList from '@/components/social/FeedList';
 import { ComposeButton } from '@/components/social/FeedControls';
 import NoteComposer from '@/components/social/NoteComposer';
@@ -78,7 +78,7 @@ export default function NostrProfile({
   initialMeta = null,
   hideClose = false,
 }: NostrProfileProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const meta = useProfileMeta(pubkey, initialMeta);
   const relays = usePreferences().socialRelays;
   const follow = useProfileFollow(pubkey, relays);
@@ -98,7 +98,7 @@ export default function NostrProfile({
   const startReply = useCallback((note: NostrEvent) => setComposer({ kind: 'reply', parent: note }), []);
   const startQuote = useCallback((note: NostrEvent) => setComposer({ kind: 'quote', target: note }), []);
 
-  const copyNpub = () => copyWithToast(hexToNpub(pubkey), t('profileFeed.npubCopied'), displayName);
+  const copyNpub = () => copyWithToast(hexToNpub(pubkey), t('social.profileFeed.npubCopied'), displayName);
 
   // A thread or an article takes over the profile surface rather than
   // opening in a modal on top of it: same reasoning as the feed, a card
@@ -192,7 +192,7 @@ export default function NostrProfile({
             <MediaGrid items={media} onOpen={setExpandedMedia} />
           ) : (
             <div className="flex min-h-40 items-center justify-center px-6 text-center text-sm text-lc-muted" data-testid="profile-feed-empty">
-              {t(state.error ? 'profileFeed.loadFailed' : 'profileFeed.empty')}
+              {t(state.error ? 'social.profileFeed.loadFailed' : 'social.profileFeed.empty')}
             </div>
           )
         ) : (

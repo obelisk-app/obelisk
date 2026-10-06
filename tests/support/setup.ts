@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { configure } from '@testing-library/dom';
-import { afterAll, afterEach } from 'vitest';
+import { afterAll, afterEach, vi } from 'vitest';
 
 // jsdom doesn't implement scrollIntoView.
 if (typeof Element !== 'undefined') {
@@ -129,3 +129,34 @@ function failOnRealFetches(): void {
 
 afterEach(failOnRealFetches);
 afterAll(failOnRealFetches);
+
+/**
+ * Components outside a mounted App Router still get a router.
+ *
+ * The language picker (`useSwitchLocale`) and every locale-aware `Link` go
+ * through next-intl, which calls `next/navigation`'s `useRouter()`; that
+ * throws "expected app router to be mounted" in a bare `render()`. Settings
+ * screens render the picker, so every test that mounts them would need its
+ * own router mock. Here the real hook is tried first and a no-op router
+ * stands in only when there is no router at all. A test that wants to
+ * watch navigation mocks `@/i18n/navigation` itself
+ * (`@tests/support/mocks/i18n-navigation`).
+ */
+vi.mock('next/navigation', async (importOriginal) => {
+  const real = await importOriginal<typeof import('next/navigation')>();
+  const noop = () => {};
+  const fallback = { push: noop, replace: noop, prefetch: noop, back: noop, forward: noop, refresh: noop };
+  return {
+    ...real,
+    useRouter: () => {
+      try {
+        return real.useRouter();
+      } catch {
+        return fallback;
+      }
+    },
+  };
+});
+
+// The route-level message provider is an async server component; see the stand-in.
+vi.mock('@/i18n/IntlScope', async () => ({ default: (await import('./intl-scope')).default }));

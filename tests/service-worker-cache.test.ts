@@ -6,7 +6,7 @@ const sw = readFileSync(join(process.cwd(), 'public/sw.js'), 'utf8');
 
 describe('service worker cache policy', () => {
   it('caches only safe same-origin app shell and static assets', () => {
-    expect(sw).toContain("const CACHE_VERSION = 'obelisk-v8-static-shell-cache'");
+    expect(sw).toContain("const CACHE_VERSION = 'obelisk-v9-localized-shell-cache'");
     expect(sw).toContain("const STATIC_CACHE = `${CACHE_VERSION}:static`");
     expect(sw).toContain("const SHELL_CACHE = `${CACHE_VERSION}:shell`");
     expect(sw).toContain("const APP_SHELL_KEY = '/app'");
@@ -30,7 +30,27 @@ describe('service worker cache policy', () => {
   it('uses cache-first assets and network-first navigation fallback', () => {
     expect(sw).toContain('event.waitUntil(fetchAndCache(event.request, cache).catch(() => undefined))');
     expect(sw).toContain('const response = await fetch(event.request)');
-    expect(sw).toContain('await putIfCacheable(cache, APP_SHELL_KEY, response)');
-    expect(sw).toContain('const cached = await cache.match(APP_SHELL_KEY) || await caches.match(APP_SHELL_KEY)');
+    expect(sw).toContain('await putIfCacheable(cache, shellKey, response)');
+    expect(sw).toContain('const cached = await cache.match(shellKey) || await caches.match(shellKey)');
+  });
+
+  it('keeps one offline shell per language and never caches a redirect', async () => {
+    // Evaluate the worker's pure helpers in isolation.
+    const helpers = new Function(
+      'self',
+      `${sw.slice(0, sw.indexOf('async function putIfCacheable'))}; return { isAppShellNavigation, shellKeyFor, isCacheableResponse };`,
+    )({ location: { origin: 'https://obelisk.test' }, addEventListener: () => {} });
+    const u = (p: string) => new URL(p, 'https://obelisk.test');
+    for (const p of ['/', '/app', '/app/x', '/es', '/es/app', '/pt/app?c=1']) {
+      expect(helpers.isAppShellNavigation(u(p)), p).toBe(true);
+    }
+    for (const p of ['/guides', '/es/guides', '/esx/app', '/p/x']) {
+      expect(helpers.isAppShellNavigation(u(p)), p).toBe(false);
+    }
+    expect(helpers.shellKeyFor(u('/app'))).toBe('/app');
+    expect(helpers.shellKeyFor(u('/es/app'))).toBe('/es/app');
+    expect(helpers.shellKeyFor(u('/pt'))).toBe('/pt/app');
+    expect(helpers.isCacheableResponse({ ok: true, redirected: true, type: 'basic' })).toBe(false);
+    expect(helpers.isCacheableResponse({ ok: true, redirected: false, type: 'basic' })).toBe(true);
   });
 });

@@ -1,0 +1,15 @@
+{
+  "publishedOn": "Publicado el {date}",
+  "index": {
+    "title": "Guías",
+    "heading": "Guías de Obelisk",
+    "subtitle": "Todo sobre Obelisk: qué es, cómo funciona, a dónde va. Escrito en lenguaje claro, sin paredes de jerga.",
+    "backHome": "← Volver al inicio",
+    "empty": "Todavía no hay guías."
+  },
+  "article": {
+    "back": "Todas las guías",
+    "readTime": "min de lectura",
+    "updated": "Actualizado"
+  }
+}

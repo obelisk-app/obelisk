@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useTranslation } from '@/i18n/context';
+import { Link } from '@/i18n/navigation';
+import { useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import ObeliskIcon from '@/components/ui/ObeliskIcon';
 import Button from '@/components/ui/Button';
 import UserAvatar from '@/components/ui/UserAvatar';
@@ -13,19 +13,19 @@ import { useDismiss } from '@/hooks/useDismiss';
 import { notifySavedAccountChanged, useSavedAccount } from '@/hooks/marketing/useSavedAccount';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import LanguageToggle from '@/components/marketing/LanguageToggle';
-import { guidesHref } from '@/utils/guides/guide-urls';
+import { guidePath } from '@/utils/guides/guide-urls';
 
 const SIMPLE_LINKS = [
-  { href: '/features', key: 'nav.features' },
-  { href: '/#how-it-works', key: 'nav.howItWorks' },
-  { href: '/#roadmap', key: 'nav.roadmap' },
-];
+  { href: '/features', key: 'marketing.nav.features' },
+  { href: '/#how-it-works', key: 'marketing.nav.howItWorks' },
+  { href: '/#roadmap', key: 'marketing.nav.roadmap' },
+] as const;
 
 const GUIDE_ITEMS = [
-  { slug: 'what-is-obelisk', tKey: 'learn.card.whatIsObelisk.title' },
-  { slug: 'how-obelisk-works', tKey: 'learn.card.howObeliskWorks.title' },
-  { slug: 'web-of-trust', tKey: 'learn.card.webOfTrust.title' },
-  { slug: 'future-nostr-relays', tKey: 'learn.card.futureNostrRelays.title' },
+  { slug: 'what-is-obelisk', tKey: 'marketing.learn.card.whatIsObelisk.title' },
+  { slug: 'how-obelisk-works', tKey: 'marketing.learn.card.howObeliskWorks.title' },
+  { slug: 'web-of-trust', tKey: 'marketing.learn.card.webOfTrust.title' },
+  { slug: 'future-nostr-relays', tKey: 'marketing.learn.card.futureNostrRelays.title' },
 ] as const;
 
 export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
@@ -40,7 +40,7 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   useDismiss({ refs: [menuRef, triggerRef], onDismiss: () => setShowMenu(false), enabled: showMenu });
-  const { t, locale } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
 
   useEffect(() => {
@@ -94,13 +94,13 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
               }}
             >
               <Link
-                href={guidesHref(locale)}
+                href={guidePath()}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-lc-muted hover:text-lc-white transition-colors inline-flex items-center gap-1"
                 aria-haspopup="true"
                 aria-expanded={guidesOpen}
                 data-testid="nav-guides-link"
               >
-                {t('nav.guides')}
+                {t('marketing.nav.guides')}
                 <svg
                   width="10"
                   height="10"
@@ -122,17 +122,17 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
                     {GUIDE_ITEMS.map((g) => (
                       <Link
                         key={g.slug}
-                        href={guidesHref(locale, g.slug)}
+                        href={guidePath(g.slug)}
                         className="block px-4 py-3 text-sm text-lc-muted hover:bg-lc-border/50 hover:text-lc-white transition"
                       >
                         {t(g.tKey)}
                       </Link>
                     ))}
                     <Link
-                      href={guidesHref(locale)}
+                      href={guidePath()}
                       className="block px-4 py-3 text-sm font-semibold text-lc-green hover:bg-lc-border/50 border-t border-lc-border/50"
                     >
-                      {t('footer.allGuides')} →
+                      {t('marketing.footer.allGuides')} →
                     </Link>
                   </div>
                 </div>
@@ -143,7 +143,7 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
               href="/#faq"
               className="px-3 py-1.5 rounded-lg text-sm font-medium text-lc-muted hover:text-lc-white transition-colors"
             >
-              {t('nav.faq')}
+              {t('marketing.nav.faq')}
             </Link>
           </div>
 
@@ -157,7 +157,7 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
                   className="lc-pill lc-pill-primary text-sm"
                   data-testid="nav-app-pill"
                 >
-                  {t('nav.app')}
+                  {t('marketing.nav.app')}
                 </Link>
                 <div className="relative">
                 {/* The account pill: avatar and name in one rounded trigger, a look of its own. */}
@@ -192,14 +192,14 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
                     </div>
                     <MenuLink
                       icon={<UserIcon />}
-                      label={t('desktop.me.profile')}
+                      label={t('marketing.nav.profile')}
                       href="/app"
                       newTab={false}
                       testId="nav-profile-link"
                     />
                     <MenuItem
                       icon={<LogOutIcon />}
-                      label={t('nav.disconnect')}
+                      label={t('marketing.nav.disconnect')}
                       danger
                       onClick={() => void handleLogout()}
                       testId="nav-disconnect"
@@ -210,7 +210,7 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
               </>
             ) : (
               <Button variant="pill" size="sm" onClick={() => router.push('/app')}>
-                {t('nav.launchApp')}
+                {t('marketing.nav.launchApp')}
               </Button>
             )}
           </div>

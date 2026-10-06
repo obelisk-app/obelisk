@@ -1,16 +1,21 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import LanguagePreference from '@/components/settings/LanguagePreference';
 
+const { replaceMock } = vi.hoisted(() => ({ replaceMock: vi.fn() }));
+vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({
+  usePathname: () => '/app',
+  useRouter: () => ({ push: vi.fn(), replace: replaceMock, prefetch: vi.fn() }),
+}));
+
 beforeEach(() => {
-  document.cookie = 'locale=;max-age=0';
-  localStorage.clear();
+  replaceMock.mockClear();
 });
 
 describe('LanguagePreference', () => {
-  it('switches the app locale and persists the choice', async () => {
+  it('switches language by going to the same page in it', async () => {
     const user = userEvent.setup();
     render(
       <LocaleProvider initialLocale="es">
@@ -22,14 +27,10 @@ describe('LanguagePreference', () => {
     expect(screen.getByTestId('language-option-es')).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(screen.getByTestId('language-option-en'));
-
-    expect(screen.getByText('Language')).toBeTruthy();
-    expect(screen.getByTestId('language-option-en')).toHaveAttribute('aria-pressed', 'true');
-    expect(document.cookie).toContain('locale=en');
-    expect(localStorage.getItem('locale')).toBe('en');
+    expect(replaceMock).toHaveBeenCalledWith('/app', { locale: 'en', scroll: false });
   });
 
-  it('offers Portuguese too, and persists it', async () => {
+  it('offers Portuguese too', async () => {
     const user = userEvent.setup();
     render(
       <LocaleProvider initialLocale="es">
@@ -38,11 +39,18 @@ describe('LanguagePreference', () => {
     );
 
     await user.click(screen.getByTestId('language-option-pt'));
+    expect(replaceMock).toHaveBeenCalledWith('/app', { locale: 'pt', scroll: false });
+  });
 
-    expect(screen.getByText('Idioma')).toBeTruthy();
-    expect(screen.getByTestId('language-option-pt')).toHaveAttribute('aria-pressed', 'true');
-    expect(document.cookie).toContain('locale=pt');
-    expect(localStorage.getItem('locale')).toBe('pt');
+  it('does nothing when the language is already the current one', async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider initialLocale="es">
+        <LanguagePreference />
+      </LocaleProvider>,
+    );
+    await user.click(screen.getByTestId('language-option-es'));
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 
   it('renders the compact mobile row', () => {

@@ -1,14 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import ArticleShell from '@/components/guides/ArticleShell';
+import { describe, it, expect } from 'vitest';
+import { render as rtlRender, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
 
-vi.mock('next/link', () => ({
-  default: ({ children, href, ...rest }: any) => (
-    <a href={href} {...rest}>
-      {children}
-    </a>
-  ),
-}));
+/** Guide components link through the locale-aware `Link`, which needs the intl provider. */
+const render = (ui: ReactElement) => rtlRender(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
+import ArticleShell from '@/components/guides/ArticleShell';
 
 describe('ArticleShell', () => {
   const fm = {

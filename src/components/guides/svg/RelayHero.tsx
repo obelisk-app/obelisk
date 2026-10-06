@@ -198,7 +198,7 @@ export default function RelayHero() {
           <text x="490" y={302} fontSize="14" fontWeight="800" fill="#f87171" fontFamily="monospace">
             BLOCKED
           </text>
-          <text x="490" y={319} fontSize="11" fontWeight="600" fill="#fafafa" opacity="0.7">
+          <text x="490" y={319} fontSize="11" fontWeight="600" fill="#fafafa" opacity="0.7"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
             checked first, overrides every tier
           </text>
           <text x="742" y={310} textAnchor="end" fontSize="13" fontWeight="700" fill="#f87171">
@@ -215,10 +215,10 @@ export default function RelayHero() {
         <line x1="355.5" y1="332.5" x2="348.5" y2="339.5" stroke="#f87171" strokeWidth="2" strokeLinecap="round" />
       </g>
 
-      <text x="470" y={356} fontSize="11.5" fontWeight="600" fill="#a3a3a3">
+      <text x="470" y={356} fontSize="11.5" fontWeight="600" fill="#a3a3a3"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         Distance from your reference accounts
       </text>
-      <text x="470" y={373} fontSize="11.5" fontWeight="600" fill="#a3a3a3">
+      <text x="470" y={373} fontSize="11.5" fontWeight="600" fill="#a3a3a3"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         is how much evidence you have.
       </text>
     </svg>

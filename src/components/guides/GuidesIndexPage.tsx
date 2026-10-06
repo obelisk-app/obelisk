@@ -1,81 +1,37 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { LOCALES, type Locale } from '@/i18n';
+import { getTranslations } from 'next-intl/server';
+import { Link } from '@/i18n/navigation';
+import type { Locale } from '@/i18n';
 import { listAllGuides } from '@/services/guides';
-import { guideAlternates, guidesHref, OG_LOCALE } from '@/utils/guides/guide-urls';
+import { guidePath } from '@/utils/guides/guide-urls';
+import { absoluteUrl, localizedAlternates, ogLocales } from '@/utils/seo/alternates';
 import GuideCard from '@/components/guides/GuideCard';
-import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
 import Navbar from '@/components/marketing/Navbar';
 import Footer from '@/components/marketing/Footer';
 
-const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
-
-const COPY: Record<Locale, Record<string, string>> = {
-  en: {
-    title: 'Guides',
-    subtitle:
-      "Everything about Obelisk: what it is, how it works, and where it's going. Written plain, no jargon walls.",
-    heading: 'Obelisk Guides',
-    seoTitle: 'Guides · Obelisk',
-    seoDescription:
-      'Long-form guides about Obelisk, Nostr identity, Web of Trust spam resistance, and relay-based Nostr groups.',
-    backHome: '← Back to home',
-    empty: 'No guides yet.',
-  },
-  es: {
-    title: 'Guías',
-    subtitle:
-      'Todo sobre Obelisk: qué es, cómo funciona, a dónde va. Escrito en lenguaje claro, sin paredes de jerga.',
-    heading: 'Guías de Obelisk',
-    seoTitle: 'Guías · Obelisk',
-    seoDescription:
-      'Guías largas sobre Obelisk, identidad Nostr, resistencia a spam por Red de Confianza, y grupos Nostr basados en relays.',
-    backHome: '← Volver al inicio',
-    empty: 'Todavía no hay guías.',
-  },
-  pt: {
-    title: 'Guias',
-    subtitle:
-      'Tudo sobre o Obelisk: o que é, como funciona, para onde vai. Escrito em linguagem clara, sem paredes de jargão.',
-    heading: 'Guias do Obelisk',
-    seoTitle: 'Guias · Obelisk',
-    seoDescription:
-      'Guias longos sobre o Obelisk, identidade Nostr, resistência a spam por Rede de Confiança e grupos Nostr baseados em relays.',
-    backHome: '← Voltar ao início',
-    empty: 'Ainda não há guias.',
-  },
-};
-
-export function buildGuidesIndexMetadata(locale: Locale): Metadata {
-  const c = COPY[locale];
-  const canonical = guidesHref(locale);
+export async function buildGuidesIndexMetadata(locale: Locale): Promise<Metadata> {
+  const t = await getTranslations({ locale });
+  const title = t('seo.guides.title');
+  const description = t('seo.guides.description');
   return {
-    title: c.seoTitle,
-    description: c.seoDescription,
-    alternates: {
-      canonical,
-      languages: guideAlternates(),
-    },
+    title,
+    description,
+    alternates: localizedAlternates(locale, guidePath()),
     openGraph: {
-      title: c.seoTitle,
-      description: c.seoDescription,
-      url: `${SITE_URL}${canonical}`,
+      title,
+      description,
+      url: absoluteUrl(locale, guidePath()),
       siteName: 'Obelisk',
-      locale: OG_LOCALE[locale],
-      alternateLocale: LOCALES.filter((l) => l !== locale).map((l) => OG_LOCALE[l]),
+      ...ogLocales(locale),
       type: 'website',
     },
-    twitter: {
-      card: 'summary_large_image',
-      title: c.seoTitle,
-      description: c.seoDescription,
-    },
+    twitter: { card: 'summary_large_image', title, description },
   };
 }
 
 export default async function GuidesIndexPage({ locale }: { locale: Locale }) {
   const guides = await listAllGuides(locale);
-  const copy = COPY[locale];
+  const t = await getTranslations({ locale });
 
   const breadcrumbLd = {
     '@context': 'https://schema.org',
@@ -85,20 +41,19 @@ export default async function GuidesIndexPage({ locale }: { locale: Locale }) {
         '@type': 'ListItem',
         position: 1,
         name: 'Obelisk',
-        item: SITE_URL,
+        item: absoluteUrl(locale, '/'),
       },
       {
         '@type': 'ListItem',
         position: 2,
-        name: copy.title,
-        item: `${SITE_URL}${guidesHref(locale)}`,
+        name: t('guides.index.title'),
+        item: absoluteUrl(locale, guidePath()),
       },
     ],
   };
 
   return (
     <div className="min-h-screen bg-lc-black lc-grid-bg">
-      <GuideLocaleSync locale={locale} />
       <Navbar />
       <script
         type="application/ld+json"
@@ -111,27 +66,27 @@ export default async function GuidesIndexPage({ locale }: { locale: Locale }) {
             href="/"
             className="inline-flex items-center text-sm font-medium text-lc-green hover:text-lc-green-dark transition-colors"
           >
-            {copy.backHome}
+            {t('guides.index.backHome')}
           </Link>
           <div className="mt-4">
             <h1 className="text-4xl md:text-5xl font-extrabold text-lc-white tracking-tight">
-              {copy.heading}
+              {t('guides.index.heading')}
             </h1>
-            <p className="mt-3 text-lg text-lc-muted max-w-2xl">{copy.subtitle}</p>
+            <p className="mt-3 text-lg text-lc-muted max-w-2xl">{t('guides.index.subtitle')}</p>
           </div>
         </div>
 
         {guides.length === 0 ? (
-          <p className="text-lc-muted">{copy.empty}</p>
+          <p className="text-lc-muted">{t('guides.index.empty')}</p>
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             {guides.map((g) => (
-              <GuideCard key={g.slug} slug={g.slug} locale={locale} frontmatter={g.frontmatter} />
+              <GuideCard key={g.slug} slug={g.slug} frontmatter={g.frontmatter} />
             ))}
           </div>
         )}
       </main>
-      <Footer localeOverride={locale} />
+      <Footer />
     </div>
   );
 }

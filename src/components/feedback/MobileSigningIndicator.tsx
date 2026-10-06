@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { type ActivityEntry } from '@/services/activity-log';
 import { useActivityLog } from '@/hooks/useActivityLog';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import CloseButton from '@/components/ui/CloseButton';
 import Overlay from '@/components/ui/Overlay';
+import type { MessageKey } from '@/i18n/keys';
 
 export default function MobileSigningIndicator() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const activities = useActivityLog();
   const [open, setOpen] = useState(false);
   const signing = activities.find((entry) => entry.operation === 'sign' && entry.status === 'pending')
@@ -41,9 +42,9 @@ export default function MobileSigningIndicator() {
 }
 
 function SigningPopup({ entry, onClose }: { entry: ActivityEntry | null; onClose: () => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
-  const statusKey = entry ? `mobile.signing.${entry.status}` : 'mobile.signing.idle';
+  const statusKey: MessageKey = entry ? `mobile.signing.${entry.status}` : 'mobile.signing.idle';
   const kind = entry?.eventKind == null ? null : `kind ${entry.eventKind}`;
   const detail = [entry?.description, kind].filter(Boolean).join(' · ') || entry?.detail;
 

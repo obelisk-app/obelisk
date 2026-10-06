@@ -7,7 +7,7 @@
  */
 import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { DmMessageBody } from '@/components/chat/DmMessageBody';
 import MessageContent from '@/components/chat/MessageContent';
 import { preloadMarkdownBody } from '@/hooks/chat/message/useMarkdownBody';

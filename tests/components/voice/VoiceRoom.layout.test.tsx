@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import { useVoiceStore } from '@/store/voice';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { FakeMediaStream, FakeMediaStreamTrack } from '@tests/support/mocks/webrtc';
 import type { RemoteTrack } from '@/services/voice/client';
 
@@ -54,7 +54,7 @@ function activeClient() {
   };
 }
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/components/marketing/ShootingStars', () => ({ default: () => null }));
 vi.mock('@/components/voice/VoiceControls', () => ({ default: () => <div data-testid="voice-controls" /> }));
 vi.mock('@/components/voice/DebugOverlay', () => ({ DebugOverlay: () => null }));

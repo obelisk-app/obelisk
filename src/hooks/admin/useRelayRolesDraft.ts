@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { confirmDialog } from '@/services/confirm-dialog';
 import { retier, serializeRoles } from '@/services/relay-roles-model';
 import {
@@ -19,7 +19,7 @@ import {
  * delete / save / grant / revoke actions with their status line.
  */
 export function useRelayRolesDraft(relayUrl: string, roles: RelayRoles) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [draft, setDraft] = useState<RelayRole[]>(() => sortRoles(roles.roles));
   const [newName, setNewName] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -82,9 +82,9 @@ export function useRelayRolesDraft(relayUrl: string, roles: RelayRoles) {
   const removeRole = async (role: RelayRole) => {
     if (savedIds.has(role.id)) {
       const ok = await confirmDialog({
-        title: t('roles.confirmDelete').replace('{name}', role.name),
-        message: t('roles.confirmDeleteBody'),
-        confirmLabel: t('confirm.delete'),
+        title: t('admin.roles.confirmDelete', { name: role.name }),
+        message: t('admin.roles.confirmDeleteBody'),
+        confirmLabel: t('common.confirm.delete'),
       });
       if (!ok) return;
     }

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OBELISK_SIGNING_KINDS } from '@/utils/nostr-signing-kinds';
 import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
 const renderLocalized = (ui: React.ReactElement) => render(

@@ -1,0 +1,60 @@
+{
+  "soundBlocked": {
+    "title": "🔔 Notification sounds are paused",
+    "body": "Browsers only allow page sound after you click or type on the page. Click here to turn on desktop notifications: they ring even when Obelisk is in another tab."
+  },
+  "close": "Close",
+  "cancel": "Cancel",
+  "save": "Save",
+  "saving": "Saving...",
+  "sending": "Sending",
+  "uploading": "Uploading...",
+  "back": "Back",
+  "retry": "Retry",
+  "send": "Send",
+  "search": "Search",
+  "clear": "Clear",
+  "notifications": "Notifications",
+  "help": "Help",
+  "reconnecting": "Reconnecting...",
+  "copied": "Copied!",
+  "copy": "Copy {label}",
+  "channel": "channel",
+  "loading": "Loading…",
+  "done": "Done",
+  "previous": "Previous",
+  "next": "Next",
+  "dismiss": "Dismiss",
+  "upload": {
+    "bannerPreview": "Channel banner preview",
+    "avatarPreview": "Channel profile picture preview"
+  },
+  "relayLanding": {
+    "failed": "Could not open relay",
+    "goToApp": "Go to app",
+    "connecting": "Connecting to relay…"
+  },
+  "time": {
+    "justNow": "just now",
+    "today": "Today · {time}",
+    "yesterday": "Yesterday"
+  },
+  "confirm": {
+    "delete": "Delete",
+    "remove": "Remove",
+    "leave": "Leave",
+    "demote": "Demote"
+  },
+  "deeplink": {
+    "relay": {
+      "title": "Connect to {host}?",
+      "body": "This link opens a relay you have not added. Connecting sends it your public key and lets it see your IP address. You can also stay where you are.",
+      "connect": "Connect"
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "This page doesn't exist, or it moved.",
+    "home": "Back to home"
+  }
+}

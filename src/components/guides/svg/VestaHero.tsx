@@ -115,12 +115,12 @@ export default function VestaHero() {
 
       {/* where the numbers come from */}
       <g fontSize="12" fontWeight="600">
-        <text x="516" y="120" fill="#fafafa" fontSize="15">Nobody rolls their own dice</text>
-        <text x="516" y="142" fill="#a3a3a3" fontSize="11">the numbers come out of the event log</text>
+        <text x="516" y="120" fill="#fafafa" fontSize="15">Nobody rolls their own dice</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="516" y="142" fill="#a3a3a3" fontSize="11">the numbers come out of the event log</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
 
         <g fontFamily="ui-monospace, monospace">
           <rect x="516" y="164" width="236" height="30" rx="8" fill="#171717" stroke="#262626" />
-          <text x="530" y="184" fill="#a3a3a3" fontSize="11">entropy = 3f9c…a12 : 14</text>
+          <text x="530" y="184" fill="#a3a3a3" fontSize="11">entropy = 3f9c…a12 : 14</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
 
           <line x1="634" y1="196" x2="634" y2="216" stroke="#b4f953" strokeOpacity="0.6" strokeWidth="2" />
 
@@ -129,7 +129,7 @@ export default function VestaHero() {
         </g>
         <g fontFamily="ui-monospace, monospace">
           <text x="516" y="282" fill="#a3a3a3" fontSize="11">…and every client derives the same</text>
-          <text x="516" y="298" fill="#a3a3a3" fontSize="11">roll from the same log.</text>
+          <text x="516" y="298" fill="#a3a3a3" fontSize="11">roll from the same log.</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         </g>
       </g>
     </svg>

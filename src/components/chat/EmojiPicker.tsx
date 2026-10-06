@@ -6,7 +6,7 @@
  * this file keeps the public names other folders import.
  */
 import { EMOJI_CATEGORIES } from '@/lib/emoji';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { EMOJI_SECTIONS } from '@/utils/chat/picker/emoji-sections';
 import { useEmojiPicker } from '@/hooks/chat/picker/useEmojiPicker';
 import { useCategoryJump } from '@/hooks/chat/picker/useCategoryJump';
@@ -114,7 +114,7 @@ export default function EmojiPicker({
   customEmojiAction,
   children,
 }: EmojiPickerProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const picker = useEmojiPicker({ customEmojis, customMediaKinds, skipRecent, onPick });
   const { activeCategory, scrollRef, jumpToCategory } = useCategoryJump();
   const classes = emojiPickerClasses({ variant, placement, align, columns });
@@ -144,7 +144,7 @@ export default function EmojiPicker({
   return (
     <div
       role="dialog"
-      aria-label={t('emoji.picker')}
+      aria-label={t('chat.emoji.picker')}
       className={classes.containerClass + (className ?? '')}
       onClick={(e) => e.stopPropagation()}
     >
@@ -164,7 +164,7 @@ export default function EmojiPicker({
             {section('Server emojis', picker.filteredCustomEmojiEntries)}
             <div className={classes.gridClass}>
               {filtered.length === 0 && picker.filteredCustomCount === 0 && (
-                <div className="col-span-8 py-4 text-center text-xs text-lc-muted">{t('emoji.noMatches')}</div>
+                <div className="col-span-8 py-4 text-center text-xs text-lc-muted">{t('chat.emoji.noMatches')}</div>
               )}
               {filtered.map(charButton)}
             </div>
@@ -173,8 +173,8 @@ export default function EmojiPicker({
           <>
             {section("My emojis", [], customEmojiAction)}
             <RecentEmojiSection
-              title={t('emoji.recent')}
-              emptyLabel={t('emoji.noRecent')}
+              title={t('chat.emoji.recent')}
+              emptyLabel={t('chat.emoji.noRecent')}
               entries={picker.recentEntries}
               disabled={disabled}
               classes={classes}

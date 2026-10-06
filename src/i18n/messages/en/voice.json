@@ -1,0 +1,31 @@
+{
+  "voiceDebug": {
+    "controlChannel": "control channel",
+    "sfuReliability": "sfu reliability",
+    "title": "voice debug",
+    "noClient": "no VoiceClient mounted"
+  },
+  "switchCamera": "Switch camera",
+  "videoQuality": "Video quality",
+  "myCamera": "My camera",
+  "incoming": "Incoming",
+  "disconnect": "Disconnect",
+  "audioNote": "Audio is always sent at high quality.",
+  "loadingMembership": "Loading channel membership…",
+  "notMember": "You aren’t a member of this channel.",
+  "notMemberHelp": "Ask an admin to add you, then refresh this page.",
+  "stayConnected": "You will stay connected to your current call until you join this one.",
+  "join": "Join voice channel",
+  "inCall": "In Call",
+  "mediaSyncing": "Media syncing",
+  "syncing": "Syncing",
+  "channel": "Voice channel",
+  "goToChannel": "Go to voice channel",
+  "reconnectingSignaling": "Reconnecting to voice…",
+  "connected": "Voice connected",
+  "voicePage": {
+    "roomPlaceholder": "room name",
+    "title": "Join a voice room",
+    "enter": "Enter room"
+  }
+}

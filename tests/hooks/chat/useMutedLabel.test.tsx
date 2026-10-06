@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { useMutedLabel } from '@/hooks/chat/useMutedLabel';
 import { MUTED_FOREVER } from '@/store/channel-prefs';
 import { formatDateTime } from '@/utils/format/format';

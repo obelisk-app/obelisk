@@ -1,0 +1,43 @@
+{
+  "searchPlaceholder": "Search packs and media",
+  "close": "Close media library",
+  "filterByType": "Filter packs by media type",
+  "openActions": "Open media actions",
+  "closeViewer": "Close pack viewer",
+  "closeActions": "Close media actions",
+  "closeEditor": "Close pack editor",
+  "packName": "Pack name",
+  "packDescription": "Pack description",
+  "newItemType": "New item type",
+  "title": "Media library",
+  "subtitle": "Emoji · GIFs · Stickers",
+  "upload": "Upload media",
+  "createPack": "Create pack",
+  "serverPacks": "Server packs",
+  "serverPacksHelp": "Create and edit packs from My packs in your personal media settings.",
+  "legacyHelp": "Legacy individual items will be removed on the next pack change.",
+  "individualFavorites": "Individual favorites",
+  "viewPack": "View pack",
+  "edit": "Edit",
+  "delete": "Delete",
+  "createPackWithItem": "Create pack with this item",
+  "editPack": "Edit media pack",
+  "newItemsAre": "New items are",
+  "addUrl": "Add URL",
+  "remove": "Remove",
+  "uploadHelp": "Upload emoji, GIFs, or stickers into this pack.",
+  "kind": {
+    "emoji": "Emoji",
+    "gif": "GIF",
+    "sticker": "Sticker"
+  },
+  "itemShortcode": "Item {n} shortcode",
+  "itemType": "Item {n} type",
+  "itemUrl": "Item {n} URL",
+  "confirmDeletePack": "Delete “{title}”?",
+  "confirmDeletePackBody": "This sends a Nostr deletion request and cannot be undone.",
+  "remote": {
+    "show": "Show media",
+    "hint": "Hidden until you ask. Loading it would tell its host your IP address."
+  }
+}

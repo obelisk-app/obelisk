@@ -65,8 +65,8 @@ export default function HowObeliskWorksHero() {
         <rect x="72" y="190" width="80" height="4" rx="1" fill="#262626" />
         <rect x="72" y="200" width="92" height="4" rx="1" fill="#262626" />
         <rect x="72" y="220" width="60" height="18" rx="9" fill="#b4f953" />
-        <text x="102" y="232" textAnchor="middle" fontSize="10" fontWeight="700" fill="#0a0a0a">Sign</text>
-        <text x="130" y="275" textAnchor="middle" fontSize="12" fontWeight="600" fill="#a3a3a3">Client</text>
+        <text x="102" y="232" textAnchor="middle" fontSize="10" fontWeight="700" fill="#0a0a0a">Sign</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="130" y="275" textAnchor="middle" fontSize="12" fontWeight="600" fill="#a3a3a3">Client</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
       </g>
 
       {/* Server node - real Buenos Aires Obelisco silhouette (from ObeliskIcon).
@@ -86,8 +86,8 @@ export default function HowObeliskWorksHero() {
         {/* plinth */}
         <rect x="372" y="290" width="56" height="8" fill="#8bc34a" />
         <rect x="362" y="298" width="76" height="6" fill="#2d3a1a" />
-        <text x="400" y="330" textAnchor="middle" fontSize="12" fontWeight="600" fill="#a3a3a3">Obelisk server</text>
-        <text x="400" y="345" textAnchor="middle" fontSize="10" fill="#a3a3a3">Channels · Messages · Realtime</text>
+        <text x="400" y="330" textAnchor="middle" fontSize="12" fontWeight="600" fill="#a3a3a3">Obelisk server</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="400" y="345" textAnchor="middle" fontSize="10" fill="#a3a3a3">Channels · Messages · Realtime</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
       </g>
 
       {/* Relays cluster */}
@@ -119,8 +119,8 @@ export default function HowObeliskWorksHero() {
             />
           </g>
         ))}
-        <text x="670" y="310" textAnchor="middle" fontSize="12" fontWeight="600" fill="#a3a3a3">Nostr relays</text>
-        <text x="670" y="325" textAnchor="middle" fontSize="10" fill="#a3a3a3">Identity · Profiles</text>
+        <text x="670" y="310" textAnchor="middle" fontSize="12" fontWeight="600" fill="#a3a3a3">Nostr relays</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+        <text x="670" y="325" textAnchor="middle" fontSize="10" fill="#a3a3a3">Identity · Profiles</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
       </g>
 
       {/* Flow: Client ↔ Server (bidirectional: session + messages) */}
@@ -163,9 +163,9 @@ export default function HowObeliskWorksHero() {
       </g>
 
       {/* labels on flows */}
-      <text x="291" y="192" fontSize="10" fill="#b4f953" fontWeight="600" textAnchor="middle">session + messages</text>
-      <text x="389" y="80" fontSize="10" fill="#8bc34a" fontWeight="600" textAnchor="middle">sign kind 0 / auth challenge</text>
-      <text x="503" y="228" fontSize="9" fill="#b4f953" fontWeight="600" textAnchor="middle" opacity="0.8">profile fetch</text>
+      <text x="291" y="192" fontSize="10" fill="#b4f953" fontWeight="600" textAnchor="middle">session + messages</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+      <text x="389" y="80" fontSize="10" fill="#8bc34a" fontWeight="600" textAnchor="middle">sign kind 0 / auth challenge</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
+      <text x="503" y="228" fontSize="9" fill="#b4f953" fontWeight="600" textAnchor="middle" opacity="0.8">profile fetch</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
     </svg>
   );
 }

@@ -1,0 +1,374 @@
+{
+  "inbox": {
+    "title": "Caixa de entrada",
+    "empty": "Nenhuma notificação ainda",
+    "markAllRead": "Marcar tudo como lido",
+    "type": {
+      "mention": "Mencionou você",
+      "dm": "Mensagem direta"
+    },
+    "tab": {
+      "dms": "DMs",
+      "mentions": "Menções"
+    },
+    "timeAgo": {
+      "now": "agora",
+      "minutes": "{n}m",
+      "hours": "{n}h",
+      "days": "{n}d"
+    }
+  },
+  "rail": {
+    "backgroundUnread": "{count} menções ou respostas não lidas",
+    "directMessages": "Mensagens diretas",
+    "nostrFeed": "Feed do Nostr",
+    "addRelay": "Adicionar relay",
+    "unreadTitle": "Menções ou respostas não lidas",
+    "unreadAria": "Menções ou respostas não lidas neste relay",
+    "switchTo": "Trocar para este relay",
+    "copyShareLink": "Copiar link de compartilhamento",
+    "copyPrompt": "Copie este link",
+    "remove": "Remover",
+    "confirmRemove": "Remover o relay {host}?",
+    "addModal": {
+      "title": "Adicionar um relay",
+      "subtitle": "Escolha um relay conhecido ou informe uma URL própria para conectar.",
+      "suggested": "Sugeridos",
+      "custom": "URL própria",
+      "urlLabel": "URL do relay",
+      "urlHint": "Cole a URL de um relay de grupos NIP-29. Cada relay é um “servidor” separado na barra lateral.",
+      "adding": "Adicionando…",
+      "add": "Adicionar",
+      "added": "Adicionado"
+    },
+    "confirmRemoveBody": "Você pode adicioná-lo novamente depois."
+  },
+  "user": {
+    "settings": "Configurações do usuário",
+    "editProfile": "Editar perfil",
+    "appPreferences": "Preferências do app",
+    "about": "Sobre",
+    "copyNpub": "Copiar npub",
+    "copyPubkeyHex": "Copiar chave pública (hex)",
+    "openNostrClient": "Abrir em outro cliente Nostr",
+    "logOut": "Sair",
+    "field": {
+      "name": "Nome",
+      "picture": "Foto",
+      "banner": "Banner",
+      "website": "Site",
+      "lud16": "Endereço Lightning",
+      "nip05": "NIP-05"
+    },
+    "nameRequired": "O nome é obrigatório",
+    "notSignedIn": "Você não está conectado",
+    "publishFailed": "Não foi possível publicar"
+  },
+  "desktop": {
+    "empty": {
+      "title": "Escolha um canal ou um DM",
+      "description": "Escolha na barra lateral ou toque em + para criar um canal novo."
+    },
+    "channel": {
+      "loadingInfo": "Carregando informações do canal...",
+      "loadingMessages": "Carregando mensagens...",
+      "loadingEarlier": "Carregando mensagens anteriores...",
+      "noEarlierMessages": "Não há mensagens anteriores",
+      "welcome": "Boas-vindas ao #{name}",
+      "noMessages": "Nenhuma mensagem ainda. Seja o primeiro.",
+      "notVisible": "Canal não visível neste relay",
+      "notVisibleDescription": "O link aponta para {id}, mas este relay não está mostrando esse canal para você. Talvez você precise ser adicionado como membro, ou trocar para o relay que o hospeda.",
+      "settings": "Configurações do canal",
+      "hideMembers": "Esconder a lista de membros",
+      "showMembers": "Mostrar a lista de membros",
+      "namePlaceholder": "nome do canal",
+      "closed": "Fechado (somente convite)",
+      "kindText": "Texto",
+      "kindVoice": "Voz / Vídeo",
+      "kindSfu": "Voz para salas grandes",
+      "kindForum": "Publicações",
+      "forumTags": "Etiquetas de publicação",
+      "members": "Membros",
+      "saveHelp": "As mudanças são publicadas como NIP-29 kind 9002.",
+      "accessHint": "Permissões NIP-29 aplicadas pelo relay",
+      "publicHint": "Todos podem ler e escrever",
+      "readOnlyHint": "Todos leem; membros escrevem",
+      "privateHint": "Oculto; somente membros",
+      "textHint": "Mensagens, respostas, reações",
+      "voiceHint": "Malha P2P, até 8 pessoas",
+      "sfuHint": "Roteado por SFU, até 50 pessoas",
+      "forumHint": "Um feed de publicações, cada uma com seu próprio chat",
+      "voiceHelp": "Adiciona uma etiqueta <tag></tag>. Os membros abrem <url></url> para entrar.",
+      "sfuHelp": "Adiciona uma etiqueta <tag></tag>. A entrada é a mesma da voz, mas o canal avisa aos operadores “espere uma sala grande”. Um SFU autorizado entra e encaminha a mídia de todos, então a sala passa do teto de 8 pares da malha.",
+      "forumHelp": "Adiciona uma etiqueta <tag></tag> (o valor no protocolo mantém o nome original). O canal aparece como um feed de publicações em vez de um chat: cada publicação é seu próprio canal, com sua própria conversa."
+    },
+    "composer": {
+      "replyingTo": "Respondendo a",
+      "cancelReply": "Cancelar resposta",
+      "removeAttachment": "Remover anexo",
+      "attachMedia": "Anexar mídia",
+      "placeholder": "Mensagem em #{name}",
+      "addEmoji": "Adicionar emoji"
+    },
+    "invite": {
+      "copy": "Copiar link de convite",
+      "copiedTitle": "Link copiado. Só quem é membro deste relay consegue abrir"
+    },
+    "voiceChat": {
+      "dragResize": "Arraste para redimensionar",
+      "chat": "Chat",
+      "hideChat": "Esconder o chat"
+    },
+    "message": {
+      "jumpToReply": "Ir para a mensagem respondida",
+      "muteFailed": "Não foi possível silenciar",
+      "cannotZapSelf": "Você não pode dar zap em si mesmo",
+      "confirmDeleteEveryone": "Apagar esta mensagem para todo mundo?",
+      "confirmDeleteOwn": "Apagar a sua mensagem?",
+      "replyingToMessage": "respondendo a uma mensagem",
+      "moreActions": "Mais ações",
+      "copyText": "Copiar texto",
+      "textCopied": "Texto copiado",
+      "reply": "Responder",
+      "zap": "Zap",
+      "linkCopied": "Link copiado",
+      "copyLink": "Copiar link",
+      "unmuteUser": "Reativar usuário",
+      "muteUser": "Silenciar usuário",
+      "deleteEveryone": "Apagar para todo mundo",
+      "deleteMessage": "Apagar mensagem",
+      "confirmDeleteEveryoneBody": "Ela será removida do canal para todos.",
+      "confirmDeleteOwnBody": "Ela será removida do canal."
+    },
+    "reactions": {
+      "addReaction": "Adicionar reação",
+      "andMore": "...e mais {count}",
+      "removeEveryone": "Remover as reações de todo mundo",
+      "removeOwn": "Remover a sua reação",
+      "react": "Reagir",
+      "alreadyReacted": "Você já reagiu",
+      "reactEmoji": "Reagir com {emoji}",
+      "moreEmojis": "Mais emojis...",
+      "openEmojiPicker": "Abrir o seletor de emojis",
+      "count": "{count, plural, one {# reação} other {# reações}}"
+    },
+    "inbox": {
+      "markRead": "Marcar como lido",
+      "caughtUpDms": "Nenhuma mensagem direta nova.",
+      "caughtUpMentions": "Nenhuma menção neste relay.",
+      "markReadDmsTitle": "Marcar todas as mensagens diretas como lidas",
+      "markReadMentionsTitle": "Marcar todas as menções deste relay como lidas",
+      "type": {
+        "mention": "@ Menção",
+        "reply": "↩ Resposta"
+      }
+    },
+    "channels": {
+      "loading": "Carregando canais…",
+      "empty": "Ainda não há canais neste relay."
+    },
+    "header": {
+      "openMenu": "Abrir menu"
+    },
+    "pane": {
+      "resize": "Arraste para redimensionar"
+    },
+    "server": {
+      "settings": "Configurações do servidor",
+      "settingsHelp": "Disponível apenas para o operador do relay."
+    },
+    "branding": {
+      "appearance": "Aparência",
+      "title": "Identidade do relay"
+    },
+    "layout": {
+      "dragCategory": "Arrastar categoria",
+      "categoryName": "Nome da categoria",
+      "channelCategory": "Categoria de {channel}",
+      "dragChannel": "Arrastar canal",
+      "moveUp": "Mover para cima",
+      "moveDown": "Mover para baixo",
+      "grabHint": "Segure ⠿ para ordenar",
+      "empty": "Ainda não há categorias. Adicione uma acima para começar a organizar.",
+      "dropHere": "Solte canais aqui",
+      "allPlaced": "Todos os canais estão em categorias.",
+      "saveHelp": "Salvo como um único evento substituível kind 30078 assinado por você."
+    },
+    "me": {
+      "profile": "Perfil",
+      "settings": "Configurações"
+    },
+    "members": {
+      "addPlaceholder": "npub1… ou pubkey em hex",
+      "addLabel": "npub ou pubkey em hex do membro",
+      "loading": "Carregando membros…",
+      "demoteHelp": "Remove o cargo de admin; continua no canal como membro comum.",
+      "remove": "Remover"
+    },
+    "tags": {
+      "emoji": "Emoji da etiqueta",
+      "name": "Nome da etiqueta",
+      "remove": "Remover etiqueta",
+      "empty": "Ainda não há etiquetas. Adicione uma para os autores terem o que escolher."
+    },
+    "sfu": {
+      "operator": "Operador do SFU (pin kind 30078)",
+      "url": "URL do SFU",
+      "verified": "Verificado",
+      "help": "Informe uma URL de SFU. O Obelisk verifica o descritor <info></info> e guarda a identidade retornada automaticamente. As chamadas autenticam direto no SFU; os relays Nostr são só um fallback de compatibilidade.",
+      "verifyHelp": "O SFU confere sua identidade Nostr assinada e a whitelist quando você entra. A pubkey completa acima está disponível para verificação avançada."
+    },
+    "voice": {
+      "liveTitle": "Chamada em andamento",
+      "live": "Ao vivo"
+    },
+    "gotIt": "Entendi",
+    "zaps": {
+      "count": "{count, plural, one {# zap} other {# zaps}}"
+    }
+  },
+  "search": {
+    "open": "Abrir a busca",
+    "close": "Fechar a busca",
+    "filters": {
+      "title": "Filtros",
+      "fromUser": {
+        "title": "De uma pessoa específica",
+        "example": "from: usuário"
+      },
+      "inChannel": {
+        "title": "Enviado num canal específico",
+        "example": "in: canal"
+      },
+      "has": {
+        "title": "Inclui um tipo específico de conteúdo",
+        "example": "has: link, embed ou file"
+      },
+      "mentions": {
+        "title": "Menciona uma pessoa específica",
+        "example": "mentions: usuário"
+      },
+      "date": {
+        "title": "Enviado antes ou depois de uma data",
+        "example": "after: 2026-01-31"
+      }
+    },
+    "history": {
+      "title": "Histórico",
+      "clear": "Limpar histórico"
+    },
+    "searching": "Buscando...",
+    "placeholderIn": "Buscar em {server}",
+    "messagesHeader": "Mensagens · {count}",
+    "messagesSearching": "Buscando mensagens...",
+    "messagesPrompt": "Digite para buscar mensagens. Experimente os filtros (from:, in:, mentions:, has:, before:, after:).",
+    "users": "Pessoas",
+    "channels": "Canais",
+    "noMatches": "Nenhum resultado.",
+    "in": "em",
+    "scope": {
+      "relay": "Todos os canais",
+      "channel": "Este canal"
+    },
+    "unresolved": "Não deu para resolver {token}: nenhuma pessoa ou canal corresponde.",
+    "noNip50": "Este relay não suporta busca no servidor, então só as mensagens recentes foram varridas.",
+    "loadMore": "Carregar mais resultados",
+    "localFilterNote": "Alguns termos foram filtrados neste aparelho.",
+    "scopeThisRelay": "em {server}"
+  },
+  "hints": {
+    "gotIt": "Entendi",
+    "dismissAll": "Não mostrar dicas",
+    "replay": "Ver as dicas de novo",
+    "replayed": "As dicas voltaram",
+    "railRelay": {
+      "title": "Relays são comunidades",
+      "body": "Cada um tem os seus canais, a sua gente e a sua história. Você não tem uma conta nele. A sua chave é a mesma em todos."
+    },
+    "railAdd": {
+      "title": "Adicione outro",
+      "body": "Cole o endereço de qualquer relay NIP-29 para entrar nos canais dele. Sair é tirá-lo desta lista."
+    },
+    "channels": {
+      "title": "Canais",
+      "body": "Texto, voz e publicações deste relay. O que você lê aqui vem só deste relay."
+    },
+    "railFeed": {
+      "title": "O feed é todo o Nostr",
+      "body": "Posts da rede inteira pelos seus próprios relays, não pelo relay onde você está conversando."
+    },
+    "railDm": {
+      "title": "Mensagens privadas",
+      "body": "Criptografadas ponta a ponta e entregues pela lista de relays que você publica, não por este."
+    },
+    "composer": {
+      "title": "Tudo o que você manda vai assinado",
+      "body": "As mensagens são eventos assinados com a sua chave, então outros clientes Nostr também conseguem ler este canal."
+    },
+    "feedSource": {
+      "title": "Seguindo ou todo mundo",
+      "body": "Seguindo é a gente que você segue; Global é o que os seus relays de feed estiverem trazendo agora."
+    },
+    "feedSearch": {
+      "title": "Busque na rede",
+      "body": "Pessoas, posts e #tags em todo o Nostr (diferente da busca de um relay, que só cobre os canais dele)."
+    },
+    "feedCompose": {
+      "title": "Publique no Nostr",
+      "body": "Isso vai para os seus relays de feed e chega a todos os clientes Nostr, não só ao Obelisk."
+    },
+    "dms": {
+      "title": "Só vocês dois conseguem ler",
+      "body": "As conversas são criptografadas com as suas chaves. Os relays guardam sem conseguir abrir."
+    },
+    "inbox": {
+      "title": "Menções e mensagens",
+      "body": "As menções vêm do relay que você tem aberto; as mensagens diretas te seguem em todos eles."
+    },
+    "voice": {
+      "title": "A voz vai direto entre vocês",
+      "body": "As chamadas são entre pares quando dá, e o relay só serve para apresentar vocês."
+    },
+    "identity": {
+      "title": "A sua chave é a sua conta",
+      "body": "Sem e-mail, sem senha, sem recuperação. Guarde a sua nsec e você entra de qualquer lugar."
+    },
+    "relayStatus": {
+      "title": "O que está conectado",
+      "body": "Abra para ver quais relays respondem, com que rapidez, e se este aqui te deixou entrar."
+    }
+  },
+  "members": {
+    "roleAdmin": "Cargo: Admin"
+  },
+  "login": {
+    "shareProfile": "Compartilhe seu perfil Nostr",
+    "profileReady": "Seu perfil está pronto",
+    "copyNpub": "Copiar meu npub",
+    "pastedKey": {
+      "title": "Você colou sua chave privada",
+      "body": "Esta é a forma menos segura de entrar. Uma extensão de assinatura ou um bunker mantém sua chave fora desta página.",
+      "continue": "Continuar com esta chave",
+      "useSigner": "Usar uma extensão ou um bunker"
+    },
+    "notice": {
+      "notRemembered": {
+        "title": "Sessão só nesta visita",
+        "body": "Este navegador não consegue guardar sua chave com segurança, então você vai precisar entrar de novo da próxima vez."
+      },
+      "vaultUnavailable": "Este navegador não consegue guardar sua chave com segurança entre visitas, então sua sessão foi encerrada. Uma extensão de assinatura ou um bunker mantém você conectado sem guardar uma chave aqui.",
+      "unlockFailed": "Não conseguimos abrir sua chave salva, então sua sessão foi encerrada. Entre de novo."
+    }
+  },
+  "channel": {
+    "create": {
+      "header": "Canais · {count}",
+      "submit": "Criar canal",
+      "submitShort": "Criar",
+      "creating": "Criando…",
+      "help": "Os canais são públicos e abertos por padrão: qualquer pessoa que o relay aceite pode ler e publicar. Você pode restringi-lo depois em <settings></settings>.",
+      "nameOn": "Nome do canal · em {relay}",
+      "examplePlaceholder": "geral"
+    }
+  }
+}

@@ -51,7 +51,7 @@ export default function AdminCliHero() {
         <circle cx="198" cy="74" r="5" fill="#b45353" />
         <circle cx="214" cy="74" r="5" fill="#f7b32b" />
         <circle cx="230" cy="74" r="5" fill="#b4f953" />
-        <text x="400" y="78" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace">
+        <text x="400" y="78" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           obelisk admin cli
         </text>
 
@@ -98,7 +98,7 @@ export default function AdminCliHero() {
         />
         {/* mouth */}
         <rect x="78" y="212" width="24" height="4" rx="2" fill="#b4f953" opacity="0.7" />
-        <text x="90" y="276" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace">
+        <text x="90" y="276" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           AI agent
         </text>
       </g>
@@ -108,7 +108,7 @@ export default function AdminCliHero() {
         <rect x="670" y="150" width="90" height="100" rx="12" fill="#171717" stroke="#b4f953" strokeWidth="1.6" />
         <polygon points="715,168 705,232 725,232" fill="#b4f953" opacity="0.85" />
         <rect x="700" y="232" width="30" height="4" fill="#b4f953" opacity="0.7" />
-        <text x="715" y="268" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace">
+        <text x="715" y="268" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           NIP-29 relay
         </text>
       </g>
@@ -131,7 +131,7 @@ export default function AdminCliHero() {
       {/* signed-challenge badge */}
       <g>
         <rect x="320" y="348" width="160" height="26" rx="13" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.5" />
-        <text x="400" y="365" textAnchor="middle" fontSize="11" fontWeight="700" fill="#b4f953" fontFamily="monospace">
+        <text x="400" y="365" textAnchor="middle" fontSize="11" fontWeight="700" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           signed with nsec / NIP-46
         </text>
       </g>
@@ -141,7 +141,7 @@ export default function AdminCliHero() {
         <rect x="34" y="18" width="12" height="12" rx="2" fill="#b4f953" />
         <text x="52" y="28" fill="#fafafa">relay-authorized events</text>
         <rect x="220" y="18" width="12" height="12" rx="2" fill="#171717" stroke="#b4f953" strokeWidth="1.5" />
-        <text x="238" y="28" fill="#fafafa">same NIP-29 protocol</text>
+        <text x="238" y="28" fill="#fafafa">same NIP-29 protocol</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
       </g>
     </svg>
   );

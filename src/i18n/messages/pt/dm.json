@@ -1,0 +1,88 @@
+{
+  "optIn": {
+    "title": "Ligar as mensagens diretas",
+    "subtitle": "Ative os DMs só nos aparelhos onde você quer que fiquem ativos.",
+    "point": {
+      "events": "Os DMs usam eventos de mensagem direta criptografada do Nostr.",
+      "subscriptions": "Ligar os DMs pode abrir assinaturas nos relays de DM e descriptografar/mostrar conversas neste aparelho/sessão.",
+      "device": "Deixe os DMs desligados se não quiser tráfego nem notificações de DM neste aparelho."
+    },
+    "enable": "Ligar os DMs",
+    "notNow": "Agora não",
+    "continueWithout": "Continuar sem DMs"
+  },
+  "title": "Mensagens diretas",
+  "newMessage": "Nova mensagem",
+  "clearCache": "Limpar cache de DMs",
+  "clearCacheTitle": "Limpar cache de DMs (sem efeito nesta versão)",
+  "clearCacheAlert": "A limpeza do cache de DMs é só local; este cliente mantém os DMs apenas em memória. Recarregue para limpar.",
+  "conversationOptions": "Opções da conversa",
+  "viewProfile": "Ver perfil",
+  "new": "Novo DM",
+  "noConversations": "Nenhuma conversa ainda",
+  "startConversation": "Começar uma conversa",
+  "noFollows": "Ninguém que você segue te mandou mensagem ainda",
+  "everyoneInFollows": "Todo mundo para quem você escreveu está em Seguindo",
+  "follows": "Seguindo",
+  "others": "Outros",
+  "youPrefix": "Você: ",
+  "encryptedPill": "As mensagens são criptografadas ponta a ponta",
+  "protocol": {
+    "label": "Protocolo de mensagens",
+    "nip17Title": "Padrão: selado e embrulhado, com anexos",
+    "nip04Title": "Legado, para clientes antigos",
+    "nip04Explain": "O NIP-04 é para clientes antigos que só falam esse protocolo. Os relays podem ver quem fala com quem e quando, e não há anexos.",
+    "useNip04": "Usar NIP-04",
+    "keepNip17": "Manter NIP-17"
+  },
+  "attach": "Anexar",
+  "compose": {
+    "to": "Para:",
+    "next": "Avançar",
+    "recent": "Recentes",
+    "noRecent": "Nenhuma conversa recente",
+    "noRecentDescription": "Cole uma npub acima e toque em Avançar.",
+    "placeholder": "Nome, NIP-05 ou npub"
+  },
+  "emptyMobileDescription": "Toque em + para começar um DM criptografado com qualquer pessoa do Nostr.",
+  "pickConversation": "Escolha ou comece uma conversa.",
+  "emptyEncrypted": "Nenhuma mensagem ainda. Mande a primeira, criptografada ponta a ponta.",
+  "placeholderEncrypted": "Mensagem criptografada",
+  "failedSend": "Não deu para enviar",
+  "dismissFailed": "Dispensar mensagem que falhou",
+  "composePlaceholder": "npub1…, hex ou alice@exemplo.com",
+  "start": "Começar",
+  "file": {
+    "decrypting": "Descriptografando…",
+    "failed": "Não foi possível abrir este arquivo criptografado",
+    "integrity": "Este arquivo não corresponde ao que foi enviado",
+    "download": "Baixar",
+    "open": "Descriptografar e mostrar",
+    "attachment": "Anexo criptografado",
+    "uploading": "Criptografando e enviando…",
+    "tooLarge": "Esse arquivo é grande demais",
+    "badType": "Esse tipo de arquivo não é suportado",
+    "uploadFailed": "Falha no envio",
+    "needsNip17": "Arquivos criptografados precisam de NIP-17 nesta conversa"
+  },
+  "msg": {
+    "options": "Opções da mensagem",
+    "copyText": "Copiar texto",
+    "copyFileLink": "Copiar link do arquivo",
+    "copyId": "Copiar ID da mensagem",
+    "copySender": "Copiar npub do remetente",
+    "viewRaw": "Ver evento bruto",
+    "copied": "Copiado"
+  },
+  "raw": {
+    "title": "Evento bruto",
+    "tabMessage": "Mensagem descriptografada",
+    "tabWire": "No relé",
+    "rumorHint": "A mensagem em si (kind {kind}), como só você e a outra pessoa podem lê-la. Não é assinada de propósito: o selo dentro do gift wrap é o que prova quem a enviou.",
+    "wrapHint": "O que os relés guardam: um gift wrap (kind 1059) assinado por uma chave de uso único. Os relés só veem para quem é endereçado, não o remetente, a hora nem o conteúdo.",
+    "nip04Hint": "Uma mensagem direta NIP-04 legada (kind 4). O conteúdo é criptografado, mas remetente, destinatário e hora ficam visíveis para qualquer relé.",
+    "decrypted": "Conteúdo descriptografado",
+    "keyWarning": "Contém a chave de descriptografia do arquivo: qualquer pessoa a quem você der este JSON pode abri-lo.",
+    "unavailable": "Ainda não disponível para esta mensagem."
+  }
+}

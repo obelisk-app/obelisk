@@ -17,7 +17,7 @@ import { useCallback } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import type { UserHit } from '@/hooks/useNostrUserSearch';
 import { useAuthor } from '@/hooks/social/useAuthor';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import Button from '@/components/ui/Button';
 import Text from '@/components/ui/Text';
@@ -42,7 +42,7 @@ export default function FeedSearch({
   onOpenArticle?: (note: NostrEvent) => void;
   onClose?: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { raw, setRaw, debounced, notes, userHits, tags, busy, empty } = useFeedSearch(initialQuery);
   const openProfile = useCallback((pubkey: string) => onOpenProfile?.(pubkey), [onOpenProfile]);
 

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import MemberList from '@/components/chat/MemberList';
 import { useChatStore } from '@/store/chat';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
 const renderLocalized = (ui: React.ReactElement) => render(

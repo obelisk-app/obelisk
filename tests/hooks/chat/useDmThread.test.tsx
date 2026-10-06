@@ -1,6 +1,6 @@
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import type { JsDirectMessage } from '@/services/nostr-bridge';
 
 const PEER = 'b'.repeat(64);

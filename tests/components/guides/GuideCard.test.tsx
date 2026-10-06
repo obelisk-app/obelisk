@@ -1,14 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import GuideCard from '@/components/guides/GuideCard';
+import { describe, it, expect } from 'vitest';
+import { render as rtlRender, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
 
-vi.mock('next/link', () => ({
-  default: ({ children, href, ...rest }: any) => (
-    <a href={href} {...rest}>
-      {children}
-    </a>
-  ),
-}));
+/** Guide components link through the locale-aware `Link`, which needs the intl provider. */
+const render = (ui: ReactElement) => rtlRender(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
+import GuideCard from '@/components/guides/GuideCard';
 
 describe('GuideCard', () => {
   const fm = {
@@ -21,7 +18,7 @@ describe('GuideCard', () => {
   };
 
   it('renders title, description, tags, and links to the article', () => {
-    render(<GuideCard slug="my-guide" locale="en" frontmatter={fm} />);
+    render(<GuideCard slug="my-guide" frontmatter={fm} />);
     expect(screen.getByText('My Guide')).toBeInTheDocument();
     expect(screen.getByText('Short description.')).toBeInTheDocument();
     expect(screen.getByText('#alpha')).toBeInTheDocument();
@@ -33,7 +30,6 @@ describe('GuideCard', () => {
     render(
       <GuideCard
         slug="x"
-        locale="es"
         frontmatter={{ ...fm, heroComponent: 'does-not-exist' }}
       />,
     );

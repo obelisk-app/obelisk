@@ -89,19 +89,19 @@ export default function WotGraphDiagram() {
           fontWeight="700"
           fill="#b4f953"
           fontFamily="monospace"
-        >
+        > {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           score = Σ (hop_weight × mutual_bonus × activity)
         </text>
-        <text x="400" y="284" textAnchor="middle" fontSize="10" fill="#a3a3a3">
+        <text x="400" y="284" textAnchor="middle" fontSize="10" fill="#a3a3a3"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           Higher = trusted. Below threshold → posts hidden on public channels.
         </text>
       </g>
 
       {/* title */}
-      <text x="400" y="40" textAnchor="middle" fontSize="16" fontWeight="700" fill="#fafafa">
+      <text x="400" y="40" textAnchor="middle" fontSize="16" fontWeight="700" fill="#fafafa"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         How a trust score is computed
       </text>
-      <text x="400" y="62" textAnchor="middle" fontSize="11" fill="#a3a3a3">
+      <text x="400" y="62" textAnchor="middle" fontSize="11" fill="#a3a3a3"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         Pure Nostr data: no KYC, no CAPTCHA, no phone number.
       </text>
     </svg>

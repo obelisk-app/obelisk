@@ -20,7 +20,7 @@
 import { useMemo } from 'react';
 import { useUserMetadata } from '@/services/nostr-bridge';
 import { useModerationStore } from '@/store/moderation';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import UserAvatar from '@/components/ui/UserAvatar';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -28,7 +28,7 @@ import Text from '@/components/ui/Text';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 
 export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const muted = useModerationStore((state) => state.mutedPubkeys);
   const blocked = useModerationStore((state) => state.blockedPubkeys);
 
@@ -39,7 +39,7 @@ export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }
 
   const body = entries.length === 0 ? (
     <p className="text-xs text-lc-muted" data-testid="moderation-empty">
-      {t('moderation.empty')}
+      {t('settings.moderation.empty')}
     </p>
   ) : (
     <ul className="space-y-1">
@@ -51,13 +51,13 @@ export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }
 
   return mobile ? (
     <div className="settings-section" data-testid="muted-and-blocked">
-      <div className="settings-section-title">{t('moderation.title')}</div>
+      <div className="settings-section-title">{t('settings.moderation.title')}</div>
       <div className="settings-row !block space-y-2">{body}</div>
     </div>
   ) : (
     <div className="space-y-2 border-t border-lc-border pt-4" data-testid="muted-and-blocked">
       <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">
-        {t('moderation.title')}
+        {t('settings.moderation.title')}
       </Text>
       {body}
     </div>
@@ -65,7 +65,7 @@ export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }
 }
 
 function ModerationRow({ pubkey, kind }: { pubkey: string; kind: 'mute' | 'block' }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const meta = useUserMetadata(pubkey);
   const toggleMute = useModerationStore((state) => state.toggleMute);
   const toggleBlock = useModerationStore((state) => state.toggleBlock);
@@ -78,7 +78,7 @@ function ModerationRow({ pubkey, kind }: { pubkey: string; kind: 'mute' | 'block
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs text-lc-white">{name}</div>
         <Text as="div" size="10" tone="muted">
-          {t(kind === 'mute' ? 'moderation.muted' : 'moderation.blocked')}
+          {t(kind === 'mute' ? 'settings.moderation.muted' : 'settings.moderation.blocked')}
         </Text>
       </div>
       <Button
@@ -88,7 +88,7 @@ function ModerationRow({ pubkey, kind }: { pubkey: string; kind: 'mute' | 'block
         onClick={() => (kind === 'mute' ? toggleMute(pubkey) : toggleBlock(pubkey))}
         data-testid={`moderation-undo-${kind}`}
       >
-        {t(kind === 'mute' ? 'profileFeed.unmute' : 'profileFeed.unblock')}
+        {t(kind === 'mute' ? 'social.profileFeed.unmute' : 'social.profileFeed.unblock')}
       </Button>
     </Card>
   );

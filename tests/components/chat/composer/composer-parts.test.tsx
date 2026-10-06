@@ -1,6 +1,6 @@
 import { fireEvent, render, renderHook, act, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { AttachmentMenu, promptForContact } from '@/components/chat/composer/AttachmentMenu';
 import { useFileDrag } from '@/hooks/chat/composer/useFileDrag';
 

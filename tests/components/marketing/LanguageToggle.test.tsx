@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import type { Locale } from '@/i18n';
 import LanguageToggle from '@/components/marketing/LanguageToggle';
 
-const pushMock = vi.fn();
+const { replaceMock } = vi.hoisted(() => ({ replaceMock: vi.fn() }));
 let currentPathname = '/';
 
-vi.mock('next/navigation', () => ({
+// `usePathname` here is next-intl's: the path without the locale prefix.
+vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({
   usePathname: () => currentPathname,
-  useRouter: () => ({ push: pushMock, replace: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: replaceMock, prefetch: vi.fn() }),
 }));
 
 function renderToggle(locale: Locale = 'es') {
@@ -28,7 +29,7 @@ function pick(locale: Locale) {
 
 describe('LanguageToggle', () => {
   beforeEach(() => {
-    pushMock.mockClear();
+    replaceMock.mockClear();
     currentPathname = '/';
     document.cookie = 'locale=;path=/;max-age=0';
   });
@@ -76,55 +77,37 @@ describe('LanguageToggle', () => {
     expect(trigger).toHaveClass('rounded-full', 'text-lc-white', 'focus-visible:ring-2');
   });
 
-  it('switches to the language that was picked', () => {
+  it('goes to the same page in the language that was picked', () => {
+    currentPathname = '/app';
     renderToggle('es');
     pick('pt');
-    expect(document.cookie).toContain('locale=pt');
+    expect(replaceMock).toHaveBeenCalledWith('/app', { locale: 'pt', scroll: false });
   });
 
   it('closes without changing anything when you pick what you already have', () => {
     renderToggle('es');
     pick('es');
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
     expect(screen.queryByTestId('language-menu')).not.toBeInTheDocument();
   });
 
   it('moves you to the same guide in the new language', () => {
-    // English articles are unprefixed; every other language is
-    // /guides/<locale>.
+    // Guide paths are the same in every language; the router adds the prefix.
     currentPathname = '/guides/what-is-obelisk';
     renderToggle('en');
     pick('pt');
-    expect(pushMock).toHaveBeenCalledWith('/guides/pt/what-is-obelisk');
+    expect(replaceMock).toHaveBeenCalledWith('/guides/what-is-obelisk', { locale: 'pt', scroll: false });
   });
 
-  it('moves you back to the English article', () => {
-    currentPathname = '/guides/pt/what-is-obelisk';
-    renderToggle('pt');
-    pick('en');
-    expect(pushMock).toHaveBeenCalledWith('/guides/what-is-obelisk');
-  });
-
-  it('switches between two non-English guide languages', () => {
-    // The old regex only knew about /guides/es, so this pathname was
-    // unrecognised and the URL was left pointing at the wrong language.
-    currentPathname = '/guides/es/what-is-obelisk';
-    renderToggle('es');
-    pick('pt');
-    expect(pushMock).toHaveBeenCalledWith('/guides/pt/what-is-obelisk');
-  });
-
-  it('rewrites the guides index too', () => {
-    currentPathname = '/guides/es';
-    renderToggle('es');
-    pick('pt');
-    expect(pushMock).toHaveBeenCalledWith('/guides/pt');
-  });
-
-  it('leaves other pages where they are', () => {
+  it('keeps the query, so the app stays on the same relay and channel', () => {
     currentPathname = '/app';
-    renderToggle('es');
-    pick('en');
-    expect(pushMock).not.toHaveBeenCalled();
+    window.history.replaceState(null, '', '/es/app?relay=public.obelisk.ar&c=general');
+    try {
+      renderToggle('es');
+      pick('en');
+      expect(replaceMock).toHaveBeenCalledWith('/app?relay=public.obelisk.ar&c=general', { locale: 'en', scroll: false });
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
   });
 });

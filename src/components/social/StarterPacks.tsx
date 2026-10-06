@@ -26,7 +26,7 @@ import {
 } from '@/services/social/starter-packs';
 import { useAuthor } from '@/hooks/social/useAuthor';
 import { useToastStore } from '@/store/toast';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import UserAvatar from '@/components/ui/UserAvatar';
@@ -46,7 +46,7 @@ export default function StarterPacks({
 }: {
   onOpenProfile?: (pubkey: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const relays = usePreferences().socialRelays;
   const follows = useMyFollows();
   const contactEvent = useMyContactList();

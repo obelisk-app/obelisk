@@ -1,7 +1,7 @@
 'use client';
 
 import type { JsForumTag, JsGroup } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useLocale, useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { InlineTagChip } from './InlineTagChip';
 import { ThreadGalleryCardSkeleton } from './ThreadCardSkeletons';
@@ -49,7 +49,8 @@ function ThreadGalleryCard({
   forumTags: ReadonlyArray<JsForumTag>;
   onOpen: () => void;
 }) {
-  const { t, locale } = useTranslation();
+  const t = useTranslations();
+  const locale = useLocale();
   const { messages, messagesStatus, op, lastMsg, opMeta, tags } = useThreadCardData(thread, forumTags);
   if (!op || !lastMsg) {
     if (messagesStatus === 'empty-confirmed') return null;

@@ -2,7 +2,7 @@
 
 import type { RefObject } from 'react';
 import { scrollBehavior } from '@/utils/scroll/scroll-behavior';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import IconButton from '@/components/ui/IconButton';
 
 /**
@@ -29,7 +29,7 @@ export default function FeedFloatingControls({
   onShowPending: () => void;
   onCompose: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <>
       {/*
@@ -65,8 +65,8 @@ export default function FeedFloatingControls({
           tone="primary"
           size="14"
           onClick={onCompose}
-          aria-label={t('profileFeed.createPost')}
-          title={t('profileFeed.createPost')}
+          aria-label={t('social.profileFeed.createPost')}
+          title={t('social.profileFeed.createPost')}
           className={`absolute right-5 z-20 shadow-2xl shadow-black/50 active:scale-95 ${mobile ? 'bottom-6' : 'bottom-5'}`}
           data-testid="feed-compose-fab"
         >

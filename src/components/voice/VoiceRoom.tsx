@@ -14,14 +14,14 @@
  * `room/stage-layout.ts`.
  */
 import { useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import type { VoiceClient } from '@/services/voice/client';
 import { useVoiceStore } from '@/store/voice';
 import { useActiveCall, useGroups, useCurrentRelayUrl, useMyLoginMethod } from '@/services/nostr-bridge';
 import { shouldUseSfuTopology } from '@/services/voice/topology';
 import VoiceControls from './VoiceControls';
 import { DebugOverlay } from './DebugOverlay';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import { CenteredPanel, Spinner, StageBackdrop } from './room/chrome';
 import { MeshSyncStatusPill, RoomHeader } from './room/header';
@@ -50,7 +50,7 @@ interface Props {
 }
 
 export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen, onToggleChat }: Props) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const groups = useGroups();
   const currentRelayUrl = useCurrentRelayUrl();

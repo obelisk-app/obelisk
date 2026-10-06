@@ -8,7 +8,7 @@ import { useSendZap } from '@/hooks/chat/useSendZap';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { ZapIcon } from '@/components/ui/icons';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import Button from '@/components/ui/Button';
 
@@ -23,7 +23,7 @@ export default function MessageZapModal() {
 }
 
 function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { formatNumber } = useFormat();
   const amountId = useId();
   const commentId = useId();
@@ -52,7 +52,7 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
           <ZapIcon filled className="h-5 w-5 text-yellow-400" />
           <h3 className="font-semibold text-lc-white">Zap {displayName}</h3>
         </div>
-        <label htmlFor={amountId} className="mb-2 block text-xs text-lc-muted">{t('zap.amount')}</label>
+        <label htmlFor={amountId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.amount')}</label>
         <Input
           id={amountId}
           type="number"
@@ -78,19 +78,19 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
             </button>
           ))}
         </div>
-        <label htmlFor={commentId} className="mb-2 block text-xs text-lc-muted">{t('zap.comment')}</label>
+        <label htmlFor={commentId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.comment')}</label>
         <Input
           id={commentId}
           type="text"
           value={comment}
           maxLength={200}
           onChange={(e) => setComment(e.target.value)}
-          placeholder={t('zap.commentPlaceholder')}
+          placeholder={t('chat.zap.commentPlaceholder')}
           className="mb-3"
         />
         {err && <p className="mb-3 break-words text-xs text-red-400">{err}</p>}
         {!lud16 && (
-          <p className="mb-3 text-xs text-yellow-400">{t('zap.noAddress')}</p>
+          <p className="mb-3 text-xs text-yellow-400">{t('chat.zap.noAddress')}</p>
         )}
         <div className="flex justify-end gap-2">
           <Button variant="pillSecondary" size="xs" onClick={close}>
@@ -105,7 +105,7 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
             <ZapIcon filled className="h-3.5 w-3.5" />
             {busy
               ? t('common.sending')
-              : t('zap.send').replace('{amount}', formatNumber(amount))}
+              : t('chat.zap.send', { amount: formatNumber(amount) })}
           </button>
         </div>
     </Modal>

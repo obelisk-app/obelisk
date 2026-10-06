@@ -5,7 +5,7 @@ import NewGameModal from '@/components/chat/games/NewGameModal';
 import GameCard from '@/components/chat/games/GameCard';
 import { useGamesStore } from '@/store/games';
 import { buildCreate, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
 const renderLocalized = (ui: React.ReactElement) => render(

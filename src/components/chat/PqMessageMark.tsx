@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import type { PqMessageMark as Mark } from '@/services/pq/status';
 
 /**
@@ -23,11 +23,11 @@ export default function PqMessageMark({
    */
   onAccent?: boolean;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   if (mark === null) return null;
 
-  const label = mark === 'no-giftwrap' ? t('pq.markNoGiftwrap') : t('pq.markNoPq');
-  const detail = mark === 'no-giftwrap' ? t('pq.markNoGiftwrapDetail') : t('pq.markNoPqDetail');
+  const label = mark === 'no-giftwrap' ? t('chat.pq.markNoGiftwrap') : t('chat.pq.markNoPq');
+  const detail = mark === 'no-giftwrap' ? t('chat.pq.markNoGiftwrapDetail') : t('chat.pq.markNoPqDetail');
 
   return (
     <span

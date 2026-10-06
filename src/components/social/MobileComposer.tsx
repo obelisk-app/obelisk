@@ -24,7 +24,7 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMyPubkey, useUserMetadata } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useHistoryDismiss } from '@/hooks/app/useHistoryDismiss';
 import Button from '@/components/ui/Button';
 import RemoteImage from '@/components/ui/RemoteImage';
@@ -47,7 +47,7 @@ export default function MobileComposer({
   onPublished?: (event: NostrEvent) => void;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const myPubkey = useMyPubkey();
   const meta = useUserMetadata(myPubkey ?? '');
   const dismiss = useHistoryDismiss(true, onClose);
@@ -63,7 +63,7 @@ export default function MobileComposer({
     ? t('social.replyAction')
     : mode.kind === 'quote'
       ? t('social.quote')
-      : t('profileFeed.createPost');
+      : t('social.profileFeed.createPost');
 
   return (
     <div
@@ -99,7 +99,7 @@ export default function MobileComposer({
           className="shrink-0"
           data-testid="mobile-composer-post"
         >
-          {busy ? t('common.saving') : t('profileFeed.publish')}
+          {busy ? t('common.saving') : t('social.profileFeed.publish')}
         </Button>
       </header>
 
@@ -164,7 +164,7 @@ export default function MobileComposer({
         style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}
       >
         <ToolButton
-          label={t('profileFeed.upload')}
+          label={t('social.profileFeed.upload')}
           onClick={() => fileRef.current?.click()}
           disabled={busy}
           testId="mobile-composer-upload"
@@ -179,15 +179,15 @@ export default function MobileComposer({
           ref={fileRef}
           accept="image/*,video/*,audio/*"
           multiple
-          aria-label={t('profileFeed.upload')}
+          aria-label={t('social.profileFeed.upload')}
           onChange={(event) => void uploadFiles(event.target.files)}
           data-testid="composer-files"
         />
 
-        <ToolButton label={t('composer.bold')} onClick={() => wrapSelection('**')} testId="mobile-composer-bold">
+        <ToolButton label={t('chat.composer.bold')} onClick={() => wrapSelection('**')} testId="mobile-composer-bold">
           <span className="text-base font-bold">B</span>
         </ToolButton>
-        <ToolButton label={t('composer.link')} onClick={() => wrapSelection('[', '](https://)')} testId="mobile-composer-link">
+        <ToolButton label={t('chat.composer.link')} onClick={() => wrapSelection('[', '](https://)')} testId="mobile-composer-link">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
             <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" />
             <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19" />

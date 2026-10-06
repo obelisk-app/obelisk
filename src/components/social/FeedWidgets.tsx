@@ -23,7 +23,7 @@ import {
   toggleFeedWidget,
   type FeedWidgetId,
 } from '@/services/social/widgets';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Text from '@/components/ui/Text';
 import { MenuItem } from '@/components/ui/menu';
 import { CheckIcon } from '@/components/ui/icons';
@@ -43,7 +43,7 @@ export default function FeedWidgets({
   onOpenTag?: (tag: string) => void;
   onOpenProfile?: (pubkey: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const selected = normalizeFeedWidgets(usePreferences().feedWidgets);
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerRef = useRef<HTMLButtonElement>(null);

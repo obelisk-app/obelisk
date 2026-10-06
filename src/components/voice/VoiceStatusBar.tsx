@@ -14,14 +14,14 @@ import { useGroups } from '@/services/nostr-bridge';
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient, setActiveVoiceClient } from '@/services/voice/active-client';
 import { requestVoiceJump } from '@/services/voice/jump-to-voice';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import {
   CameraOffIcon, CameraOnIcon, DeafenOffIcon, DeafenOnIcon, LeaveIcon, MicOffIcon, MicOnIcon,
   ScreenShareIcon, SignalIcon, SwitchCameraIcon,
 } from './icons';
 
 export default function VoiceStatusBar() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const channelId = useVoiceStore((s) => s.currentVoiceChannelId);
   const relayUrl = useVoiceStore((s) => s.currentVoiceRelayUrl);
   const isMuted = useVoiceStore((s) => s.isMuted);

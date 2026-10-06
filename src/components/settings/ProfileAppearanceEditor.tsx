@@ -25,7 +25,7 @@ import FileInput from '@/components/ui/FileInput';
 import Input from '@/components/ui/Input';
 import RemoteImage from '@/components/ui/RemoteImage';
 import UserAvatar from '@/components/ui/UserAvatar';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/Spinner';
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -66,7 +66,7 @@ export default function ProfileAppearanceEditor({
   uploading?: 'picture' | 'banner' | null;
   mobile?: boolean;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [error, setError] = useState<string | null>(null);
   const [previews, setPreviews] = useState<{ picture: string | null; banner: string | null }>({
     picture: null,
@@ -86,7 +86,7 @@ export default function ProfileAppearanceEditor({
     if (!file) return;
     const problem = validateImage(file);
     if (problem) {
-      setError(t(problem === 'not-image' ? 'profileAppearance.notImage' : 'profileAppearance.tooLarge'));
+      setError(t(problem === 'not-image' ? 'settings.profileAppearance.notImage' : 'settings.profileAppearance.tooLarge'));
       return;
     }
     setError(null);
@@ -124,7 +124,7 @@ export default function ProfileAppearanceEditor({
           type="button"
           className="group absolute inset-0 h-full w-full overflow-hidden rounded-xl"
           onClick={() => bannerInput.current?.click()}
-          aria-label={t('profileAppearance.changeBanner')}
+          aria-label={t('settings.profileAppearance.changeBanner')}
           data-testid="edit-banner-tap"
         >
           {bannerSrc ? (
@@ -134,7 +134,7 @@ export default function ProfileAppearanceEditor({
           )}
           <span className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-black/45 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
             {uploading === 'banner' ? <Spinner size="sm" /> : <PencilIcon />}
-            {t(bannerSrc ? 'profileAppearance.changeBanner' : 'profileAppearance.addBanner')}
+            {t(bannerSrc ? 'settings.profileAppearance.changeBanner' : 'settings.profileAppearance.addBanner')}
           </span>
         </button>
 
@@ -142,7 +142,7 @@ export default function ProfileAppearanceEditor({
           type="button"
           className="group absolute -bottom-11 left-5 h-24 w-24 overflow-hidden rounded-full border-4 border-lc-dark bg-lc-card"
           onClick={() => pictureInput.current?.click()}
-          aria-label={t('profileAppearance.changeAvatar')}
+          aria-label={t('settings.profileAppearance.changeAvatar')}
           data-testid="edit-avatar-tap"
         >
           <UserAvatar
@@ -162,13 +162,13 @@ export default function ProfileAppearanceEditor({
       <FileInput
         ref={bannerInput}
         accept="image/*"
-        aria-label={t('profileAppearance.changeBanner')}
+        aria-label={t('settings.profileAppearance.changeBanner')}
         onChange={(event) => { pick('banner', event.target.files?.[0]); event.target.value = ''; }}
       />
       <FileInput
         ref={pictureInput}
         accept="image/*"
-        aria-label={t('profileAppearance.changeAvatar')}
+        aria-label={t('settings.profileAppearance.changeAvatar')}
         onChange={(event) => { pick('picture', event.target.files?.[0]); event.target.value = ''; }}
       />
 
@@ -177,18 +177,18 @@ export default function ProfileAppearanceEditor({
       {/* The URL fields stay: uploading is the fast path, not the only one. */}
       <div className={mobile ? 'space-y-3' : 'space-y-3'}>
         <UrlField
-          label={t('user.field.picture')}
+          label={t('shell.user.field.picture')}
           value={value.pictureUrl}
           disabled={!!value.pictureFile}
-          hint={value.pictureFile ? t('profileAppearance.fileSelected') : undefined}
+          hint={value.pictureFile ? t('settings.profileAppearance.fileSelected') : undefined}
           onChange={(url) => setUrl('picture', url)}
           testId="picture-url"
         />
         <UrlField
-          label={t('user.field.banner')}
+          label={t('shell.user.field.banner')}
           value={value.bannerUrl}
           disabled={!!value.bannerFile}
-          hint={value.bannerFile ? t('profileAppearance.fileSelected') : undefined}
+          hint={value.bannerFile ? t('settings.profileAppearance.fileSelected') : undefined}
           onChange={(url) => setUrl('banner', url)}
           testId="banner-url"
         />

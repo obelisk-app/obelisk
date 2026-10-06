@@ -1,7 +1,7 @@
 'use client';
 
 import type { JsUserMetadata } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import ProfileMenu from '@/components/social/ProfileMenu';
 import UserAvatar from '@/components/ui/UserAvatar';
 import RemoteImage from '@/components/ui/RemoteImage';
@@ -43,7 +43,7 @@ export function ProfileHeader({
   onCreatePost: () => void;
   onCopyNpub: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <>
       {!settingsMode && !hideClose && (
@@ -119,7 +119,7 @@ export function ProfileHeader({
               size="11"
               onClick={onCreatePost}
               className="active:scale-95"
-              aria-label={t('profileFeed.createPost')}
+              aria-label={t('social.profileFeed.createPost')}
               data-testid="profile-create-post"
             >
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -134,8 +134,8 @@ export function ProfileHeader({
               size="11"
               onClick={onOpenSettings}
               className="active:scale-95"
-              aria-label={t('settings.preferences')}
-              title={t('settings.preferences')}
+              aria-label={t('settings.preferencesTitle')}
+              title={t('settings.preferencesTitle')}
               data-testid="profile-settings-gear"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -160,7 +160,7 @@ export function ProfileHeader({
               onClick={onCopyNpub}
               data-testid="copy-npub"
             >
-              {t('profileFeed.copyNpub')}
+              {t('social.profileFeed.copyNpub')}
             </Button>
           )}
         </div>

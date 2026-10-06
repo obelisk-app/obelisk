@@ -7,7 +7,7 @@ import { preloadMarkdownBody } from '@/hooks/chat/message/useMarkdownBody';
 // The markdown renderer loads on demand; load it first so every render below is the real one.
 beforeAll(async () => { await preloadMarkdownBody(); });
 import { useChatStore } from '@/store/chat';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
 const renderLocalized = (ui: React.ReactElement) => render(

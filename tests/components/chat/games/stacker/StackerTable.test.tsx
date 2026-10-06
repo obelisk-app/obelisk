@@ -1,6 +1,6 @@
 import '@tests/support/game-engines';
 import { render, screen, act } from '@testing-library/react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { describe, expect, it, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import StackerTable, { type StackerTableProps } from '@/components/chat/games/stacker/StackerTable';
 import { deriveSession, type GameSession } from '@/lib/games/session';

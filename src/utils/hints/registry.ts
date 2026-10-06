@@ -14,6 +14,8 @@
  * condition field.
  */
 
+import type { MessageKey } from '@/i18n/keys';
+
 /** The screen a hint belongs to. Matches the mobile nav ids where they overlap. */
 export type SurfaceId =
   | 'server'            // relay rail + channel list
@@ -32,8 +34,8 @@ export type Hint = {
   surface: SurfaceId;
   /** The `data-tour` value on the control this explains. */
   anchor: string;
-  titleKey: string;
-  bodyKey: string;
+  titleKey: MessageKey;
+  bodyKey: MessageKey;
   /** Omitted = both shells. */
   shell?: Shell;
   /** Ascending, within a surface. */
@@ -52,32 +54,32 @@ export const HINTS: readonly Hint[] = [
     id: 'rail-relay',
     surface: 'server',
     anchor: 'rail-relay',
-    titleKey: 'hints.railRelay.title',
-    bodyKey: 'hints.railRelay.body',
+    titleKey: 'shell.hints.railRelay.title',
+    bodyKey: 'shell.hints.railRelay.body',
     order: 10,
   },
   {
     id: 'rail-add',
     surface: 'server',
     anchor: 'rail-add-relay',
-    titleKey: 'hints.railAdd.title',
-    bodyKey: 'hints.railAdd.body',
+    titleKey: 'shell.hints.railAdd.title',
+    bodyKey: 'shell.hints.railAdd.body',
     order: 20,
   },
   {
     id: 'channels',
     surface: 'server',
     anchor: 'channels-list',
-    titleKey: 'hints.channels.title',
-    bodyKey: 'hints.channels.body',
+    titleKey: 'shell.hints.channels.title',
+    bodyKey: 'shell.hints.channels.body',
     order: 30,
   },
   {
     id: 'rail-feed',
     surface: 'server',
     anchor: 'rail-feed',
-    titleKey: 'hints.railFeed.title',
-    bodyKey: 'hints.railFeed.body',
+    titleKey: 'shell.hints.railFeed.title',
+    bodyKey: 'shell.hints.railFeed.body',
     shell: 'desktop',
     order: 40,
   },
@@ -85,8 +87,8 @@ export const HINTS: readonly Hint[] = [
     id: 'rail-dm',
     surface: 'server',
     anchor: 'rail-dm',
-    titleKey: 'hints.railDm.title',
-    bodyKey: 'hints.railDm.body',
+    titleKey: 'shell.hints.railDm.title',
+    bodyKey: 'shell.hints.railDm.body',
     shell: 'desktop',
     order: 50,
   },
@@ -96,8 +98,8 @@ export const HINTS: readonly Hint[] = [
     id: 'composer',
     surface: 'channel',
     anchor: 'composer',
-    titleKey: 'hints.composer.title',
-    bodyKey: 'hints.composer.body',
+    titleKey: 'shell.hints.composer.title',
+    bodyKey: 'shell.hints.composer.body',
     order: 10,
   },
 
@@ -106,24 +108,24 @@ export const HINTS: readonly Hint[] = [
     id: 'feed-source',
     surface: 'feed',
     anchor: 'feed-source',
-    titleKey: 'hints.feedSource.title',
-    bodyKey: 'hints.feedSource.body',
+    titleKey: 'shell.hints.feedSource.title',
+    bodyKey: 'shell.hints.feedSource.body',
     order: 10,
   },
   {
     id: 'feed-search',
     surface: 'feed',
     anchor: 'feed-search',
-    titleKey: 'hints.feedSearch.title',
-    bodyKey: 'hints.feedSearch.body',
+    titleKey: 'shell.hints.feedSearch.title',
+    bodyKey: 'shell.hints.feedSearch.body',
     order: 20,
   },
   {
     id: 'feed-compose',
     surface: 'feed',
     anchor: 'feed-compose',
-    titleKey: 'hints.feedCompose.title',
-    bodyKey: 'hints.feedCompose.body',
+    titleKey: 'shell.hints.feedCompose.title',
+    bodyKey: 'shell.hints.feedCompose.body',
     order: 30,
   },
 
@@ -132,8 +134,8 @@ export const HINTS: readonly Hint[] = [
     id: 'dms',
     surface: 'dms-list',
     anchor: 'dm-list',
-    titleKey: 'hints.dms.title',
-    bodyKey: 'hints.dms.body',
+    titleKey: 'shell.hints.dms.title',
+    bodyKey: 'shell.hints.dms.body',
     order: 10,
   },
 
@@ -142,8 +144,8 @@ export const HINTS: readonly Hint[] = [
     id: 'inbox',
     surface: 'inbox',
     anchor: 'inbox-tabs',
-    titleKey: 'hints.inbox.title',
-    bodyKey: 'hints.inbox.body',
+    titleKey: 'shell.hints.inbox.title',
+    bodyKey: 'shell.hints.inbox.body',
     order: 10,
   },
 
@@ -152,8 +154,8 @@ export const HINTS: readonly Hint[] = [
     id: 'voice',
     surface: 'voice',
     anchor: 'voice-join',
-    titleKey: 'hints.voice.title',
-    bodyKey: 'hints.voice.body',
+    titleKey: 'shell.hints.voice.title',
+    bodyKey: 'shell.hints.voice.body',
     order: 10,
   },
 
@@ -162,16 +164,16 @@ export const HINTS: readonly Hint[] = [
     id: 'identity',
     surface: 'settings-profile',
     anchor: 'profile-button',
-    titleKey: 'hints.identity.title',
-    bodyKey: 'hints.identity.body',
+    titleKey: 'shell.hints.identity.title',
+    bodyKey: 'shell.hints.identity.body',
     order: 10,
   },
   {
     id: 'relay-status',
     surface: 'settings-profile',
     anchor: 'relay-status',
-    titleKey: 'hints.relayStatus.title',
-    bodyKey: 'hints.relayStatus.body',
+    titleKey: 'shell.hints.relayStatus.title',
+    bodyKey: 'shell.hints.relayStatus.body',
     order: 20,
   },
 ];

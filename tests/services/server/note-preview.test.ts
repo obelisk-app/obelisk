@@ -91,3 +91,17 @@ describe('buildNotePreview', () => {
     expect(preview.description).not.toMatch(/wo…$/);
   });
 });
+
+describe('buildNotePreview in another language', () => {
+  it('takes its own words from the labels the page passes', async () => {
+    const { translator } = await import('@tests/support/intl');
+    const t = translator('es');
+    const preview = buildNotePreview(
+      { kind: 1, tags: [], content: 'https://cdn.example/a.jpg' },
+      'Ana',
+      { noteTitle: (name) => t('seo.notes.title', { name }), untitledArticle: t('seo.notes.untitledArticle'), sharedMedia: t('seo.notes.sharedMedia') },
+    );
+    expect(preview.title).toBe('Ana en Obelisk');
+    expect(preview.description).toBe('Contenido multimedia compartido');
+  });
+});

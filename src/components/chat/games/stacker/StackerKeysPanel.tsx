@@ -7,7 +7,7 @@ import {
   type KeyMap,
 } from '@/lib/games/stacker/keymap';
 import type { InputKind } from '@/lib/games/stacker/engine';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
 
@@ -20,7 +20,7 @@ import Chip from '@/components/ui/Chip';
  * both ↑ and X), so binding one key never clears the others.
  */
 export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [map, setMap] = useState<KeyMap>(() => loadKeyMap());
   const [listening, setListening] = useState<InputKind | null>(null);
 

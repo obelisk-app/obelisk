@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useChannelActions } from '@/hooks/chat/useChannelActions';
 import { useMutedLabel } from '@/hooks/chat/useMutedLabel';
 import Sheet from '@/components/ui/Sheet';
@@ -9,7 +9,7 @@ import { MUTE_OPTIONS, NOTIFY_OPTIONS, type ChannelMenuTarget } from '@/utils/ch
 
 /** The phone's long-press version of the channel menu, as a sheet with drill-in views. */
 export function ChannelActionSheet({ target, onClose }: { target: ChannelMenuTarget; onClose: () => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const a = useChannelActions(target);
   const mutedLabel = useMutedLabel(a.muted ? a.pref.mutedUntil : undefined);
   const [view, setView] = useState<'main' | 'mute' | 'notify'>('main');
@@ -41,22 +41,22 @@ export function ChannelActionSheet({ target, onClose }: { target: ChannelMenuTar
       <div style={{ padding: '4px 4px 12px', fontSize: 16, fontWeight: 700, color: 'var(--app-text)' }}>
         {view === 'main' ? `# ${target.name}` : (
           <button type="button" onClick={() => setView('main')} style={{ background: 'none', border: 0, color: 'var(--app-text)', font: 'inherit', padding: 0 }}>
-            ‹ {view === 'mute' ? t('channelMenu.mute') : t('channelMenu.notify')}
+            ‹ {view === 'mute' ? t('chat.channelMenu.mute.label') : t('chat.channelMenu.notify.label')}
           </button>
         )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {view === 'main' && <>
-          {row(t('channelMenu.markRead'), act(a.markRead), { testId: 'channel-menu-mark-read', disabled: !target.hasUnread })}
-          {row(a.following ? t('channelMenu.unfollow') : t('channelMenu.follow'), act(a.toggleFollow), {
+          {row(t('chat.channelMenu.markRead'), act(a.markRead), { testId: 'channel-menu-mark-read', disabled: !target.hasUnread })}
+          {row(a.following ? t('chat.channelMenu.unfollow') : t('chat.channelMenu.follow'), act(a.toggleFollow), {
             testId: 'channel-menu-follow',
-            hint: a.following ? t('channelMenu.unfollowHint') : null,
+            hint: a.following ? t('chat.channelMenu.unfollowHint') : null,
           })}
           {a.muted
-            ? row(t('channelMenu.unmute'), act(a.unmute), { testId: 'channel-menu-unmute', hint: mutedLabel })
-            : row(t('channelMenu.mute'), () => setView('mute'), { testId: 'channel-menu-mute', chevron: true })}
-          {row(t('channelMenu.notify'), () => setView('notify'), { testId: 'channel-menu-notify', chevron: true, hint: t(`channelMenu.notify.${a.level}`) })}
-          {row(t('channelMenu.copyLink'), act(() => void a.copyLink()), { testId: 'channel-menu-copy-link' })}
+            ? row(t('chat.channelMenu.unmute'), act(a.unmute), { testId: 'channel-menu-unmute', hint: mutedLabel })
+            : row(t('chat.channelMenu.mute.label'), () => setView('mute'), { testId: 'channel-menu-mute', chevron: true })}
+          {row(t('chat.channelMenu.notify.label'), () => setView('notify'), { testId: 'channel-menu-notify', chevron: true, hint: t(`chat.channelMenu.notify.${a.level}`) })}
+          {row(t('chat.channelMenu.copyLink'), act(() => void a.copyLink()), { testId: 'channel-menu-copy-link' })}
         </>}
         {view === 'mute' && MUTE_OPTIONS.map((o) => row(t(o.key), act(() => a.mute(o.ms)), { testId: `channel-menu-mute-${o.ms}` }))}
         {view === 'notify' && NOTIFY_OPTIONS.map((o) => row(t(o.key), act(() => a.setLevel(o.level)), {

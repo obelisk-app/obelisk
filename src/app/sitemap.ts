@@ -1,11 +1,9 @@
 import type { MetadataRoute } from 'next';
-import { listAllGuides, type Guide } from '@/services/guides';
+import { listAllGuides, listSlugs, type Guide } from '@/services/guides';
 import { LOCALES } from '@/i18n';
-import { guidesHref } from '@/utils/guides/guide-urls';
+import { guidePath } from '@/utils/guides/guide-urls';
 import { snapshotPaths } from '@/utils/guides/asset-meta';
-
-const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
-
+import { SITE_URL, absoluteUrl, languageAlternates } from '@/utils/seo/alternates';
 
 const ASSET_REF_RE = /<(?:Diagram|SvgHero)\s+[^>]*name=["']([^"']+)["']/g;
 
@@ -16,83 +14,52 @@ function guideImageUrls(g: Guide): string[] {
   return Array.from(names).map((n) => `${SITE_URL}${snapshotPaths(n).png}`);
 }
 
+type Freq = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
+
+/** The public pages, each listed once per language. */
+const PAGES: ReadonlyArray<{ path: string; changeFrequency: Freq; priority: number }> = [
+  { path: '/', changeFrequency: 'weekly', priority: 1 },
+  { path: '/app', changeFrequency: 'weekly', priority: 0.8 },
+  { path: '/mobile', changeFrequency: 'monthly', priority: 0.7 },
+  { path: '/desktop', changeFrequency: 'monthly', priority: 0.7 },
+  { path: '/features', changeFrequency: 'monthly', priority: 0.8 },
+  { path: '/help', changeFrequency: 'monthly', priority: 0.7 },
+  { path: '/media-kit', changeFrequency: 'monthly', priority: 0.5 },
+  { path: guidePath(), changeFrequency: 'weekly', priority: 0.7 },
+];
+
+/**
+ * Every page in every language (`/x`, `/es/x`, `/pt/x`), each entry
+ * carrying the full set of hreflang alternates plus `x-default` (English),
+ * so a crawler can pair the three versions from any one of them.
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const out: MetadataRoute.Sitemap = [];
 
-  const base: MetadataRoute.Sitemap = [
-    {
-      url: SITE_URL,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 1,
-    },
-    {
-      url: `${SITE_URL}/app`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/mobile`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/desktop`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/features`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/help`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-  ];
-
-  const guideIndexes: MetadataRoute.Sitemap = LOCALES.map((locale) => ({
-    url: `${SITE_URL}${guidesHref(locale)}`,
-    lastModified: now,
-    changeFrequency: 'weekly',
-    priority: 0.7,
-    alternates: {
-      languages: {
-        'en-US': `${SITE_URL}${guidesHref('en')}`,
-        'es-AR': `${SITE_URL}${guidesHref('es')}`,
-      },
-    },
-  }));
-
-  const guideArticles: MetadataRoute.Sitemap = [];
-  for (const locale of LOCALES) {
-    const guides = await listAllGuides(locale).catch(() => []);
-    for (const g of guides) {
-      const last = g.frontmatter.updatedAt
-        ? new Date(g.frontmatter.updatedAt)
-        : now;
-      guideArticles.push({
-        url: `${SITE_URL}${guidesHref(locale, g.slug)}`,
-        lastModified: last,
-        changeFrequency: 'monthly',
-        priority: 0.6,
-        images: guideImageUrls(g),
-        alternates: {
-          languages: {
-            'en-US': `${SITE_URL}${guidesHref('en', g.slug)}`,
-            'es-AR': `${SITE_URL}${guidesHref('es', g.slug)}`,
-          },
-        },
-      });
+  for (const page of PAGES) {
+    const alternates = { languages: languageAlternates(page.path) };
+    for (const locale of LOCALES) {
+      out.push({ url: absoluteUrl(locale, page.path), lastModified: now, changeFrequency: page.changeFrequency, priority: page.priority, alternates });
     }
   }
 
-  return [...base, ...guideIndexes, ...guideArticles];
+  // Slugs are shared across languages; a missing translation falls back to
+  // English in `readGuide`, so every slug exists in every language.
+  const slugs = await listSlugs('en').catch(() => []);
+  for (const locale of LOCALES) {
+    const guides = new Map((await listAllGuides(locale).catch(() => [])).map((g) => [g.slug, g]));
+    for (const slug of slugs) {
+      const g = guides.get(slug);
+      out.push({
+        url: absoluteUrl(locale, guidePath(slug)),
+        lastModified: g?.frontmatter.updatedAt ? new Date(g.frontmatter.updatedAt) : now,
+        changeFrequency: 'monthly',
+        priority: 0.6,
+        images: g ? guideImageUrls(g) : undefined,
+        alternates: { languages: languageAlternates(guidePath(slug)) },
+      });
+    }
+  }
+  return out;
 }

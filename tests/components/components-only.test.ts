@@ -178,8 +178,8 @@ describe('component folders hold components only', () => {
     expect(isComponentModule('export default function Root() { return null; }', 'src/components/Root.tsx')).toBe(true);
     expect(isComponentModule('export default function Root() { return null; }', 'src/components/root.ts')).toBe(false);
     expect(isNextConvention('src/app/robots.ts')).toBe(true);
-    expect(isNextConvention('src/app/guides/[slug]/opengraph-image.tsx')).toBe(true);
-    expect(isNextConvention('src/app/app/feed-pane.ts')).toBe(false);
+    expect(isNextConvention('src/app/[locale]/guides/[slug]/opengraph-image.tsx')).toBe(true);
+    expect(isNextConvention('src/app/[locale]/app/feed-pane.ts')).toBe(false);
     expect(isNextConvention('src/components/chat/page.ts')).toBe(false);
   });
 });

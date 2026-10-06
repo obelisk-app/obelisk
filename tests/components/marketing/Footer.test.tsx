@@ -1,16 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { AnchorHTMLAttributes, ReactNode } from 'react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import Footer from '@/components/marketing/Footer';
-
-vi.mock('next/link', () => ({
-  default: ({ children, href, ...rest }: { children: ReactNode; href: string } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
-    <a href={href} {...rest}>
-      {children}
-    </a>
-  ),
-}));
 
 describe('Footer', () => {
   it('renders the 4 guide links using the context locale', () => {
@@ -27,16 +18,19 @@ describe('Footer', () => {
     expect(links).toContain('/guides');
   });
 
-  it('respects localeOverride prop for URL-localized pages', () => {
+  it('links stay in the language being read: Spanish links carry /es', () => {
     render(
-      <LocaleProvider initialLocale="en">
-        <Footer localeOverride="es" />
+      <LocaleProvider initialLocale="es">
+        <Footer />
       </LocaleProvider>,
     );
     const links = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
-    expect(links).toContain('/guides/es/what-is-obelisk');
+    expect(links).toContain('/es/guides/what-is-obelisk');
+    expect(links).toContain('/es/guides');
+    expect(links).toContain('/es/app');
     expect(links).not.toContain('/guides/what-is-obelisk');
-    expect(links).toContain('/guides/es');
+    // External links are left alone.
+    expect(links).toContain('https://lacrypta.ar');
   });
 
   it('includes product, community, legal, and FAQ links', () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { TrashIcon } from './composer-icons';
 import { formatElapsed } from '@/utils/format/format-elapsed';
 import { useVoiceRecorder } from '@/hooks/chat/composer/useVoiceRecorder';
@@ -13,7 +13,7 @@ export function VoiceNoteButton({
   disabled?: boolean;
   onRecorded: (file: File, durationSeconds: number) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { recording, elapsed, start, stop } = useVoiceRecorder(onRecorded);
 
   if (recording) {
@@ -22,8 +22,8 @@ export function VoiceNoteButton({
         <IconButton
           tone="danger"
           onClick={() => stop(true)}
-          aria-label={t('composer.discardRecording')}
-          title={t('composer.discardRecording')}
+          aria-label={t('chat.composer.discardRecording')}
+          title={t('chat.composer.discardRecording')}
         >
           <TrashIcon />
         </IconButton>
@@ -34,8 +34,8 @@ export function VoiceNoteButton({
         <IconButton
           tone="dangerSoft"
           onClick={() => stop(false)}
-          aria-label={t('composer.stopVoice')}
-          title={t('composer.finishRecording')}
+          aria-label={t('chat.composer.stopVoice')}
+          title={t('chat.composer.finishRecording')}
         >
           <span className="h-3 w-3 rounded-[3px] bg-current" aria-hidden="true" />
         </IconButton>
@@ -47,7 +47,7 @@ export function VoiceNoteButton({
     <IconButton
       disabled={disabled}
       onClick={() => void start()}
-      aria-label={t('composer.recordVoice')}
+      aria-label={t('chat.composer.recordVoice')}
     >
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="9" y="2" width="6" height="12" rx="3" />

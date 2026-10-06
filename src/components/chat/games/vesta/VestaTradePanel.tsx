@@ -1,7 +1,7 @@
 'use client';
 
 import type { GameState } from 'vesta';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { RESOURCES, RESOURCE_EMOJI, tradeAction } from './resources';
 import { Chip, ResourceRow as Row } from './table-controls';
 import type { VestaTurn } from '@/hooks/chat/games/vesta/useVestaTurn';
@@ -15,7 +15,7 @@ export default function VestaTradePanel({ state, seatLabel, busy, turn }: {
   busy?: boolean;
   turn: VestaTurn;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const {
     myTurn, isSetup, participants, actingIdx, can, send, rates,
     tradePartner, setTradePartner, give, setGive, take, setTake,

@@ -14,28 +14,29 @@
  */
 
 import { RELAY_SETTINGS_ANCHOR } from '@/utils/open-settings';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useSocialRelayDraft, type SocialRelayDraftStatus } from '@/hooks/settings/useSocialRelayDraft';
 import SocialRelayPresets from './social-relays/SocialRelayPresets';
 import SocialRelayRows from './social-relays/SocialRelayRows';
 import Button from '@/components/ui/Button';
 import Text from '@/components/ui/Text';
+import type { MessageKey } from '@/i18n/keys';
 
-const STATUS_KEY: Record<Exclude<SocialRelayDraftStatus, 'idle'>, string> = {
-  invalid: 'preferences.socialRelays.invalid',
-  importing: 'preferences.socialRelays.importing',
-  'import-empty': 'preferences.socialRelays.importEmpty',
-  saved: 'preferences.profileFeed.saved',
+const STATUS_KEY: Record<Exclude<SocialRelayDraftStatus, 'idle'>, MessageKey> = {
+  invalid: 'settings.preferences.socialRelays.invalid',
+  importing: 'settings.preferences.socialRelays.importing',
+  'import-empty': 'settings.preferences.socialRelays.importEmpty',
+  saved: 'settings.preferences.profileFeed.saved',
 };
 
 export default function SocialRelaySettings({ mobile = false }: { mobile?: boolean }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const relays = useSocialRelayDraft();
   const { status } = relays;
 
   const fields = (
     <>
-      <Text as="p" size="xs" tone="muted">{t('preferences.socialRelays.description')}</Text>
+      <Text as="p" size="xs" tone="muted">{t('settings.preferences.socialRelays.description')}</Text>
 
       <SocialRelayRows
         draft={relays.draft}
@@ -54,7 +55,7 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
           disabled={!relays.canAdd}
           data-testid="social-relay-add"
         >
-          + {t('preferences.socialRelays.add')}
+          + {t('settings.preferences.socialRelays.add')}
         </Button>
         {relays.canImport && (
           <Button
@@ -63,11 +64,11 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
             onClick={() => void relays.importFromNip65()}
             data-testid="social-relay-import"
           >
-            {t('preferences.socialRelays.import')}
+            {t('settings.preferences.socialRelays.import')}
           </Button>
         )}
         <Button variant="pillSecondary" size="xs" onClick={relays.reset} data-testid="social-relay-reset">
-          {t('preferences.socialRelays.reset')}
+          {t('settings.preferences.socialRelays.reset')}
         </Button>
       </div>
 
@@ -91,13 +92,13 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
 
   return mobile ? (
     <div className="settings-section" id={RELAY_SETTINGS_ANCHOR} data-testid="social-relay-settings">
-      <div className="settings-section-title">{t('preferences.socialRelays.title')}</div>
+      <div className="settings-section-title">{t('settings.preferences.socialRelays.title')}</div>
       <div className="settings-row !block space-y-3">{fields}</div>
     </div>
   ) : (
     <div className="space-y-3 border-t border-lc-border pt-4" id={RELAY_SETTINGS_ANCHOR} data-testid="social-relay-settings">
       <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">
-        {t('preferences.socialRelays.title')}
+        {t('settings.preferences.socialRelays.title')}
       </Text>
       {fields}
     </div>

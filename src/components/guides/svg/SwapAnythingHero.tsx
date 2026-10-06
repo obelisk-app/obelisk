@@ -112,7 +112,7 @@ export default function SwapAnythingHero() {
           fontWeight="600"
           fill="#fafafa"
           opacity="0.85"
-        >
+        > {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           Self-hostable Nostr relay · whitelist · admin UI
         </text>
 
@@ -250,7 +250,7 @@ export default function SwapAnythingHero() {
         fontWeight="600"
         fill="#a3a3a3"
         fontFamily="monospace"
-      >
+      > {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         four projects · one protocol · no central server
       </text>
     </svg>

@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import type { JsMediaKind } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import FileInput from '@/components/ui/FileInput';
 
 /** The dashed "+ Create" tile: opens a file picker and uploads the image as new media of `kind`. */
@@ -17,7 +17,7 @@ export function CreateMediaControl({
   uploading: boolean;
   onFile: (file: File | undefined, kind: JsMediaKind) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const fileRef = useRef<HTMLInputElement>(null);
   const label = kind === "gif" ? "GIF" : kind;
   return <>

@@ -1,0 +1,88 @@
+{
+  "optIn": {
+    "title": "Activar mensajes directos",
+    "subtitle": "Activá DMs solo en dispositivos donde querés tenerlos activos.",
+    "point": {
+      "events": "Los DMs usan eventos de mensajes directos encriptados de Nostr.",
+      "subscriptions": "Activar DMs puede abrir suscripciones de relays de DM y desencriptar/mostrar conversaciones en este dispositivo o sesión.",
+      "device": "Dejá los DMs desactivados si no querés tráfico ni notificaciones de DM en este dispositivo."
+    },
+    "enable": "Activar DMs",
+    "notNow": "Ahora no",
+    "continueWithout": "Continuar sin DMs"
+  },
+  "title": "Mensajes directos",
+  "newMessage": "Mensaje nuevo",
+  "clearCache": "Limpiar caché de DMs",
+  "clearCacheTitle": "Limpiar caché de DMs (sin efecto en este build)",
+  "clearCacheAlert": "La limpieza de caché de DMs es local; este cliente mantiene los DMs solo en memoria. Recargá para limpiar.",
+  "conversationOptions": "Opciones de la conversación",
+  "viewProfile": "Ver perfil",
+  "new": "Nuevo DM",
+  "noConversations": "Todavía no hay conversaciones",
+  "startConversation": "Iniciar una conversación",
+  "noFollows": "Ninguno de tus contactos te escribió todavía",
+  "everyoneInFollows": "Todas tus conversaciones están en Contactos",
+  "follows": "Contactos",
+  "others": "Otros",
+  "youPrefix": "Vos: ",
+  "encryptedPill": "Los mensajes están encriptados end-to-end",
+  "protocol": {
+    "label": "Protocolo de mensajes",
+    "nip17Title": "Por defecto: sellado y envuelto, con adjuntos",
+    "nip04Title": "Heredado, para clientes viejos",
+    "nip04Explain": "NIP-04 es para clientes viejos que solo hablan ese protocolo. Los relays pueden ver quién habla con quién y cuándo, y no hay adjuntos.",
+    "useNip04": "Usar NIP-04",
+    "keepNip17": "Seguir con NIP-17"
+  },
+  "attach": "Adjuntar",
+  "compose": {
+    "to": "Para:",
+    "next": "Siguiente",
+    "recent": "Recientes",
+    "noRecent": "Sin conversaciones recientes",
+    "noRecentDescription": "Pegá un npub arriba y tocá Siguiente.",
+    "placeholder": "Nombre, NIP-05 o npub"
+  },
+  "emptyMobileDescription": "Tocá + para iniciar un DM encriptado con cualquier persona en Nostr.",
+  "pickConversation": "Elegí o iniciá una conversación por DM.",
+  "emptyEncrypted": "Todavía no hay mensajes. Mandá el primero, encriptado end-to-end.",
+  "placeholderEncrypted": "Mensaje encriptado",
+  "failedSend": "No se pudo enviar",
+  "dismissFailed": "Descartar mensaje fallido",
+  "composePlaceholder": "npub1…, hex o alice@ejemplo.com",
+  "start": "Empezar",
+  "file": {
+    "decrypting": "Descifrando…",
+    "failed": "No se pudo abrir este archivo cifrado",
+    "integrity": "Este archivo no coincide con el que se envió",
+    "download": "Descargar",
+    "open": "Descifrar y mostrar",
+    "attachment": "Adjunto cifrado",
+    "uploading": "Cifrando y subiendo…",
+    "tooLarge": "Ese archivo es demasiado grande",
+    "badType": "Ese tipo de archivo no está soportado",
+    "uploadFailed": "Falló la subida",
+    "needsNip17": "Los archivos cifrados necesitan NIP-17 en esta conversación"
+  },
+  "msg": {
+    "options": "Opciones del mensaje",
+    "copyText": "Copiar texto",
+    "copyFileLink": "Copiar enlace del archivo",
+    "copyId": "Copiar ID del mensaje",
+    "copySender": "Copiar npub del remitente",
+    "viewRaw": "Ver evento en bruto",
+    "copied": "Copiado"
+  },
+  "raw": {
+    "title": "Evento en bruto",
+    "tabMessage": "Mensaje descifrado",
+    "tabWire": "En el relé",
+    "rumorHint": "El mensaje en sí (kind {kind}), tal como solo tú y la otra persona pueden leerlo. No está firmado a propósito: el sello dentro del gift wrap es lo que prueba quién lo envió.",
+    "wrapHint": "Lo que guardan los relés: un gift wrap (kind 1059) firmado por una clave de un solo uso. Los relés solo ven a quién va dirigido, no el remitente, la hora ni el contenido.",
+    "nip04Hint": "Un mensaje directo NIP-04 heredado (kind 4). El contenido está cifrado, pero remitente, destinatario y hora son visibles para cualquier relé.",
+    "decrypted": "Contenido descifrado",
+    "keyWarning": "Contiene la clave de descifrado del archivo: cualquiera a quien le des este JSON puede abrirlo.",
+    "unavailable": "Aún no disponible para este mensaje."
+  }
+}

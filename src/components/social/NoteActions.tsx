@@ -26,7 +26,7 @@
  */
 
 import { useRef, useState } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { MENU_PANEL_CLASS, MenuItem } from '@/components/ui/menu';
 import AnchoredMenu from './AnchoredMenu';
 import { formatCount } from '@/utils/format/format-count';
@@ -203,7 +203,7 @@ export function RepostButton({
   onRepost: () => void;
   onQuote?: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 

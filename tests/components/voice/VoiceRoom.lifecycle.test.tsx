@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import { useVoiceStore } from '@/store/voice';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 const renderLocalized = (ui: React.ReactElement) => render(
   <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
@@ -51,7 +51,7 @@ function makeClient(channelId: string): FakeClient {
   };
 }
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/components/marketing/ShootingStars', () => ({ default: () => null }));
 vi.mock('@/components/voice/VoiceControls', () => ({
   default: ({ onLeave }: { onLeave: () => void }) => (

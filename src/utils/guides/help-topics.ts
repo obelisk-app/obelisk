@@ -7,7 +7,7 @@ import type { Locale } from '@/i18n';
  * the chat to reach these.
  */
 export interface HelpTopic {
-  /** Guide slug, resolved through `guidesHref(locale, slug)`. */
+  /** Guide slug, resolved through `guidePath(slug)`. */
   readonly slug: string;
   readonly title: string;
   readonly description: string;

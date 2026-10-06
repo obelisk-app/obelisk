@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { useVoiceStore } from '@/store/voice';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 type FakeClient = {
   setMicEnabled: ReturnType<typeof vi.fn>;

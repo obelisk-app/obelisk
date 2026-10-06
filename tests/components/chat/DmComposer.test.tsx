@@ -16,7 +16,7 @@ vi.mock('@/services/dm-attachments', async (orig) => ({
 }));
 
 import { DmComposer } from '@/components/chat/DmComposer';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { useDMStore } from '@/store/dm';
 
 const PEER = 'b'.repeat(64);

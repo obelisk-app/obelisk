@@ -17,7 +17,7 @@
 import { useMemo } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useAuthor } from '@/hooks/social/useAuthor';
-import { useTranslation } from '@/i18n/context';
+import { useLocale, useTranslations } from 'next-intl';
 import Badge from '@/components/ui/Badge';
 import Chip from '@/components/ui/Chip';
 import RemoteImage from '@/components/ui/RemoteImage';
@@ -36,7 +36,7 @@ export function ArticleCard({
   note: NostrEvent;
   onOpen?: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const meta = useMemo(() => articleMeta(note), [note]);
   const minutes = useMemo(() => readingMinutes(note.content), [note.content]);
 
@@ -109,7 +109,8 @@ export default function ArticleReader({
   note: NostrEvent;
   onOpenProfile?: (pubkey: string) => void;
 }) {
-  const { t, locale } = useTranslation();
+  const t = useTranslations();
+  const locale = useLocale();
   const author = useAuthor(note.pubkey);
   const meta = useMemo(() => articleMeta(note), [note]);
   const minutes = useMemo(() => readingMinutes(note.content), [note.content]);

@@ -35,7 +35,7 @@ import {
 } from '@/services/social/relay-status';
 import { normalizeRelayUrl } from '@/services/social/relays';
 import { useConnectionState, useRelayAccess } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { shortHost } from '@/utils/relay-url/url-host';
 import Text from '@/components/ui/Text';
 import { MenuDivider } from '@/components/ui/menu';
@@ -80,7 +80,7 @@ export default function RelayStatusPill({
    */
   indicate?: 'social' | 'active';
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const statuses = useSyncExternalStore(subscribeRelayStatus, getRelayStatuses, getRelayStatuses);
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);

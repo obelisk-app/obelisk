@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 /**
  * These used to mock `SimplePool` directly, because the component opened its

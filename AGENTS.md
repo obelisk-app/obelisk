@@ -11,7 +11,7 @@ See [ROADMAP.md](ROADMAP.md) for the development plan.
 The rules in this file are the intended design. The tree does not fully obey them yet. Treat the items below as aspirations under repair, not as descriptions of reality, and do not add to any of them.
 
 - **`src/utils/nip-kinds.ts` is the intended single source of truth for event kinds.** `src/services/nostr-bridge/client.ts:407-443` still declares 21 private `KIND_*` constants (kind 9 as `KIND_GROUP_MESSAGE`, 39000-39002, 9000-9007, 9021/9022, 0, 3, 4, 5, 7, 10000, 10002, 10050, 31314) that shadow or duplicate it; `background-watch.ts` has one more, `src/services/social/kinds.ts` thirteen, `social/publish.ts` three, `social/profiles.ts`, `social/interests.ts` and `social/starter-packs.ts` a few each. Import from `@/utils/nip-kinds`; do not add another local block.
-- **"Keys are never labels" is violated by five private `shortNpub` helpers** with different truncations and hex fallbacks: `src/app/app/mobile/PhoneShell.tsx:271`, `src/components/chat/ProfilePopover.tsx:59`, `src/components/chat/NostrProfile.tsx:496`, `src/components/settings/MutedAndBlocked.tsx:93`, `src/app/t/[tag]/page.tsx:172`. The intended helper is `shortNpubLabel` in `src/utils/identity/short-npub.ts`. Use it; do not write a sixth.
+- **"Keys are never labels" is violated by five private `shortNpub` helpers** with different truncations and hex fallbacks: `src/app/[locale]/app/mobile/PhoneShell.tsx:271`, `src/components/chat/ProfilePopover.tsx:59`, `src/components/chat/NostrProfile.tsx:496`, `src/components/settings/MutedAndBlocked.tsx:93`, `src/app/[locale]/t/[tag]/page.tsx:172`. The intended helper is `shortNpubLabel` in `src/utils/identity/short-npub.ts`. Use it; do not write a sixth.
 - **"SVG icons, not glyphs" is violated by the glyph the rule cites.** The muted-channel marker is still `🔕` in both shells, and `✕` / `×` / `★` remain in `MediaLibraryModal.tsx`, `RelayRolesAdminModal.tsx`, `MobileSigningIndicator.tsx` and the PhoneShell search clear. New chrome goes through `src/components/ui/icons.tsx`.
 - **`ingestGroupMetadata` does not fan out the way older docs said.** It calls only `queueGroupMessages(groupId)`. `subscribeGroupCreator` (`client.ts:6374`) has no caller at all, yet its two containers (`creatorSubscribedGroups`, the sub list) are still declared, cleared on session change and iterated when voice trims subscriptions. Creator lookup actually happens through the relay-wide kind 9007 sub (`subscribeMyAuthoredGroups` / `ingestGroupCreator`). Delete or re-wire; do not document it as live.
 - **`src/services/voice/client.ts` wraps 16 production store calls in `catch { /* test envs */ }`.** It is a test seam leaking into production; any real store error is swallowed. Do not add a seventeenth. The fix is an injected store sink, not another catch.
@@ -43,7 +43,7 @@ Payments          Zaps and invoices through @nostr-wot/wallet (NIP-47 NWC); src/
 - **Next.js 16** + TypeScript + Tailwind CSS v4 (client-rendered; the only server route is the link-preview unfurler)
 - **nostr-tools**: `SimplePool`, `BunkerSigner`, `finalizeEvent`, NIP-04/NIP-44 helpers. This is the only Nostr client in the running code path.
 - **@nostr-wot/\***: `data` and `ui` (WoT-aware profile/follow hooks and `formatPubkey` / `hexToNpub`, consumed by the rail / search / DM list), `dm` (NIP-17 wire format, confined to the bridge), `pq` (post-quantum DM scheme), `signers`, `wallet` (NWC). Orthogonal to the bridge: the bridge owns identity + relay subs; nostr-wot owns WoT scoring + profile cache.
-- **Zustand**: client-side state under `src/store/` (`chat`, `dm`, `dm-call`, `voice`, `notifications`, `read-state`, `channel-prefs`, `games`, `hints`, `moderation`, `multi-account`, `toast`, `locale`, `messageZap`). Identity is NOT a Zustand store; it lives on the bridge.
+- **Zustand**: client-side state under `src/store/` (`chat`, `dm`, `dm-call`, `voice`, `notifications`, `read-state`, `channel-prefs`, `games`, `hints`, `moderation`, `multi-account`, `toast`, `messageZap`). Identity is NOT a Zustand store; it lives on the bridge.
 - **Vitest** + **React Testing Library** + **jsdom** for unit and component tests; **Playwright** for the end-to-end specs in `scripts/e2e/`.
 - **NDK is not a dependency.** `grep -c "ndk\|nostr-dev-kit" package.json` is 0 and nothing in `src/` imports it. Do not reach for it. The only trace is the stale mock in `tests/support/mocks/ndk.ts`.
 
@@ -51,25 +51,29 @@ Payments          Zaps and invoices through @nostr-wot/wallet (NIP-47 NWC); src/
 ```
 src/
 ├── app/                          # Next.js App Router
-│   ├── layout.tsx                # Root layout (La Crypta theme)
-│   ├── page.tsx                  # Landing page
-│   ├── app/                      # /app : the chat surface
-│   │   ├── page.tsx                # Mounts <AppGate />
-│   │   ├── AppGate.tsx             # Viewport switch: DesktopShell or mobile/PhoneShell (`useIsMobile`)
-│   │   ├── DesktopShell.tsx        # Desktop chat shell (default export named AppShell), 5664 lines
-│   │   ├── mobile/                 # PhoneShell.tsx, screens/, sheets/, mobile-shell.css (the navigation rules are in src/utils/shell/mobile)
-│   │   ├── LoginModal.tsx          # 3 auth methods + QR bunker flow
-│   │   ├── RelayStatusBanner.tsx   # Unified connection + access banner
-│   │   ├── ServerRail.tsx          # Relay-list rail
-│   │   ├── DMList.tsx, DMComposer.tsx, DMOptInGate.tsx
-│   │   └── SearchBar.tsx, UserPanel.tsx, GeneratedProfileEnhancements.tsx
+│   ├── layout.tsx, not-found.tsx # Pass-through root layout; 404 for paths outside a locale
+│   ├── [locale]/                 # Every page, once per language: /x (English), /es/x, /pt/x (docs/i18n.md)
+│   │   ├── layout.tsx              # The real root layout: <html lang>, site metadata + JSON-LD, the `common` messages
+│   │   ├── page.tsx                # Landing page
+│   │   ├── app/                    # /app : the chat surface
+│   │   │   ├── layout.tsx            # The app's message scope around AppProviders (BridgeProvider, RuntimeTranslator)
+│   │   │   ├── page.tsx              # Mounts <AppGate />
+│   │   │   ├── AppGate.tsx           # Viewport switch: DesktopShell or mobile/PhoneShell (`useIsMobile`)
+│   │   │   ├── DesktopShell.tsx      # Desktop chat shell (default export named AppShell)
+│   │   │   ├── mobile/               # PhoneShell.tsx, screens/, sheets/, mobile-shell.css (the navigation rules are in src/utils/shell/mobile)
+│   │   │   ├── LoginModal.tsx        # 3 auth methods + QR bunker flow
+│   │   │   ├── RelayStatusBanner.tsx # Unified connection + access banner
+│   │   │   ├── ServerRail.tsx        # Relay-list rail
+│   │   │   ├── DMList.tsx, DMComposer.tsx, DMOptInGate.tsx
+│   │   │   └── SearchBar.tsx, UserPanel.tsx, GeneratedProfileEnhancements.tsx
+│   │   ├── guides/                 # One route tree for every language (+ opengraph-image); MDX in content/guides
+│   │   ├── r/[code]/               # Per-relay branded share-link routes (+ opengraph-image)
+│   │   ├── notes/[id]/, p/[id]/, t/[tag]/   # Public viewers: note, profile, tag
+│   │   ├── desktop/, mobile/, features/, help/, media-kit/   # Marketing and help pages
+│   │   └── voice/                  # Voice channel surface
 │   ├── api/link-preview/route.ts # The one server route (OG unfurl proxy)
-│   ├── guides/                   # Markdown guides + SVG diagrams (en, es, pt)
-│   ├── r/[code]/                 # Per-relay branded share-link routes (+ opengraph-image)
-│   ├── notes/[id]/, p/[id]/, t/[tag]/   # Public viewers: note, profile, tag
-│   ├── desktop/, mobile/, features/, help/, media-kit/   # Marketing and help pages
-│   ├── voice/                    # Voice channel surface
-│   └── manifest.ts, robots.ts, sitemap.ts
+│   ├── dev/                      # Dev-only screenshot harness (`*.dev.tsx`, its own root layout)
+│   └── manifest.ts, robots.ts, sitemap.ts, global-error.tsx
 ├── components/
 │   ├── Navbar.tsx, Footer.tsx, LandingPage.tsx, Showcase.tsx
 │   ├── ProfileAppearanceEditor.tsx # kind:0 editor in use (`bridge.editUserMetadata`), mounted by UserPanel
@@ -93,7 +97,7 @@ src/
 │   ├── relay/                     # Operator data per relay: useChannelLayout, useRelayBranding, useRelayRoles, ...
 │   ├── social/                    # useFeed, useAuthor, useSocialProfile, useNotePreview, useInterests, ...
 │   └── read-state/, notifications/, wot/, pq/, dm/, voice/, media/, admin/, settings/, marketing/, media-kit/, wallet/
-├── i18n/                          # context, rich(), useFormat, locales/{en,es,pt}.json, hardcoded-strings ratchet
+├── i18n/                          # next-intl: routing, navigation, request config, IntlScope, modules + messages/{en,es,pt}/<module>.json, useFormat, runtime translator, hardcoded-strings ratchet
 ├── lib/                           # Mini-packages: no app imports, publishable as they stand
 │   ├── relay-hub/                 # Relay socket hub; imports only nostr-tools (pinned by isolation.test.ts)
 │   ├── games/                     # Engines, protocol codec, session replay, registry (each engine loads on demand; names in game-meta.ts), clock, stacker/, vesta/
@@ -130,7 +134,7 @@ src/
 │   │   ├── relay-url.ts             # normalizeRelayUrl + validation (the canonical one)
 │   │   ├── signer-queue.ts, wrap-ledger.ts, decrypt-cache.ts, quota-resubscribe.ts, relay-debug.ts
 │   │   ├── types.ts                 # NostrBridge interface, JsGroup/JsMessage/...
-│   │   ├── provider.tsx             # <BridgeProvider> (mounted by src/app/app/layout.tsx), useBridge/useBridgeReady in hooks/provider.ts
+│   │   ├── provider.tsx             # <BridgeProvider> (mounted by src/app/[locale]/app/AppProviders.tsx), useBridge/useBridgeReady in hooks/provider.ts
 │   │   ├── bridge-slot.ts           # The page bridge's globalThis slot: registerBridge / unregisterBridge
 │   │   └── index.ts                 # Public re-exports
 │   ├── channel-layout.ts          # NIP-78 (kind 30078) channel layout + operator authors
@@ -159,7 +163,7 @@ src/
 └── test/                          # setup.ts, fixtures/, mocks/ (webrtc, stale ndk)
 ```
 
-Where new code goes: a self-contained building block with no app imports, formal enough to publish, goes in `lib/`; a small stateless helper that belongs to no feature goes in `utils/` (in a topic subfolder when it has siblings); anything that talks to a relay, the bridge, a store, `fetch`, `localStorage` on behalf of a feature, WebRTC or the filesystem goes in `services/`. React hooks go in the hooks layer, `src/hooks/<module>/`, never in a component file or folder and never in `services/`: a hook file under `src/hooks/` mirrors the module it serves (`src/components/chat/gallery/` -> `src/hooks/chat/gallery/`, `src/app/app/mobile/` -> `src/hooks/app/mobile/`, `src/services/social/` -> `src/hooks/social/`), and the store, cache or fetch it reads stays in `services/`. Before writing one, look for an existing hook that does the job (`useDismiss` for click-outside and Escape, `useAnchoredPosition` for popovers). `tests/hooks/hooks-layer.test.ts` fails on a hook file or hook definition under `src/components/` or `src/app/`, and `tests/components/components-only.test.ts` fails on any other non-component module there (a `.ts` file, or a `.tsx` file that neither renders JSX nor exports a component) outside Next.js file conventions and its short, reasoned, shrink-only list (the ui kit's `input-surface.ts` and `merge-refs.ts`, and the game helpers under `chat/games/` until that folder's own move). A props type used only by its component stays in that component file; a type shared with logic lives beside the logic.
+Where new code goes: a self-contained building block with no app imports, formal enough to publish, goes in `lib/`; a small stateless helper that belongs to no feature goes in `utils/` (in a topic subfolder when it has siblings); anything that talks to a relay, the bridge, a store, `fetch`, `localStorage` on behalf of a feature, WebRTC or the filesystem goes in `services/`. React hooks go in the hooks layer, `src/hooks/<module>/`, never in a component file or folder and never in `services/`: a hook file under `src/hooks/` mirrors the module it serves (`src/components/chat/gallery/` -> `src/hooks/chat/gallery/`, `src/app/[locale]/app/mobile/` -> `src/hooks/app/mobile/`, `src/services/social/` -> `src/hooks/social/`), and the store, cache or fetch it reads stays in `services/`. Before writing one, look for an existing hook that does the job (`useDismiss` for click-outside and Escape, `useAnchoredPosition` for popovers). `tests/hooks/hooks-layer.test.ts` fails on a hook file or hook definition under `src/components/` or `src/app/`, and `tests/components/components-only.test.ts` fails on any other non-component module there (a `.ts` file, or a `.tsx` file that neither renders JSX nor exports a component) outside Next.js file conventions and its short, reasoned, shrink-only list (the ui kit's `input-surface.ts` and `merge-refs.ts`, and the game helpers under `chat/games/` until that folder's own move). A props type used only by its component stays in that component file; a type shared with logic lives beside the logic.
 
 The `prisma/` and `server.ts` of the legacy stack are gone, and `src/app/api/` holds only the link-preview route. References to `useAuthStore`, `restoreSession`, `syncProfile`, `/api/auth/*`, `/api/members/*`, `getNDK`, `src/lib/nostr.ts`, `src/hooks/useIdentity.ts` are no longer in the tree: if you find one, it slipped through and should be removed.
 
@@ -340,7 +344,7 @@ The SFU server is a separate repo: **[obelisk-app/obelisk-sfu](https://github.co
 
 Forum-kind channels are called **Publications** in every user-facing string
 (a single one is "a publication"). The old "forum" / "thread" wording is
-gone from the UI, SEO metadata, and all three locale files (`src/i18n/locales/{en,es,pt}.json`).
+gone from the UI, SEO metadata, and all three languages' message files (`src/i18n/messages/{en,es,pt}/`).
 
 Nothing below the UI changed, and none of it should:
 
@@ -474,7 +478,7 @@ await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
 | UI-only state, non-personal | `obelisk-dex/{namespace}/{id}` | direct `localStorage` |
 | Per-user UI flags | `obelisk-dex/{flag}/{myPubkey}` | direct `localStorage` |
 
-In practice the persisted store names are split between `obelisk-{name}` (`channel-prefs`, `dm-store`, `notifications`, `read-state`, `lacrypta-ranks`) and `obelisk:{name}` (`hints`, `locale`, `moderation`, `voice:quality`, `wot`); the preferences blob is `obelisk:preferences`.
+In practice the persisted store names are split between `obelisk-{name}` (`channel-prefs`, `dm-store`, `notifications`, `read-state`, `lacrypta-ranks`) and `obelisk:{name}` (`hints`, `moderation`, `voice:quality`, `wot`); the preferences blob is `obelisk:preferences`.
 
 When adding new persisted per-user state, follow the read-state store as the
 canonical example: define a Zustand `persist` store keyed by
@@ -497,7 +501,7 @@ for where this sits relative to the bridgeCache.
 ### Conventions
 - Tests live in `tests/`, mirroring `src/`: `src/components/chat/Foo.tsx` is tested by `tests/components/chat/Foo.test.tsx`, which imports it as `@/components/chat/Foo`. `src/` holds no test files (`vitest.config.ts` only collects `tests/**` and `scripts/**`). Repo-wide invariant tests (`csp`, `service-worker-cache`, `hooks-after-early-return`, `no-em-dash`, `eslint-config`) sit at the top of `tests/`. The hooks-layer guard sits with the hooks it guards, `tests/hooks/hooks-layer.test.ts`, and the components-only guard with the components, `tests/components/components-only.test.ts`; a hook's test lives under `tests/hooks/` like the hook (`src/hooks/chat/gallery/useZoomPan.ts` -> `tests/hooks/chat/gallery/`).
 - Two house rules are enforced, not just written down: `eslint.config.mjs` makes `max-lines` (300, blank and comment-only lines not counted) an error for `src/**`, and `tests/no-em-dash.test.ts` fails on a literal em dash (U+2014) anywhere in `src/`, `tests/`, `scripts/`, `docs/`, `content/` (the guides), `.github/`, `.claude/`, the text assets under `public/` (SVG, JSON, TXT, JS, manifest) or any file at the repo root (only the generated `package-lock.json` is left out). Neither has any exemption left. `tests/eslint-config.test.ts` also fails if a path-scoped glob in the lint config matches no file.
-- Shared setup, mocks and fixtures in `tests/support/` (`setup.ts`, `warm-bridge-modules.ts`, `mocks/webrtc.ts`, `mocks/nostr-bridge.ts`, `fake-bridge.ts`, `render-with-bridge.tsx`, `fixtures/`), imported as `@tests/support/...`; `mocks/ndk.ts` is a leftover
+- Shared setup, mocks and fixtures in `tests/support/` (`setup.ts`, `warm-bridge-modules.ts`, `mocks/webrtc.ts`, `mocks/nostr-bridge.ts`, `mocks/i18n-navigation.ts`, `fake-bridge.ts`, `render-with-bridge.tsx`, `intl.tsx` (the `LocaleProvider` a component test wraps itself in), `next-intl-server.ts`, `fixtures/`), imported as `@tests/support/...`; `mocks/ndk.ts` is a leftover
 - A new component or hook test fakes the bridge *instance*, not the module: `renderWithBridge(<X />, fakeBridge({ groups }))` (or `bridgeWrapper` for `renderHook`) runs the real hooks over seeded stores, and `fake.stores.groups.set(...)` inside `act` drives a change. `tests/bridge-mock-count.test.ts` only lets the number of `vi.mock('@/services/nostr-bridge', ...)` files go down.
 - The page bridge lives on `globalThis` (`bridge-slot.ts`), so `vi.resetModules()` does not forget it: a suite that wants a fresh bridge calls `unregisterBridge()` (the bridge harnesses do), and a non-React suite can `registerBridge(fake)` instead of mocking the client module.
 - Use `data-testid` attributes for reliable test selectors
@@ -551,7 +555,7 @@ for where this sits relative to the bridgeCache.
 - [docs/relay-roles.md](docs/relay-roles.md): operator-defined tiered roles (NIP-78 kind 30078); highest tier held is the badge shown in chat and the member list
 - [docs/social-feeds.md](docs/social-feeds.md): the Nostr-proper surface: social as a fourth relay tier, the shared SDK pool, feed caching, `until` pagination, and the wire-format matrix (with the Amethyst/Damus/Primal quirks that make it not simply "follow the NIP")
 - [docs/games.md](docs/games.md): games on the relay: kind 2390 wire format, deterministic replay as the trust model, turn clock without a server, what it doesn't defend against
-- [docs/i18n.md](docs/i18n.md): the three languages: where copy lives, `rich()` for sentences with markup in them, `useFormat()`/`serverLocale()` (a bare `toLocaleDateString()` follows the OS, not the app), the hardcoded-string ratchet and what stays exempt, and how to add a fourth language
+- [docs/i18n.md](docs/i18n.md): the three languages: URL locales (English unprefixed, `/es`, `/pt`) and who gets which, the message modules and what each route ships, ICU arguments and `t.rich`, SEO alternates, `useFormat()`/`serverLocale()`, the hardcoded-string ratchet and its `i18n-exempt` marker, and how to add a fourth language
 - [docs/search.md](docs/search.md), [docs/media-packs.md](docs/media-packs.md), [docs/chat-composer-attachments.md](docs/chat-composer-attachments.md), [docs/mobile-navigation.md](docs/mobile-navigation.md), [docs/onboarding.md](docs/onboarding.md), [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md), [docs/bitcoin-zaps-nwc.md](docs/bitcoin-zaps-nwc.md)
 - [docs/uploads.md](docs/uploads.md): Blossom storage + URL format
 - [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md): exposing localhost:3000 at https://obelisk.fabri.lat

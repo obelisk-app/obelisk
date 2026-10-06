@@ -6,7 +6,7 @@ import GameResults from '@/components/chat/games/GameResults';
 import { deriveSession, type GameSession } from '@/lib/games/session';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
 import { applyMatchEvent } from '@/lib/games/stacker/match';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
 const renderLocalized = (ui: React.ReactElement) => render(

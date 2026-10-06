@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient } from '@/services/voice/active-client';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import QualityPopover from './QualityPopover';
 import {
   CameraOffIcon, CameraOnIcon, ChatIcon, DeafenOffIcon, DeafenOnIcon, GearIcon, LeaveIcon,
@@ -22,7 +22,7 @@ interface VoiceControlsProps {
 }
 
 export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: VoiceControlsProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const isMuted = useVoiceStore((s) => s.isMuted);
   const isDeafened = useVoiceStore((s) => s.isDeafened);
   const isCameraOn = useVoiceStore((s) => s.isCameraOn);

@@ -6,9 +6,9 @@ import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useMyFollows, useMyPubkey } from '@/services/nostr-bridge';
 import { suggestedAuthors } from '@/services/social/feed-people';
 import { useAuthor } from '@/hooks/social/useAuthor';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import UserAvatar from '@/components/ui/UserAvatar';
-import FollowButton from '@/app/notes/[id]/FollowButton';
+import FollowButton from '@/app/[locale]/notes/[id]/FollowButton';
 import WidgetCard, { WidgetEmpty } from './WidgetCard';
 
 /**
@@ -25,7 +25,7 @@ export default function WhoToFollowWidget({
   notes: readonly NostrEvent[];
   onOpenProfile?: (pubkey: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const myPubkey = useMyPubkey();
   const follows = useMyFollows();
 

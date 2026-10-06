@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { CloseIcon } from '@/components/ui/icons';
 import CloseButton from '@/components/ui/CloseButton';
 import { EMOJI_NAV } from '@/utils/chat/picker/emoji-sections';
@@ -16,9 +16,9 @@ export function EmojiCategoryNav({
   activeCategory: string;
   onJump: (category: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
-    <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label={t('emoji.categories')}>
+    <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label={t('chat.emoji.categories')}>
       {EMOJI_NAV.map((meta) => {
         const category = meta.name;
         return (
@@ -53,26 +53,26 @@ export function EmojiPickerSearchBar({
   onQuery: (value: string) => void;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <div className={isSheet ? 'my-2 flex items-center gap-2' : 'border-b border-lc-border p-3'}>
       {!isSheet && (
         <div className="mb-2 flex items-center justify-between">
           <div>
-            <div className="text-sm font-bold text-lc-white">{t('emoji.title')}</div>
-            <div className="text-[11px] text-lc-muted">{t('emoji.subtitle')}</div>
+            <div className="text-sm font-bold text-lc-white">{t('chat.emoji.title')}</div>
+            <div className="text-[11px] text-lc-muted">{t('chat.emoji.subtitle')}</div>
           </div>
-          <CloseButton onClick={onClose} label={t('emoji.close')} title={t('common.close')} />
+          <CloseButton onClick={onClose} label={t('chat.emoji.close')} title={t('common.close')} />
         </div>
       )}
       <MediaPickerSearch
         autoFocus={!isSheet}
         value={query}
         onChange={onQuery}
-        placeholder={t('emoji.search')}
+        placeholder={t('chat.emoji.search')}
       />
       {isSheet && showClose && (
-        <IconButton tone="outline" onClick={onClose} aria-label={t('emoji.close')} title={t('common.close')}>
+        <IconButton tone="outline" onClick={onClose} aria-label={t('chat.emoji.close')} title={t('common.close')}>
           <CloseIcon size={18} />
         </IconButton>
       )}

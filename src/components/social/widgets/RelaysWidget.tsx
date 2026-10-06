@@ -10,7 +10,7 @@ import {
 import { normalizeRelayUrl } from '@/services/social/relays';
 import { usePreferences } from '@/hooks/usePreferences';
 import { openSettings } from '@/utils/open-settings';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import WidgetCard from './WidgetCard';
 import { shortHost } from '@/utils/relay-url/url-host';
 import TextButton from '@/components/ui/TextButton';
@@ -34,7 +34,7 @@ const DOT: Record<RelayState, string> = {
 };
 
 export default function RelaysWidget() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const relays = usePreferences().socialRelays;
   const statuses = useSyncExternalStore(subscribeRelayStatus, getRelayStatuses, getRelayStatuses);
 

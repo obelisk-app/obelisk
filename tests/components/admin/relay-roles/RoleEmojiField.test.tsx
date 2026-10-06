@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 vi.mock('@/components/chat/EmojiPicker', () => ({
   default: ({ onPick }: { onPick: (e: string) => void }) => (

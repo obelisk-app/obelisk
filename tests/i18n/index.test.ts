@@ -1,42 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-  getTranslation,
   countryToLocale,
   acceptLanguageToLocale,
   detectLocale,
   LATAM_COUNTRIES,
   DEFAULT_LOCALE,
-  type Locale,
 } from '@/i18n/index';
-
-describe('getTranslation', () => {
-  it('returns English strings for "en" locale', () => {
-    const t = getTranslation('en');
-    expect(t('hero.title')).toBe('Tus comunidades,');
-    expect(t('hero.titleHighlight')).toBe('bajo tu control');
-  });
-
-  it('returns Spanish strings for "es" locale', () => {
-    const t = getTranslation('es');
-    expect(t('hero.title')).toBe('Tus comunidades,');
-    expect(t('hero.titleHighlight')).toBe('bajo tu control');
-  });
-
-  it('returns the key itself for missing translations', () => {
-    const t = getTranslation('en');
-    expect(t('nonexistent.key')).toBe('nonexistent.key');
-  });
-
-  it('defaults to Spanish for unknown locale', () => {
-    const t = getTranslation('fr' as unknown as Locale);
-    expect(t('hero.title')).toBe('Tus comunidades,');
-  });
-
-  it('identifies Obelisk as the operator of its public relays', () => {
-    expect(getTranslation('en')('faq.q2.answer')).toContain('Obelisk operates two public relays');
-    expect(getTranslation('es')('faq.q2.answer')).toContain('Obelisk opera dos relays públicos');
-  });
-});
 
 describe('countryToLocale', () => {
   it('returns "es" for LATAM countries', () => {
@@ -67,12 +36,12 @@ describe('countryToLocale', () => {
     expect(countryToLocale('br')).toBe('pt');
   });
 
-  it('returns default locale (es) when country is null', () => {
-    expect(countryToLocale(null)).toBe('es');
+  it('returns the default locale (en) when country is null', () => {
+    expect(countryToLocale(null)).toBe('en');
   });
 
-  it('default locale is "es"', () => {
-    expect(DEFAULT_LOCALE).toBe('es');
+  it('default locale is "en": English lives at the unprefixed URLs', () => {
+    expect(DEFAULT_LOCALE).toBe('en');
   });
 
   it('LATAM_COUNTRIES includes key countries', () => {

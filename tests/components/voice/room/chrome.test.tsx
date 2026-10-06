@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 vi.mock('@/services/nostr-bridge', () => ({
   useUserMetadata: (pk: string) => (pk === A ? { name: 'ada' } : null),

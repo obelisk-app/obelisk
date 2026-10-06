@@ -1,7 +1,7 @@
 'use client';
 
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import {
   ActionButton,
   LikeIcon,
@@ -38,7 +38,7 @@ export default function NoteActionRow({
   onQuote?: (note: NostrEvent) => void;
   onZap?: (note: NostrEvent) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { counts, busy, reacted, reposted, share, react, repost } = engagement;
 
   return (

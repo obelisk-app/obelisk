@@ -14,7 +14,7 @@ describe('relativeTime', () => {
   const secondsAgo = (s: number) => Math.floor((NOW - s * 1000) / 1000);
 
   it('uses the caller\'s "just now" key under a minute', () => {
-    expect(relativeTime(secondsAgo(30), t, 'en')).toBe('<time.justNow>');
+    expect(relativeTime(secondsAgo(30), t, 'en')).toBe('<common.time.justNow>');
     expect(relativeTime(secondsAgo(30), t, 'en', 'social.now')).toBe('<social.now>');
   });
 

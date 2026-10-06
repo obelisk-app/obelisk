@@ -5,7 +5,7 @@ vi.mock('@/services/social/relay-status', () => ({ probeRelay: vi.fn() }));
 
 import SocialRelayRows from '@/components/settings/social-relays/SocialRelayRows';
 
-const t = (key: string) => (key === 'preferences.socialRelays.relay' ? 'Relay' : 'Remove');
+const t = (key: string) => (key === 'settings.preferences.socialRelays.relay' ? 'Relay' : 'Remove');
 
 describe('SocialRelayRows', () => {
   it('names each field, flags invalid ones and reports edits and removals', () => {

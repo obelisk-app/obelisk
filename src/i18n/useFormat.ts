@@ -5,12 +5,12 @@
  * language, so a component never has to pass the locale itself and,
  * more to the point, never has the option of forgetting to.
  *
- * Sits beside `useTranslation()` rather than inside it: plenty of
+ * Sits beside `useTranslations()` rather than inside it: plenty of
  * components format a timestamp without having any copy to translate.
  */
 
 import { useMemo } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useLocale } from 'next-intl';
 import {
   formatDate,
   formatDateTime,
@@ -19,7 +19,7 @@ import {
 } from '@/utils/format/format';
 
 export function useFormat() {
-  const { locale } = useTranslation();
+  const locale = useLocale();
   return useMemo(() => ({
     locale,
     formatDate: (value: Date | number, options?: Intl.DateTimeFormatOptions) =>

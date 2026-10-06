@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nostrActions } from '@/services/nostr-bridge';
 import MessageMediaPicker from '@/components/chat/MessageMediaPicker';
 import { useChatStore } from '@/store/chat';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
 const renderLocalized = (ui: React.ReactElement) => render(

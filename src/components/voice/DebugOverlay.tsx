@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { VoiceMetrics } from '@/services/voice/metrics';
 import type { VoiceDebugEvent } from '@/services/voice/debug';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 const REFRESH_MS = 500;
 const SHOW_EVENTS = 50;
@@ -38,7 +38,7 @@ function readBag(): DebugBag | null {
  * end-user UI.
  */
 export function DebugOverlay() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -71,8 +71,8 @@ export function DebugOverlay() {
         pointerEvents: 'auto',
       }}
     >
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('voiceDebug.title')}</div>
-      {!metrics && <div style={{ color: '#a3a3a3' }}>{t('voiceDebug.noClient')}</div>}
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('voice.voiceDebug.title')}</div>
+      {!metrics && <div style={{ color: '#a3a3a3' }}>{t('voice.voiceDebug.noClient')}</div>}
       {metrics && (
         <>
           <Section title="peers">
@@ -82,7 +82,7 @@ export function DebugOverlay() {
             <Row k="byUnload" v={metrics.peers.tornDownByUnload} />
             <Row k="iceExhausted" v={metrics.peers.iceExhausted} />
           </Section>
-          <Section title={t('voiceDebug.controlChannel')}>
+          <Section title={t('voice.voiceDebug.controlChannel')}>
             <Row k="opened" v={metrics.controlChannel.opened} />
             <Row k="ping" v={`${metrics.controlChannel.pingSent}/${metrics.controlChannel.pongRcvd}`} />
             <Row k="lastRtt" v={metrics.controlChannel.lastRttMs ?? '-'} />
@@ -115,7 +115,7 @@ export function DebugOverlay() {
             <Row k="hit" v={metrics.rateLimit.hit} highlight={metrics.rateLimit.hit > 0} />
             <Row k="backoff" v={`${metrics.rateLimit.backoffMs}ms`} />
           </Section>
-          <Section title={t('voiceDebug.sfuReliability')}>
+          <Section title={t('voice.voiceDebug.sfuReliability')}>
             <Row
               k="retries"
               v={metrics.sfuReliability.consumeRetries}

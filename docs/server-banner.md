@@ -68,6 +68,6 @@ event:
   `tag('banner')` from kind 39000.
 - Sign: `editGroupMetadata({ banner })` adds `["banner", url]` to the kind
   9002 tag list (same file).
-- Render: `ChatPanel` in `src/app/app/AppShell.tsx` renders the banner as a
+- Render: `ChatPanel` in `src/app/[locale]/app/AppShell.tsx` renders the banner as a
   thin strip directly below the channel header.
 - Edit: the channel settings modal (admin-only) exposes a "Banner URL" field.

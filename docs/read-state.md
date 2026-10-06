@@ -215,7 +215,7 @@ ServerRail relay-tile `@` overlay on the active relay.
 
 | Surface | File | Behaviour |
 |---|---|---|
-| Relay-tile `@` overlay | `src/app/app/ServerRail.tsx` (RelayTile) | Tiny green `@` badge when the active relay has unread mentions or replies in any channel. Cross-relay surveillance is a follow-up. |
+| Relay-tile `@` overlay | `src/app/[locale]/app/ServerRail.tsx` (RelayTile) | Tiny green `@` badge when the active relay has unread mentions or replies in any channel. Cross-relay surveillance is a follow-up. |
 | Channel row badges | desktop `DesktopShell.tsx` (`GroupNode`), mobile `PhoneShell.tsx` (channel list) | Gray unread count + green pill for `mentions + replies`. Bold name when unread > 0. |
 | MentionNavigator | `src/components/chat/MentionNavigator.tsx` | Floating bottom-right of the message viewport. `↑ N / total ↓` when there are highlights; `F7` / `Shift+F7` keyboard shortcuts. Plus a `⌄` jump-to-latest button when scrolled away from the bottom. |
 | Inbox bell | desktop `DesktopShell.tsx` (`RelayTopBar`), mobile inbox tab | Two tabs: **Mentions** (active relay) and **DMs**, with independent counts, independent "mark read", and independent "clear". The bell glyph shows their sum. |
@@ -379,7 +379,7 @@ See [`data-system.md` §4](./data-system.md) for the full priority table.
 ## 9. Mount points
 
 ```
-src/app/app/AppGate.tsx
+src/app/[locale]/app/AppGate.tsx
 └── <ReadStateRoot/>  (gated on useIsLoggedIn)
     │  src/services/read-state/root.tsx
     ├── ensureReadStateStoreForAccount(myPubkey)

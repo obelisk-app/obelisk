@@ -1,0 +1,41 @@
+{
+  "call": {
+    "voice": "Chamada de voz",
+    "video": "Videochamada",
+    "incomingVoice": "Chamada recebida",
+    "incomingVideo": "Videochamada recebida",
+    "acceptVideo": "Aceitar com vídeo",
+    "acceptVoice": "Aceitar",
+    "decline": "Recusar",
+    "hangup": "Desligar",
+    "calling": "Chamando…",
+    "connecting": "Conectando…",
+    "reconnecting": "Reconectando…",
+    "mute": "Silenciar",
+    "unmute": "Ativar microfone",
+    "cameraOn": "Ligar câmera",
+    "cameraOff": "Desligar câmera",
+    "flip": "Trocar câmera",
+    "shareScreen": "Compartilhar tela",
+    "stopShare": "Parar de compartilhar",
+    "encrypted": "Criptografada de ponta a ponta",
+    "ipHidden": "Seu IP está oculto, via relé",
+    "close": "Fechar",
+    "needsDms": "Ative as mensagens diretas para fazer chamadas",
+    "ended": {
+      "local-hangup": "Chamada encerrada",
+      "remote-hangup": "Chamada encerrada",
+      "declined": "Chamada recusada",
+      "busy": "Ocupado em outra chamada",
+      "no-answer": "Sem resposta",
+      "missed": "Chamada perdida",
+      "cancelled": "Chamada cancelada",
+      "answered-elsewhere": "Atendida em outro dispositivo",
+      "connect-failed": "Não foi possível conectar a chamada",
+      "connection-lost": "Conexão perdida",
+      "error": "A chamada falhou"
+    },
+    "fullscreen": "Tela cheia",
+    "exitFullscreen": "Sair da tela cheia"
+  }
+}

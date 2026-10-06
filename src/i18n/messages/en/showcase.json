@@ -1,0 +1,81 @@
+{
+  "mobile": {
+    "hero": {
+      "badge": "Mobile tour",
+      "title": "Group chat that fits in your",
+      "titleHighlight": "pocket",
+      "subtitle": "Obelisk on Android, iOS and any modern mobile browser. NIP-29 channels, voice with SFU, encrypted DMs and Lightning zaps. All backed by your Nostr keys: no email, no password.",
+      "cta": "Launch app",
+      "ctaSecondary": "See on desktop →"
+    },
+    "shot1": {
+      "badge": "Servers & channels",
+      "title": "Discord-style server list, mobile-first",
+      "alt": "Obelisk mobile home, with server icons up top, then categorized channels: General Chat, Publications (Finances, Bitcoin, RUNSTR), Voice Channel, Feedback, Uncategorized.",
+      "desc": "Your relays show up as servers. Inside each, channels are grouped into the categories the operator publishes (general chat, publications, voice, anything you want), with unread badges and live indicators just like Discord.",
+      "features": "Pinned server rail at the top|Operator-controlled categories|Publications nested under their parent|Live indicators on active voice channels"
+    },
+    "shot2": {
+      "badge": "Voice • SFU",
+      "title": "Voice and video that scales past mesh",
+      "alt": "Obelisk mobile voice channel running in SFU mode with a test peer transmitting an SMPTE color-bar video stream.",
+      "desc": "Small rooms run as a P2P mesh; once a relay advertises an SFU, the same channel switches automatically and rooms scale to dozens of participants, all signaled over Nostr (kind 25050) without revealing identity to a media server.",
+      "features": "Mesh up to ~6 peers, SFU beyond|Mute, deafen, screen-share and chat from one bar|Bottom nav stays put while you talk"
+    },
+    "shot3": {
+      "badge": "Sign in with Nostr",
+      "title": "No email, no password, three ways to log in",
+      "alt": "Obelisk mobile login modal showing three options: NIP-46 remote signer, generate a new key, and import an existing nsec.",
+      "desc": "Pick the signer that matches your habits: a remote bunker via NIP-46 (Amber, nsec.app), generate a brand-new key on device, or paste an nsec you already own. Onboarding is one screen.",
+      "features": "NIP-46 bunker via QR or URL|Generate-and-back-up flow for new users|Paste your existing nsec - your keys, your account"
+    },
+    "shot4": {
+      "badge": "Profile & identity",
+      "title": "Your Nostr profile, your settings",
+      "alt": "Obelisk mobile profile screen: banner, avatar, npub and hex pubkey, Edit Nostr Profile button, Disconnect button and a Preferences tab.",
+      "desc": "The same kind 0 profile every Nostr client uses: display name, banner, bio, NIP-05, Lightning address. Edit it once and every Nostr app sees the change.",
+      "features": "Copy npub or hex pubkey with one tap|Open your profile in any other Nostr client|Per-device preferences kept in localStorage"
+    },
+    "cta": {
+      "heading": "Take Obelisk with you",
+      "subtitle": "Open the web app on your phone, install it from the browser menu, and you're done. No app store, no review, no platform tax.",
+      "button": "Launch on mobile"
+    }
+  },
+  "desktop": {
+    "hero": {
+      "badge": "Desktop tour",
+      "title": "A Discord-class workspace, on the open",
+      "titleHighlight": "Nostr stack",
+      "subtitle": "Obelisk in your browser: server rail, categorized channels, publications, member list, mediasoup-powered voice rooms, encrypted DMs and Lightning zaps, all on relays you control.",
+      "cta": "Launch app",
+      "ctaSecondary": "See on mobile →"
+    },
+    "shot1": {
+      "badge": "Group chat",
+      "title": "Three-pane chat, member list and reactions",
+      "alt": "Obelisk desktop view of the public General Chat: server rail, channel list, central message stream with reactions and a link preview, and the right-side member list.",
+      "desc": "The familiar Discord layout (server rail, channel list, message stream, member sidebar) wired straight to NIP-29 events on the relay. Every message is a signed Nostr event: no backend, no proprietary format.",
+      "features": "Replies, reactions and rich link previews|Member list reflects the relay's NIP-29 roster live|Lightning zap any message via NIP-57 + NWC"
+    },
+    "shot2": {
+      "badge": "Publications",
+      "title": "Publications for slower, deeper conversations",
+      "alt": "Obelisk desktop publications view of plaza-publica: four publications (Politica y Economia, But why?, Only-Claws, Finanzas-Trading v2) with OP, message count and last reply time.",
+      "desc": "Publication-kind channels turn into a tidy feed: a list of posts, OP and last-reply metadata, each with its own chat, and the same NIP-29 moderation as every other channel.",
+      "features": "One-click 'New thread' to start a topic|Last-message timestamps stay accurate via cursors|Same admin model: kicks and bans live on the relay"
+    },
+    "shot3": {
+      "badge": "Voice • SFU",
+      "title": "Big voice rooms with mediasoup and screen share",
+      "alt": "Obelisk desktop voice channel in SFU mode showing a test peer streaming an SMPTE color-bar test pattern with the chat sidebar and voice controls.",
+      "desc": "Voice channels start as a P2P mesh and switch to a mediasoup SFU when the relay advertises one. Same UI, same kind-25050 signaling, just more peers and screen-share without melting CPUs.",
+      "features": "Allow-listed SFU operators per relay|Screen share with hardware-accelerated encode|All signaling rides on Nostr, no sticky-session backend"
+    },
+    "cta": {
+      "heading": "Open Obelisk in any browser",
+      "subtitle": "It's a static frontend with no signup. Open it locally, install the PWA, or self-host the build. Same client either way.",
+      "button": "Launch on desktop"
+    }
+  }
+}

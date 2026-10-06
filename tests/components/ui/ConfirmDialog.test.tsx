@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import type { Locale } from '@/i18n/index';
 import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
 import { confirmDialog } from '@/services/confirm-dialog';

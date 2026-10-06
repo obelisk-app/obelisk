@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import en from '@/i18n/locales/en.json';
+import { flatMessages } from '@tests/support/messages';
 import { HINTS, hintForAnchor, hintsForSurface } from '@/utils/hints/registry';
 
-const EN = en as Record<string, string>;
+const EN = flatMessages('en');
 
 describe('hint registry', () => {
   it('has unique ids: they are the persisted seen-set', () => {
@@ -17,7 +17,7 @@ describe('hint registry', () => {
 
   it('has real copy for every hint in both directions', () => {
     // A missing key renders as the key itself, which would ship a callout
-    // reading "hints.railFeed.body".
+    // reading "shell.hints.railFeed.body".
     for (const hint of HINTS) {
       expect(EN[hint.titleKey], hint.titleKey).toBeTruthy();
       expect(EN[hint.bodyKey], hint.bodyKey).toBeTruthy();

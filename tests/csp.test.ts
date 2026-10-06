@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { proxy } from '@/proxy';
-import { LOCALE_COOKIE, LOCALE_HEADER } from '@/i18n';
+import { LOCALE_COOKIE } from '@/i18n';
 import { buildCsp } from '@/utils/csp';
 import nextConfig from '../next.config';
 
@@ -62,36 +62,65 @@ describe('locale proxy', () => {
     vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000000' as `${string}-${string}-${string}-${string}-${string}`);
   });
 
-  it('sets a locale cookie and request header on direct app routes', () => {
-    const req = new NextRequest('https://obelisk.test/app', {
-      headers: { 'x-vercel-ip-country': 'AR' },
-    });
-    const res = proxy(req);
+  const location = (res: Response) => res.headers.get('location');
 
-    expect(res.cookies.get(LOCALE_COOKIE)?.value).toBe('es');
-    expect(res.headers.get('x-middleware-request-' + LOCALE_HEADER)).toBe('es');
+  it('serves English at / to a request with no language signal (a crawler), and sets no cookie', () => {
+    const res = proxy(new NextRequest('https://obelisk.test/'));
+    expect(location(res)).toBeNull();
+    // next-intl rewrites to the `[locale]` route internally.
+    expect(res.headers.get('x-middleware-rewrite')).toBe('https://obelisk.test/en');
+    expect(res.headers.get('set-cookie')).toBeNull();
   });
 
-  it('uses Accept-Language when geo headers are unavailable', () => {
-    const req = new NextRequest('https://obelisk.test/guides', {
-      headers: { 'accept-language': 'en-US,en;q=0.8,es;q=0.7' },
-    });
-    const res = proxy(req);
-
-    expect(res.cookies.get(LOCALE_COOKIE)?.value).toBe('en');
-    expect(res.headers.get('x-middleware-request-' + LOCALE_HEADER)).toBe('en');
+  it('sends a first-time Spanish browser from / to /es', () => {
+    const res = proxy(new NextRequest('https://obelisk.test/', { headers: { 'accept-language': 'es-AR,es;q=0.9' } }));
+    expect(res.status).toBe(307);
+    expect(location(res)).toBe('https://obelisk.test/es');
+    expect(res.headers.get('Content-Security-Policy')).toContain("'nonce-");
   });
 
-  it('preserves an explicit user locale cookie', () => {
-    const req = new NextRequest('https://obelisk.test/app', {
-      headers: {
-        cookie: `${LOCALE_COOKIE}=en`,
-        'x-vercel-ip-country': 'AR',
-      },
-    });
-    const res = proxy(req);
+  it('uses the CDN country before Accept-Language, and keeps the path and query', () => {
+    const res = proxy(new NextRequest('https://obelisk.test/app?relay=x', {
+      headers: { 'x-vercel-ip-country': 'BR', 'accept-language': 'en-US' },
+    }));
+    expect(location(res)).toBe('https://obelisk.test/pt/app?relay=x');
+  });
 
-    expect(res.cookies.get(LOCALE_COOKIE)).toBeUndefined();
-    expect(res.headers.get('x-middleware-request-' + LOCALE_HEADER)).toBe('en');
+  it('a language the user picked wins: locale=en with a Spanish browser stays on /', () => {
+    const res = proxy(new NextRequest('https://obelisk.test/', {
+      headers: { cookie: `${LOCALE_COOKIE}=en`, 'accept-language': 'es-AR', 'x-vercel-ip-country': 'AR' },
+    }));
+    expect(location(res)).toBeNull();
+    expect(res.headers.get('x-middleware-rewrite')).toBe('https://obelisk.test/en');
+  });
+
+  it('the cookie also moves an unprefixed URL to the picked language', () => {
+    const res = proxy(new NextRequest('https://obelisk.test/app', { headers: { cookie: `${LOCALE_COOKIE}=pt` } }));
+    expect(location(res)).toBe('https://obelisk.test/pt/app');
+  });
+
+  it('never redirects a prefixed URL: the URL is the language, and the cookie follows it', () => {
+    const res = proxy(new NextRequest('https://obelisk.test/pt/guides/vesta', {
+      headers: { cookie: `${LOCALE_COOKIE}=en`, 'accept-language': 'es' },
+    }));
+    expect(location(res)).toBeNull();
+    expect(res.cookies.get(LOCALE_COOKIE)?.value).toBe('pt');
+  });
+
+  it('normalises /en/... to the unprefixed English URL', () => {
+    const res = proxy(new NextRequest('https://obelisk.test/en/app'));
+    expect(location(res)).toBe('https://obelisk.test/app');
+  });
+
+  it('forwards the nonce to the page through next-intl', () => {
+    const res = proxy(new NextRequest('https://obelisk.test/es/app'));
+    const nonce = /'nonce-([A-Za-z0-9+/=]+)'/.exec(res.headers.get('Content-Security-Policy')!)![1];
+    expect(res.headers.get('x-middleware-request-x-nonce')).toBe(nonce);
+  });
+
+  it('leaves /sw.js alone', () => {
+    const res = proxy(new NextRequest('https://obelisk.test/sw.js', { headers: { 'accept-language': 'es' } }));
+    expect(location(res)).toBeNull();
+    expect(res.headers.get('Service-Worker-Allowed')).toBe('/');
   });
 });

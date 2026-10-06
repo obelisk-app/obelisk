@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { FileIcon, LockIcon, TrashIcon } from '@/components/ui/icons';
 import Spinner from '@/components/ui/Spinner';
 import type { PendingFile } from '@/utils/chat/dm/pending';
@@ -20,7 +20,7 @@ export function DmPendingFiles({
   variant: 'desktop' | 'mobile';
   onRemove: (id: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   if (files.length === 0) return null;
   return (
     <div
@@ -59,7 +59,7 @@ export function DmPendingFiles({
             size="5"
             onClick={() => onRemove(f.id)}
             className="absolute right-0.5 top-0.5"
-            aria-label={t('desktop.composer.removeAttachment')}
+            aria-label={t('shell.desktop.composer.removeAttachment')}
           >
             <TrashIcon size={11} />
           </IconButton>

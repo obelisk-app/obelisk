@@ -1,7 +1,7 @@
 'use client';
 
 import { gameCatalog, gameSummary, type GameInfo } from '@/lib/games/catalog';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { GameTypePreview } from '../GamePreviews';
 import Button from '@/components/ui/Button';
 
@@ -10,7 +10,7 @@ export default function GamePickList({ onChoose, onClose }: {
   onChoose: (info: GameInfo) => void;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const catalog = gameCatalog();
   return (
     <>

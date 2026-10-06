@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DmMessageBody } from '@/components/chat/DmMessageBody';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { _resetRemoteMediaForTest, setRemoteMediaMode } from '@/services/remote-media';
 import type { JsDirectMessage } from '@/services/nostr-bridge';
 

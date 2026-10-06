@@ -3,7 +3,7 @@
 import Button from '@/components/ui/Button';
 import { ChevronDownIcon, ChevronUpIcon } from '@/components/ui/icons';
 import Input from '@/components/ui/Input';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { normalizeRoleColor, type RelayRole } from '@/services/relay-roles';
 import type { RelayRolesDraft } from '@/hooks/admin/useRelayRolesDraft';
 import RoleEmojiField from './RoleEmojiField';
@@ -24,13 +24,13 @@ export default function RoleRow({ role, index, holders, roles }: {
   holders: readonly string[];
   roles: RelayRolesDraft;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const saved = roles.savedIds.has(role.id);
   const open = roles.expanded === role.id;
   return (
     <li data-testid={`role-row-${role.id}`} className="rounded-xl border border-lc-border bg-lc-black/40">
       <div className="flex flex-wrap items-center gap-2 p-3">
-        <span className="text-[10px] font-mono text-lc-muted" title={t('roles.tier')}>T{role.tier}</span>
+        <span className="text-[10px] font-mono text-lc-muted" title={t('admin.roles.tier')}>T{role.tier}</span>
         <RoleEmojiField role={role} onPick={(emoji) => roles.updateRole(role.id, { emoji })} />
         <Input
           value={role.name}

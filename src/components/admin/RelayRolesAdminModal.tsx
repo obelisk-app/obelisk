@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import CloseButton from '@/components/ui/CloseButton';
 import EmptyState from '@/components/ui/EmptyState';
 import Input from '@/components/ui/Input';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import type { RelayRoles } from '@/services/relay-roles';
 import { useRelayRolesDraft } from '@/hooks/admin/useRelayRolesDraft';
 import RoleRow from './relay-roles/RoleRow';
@@ -25,7 +25,7 @@ export default function RelayRolesAdminModal({
   roles: RelayRoles;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const draft = useRelayRolesDraft(relayUrl, roles);
 
   return (
@@ -36,7 +36,7 @@ export default function RelayRolesAdminModal({
     >
       <header className="flex items-start justify-between gap-4 border-b border-lc-border px-5 py-4">
         <div>
-          <h2 className="text-base font-bold text-lc-white">{t('roles.title')}</h2>
+          <h2 className="text-base font-bold text-lc-white">{t('admin.roles.title')}</h2>
           <p className="mt-1 text-xs text-lc-muted">
             Ordered most senior first. Members can hold several roles: the top one they hold is the badge
             shown in chat and the member list, until you revoke it.
@@ -51,16 +51,16 @@ export default function RelayRolesAdminModal({
             value={draft.newName}
             onChange={(event) => draft.setNewName(event.target.value)}
             onKeyDown={(event) => { if (event.key === 'Enter') draft.addRole(); }}
-            placeholder={t('roles.newPlaceholder')}
-            aria-label={t('roles.newLabel')}
+            placeholder={t('admin.roles.newPlaceholder')}
+            aria-label={t('admin.roles.newLabel')}
             maxLength={32}
             className="min-w-[200px] flex-1"
           />
-          <Button variant="pillSecondary" size="xs" onClick={draft.addRole}>{t('roles.add')}</Button>
+          <Button variant="pillSecondary" size="xs" onClick={draft.addRole}>{t('admin.roles.add')}</Button>
         </div>
 
         {draft.draft.length === 0 && (
-          <EmptyState as="p">{t('roles.empty')}</EmptyState>
+          <EmptyState as="p">{t('admin.roles.empty')}</EmptyState>
         )}
 
         <ul className="grid gap-2">

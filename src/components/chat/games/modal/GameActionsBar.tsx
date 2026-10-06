@@ -3,7 +3,7 @@
 import type { GameSession } from '@/lib/games/session';
 import { canJoin, canStart } from '@/lib/games/session';
 import { publishCancel, publishJoin, publishResign } from '@/services/games/transport';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 
 /** Join, start, cancel, resign: whichever this viewer may do at this table right now. */
@@ -22,7 +22,7 @@ export default function GameActionsBar({
   run: (fn: () => Promise<unknown>) => Promise<void>;
   onOpenSeatPicker: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   // Resigning names a seat, because one account can hold several: the seat on
   // move if it is ours, else our only one.
   const resignSeat = session.currentTurn && mySeats.includes(session.currentTurn)

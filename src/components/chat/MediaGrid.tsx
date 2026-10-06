@@ -17,7 +17,7 @@
  */
 
 import { isVideoUrl } from '@/utils/attachments/attachments';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/RemoteImage';
 import type { MediaItem } from '@/services/social/feed-media';
 
@@ -32,7 +32,7 @@ export default function MediaGrid({
   items: readonly MediaItem[];
   onOpen: (url: string, noteId?: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <div
@@ -50,7 +50,7 @@ export default function MediaGrid({
             className={`group relative aspect-square overflow-hidden bg-lc-dark ${
               featured ? 'col-span-2 row-span-2' : ''
             }`}
-            aria-label={t('profileFeed.openMedia')}
+            aria-label={t('social.profileFeed.openMedia')}
             data-testid="profile-media-tile"
             data-featured={featured || undefined}
           >

@@ -8,7 +8,7 @@ vi.mock('@/services/notifications/sound', () => ({
 }));
 
 import NotificationSettings from '@/components/settings/NotificationSettings';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 const renderLocalized = (ui: React.ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
 import { getPreferences, setPreference } from '@/services/preferences';

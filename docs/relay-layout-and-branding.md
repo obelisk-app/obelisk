@@ -58,7 +58,7 @@ src/hooks/relay/                  useChannelLayout(relay, authors[]),
                                   useRelayBranding(relay, authors[]),
                                   useRelayRoles, useRelayEmojiSet,
                                   useRelayOperatorPubkey(relay)
-src/app/app/DesktopShell.tsx      Sidebar - gates the server settings gear
+src/app/[locale]/app/DesktopShell.tsx      Sidebar - gates the server settings gear
                                   and relay-wide modals
 ```
 

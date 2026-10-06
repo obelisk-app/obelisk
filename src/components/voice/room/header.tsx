@@ -5,7 +5,7 @@
  * `voice-sfu` channel, or the media-sync badge for a mesh call while peer
  * connections are still coming up. Pure presentation.
  */
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import type { SfuStatus } from '@/services/voice/room-events';
 
 /**
@@ -84,7 +84,7 @@ function SfuStatusPill({ status }: { status: SfuStatus }) {
 }
 
 export function MeshSyncStatusPill({ count }: { count: number }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   if (count <= 0) return null;
   const detail = count === 1
     ? 'Peer detected; WebRTC media channels are still syncing in the background.'
@@ -114,7 +114,7 @@ export function RoomHeader({ name, count, sfuStatus, meshSyncingCount = 0 }: {
   sfuStatus?: SfuStatus;
   meshSyncingCount?: number;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <div className="relative z-10 px-3 sm:px-5 py-3 flex items-center gap-3 border-b border-white/5" data-testid="voice-room-header">
       <div className="min-w-0 flex items-center gap-2.5 flex-1 min-w-0">

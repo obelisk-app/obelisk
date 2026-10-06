@@ -12,7 +12,7 @@ import { useChatStore } from '@/store/chat';
 import { useMyPubkey } from '@/services/nostr-bridge';
 import UserAvatar from '@/components/ui/UserAvatar';
 import RemoteImage from '@/components/ui/RemoteImage';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import ProfileMenu from '@/components/social/ProfileMenu';
 import { ZapIcon } from '@/components/ui/icons';
 import { useNip05Status } from '@/hooks/useNip05Status';
@@ -33,7 +33,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
   onExplore: (pubkey: string) => void;
   onMessage?: (pubkey: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const serverEmojis = useChatStore((s) => s.serverEmojis);
   const anchor = useChatStore((s) => s.profilePopupAnchor);
   const member = usePopoverMember(pubkey);
@@ -103,8 +103,8 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
                 tone="accent"
                 onClick={zap}
                 className="active:scale-95"
-                aria-label={t('profilePopover.zap')}
-                title={t('profilePopover.zap')}
+                aria-label={t('chat.profilePopover.zap')}
+                title={t('chat.profilePopover.zap')}
                 data-testid="profile-zap-btn"
               >
                 <ZapIcon size={16} fill="currentColor" />
@@ -128,7 +128,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
             nip05State={nip05State}
             npub={npub}
             npubShort={npubShort}
-            onCopyNpub={() => copyWithToast(npub, t('profileFeed.npubCopied'), npubShort)}
+            onCopyNpub={() => copyWithToast(npub, t('social.profileFeed.npubCopied'), npubShort)}
           />
 
           {member?.about && (

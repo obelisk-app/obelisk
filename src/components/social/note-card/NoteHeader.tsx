@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import type { AuthorIdentity } from '@/hooks/social/useAuthor';
-import { useTranslation } from '@/i18n/context';
+import { useLocale, useTranslations } from 'next-intl';
 import type { renderModeFor } from '@/services/social/kinds';
 import type { replyParentOf } from '@/services/social/feed';
 import UserAvatar from '@/components/ui/UserAvatar';
@@ -36,7 +36,8 @@ export default function NoteHeader({
   onOpenProfile?: (pubkey: string) => void;
   onOpenNote?: (id: string) => void;
 }) {
-  const { t, locale } = useTranslation();
+  const t = useTranslations();
+  const locale = useLocale();
 
   /**
    * The second header row only earns its space when it has something to say:

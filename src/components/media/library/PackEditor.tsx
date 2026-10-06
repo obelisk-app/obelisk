@@ -10,12 +10,12 @@ import EmptyState from '@/components/ui/EmptyState';
 import FileInput from '@/components/ui/FileInput';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { usePackEditor } from '@/hooks/media/library/usePackEditor';
 import type { EditablePack } from '@/utils/media-library/types';
 
 function KindOptions() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <>
       <option value="emoji">{t('media.kind.emoji')}</option><option value="gif">{t('media.kind.gif')}</option><option value="sticker">{t('media.kind.sticker')}</option>
@@ -30,7 +30,7 @@ export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
   onClose: () => void;
   onSaved: (pack: EditablePack) => Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const inputRef = useRef<HTMLInputElement>(null);
   const {
     draft, setDraft, newItemKind, setNewItemKind, busy, error,
@@ -66,11 +66,11 @@ export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
           {draft.items.map((item, index) => (
             <div key={`${index}-${item.url}`} className="grid items-center gap-2 rounded-lg border border-lc-border p-2 sm:grid-cols-[3rem_10rem_7rem_minmax(0,1fr)_auto]">
               <div className="flex h-12 w-12 items-center justify-center rounded bg-lc-black p-1">{item.url && <MediaThumb src={item.url} alt="" className="max-h-full max-w-full object-contain" />}</div>
-              <Input value={item.name} onChange={(event) => updateItem(index, { name: event.target.value })} placeholder="shortcode" aria-label={t('media.itemShortcode').replace('{n}', String(index + 1))} />
-              <Select size="md" className="w-full" value={item.kind} onChange={(event) => updateItem(index, { kind: event.target.value as JsMediaKind })} aria-label={t('media.itemType').replace('{n}', String(index + 1))}>
+              <Input value={item.name} onChange={(event) => updateItem(index, { name: event.target.value })} placeholder="shortcode" aria-label={t('media.itemShortcode', { n: String(index + 1) })} />
+              <Select size="md" className="w-full" value={item.kind} onChange={(event) => updateItem(index, { kind: event.target.value as JsMediaKind })} aria-label={t('media.itemType', { n: String(index + 1) })}>
                 <KindOptions />
               </Select>
-              <Input value={item.url} onChange={(event) => updateItem(index, { url: event.target.value })} placeholder="https://…" aria-label={t('media.itemUrl').replace('{n}', String(index + 1))} />
+              <Input value={item.url} onChange={(event) => updateItem(index, { url: event.target.value })} placeholder="https://…" aria-label={t('media.itemUrl', { n: String(index + 1) })} />
               <Button variant="ghost" tone="danger" size="xs" onClick={() => removeItem(index)}>{t('media.remove')}</Button>
             </div>
           ))}

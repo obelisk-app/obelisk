@@ -1,0 +1,40 @@
+{
+  "filterPlaceholder": "Filtrar por pubkey o nombre de canal…",
+  "demoteHelp": "Quita el rol de admin de las filas seleccionadas. Los miembros se omiten.",
+  "title": "Admins y miembros del relay",
+  "allRoles": "Todos los roles",
+  "adminsOnly": "Solo admins",
+  "membersOnly": "Solo miembros",
+  "allChannels": "Todos los canales",
+  "colUser": "Usuario",
+  "colChannel": "Canal",
+  "colRole": "Rol",
+  "member": "Miembro",
+  "selectRow": "Seleccionar {user}",
+  "roles": {
+    "newPlaceholder": "Nombre del nuevo rol…",
+    "newLabel": "Nombre del nuevo rol",
+    "tier": "Nivel: gana el más alto",
+    "badgeEmoji": "Emoji de la insignia",
+    "searchPlaceholder": "Buscar miembros por nombre, NIP-05 o npub…",
+    "title": "Roles y rangos",
+    "add": "Agregar rol",
+    "empty": "Todavía no hay roles. Creá uno arriba.",
+    "nobody": "Nadie tiene este rol todavía.",
+    "grant": "Otorgar",
+    "revoke": "Revocar",
+    "base": {
+      "owner": "Dueño",
+      "admin": "Admin",
+      "mod": "Moderador",
+      "member": "Miembro"
+    },
+    "confirmDelete": "¿Eliminar “{name}”?",
+    "confirmDeleteBody": "Todos los que lo tienen pierden la insignia."
+  },
+  "bulk": {
+    "confirmRemove": "¿Quitar {count} entradas?",
+    "confirmDemote": "¿Degradar {count} entradas?",
+    "more": "y {count} más"
+  }
+}

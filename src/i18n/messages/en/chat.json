@@ -1,0 +1,173 @@
+{
+  "profile": {
+    "title": "Profile",
+    "nostrSection": "Nostr Profile",
+    "obeliskSection": "Obelisk Settings",
+    "nickname": "Server nickname",
+    "nicknamePlaceholder": "Leave empty to use your Nostr name",
+    "save": "Save",
+    "saved": "Saved",
+    "about": "About",
+    "nip05": "NIP-05",
+    "logout": "Disconnect",
+    "editNostr": "Edit Nostr Profile"
+  },
+  "channelMenu": {
+    "markRead": "Mark as read",
+    "unfollow": "Stop following channel",
+    "unfollowHint": "No unread counts for its traffic, but @mentions and replies still notify you",
+    "follow": "Follow channel",
+    "mute": {
+      "label": "Mute channel",
+      "15m": "For 15 minutes",
+      "1h": "For 1 hour",
+      "8h": "For 8 hours",
+      "24h": "For 24 hours",
+      "forever": "Until I turn it back on"
+    },
+    "unmute": "Unmute channel",
+    "mutedUntil": "Muted until {time}",
+    "mutedForever": "Muted until you turn it back on",
+    "notify": {
+      "label": "Notification settings",
+      "all": "All messages",
+      "mentions": "Only @mentions & replies",
+      "nothing": "Nothing"
+    },
+    "copyLink": "Copy link",
+    "muted": "Muted"
+  },
+  "message": {
+    "forward": "Forward",
+    "forwarded": "Forwarded",
+    "forwardedTo": "Forwarded to #{channel}",
+    "forwardFailed": "Couldn't forward the message",
+    "forwardTitle": "Forward to a channel",
+    "forwardSearch": "Search channels",
+    "forwardEmpty": "No other channels here"
+  },
+  "pq": {
+    "level": {
+      "quantum": "Extra safe",
+      "quantumDetail": "Your messages are locked, and nobody can see who you are talking to. Even a future quantum computer could not open them.",
+      "wrapped": "Safe",
+      "wrappedDetail": "Your messages are locked, and nobody can see who you are talking to. One day a quantum computer could open them, though.",
+      "basic": "Basic",
+      "basicDetail": "Your messages are locked, but the servers that carry them can see who you are talking to."
+    },
+    "learnHow": "How to get extra safe",
+    "markNoGiftwrap": "Who you talk to is visible",
+    "markNoGiftwrapDetail": "The servers that carried this message could see who you were talking to.",
+    "markNoPq": "Not extra safe",
+    "markNoPqDetail": "This message is locked today, but someone could save it now and open it years from now, once quantum computers arrive."
+  },
+  "forum": {
+    "searchPlaceholder": "Search or create a publication",
+    "new": "New publication",
+    "sortActive": "Recently active",
+    "sortCreated": "Creation date",
+    "matchAny": "Match any",
+    "matchAll": "Match all",
+    "titlePlaceholder": "Publication title",
+    "sort": "Sort",
+    "loading": "Loading publications…",
+    "sortTitle": "Sort & view",
+    "sortBy": "Sort by",
+    "tagMatching": "Tag matching",
+    "titleLabel": "Title",
+    "viewAs": "View as",
+    "viewList": "List",
+    "viewGallery": "Gallery",
+    "firstMessagePlaceholder": "First message…",
+    "reset": "Reset to defaults",
+    "emptyDesktop": "No publications yet.",
+    "startFirst": "Start the first publication →"
+  },
+  "composer": {
+    "dropFiles": "Drop files to attach",
+    "addAttachment": "Add attachment",
+    "document": "Document",
+    "photos": "Photos & videos",
+    "camera": "Camera",
+    "contact": "Contact",
+    "newSticker": "New sticker",
+    "poll": "Poll",
+    "event": "Event",
+    "later": "Later",
+    "discardVoice": "Discard voice note",
+    "discardRecording": "Discard voice recording",
+    "stopVoice": "Stop voice note",
+    "finishRecording": "Finish recording",
+    "recordVoice": "Record voice note",
+    "bold": "Bold",
+    "italic": "Italic",
+    "preview": "Preview",
+    "link": "Link"
+  },
+  "emoji": {
+    "picker": "Emoji picker",
+    "categories": "Emoji categories",
+    "close": "Close emoji picker",
+    "search": "Search emoji",
+    "title": "Emoji",
+    "subtitle": "Server emojis, GIFs, and unicode",
+    "noMatches": "No matches",
+    "recent": "Recent",
+    "noRecent": "No recent emojis"
+  },
+  "invoice": {
+    "expired": "Expired"
+  },
+  "mentions": {
+    "navigation": "Mention navigation",
+    "previousTitle": "Previous mention or reply (Shift+F7)",
+    "previous": "Previous (Shift+F7)",
+    "nextTitle": "Next mention or reply (F7)",
+    "next": "Next (F7)",
+    "latestTitle": "Jump to latest message",
+    "latest": "Jump to latest"
+  },
+  "voiceNote": {
+    "progress": "Voice message progress",
+    "sender": "Voice message sender",
+    "speed": "Change playback speed"
+  },
+  "mediaPicker": {
+    "title": "Media picker",
+    "categories": "Media categories",
+    "favorites": "Favorites & packs"
+  },
+  "zap": {
+    "commentPlaceholder": "Nice post!",
+    "amount": "Amount (sats)",
+    "comment": "Comment (optional)",
+    "noAddress": "Recipient has no Lightning address, so the zap will fail.",
+    "errorNoAddress": "This user has no Lightning address (lud16).",
+    "errorNoWallet": "No WebLN extension detected. Install Alby (or similar) to zap.",
+    "errorInvalidAmount": "Enter a valid amount.",
+    "errorNoSigner": "No active signer: log in first.",
+    "sent": "⚡ Sent {amount} sats to {name}",
+    "send": "Zap {amount} sats",
+    "markerFailed": "Payment succeeded, but the group zap marker was not published: {error}",
+    "sendAmount": "⚡ Send {amount} sats"
+  },
+  "profilePopover": {
+    "zap": "Zap",
+    "roles": "Roles",
+    "muteHint": "Mute notifications from this user (this device only)",
+    "hideHint": "Hide this user's messages (this device only)",
+    "muted": "User muted",
+    "unmuted": "Mute removed",
+    "mutedBody": "You won't see notifications from {name} any more",
+    "unmutedBody": "You will get notifications from {name} again",
+    "blocked": "User blocked",
+    "unblocked": "Block removed",
+    "blockedBody": "{name}'s messages will be hidden",
+    "unblockedBody": "You will see {name}'s messages again",
+    "blockConfirm": "Block {name}? Their messages will be hidden on this device."
+  },
+  "slash": {
+    "recent": "Recent",
+    "noMatch": "No commands match."
+  }
+}

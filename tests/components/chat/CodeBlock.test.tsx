@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { describe, it, expect } from 'vitest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import CodeBlock from '@/components/chat/CodeBlock';
 
 const renderLocalized = (ui: ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);

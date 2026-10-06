@@ -3,7 +3,7 @@
 import type { RefObject } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useUserMetadata } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import type { FeedState } from '@/hooks/social/useFeed';
 import type { ContentFilter } from '@/services/social/kinds';
 import MediaGrid from '@/components/chat/MediaGrid';
@@ -61,7 +61,7 @@ export default function FeedColumn({
   onOpenTag: (tag: string) => void;
   onAtTopChange: (atTop: boolean) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const meta = useUserMetadata(myPubkey ?? '');
   return (
     <>

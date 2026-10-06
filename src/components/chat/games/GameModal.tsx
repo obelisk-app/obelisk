@@ -21,7 +21,7 @@ import { useResultSplash } from '@/hooks/chat/games/modal/useResultSplash';
 import { useTableNames } from '@/hooks/chat/games/modal/useTableNames';
 import { useGameActions } from '@/hooks/chat/games/modal/useGameActions';
 import type { GameState } from 'vesta';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import ErrorState from '@/components/ui/ErrorState';
 
 /**
@@ -32,7 +32,7 @@ import ErrorState from '@/components/ui/ErrorState';
  * hasn't accepted is a board the other players cannot see.
  */
 export default function GameModal({ gameId, onClose }: { gameId: string; onClose: () => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const session = useGameSession(gameId);
   const myPubkey = useMyPubkey();
   const now = useNowSeconds();

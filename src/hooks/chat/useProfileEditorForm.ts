@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { nostrActions, useSignerReady } from '@/services/nostr-bridge';
 import { uploadToBlossom } from '@/services/blossom';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 export interface ProfileEditorInitial {
   readonly displayName?: string | null;
@@ -59,7 +59,7 @@ export interface ProfileEditorForm {
  * image they tried. Mobile used to upload first and check afterwards.
  */
 export function useProfileEditorForm(initial: ProfileEditorInitial | null, onSaved: () => void): ProfileEditorForm {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const signerReady = useSignerReady();
   const [name, setNameState] = useState(initial?.displayName || initial?.name || '');
   const [about, setAboutState] = useState(initial?.about || '');
@@ -97,11 +97,11 @@ export function useProfileEditorForm(initial: ProfileEditorInitial | null, onSav
 
   async function save() {
     if (busy) return;
-    if (!nameValid) { setError(t('user.nameRequired')); return; }
+    if (!nameValid) { setError(t('shell.user.nameRequired')); return; }
     setSaving(true);
     setError(null);
     try {
-      if (!signerReady) throw new Error(t('user.notSignedIn'));
+      if (!signerReady) throw new Error(t('shell.user.notSignedIn'));
       // Uploads are deferred to save so an abandoned edit doesn't burn
       // Blossom storage for every image the user tried.
       let finalPicture = picture.trim();
@@ -127,7 +127,7 @@ export function useProfileEditorForm(initial: ProfileEditorInitial | null, onSav
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('user.publishFailed'));
+      setError(err instanceof Error ? err.message : t('shell.user.publishFailed'));
     } finally {
       setUploading(null);
       setSaving(false);

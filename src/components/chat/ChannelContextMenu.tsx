@@ -14,7 +14,7 @@
  */
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { MUTED_FOREVER } from '@/store/channel-prefs';
 import { useChannelActions } from '@/hooks/chat/useChannelActions';
 import { useMutedLabel } from '@/hooks/chat/useMutedLabel';
@@ -38,7 +38,7 @@ export function ChannelContextMenu({
   y: number;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const a = useChannelActions(target);
   const mutedLabel = useMutedLabel(a.muted ? a.pref.mutedUntil : undefined);
   const ref = useRef<HTMLDivElement>(null);
@@ -65,7 +65,7 @@ export function ChannelContextMenu({
     >
       <MenuItem
         icon={<CheckCircleIcon />}
-        label={t('channelMenu.markRead')}
+        label={t('chat.channelMenu.markRead')}
         disabled={!target.hasUnread}
         onClick={act(a.markRead)}
         testId="channel-menu-mark-read"
@@ -73,13 +73,13 @@ export function ChannelContextMenu({
       <MenuDivider />
       <MenuItem
         icon={<StarIcon filled={a.following} />}
-        label={a.following ? t('channelMenu.unfollow') : t('channelMenu.follow')}
+        label={a.following ? t('chat.channelMenu.unfollow') : t('chat.channelMenu.follow')}
         onClick={act(a.toggleFollow)}
         testId="channel-menu-follow"
       />
       <MenuItem
         icon={<LinkIcon />}
-        label={t('channelMenu.copyLink')}
+        label={t('chat.channelMenu.copyLink')}
         onClick={act(() => void a.copyLink())}
         testId="channel-menu-copy-link"
       />
@@ -88,7 +88,7 @@ export function ChannelContextMenu({
         {a.muted ? (
           <MenuItem
             icon={<BellIcon />}
-            label={t('channelMenu.unmute')}
+            label={t('chat.channelMenu.unmute')}
             hint={mutedLabel}
             onClick={act(a.unmute)}
             testId="channel-menu-unmute"
@@ -96,7 +96,7 @@ export function ChannelContextMenu({
         ) : (
           <MenuItem
             icon={<BellOffIcon />}
-            label={t('channelMenu.mute')}
+            label={t('chat.channelMenu.mute.label')}
             trailing={chevron}
             onClick={() => setSub(sub === 'mute' ? null : 'mute')}
             buttonProps={{ 'aria-haspopup': 'menu', 'aria-expanded': sub === 'mute' }}
@@ -120,8 +120,8 @@ export function ChannelContextMenu({
       <div className="relative" onMouseEnter={() => setSub('notify')} onMouseLeave={() => setSub(null)}>
         <MenuItem
           icon={<BellIcon />}
-          label={t('channelMenu.notify')}
-          hint={t(`channelMenu.notify.${a.level}`)}
+          label={t('chat.channelMenu.notify.label')}
+          hint={t(`chat.channelMenu.notify.${a.level}`)}
           trailing={chevron}
           onClick={() => setSub(sub === 'notify' ? null : 'notify')}
           buttonProps={{ 'aria-haspopup': 'menu', 'aria-expanded': sub === 'notify' }}

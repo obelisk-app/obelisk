@@ -7,7 +7,7 @@ import StartTableModal from '@/components/chat/games/StartTableModal';
 import { deriveSession, type GameSession } from '@/lib/games/session';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
 import { vertices, edges, nearestVertex } from '@/lib/games/vesta/geometry';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
 const renderLocalized = (ui: React.ReactElement) => render(

@@ -3,7 +3,7 @@
 import Modal from '@/components/ui/Modal';
 import { gameSummary } from '@/lib/games/catalog';
 import { GameTypePreview } from './GamePreviews';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import ErrorState from '@/components/ui/ErrorState';
 import GamePickList from './new-game/GamePickList';
 import GameSetupOptions from './new-game/GameSetupOptions';
@@ -34,7 +34,7 @@ export default function NewGameModal({
   /** Posts the in-channel card. Given the table id once the relay accepts it. */
   onPostMarker: (marker: string) => void;
 }) {
-  const { t } = useTranslation();  const form = useNewGameForm({ channelId, onClose, onPostMarker });
+  const t = useTranslations();  const form = useNewGameForm({ channelId, onClose, onPostMarker });
   const { selected, setSelected, choose, localPlayers, busy, error, create } = form;
 
   return (

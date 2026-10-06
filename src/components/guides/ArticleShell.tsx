@@ -1,9 +1,9 @@
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import type { ReactNode } from 'react';
 import type { Locale } from '@/i18n';
 import type { GuideFrontmatter } from '@/services/guides';
 import { formatDate } from '@/utils/format/format';
-import { getTranslation } from '@/i18n';
+import { useTranslations } from 'next-intl';
 import { HERO_REGISTRY } from './svg';
 
 interface Props {
@@ -28,6 +28,7 @@ export default function ArticleShell({
   updatedLabel,
   children,
 }: Props) {
+  const t = useTranslations();
   const Hero = HERO_REGISTRY[frontmatter.heroComponent];
   const published = new Date(frontmatter.publishedAt);
   const updated = new Date(frontmatter.updatedAt || frontmatter.publishedAt);
@@ -87,10 +88,9 @@ export default function ArticleShell({
             formatted date: Spanish and Portuguese both need the date
             somewhere English doesn't put it.
           */}
-          {getTranslation(locale)('guides.publishedOn').replace(
-            '{date}',
-            formatDate(locale, published, { year: 'numeric', month: 'long', day: 'numeric' }),
-          )}
+          {t('guides.publishedOn', {
+            date: formatDate(locale, published, { year: 'numeric', month: 'long', day: 'numeric' }),
+          })}
         </time>
       </footer>
     </article>

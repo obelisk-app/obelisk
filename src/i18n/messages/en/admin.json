@@ -1,0 +1,40 @@
+{
+  "filterPlaceholder": "Filter by pubkey or channel name…",
+  "demoteHelp": "Strip admin role from selected admin rows. Members are skipped.",
+  "title": "Relay admins & members",
+  "allRoles": "All roles",
+  "adminsOnly": "Admins only",
+  "membersOnly": "Members only",
+  "allChannels": "All channels",
+  "colUser": "User",
+  "colChannel": "Channel",
+  "colRole": "Role",
+  "member": "Member",
+  "selectRow": "Select {user}",
+  "roles": {
+    "newPlaceholder": "New role name…",
+    "newLabel": "New role name",
+    "tier": "Tier: higher wins",
+    "badgeEmoji": "Badge emoji",
+    "searchPlaceholder": "Search members by name, NIP-05 or npub…",
+    "title": "Roles & ranks",
+    "add": "Add role",
+    "empty": "No roles yet. Create one above.",
+    "nobody": "Nobody holds this role yet.",
+    "grant": "Grant",
+    "revoke": "Revoke",
+    "base": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "mod": "Moderator",
+      "member": "Member"
+    },
+    "confirmDelete": "Delete “{name}”?",
+    "confirmDeleteBody": "Everyone holding it loses the badge."
+  },
+  "bulk": {
+    "confirmRemove": "Remove {count} entries?",
+    "confirmDemote": "Demote {count} entries?",
+    "more": "and {count} more"
+  }
+}

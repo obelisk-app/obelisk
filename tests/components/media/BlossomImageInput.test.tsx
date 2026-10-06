@@ -6,7 +6,7 @@ const uploadToBlossom = vi.fn();
 vi.mock('@/services/blossom', () => ({ uploadToBlossom }));
 
 import { ChannelAppearanceInput } from '@/components/media/BlossomImageInput';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
 const renderLocalized = (ui: React.ReactElement) => render(

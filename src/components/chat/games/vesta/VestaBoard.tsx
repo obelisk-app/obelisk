@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, type MouseEvent } from 'react';
 import { CANVAS_WIDTH, CANVAS_HEIGHT, type GameState, type HexCoord } from 'vesta';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { drawVestaBoard } from './draw-board';
 import { resolveBoardPick, validPositionKeys, type EdgePick, type VertexPick } from './board-pick';
 import type { PickMode } from './pick-mode';
@@ -26,7 +26,7 @@ export interface VestaBoardProps {
  * rules, and a click that lands on one is a move the engine will accept.
  */
 export default function VestaBoard({ state, mode, onPickVertex, onPickEdge, onPickHex }: VestaBoardProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const validKeys = useCallback(() => validPositionKeys(state, mode), [state, mode]);
 

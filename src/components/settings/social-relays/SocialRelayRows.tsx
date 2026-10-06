@@ -4,6 +4,7 @@ import Input from '@/components/ui/Input';
 import { probeRelay, type RelayStatus } from '@/services/social/relay-status';
 import { relayKey } from '@/hooks/settings/useSocialRelayDraft';
 import { RelayDot, RelayStats } from './RelayIndicators';
+import type { Translate } from '@/i18n/keys';
 
 /** One editable row per draft relay: status dot, URL field, stats, remove. */
 export default function SocialRelayRows({
@@ -19,7 +20,7 @@ export default function SocialRelayRows({
   invalid: ReadonlySet<number>;
   onUpdate: (index: number, value: string) => void;
   onRemove: (index: number) => void;
-  t: (key: string) => string;
+  t: Translate;
 }) {
   return (
     <div className="space-y-2">
@@ -32,7 +33,7 @@ export default function SocialRelayRows({
           <Input
             value={relay}
             onChange={(event) => onUpdate(index, event.target.value)}
-            aria-label={`${t('preferences.socialRelays.relay')} ${index + 1}`}
+            aria-label={`${t('settings.preferences.socialRelays.relay')} ${index + 1}`}
             invalid={invalid.has(index)}
             fontSize="xs"
             className="min-w-0 flex-1 font-mono"
@@ -49,7 +50,7 @@ export default function SocialRelayRows({
             size="icon-md"
             className="shrink-0"
             onClick={() => onRemove(index)}
-            aria-label={`${t('preferences.socialRelays.remove')} ${relay || index + 1}`}
+            aria-label={`${t('settings.preferences.socialRelays.remove')} ${relay || index + 1}`}
             disabled={draft.length <= 1}
           >
             <CloseIcon size={14} />

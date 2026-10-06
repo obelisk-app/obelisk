@@ -74,7 +74,7 @@ export default function BitcoinZapsHero() {
         <rect x="48" y="174" width="74" height="16" rx="3" fill="#2b1f08" />
         <rect x="48" y="198" width="50" height="8" rx="2" fill="#f7b32b" opacity="0.7" />
         <rect x="48" y="212" width="34" height="8" rx="2" fill="#f7b32b" opacity="0.4" />
-        <text x="85" y="258" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace">
+        <text x="85" y="258" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           NWC wallet
         </text>
       </g>
@@ -158,9 +158,9 @@ export default function BitcoinZapsHero() {
       {/* legend */}
       <g fontSize="11" fontWeight="600">
         <circle cx="40" cy="24" r="6" fill="#f7b32b" />
-        <text x="52" y="28" fill="#fafafa">Lightning (NIP-47)</text>
+        <text x="52" y="28" fill="#fafafa">Lightning (NIP-47)</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         <circle cx="220" cy="24" r="6" fill="#b4f953" />
-        <text x="232" y="28" fill="#fafafa">chat message</text>
+        <text x="232" y="28" fill="#fafafa">chat message</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
       </g>
     </svg>
   );

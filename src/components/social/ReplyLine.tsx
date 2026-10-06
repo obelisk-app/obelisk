@@ -17,7 +17,7 @@
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useAuthor } from '@/hooks/social/useAuthor';
 import { useNotePreview } from '@/hooks/social/useNotePreview';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import type { ReplyParent } from '@/services/social/feed';
 import TextButton from '@/components/ui/TextButton';
 
@@ -30,7 +30,7 @@ export default function ReplyLine({
   onOpenNote?: (id: string) => void;
   onOpenProfile?: (pubkey: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   // Only fetch when the tag didn't name the author: that is the whole point
   // of reading the tag first.
   const fetched = useNotePreview(parent.author ? null : parent.id, parent.relay ? [parent.relay] : undefined);

@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 const mocks = vi.hoisted(() => ({
   publishReaction: vi.fn(),

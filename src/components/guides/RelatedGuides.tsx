@@ -1,7 +1,7 @@
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import type { Locale } from '@/i18n';
 import { readGuide } from '@/services/guides';
-import { guidesHref } from '@/utils/guides/guide-urls';
+import { guidePath } from '@/utils/guides/guide-urls';
 import { HERO_REGISTRY } from './svg';
 
 interface Item {
@@ -58,7 +58,7 @@ export default async function RelatedGuides({ locale, items }: Props) {
           return (
             <Link
               key={r.slug}
-              href={guidesHref(locale, r.slug)}
+              href={guidePath(r.slug)}
               role="listitem"
               data-testid={`related-guide-${r.slug}`}
               className="group shrink-0 w-[260px] sm:w-[300px] snap-start rounded-xl overflow-hidden border border-lc-border bg-lc-dark hover:border-lc-green transition-colors"

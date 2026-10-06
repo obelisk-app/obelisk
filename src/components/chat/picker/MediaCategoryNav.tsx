@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { MEDIA_CATEGORIES, type MediaCategory } from '@/utils/chat/picker/media-catalog';
 import { MediaCategoryIcon } from './MediaCategoryIcon';
 
@@ -12,9 +12,9 @@ export function MediaCategoryNav({
   category: MediaCategory;
   onCategory: (value: MediaCategory) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
-    <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label={t('mediaPicker.categories')}>
+    <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label={t('chat.mediaPicker.categories')}>
       {MEDIA_CATEGORIES.map((value) => (
         <button
           type="button"

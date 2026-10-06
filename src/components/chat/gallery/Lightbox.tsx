@@ -1,7 +1,7 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { useZoomPan } from '@/hooks/chat/gallery/useZoomPan';
 import IconButton from '@/components/ui/IconButton';
@@ -16,7 +16,7 @@ export interface LightboxProps {
 }
 
 export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const {
     scale, tx, ty, isZoomed, isDragging,
     onWheel, onMouseDown, onMouseMove, onMouseUp, onDoubleClick, shouldIgnoreBackdropClick,

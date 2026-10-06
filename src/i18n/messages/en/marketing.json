@@ -1,0 +1,321 @@
+{
+  "nav": {
+    "features": "Features",
+    "howItWorks": "How it works",
+    "roadmap": "Roadmap",
+    "guides": "Guides",
+    "faq": "FAQ",
+    "launchApp": "Launch App",
+    "app": "App",
+    "disconnect": "Disconnect",
+    "profile": "Profile"
+  },
+  "learn": {
+    "heading": "Learn",
+    "subtitle": "How a pure Nostr client works, what NIP-29 groups are, and how to bring your own relay.",
+    "cta": "Read all guides",
+    "card": {
+      "whatIsObelisk": {
+        "title": "What is Obelisk?",
+        "desc": "A Discord-style group chat with no backend. Just your Nostr keys and the relays you choose."
+      },
+      "howObeliskWorks": {
+        "title": "How it works",
+        "desc": "Frontend-only, signed events, NIP-29 groups. No database, no servers, no accounts."
+      },
+      "webOfTrust": {
+        "title": "Bring your own relay",
+        "desc": "You pick the relays. Switch them, add more, run your own. The app stays the same."
+      },
+      "futureNostrRelays": {
+        "title": "What's on the roadmap",
+        "desc": "Voice channels, NIP-46 bunker login, NIP-44 encryption, and a static-export build."
+      },
+      "bitcoinZaps": {
+        "title": "Bitcoin zaps in chat",
+        "desc": "Send sats from any message via NIP-57 zaps and Nostr Wallet Connect. No platform, no fee."
+      },
+      "adminCli": {
+        "title": "NIP-29 admins & roles",
+        "desc": "Group moderation lives on the relay. Admins, members, kicks and bans are standard NIP-29 events."
+      }
+    }
+  },
+  "faq": {
+    "heading": "Frequently Asked Questions",
+    "subtitle": "Short answers about the new Nostr-only Obelisk.",
+    "q1": {
+      "question": "What is Obelisk?",
+      "answer": "Obelisk is an open-source, Discord-style group chat client that runs entirely on Nostr. There is no backend and no database: every message is a signed Nostr event published directly to the relays you choose. Groups are NIP-29 groups, DMs are encrypted Nostr DMs, and your account is a Nostr keypair."
+    },
+    "q2": {
+      "question": "Is there a server I have to sign up to?",
+      "answer": "No. Obelisk is a frontend. There is no signup, no email, no password, and no Obelisk account. You log in with a Nostr key and the app talks straight to your configured relays: there is no Obelisk application backend or database. Messages live on relays. Obelisk operates two public relays; every other relay is controlled by its own operator."
+    },
+    "q3": {
+      "question": "What relays does Obelisk use?",
+      "answer": "Whatever relays you tell it to. New installs currently include wss://public.obelisk.ar and wss://lacrypta-relay.obelisk.ar, both operated by Obelisk. You can add, remove, or replace relays from the relay rail. Every other relay is independent and controlled by its own operator."
+    },
+    "q4": {
+      "question": "Do I need an email or phone number?",
+      "answer": "No. Obelisk has no signup form. You log in with a Nostr key, via a browser extension (NIP-07) or by pasting an nsec. NIP-46 bunker support is on the roadmap."
+    },
+    "q5": {
+      "question": "How are groups implemented?",
+      "answer": "Obelisk uses NIP-29: relay-managed groups. Channels, members, admins, kicks and bans are all standard NIP-29 events that the relay enforces. Any NIP-29-compatible relay works. You can host your own relay, run a private one for your community, or use a public one."
+    },
+    "q6": {
+      "question": "Are my messages encrypted?",
+      "answer": "Direct messages are end-to-end encrypted. Obelisk sends NIP-17 gift-wrapped messages by default, so relays cannot see who you are talking to, and you can switch a conversation back to NIP-04 if the other person's client needs it. Turn on post-quantum protection in settings and the message is sealed with a post-quantum envelope as well, whenever your signer and the other person both have post-quantum keys. Group messages are signed but public on the relay: anyone the relay lets in can read them, just like a Discord channel. Run a private relay if you need a closed group."
+    },
+    "q7": {
+      "question": "Can I self-host Obelisk?",
+      "answer": "Yes, Obelisk is a Next.js app and 'hosting' it just means serving static-style HTML/JS. There's no database to manage and no backend service to run. Run it locally with `npm run dev`, ship it to any Node host, or expose it through a tunnel. We're working on a static-export build for one-click deployment to GitHub Pages, S3, or any static CDN."
+    },
+    "q8": {
+      "question": "How do I get a Nostr key?",
+      "answer": "You can generate one in the login screen. If you want a standalone signer, install a NIP-07 browser extension like Alby or nos2x, or on mobile use Amber (Android) or nsec.app. Keep your nsec safe: it's your account, no one can recover it for you."
+    },
+    "q9": {
+      "question": "What about voice channels?",
+      "answer": "Voice is on the roadmap. The previous voice implementation used a Socket.io signaling server, which doesn't fit a backend-free architecture: we're rebuilding it as P2P WebRTC with relay-based signaling so it stays pure Nostr."
+    },
+    "q10": {
+      "question": "Does Obelisk work on mobile?",
+      "answer": "Yes. Obelisk is a responsive web app and works in any modern mobile browser. Pair it with a NIP-07-compatible signer (or a NIP-46 bunker, once shipped) for a smooth login. A dedicated PWA build is on the roadmap."
+    }
+  },
+  "hero": {
+    "title": "Tus comunidades,",
+    "titleHighlight": "bajo tu control",
+    "subtitle": "Discord-style group chat built directly on Nostr relays.",
+    "trustLine": "No accounts. No backend. Your keys, your relays.",
+    "launchApp": "Launch App",
+    "github": "GitHub"
+  },
+  "features": {
+    "heading": "Why Obelisk",
+    "subtitle": "All the chat. None of the servers. Your keys, your relays, signed events.",
+    "nostrIdentity": {
+      "title": "Nostr login: your keys, your account",
+      "desc": "Sign in with NIP-07 or your nsec. There is no Obelisk account to create. Your Nostr key is the account, everywhere."
+    },
+    "realtimeChat": {
+      "title": "NIP-29 groups",
+      "desc": "Channels, members, admins, kicks and bans are all standard NIP-29 events on the relay. Open protocol, no proprietary format, no lock-in."
+    },
+    "encryptedDMs": {
+      "title": "Encrypted DMs",
+      "desc": "Direct messages are end-to-end encrypted Nostr DMs, gift-wrapped with NIP-17 by default and NIP-04 when a conversation needs it. Only you and the recipient can read them."
+    },
+    "voice": {
+      "title": "P2P voice channels over Nostr",
+      "desc": "Talk to anyone in a channel with no media server in the middle. Voice is WebRTC peer-to-peer; signaling rides on Nostr events, just like every other message."
+    },
+    "selfHosted": {
+      "title": "No backend, no database",
+      "desc": "Obelisk is a frontend. There is no Postgres, no Socket.io server, no auth service. Every message is a signed event sent straight to a relay."
+    },
+    "spamResistant": {
+      "title": "Static-site self-hosting",
+      "desc": "Self-hosting means serving HTML and JS. No database to operate, no Docker required. Run it from your laptop, a tunnel, or a static host."
+    },
+    "zaps": {
+      "title": "Bitcoin zaps in chat",
+      "desc": "Send sats from any message via NIP-57 zaps and Nostr Wallet Connect (NIP-47). No custodian, no platform fee, no middleman."
+    },
+    "games": {
+      "title": "Games on the relay",
+      "desc": "Chain Reaction, Vesta and Stacker run inside a channel with no game server. Every move is a signed event, and every client replays the same log to the same board."
+    },
+    "adminCli": {
+      "title": "Open source",
+      "desc": "MIT-licensed, every line on GitHub. Read it, fork it, audit it, run it. The whole app is the client you can see."
+    },
+    "eyebrow": "The comeback",
+    "headline": "Discord-style community chat.",
+    "headlineAccent": "Relay native.",
+    "subhead": "Your Nostr key is your account. The browser talks directly to relays: no email, password, chat backend, or platform database.",
+    "openApp": "Open Obelisk",
+    "viewSource": "View source",
+    "number": "Feature",
+    "ctaTitle": "Bring your keys. Keep your identity.",
+    "ctaBody": "Join the public relay or point Obelisk at another NIP-29 community.",
+    "ctaButton": "Launch the app",
+    "item": {
+      "groups": {
+        "title": "Nostr relay-based groups",
+        "description": "Servers, channels, membership, moderation, messages, and reactions are NIP-29 events. Obelisk has no chat backend or private database between you and the relay.",
+        "alt": "Obelisk NIP-29 group chat with channels and member list on desktop"
+      },
+      "voiceMessages": {
+        "title": "Voice messages",
+        "description": "Record and send voice notes from the composer. Audio is uploaded to Blossom and delivered as a signed Nostr message with its duration intact.",
+        "alt": "Obelisk desktop message composer where voice notes can be recorded"
+      },
+      "stickers": {
+        "title": "Sticker marketplace",
+        "description": "Discover media packs, keep favorites, create personal stickers, and let relay operators publish server-wide emoji, GIF, and sticker collections.",
+        "alt": "Obelisk desktop sticker, emoji, and GIF marketplace"
+      },
+      "games": {
+        "title": "Games in the channel",
+        "description": "Chain Reaction, Vesta and Stacker run inside a channel with no game server: every move is a signed Nostr event and every client replays the same log to the same board. Turn clocks, seats and results all come out of that log.",
+        "alt": "Three Obelisk games running on a Nostr relay: a Chain Reaction board, a Vesta island, and a Stacker well"
+      },
+      "pwa": {
+        "title": "Mobile PWA",
+        "description": "Install Obelisk from the browser and use the complete responsive app: relays, channels, DMs, profiles, notifications, and calls.",
+        "alt": "Obelisk mobile PWA showing login, channels, a video call, and a Nostr profile"
+      },
+      "p2p": {
+        "title": "Peer-to-peer video calls",
+        "description": "Small voice channels connect browsers directly with WebRTC for audio, camera, and screen sharing. Nostr carries the signaling; media stays peer to peer.",
+        "alt": "Obelisk voice and video channel on desktop"
+      },
+      "sfu": {
+        "title": "Big calls with SFU",
+        "description": "Large rooms switch to a mediasoup SFU advertised by the channel. Choose which SFU server to use or host your own. Media remains DTLS-SRTP transport encrypted while avoiding a full mesh between every participant.",
+        "alt": "Large Obelisk voice channel using a mediasoup SFU on desktop"
+      },
+      "profiles": {
+        "title": "Nostr profile explorer",
+        "description": "Open any member’s portable kind-0 identity, follow them, inspect their NIP-05 name, and start a DM without creating another account.",
+        "alt": "Obelisk interface with portable Nostr profiles"
+      }
+    }
+  },
+  "steps": {
+    "1": {
+      "title": "Sign in with Nostr",
+      "desc": "Use a NIP-07 extension or paste an nsec. No signup forms, no email, no password."
+    },
+    "2": {
+      "title": "Pick a relay",
+      "desc": "The default groups relay is preloaded. Add any NIP-29 relay you like: each one becomes its own 'server' in the rail."
+    },
+    "3": {
+      "title": "Chat",
+      "desc": "Join NIP-29 groups, post messages, react, reply, DM. Every action is a signed Nostr event going straight to the relay."
+    },
+    "heading": "Three steps",
+    "subtitle": "No signup forms. No email verification. Just keys and relays."
+  },
+  "roadmap": {
+    "heading": "Roadmap",
+    "subtitle": "Building in the open. From Nostr-only client today to a richer, more portable client tomorrow.",
+    "done": "Done",
+    "inProgress": "In Progress",
+    "upcoming": "Upcoming",
+    "phase0": {
+      "title": "Identity",
+      "items": "NIP-07 browser-extension login|nsec login|Profile editor (kind 0)"
+    },
+    "phase1": {
+      "title": "NIP-29 Groups",
+      "items": "Group create / edit metadata|Channels, replies, reactions|Admins, members, kicks, bans (relay-enforced)"
+    },
+    "phase1_5": {
+      "title": "Multi-relay UX",
+      "items": "Add / remove relays from the rail|Switch active relay per group|Per-relay favicon and metadata"
+    },
+    "phase2": {
+      "title": "Encrypted DMs",
+      "items": "NIP-04 encrypted DMs|NIP-17 gift-wrapped DMs|DM inbox via NIP-17 inbox relays"
+    },
+    "phase3": {
+      "title": "Lightning Zaps",
+      "items": "NIP-57 zap requests|Nostr Wallet Connect (NIP-47)|Per-message zap amounts"
+    },
+    "phase6": {
+      "title": "Backend removal",
+      "items": "Drop PostgreSQL and Prisma|Drop Socket.io server|Frontend talks directly to relays"
+    },
+    "phase4": {
+      "title": "Auth & encryption upgrades",
+      "items": "NIP-46 bunker (remote signer)|NIP-44 v2 encryption migration|Static-export build (no Node required)"
+    },
+    "phase5": {
+      "title": "Voice & PWA",
+      "items": "P2P voice channels with relay signaling|Installable PWA with push notifications|Offline-first message cache"
+    }
+  },
+  "stack": {
+    "heading": "Tech stack",
+    "subtitle": "Modern, open-source, no proprietary backend."
+  },
+  "cta": {
+    "heading": "Ready to chat without a server",
+    "subtitle": "Open the app, log in with your Nostr keys, pick a relay. That's it.",
+    "button": "Launch Obelisk"
+  },
+  "footer": {
+    "tagline": "Obelisk: A pure Nostr client. ",
+    "brandBlurb": "Discord-style group chat with no backend. Your keys, your relays, signed Nostr events.",
+    "col": {
+      "guides": "Guides",
+      "product": "Product",
+      "community": "Community",
+      "legal": "Legal"
+    },
+    "allGuides": "All guides",
+    "launchApp": "Launch app",
+    "faq": "FAQ",
+    "help": "Help",
+    "github": "GitHub",
+    "lacrypta": "La Crypta",
+    "nostr": "Nostr",
+    "license": "License",
+    "abuse": "Abuse & takedowns",
+    "security": "Security"
+  },
+  "landing": {
+    "video": {
+      "heading": "Watch the walkthrough",
+      "subtitle": "Two minutes through a real relay: log in with your keys, join a group, talk, zap.",
+      "title": "Obelisk walkthrough video"
+    },
+    "preview": {
+      "heading": "See it in action",
+      "subtitle": "The same Nostr-only client, designed for both your laptop and your phone. Take the tour for the device you actually use.",
+      "desktop": {
+        "badge": "Desktop",
+        "title": "Discord-style chat, on the open Nostr stack",
+        "desc": "Server rail, categorized channels, publications, member list, voice with SFU. The full workspace in your browser.",
+        "alt": "Obelisk desktop screenshot: General Chat with server rail, channel list, message stream and member list.",
+        "cta": "Tour the desktop UI"
+      },
+      "mobile": {
+        "badge": "Mobile",
+        "title": "Mobile-first server and channel list",
+        "desc": "Tap your way through servers, categories, voice and publications. Install it as a PWA, no app store required.",
+        "alt": "Obelisk mobile screenshot: server icons, General Chat, nested publication channels, voice channel and uncategorized list.",
+        "cta": "Tour the mobile UI"
+      }
+    },
+    "showcase": {
+      "heading": "One client, every screen",
+      "subtitle": "Real-time voice rooms with video, channels in your pocket. Same Nostr-only client, no native app, no backend.",
+      "desktop": {
+        "alt": "Obelisk desktop screenshot: voice channel with an SFU peer transmitting a colour test pattern."
+      },
+      "mobile": {
+        "alt": "Obelisk mobile screenshot: server list with categorised channels and a live voice room."
+      }
+    },
+    "voiceLive": "Voice live"
+  },
+  "pqc": {
+    "heading": "Post-quantum messages",
+    "subtitle": "Encrypted messages sent today can be recorded now and read years from now, once a quantum computer breaks the key exchange Nostr relies on. It is the one part of the problem that can be fixed in advance.",
+    "status": "Live in Obelisk. Direct messages are gift-wrapped by default, and carry a post-quantum seal once you turn post-quantum protection on and your signer and the other person both have post-quantum keys. The keys themselves live in the Nostr WoT extension and the @nostr-wot/pq library.",
+    "collab": "Built in collaboration with",
+    "nostrwot": {
+      "desc": "Identity, signer and post-quantum keys derived from a single 24-word recovery phrase."
+    },
+    "quantakrypto": {
+      "desc": "Applied post-quantum cryptography: design, specification and cryptographic review."
+    },
+    "guide": "Read the guide: making your DMs quantum-safe"
+  }
+}

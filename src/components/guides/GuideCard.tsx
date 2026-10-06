@@ -1,21 +1,19 @@
-import Link from 'next/link';
-import type { Locale } from '@/i18n';
+import { Link } from '@/i18n/navigation';
 import type { GuideFrontmatter } from '@/services/guides';
-import { guidesHref } from '@/utils/guides/guide-urls';
+import { guidePath } from '@/utils/guides/guide-urls';
 import { HERO_REGISTRY } from './svg';
 
 interface Props {
   slug: string;
-  locale: Locale;
   frontmatter: GuideFrontmatter;
 }
 
-export default function GuideCard({ slug, locale, frontmatter }: Props) {
+export default function GuideCard({ slug, frontmatter }: Props) {
   const Hero = HERO_REGISTRY[frontmatter.heroComponent];
 
   return (
     <Link
-      href={guidesHref(locale, slug)}
+      href={guidePath(slug)}
       className="lc-card group block overflow-hidden"
       data-testid={`guide-card-${slug}`}
     >

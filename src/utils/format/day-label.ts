@@ -13,8 +13,8 @@
 
 import { formatDate, formatTime } from '@/utils/format/format';
 import type { Locale } from '@/i18n';
+import type { Translate } from '@/i18n/keys';
 
-type Translate = (key: string) => string;
 
 /** Calendar-day key: two timestamps share a divider when these match. */
 export function dayKey(unixSeconds: number): string {
@@ -30,8 +30,8 @@ export function dayLabel(unixSeconds: number, t: Translate, locale: Locale): str
   if (date.toDateString() === today.toDateString()) {
     // `{time}` because today's divider doubles as "when this run started",
     // the only day where that's more useful than the date.
-    return t('time.today').replace('{time}', formatTime(locale, date));
+    return t('common.time.today', { time: formatTime(locale, date) });
   }
-  if (date.toDateString() === yesterday.toDateString()) return t('time.yesterday');
+  if (date.toDateString() === yesterday.toDateString()) return t('common.time.yesterday');
   return formatDate(locale, date, { month: 'short', day: 'numeric' });
 }

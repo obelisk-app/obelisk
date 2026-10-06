@@ -14,14 +14,14 @@
 import { dmFileCategory, type JsDmFile } from '@/utils/attachments/dm-file';
 import { useDecryptedDmFile } from '@/hooks/chat/useDecryptedDmFile';
 import { formatBytes } from '@/utils/format/format-bytes';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { DownloadIcon, FileIcon, LockIcon } from '@/components/ui/icons';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { VoiceMessage } from '@/components/chat/message/VoiceMessage';
 import TextButton from '@/components/ui/TextButton';
 
 export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFile; onAccent?: boolean }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const category = dmFileCategory(file.mimeType);
   const media = category !== 'file';
   const { state, load } = useDecryptedDmFile(file, media);

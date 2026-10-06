@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import {
   getCounts,
   subscribeCounts,
@@ -30,7 +30,7 @@ export interface NoteEngagement {
 }
 
 export function useNoteEngagement(note: NostrEvent, canInteract: boolean): NoteEngagement {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const relays = usePreferences().socialRelays;
   const [counts, setCounts] = useState<NoteCounts>(() => getCounts(note.id));
   const [busy, setBusy] = useState(false);

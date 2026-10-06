@@ -16,7 +16,7 @@ import Input from '@/components/ui/Input';
 import { nostrActions, useGroups } from '@/services/nostr-bridge';
 import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
 import { useToastStore } from '@/store/toast';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { ForwardIcon, HashIcon } from '@/components/ui/icons';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
@@ -43,7 +43,7 @@ export default function ForwardMessageModal({
   fromGroupId: string;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const groups = useGroups();
   const [query, setQuery] = useState('');
   const [sending, setSending] = useState<string | null>(null);
@@ -62,15 +62,15 @@ export default function ForwardMessageModal({
     try {
       await nostrActions.sendMessage(
         target.id,
-        forwardedContent(message, { authorName, fromChannel: fromName, label: t('message.forwarded') }),
+        forwardedContent(message, { authorName, fromChannel: fromName, label: t('chat.message.forwarded') }),
       );
       useToastStore.getState().pushToast({
-        title: t('message.forwardedTo').replace('{channel}', target.name ?? target.id.slice(0, 8)),
+        title: t('chat.message.forwardedTo', { channel: target.name ?? target.id.slice(0, 8) }),
         body: '',
       });
       onClose();
     } catch (e) {
-      useToastStore.getState().pushToast({ title: t('message.forwardFailed'), body: e instanceof Error ? e.message : String(e) });
+      useToastStore.getState().pushToast({ title: t('chat.message.forwardFailed'), body: e instanceof Error ? e.message : String(e) });
       setSending(null);
     }
   };
@@ -79,7 +79,7 @@ export default function ForwardMessageModal({
     <Modal onClose={onClose} testId="forward-modal" panelClassName="w-[min(420px,calc(100vw-2rem))] rounded-xl border border-lc-border bg-lc-dark p-4 shadow-2xl">
       <div className="mb-3 flex items-center gap-2 text-lc-white">
         <ForwardIcon size={18} />
-        <h2 className="text-base font-semibold">{t('message.forwardTitle')}</h2>
+        <h2 className="text-base font-semibold">{t('chat.message.forwardTitle')}</h2>
       </div>
       <blockquote className="mb-3 line-clamp-3 border-l-2 border-lc-green/40 pl-3 text-sm text-lc-white/80">
         {message.content}
@@ -88,14 +88,14 @@ export default function ForwardMessageModal({
         autoFocus
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={t('message.forwardSearch')}
-        aria-label={t('message.forwardSearch')}
+        placeholder={t('chat.message.forwardSearch')}
+        aria-label={t('chat.message.forwardSearch')}
         className="mb-2"
         data-testid="forward-search"
       />
-      <ul className="max-h-72 space-y-0.5 overflow-y-auto" role="menu" aria-label={t('message.forwardTitle')}>
+      <ul className="max-h-72 space-y-0.5 overflow-y-auto" role="menu" aria-label={t('chat.message.forwardTitle')}>
         {targets.length === 0 && (
-          <EmptyState as="li" padding="md" className="px-3">{t('message.forwardEmpty')}</EmptyState>
+          <EmptyState as="li" padding="md" className="px-3">{t('chat.message.forwardEmpty')}</EmptyState>
         )}
         {targets.map((g) => (
           <li key={g.id} role="none">

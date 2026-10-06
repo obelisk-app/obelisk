@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { MeshSyncStatusPill, RoomHeader } from '@/components/voice/room/header';
 import type { SfuStatus } from '@/services/voice/room-events';
 

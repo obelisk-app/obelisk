@@ -1,5 +1,7 @@
 'use client';
 
+import { useParams } from 'next/navigation';
+import { isLocale } from '@/i18n';
 import ErrorPanel from '@/components/feedback/ErrorPanel';
 // `global-error.tsx` replaces the root layout wholesale, so the layout's
 // own `globals.css` import is not in play here - pull it in or the lc-*
@@ -22,8 +24,11 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // The `[locale]` segment, when the failure happened under one; English
+  // otherwise. ErrorPanel reads its language off this `lang`.
+  const { locale } = useParams<{ locale?: string }>() ?? {};
   return (
-    <html lang="es">
+    <html lang={isLocale(locale) ? locale : 'en'}>
       <body className="bg-lc-black text-lc-white antialiased">
         <ErrorPanel error={error} reset={reset} />
       </body>

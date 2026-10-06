@@ -10,10 +10,10 @@ import RoleBadge from '@/components/chat/RoleBadge';
 import RemoteImage from '@/components/ui/RemoteImage';
 import Text from '@/components/ui/Text';
 import type { RelayRole } from '@/services/relay-roles';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: boolean }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   // `displayName` is always set: `useGroupMemberInfo` resolves it through
   // `displayNameFor`, so there is nothing left to fall back to here.
   const name = member.displayName;
@@ -43,7 +43,7 @@ function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: bool
           title={isOnline ? 'Online' : 'Offline'}
         />
       </div>
-      {member.role === 'admin' && <span title={t('mobile.members.admin')} aria-label={t('members.roleAdmin')}>🛡️</span>}
+      {member.role === 'admin' && <span title={t('mobile.members.admin')} aria-label={t('shell.members.roleAdmin')}>🛡️</span>}
       <span className={`text-sm truncate ${isOnline ? 'text-lc-white' : 'text-lc-muted'}`}>
         {name}
       </span>

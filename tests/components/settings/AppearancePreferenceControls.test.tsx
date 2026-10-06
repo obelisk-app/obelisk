@@ -12,7 +12,7 @@ describe('AppearancePreferenceControls', () => {
     const user = userEvent.setup();
     const { default: AppearancePreferenceControls } = await import('@/components/settings/AppearancePreferenceControls');
     const { getPreferences } = await import('@/services/preferences');
-    const { LocaleProvider } = await import('@/i18n/context');
+    const { LocaleProvider } = await import('@tests/support/intl');
 
     render(<LocaleProvider initialLocale="en"><AppearancePreferenceControls /></LocaleProvider>);
 
@@ -39,7 +39,7 @@ describe('AppearancePreferenceControls', () => {
     const user = userEvent.setup();
     const { default: AppearancePreferenceControls } = await import('@/components/settings/AppearancePreferenceControls');
     const { getPreferences, setPreference } = await import('@/services/preferences');
-    const { LocaleProvider } = await import('@/i18n/context');
+    const { LocaleProvider } = await import('@tests/support/intl');
     setPreference('accentColor', '#7ec8ff');
     setPreference('backgroundColor', '#111827');
     setPreference('buttonColor', '#f0c14a');
@@ -63,7 +63,7 @@ describe('AppearancePreferenceControls', () => {
 
   it('keeps each shell skin on the migrated controls', async () => {
     const { default: AppearancePreferenceControls } = await import('@/components/settings/AppearancePreferenceControls');
-    const { LocaleProvider } = await import('@/i18n/context');
+    const { LocaleProvider } = await import('@tests/support/intl');
     const { unmount } = render(<LocaleProvider initialLocale="en"><AppearancePreferenceControls /></LocaleProvider>);
     expect(screen.getByTestId('appearance-accent-color')).toHaveClass('w-24', 'rounded-md', 'bg-lc-dark', 'font-mono');
     expect(screen.getByTestId('appearance-bubble-animation')).toHaveClass('w-full', 'bg-lc-dark', 'text-xs');

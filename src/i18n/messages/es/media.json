@@ -1,0 +1,43 @@
+{
+  "searchPlaceholder": "Buscar packs y medios",
+  "close": "Cerrar la biblioteca",
+  "filterByType": "Filtrar packs por tipo",
+  "openActions": "Abrir acciones del medio",
+  "closeViewer": "Cerrar el visor del pack",
+  "closeActions": "Cerrar las acciones del medio",
+  "closeEditor": "Cerrar el editor del pack",
+  "packName": "Nombre del pack",
+  "packDescription": "Descripción del pack",
+  "newItemType": "Tipo del nuevo ítem",
+  "title": "Biblioteca de medios",
+  "subtitle": "Emojis · GIFs · Stickers",
+  "upload": "Subir medios",
+  "createPack": "Crear pack",
+  "serverPacks": "Packs del servidor",
+  "serverPacksHelp": "Creá y editá packs desde Mis packs, en tus preferencias de medios.",
+  "legacyHelp": "Los ítems sueltos del formato viejo se van a borrar en el próximo cambio de pack.",
+  "individualFavorites": "Favoritos sueltos",
+  "viewPack": "Ver el pack",
+  "edit": "Editar",
+  "delete": "Eliminar",
+  "createPackWithItem": "Crear un pack con este ítem",
+  "editPack": "Editar el pack",
+  "newItemsAre": "Los ítems nuevos son",
+  "addUrl": "Agregar URL",
+  "remove": "Quitar",
+  "uploadHelp": "Subí emojis, GIFs o stickers a este pack.",
+  "kind": {
+    "emoji": "Emoji",
+    "gif": "GIF",
+    "sticker": "Sticker"
+  },
+  "itemShortcode": "Atajo del ítem {n}",
+  "itemType": "Tipo del ítem {n}",
+  "itemUrl": "URL del ítem {n}",
+  "confirmDeletePack": "¿Eliminar “{title}”?",
+  "confirmDeletePackBody": "Esto envía una solicitud de borrado de Nostr y no se puede deshacer.",
+  "remote": {
+    "show": "Mostrar contenido",
+    "hint": "Oculto hasta que lo pidas. Cargarlo le revelaría tu dirección IP al servidor que lo aloja."
+  }
+}

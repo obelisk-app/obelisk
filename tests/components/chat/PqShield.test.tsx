@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import PqShield from '@/components/chat/PqShield';
 import type { PqProtectionLevel } from '@/services/pq/status';
 

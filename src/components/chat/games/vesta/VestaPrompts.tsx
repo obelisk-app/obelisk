@@ -2,7 +2,7 @@
 
 import type { GameState } from 'vesta';
 import type { VestaAction } from '@/lib/games/vesta/definition';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { RESOURCES, RESOURCE_EMOJI, describe, filled, sum } from './resources';
 import { Counter } from './table-controls';
 import type { VestaTurn } from '@/hooks/chat/games/vesta/useVestaTurn';
@@ -19,7 +19,7 @@ export default function VestaPrompts({ state, seatLabel, busy, turn }: {
   busy?: boolean;
   turn: VestaTurn;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const {
     participants, actingIdx, can, send, mustDiscard, myHandSize, discard, setDiscard,
     pendingTrade, iAmTradeTarget, iAmProposer, robberPending, showSteal, stealVictims, skipSteal,

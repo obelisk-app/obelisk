@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { useMyPubkey } from '@/services/nostr-bridge';
 import { useInterests } from '@/hooks/social/useInterests';
 import { useToastStore } from '@/store/toast';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Chip from '@/components/ui/Chip';
 
 export default function FollowTagButton({
@@ -22,7 +22,7 @@ export default function FollowTagButton({
   /** `sm` for inside a list row, `md` for a page header. */
   size?: 'sm' | 'md';
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const myPubkey = useMyPubkey();
   const { isFollowing, toggle, ready } = useInterests();
   const [busy, setBusy] = useState(false);

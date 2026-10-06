@@ -1,0 +1,31 @@
+{
+  "voiceDebug": {
+    "controlChannel": "canal de control",
+    "sfuReliability": "fiabilidad del SFU",
+    "title": "depuración de voz",
+    "noClient": "no hay VoiceClient montado"
+  },
+  "switchCamera": "Cambiar de cámara",
+  "videoQuality": "Calidad de video",
+  "myCamera": "Mi cámara",
+  "incoming": "Entrante",
+  "disconnect": "Desconectar",
+  "audioNote": "El audio siempre se envía en alta calidad.",
+  "loadingMembership": "Cargando la membresía del canal…",
+  "notMember": "No sos miembro de este canal.",
+  "notMemberHelp": "Pedile a un admin que te agregue y recargá la página.",
+  "stayConnected": "Vas a seguir en tu llamada actual hasta que entres a esta.",
+  "join": "Entrar al canal de voz",
+  "inCall": "En llamada",
+  "mediaSyncing": "Sincronizando medios",
+  "syncing": "Sincronizando",
+  "channel": "Canal de voz",
+  "goToChannel": "Ir al canal de voz",
+  "reconnectingSignaling": "Reconectando la voz…",
+  "connected": "Voz conectada",
+  "voicePage": {
+    "roomPlaceholder": "nombre de la sala",
+    "title": "Entrar a una sala de voz",
+    "enter": "Entrar a la sala"
+  }
+}

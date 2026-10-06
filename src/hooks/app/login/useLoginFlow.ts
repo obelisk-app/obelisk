@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import type { LoginMethodId } from '@nostr-wot/ui';
 import { profileUrl } from '@/services/social/note-links';
 import { publishGeneratedProfile, routeToBridge, type GeneratedProfileDraft, type LoginArgs } from '@/services/login/login-bridge';

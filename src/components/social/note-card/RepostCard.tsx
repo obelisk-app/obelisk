@@ -13,7 +13,7 @@
 import { useMemo } from 'react';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useAuthor } from '@/hooks/social/useAuthor';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { embeddedRepostEvent, repostTarget } from '@/services/social/repost';
 import { RepostIcon } from '../NoteActions';
 import PlainNoteCard from './PlainNoteCard';
@@ -22,7 +22,7 @@ import type { NoteCardProps } from '../NoteCard';
 import TextButton from '@/components/ui/TextButton';
 
 export default function RepostCard(props: NoteCardProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { note, reposters } = props;
   // `embeddedRepostEvent` only returns a note whose signature verifies and
   // whose id matches the wrapper's `e` tag; the pool never saw the inner
@@ -109,7 +109,7 @@ function RepostersLine({
   pubkeys: readonly string[];
   onOpenProfile?: (pubkey: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const shown = pubkeys.slice(0, 2);
   const rest = pubkeys.length - shown.length;
 
@@ -124,7 +124,7 @@ function RepostersLine({
       {rest > 0 && (
         <span data-testid="repost-others">
           {' '}
-          {t('social.andOthers').replace('{n}', String(rest))}
+          {t('social.andOthers', { n: String(rest) })}
         </span>
       )}
     </>

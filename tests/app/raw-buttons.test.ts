@@ -19,7 +19,7 @@ const CEILING = 43;
 
 const ROOT = join(__dirname, '..', '..');
 const APP = join(ROOT, 'src', 'app');
-const EXCLUDED = [join(APP, 'app', 'mobile'), join(APP, 'dev')];
+const EXCLUDED = [join(APP, '[locale]', 'app', 'mobile'), join(APP, 'dev')];
 
 function tsxFiles(dir: string, out: string[] = []): string[] {
   if (EXCLUDED.includes(dir)) return out;

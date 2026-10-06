@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { ChannelActionSheet, ChannelContextMenu } from '@/components/chat/ChannelContextMenu';
 import { channelLink } from '@/utils/channel-link';
 import { MUTED_FOREVER, getChannelPref, isChannelMuted, notifyLevel, useChannelPrefsStore } from '@/store/channel-prefs';

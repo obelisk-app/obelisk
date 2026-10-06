@@ -8,7 +8,7 @@ describe('MobileSigningIndicator', () => {
 
   it('shows green while idle because signing is healthy', async () => {
     const { default: MobileSigningIndicator } = await import('@/components/feedback/MobileSigningIndicator');
-    const { LocaleProvider } = await import('@/i18n/context');
+    const { LocaleProvider } = await import('@tests/support/intl');
 
     render(
       <LocaleProvider initialLocale="en">
@@ -23,7 +23,7 @@ describe('MobileSigningIndicator', () => {
   it('changes color state and explains the event being signed', async () => {
     const { pushActivity, resolveActivity } = await import('@/services/activity-log');
     const { default: MobileSigningIndicator } = await import('@/components/feedback/MobileSigningIndicator');
-    const { LocaleProvider } = await import('@/i18n/context');
+    const { LocaleProvider } = await import('@tests/support/intl');
     const id = pushActivity('Waiting for bunker signature', 'kind 9', {
       operation: 'sign',
       eventKind: 9,
@@ -53,7 +53,7 @@ describe('MobileSigningIndicator popup', () => {
 
   it('closes from the labelled close icon, Escape and the backdrop', async () => {
     const { default: MobileSigningIndicator } = await import('@/components/feedback/MobileSigningIndicator');
-    const { LocaleProvider } = await import('@/i18n/context');
+    const { LocaleProvider } = await import('@tests/support/intl');
     render(
       <LocaleProvider initialLocale="en">
         <MobileSigningIndicator />

@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
 
 /**

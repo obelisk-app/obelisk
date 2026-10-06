@@ -13,8 +13,8 @@ the client against the relay.
 
 | Surface | File | Searches |
 |---|---|---|
-| Desktop bar | `src/app/app/SearchBar.tsx` | messages + users + channels |
-| Mobile screen | `SearchScreen` in `src/app/app/mobile/PhoneShell.tsx` | messages + channels |
+| Desktop bar | `src/app/[locale]/app/SearchBar.tsx` | messages + users + channels |
+| Mobile screen | `SearchScreen` in `src/app/[locale]/app/mobile/PhoneShell.tsx` | messages + channels |
 | Publications search-or-create | `src/components/chat/ForumView.tsx` | thread titles in the current container (local, no relay query) |
 
 Users are resolved separately by `src/hooks/useNostrUserSearch.ts`: NIP-19
@@ -148,6 +148,6 @@ highlighted `role="option"`; the result count is `aria-live="polite"`.
 - `tests/services/nostr-bridge/bridge.test.ts` (`describe('searchMessages')`) -
   single-term relay filter, over-fetch before `has:`, trim + partial flag,
   phrase contiguity, NIP-50-absent fallback.
-- `src/app/app/SearchBar.test.tsx` - debounce, race, stale clearing, scope
+- `src/app/[locale]/app/SearchBar.test.tsx` - debounce, race, stale clearing, scope
   toggle, keyboard, paging, jump.
-- `src/app/app/mobile/search-screen.test.tsx` - mobile parity.
+- `src/app/[locale]/app/mobile/search-screen.test.tsx` - mobile parity.

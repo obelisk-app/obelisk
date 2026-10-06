@@ -8,10 +8,10 @@
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient } from '@/services/voice/active-client';
 import { VIDEO_QUALITIES, type VideoQuality } from '@/services/voice/quality';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 export default function QualityPopover() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const setError = useVoiceStore((s) => s.setError);
   const videoQuality = useVoiceStore((s) => s.videoQuality);
   const receivedVideoQuality = useVoiceStore((s) => s.receivedVideoQuality);

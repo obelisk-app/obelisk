@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { clearVoiceDebug, pushVoiceDebug, setVoiceMetricsRef } from '@/services/voice/debug';
 import { emptyVoiceMetrics } from '@/services/voice/metrics';
 import { DebugOverlay } from '@/components/voice/DebugOverlay';

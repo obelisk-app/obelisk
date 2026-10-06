@@ -170,11 +170,11 @@ export default function WotHero() {
       {/* legend */}
       <g fontSize="11" fontWeight="600">
         <circle cx="40" cy="20" r="6" fill="#b4f953" />
-        <text x="52" y="24" fill="#fafafa">direct follow</text>
+        <text x="52" y="24" fill="#fafafa">direct follow</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         <circle cx="160" cy="20" r="6" fill="#8bc34a" />
         <text x="172" y="24" fill="#fafafa">friend-of-friend</text>
         <circle cx="310" cy="20" r="6" fill="#3a1a1a" stroke="#b45353" strokeWidth="1.5" />
-        <text x="322" y="24" fill="#fafafa">filtered (spam)</text>
+        <text x="322" y="24" fill="#fafafa">filtered (spam)</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
       </g>
     </svg>
   );

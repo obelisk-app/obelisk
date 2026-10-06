@@ -15,7 +15,7 @@
 
 import { bioSegments, normalizeWebsite, prettyUrl } from '@/utils/profile-links';
 import { useToastStore } from '@/store/toast';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import TextButton from '@/components/ui/TextButton';
 
 export default function ProfileLinks({
@@ -27,7 +27,7 @@ export default function ProfileLinks({
   website?: string | null;
   lud16?: string | null;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const segments = bioSegments(about);
   const site = normalizeWebsite(website);
 
@@ -36,7 +36,7 @@ export default function ProfileLinks({
   const copyAddress = () => {
     if (!lud16) return;
     void Promise.resolve(navigator.clipboard?.writeText(lud16)).catch(() => {});
-    useToastStore.getState().pushToast({ title: t('profileFeed.addressCopied'), body: lud16 });
+    useToastStore.getState().pushToast({ title: t('social.profileFeed.addressCopied'), body: lud16 });
   };
 
   return (

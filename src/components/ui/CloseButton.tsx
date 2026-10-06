@@ -1,7 +1,7 @@
 'use client';
 
 import type { ButtonHTMLAttributes } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from './Button';
 import { cn } from '@/utils/style/cn';
 import { CloseIcon } from './icons';
@@ -27,7 +27,7 @@ export interface CloseButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEl
 
 /** The dismiss button: a ghost icon Button with `CloseIcon`, never the `✕` glyph. */
 export default function CloseButton({ onClick, size = 'md', label, className, ...rest }: CloseButtonProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const spec = SIZE[size];
   return (
     <Button

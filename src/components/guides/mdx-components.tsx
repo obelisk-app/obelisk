@@ -1,4 +1,5 @@
 import type { ComponentPropsWithoutRef } from 'react';
+import { Link } from '@/i18n/navigation';
 import Callout from './Callout';
 import Shot from './Shot';
 import Clip from './Clip';
@@ -32,12 +33,22 @@ function OL(props: ComponentPropsWithoutRef<'ol'>) {
 function LI(props: ComponentPropsWithoutRef<'li'>) {
   return <li className="my-1" {...props} />;
 }
-function A(props: ComponentPropsWithoutRef<'a'>) {
+const LINK_CLASS = 'text-lc-green underline underline-offset-2 hover:text-lc-green-dark';
+
+/**
+ * Internal links are written locale-free in every language
+ * (`/guides/web-of-trust`) and go through the locale-aware `Link`, so the
+ * Spanish article links to `/es/guides/web-of-trust`.
+ */
+function A({ href = '', ...props }: ComponentPropsWithoutRef<'a'>) {
+  if (href.startsWith('/')) return <Link href={href} className={LINK_CLASS} {...props} />;
+  const external = href.startsWith('http');
   return (
     <a
-      className="text-lc-green underline underline-offset-2 hover:text-lc-green-dark"
-      target={props.href?.startsWith('http') ? '_blank' : undefined}
-      rel={props.href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+      href={href}
+      className={LINK_CLASS}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noopener noreferrer' : undefined}
       {...props}
     />
   );

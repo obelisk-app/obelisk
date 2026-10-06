@@ -2,7 +2,7 @@ import type { ImgHTMLAttributes } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import LandingPage from '@/components/marketing/LandingPage';
 
 const pushMock = vi.fn();
@@ -14,7 +14,7 @@ type MockImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'alt'> &
   sizes?: string;
 };
 
-vi.mock('next/navigation', () => ({
+vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({
   useRouter: () => ({ push: pushMock, replace: vi.fn(), prefetch: vi.fn() }),
 }));
 

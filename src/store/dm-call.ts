@@ -64,7 +64,7 @@ export function handleDmCallMessage(msg: IncomingDmCallMessage & { peer: string 
     const title = getBridgeImpl()?.displayNameFor(msg.from) ?? 'Obelisk';
     // The name is in the title, as for a DM; the body never says more than
     // that a call is coming in.
-    rt.stopRing = ringIncomingCall({ id: msg.callId, title, body: tr(msg.video ? 'call.incomingVideo' : 'call.incomingVoice') }).stop;
+    rt.stopRing = ringIncomingCall({ id: msg.callId, title, body: tr(msg.video ? 'calls.call.incomingVideo' : 'calls.call.incomingVoice') }).stop;
     // Ringing needs none of the media stack. Fetch it now, after the ring has
     // started, so it is in place by the time the user reaches "Accept".
     prefetchDmCallSession();

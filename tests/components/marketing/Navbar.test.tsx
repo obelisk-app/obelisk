@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { nip19 } from 'nostr-tools';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 const ME = 'd'.repeat(64);
 const pushMock = vi.fn();
 const logout = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('next/navigation', () => ({
+vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({
   useRouter: () => ({ push: pushMock, replace: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => '/',
 }));

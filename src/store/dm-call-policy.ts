@@ -10,11 +10,11 @@ import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient, setActiveVoiceClient } from '@/services/voice/active-client';
 import { HAS_TURN } from '@/services/voice/ice-config';
 import type { DmCallMessage } from '@/services/dm-call/protocol';
-import { getTranslation, isLocale } from '@/i18n';
+import { translate } from '@/i18n/runtime';
+import type { MessageKey } from '@/i18n/keys';
 
-export function tr(key: string): string {
-  const lang = typeof document !== 'undefined' ? document.documentElement.lang : '';
-  return getTranslation(isLocale(lang) ? lang : 'en')(key);
+export function tr(key: MessageKey): string {
+  return translate(key);
 }
 
 export function send(peer: string, msg: DmCallMessage, selfNotice = false): Promise<void> {

@@ -74,9 +74,24 @@ export type NotePreview = {
   isArticle: boolean;
 };
 
+/** The preview's own words, in the reader's language (`seo.notes.*`). */
+export type NotePreviewLabels = {
+  /** A note's title: the author, `{name} on Obelisk`. */
+  noteTitle: (authorName: string) => string;
+  untitledArticle: string;
+  sharedMedia: string;
+};
+
+const ENGLISH: NotePreviewLabels = {
+  noteTitle: (name) => `${name} on Obelisk`,
+  untitledArticle: 'Untitled article',
+  sharedMedia: 'Shared media',
+};
+
 export function buildNotePreview(
   note: Pick<NostrEvent, 'content' | 'tags' | 'kind'>,
   authorName: string,
+  labels: NotePreviewLabels = ENGLISH,
 ): NotePreview {
   const isArticle = note.kind >= 30000 && note.kind < 40000;
   const articleTitle = tagValue(note, 'title');
@@ -85,7 +100,7 @@ export function buildNotePreview(
 
   if (isArticle) {
     return {
-      title: truncate(articleTitle || body || 'Untitled article', MAX_TITLE),
+      title: truncate(articleTitle || body || labels.untitledArticle, MAX_TITLE),
       description: truncate(summary || body, MAX_DESCRIPTION),
       image: previewImage(note),
       isArticle: true,
@@ -95,9 +110,9 @@ export function buildNotePreview(
   // A note has no title, so the author is the title and the note is the body,
   // the shape every social preview card uses.
   return {
-    title: `${authorName} on Obelisk`,
+    title: labels.noteTitle(authorName),
     // An image-only post strips to nothing; say so rather than showing blank.
-    description: truncate(body || 'Shared media', MAX_DESCRIPTION),
+    description: truncate(body || labels.sharedMedia, MAX_DESCRIPTION),
     image: previewImage(note),
     isArticle: false,
   };

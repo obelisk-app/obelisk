@@ -9,7 +9,7 @@ export default function RelayGroupsDiagram() {
     >
       <rect width="800" height="360" fill="#0a0a0a" />
 
-      <text x="400" y="34" textAnchor="middle" fontSize="16" fontWeight="700" fill="#fafafa">
+      <text x="400" y="34" textAnchor="middle" fontSize="16" fontWeight="700" fill="#fafafa"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         NIP-29: the relay hosts the group
       </text>
 
@@ -46,7 +46,7 @@ export default function RelayGroupsDiagram() {
             </text>
           </g>
         ))}
-        <text x="400" y="270" textAnchor="middle" fontSize="10" fill="#b4f953">
+        <text x="400" y="270" textAnchor="middle" fontSize="10" fill="#b4f953"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           no central Obelisk server needed
         </text>
       </g>
@@ -94,7 +94,7 @@ export default function RelayGroupsDiagram() {
       })}
 
       {/* footer */}
-      <text x="400" y="330" textAnchor="middle" fontSize="11" fill="#a3a3a3" fontFamily="monospace">
+      <text x="400" y="330" textAnchor="middle" fontSize="11" fill="#a3a3a3" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         move off Postgres → keep Discord UX, gain Nostr portability
       </text>
     </svg>

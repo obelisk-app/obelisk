@@ -8,7 +8,7 @@
  * the SDK does the heavy query; `fetchNote` walks the parent chain.
  */
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useNoteThread } from '@/hooks/social/useNoteThread';
 import NoteCard from './NoteCard';
 import NoteComposer from './NoteComposer';
@@ -24,7 +24,7 @@ export default function NoteThread({
   onOpenProfile?: (pubkey: string) => void;
   onOpenNote?: (id: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const myPubkey = useMyPubkey();
   const { root, ancestors, replies, loading, error, addReply } = useNoteThread(noteId);
 

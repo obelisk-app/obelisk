@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { RELAY_SETTINGS_ANCHOR } from '@/utils/open-settings';
 
 const renderLocalized = (ui: React.ReactElement) => render(

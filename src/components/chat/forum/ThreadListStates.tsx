@@ -1,34 +1,34 @@
 'use client';
 
 import { useSignerReady } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import TextButton from '@/components/ui/TextButton';
 
 export function LoadingThreads() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <div
       className="flex flex-col items-center justify-center h-full text-center text-lc-muted py-12 gap-3"
       data-testid="threads-loading"
     >
       <div className="lc-spinner" aria-hidden="true" />
-      <div className="text-sm">{t('forum.loading')}</div>
+      <div className="text-sm">{t('chat.forum.loading')}</div>
     </div>
   );
 }
 
 export function EmptyForum({ onNewThread }: { onNewThread: () => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const ready = useSignerReady();
   return (
     <div className="flex flex-col items-center justify-center h-full text-center text-lc-muted py-12">
-      <div className="text-sm">{t('forum.emptyDesktop')}</div>
+      <div className="text-sm">{t('chat.forum.emptyDesktop')}</div>
       {ready && (
         <TextButton
           onClick={onNewThread} className="mt-3 text-sm font-medium"
         >
-          {t('forum.startFirst')}
+          {t('chat.forum.startFirst')}
         </TextButton>
       )}
     </div>

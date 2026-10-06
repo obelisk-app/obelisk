@@ -104,10 +104,10 @@ export default function ObeliskBotsHero() {
 
       <g>
         <rect x="44" y="78" width="156" height="86" rx="16" fill="#171717" stroke="#b4f953" strokeWidth="1.6" />
-        <text x="122" y="110" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fafafa" fontFamily="monospace">
+        <text x="122" y="110" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fafafa" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           zap receipt
         </text>
-        <text x="122" y="134" textAnchor="middle" fontSize="12" fontWeight="700" fill="#f7b32b" fontFamily="monospace">
+        <text x="122" y="134" textAnchor="middle" fontSize="12" fontWeight="700" fill="#f7b32b" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           kind 9735
         </text>
         <rect x="72" y="144" width="100" height="6" rx="3" fill="#b4f953" opacity="0.5" />
@@ -118,7 +118,7 @@ export default function ObeliskBotsHero() {
         <text x="678" y="110" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fafafa" fontFamily="monospace">
           reaction
         </text>
-        <text x="678" y="134" textAnchor="middle" fontSize="12" fontWeight="700" fill="#f7b32b" fontFamily="monospace">
+        <text x="678" y="134" textAnchor="middle" fontSize="12" fontWeight="700" fill="#f7b32b" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           kind 7 zap
         </text>
         <rect x="628" y="144" width="100" height="6" rx="3" fill="#f7b32b" opacity="0.5" />
@@ -129,7 +129,7 @@ export default function ObeliskBotsHero() {
         <text x="122" y="270" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fafafa" fontFamily="monospace">
           groups
         </text>
-        <text x="122" y="294" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953" fontFamily="monospace">
+        <text x="122" y="294" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           NIP-29 scan
         </text>
         <rect x="72" y="304" width="100" height="6" rx="3" fill="#b4f953" opacity="0.5" />
@@ -140,7 +140,7 @@ export default function ObeliskBotsHero() {
         <text x="678" y="270" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fafafa" fontFamily="monospace">
           announcement
         </text>
-        <text x="678" y="294" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953" fontFamily="monospace">
+        <text x="678" y="294" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           kind 9 post
         </text>
         <rect x="628" y="304" width="100" height="6" rx="3" fill="#b4f953" opacity="0.5" />
@@ -173,7 +173,7 @@ export default function ObeliskBotsHero() {
           stroke="#b4f953"
           strokeWidth="1.5"
         />
-        <text x="400" y="301" textAnchor="middle" fontSize="13" fontWeight="900" fill="#b4f953" fontFamily="monospace">
+        <text x="400" y="301" textAnchor="middle" fontSize="13" fontWeight="900" fill="#b4f953" fontFamily="monospace"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           ZAP BOT
         </text>
       </g>
@@ -241,7 +241,7 @@ export default function ObeliskBotsHero() {
 
       <g fontSize="11" fontWeight="700" fontFamily="monospace">
         <rect x="244" y="342" width="96" height="24" rx="12" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.4" />
-        <text x="292" y="358" textAnchor="middle" fill="#b4f953">own nsec</text>
+        <text x="292" y="358" textAnchor="middle" fill="#b4f953">own nsec</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         <rect x="352" y="342" width="96" height="24" rx="12" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.4" />
         <text x="400" y="358" textAnchor="middle" fill="#b4f953">NIP-42</text>
         <rect x="460" y="342" width="96" height="24" rx="12" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.4" />

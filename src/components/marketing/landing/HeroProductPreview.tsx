@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 type HeroProductPreviewProps = {
   desktopAlt: string;
@@ -10,7 +10,7 @@ type HeroProductPreviewProps = {
 
 /** The desktop and phone screenshots under the hero, with the live badges. */
 export default function HeroProductPreview({ desktopAlt, mobileAlt }: HeroProductPreviewProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <div
       data-testid="hero-product-preview"
@@ -39,7 +39,7 @@ export default function HeroProductPreview({ desktopAlt, mobileAlt }: HeroProduc
       </div>
       <div className="hidden md:flex absolute right-40 bottom-8 items-center gap-2 rounded-full border border-lc-green/30 bg-lc-black/80 px-3 py-1.5 text-xs font-semibold text-lc-green shadow-xl shadow-black/40" aria-hidden="true">
         <span className="h-2 w-2 rounded-full bg-lc-green animate-dot-pulse" />
-        {t('landing.voiceLive')}
+        {t('marketing.landing.voiceLive')}
       </div>
 
       <div className="mx-auto w-[168px] sm:w-[190px] md:mt-6 lg:mt-0 lg:mx-0 lg:w-[210px] lg:absolute lg:right-0 lg:-bottom-10">

@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuthor } from '@/hooks/social/useAuthor';
 import { displayNameFor } from '@/utils/identity/display-name';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useCallFullscreen } from '@/hooks/useCallFullscreen';
 import { useStreamRef } from '@/hooks/useStreamRef';
 import { formatElapsed } from '@/utils/format/format-elapsed';
@@ -24,6 +24,7 @@ import {
   ScreenShareIcon, ShieldIcon, VideoIcon, VideoOffIcon,
 } from '@/components/ui/icons';
 import IconButton from '@/components/ui/IconButton';
+import type { Translate } from '@/i18n/keys';
 
 function CallTimer({ since }: { since: number }) {
   const [now, setNow] = useState(() => Date.now());
@@ -34,15 +35,15 @@ function CallTimer({ since }: { since: number }) {
   return <span data-testid="dm-call-timer">{formatElapsed(now - since)}</span>;
 }
 
-function statusLine(status: DmCallStatus, t: (k: string) => string): string | null {
-  if (status === 'outgoing') return t('call.calling');
-  if (status === 'connecting') return t('call.connecting');
-  if (status === 'reconnecting') return t('call.reconnecting');
+function statusLine(status: DmCallStatus, t: Translate): string | null {
+  if (status === 'outgoing') return t('calls.call.calling');
+  if (status === 'connecting') return t('calls.call.connecting');
+  if (status === 'reconnecting') return t('calls.call.reconnecting');
   return null;
 }
 
 export function IncomingCallBanner() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const peer = useDmCallStore((s) => s.peer);
   const video = useDmCallStore((s) => s.video);
   const author = useAuthor(peer);
@@ -52,7 +53,7 @@ export function IncomingCallBanner() {
     <div
       className="fixed inset-x-0 top-3 z-[90] mx-auto flex w-[min(28rem,calc(100%-2rem))] items-center gap-3 rounded-2xl border border-lc-green/40 bg-lc-dark/95 p-3 shadow-2xl backdrop-blur"
       role="alertdialog"
-      aria-label={video ? t('call.incomingVideo') : t('call.incomingVoice')}
+      aria-label={video ? t('calls.call.incomingVideo') : t('calls.call.incomingVoice')}
       data-testid="dm-incoming-call"
     >
       <span className="relative shrink-0">
@@ -63,15 +64,15 @@ export function IncomingCallBanner() {
         <div className="truncate text-sm font-bold text-lc-white">{name}</div>
         <div className="flex items-center gap-1 text-xs text-lc-muted">
           <LockIcon size={11} />
-          <span className="truncate">{video ? t('call.incomingVideo') : t('call.incomingVoice')}</span>
+          <span className="truncate">{video ? t('calls.call.incomingVideo') : t('calls.call.incomingVoice')}</span>
         </div>
       </div>
       <IconButton
         tone="dangerSolid"
         size="10"
         onClick={() => useDmCallStore.getState().declineCall()}
-        aria-label={t('call.decline')}
-        title={t('call.decline')}
+        aria-label={t('calls.call.decline')}
+        title={t('calls.call.decline')}
         data-testid="dm-call-decline"
       >
         <PhoneOffIcon size={18} />
@@ -80,8 +81,8 @@ export function IncomingCallBanner() {
         tone="primary"
         size="10"
         onClick={() => void useDmCallStore.getState().acceptCall(false)}
-        aria-label={t('call.acceptVoice')}
-        title={t('call.acceptVoice')}
+        aria-label={t('calls.call.acceptVoice')}
+        title={t('calls.call.acceptVoice')}
         data-testid="dm-call-accept"
       >
         <PhoneIcon size={18} />
@@ -91,8 +92,8 @@ export function IncomingCallBanner() {
           tone="primary"
           size="10"
           onClick={() => void useDmCallStore.getState().acceptCall(true)}
-          aria-label={t('call.acceptVideo')}
-          title={t('call.acceptVideo')}
+          aria-label={t('calls.call.acceptVideo')}
+          title={t('calls.call.acceptVideo')}
           data-testid="dm-call-accept-video"
         >
           <VideoIcon size={18} />
@@ -128,7 +129,7 @@ function ControlButton({
 }
 
 export function DmCallView() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const s = useDmCallStore();
   const viewRef = useRef<HTMLDivElement>(null);
   const { full, toggle: toggleFullscreen } = useCallFullscreen(viewRef);
@@ -160,8 +161,8 @@ export function DmCallView() {
             <IconButton
               tone="overlay"
               onClick={toggleFullscreen}
-              aria-label={full ? t('call.exitFullscreen') : t('call.fullscreen')}
-              title={full ? t('call.exitFullscreen') : t('call.fullscreen')}
+              aria-label={full ? t('calls.call.exitFullscreen') : t('calls.call.fullscreen')}
+              title={full ? t('calls.call.exitFullscreen') : t('calls.call.fullscreen')}
               data-testid="dm-call-fullscreen"
             >
               {full ? <MinimizeIcon size={18} /> : <MaximizeIcon size={18} />}
@@ -176,7 +177,7 @@ export function DmCallView() {
             <div className="text-lg font-bold text-lc-white">{name}</div>
             <div className="text-sm text-lc-muted" role="status">
               {ended
-                ? t(`call.ended.${s.endReason ?? 'local-hangup'}`)
+                ? t(`calls.call.ended.${s.endReason ?? 'local-hangup'}`)
                 : line ?? (s.connectedAt ? <CallTimer since={s.connectedAt} /> : null)}
             </div>
           </div>
@@ -196,17 +197,17 @@ export function DmCallView() {
             <span className="rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-lc-white">
               {name}
               {' · '}
-              {ended ? t(`call.ended.${s.endReason ?? 'local-hangup'}`) : line ?? (s.connectedAt ? <CallTimer since={s.connectedAt} /> : null)}
+              {ended ? t(`calls.call.ended.${s.endReason ?? 'local-hangup'}`) : line ?? (s.connectedAt ? <CallTimer since={s.connectedAt} /> : null)}
             </span>
           )}
           <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11px] text-lc-white" data-testid="dm-call-encrypted">
             <LockIcon size={11} />
-            {t('call.encrypted')}
+            {t('calls.call.encrypted')}
           </span>
           {s.relayOnly && (
             <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11px] text-lc-green" data-testid="dm-call-ip-hidden">
               <ShieldIcon size={11} />
-              {t('call.ipHidden')}
+              {t('calls.call.ipHidden')}
             </span>
           )}
         </div>
@@ -216,14 +217,14 @@ export function DmCallView() {
       {s.error && <p className="px-4 pt-2 text-center text-xs text-red-400" role="alert">{s.error}</p>}
       <div className="flex shrink-0 items-center justify-center gap-3 px-4 py-4">
         {ended ? (
-          <ControlButton onClick={() => s.dismiss()} label={t('call.close')} testId="dm-call-close">
+          <ControlButton onClick={() => s.dismiss()} label={t('calls.call.close')} testId="dm-call-close">
             <CloseIcon size={20} />
           </ControlButton>
         ) : (
           <>
             <ControlButton
               onClick={() => s.setMic(!s.media.micOn)}
-              label={s.media.micOn ? t('call.mute') : t('call.unmute')}
+              label={s.media.micOn ? t('calls.call.mute') : t('calls.call.unmute')}
               active={s.media.micOn}
               testId="dm-call-mic"
             >
@@ -231,28 +232,28 @@ export function DmCallView() {
             </ControlButton>
             <ControlButton
               onClick={() => void s.setCamera(!s.media.cameraOn)}
-              label={s.media.cameraOn ? t('call.cameraOff') : t('call.cameraOn')}
+              label={s.media.cameraOn ? t('calls.call.cameraOff') : t('calls.call.cameraOn')}
               active={s.media.cameraOn}
               testId="dm-call-camera"
             >
               {s.media.cameraOn ? <VideoIcon size={20} /> : <VideoOffIcon size={20} />}
             </ControlButton>
             {s.media.cameraOn && (
-              <ControlButton onClick={() => void s.flipCamera()} label={t('call.flip')} testId="dm-call-flip">
+              <ControlButton onClick={() => void s.flipCamera()} label={t('calls.call.flip')} testId="dm-call-flip">
                 <FlipCameraIcon size={20} />
               </ControlButton>
             )}
             {canShare && (
               <ControlButton
                 onClick={() => void s.setScreenShare(!s.media.screenOn)}
-                label={s.media.screenOn ? t('call.stopShare') : t('call.shareScreen')}
+                label={s.media.screenOn ? t('calls.call.stopShare') : t('calls.call.shareScreen')}
                 active={!s.media.screenOn}
                 testId="dm-call-screen"
               >
                 <ScreenShareIcon size={20} />
               </ControlButton>
             )}
-            <ControlButton onClick={() => s.hangup()} label={t('call.hangup')} danger testId="dm-call-hangup">
+            <ControlButton onClick={() => s.hangup()} label={t('calls.call.hangup')} danger testId="dm-call-hangup">
               <PhoneOffIcon size={20} />
             </ControlButton>
           </>

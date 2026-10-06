@@ -6,14 +6,14 @@ import { faviconFor } from '@/services/relay-info';
 import { useHasAnyHighlights } from '@/hooks/read-state/useChannelHighlights';
 import { useUnreadMentionCount } from '@/hooks/notifications/useNotificationSelectors';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { relayShareLink } from '@/utils/relay-url/relay-share-link';
 import { useRelayInfo } from '@/hooks/app/rail/useRelayInfo';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 
 /** One relay tile's state: its icon, its unread markers, its context menu and share link. */
 export function useRelayTile(url: string, active: boolean) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [menu, setMenu] = useState(false);
   const [iconFailed, setIconFailed] = useState(false);
   // The shared copy flag (2000 ms; this tile used its own 1500 ms timer).
@@ -36,7 +36,7 @@ export function useRelayTile(url: string, active: boolean) {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://obelisk.ar';
     const link = relayShareLink(origin, url);
     // A refused clipboard falls back to a prompt the user can copy from.
-    if (!(await copy(link))) window.prompt(t('rail.copyPrompt'), link);
+    if (!(await copy(link))) window.prompt(t('shell.rail.copyPrompt'), link);
   }
 
   return {

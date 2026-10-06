@@ -18,7 +18,7 @@
  */
 
 import { useRef, useState } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useMyPubkey } from '@/services/nostr-bridge';
 import type { JsDirectMessage } from '@/services/nostr-bridge';
 import AnchoredMenu from '@/components/social/AnchoredMenu';
@@ -40,7 +40,7 @@ export const DM_BUBBLE_MENU_GUTTER = 'pr-11';
  * reads as a control on both rather than a faint glyph.
  */
 export function DmMessageMenu({ message, className = '' }: { message: JsDirectMessage; className?: string }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const me = useMyPubkey();
   const [open, setOpen] = useState(false);
   const [rawOpen, setRawOpen] = useState(false);

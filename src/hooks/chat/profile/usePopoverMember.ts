@@ -4,13 +4,14 @@ import { useMemo } from 'react';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useGroupMemberInfo, useUserMetadata } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
+import type { MessageKey } from '@/i18n/keys';
 
 /** Colour per base role; the label is a key, resolved at render. */
-export const BASE_ROLE: Record<string, { key: string; color: string }> = {
-  owner: { key: 'roles.base.owner', color: '#f59e0b' },
-  admin: { key: 'roles.base.admin', color: '#ef4444' },
-  mod: { key: 'roles.base.mod', color: '#3b82f6' },
-  member: { key: 'roles.base.member', color: '#737373' },
+export const BASE_ROLE: Record<string, { key: MessageKey; color: string }> = {
+  owner: { key: 'admin.roles.base.owner', color: '#f59e0b' },
+  admin: { key: 'admin.roles.base.admin', color: '#ef4444' },
+  mod: { key: 'admin.roles.base.mod', color: '#3b82f6' },
+  member: { key: 'admin.roles.base.member', color: '#737373' },
 };
 
 

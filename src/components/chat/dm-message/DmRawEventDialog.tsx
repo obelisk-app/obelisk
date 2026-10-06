@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import type { DmRawEvent, JsDirectMessage } from '@/services/nostr-bridge';
 import Modal from '@/components/ui/Modal';
 import { LockIcon } from '@/components/ui/icons';
@@ -11,7 +11,7 @@ import { copyWithToast } from '@/services/clipboard';
 import { json, rawEventFacts } from '@/utils/chat/dm/dm-message-utils';
 
 function RawEventView({ event, hint, warning, testId }: { event: DmRawEvent; hint: string; warning?: string | null; testId: string }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <div data-testid={testId}>
       <p className="mb-2 text-xs text-lc-muted">{hint}</p>
@@ -46,7 +46,7 @@ function RawEventView({ event, hint, warning, testId }: { event: DmRawEvent; hin
 }
 
 export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessage; onClose: () => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { rumor, wire, holdsKey, nip04 } = rawEventFacts(message);
   const [tab, setTab] = useState<'message' | 'wire'>(rumor ? 'message' : 'wire');
 
@@ -75,7 +75,7 @@ export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessag
       {rumor && tab === 'message' && (
         <RawEventView
           event={rumor}
-          hint={t('dm.raw.rumorHint').replace('{kind}', String(rumor.kind))}
+          hint={t('dm.raw.rumorHint', { kind: String(rumor.kind) })}
           warning={holdsKey ? t('dm.raw.keyWarning') : null}
           testId="dm-raw-rumor"
         />

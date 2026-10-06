@@ -1,10 +1,16 @@
 import { ImageResponse } from 'next/og';
+import { getTranslations } from 'next-intl/server';
 import { readGuide } from '@/services/guides';
 import type { Locale } from '@/i18n';
+import { guidePath } from '@/utils/guides/guide-urls';
+import { localizedPath } from '@/utils/seo/alternates';
 
 export const ogImageSize = { width: 1200, height: 630 };
 
 export async function renderGuideOgImage(locale: Locale, slug: string) {
+  const t = await getTranslations({ locale });
+  // The card's footer names the article's own section, in its language.
+  const footer = `obelisk.ar${localizedPath(locale, guidePath())}`;
   let title = 'Obelisk';
   let description = '';
   let tags: string[] = [];
@@ -70,7 +76,7 @@ export async function renderGuideOgImage(locale: Locale, slug: string) {
               fontWeight: 700,
             }}
           >
-            {locale === 'en' ? 'Guide' : 'Guía'}
+            {t('seo.guides.ogLabel')}
           </div>
         </div>
 
@@ -128,7 +134,7 @@ export async function renderGuideOgImage(locale: Locale, slug: string) {
             </div>
           ))}
           <div style={{ flex: 1 }} />
-          <div style={{ fontSize: 20, color: '#a3a3a3' }}>obelisk.ar/guides</div>
+          <div style={{ fontSize: 20, color: '#a3a3a3' }}>{footer}</div>
         </div>
       </div>
     ),

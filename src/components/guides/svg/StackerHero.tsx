@@ -154,16 +154,16 @@ export default function StackerHero() {
       />
 
       <g fontWeight="600">
-        <text x={leftX} y="72" fill="#fafafa" fontSize="15">Clear a line…</text>
+        <text x={leftX} y="72" fill="#fafafa" fontSize="15">Clear a line…</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         <text x={rightX} y="72" fill="#fafafa" fontSize="15">…and somebody else digs</text>
 
         <g fontFamily="ui-monospace, monospace">
           <rect x="336" y="176" width="132" height="52" rx="9" fill="#171717" stroke="#262626" />
           <text x="352" y="199" fill="#b4f953" fontSize="12">op: attack</text>
-          <text x="352" y="217" fill="#a3a3a3" fontSize="11">lines 3 · hole 6</text>
+          <text x="352" y="217" fill="#a3a3a3" fontSize="11">lines 3 · hole 6</text> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
         </g>
 
-        <text x={leftX} y="368" fill="#a3a3a3" fontSize="11">
+        <text x={leftX} y="368" fill="#a3a3a3" fontSize="11"> {/* i18n-exempt: hero artwork, rendered into the OG snapshot PNGs */}
           Every board runs locally at sixty frames a second; only the consequences are published.
         </text>
       </g>

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 vi.mock('@/services/social/engagement', () => ({
   ensureCounts: vi.fn(),

@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUserMetadata as useProfile } from '@/services/nostr-bridge';
 import ShootingStars from '@/components/marketing/ShootingStars';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { Avatar } from './tiles';
 import IconButton from '@/components/ui/IconButton';
 
@@ -18,7 +18,7 @@ export function PassiveCallRoster({ pubkeys, count, mode }: {
   count: number;
   mode?: 'sfu' | 'mesh';
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   if (count <= 0 && pubkeys.length === 0) return null;
   const visible = pubkeys.slice(0, 6);
   const hidden = Math.max(0, count - visible.length);
@@ -94,7 +94,7 @@ export function StageBackdrop() {
 }
 
 export function ScrollableRail({ children }: { children: React.ReactNode }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const ref = useRef<HTMLElement | null>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);

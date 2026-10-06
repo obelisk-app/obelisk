@@ -5,7 +5,7 @@ import { parseBolt11, type ParsedInvoice } from '@/utils/bolt11';
 import { useMyPubkey, useNipSigner, useUserMetadata } from '@/services/nostr-bridge';
 import { formatPubkey } from '@nostr-wot/data';
 import { useLocalWallet } from '@/hooks/wallet/useLocalWallet';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import { useHasExpired } from '@/hooks/useHasExpired';
 import Button from '@/components/ui/Button';
@@ -37,7 +37,7 @@ interface PaidState {
  */
 export default function InvoiceCard({ invoice, messageId: _messageId, channelId: _channelId }: Props) {
   const { formatNumber } = useFormat();
-  const { t } = useTranslation();
+  const t = useTranslations();
   const myPubkey = useMyPubkey();
   const signer = useNipSigner();
   const { client: _walletClient } = useLocalWallet(myPubkey, signer);
@@ -101,7 +101,7 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
             ✅ Pagada{payerName ? ` · ${payerName}` : ''}
           </span>
         ) : expired ? (
-          <span className="shrink-0 text-[11px] text-lc-muted">{t('invoice.expired')}</span>
+          <span className="shrink-0 text-[11px] text-lc-muted">{t('chat.invoice.expired')}</span>
         ) : (
           <Button
             variant="pill"

@@ -2,7 +2,7 @@
 
 import type { GameState } from 'vesta';
 import type { VestaAction } from '@/lib/games/vesta/definition';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { DEV_EMOJI } from './resources';
 import { ActionButton as Action, ModeToggle as Toggle } from './table-controls';
 import type { VestaTurn } from '@/hooks/chat/games/vesta/useVestaTurn';
@@ -14,7 +14,7 @@ export default function VestaTurnActions({ state, busy, turn }: {
   busy?: boolean;
   turn: VestaTurn;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { myTurn, isSetup, actingIdx, can, send, pick, setPick } = turn;
   return (
     <>

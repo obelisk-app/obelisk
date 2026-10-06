@@ -1,4 +1,5 @@
 import { MUTED_FOREVER, type ChannelNotifyLevel } from '@/store/channel-prefs';
+import type { MessageKey } from '@/i18n/keys';
 
 export interface ChannelMenuTarget {
   readonly relay: string;
@@ -8,18 +9,18 @@ export interface ChannelMenuTarget {
   readonly hasUnread: boolean;
 }
 
-export const MUTE_OPTIONS: ReadonlyArray<{ key: string; ms: number }> = [
-  { key: 'channelMenu.mute.15m', ms: 15 * 60_000 },
-  { key: 'channelMenu.mute.1h', ms: 60 * 60_000 },
-  { key: 'channelMenu.mute.8h', ms: 8 * 60 * 60_000 },
-  { key: 'channelMenu.mute.24h', ms: 24 * 60 * 60_000 },
-  { key: 'channelMenu.mute.forever', ms: MUTED_FOREVER },
+export const MUTE_OPTIONS: ReadonlyArray<{ key: MessageKey; ms: number }> = [
+  { key: 'chat.channelMenu.mute.15m', ms: 15 * 60_000 },
+  { key: 'chat.channelMenu.mute.1h', ms: 60 * 60_000 },
+  { key: 'chat.channelMenu.mute.8h', ms: 8 * 60 * 60_000 },
+  { key: 'chat.channelMenu.mute.24h', ms: 24 * 60 * 60_000 },
+  { key: 'chat.channelMenu.mute.forever', ms: MUTED_FOREVER },
 ];
 
-export const NOTIFY_OPTIONS: ReadonlyArray<{ level: ChannelNotifyLevel; key: string }> = [
-  { level: 'all', key: 'channelMenu.notify.all' },
-  { level: 'mentions', key: 'channelMenu.notify.mentions' },
-  { level: 'nothing', key: 'channelMenu.notify.nothing' },
+export const NOTIFY_OPTIONS: ReadonlyArray<{ level: ChannelNotifyLevel; key: MessageKey }> = [
+  { level: 'all', key: 'chat.channelMenu.notify.all' },
+  { level: 'mentions', key: 'chat.channelMenu.notify.mentions' },
+  { level: 'nothing', key: 'chat.channelMenu.notify.nothing' },
 ];
 
 /** Room a submenu needs beside the menu before it opens to the left instead. */

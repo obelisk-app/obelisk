@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import SegmentedControl from '@/components/ui/SegmentedControl';
 import Text from '@/components/ui/Text';
@@ -35,7 +35,7 @@ export default function FilterSheet({
   onToggleHighlights: () => void;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   // Back closes the sheet on a phone. A desktop dropdown is dismissed by
   // clicking away, and pushing history for it would make the back button
   // feel like it did nothing.

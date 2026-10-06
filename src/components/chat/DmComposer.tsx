@@ -24,7 +24,7 @@
  */
 
 import { useRef, type InputHTMLAttributes } from 'react';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { MESSAGE_INPUT_PROPS } from '@/utils/message-input-props';
 import Input from '@/components/ui/Input';
 import MessageMediaPicker from './MessageMediaPicker';
@@ -38,7 +38,7 @@ import { DmComposerActions, DmSendControl } from './dm-composer/DmComposerContro
 const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
 
 export function DmComposer({ peer, variant }: { peer: string; variant: 'desktop' | 'mobile' }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const inputRef = useRef<HTMLInputElement>(null);
   const state = useDmComposer(peer, inputRef);
   const { voice, error, pickerOpen } = state;

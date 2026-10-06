@@ -21,7 +21,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import type { FeedState } from '@/hooks/social/useFeed';
 import NoteCard from './NoteCard';
@@ -77,7 +77,7 @@ export default function FeedList({
   header?: React.ReactNode;
   scrollRef?: React.RefObject<HTMLElement | null>;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { notes, loading, loadingMore, error, exhausted, pendingCount, repostersByTarget } = state;
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -206,7 +206,7 @@ export default function FeedList({
     return (
       <div className="flex min-h-48 flex-col items-center justify-center gap-3 px-6 text-center" data-testid="feed-empty">
         <p className="max-w-xs text-sm text-lc-muted">
-          {error ? t('social.loadFailed') : emptyLabel ?? t('profileFeed.empty')}
+          {error ? t('social.loadFailed') : emptyLabel ?? t('social.profileFeed.empty')}
         </p>
         <Button variant="pillSecondary" size="xs" onClick={state.refresh}>
           {t('social.refresh')}

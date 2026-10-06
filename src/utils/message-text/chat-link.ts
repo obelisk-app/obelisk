@@ -6,9 +6,17 @@ export interface ChatLinkTarget {
   postId?: string;
 }
 
+import { appShellPath } from '@/utils/shell/mobile/url-state';
+
+/** `/chat` (the legacy name) or `/app`, in any language (`/es/app`). */
+const CHAT_PATH = /^(?:\/(?:es|pt))?\/(?:chat|app)$/;
+
 /**
- * A same-origin `/chat?c=<slug>[&m=|&p=]` link, or null for anything else
- * (another origin, another path, an unparseable href, or no window).
+ * A same-origin `/chat?c=<slug>[&m=|&p=]` link (or the same under `/app`,
+ * `/es/app`, `/pt/app`), or null for anything else (another origin, another
+ * path, an unparseable href, or no window). The path it returns is the chat
+ * shell in the reader's current language, so following a link written by an
+ * English speaker does not switch a Spanish reader to English.
  */
 export function chatLinkTarget(href: string): ChatLinkTarget | null {
   try {
@@ -16,13 +24,13 @@ export function chatLinkTarget(href: string): ChatLinkTarget | null {
     if (
       typeof window === 'undefined' ||
       url.origin !== window.location.origin ||
-      url.pathname !== '/chat'
+      !CHAT_PATH.test(url.pathname)
     ) {
       return null;
     }
     const sp = url.searchParams;
     return {
-      path: url.pathname + url.search,
+      path: appShellPath(window.location.pathname) + url.search,
       slug: sp.get('c'),
       messageId: sp.get('m') || undefined,
       postId: sp.get('p') || undefined,

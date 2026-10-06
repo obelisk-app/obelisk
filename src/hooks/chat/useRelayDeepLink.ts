@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { getBridge, nostrActions } from '@/services/nostr-bridge';
 import { confirmDialog } from '@/services/confirm-dialog';
 import { shortHost } from '@/utils/relay-url/url-host';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 export type DeepLinkRelayOutcome = 'unchanged' | 'switched' | 'declined' | 'failed';
 
@@ -121,7 +121,7 @@ async function readBridgeRelayState(): Promise<RelayState> {
  * either be stale or re-run the parse.
  */
 export function useRelayDeepLink(): (requested: string) => Promise<DeepLinkRelayOutcome> {
-  const { t } = useTranslation();
+  const t = useTranslations();
   // Read through a ref so the callback can stay stable across locale changes.
   const translate = useRef(t);
   useEffect(() => { translate.current = t; }, [t]);
@@ -129,9 +129,9 @@ export function useRelayDeepLink(): (requested: string) => Promise<DeepLinkRelay
     requested,
     readRelayState: readBridgeRelayState,
     confirm: (host) => confirmDialog({
-      title: translate.current('deeplink.relay.title').replace('{host}', host),
-      message: translate.current('deeplink.relay.body'),
-      confirmLabel: translate.current('deeplink.relay.connect'),
+      title: translate.current('common.deeplink.relay.title', { host }),
+      message: translate.current('common.deeplink.relay.body'),
+      confirmLabel: translate.current('common.deeplink.relay.connect'),
       tone: 'default',
       icon: 'none',
     }),

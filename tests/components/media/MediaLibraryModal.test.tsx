@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */

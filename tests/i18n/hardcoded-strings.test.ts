@@ -1,36 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import baseline from '@/i18n/hardcoded-baseline.json';
-import { countsByFile, looksLikeProse, scanTree } from '@/i18n/hardcoded-strings';
+import { countsByFile, looksLikeProse, scanFile, scanTree } from '@/i18n/hardcoded-strings';
 
 const BASELINE = baseline as Record<string, number>;
 
 /**
  * A ratchet, not a gate.
  *
- * 654 user-visible strings were written straight into JSX and never reached
- * a dictionary. They were English in the Spanish build too, and translating
- * `pt.json` did nothing for them. Banning them outright in one commit would
- * have meant a red suite until all 654 were extracted, so the known set was
- * frozen here and this test fails on any *increase*: a new file with
- * hardcoded copy, or an existing file gaining more.
+ * Copy written straight into the source is English in every language. The
+ * scanner (src/i18n/hardcoded-strings.ts, rules in src/i18n/hardcoded/)
+ * reads JSX text, reader-facing attributes and their expressions, object
+ * copy, toasts and dialogs, ternaries, fallbacks, templates, `.ts` files,
+ * and prose in src/lib; comments are stripped first. Round 18 widened it
+ * from "JSX text and five quoted attributes" to all of that, and the
+ * baseline was regenerated honestly: several hundred strings, owned by the
+ * translation waves listed in audits/obelisk/round18/I18N-WAVE2.md.
  *
- * They have since been extracted. What is left in the baseline is exempt on
- * purpose, and each entry is one of:
+ * The number may only go down: a new file with hardcoded copy, or an
+ * existing file gaining more, fails. Text that legitimately stays (brand
+ * names, protocol terms, artwork that feeds the OG snapshots, type
+ * specimens) carries an `i18n-exempt: <reason>` marker on its line instead
+ * of a baseline entry, so the baseline can reach an empty object.
  *
- *  - **Guide hero SVGs** (`components/guides/svg/**`): English inside
- *    `<text>` elements that also feed the OG-image snapshot pipeline.
- *    Translating them is a build-pipeline change, not a string swap.
- *  - **Brand names**: "Obelisk", "GitHub", "Nostr WoT", "QuantaKrypto",
- *    and the media kit's typography and pitch specimens, which are the
- *    asset itself rather than copy about it.
- *  - **Scanner misreads** the filter can't distinguish from prose: a
- *    selector string, a sentence inside a code comment.
- *
- * So the number should keep going *down* and never up. When a file leaves
- * the list, delete its line.
- *
- * Regenerate after extracting:
- *   npx tsx -e "…scanTree…"   (see hardcoded-strings.ts)
+ * After moving strings to the messages, regenerate (never hand-merge):
+ *   npx tsx scripts/i18n/hardcoded-baseline.ts
  */
 describe('hardcoded user-visible strings', () => {
   const counts = countsByFile(scanTree('src'));
@@ -68,6 +61,55 @@ describe('hardcoded user-visible strings', () => {
   });
 });
 
+describe('the scanner rules', () => {
+  const texts = (source: string, file = 'components/x/Foo.tsx') => scanFile(file, source).map((f) => f.text);
+
+  it('reads JSX text and quoted reader-facing attributes', () => {
+    expect(texts('const a = <p title="Remove relay">No messages yet</p>;').sort()).toEqual(['No messages yet', 'Remove relay']);
+  });
+
+  it('reads literals inside attribute expressions, ternaries and templates included', () => {
+    expect(texts("const a = <b aria-label={muted ? 'Unmute' : 'Mute'} />;")).toEqual(expect.arrayContaining(['Unmute', 'Mute']));
+    expect(texts('const a = <b title={`Grant ${role} to ${name}`} />;')).toEqual(expect.arrayContaining(['Grant']));
+  });
+
+  it('reads copy-shaped object keys, in .ts files too', () => {
+    expect(texts("export const X = { label: 'Add relay', id: 'add' };", 'utils/x.ts')).toEqual(['Add relay']);
+    expect(texts("export const X = { name: 'relay' };", 'utils/x.ts')).toEqual([]);
+  });
+
+  it('reads toast, dialog and error-setter arguments', () => {
+    expect(texts("pushToast({ title: 'Saved', body: 'Your layout is live' });", 'hooks/x.ts')).toEqual(expect.arrayContaining(['Saved', 'Your layout is live']));
+    expect(texts("setError('Upload failed');", 'hooks/x.ts')).toEqual(['Upload failed']);
+  });
+
+  it('reads ternaries and fallbacks, but not class names', () => {
+    expect(texts("const s = online ? 'Online' : 'Offline';", 'utils/x.ts')).toEqual(['Online', 'Offline']);
+    expect(texts("const n = name || 'Anonymous';", 'utils/x.ts')).toEqual(['Anonymous']);
+    expect(texts("const c = <b className={on ? 'text-lc-green font-bold' : 'text-lc-muted'} />;")).toEqual([]);
+  });
+
+  it('reads capitalised template prose, not paths or t() keys', () => {
+    expect(texts('const s = `Connecting to ${host}`;', 'utils/x.ts')).toEqual(['Connecting to']);
+    expect(texts('const p = `/guides/${slug}`; const k = t(`social.filter.${v}`);', 'utils/x.ts')).toEqual([]);
+  });
+
+  it('ignores comments and message keys', () => {
+    expect(texts("// Shows the Welcome Screen here\nconst k = t('shell.desktop.title');", 'utils/x.ts')).toEqual([]);
+    expect(texts("/* A Long Sentence In A Comment */ const a = 1;", 'utils/x.ts')).toEqual([]);
+  });
+
+  it('treats any prose literal in src/lib as copy, except errors and logs', () => {
+    expect(texts("export const RULES = ['Roll first'];", 'lib/games/x.ts')).toEqual(['Roll first']);
+    expect(texts("throw new Error('Something Broke Badly');", 'lib/x.ts')).toEqual([]);
+  });
+
+  it('honours a per-line i18n-exempt marker with a reason', () => {
+    expect(texts('const a = <text>Relay Hero Label</text>; {/* i18n-exempt: artwork */}')).toEqual([]);
+    expect(texts('const a = <text>Relay Hero Label</text>; {/* i18n-exempt: */}')).toEqual(['Relay Hero Label']);
+  });
+});
+
 describe('what counts as prose', () => {
   it('catches the copy a reader would notice', () => {
     expect(looksLikeProse('Add relay')).toBe(true);
@@ -86,5 +128,10 @@ describe('what counts as prose', () => {
     expect(looksLikeProse('px')).toBe(false);
     expect(looksLikeProse('@')).toBe(false);
     expect(looksLikeProse('data-testid')).toBe(false);
+    expect(looksLikeProse('shell.desktop.channel.welcome')).toBe(false);
+    expect(looksLikeProse('px-3 py-1 text-lc-muted')).toBe(false);
+    expect(looksLikeProse('rgba(180, 249, 83, 0.08)')).toBe(false);
+    expect(looksLikeProse('Obelisk')).toBe(false);
+    expect(looksLikeProse('DesktopShell')).toBe(false);
   });
 });

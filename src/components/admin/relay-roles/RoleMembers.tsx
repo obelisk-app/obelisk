@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Text from '@/components/ui/Text';
 import UserAvatar from '@/components/ui/UserAvatar';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useRelayPeople, useUserMetadata, type JsMemberInfo } from '@/services/nostr-bridge';
 import type { RelayRole } from '@/services/relay-roles';
@@ -20,7 +20,7 @@ export default function RoleMembers({ role, holders, busy, onGrant, onRevoke, on
   onRevoke: (pubkey: string) => void;
   onError: (message: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [query, setQuery] = useState('');
   const people = useRelayPeople();
   const held = useMemo(() => new Set(holders), [holders]);
@@ -53,7 +53,7 @@ export default function RoleMembers({ role, holders, busy, onGrant, onRevoke, on
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => { if (event.key === 'Enter' && pastedIsNew) grantPasted(); }}
-        placeholder={t('roles.searchPlaceholder')}
+        placeholder={t('admin.roles.searchPlaceholder')}
         aria-label={`Grant ${role.name} to`}
       />
 
@@ -90,7 +90,7 @@ export default function RoleMembers({ role, holders, busy, onGrant, onRevoke, on
           {holders.map((pubkey) => (
             <RoleHolderRow key={pubkey} pubkey={pubkey} roleName={role.name} busy={busy} onRevoke={() => onRevoke(pubkey)} />
           ))}
-          {holders.length === 0 && <li className="py-2 text-xs text-lc-muted">{t('roles.nobody')}</li>}
+          {holders.length === 0 && <li className="py-2 text-xs text-lc-muted">{t('admin.roles.nobody')}</li>}
         </ul>
       </div>
     </div>
@@ -103,7 +103,7 @@ function RolePersonRow({ person, busy, roleName, onClick }: {
   roleName: string;
   onClick: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <li>
       <button
@@ -128,7 +128,7 @@ function RolePersonRow({ person, busy, roleName, onClick }: {
         {person.role === 'admin' && (
           <span className="shrink-0 rounded-full bg-lc-green/15 px-1.5 py-px text-[9px] font-bold uppercase text-lc-green">admin</span>
         )}
-        <span className="shrink-0 text-xs font-semibold text-lc-green">{t('roles.grant')}</span>
+        <span className="shrink-0 text-xs font-semibold text-lc-green">{t('admin.roles.grant')}</span>
       </button>
     </li>
   );
@@ -140,7 +140,7 @@ function RoleHolderRow({ pubkey, roleName, busy, onRevoke }: {
   busy: boolean;
   onRevoke: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const meta = useUserMetadata(pubkey);
   const named = meta?.displayName || meta?.name;
   const npub = shortNpubLabel(pubkey);
@@ -159,7 +159,7 @@ function RoleHolderRow({ pubkey, roleName, busy, onRevoke }: {
         disabled={busy}
         aria-label={`Revoke ${roleName} from ${npub}`}
       >
-        {t('roles.revoke')}
+        {t('admin.roles.revoke')}
       </Button>
     </li>
   );

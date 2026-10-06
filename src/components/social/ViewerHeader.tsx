@@ -8,10 +8,10 @@
  * render throws: every public /notes, /p and /t URL answered 500.
  */
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/ui/Button';
 import ObeliskIcon from '@/components/ui/ObeliskIcon';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 /**
  * Header for the public viewer pages (`/notes`, `/p`, `/t`).
@@ -26,7 +26,7 @@ import { useTranslation } from '@/i18n/context';
  * three times so the three pages can't drift apart.
  */
 export default function ViewerHeader({ maxWidth = 'max-w-2xl' }: { maxWidth?: string }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <header className="sticky top-0 z-20 border-b border-lc-border bg-lc-black/90 backdrop-blur">
       <div className={`mx-auto flex ${maxWidth} items-center gap-3 px-5 py-2.5`}>
@@ -40,7 +40,7 @@ export default function ViewerHeader({ maxWidth = 'max-w-2xl' }: { maxWidth?: st
           channel they happened to leave open.
         */}
         <Link href="/app?s=feed" className={`${buttonClass({ variant: 'pill', size: 'xs' })} ml-auto`}>
-          {t('viewer.openInObelisk')}
+          {t('social.viewer.openInObelisk')}
         </Link>
       </div>
     </header>

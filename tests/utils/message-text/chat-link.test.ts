@@ -6,8 +6,19 @@ describe('chatLinkTarget', () => {
 
   it('reads slug, message and post from a same-origin /chat link', () => {
     const href = `${window.location.origin}/chat?c=general&m=abc`;
-    expect(chatLinkTarget(href)).toEqual({ path: '/chat?c=general&m=abc', slug: 'general', messageId: 'abc', postId: undefined });
-    expect(chatLinkTarget('/chat?p=xyz')).toEqual({ path: '/chat?p=xyz', slug: null, messageId: undefined, postId: 'xyz' });
+    expect(chatLinkTarget(href)).toEqual({ path: '/app?c=general&m=abc', slug: 'general', messageId: 'abc', postId: undefined });
+    expect(chatLinkTarget('/chat?p=xyz')).toEqual({ path: '/app?p=xyz', slug: null, messageId: undefined, postId: 'xyz' });
+  });
+
+  it('accepts /app and the prefixed shells, and keeps the reader in their language', () => {
+    window.history.replaceState(null, '', '/es/app?c=old');
+    try {
+      expect(chatLinkTarget('/app?c=general')?.path).toBe('/es/app?c=general');
+      expect(chatLinkTarget('/pt/chat?c=general')?.path).toBe('/es/app?c=general');
+      expect(chatLinkTarget('/es/notes/x')).toBeNull();
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
   });
 
   it('ignores other origins and paths', () => {

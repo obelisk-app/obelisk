@@ -2,13 +2,13 @@
 
 import { useEffect } from 'react';
 import { useToastStore } from '@/store/toast';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import { CloseIcon } from '@/components/ui/icons';
 
 const AUTO_DISMISS_MS = 5000;
 
 export default function ToastStack() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const toasts = useToastStore((s) => s.toasts);
   const dismissToast = useToastStore((s) => s.dismissToast);
 

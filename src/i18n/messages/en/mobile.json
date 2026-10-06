@@ -1,0 +1,191 @@
+{
+  "settings": {
+    "identity": "Identity",
+    "openOtherClient": "Open in another client",
+    "editNostrProfile": "Edit Nostr Profile",
+    "disconnect": "Disconnect",
+    "disconnectTitle": "Disconnect from Nostr?",
+    "disconnectDescription": "Your session will end on this device. You'll need your nsec, signer extension, or bunker to log back in.",
+    "disconnectConfirm": "Yes, disconnect",
+    "editProfile": "Edit profile",
+    "changeBanner": "Change banner",
+    "addBanner": "Tap to add banner",
+    "changeBannerImage": "Change banner image",
+    "changeProfilePicture": "Change profile picture",
+    "uploadTip": "Tap your avatar or banner to upload a new image. Your changes are published as kind:0 metadata.",
+    "displayName": "Display name",
+    "yourName": "Your name",
+    "aboutPlaceholder": "A short bio...",
+    "lightningAddress": "Lightning address",
+    "saveChanges": "Save changes",
+    "imageOnly": "Please select an image file",
+    "imageTooLarge": "Image is too large (max 10MB)",
+    "publishFailed": "Failed to publish profile",
+    "relays": "Relays",
+    "packs": "Emoji, GIFs & stickers",
+    "packsHint": "Create packs and manage favorites."
+  },
+  "nav": {
+    "servers": "Servers"
+  },
+  "inbox": {
+    "mentions": "@mentions",
+    "caughtUp": "All caught up",
+    "emptyDms": "Direct messages you have not opened yet land here.",
+    "emptyMentions": "When someone @-mentions you on this relay, it lands here.",
+    "type": {
+      "mention": "@ Mentioned you",
+      "reply": "↩ Replied to you"
+    }
+  },
+  "members": {
+    "label": "members",
+    "admins": "Admins",
+    "members": "Members",
+    "loading": "Loading members...",
+    "empty": "No members",
+    "emptyDescription": "No relay-published 39002 members yet.",
+    "admin": "admin",
+    "addPlaceholder": "npub1… or 64-char hex",
+    "addHelp": "Add member · NIP-29 kind 9000",
+    "promote": "Make admin",
+    "emptyHelp": "No members listed yet. Public channels do not require a member list.",
+    "demote": "Demote",
+    "kick": "Kick"
+  },
+  "channel": {
+    "loadingMessages": "Loading messages...",
+    "loadingEarlier": "Loading earlier messages...",
+    "noEarlierMessages": "No earlier messages",
+    "noMessages": "No messages yet",
+    "noMessagesDescription": "Be the first to say hi.",
+    "messagePlaceholder": "Message #{name}",
+    "replyingTo": "Replying to",
+    "cancelReply": "Cancel reply",
+    "descriptionPlaceholder": "What's this channel about?",
+    "access": "Access",
+    "public": "Public",
+    "publicHint": "everyone reads and posts",
+    "readOnly": "Read-only",
+    "readOnlyHint": "members post",
+    "private": "Private",
+    "privateHint": "hidden; members only",
+    "type": "Channel type"
+  },
+  "profile": {
+    "more": "More",
+    "follow": "Follow",
+    "message": "Message",
+    "postsComing": "Posts and replies will surface here",
+    "timelineComing": "(kind 1 timeline · coming soon)"
+  },
+  "search": {
+    "aria": "Search messages, people, and channels",
+    "placeholder": "Search messages, people, channels...",
+    "all": "All",
+    "channelsHelp": "Type to filter channels.",
+    "serverSideHelp": "Server-side message search uses from:, in:#, has:."
+  },
+  "empty": {
+    "noChannelSelected": "No channel selected",
+    "noVoiceChannel": "No voice channel",
+    "noConversation": "No conversation",
+    "noProfileSelected": "No profile selected",
+    "noChannel": "No channel",
+    "noForum": "No publications",
+    "unknownScreen": "Unknown screen",
+    "backHome": "Back to home"
+  },
+  "navigation": {
+    "pressBackAgain": "Press back again to exit"
+  },
+  "signing": {
+    "label": "Signature status",
+    "title": "Nostr signature",
+    "idle": "Ready",
+    "pending": "Waiting for approval",
+    "ok": "Signed",
+    "error": "Signature failed",
+    "none": "No signature request is active."
+  },
+  "branding": {
+    "iconAlt": "Icon",
+    "bannerAlt": "Banner",
+    "descriptionPlaceholder": "What's this space about?",
+    "edit": "Edit branding",
+    "help": "Shown to everyone on this relay · NIP-78 kind 30078.",
+    "hint": "name · icon · banner",
+    "iconHint": "Square logo shown next to the relay name.",
+    "bannerHint": "Wide image shown above the relay name."
+  },
+  "layout": {
+    "categoryPlaceholder": "e.g. General, Trading, Voice",
+    "moveUp": "Move category up",
+    "moveDown": "Move category down",
+    "deleteCategory": "Delete category",
+    "title": "Categories & order",
+    "help": "Shared layout for everyone on this relay · any group admin can edit · NIP-78 kind 30078.",
+    "newCategory": "New category",
+    "categories": "Categories",
+    "empty": "No categories yet. Channels render under “Uncategorized” until you add one.",
+    "delete": "Delete"
+  },
+  "rail": {
+    "addRelay": "Add relay",
+    "addTitle": "Add a relay",
+    "addHelp": "Paste a NIP-29 group relay URL. Each relay is a separate “server” in the rail."
+  },
+  "header": {
+    "search": "Search this server",
+    "createChannel": "Create channel",
+    "spaceMenu": "Space menu"
+  },
+  "composer": {
+    "openPicker": "Open emoji, GIF, and sticker picker",
+    "emoji": "Emoji"
+  },
+  "message": {
+    "actions": "Message actions",
+    "dismissFailed": "Dismiss failed message",
+    "failed": "Couldn’t send",
+    "zap": "Send zap"
+  },
+  "voice": {
+    "sfuTitle": "Routed through an SFU",
+    "minimize": "Minimize call"
+  },
+  "forum": {
+    "clearSearch": "Clear search",
+    "bodyPlaceholder": "What's the publication about?",
+    "empty": "No publications yet",
+    "emptyHint": "Tap + to start one.",
+    "firstMessage": "First message"
+  },
+  "space": {
+    "newChannel": "New channel",
+    "noChannels": "No channels on this relay yet.",
+    "invite": "Invite people…",
+    "share": "Share this space",
+    "copyUrl": "Copy relay URL",
+    "layoutHint": "layout",
+    "roles": "Roles & ranks",
+    "rolesHint": "tiered badges",
+    "people": "Admins & members",
+    "peopleHint": "bulk cleanup",
+    "leave": "Leave this space"
+  },
+  "field": {
+    "description": "Description",
+    "name": "Name"
+  },
+  "channels": {
+    "empty": "No channels here yet."
+  },
+  "zap": {
+    "title": "Send a zap",
+    "walletHint": "Wallet · NWC · check on settings"
+  },
+  "relay": {
+    "confirmLeave": "Leave {name}?"
+  }
+}

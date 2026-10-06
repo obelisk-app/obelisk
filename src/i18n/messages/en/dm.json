@@ -1,0 +1,88 @@
+{
+  "optIn": {
+    "title": "Turn on direct messages",
+    "subtitle": "Enable DMs only on devices where you want them active.",
+    "point": {
+      "events": "DMs use Nostr encrypted direct-message events.",
+      "subscriptions": "Enabling DMs may open DM relay subscriptions and decrypt/display conversations for this device/session.",
+      "device": "Leave DMs off if you do not want DM traffic or notifications on this device."
+    },
+    "enable": "Enable DMs",
+    "notNow": "Not now",
+    "continueWithout": "Continue without DMs"
+  },
+  "title": "Direct Messages",
+  "newMessage": "New message",
+  "clearCache": "Clear DM cache",
+  "clearCacheTitle": "Clear DM cache (no-op in this build)",
+  "clearCacheAlert": "DM cache wipe is local-only; this client keeps DMs in memory only. Refresh to clear.",
+  "conversationOptions": "Conversation options",
+  "viewProfile": "View profile",
+  "new": "New DM",
+  "noConversations": "No conversations yet",
+  "startConversation": "Start a conversation",
+  "noFollows": "None of your follows have messaged you yet",
+  "everyoneInFollows": "Everyone you've messaged is in Follows",
+  "follows": "Follows",
+  "others": "Others",
+  "youPrefix": "You: ",
+  "encryptedPill": "Messages are end-to-end encrypted",
+  "protocol": {
+    "label": "Message protocol",
+    "nip17Title": "Default: sealed and gift-wrapped, attachments included",
+    "nip04Title": "Legacy, for older clients",
+    "nip04Explain": "NIP-04 is for older clients that only speak it. Relays can see who is talking to whom and when, and attachments are off.",
+    "useNip04": "Use NIP-04",
+    "keepNip17": "Keep NIP-17"
+  },
+  "attach": "Attach",
+  "compose": {
+    "to": "To:",
+    "next": "Next",
+    "recent": "Recent",
+    "noRecent": "No recent conversations",
+    "noRecentDescription": "Paste an npub above and tap Next.",
+    "placeholder": "Name, NIP-05, or npub"
+  },
+  "emptyMobileDescription": "Tap + to start an encrypted DM with anyone on Nostr.",
+  "pickConversation": "Pick or start a DM conversation.",
+  "emptyEncrypted": "No messages yet. Send the first one, end-to-end encrypted.",
+  "placeholderEncrypted": "Encrypted message",
+  "failedSend": "Couldn’t send",
+  "dismissFailed": "Dismiss failed message",
+  "composePlaceholder": "npub1…, hex, or alice@example.com",
+  "start": "Start",
+  "file": {
+    "decrypting": "Decrypting…",
+    "failed": "Couldn't open this encrypted file",
+    "integrity": "This file doesn't match what was sent",
+    "download": "Download",
+    "open": "Decrypt and show",
+    "attachment": "Encrypted attachment",
+    "uploading": "Encrypting and uploading…",
+    "tooLarge": "That file is too large",
+    "badType": "That file type isn't supported",
+    "uploadFailed": "Upload failed",
+    "needsNip17": "Encrypted files need NIP-17 for this conversation"
+  },
+  "msg": {
+    "options": "Message options",
+    "copyText": "Copy text",
+    "copyFileLink": "Copy file link",
+    "copyId": "Copy message ID",
+    "copySender": "Copy sender npub",
+    "viewRaw": "View raw event",
+    "copied": "Copied"
+  },
+  "raw": {
+    "title": "Raw event",
+    "tabMessage": "Decrypted message",
+    "tabWire": "On the relay",
+    "rumorHint": "The message itself (kind {kind}), as only you and the other person can read it. It is unsigned on purpose: the seal inside the gift wrap is what proves who sent it.",
+    "wrapHint": "What relays store: a gift wrap (kind 1059) signed by a one-time key. Relays see only who it is addressed to, not the sender, the time, or the content.",
+    "nip04Hint": "A legacy NIP-04 direct message (kind 4). The content is encrypted, but sender, recipient and time are visible to every relay.",
+    "decrypted": "Decrypted content",
+    "keyWarning": "Contains the file's decryption key: anyone you give this JSON to can open the file.",
+    "unavailable": "Not available for this message yet."
+  }
+}

@@ -5,7 +5,7 @@
  *
  * Usage keeps the one-line shape of the native call:
  *
- *   if (!(await confirmDialog({ title: t('…'), confirmLabel: t('confirm.delete') }))) return;
+ *   if (!(await confirmDialog({ title: t('…'), confirmLabel: t('common.confirm.delete') }))) return;
  *
  * This tiny module-level store used to live inside the component file, so
  * the one plain function that asks for confirmation (removing a relay from

@@ -9,7 +9,7 @@ const EVENT_MEDIA_DIRS = [
   "src/components/chat/**",
   "src/components/social/**",
   "src/components/media/**",
-  "src/app/app/**",
+  "src/app/[locale]/app/**",
 ];
 
 // Tests live in tests/ (vitest.config.ts also collects scripts/**/*.test.ts).
@@ -148,6 +148,28 @@ const eslintConfig = defineConfig([
     files: ["scripts/**"],
     rules: {
       "react-hooks/rules-of-hooks": "off",
+    },
+  },
+  {
+    // URL locales: `/app` written in a Spanish page must land on `/es/app`,
+    // which only next-intl's wrappers do. Every internal link, router call
+    // and redirect goes through `@/i18n/navigation`; the raw Next ones are
+    // banned outside the folder that wraps them. `notFound`, `useParams`
+    // and `useSearchParams` carry no locale and stay allowed.
+    name: "obelisk/locale-aware-navigation",
+    files: ["src/**"],
+    ignores: ["src/i18n/**"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        paths: [
+          { name: "next/link", message: "Use Link from '@/i18n/navigation' so the href keeps the reader's language." },
+          {
+            name: "next/navigation",
+            importNames: ["useRouter", "usePathname", "redirect", "permanentRedirect"],
+            message: "Use the locale-aware versions from '@/i18n/navigation'.",
+          },
+        ],
+      }],
     },
   },
   {

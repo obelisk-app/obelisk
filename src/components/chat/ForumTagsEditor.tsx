@@ -2,7 +2,7 @@
 
 import type { JsForumTag } from '@/services/nostr-bridge';
 import { paletteForTag, tagChipStyle } from '@/utils/forum-tag-colors';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { CloseIcon } from '@/components/ui/icons';
@@ -22,7 +22,7 @@ export default function ForumTagsEditor({
   value: ReadonlyArray<JsForumTag>;
   onChange: (next: ReadonlyArray<JsForumTag>) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const MAX = MAX_FORUM_TAGS;
   const updateAt = (idx: number, patch: Partial<JsForumTag>) => onChange(updateTagAt(value, idx, patch));
   const removeAt = (idx: number) => onChange(removeTagAt(value, idx));
@@ -34,7 +34,7 @@ export default function ForumTagsEditor({
     <div className="space-y-2">
       {value.length === 0 && (
         <div className="rounded-lg border border-dashed border-lc-border px-3 py-3 text-center text-xs text-lc-muted">
-          {t('desktop.tags.empty')}
+          {t('shell.desktop.tags.empty')}
         </div>
       )}
       {value.map((tag, idx) => (
@@ -57,7 +57,7 @@ export default function ForumTagsEditor({
             placeholder="🌐"
             maxLength={4}
             className="w-12 shrink-0 text-center"
-            aria-label={t('desktop.tags.emoji')}
+            aria-label={t('shell.desktop.tags.emoji')}
             data-testid={`forum-tag-emoji-${tag.id}`}
           />
           <Input
@@ -67,10 +67,10 @@ export default function ForumTagsEditor({
             type="text"
             value={tag.name}
             onChange={(e) => updateAt(idx, { name: e.target.value })}
-            placeholder={t('desktop.tags.name')}
+            placeholder={t('shell.desktop.tags.name')}
             maxLength={40}
             className="min-w-0 flex-1"
-            aria-label={t('desktop.tags.name')}
+            aria-label={t('shell.desktop.tags.name')}
             data-testid={`forum-tag-name-${tag.id}`}
           />
           {/* Shows the result rather than describing it: this is exactly how
@@ -99,7 +99,7 @@ export default function ForumTagsEditor({
             tone="danger"
             onClick={() => removeAt(idx)}
             className="shrink-0"
-            aria-label={t('desktop.tags.remove')}
+            aria-label={t('shell.desktop.tags.remove')}
             data-testid={`forum-tag-remove-${tag.id}`}
           >
             <CloseIcon size={14} />

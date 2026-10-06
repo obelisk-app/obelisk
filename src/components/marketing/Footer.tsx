@@ -1,31 +1,19 @@
 'use client';
 
-import Link from 'next/link';
-import type { Locale } from '@/i18n';
-import { useTranslation } from '@/i18n/context';
-import { guidesHref } from '@/utils/guides/guide-urls';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
+import { guidePath } from '@/utils/guides/guide-urls';
 import ObeliskIcon from '@/components/ui/ObeliskIcon';
 
 export const GUIDE_SLUGS = [
-  { slug: 'what-is-obelisk', tKey: 'learn.card.whatIsObelisk.title' },
-  { slug: 'how-obelisk-works', tKey: 'learn.card.howObeliskWorks.title' },
-  { slug: 'web-of-trust', tKey: 'learn.card.webOfTrust.title' },
-  { slug: 'future-nostr-relays', tKey: 'learn.card.futureNostrRelays.title' },
+  { slug: 'what-is-obelisk', tKey: 'marketing.learn.card.whatIsObelisk.title' },
+  { slug: 'how-obelisk-works', tKey: 'marketing.learn.card.howObeliskWorks.title' },
+  { slug: 'web-of-trust', tKey: 'marketing.learn.card.webOfTrust.title' },
+  { slug: 'future-nostr-relays', tKey: 'marketing.learn.card.futureNostrRelays.title' },
 ] as const;
 
-interface Props {
-  /**
-   * Override the locale used for internal links (e.g. /guides/<locale>/...).
-   * On URL-localized guide routes, pass the URL locale so the footer emits
-   * stable links from the first server render. On cookie-localized routes
-   * like the landing page, leave this undefined and the context locale is used.
-   */
-  localeOverride?: Locale;
-}
-
-export default function Footer({ localeOverride }: Props) {
-  const { t, locale: contextLocale } = useTranslation();
-  const locale = localeOverride ?? contextLocale;
+export default function Footer() {
+  const t = useTranslations();
 
   return (
     <footer className="border-t border-lc-border/50 pt-14 pb-10 px-6" data-testid="site-footer">
@@ -40,7 +28,7 @@ export default function Footer({ localeOverride }: Props) {
               </span>
             </Link>
             <p className="text-sm text-lc-muted leading-6 max-w-xs">
-              {t('footer.brandBlurb')}
+              {t('marketing.footer.brandBlurb')}
             </p>
           </div>
 
@@ -50,13 +38,13 @@ export default function Footer({ localeOverride }: Props) {
               id="footer-guides"
               className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4"
             >
-              {t('footer.col.guides')}
+              {t('marketing.footer.col.guides')}
             </h3>
             <ul className="space-y-2.5">
               {GUIDE_SLUGS.map((g) => (
                 <li key={g.slug}>
                   <Link
-                    href={guidesHref(locale, g.slug)}
+                    href={guidePath(g.slug)}
                     className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                   >
                     {t(g.tKey)}
@@ -65,10 +53,10 @@ export default function Footer({ localeOverride }: Props) {
               ))}
               <li>
                 <Link
-                  href={guidesHref(locale)}
+                  href={guidePath()}
                   className="text-sm text-lc-green hover:underline"
                 >
-                  {t('footer.allGuides')} →
+                  {t('marketing.footer.allGuides')} →
                 </Link>
               </li>
             </ul>
@@ -80,7 +68,7 @@ export default function Footer({ localeOverride }: Props) {
               id="footer-product"
               className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4"
             >
-              {t('footer.col.product')}
+              {t('marketing.footer.col.product')}
             </h3>
             <ul className="space-y-2.5">
               <li>
@@ -88,7 +76,7 @@ export default function Footer({ localeOverride }: Props) {
                   href="/app"
                   className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                 >
-                  {t('footer.launchApp')}
+                  {t('marketing.footer.launchApp')}
                 </Link>
               </li>
               <li>
@@ -96,7 +84,7 @@ export default function Footer({ localeOverride }: Props) {
                   href="/#faq"
                   className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                 >
-                  {t('footer.faq')}
+                  {t('marketing.footer.faq')}
                 </Link>
               </li>
               <li>
@@ -104,7 +92,7 @@ export default function Footer({ localeOverride }: Props) {
                   href="/help"
                   className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                 >
-                  {t('footer.help')}
+                  {t('marketing.footer.help')}
                 </Link>
               </li>
               <li>
@@ -114,7 +102,7 @@ export default function Footer({ localeOverride }: Props) {
                   rel="noopener noreferrer"
                   className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                 >
-                  {t('footer.github')}
+                  {t('marketing.footer.github')}
                 </a>
               </li>
             </ul>
@@ -126,7 +114,7 @@ export default function Footer({ localeOverride }: Props) {
               id="footer-community"
               className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4"
             >
-              {t('footer.col.community')}
+              {t('marketing.footer.col.community')}
             </h3>
             <ul className="space-y-2.5">
               <li>
@@ -136,7 +124,7 @@ export default function Footer({ localeOverride }: Props) {
                   rel="noopener noreferrer"
                   className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                 >
-                  {t('footer.lacrypta')}
+                  {t('marketing.footer.lacrypta')}
                 </a>
               </li>
               <li>
@@ -146,7 +134,7 @@ export default function Footer({ localeOverride }: Props) {
                   rel="noopener noreferrer"
                   className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                 >
-                  {t('footer.nostr')}
+                  {t('marketing.footer.nostr')}
                 </a>
               </li>
             </ul>
@@ -158,7 +146,7 @@ export default function Footer({ localeOverride }: Props) {
               id="footer-legal"
               className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4"
             >
-              {t('footer.col.legal')}
+              {t('marketing.footer.col.legal')}
             </h3>
             <ul className="space-y-2.5">
               <li>
@@ -166,7 +154,7 @@ export default function Footer({ localeOverride }: Props) {
                   href="https://github.com/obelisk-app/obelisk/blob/main/LICENSE"
                   className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                 >
-                  {t('footer.license')}
+                  {t('marketing.footer.license')}
                 </a>
               </li>
               <li>
@@ -174,7 +162,7 @@ export default function Footer({ localeOverride }: Props) {
                   href="https://github.com/obelisk-app/obelisk/blob/main/ABUSE.md"
                   className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                 >
-                  {t('footer.abuse')}
+                  {t('marketing.footer.abuse')}
                 </a>
               </li>
               <li>
@@ -182,7 +170,7 @@ export default function Footer({ localeOverride }: Props) {
                   href="https://github.com/obelisk-app/obelisk/blob/main/SECURITY.md"
                   className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                 >
-                  {t('footer.security')}
+                  {t('marketing.footer.security')}
                 </a>
               </li>
             </ul>
@@ -190,7 +178,7 @@ export default function Footer({ localeOverride }: Props) {
         </div>
 
         <div className="mt-12 pt-6 border-t border-lc-border/40 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-lc-muted">{t('footer.tagline')}</p>
+          <p className="text-xs text-lc-muted">{t('marketing.footer.tagline')}</p>
           <p className="text-xs text-lc-muted">© {new Date().getFullYear()} Fabricio Acosta · AGPL-3.0</p>
         </div>
       </div>

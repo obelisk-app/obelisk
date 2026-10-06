@@ -10,7 +10,7 @@
  *     trailing "All" chip that clears the tag filter.
  */
 import { useSignerReady, type JsForumTag } from '@/services/nostr-bridge';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import type { ForumPrefs } from '@/services/forum-prefs';
 import Input from '@/components/ui/Input';
 import { NewPostIcon, SearchIcon } from './forum-icons';
@@ -43,7 +43,7 @@ export function ForumChrome({
   onToggleTag: (id: string) => void;
   onClearTags: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const ready = useSignerReady();
   const canCreate = !exactMatch && searchQuery.trim().length > 0;
   const allActive = selectedTagIds.length === 0;
@@ -67,7 +67,7 @@ export function ForumChrome({
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={canCreate ? 'Press Enter to create…' : 'Search or create a publication…'}
           data-testid="forum-search-input"
-          aria-label={t('forum.searchPlaceholder')}
+          aria-label={t('chat.forum.searchPlaceholder')}
         />
         <Button
           variant="pill"
@@ -79,7 +79,7 @@ export function ForumChrome({
           title={ready ? 'New publication' : 'Sign in to start a publication'}
         >
           <NewPostIcon />
-          <span className="hidden sm:inline">{t('forum.new')}</span>
+          <span className="hidden sm:inline">{t('chat.forum.new')}</span>
         </Button>
       </form>
 

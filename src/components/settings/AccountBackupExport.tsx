@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { downloadAccountBackup } from '@/services/account-backup';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 
 export default function AccountBackupExport({ mobile = false }: { mobile?: boolean }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [status, setStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
@@ -17,11 +17,11 @@ export default function AccountBackupExport({ mobile = false }: { mobile?: boole
       const failed = backup.media.filter((item) => item.error).length;
       setStatus('done');
       setMessage(failed
-        ? t('preferences.backup.partial').replace('{{count}}', String(failed))
-        : t('preferences.backup.done'));
+        ? t('settings.preferences.backup.partial', { count: String(failed) })
+        : t('settings.preferences.backup.done'));
     } catch (error) {
       setStatus('error');
-      setMessage(error instanceof Error ? error.message : t('preferences.backup.error'));
+      setMessage(error instanceof Error ? error.message : t('settings.preferences.backup.error'));
     }
   };
 
@@ -38,10 +38,10 @@ export default function AccountBackupExport({ mobile = false }: { mobile?: boole
       >
         <span style={{ minWidth: 0, flex: 1 }}>
           <span className={mobile ? '' : 'block text-sm font-semibold text-lc-white'}>
-            {status === 'working' ? t('preferences.backup.working') : t('preferences.backup.action')}
+            {status === 'working' ? t('settings.preferences.backup.working') : t('settings.preferences.backup.action')}
           </span>
           <span className={mobile ? 'settings-row-meta muted' : 'mt-1 block text-xs text-lc-muted'} style={mobile ? { display: 'block', maxWidth: '100%', marginTop: 3 } : undefined}>
-            {t('preferences.backup.description')}
+            {t('settings.preferences.backup.description')}
           </span>
         </span>
         <span className={mobile ? 'settings-row-meta muted' : 'text-lc-muted'} aria-hidden="true">↓</span>

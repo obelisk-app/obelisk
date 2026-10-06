@@ -1,0 +1,283 @@
+{
+  "preferences": {
+    "backup": {
+      "advanced": "Advanced",
+      "action": "Download account backup",
+      "description": "Events, profile, follows, media packs, favorites, and recoverable uploaded media. Private keys are never included.",
+      "working": "Preparing backup…",
+      "done": "Backup downloaded.",
+      "partial": "Backup downloaded. {count} media file(s) could not be embedded; their URLs and Blossom hashes are still included.",
+      "error": "Backup failed."
+    },
+    "relays": {
+      "status": {
+        "active": "active",
+        "switch": "switch"
+      }
+    },
+    "activity": {
+      "label": "Show activity indicator",
+      "description": "Bottom-right notifications for login, signing, and relay publishing."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "sounds": {
+        "label": "Notification sounds",
+        "description": "Chime when someone mentions you, replies to you, or sends you a DM."
+      },
+      "desktop": {
+        "label": "Browser notifications",
+        "description": "System notifications for mentions, replies and DMs: they ring even when Obelisk is in another tab. Your browser asks for permission on your first click. DM text is never shown.",
+        "denied": "Blocked in your browser. Allow notifications for this site in the browser's site settings (the icon left of the address bar), then come back.",
+        "unsupported": "This browser doesn't support notifications."
+      },
+      "background": {
+        "label": "Listen on recent relays",
+        "description": "Stay connected to the last 3 relays you used and notify you of mentions and replies there too."
+      },
+      "test": "Test sound",
+      "ringtone": {
+        "label": "Ringtone",
+        "crystal": {
+          "label": "Crystal",
+          "hint": "Glassy bell with a shimmer"
+        },
+        "marimba": {
+          "label": "Marimba",
+          "hint": "Warm wooden tap"
+        },
+        "aurora": {
+          "label": "Aurora",
+          "hint": "Soft, airy pad"
+        },
+        "bubble": {
+          "label": "Bubble",
+          "hint": "Playful water drop"
+        }
+      }
+    },
+    "localData": {
+      "title": "Local data",
+      "clear": {
+        "title": "Clear local cache",
+        "description": "Wipes cached channels, profiles, branding, member lists, read positions, and DM cache. Live data re-streams from the relay on next paint. Your session and preferences are kept.",
+        "button": "Clear cache"
+      },
+      "confirm": {
+        "title": "Clear local cache?",
+        "description": "This wipes every locally-cached relay response (channels, profiles, branding, members, read positions, DM cache, UI flags) and reloads the page. Your session and preferences stay; you stay logged in.",
+        "cancel": "Cancel",
+        "action": "Clear & reload",
+        "clearing": "Clearing..."
+      }
+    },
+    "mobile": {
+      "app": "App",
+      "theme": "Theme",
+      "version": "Version"
+    },
+    "language": {
+      "label": "Language",
+      "description": "Choose the language used by the app UI."
+    },
+    "directMessages": {
+      "label": "Direct messages",
+      "description": "Allow this device to open Nostr encrypted DM subscriptions and display conversations.",
+      "mobileDescription": "Nostr encrypted DMs on this device"
+    },
+    "profileFeed": {
+      "title": "Profile feed relays",
+      "description": "Public Nostr relays for your feed and profiles. Cached locally for instant loading.",
+      "relay": "Profile feed relay",
+      "invalid": "Enter three different valid wss:// relay URLs.",
+      "saved": "Saved"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "reset": "Reset appearance",
+      "accent": {
+        "label": "Accent",
+        "description": "Highlights, links, active states"
+      },
+      "background": {
+        "label": "Background",
+        "description": "Main app backdrop"
+      },
+      "buttons": {
+        "label": "Buttons",
+        "description": "Primary actions"
+      },
+      "bubbles": {
+        "label": "Bubbles",
+        "description": "Animated background chat bubbles"
+      },
+      "bubbleMotion": {
+        "label": "Bubble motion",
+        "description": "Animation style for the decorative background bubbles",
+        "aria": "Bubble animation style",
+        "float": "Float up",
+        "drift": "Slow drift",
+        "orbit": "Orbit",
+        "still": "Still"
+      },
+      "colorAria": "{label} color",
+      "hexAria": "{label} hex color"
+    },
+    "socialRelays": {
+      "title": "Feed relays",
+      "description": "Public Nostr relays for your feed and profiles, separate from the group relays in the rail. Between 1 and 8.",
+      "relay": "Feed relay",
+      "add": "Add relay",
+      "remove": "Remove",
+      "import": "Import from NIP-65",
+      "importing": "Importing…",
+      "importEmpty": "No relay list found for your account.",
+      "reset": "Reset to defaults",
+      "invalid": "Enter at least one valid wss:// relay URL.",
+      "suggested": "Suggested relays",
+      "added": "Added",
+      "preset": {
+        "general": "General purpose",
+        "index": "Large index, fast",
+        "search": "Search and archive",
+        "paid": "Paid, low spam",
+        "profiles": "Profiles only"
+      }
+    }
+  },
+  "profileEditor": {
+    "setupTitle": "Set up your profile",
+    "setupDesc": "Add a name and picture so others can recognize you.",
+    "randomName": "Generate a random name",
+    "nameRequired": "Required",
+    "nameRequiredHint": "You need a name to continue. Tap the dice to generate one.",
+    "editTitle": "Edit Nostr Profile",
+    "displayName": "Display Name",
+    "namePlaceholder": "How others will see you",
+    "picture": "Profile Picture",
+    "clickToUpload": "Click to upload or drag & drop an image",
+    "imageOnly": "Only image files are allowed",
+    "fileTooLarge": "Image must be under 10 MB",
+    "uploading": "Uploading to Blossom...",
+    "picturePlaceholder": "https://example.com/avatar.jpg",
+    "aboutLabel": "About",
+    "aboutPlaceholder": "A short bio...",
+    "invalidUrl": "Could not load image from this URL",
+    "publish": "Publish to Nostr",
+    "publishing": "Publishing...",
+    "publishError": "Failed to publish profile. Try again.",
+    "skip": "Skip for now",
+    "cancel": "Cancel",
+    "confirmTitle": "Confirm profile changes",
+    "confirmDesc": "This will publish your updated profile (kind 0) to Nostr relays. Your other profile fields (NIP-05, Lightning, etc.) will be preserved.",
+    "confirmPublish": "Publish changes",
+    "changed": "updated",
+    "avatarAlt": "Avatar"
+  },
+  "you": "You",
+  "profile": "Profile",
+  "preferencesTitle": "Preferences",
+  "group": {
+    "user": "User settings",
+    "app": "App settings"
+  },
+  "section": {
+    "profile": {
+      "label": "Profile",
+      "desc": "Your name, picture, banner and links, published to Nostr as your kind-0 profile."
+    },
+    "general": {
+      "label": "General",
+      "desc": "Language and the activity indicator."
+    },
+    "appearance": {
+      "label": "Appearance",
+      "desc": "Accent, background, button and bubble colours."
+    },
+    "notifications": {
+      "label": "Notifications",
+      "desc": "Sounds, ringtone, browser notifications and background listening."
+    },
+    "relays": {
+      "label": "Relays",
+      "desc": "The public relays your feeds and profiles are read from."
+    },
+    "privacy": {
+      "label": "Privacy & safety",
+      "desc": "Direct messages, post-quantum protection, muted and blocked people, and web of trust."
+    },
+    "media": {
+      "label": "Emoji & stickers",
+      "desc": "Your packs and favourites."
+    },
+    "advanced": {
+      "label": "Advanced",
+      "desc": "Backups, local data and developer tools."
+    }
+  },
+  "openPreferences": "Preferences",
+  "editProfile": "Edit profile",
+  "postQuantum": "Post-quantum protection",
+  "postQuantumHint": "Seal direct messages with post-quantum keys when you and the other person both have them and your signer can use them. Anything that cannot be sealed still sends, with ordinary encryption. While this is on, each conversation also shows whether it is quantum-safe.",
+  "postQuantumChecking": "Checking for post-quantum keys…",
+  "postQuantumDetected": "Post-quantum keys detected on this account.",
+  "postQuantumReady": "Your signer can send post-quantum messages. While this setting is on, conversations with people who also publish post-quantum keys get the extra seal.",
+  "postQuantumSignerUnknown": "Your signer does not report post-quantum support, so messages keep going out with ordinary encryption. Obelisk starts using post-quantum on its own once the signer reports it.",
+  "postQuantumNotDetected": "No post-quantum keys detected on this account.",
+  "postQuantumSetupLink": "Set up post-quantum keys",
+  "profileAppearance": {
+    "changeBanner": "Change banner",
+    "addBanner": "Add banner",
+    "changeAvatar": "Change profile picture",
+    "notImage": "That file isn't an image.",
+    "tooLarge": "Images must be under 10 MB.",
+    "fileSelected": "File selected, saves on publish"
+  },
+  "moderation": {
+    "title": "Muted & blocked",
+    "empty": "You haven't muted or blocked anyone.",
+    "muted": "Muted",
+    "blocked": "Blocked"
+  },
+  "developer": {
+    "title": "Developer settings",
+    "relayLogs": "Developer relay logs",
+    "console": "Browser console.",
+    "signatureHelp": "Request mock signatures for every event kind Obelisk uses. Signed events are discarded and never published.",
+    "section": "Developer"
+  },
+  "wot": {
+    "title": "Web of Trust",
+    "help": "Drop events authored by accounts outside your social graph before they reach the cache.",
+    "maxHops": "Max hops",
+    "minPaths": "Min trust paths",
+    "channelColors": "Channel colors",
+    "outOfGraph": "Out of WoT or unresolved",
+    "resolvedAllow": "resolved allow",
+    "resolvedDeny": "resolved deny"
+  },
+  "calls": {
+    "title": "Calls",
+    "from": {
+      "label": "Who can call you",
+      "contacts": "People you follow",
+      "anyone": "Anyone"
+    },
+    "fromHint": "Calls from anyone else are ignored without ringing.",
+    "ip": {
+      "label": "Hide my IP address",
+      "auto": "With people I don't follow",
+      "always": "Always",
+      "never": "Never"
+    },
+    "ipHint": "A direct call shows each side the other's IP address. Relaying through our TURN server hides it, at some cost in quality.",
+    "relays": "Call relays",
+    "relaysHint": "Where the call is set up. They only ever see two throwaway keys exchanging encrypted data, so they must accept events from unknown keys: a whitelist relay can't carry a call.",
+    "relay": "Call relay",
+    "addRelay": "Add relay",
+    "removeRelay": "Remove",
+    "reset": "Reset to defaults",
+    "saved": "Saved",
+    "invalid": "Only wss:// relay addresses"
+  }
+}

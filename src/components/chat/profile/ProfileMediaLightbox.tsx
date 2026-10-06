@@ -1,14 +1,14 @@
 'use client';
 
 import { isVideoUrl } from '@/utils/attachments/attachments';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { CloseIcon } from '@/components/ui/icons';
 import { useDismiss } from '@/hooks/useDismiss';
 import IconButton from '@/components/ui/IconButton';
 
 export function ProfileMediaLightbox({ url, onClose }: { url: string; onClose: () => void }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   useDismiss({ onDismiss: onClose, outside: 'none' });
 
   return (
@@ -16,7 +16,7 @@ export function ProfileMediaLightbox({ url, onClose }: { url: string; onClose: (
       className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={t('profileFeed.media')}
+      aria-label={t('social.profileFeed.media')}
       onClick={onClose}
       data-testid="profile-media-lightbox"
     >

@@ -27,6 +27,7 @@ const OWN_BLOCKS = [
   'obelisk/react-hooks-temporary-warn',
   'obelisk/event-media-img',
   'obelisk/scripts',
+  'obelisk/locale-aware-navigation',
   'obelisk/max-lines',
 ];
 
@@ -36,7 +37,8 @@ const OWN_BLOCKS = [
  * fails the test rather than being matched wrongly.
  */
 function globToRegExp(glob: string): RegExp {
-  if (/[{}[\]!]/.test(glob)) throw new Error(`unsupported glob syntax in ${glob}; extend globToRegExp`);
+  // `[locale]` is a literal Next.js folder name here, not a character class.
+  if (/[{}!]/.test(glob)) throw new Error(`unsupported glob syntax in ${glob}; extend globToRegExp`);
   let out = '';
   for (let i = 0; i < glob.length; i += 1) {
     const c = glob[i];
@@ -49,7 +51,7 @@ function globToRegExp(glob: string): RegExp {
     } else if (c === '?') {
       out += '[^/]';
     } else {
-      out += c.replace(/[.+^${}()|\\]/g, '\\$&');
+      out += c.replace(/[.+^${}()|[\]\\]/g, '\\$&');
     }
   }
   return new RegExp(`^${out}$`);
@@ -123,4 +125,17 @@ describe('eslint.config.mjs', () => {
       expect(others, 'a block loosens the 300-line rule; split the file instead').toEqual([]);
     });
   });
+});
+
+describe('locale-aware navigation', () => {
+  it('bans next/link and the raw router outside src/i18n, and allows them inside', async () => {
+    const { ESLint } = await import('eslint');
+    const eslint = new ESLint();
+    const lint = async (filePath: string, code: string) =>
+      (await eslint.lintText(code, { filePath }))[0].messages.filter((m) => m.ruleId === 'no-restricted-imports');
+    const code = "import Link from 'next/link';\nimport { useRouter, notFound } from 'next/navigation';\nexport const x = [Link, useRouter, notFound];\n";
+    expect(await lint('src/components/marketing/Probe.tsx', code)).toHaveLength(2);
+    expect(await lint('src/i18n/probe.ts', code)).toHaveLength(0);
+    expect(await lint('src/components/marketing/Probe.tsx', "import { notFound, useParams } from 'next/navigation';\nexport const x = [notFound, useParams];\n")).toHaveLength(0);
+  }, 60_000);
 });

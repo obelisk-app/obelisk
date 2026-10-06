@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LocaleProvider } from '@/i18n/context';
+import { LocaleProvider } from '@tests/support/intl';
 
 const mocks = vi.hoisted(() => ({
   uploadToBlossom: vi.fn().mockResolvedValue('https://cdn.example/pasted.png'),

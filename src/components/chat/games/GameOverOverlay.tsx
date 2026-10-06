@@ -5,7 +5,7 @@ import UserAvatar from '@/components/ui/UserAvatar';
 import type { GameSession } from '@/lib/games/session';
 import { isDraw, scoreFor } from '@/lib/games/standings';
 import { SEAT_COLORS } from './ChainReactionBoard';
-import { useTranslation } from '@/i18n/context';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 
 /**
@@ -29,7 +29,7 @@ export default function GameOverOverlay({
   pictureOf: (pubkey: string) => string | null;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   // Dismissal is keyed to the result it dismissed, so a later match on the
   // same table re-arms the splash on its own, with no effect and no reset.
   const [dismissedResult, setDismissedResult] = useState<string | null>(null);

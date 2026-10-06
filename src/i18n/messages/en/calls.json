@@ -1,0 +1,41 @@
+{
+  "call": {
+    "voice": "Voice call",
+    "video": "Video call",
+    "incomingVoice": "Incoming call",
+    "incomingVideo": "Incoming video call",
+    "acceptVideo": "Accept with video",
+    "acceptVoice": "Accept",
+    "decline": "Decline",
+    "hangup": "Hang up",
+    "calling": "Calling…",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "cameraOn": "Turn camera on",
+    "cameraOff": "Turn camera off",
+    "flip": "Switch camera",
+    "shareScreen": "Share screen",
+    "stopShare": "Stop sharing",
+    "encrypted": "End-to-end encrypted",
+    "ipHidden": "Your IP is hidden, relayed",
+    "close": "Close",
+    "needsDms": "Turn on direct messages to make calls",
+    "ended": {
+      "local-hangup": "Call ended",
+      "remote-hangup": "Call ended",
+      "declined": "Call declined",
+      "busy": "Busy on another call",
+      "no-answer": "No answer",
+      "missed": "Missed call",
+      "cancelled": "Call cancelled",
+      "answered-elsewhere": "Answered on another device",
+      "connect-failed": "Couldn't connect the call",
+      "connection-lost": "Connection lost",
+      "error": "Call failed"
+    },
+    "fullscreen": "Full screen",
+    "exitFullscreen": "Exit full screen"
+  }
+}
