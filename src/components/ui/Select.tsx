@@ -1,5 +1,5 @@
 import { forwardRef, useId, type ReactNode, type SelectHTMLAttributes } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import Field, { fieldNoteId } from './Field';
 import Spinner from './Spinner';
 

@@ -2,9 +2,11 @@
  * Without a bridge (SSR, tests, before login) neither half of the
  * read-state sync subscribes, publishes or listens for page lifecycle.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 
-vi.mock('@/services/nostr-bridge/client', () => ({ getBridgeImpl: () => null }));
+// No bridge registered: the real client module, with an empty slot.
+beforeEach(() => unregisterBridge());
 
 import { subscribeAndIngest } from '@/services/read-state/sync-ingest';
 import { watchAndPublish } from '@/services/read-state/sync-publish';

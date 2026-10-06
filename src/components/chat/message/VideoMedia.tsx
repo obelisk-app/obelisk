@@ -1,12 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { isAudioOnlyWebm } from '@/utils/attachments/attachments';
 import { VoiceMessage } from './VoiceMessage';
-
-/** A `.webm` with no picture is a voice note recorded by another client. */
-export function isAudioOnlyWebm(url: string, videoWidth: number, duration: number): boolean {
-  return /\.webm(?:$|[?#])/i.test(url) && videoWidth === 0 && Number.isFinite(duration);
-}
 
 export function VideoMedia({
   url,

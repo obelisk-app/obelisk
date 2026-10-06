@@ -13,8 +13,8 @@ import NoteHeader from './NoteHeader';
 import NoteBody from './NoteBody';
 import NoteActionRow from './NoteActionRow';
 import { useNoteEngagement } from '@/hooks/social/note-card/useNoteEngagement';
-import { bodyClickHandler } from './helpers';
-import type { NoteCardProps } from './types';
+import { bodyClickHandler } from '@/utils/social/note-card';
+import type { NoteCardProps } from '../NoteCard';
 
 /** A note that is not a repost wrapper: header, body (or content warning), actions. */
 export default function PlainNoteCard({

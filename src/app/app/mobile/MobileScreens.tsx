@@ -9,7 +9,7 @@
 import type { ReactNode } from 'react';
 import type { JsGroup } from '@/services/nostr-bridge';
 import FeedScreen from '@/components/social/FeedScreen';
-import type { NavState, ScreenName } from './url-state';
+import type { NavState, ScreenName } from '@/utils/shell/mobile/url-state';
 import { ChannelScreen } from './screens/ChannelScreen';
 import { ComposeDmScreen } from './screens/ComposeDmScreen';
 import { DmThreadScreen } from './screens/DmThreadScreen';

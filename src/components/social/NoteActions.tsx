@@ -29,7 +29,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/context';
 import { MENU_PANEL_CLASS, MenuItem } from '@/components/ui/menu';
 import AnchoredMenu from './AnchoredMenu';
-import { formatCount } from './format-count';
+import { formatCount } from '@/utils/format/format-count';
 
 /** Per-action accent. Keyed by action so the mapping is legible at a glance. */
 const ACCENT = {
@@ -135,7 +135,6 @@ export function MoreIcon() {
   );
 }
 
-export { formatCount } from './format-count';
 
 export function ActionButton({
   kind,

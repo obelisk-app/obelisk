@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 export type BadgeTone = 'neutral' | 'muted' | 'accent' | 'outline' | 'danger';
 export type BadgeSize = '10' | '11' | 'xs';

@@ -120,6 +120,7 @@ vi.mock('nostr-tools/nip46', () => {
 });
 
 import { STORAGE_KEY } from '@/services/nostr-bridge/client';
+import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 
 function makeKeypair() {
   const sk = generateSecretKey();
@@ -139,6 +140,10 @@ beforeEach(() => {
   fake.state.bunkerFromBunkerCount = 0;
   fake.state.bunkerSignPending = false;
   fake.state.bunkerSignCount = 0;
+  // A fresh bridge per test: its globalThis slot survives the module reset,
+  // so it is emptied here. The reset stays for the page RelayHub singleton and
+  // the module-level stores the bridge writes to.
+  unregisterBridge();
   vi.resetModules();
   if (typeof window !== 'undefined') window.localStorage.clear();
 });

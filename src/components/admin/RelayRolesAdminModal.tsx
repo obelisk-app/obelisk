@@ -10,7 +10,6 @@ import type { RelayRoles } from '@/services/relay-roles';
 import { useRelayRolesDraft } from '@/hooks/admin/useRelayRolesDraft';
 import RoleRow from './relay-roles/RoleRow';
 
-export { parsePubkeyInput } from './relay-roles/role-draft';
 
 /**
  * Operator-only editor for the relay's role ladder (NIP-78 kind 30078). The

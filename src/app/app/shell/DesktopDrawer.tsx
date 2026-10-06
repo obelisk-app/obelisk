@@ -7,8 +7,8 @@ import DMList from '../DMList';
 import { DMOptInBoundary } from '../DMOptInGate';
 import { ResizablePane } from '../panes/ResizablePane';
 import { Sidebar } from '../panes/Sidebar';
-import type { View } from '../view';
-import { SIDEBAR_KEY, type RailMode } from './desktop-layout';
+import type { View } from '@/utils/shell/view';
+import { SIDEBAR_KEY, type RailMode } from '@/utils/shell/desktop-layout';
 
 type Props = {
   relay: string;

@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 /** The ids a control uses to point back at the row's text. */
 export interface SettingRowIds {

@@ -8,8 +8,8 @@ import { useFeed, type FeedSource } from '@/hooks/social/useFeed';
 import type { ContentFilter } from '@/services/social/kinds';
 import type { FeedSort } from '@/services/social/rank';
 import type { ComposerMode } from '@/hooks/social/useNoteDraft';
-import { feedMediaItems } from '@/components/social/feed-screen/feed-media';
-import type { FeedTab } from '@/components/social/feed-screen/types';
+import { feedMediaItems } from '@/services/social/feed-media';
+import type { FeedKind } from '@/services/social/feed';
 
 /**
  * Everything the feed surface remembers: which source, filter and sort are
@@ -28,7 +28,7 @@ export function useFeedScreen({
   const follows = useMyFollows();
   const contactsReady = useMyContactListReady();
   const relays = usePreferences().socialRelays;
-  const [tab, setTab] = useState<FeedTab>('following');
+  const [tab, setTab] = useState<FeedKind>('following');
   const [filter, setFilter] = useState<ContentFilter>('all');
   const [sort, setSort] = useState<FeedSort>('recent');
   // Only meaningful under the Articles filter, which is the one place a

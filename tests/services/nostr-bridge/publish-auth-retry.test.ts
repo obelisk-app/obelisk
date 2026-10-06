@@ -13,6 +13,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { generateSecretKey, getPublicKey, type Event as NostrEvent } from 'nostr-tools';
+import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 
 const fake = vi.hoisted(() => {
   interface FakeRelay {
@@ -125,6 +126,10 @@ warmBridgeModules();
 beforeEach(() => {
   fake.state.pools = [];
   fake.state.relays.clear();
+  // A fresh bridge per test: its globalThis slot survives the module reset,
+  // so it is emptied here. The reset stays for the page RelayHub singleton and
+  // the module-level stores the bridge writes to.
+  unregisterBridge();
   vi.resetModules();
   window.localStorage.clear();
 });

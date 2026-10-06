@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ADJECTIVES, NOUNS, avatarInitials, displayNameFor, petnameFor } from '@/utils/identity/display-name';
+import { ADJECTIVES, NOUNS, avatarInitials, displayNameFor, petnameFor, randomProfileName } from '@/utils/identity/display-name';
 
 const PK = 'a'.repeat(64);
 const OTHER = 'b'.repeat(64);
@@ -85,5 +85,14 @@ describe('avatarInitials', () => {
 
   it('falls back rather than rendering an empty circle', () => {
     expect(avatarInitials('   ', PK)).toBe(avatarInitials(null, PK));
+  });
+});
+
+describe('randomProfileName', () => {
+  it('draws an adjective and a noun from the petname vocabulary', () => {
+    expect(randomProfileName(() => 0)).toBe('Brave Badger');
+    const [adjective, noun] = randomProfileName(() => 0.999).split(' ');
+    expect(ADJECTIVES).toContain(adjective);
+    expect(NOUNS).toContain(noun);
   });
 });

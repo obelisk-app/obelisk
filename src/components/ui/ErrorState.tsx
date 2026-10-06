@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 /** `inline` is the one-line red note under a control; `box` is the bordered banner. */
 export type ErrorStateVariant = 'inline' | 'box';

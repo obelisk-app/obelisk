@@ -5,6 +5,9 @@ export { cacheGet, cacheSet, cacheDelete } from './cache';
 export { resubscribeOnQuotaClose } from './quota-resubscribe';
 export { hasSeenWrap, markWrapSeen, type WrapLedgerScope } from './wrap-ledger';
 export { nostrActions } from './actions';
+// The React provider and the two hooks that hand out the instance itself.
+export { BridgeProvider, type BridgeProviderProps } from './provider';
+export { useBridge, useBridgeReady } from './hooks/provider';
 // The React hooks, one file per concern under `./hooks/`.
 export {
   useIsLoggedIn,
@@ -18,7 +21,9 @@ export {
   useSignerReady,
   useNipSigner,
   useConfiguredRelays,
+  useSessionNotice,
 } from './hooks/session';
+export type { SessionNotice } from './session/vault';
 export {
   useMyContactList,
   useMyContactListReady,

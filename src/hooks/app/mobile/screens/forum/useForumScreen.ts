@@ -10,7 +10,7 @@ import {
   type JsGroup,
 } from '@/services/nostr-bridge';
 import { useForumPrefs } from '@/hooks/chat/useForumPrefs';
-import { hasExactThreadMatch, visibleForumThreads } from '@/app/app/mobile/screens/forum/forum-threads';
+import { hasExactThreadMatch, visibleForumThreads } from '@/utils/chat/forum/forum-threads';
 
 /** One shared empty list, so a forum with no threads keeps a stable identity. */
 const NO_CHILDREN: ReadonlyArray<string> = [];

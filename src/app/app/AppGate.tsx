@@ -25,6 +25,7 @@ import ActivityIndicator from '@/components/feedback/ActivityIndicator';
 import { usePreferences } from '@/hooks/usePreferences';
 import { initSocial } from '@/services/social/pool';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useSessionNoticeToast } from '@/hooks/app/useSessionNoticeToast';
 
 const AppShell = dynamic(() => import('./DesktopShell'), { ssr: false });
 const MobileShell = dynamic(() => import('./mobile/PhoneShell'), { ssr: false });
@@ -33,6 +34,7 @@ export default function AppGate() {
   const isMobile = useIsMobile();
   const loggedIn = useIsLoggedIn();
   const socialRelays = usePreferences().socialRelays;
+  useSessionNoticeToast();
 
   // Point @nostr-wot/data at the user's social relays before any feed read.
   // Without this the SDK would fall back to its own defaults, so a user who

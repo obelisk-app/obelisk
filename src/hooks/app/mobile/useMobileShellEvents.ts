@@ -7,7 +7,7 @@ import { emojiTagsForContent, mergeCustomEmojiMaps, type CustomEmojiMap } from '
 import { onOpenSettings, revealSettingsSection } from '@/utils/open-settings';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
-import type { NavState, ScreenName } from '@/app/app/mobile/url-state';
+import type { NavState, ScreenName } from '@/utils/shell/mobile/url-state';
 
 type PushNav = (updater: (n: NavState) => NavState, dir?: 'forward' | 'back') => void;
 

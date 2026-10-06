@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { nip19 } from 'nostr-tools';
@@ -14,13 +14,9 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/',
 }));
 
-// Only the disconnect path reaches the bridge, through a dynamic import.
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({ getBridge: async () => ({ logout }) });
-});
-
 import Navbar from '@/components/marketing/Navbar';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { fakeBridge } from '@tests/support/fake-bridge';
 import { PROFILE_CACHE_KEY } from '@/hooks/marketing/useSavedAccount';
 import { STORAGE_KEY } from '@/services/nostr-bridge/session-storage';
 
@@ -33,11 +29,18 @@ function saveSession() {
 
 const renderNavbar = () => render(<LocaleProvider initialLocale="en"><Navbar /></LocaleProvider>);
 
+// Only the disconnect path reaches the bridge, through a dynamic import of
+// the real front door; its getBridge() resolves to this registered fake.
 beforeEach(() => {
+  registerBridge(fakeBridge({}, { logout }));
   localStorage.clear();
   saveSession();
   pushMock.mockClear();
   logout.mockClear();
+});
+
+afterEach(() => {
+  unregisterBridge();
 });
 
 describe('Navbar account menu', () => {

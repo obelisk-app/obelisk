@@ -16,9 +16,9 @@ import PackViewer from './library/PackViewer';
 import MediaItemMenu from './library/MediaItemMenu';
 import MediaItemGrid from './library/MediaItemGrid';
 import PackEditor from './library/PackEditor';
-import { newPack } from './library/pack-utils';
+import { newPack } from '@/utils/media-library/pack-utils';
 import { useMediaLibrary, type LibraryServer } from '@/hooks/media/library/useMediaLibrary';
-import type { LibraryTab, MediaFilter, SelectedMedia } from './library/types';
+import type { LibraryTab, MediaFilter, SelectedMedia } from '@/utils/media-library/types';
 
 /**
  * Media packs: browse the marketplace, your own packs and favourites, or

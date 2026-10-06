@@ -5,25 +5,26 @@
  * state still held A's list until the new subscription replayed B's.
  * Every render is recorded here, so a single stale frame fails the test.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import type { BridgeImpl } from '@/services/nostr-bridge/client';
 import type { JsMessage } from '@/services/nostr-bridge/types';
+import { bridgeWrapper } from '@tests/support/render-with-bridge';
 
 const byGroup: Record<string, JsMessage[]> = {};
 const listeners = new Map<string, Set<(msgs: JsMessage[]) => void>>();
 
-vi.mock('@/services/nostr-bridge/client', () => ({
-  getBridge: () => Promise.resolve({
-    subscribeMessages: (groupId: string, cb: (msgs: JsMessage[]) => void) => {
-      const set = listeners.get(groupId) ?? new Set();
-      listeners.set(groupId, set);
-      set.add(cb);
-      cb(byGroup[groupId] ?? []);
-      return () => set.delete(cb);
-    },
-  }),
-  getBridgeImpl: () => null,
-}));
+// A hand-built instance under the real provider: no module mock.
+const bridge = {
+  subscribeMessages: (groupId: string, cb: (msgs: JsMessage[]) => void) => {
+    const set = listeners.get(groupId) ?? new Set();
+    listeners.set(groupId, set);
+    set.add(cb);
+    cb(byGroup[groupId] ?? []);
+    return () => set.delete(cb);
+  },
+} as unknown as BridgeImpl;
+const wrapper = bridgeWrapper(bridge);
 
 import { useMessages } from '@/services/nostr-bridge/hooks/messages';
 
@@ -46,7 +47,7 @@ describe('useSubscription', () => {
       const msgs = useMessages(groupId);
       frames.push({ groupId, ids: msgs.map((m) => m.id) });
       return msgs;
-    }, { initialProps: { groupId: 'A' } });
+    }, { initialProps: { groupId: 'A' }, wrapper });
     await waitFor(() => expect(frames.at(-1)?.ids).toEqual(['a1', 'a2']));
 
     rerender({ groupId: 'B' });
@@ -65,7 +66,7 @@ describe('useSubscription', () => {
       const msgs = useMessages(groupId);
       frames.push({ groupId, ids: msgs.map((m) => m.id) });
       return msgs;
-    }, { initialProps: { groupId: 'A' } });
+    }, { initialProps: { groupId: 'A' }, wrapper });
     await waitFor(() => expect(frames.at(-1)?.ids).toEqual(['a1']));
     rerender({ groupId: 'B' });
     await waitFor(() => expect(listeners.get('B')?.size).toBe(1));

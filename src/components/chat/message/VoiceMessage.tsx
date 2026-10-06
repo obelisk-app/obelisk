@@ -5,8 +5,11 @@ import { useTranslation } from '@/i18n/context';
 import { useFormat } from '@/i18n/useFormat';
 import Range from '@/components/ui/Range';
 import RemoteImage from '@/components/ui/RemoteImage';
-import { formatAudioTime, VOICE_WAVEFORM } from './audio-time';
+import { formatElapsed } from '@/utils/format/format-elapsed';
 import { useVoicePlayback } from '@/hooks/chat/message/useVoicePlayback';
+
+/** Bar heights (px) of the decorative waveform the player draws. */
+const VOICE_WAVEFORM = [10, 18, 13, 25, 20, 12, 28, 17, 23, 14, 30, 20, 12, 24, 17, 28, 15, 22, 30, 18, 11, 25, 16, 21, 13, 27, 19, 10] as const;
 
 export function VoiceMessage({
   note,
@@ -83,9 +86,9 @@ export function VoiceMessage({
           />
         </span>
         <span className={`flex justify-between text-[11px] leading-none text-[#aebac1] ${compact ? "mt-0.5" : "absolute bottom-0 left-0 right-3"}`} data-testid="voice-time-row">
-          <span>{formatAudioTime(compact ? current : current || duration)}</span>
+          <span>{formatElapsed((compact ? current : current || duration) * 1000)}</span>
           {compact
-            ? <span>{formatAudioTime(duration)}</span>
+            ? <span>{formatElapsed(duration * 1000)}</span>
             : timestamp
               ? <span>{formatTime(timestamp, { hour: 'numeric', minute: '2-digit' })}</span>
               : null}

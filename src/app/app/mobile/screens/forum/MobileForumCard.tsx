@@ -12,7 +12,7 @@ import {
 import { tagChipStyle } from '@/utils/forum-tag-colors';
 import { useTranslation } from '@/i18n/context';
 import { avatarStyle } from '../../avatar';
-import { resolveMobileTopics } from './forum-threads';
+import { resolveTopics } from '@/utils/chat/forum/forum-threads';
 import { MobileTagDot } from './MobileTagDot';
 import RemoteImage from '@/components/ui/RemoteImage';
 
@@ -35,7 +35,7 @@ export function MobileForumCard({
   const lastMsg = messages[messages.length - 1] ?? null;
   const opMeta = useUserMetadata(op?.pubkey ?? null);
   const lastMeta = useUserMetadata(lastMsg?.pubkey ?? null);
-  const tags = useMemo(() => resolveMobileTopics(group.topics, forumTags), [group.topics, forumTags]);
+  const tags = useMemo(() => resolveTopics(group.topics, forumTags), [group.topics, forumTags]);
   // Hide truly-empty threads (matches the desktop forum UX rule).
   if (!op || !lastMsg) {
     if (messagesStatus === 'empty-confirmed') return null;

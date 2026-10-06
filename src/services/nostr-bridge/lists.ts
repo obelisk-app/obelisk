@@ -168,10 +168,20 @@ export class ListsModule {
     this.ctx.track(sub);
   }
 
-  /** Account change or logout: forget the contact list. The mute list is relay-fed and left as it was. */
+  /** Account change or logout: forget the contact list. */
   resetContactList(): void {
     this.myContactList.set(null);
     this.myContactListReady.set(false);
     this.myContactListLatestAt = 0;
+  }
+
+  /**
+   * Logout: forget the mute list. It is the account's own (kind 10000) and
+   * feeds the WoT engine, so keeping it let the next account on this browser
+   * hide the people the previous one muted, until (and unless) its own list
+   * arrived. `logout-is-fresh.test.ts` caught it.
+   */
+  resetMuteList(): void {
+    this.myMutes.set([]);
   }
 }

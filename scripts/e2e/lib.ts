@@ -29,6 +29,15 @@ export const DEFAULT_RELAY = 'wss://public.obelisk.ar';
 /** Whitelist-rejection specs use this restricted relay by default. */
 export const DEFAULT_RESTRICTED_RELAY = 'wss://lacrypta-relay.obelisk.ar';
 
+/**
+ * The pre-vault session record, secrets in plain JSON. The specs still seed
+ * this shape on purpose: since the session vault, the app migrates it on the
+ * first load (seals the secrets under a key in IndexedDB, rewrites the record
+ * as `{ v: 2, pubKeyHex, loginMethod, relayUrl, sealed }`, erases the
+ * plaintext), so every seeded spec is also an end-to-end run of that
+ * migration. A spec cannot seed the sealed shape: the key that opens it is
+ * a non-extractable CryptoKey only the page itself can create.
+ */
 export interface PersistedSession {
   privKeyHex?: string;
   pubKeyHex: string;
@@ -70,9 +79,12 @@ export function nsecSession(id: FreshIdentity, relayUrl = DEFAULT_RELAY): Persis
 
 /**
  * Seed the bridge's localStorage entries before the first page load.
- * Uses `addInitScript` so the values are present in *every* document
- * served by this context, including reloads. Storage is per-origin, so
- * the `baseURL` of the test target governs which origin gets seeded.
+ * Uses `addInitScript`, which runs in *every* document served by this
+ * context, including reloads, so it writes only when no session record is
+ * there: on a reload the record is the sealed one the app migrated the seed
+ * into, and overwriting it with the plaintext again would put the key back
+ * on disk until the next migration. Storage is per-origin, so the `baseURL`
+ * of the test target governs which origin gets seeded.
  */
 export async function seedSession(
   context: BrowserContext,
@@ -83,6 +95,7 @@ export async function seedSession(
   await context.addInitScript(
     ({ key, relaysKey, sessionJson, relaysJson }) => {
       try {
+        if (window.localStorage.getItem(key) !== null) return;
         window.localStorage.setItem(key, sessionJson);
         window.localStorage.setItem(relaysKey, relaysJson);
       } catch {

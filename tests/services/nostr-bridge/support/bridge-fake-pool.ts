@@ -131,6 +131,12 @@ export function createFakeBridgePool() {
      * tests pretend every relay is reachable.
      */
     async ensureRelay(_url: string, _opts?: { connectionTimeout?: number }): Promise<{ connected: boolean; onclose?: () => void }> {
+      // A finished test's hub keeps retrying on real time. Under CPU load
+      // those retries landed inside the next test and consumed the handshakes
+      // its `ensureRelayImpl` was counting (the "rehydrated cache-free" and
+      // "delayed relay handshake" timeouts). A stale pool's handshake never
+      // settles instead, so it neither counts nor retries again.
+      if (this.stale()) return new Promise(() => {});
       state.ensureRelayCalls.push(_url);
       if (state.ensureRelayImpl) return state.ensureRelayImpl(_url, _opts);
       return { connected: true };

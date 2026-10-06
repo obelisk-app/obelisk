@@ -36,10 +36,28 @@ export {
 /**
  * Does this URL look like a hosted video? Used by MessageContent to hoist
  * video uploads out of the body and render them with <video controls>.
+ * A query or a fragment may follow the extension.
  */
-const VIDEO_EXT_REGEX = /\.(mp4|webm|mov|ogv)(\?.*)?$/i;
+const VIDEO_EXT_REGEX = /\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i;
 export function isVideoUrl(url: string): boolean {
   return VIDEO_EXT_REGEX.test(url);
+}
+
+/**
+ * A video by its declared MIME type, or by its URL's extension when none was
+ * given. Without the extension fallback an `imeta` carrying only a URL
+ * rendered through `<img>`, so a video note showed as a broken image rather
+ * than a player. (The social carousel kept its own extension list for this;
+ * it shares `isVideoUrl`'s now, which gained `m4v` and fragments from it.)
+ */
+export function isVideo(item: { url: string; mimeType?: string | null }): boolean {
+  if (item.mimeType) return item.mimeType.startsWith('video/');
+  return isVideoUrl(item.url);
+}
+
+/** A `.webm` with no picture is a voice note recorded by another client. */
+export function isAudioOnlyWebm(url: string, videoWidth: number, duration: number): boolean {
+  return /\.webm(?:$|[?#])/i.test(url) && videoWidth === 0 && Number.isFinite(duration);
 }
 
 const AUDIO_EXT_REGEX = /\.(mp3|ogg|oga|wav|m4a|weba)(\?.*)?$/i;

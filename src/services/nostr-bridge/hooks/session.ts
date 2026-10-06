@@ -4,9 +4,10 @@
  */
 import { useEffect, useState } from 'react';
 import type { NipSigner } from '@/lib/nip-59';
-import { getBridgeImpl } from '../client';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
+import type { SessionNotice } from '../session/vault';
 import type { RelayAccessState } from '../types';
+import { bridgeFrom, useBridgeContext } from './provider';
 import { useSubscription } from './subscription';
 
 export function useIsLoggedIn(): boolean {
@@ -124,10 +125,21 @@ export function useSignerReady(): boolean {
   return method !== null;
 }
 
+/** The session's NIP-59 signer, from the provider's bridge (or `getBridgeImpl()` outside one). */
 export function useNipSigner(): NipSigner | null {
   const pubkey = useMyPubkey();
   const ready = useSignerReady();
-  return pubkey && ready ? getBridgeImpl()?.getNipSigner() ?? null : null;
+  const ctx = useBridgeContext();
+  return pubkey && ready ? bridgeFrom(ctx)?.getNipSigner() ?? null : null;
+}
+
+/**
+ * What the person should be told about keeping their session, or `null`:
+ * `not-remembered` (this login lives for this visit only, the browser cannot
+ * keep a key), or why a reload could not restore the saved one.
+ */
+export function useSessionNotice(): SessionNotice | null {
+  return useSubscription<SessionNotice | null>((b, cb) => b.subscribeSessionNotice(cb), null);
 }
 
 export function useConfiguredRelays(): ReadonlyArray<string> {

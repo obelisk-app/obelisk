@@ -8,9 +8,9 @@ import type { JsMediaItem, JsMediaPack } from '@/services/nostr-bridge';
 import { publishRelayEmojiSet, type RelayEmojiSet } from '@/services/relay-emojis';
 import { inferMediaKind } from '@/utils/media-tags/media-kind';
 import { useTranslation } from '@/i18n/context';
-import { confirmDialog } from '@/components/ui/ConfirmDialog';
-import { filterVisiblePacks, sortedPacks } from '@/components/media/library/pack-utils';
-import type { EditablePack, LibraryTab, MediaFilter, SelectedMedia } from '@/components/media/library/types';
+import { confirmDialog } from '@/services/confirm-dialog';
+import { filterVisiblePacks, sortedPacks } from '@/utils/media-library/pack-utils';
+import type { EditablePack, LibraryTab, MediaFilter, SelectedMedia } from '@/utils/media-library/types';
 
 export type LibraryServer = { relayUrl: string; emojiSet: RelayEmojiSet };
 

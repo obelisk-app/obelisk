@@ -18,7 +18,7 @@ import { MessageMenu } from './message/MessageMenu';
 import { MessageToolbar } from './message/MessageToolbar';
 import { ReactionPills } from './message/ReactionPills';
 import { ReplyPreviewRow } from './message/ReplyPreviewRow';
-import { flashMessage } from './message/message-link';
+import { flashMessage } from '@/utils/scroll/message-flash';
 import { useMessageRowActions } from '@/hooks/app/panes/message/useMessageRowActions';
 import { useMessageRowMenus } from '@/hooks/app/panes/message/useMessageRowMenus';
 import Button from '@/components/ui/Button';

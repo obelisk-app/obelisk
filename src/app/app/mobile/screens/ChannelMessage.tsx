@@ -15,7 +15,7 @@ import { resolveReactionEmoji } from '@/utils/message-text/emoji-shortcodes';
 import RoleBadge from '@/components/chat/RoleBadge';
 import { useTranslation } from '@/i18n/context';
 import { avatarStyle } from '../avatar';
-import { timeOfDay } from '../labels';
+import { timeOfDay } from '@/utils/shell/mobile/labels';
 import RemoteImage from '@/components/ui/RemoteImage';
 
 function MobileReplyPreviewRow({

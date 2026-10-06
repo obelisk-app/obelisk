@@ -18,3 +18,17 @@ describe('relay-roles-model', () => {
     expect(entry.publishRoleCatalog).toBe(sync.publishRoleCatalog);
   });
 });
+
+describe('the roles editor draft', () => {
+  const role = (id: string, tier: number) => ({ id, name: id, tier, color: '#fff', emoji: '' });
+
+  it('retier numbers the ladder top-down and densely', () => {
+    expect(model.retier([role('a', 9), role('b', 1), role('c', 0)]).map((r) => r.tier)).toEqual([3, 2, 1]);
+  });
+
+  it('serializeRoles changes with any published field and not otherwise', () => {
+    const base = [role('a', 1)];
+    expect(model.serializeRoles(base)).toBe(model.serializeRoles([role('a', 1)]));
+    expect(model.serializeRoles(base)).not.toBe(model.serializeRoles([{ ...role('a', 1), color: '#000' }]));
+  });
+});

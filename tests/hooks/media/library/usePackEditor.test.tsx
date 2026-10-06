@@ -10,7 +10,7 @@ vi.mock('@/services/blossom', () => ({ uploadToBlossom: mocks.uploadToBlossom })
 vi.mock('@/services/nostr-bridge', () => ({ nostrActions: { saveMediaPack: mocks.saveMediaPack } }));
 
 import { usePackEditor } from '@/hooks/media/library/usePackEditor';
-import type { EditablePack } from '@/components/media/library/types';
+import type { EditablePack } from '@/utils/media-library/types';
 
 const PACK: EditablePack = { identifier: 'p1', title: ' Cats ', description: '', image: '', items: [] };
 

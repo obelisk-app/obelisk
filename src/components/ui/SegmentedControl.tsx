@@ -1,5 +1,5 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 /** `content` sizes the bar to its options; `fill` stretches it and shares the width equally. */
 export type SegmentedFit = 'content' | 'fill';

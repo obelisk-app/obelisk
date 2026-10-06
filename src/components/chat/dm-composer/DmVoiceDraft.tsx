@@ -4,7 +4,7 @@ import { useTranslation } from '@/i18n/context';
 import { TrashIcon } from '@/components/ui/icons';
 import Spinner from '@/components/ui/Spinner';
 import { VoiceMessage } from '../message/VoiceMessage';
-import type { PendingVoice } from './pending';
+import type { PendingVoice } from '@/utils/chat/dm/pending';
 import IconButton from '@/components/ui/IconButton';
 
 /** A recorded voice note waiting to be sent: playable, with an upload spinner and discard. */

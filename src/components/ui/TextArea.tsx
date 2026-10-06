@@ -1,6 +1,6 @@
 import { forwardRef, useId, useMemo, useRef, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { useAutosizeTextArea, type TextAreaHeight } from '@/hooks/useAutosizeTextArea';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import Field, { fieldNoteId } from './Field';
 import { inputSurfaceClass, type InputSize } from './Input';
 import { mergeRefs } from './merge-refs';

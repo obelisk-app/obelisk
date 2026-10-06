@@ -15,7 +15,7 @@ The rules in this file are the intended design. The tree does not fully obey the
 - **"SVG icons, not glyphs" is violated by the glyph the rule cites.** The muted-channel marker is still `🔕` in both shells, and `✕` / `×` / `★` remain in `MediaLibraryModal.tsx`, `RelayRolesAdminModal.tsx`, `MobileSigningIndicator.tsx` and the PhoneShell search clear. New chrome goes through `src/components/ui/icons.tsx`.
 - **`ingestGroupMetadata` does not fan out the way older docs said.** It calls only `queueGroupMessages(groupId)`. `subscribeGroupCreator` (`client.ts:6374`) has no caller at all, yet its two containers (`creatorSubscribedGroups`, the sub list) are still declared, cleared on session change and iterated when voice trims subscriptions. Creator lookup actually happens through the relay-wide kind 9007 sub (`subscribeMyAuthoredGroups` / `ingestGroupCreator`). Delete or re-wire; do not document it as live.
 - **`src/services/voice/client.ts` wraps 16 production store calls in `catch { /* test envs */ }`.** It is a test seam leaking into production; any real store error is swallowed. Do not add a seventeenth. The fix is an injected store sink, not another catch.
-- **Utilities are duplicated with diverging semantics.** `shortHost` is defined seven times (`DesktopShell`, `ServerRail`, `RelayStatusBanner`, `PhoneShell`, `mobile/url-state.ts`, `social/RelayStatusPill`, `social/widgets/RelaysWidget`); `normalizeRelayUrl` three times with three signatures (`nostr-bridge/relay-url.ts` is the bridge's canonical one, `social/relays.ts` the social tier's, `PhoneShell.tsx:310` a stray). `getBridgeSync` and `getBridgeImpl` (`client.ts:8534-8541`) are byte-identical.
+- **Utilities are duplicated with diverging semantics.** `shortHost` is down to one copy (`src/utils/relay-url/url-host.ts`; the last private one, in the mobile URL state, went in round 18); `normalizeRelayUrl` three times with three signatures (`nostr-bridge/relay-url.ts` is the bridge's canonical one, `social/relays.ts` the social tier's, `PhoneShell.tsx:310` a stray). `getBridgeSync` and `getBridgeImpl` (`client.ts:8534-8541`) are byte-identical.
 - **`useLocalWallet` (`src/hooks/wallet/useLocalWallet.ts`) is a stub** that always returns no client (its own header says the original module was never committed), so `InvoiceCard.tsx`'s Pay does nothing. Live zap flows use `@nostr-wot/wallet` (`MessageZapModal.tsx`, `useMessageZaps.ts`).
 - **A few hooks still sit outside the hooks layer.** `src/services/remote-media-gate.ts` (`useRemoteMediaGate`) waits on the bridge front-door allow-list (`tests/services/nostr-bridge/front-door.test.ts`), which names it by path. The bridge's own hooks are in `src/services/nostr-bridge/hooks/`, the Web-of-Trust Zustand store in `src/services/wot/store.ts`, and `ReadStateRoot` (`src/services/read-state/root.tsx`) is a render-nothing component in services. `tests/hooks/hooks-layer.test.ts` exempts nothing.
 - **Leftovers from the removed NDK stack:** `tests/support/mocks/ndk.ts` mocks a dependency that is no longer in `package.json`. `docs/README.md` still describes `direct-messages.md` as "NIP-04 DMs"; `docs/known-bugs.md` says `subscribeAdminMember` is fired from `ingestGroupMetadata` (it is not, see Data subscriptions).
@@ -57,13 +57,12 @@ src/
 │   │   ├── page.tsx                # Mounts <AppGate />
 │   │   ├── AppGate.tsx             # Viewport switch: DesktopShell or mobile/PhoneShell (`useIsMobile`)
 │   │   ├── DesktopShell.tsx        # Desktop chat shell (default export named AppShell), 5664 lines
-│   │   ├── mobile/                 # PhoneShell.tsx (7174 lines) + swipe-nav, url-state, mobile-shell.css
+│   │   ├── mobile/                 # PhoneShell.tsx, screens/, sheets/, mobile-shell.css (the navigation rules are in src/utils/shell/mobile)
 │   │   ├── LoginModal.tsx          # 3 auth methods + QR bunker flow
 │   │   ├── RelayStatusBanner.tsx   # Unified connection + access banner
 │   │   ├── ServerRail.tsx          # Relay-list rail
 │   │   ├── DMList.tsx, DMComposer.tsx, DMOptInGate.tsx
-│   │   ├── SearchBar.tsx, UserPanel.tsx, GeneratedProfileEnhancements.tsx
-│   │   └── feed-pane.ts
+│   │   └── SearchBar.tsx, UserPanel.tsx, GeneratedProfileEnhancements.tsx
 │   ├── api/link-preview/route.ts # The one server route (OG unfurl proxy)
 │   ├── guides/                   # Markdown guides + SVG diagrams (en, es, pt)
 │   ├── r/[code]/                 # Per-relay branded share-link routes (+ opengraph-image)
@@ -110,11 +109,17 @@ src/
 │   ├── message-text/              # mentions, mentions-draft, markdown, emoji-shortcodes
 │   ├── media-tags/                # custom-emoji, sticker, voice-note and media-pack tag codecs, media-kind
 │   ├── attachments/               # attachments, attachments-limits, dm-file (kind 15 tag codec)
-│   ├── format/                    # format (Intl dates/numbers), day-label, relative-time, format-bytes, format-elapsed
-│   ├── guides/, hints/            # guide-urls, help-topics, clip-paths; onboarding hint registry
-│   ├── scroll/, storage/          # channel scroll anchor/position, scroll-behavior; local-store, json-safe
+│   ├── format/                    # format (Intl dates/numbers), day-label, relative-time, format-bytes, format-elapsed, format-count
+│   ├── guides/, hints/            # guide-urls, help-topics, clip-paths, asset-meta; onboarding hint registry
+│   ├── scroll/, storage/          # channel scroll anchor/position, scroll-behavior, message-flash; local-store, json-safe
+│   ├── shell/                     # Shell state with no React: feed-pane, view, desktop-layout; mobile/ (url-state, swipe-nav, carousel-slots, labels)
+│   ├── chat/                      # Pure chat helpers: forum/, dm/, picker/, slash/, channel-timeline, channel-list-state, channel-menu-options
+│   ├── media-library/             # pack-utils, gif and sticker selection, the library's types
+│   ├── social/, voice/, games/    # article-meta, note-card; stage-layout; shots/ (the /dev/game-shots fixtures)
+│   ├── media-kit/content.ts       # The media kit page's copy, colours, links and assets
+│   ├── url/, style/, layout/, nip46/   # isHttpUrl; cn; popover-position; signer-link
 │   └── csp, i18n, bolt11, search-query, link-preview, profile-links, forum-tag-colors, open-settings,
-│                                   # favicon-badge, message-input-props, channel-link
+│                                   # favicon-badge, message-input-props, channel-link (channel, invite and message links)
 ├── services/                      # Business logic and integrations: relays, bridge, stores, fetch, storage
 │   ├── nostr-bridge/              # THE bridge. Read this first.
 │   │   ├── client.ts                # SimplePool wrapper, sessions, subscriptions (8541 lines)
@@ -125,6 +130,8 @@ src/
 │   │   ├── relay-url.ts             # normalizeRelayUrl + validation (the canonical one)
 │   │   ├── signer-queue.ts, wrap-ledger.ts, decrypt-cache.ts, quota-resubscribe.ts, relay-debug.ts
 │   │   ├── types.ts                 # NostrBridge interface, JsGroup/JsMessage/...
+│   │   ├── provider.tsx             # <BridgeProvider> (mounted by src/app/app/layout.tsx), useBridge/useBridgeReady in hooks/provider.ts
+│   │   ├── bridge-slot.ts           # The page bridge's globalThis slot: registerBridge / unregisterBridge
 │   │   └── index.ts                 # Public re-exports
 │   ├── channel-layout.ts          # NIP-78 (kind 30078) channel layout + operator authors
 │   ├── relay-branding.ts, relay-emojis.ts, relay-roles.ts (+ -model, -sync)   # Operator-controlled kind 30078 data
@@ -133,7 +140,9 @@ src/
 │   ├── blossom, dm-attachments, dm-file-decrypt  # Encrypted DM uploads (kind 15)
 │   ├── reset.ts                   # `resetAllClientState()`: login/logout teardown
 │   ├── account-backup, activity-log, bot-commands, forum-prefs, group-search, guides, nip05-verify
-│   ├── personal-stickers, quota-safe-storage, read-gates, recent-emojis, recent-slash-commands, remote-media(-gate)
+│   ├── personal-stickers, quota-safe-storage, read-gates, recent-emojis, recent-media, recent-slash-commands, remote-media(-gate)
+│   ├── clipboard, confirm-dialog, giphy, remove-relay   # copyText/copyWithToast; the confirm request store (the host is ui/ConfirmDialog); GIPHY API
+│   ├── login/login-bridge.ts      # Hands the SDK's login result to the bridge; publishes a generated key's kind 0
 │   ├── dm/opt-in.ts               # The `directMessagesEnabled` gate (the only file under dm/)
 │   ├── dm-call/                   # DM call protocol, session (fetched on demand by load-session.ts), signaling
 │   ├── wallet/                    # parse-zap-command, send-zap, zap-constants
@@ -144,13 +153,13 @@ src/
 │   ├── wot/                       # Web-of-trust engine + colors
 │   ├── read-state/                # Read-state root, selectors, relay-sync (NIP-59 gift wrap)
 │   ├── notifications/             # classify, sound, alert, permission-prompt
-│   └── server/                    # Server-only: locale, nostr-fetch, note-preview
+│   └── server/                    # Server-only: locale, nostr-fetch, note-preview, link-preview/ (the unfurl's safe fetch, cache, rate limit)
 ├── store/                         # Zustand stores (see Stack)
 ├── types/nostr.d.ts               # `Window.nostr` typing
 └── test/                          # setup.ts, fixtures/, mocks/ (webrtc, stale ndk)
 ```
 
-Where new code goes: a self-contained building block with no app imports, formal enough to publish, goes in `lib/`; a small stateless helper that belongs to no feature goes in `utils/` (in a topic subfolder when it has siblings); anything that talks to a relay, the bridge, a store, `fetch`, `localStorage` on behalf of a feature, WebRTC or the filesystem goes in `services/`. React hooks go in the hooks layer, `src/hooks/<module>/`, never in a component file or folder and never in `services/`: a hook file under `src/hooks/` mirrors the module it serves (`src/components/chat/gallery/` -> `src/hooks/chat/gallery/`, `src/app/app/mobile/` -> `src/hooks/app/mobile/`, `src/services/social/` -> `src/hooks/social/`), and the store, cache or fetch it reads stays in `services/`. Before writing one, look for an existing hook that does the job (`useDismiss` for click-outside and Escape, `useAnchoredPosition` for popovers). `tests/hooks/hooks-layer.test.ts` fails on a hook file or hook definition under `src/components/` or `src/app/`.
+Where new code goes: a self-contained building block with no app imports, formal enough to publish, goes in `lib/`; a small stateless helper that belongs to no feature goes in `utils/` (in a topic subfolder when it has siblings); anything that talks to a relay, the bridge, a store, `fetch`, `localStorage` on behalf of a feature, WebRTC or the filesystem goes in `services/`. React hooks go in the hooks layer, `src/hooks/<module>/`, never in a component file or folder and never in `services/`: a hook file under `src/hooks/` mirrors the module it serves (`src/components/chat/gallery/` -> `src/hooks/chat/gallery/`, `src/app/app/mobile/` -> `src/hooks/app/mobile/`, `src/services/social/` -> `src/hooks/social/`), and the store, cache or fetch it reads stays in `services/`. Before writing one, look for an existing hook that does the job (`useDismiss` for click-outside and Escape, `useAnchoredPosition` for popovers). `tests/hooks/hooks-layer.test.ts` fails on a hook file or hook definition under `src/components/` or `src/app/`, and `tests/components/components-only.test.ts` fails on any other non-component module there (a `.ts` file, or a `.tsx` file that neither renders JSX nor exports a component) outside Next.js file conventions and its short, reasoned, shrink-only list (the ui kit's `input-surface.ts` and `merge-refs.ts`, and the game helpers under `chat/games/` until that folder's own move). A props type used only by its component stays in that component file; a type shared with logic lives beside the logic.
 
 The `prisma/` and `server.ts` of the legacy stack are gone, and `src/app/api/` holds only the link-preview route. References to `useAuthStore`, `restoreSession`, `syncProfile`, `/api/auth/*`, `/api/members/*`, `getNDK`, `src/lib/nostr.ts`, `src/hooks/useIdentity.ts` are no longer in the tree: if you find one, it slipped through and should be removed.
 
@@ -191,13 +200,15 @@ See [docs/data-system.md](docs/data-system.md) for the complete contract.
 All four entrypoints route through the private `finalizeLogin()`. The page-reload rehydration in `initialize()` (`client.ts:1816-1878`) does **not**: it repeats the steps inline, so anything added to `finalizeLogin` must be mirrored there (or hung off the `isLoggedIn` store, as the background relay watch is):
 
 ```
-1. persist()                       : write session to localStorage
+1. seal() + persist()              : seal the secrets (session vault), write the session record
 2. resetPoolForSessionChange()     : fresh sockets so NIP-42 AUTH renegotiates
 3. await connect()                 : relay handshake + open global subscriptions
 4. isLoggedIn.set(true)            : flip the gate AppShell observes
 ```
 
 `isLoggedIn` is the contract for "AppShell can mount the chat UI": it implies relay handshake completed and global REQs are open.
+
+No secret is stored in the clear: the nsec, the bunker URL and the bunker client key are sealed by `src/lib/crypto/session-vault.ts` (AES-GCM, non-extractable key in IndexedDB) before `obelisk-dex/session` is written, and the SDK login widget runs on memory-only storage. See [docs/data-system.md §2](docs/data-system.md).
 
 ## Data subscriptions
 
@@ -345,8 +356,8 @@ Nothing below the UI changed, and none of it should:
 
 So: renaming an identifier is a wire/compat change, renaming a string is
 copy. When adding a user-visible label, say "publication". The one place
-that maps kind id -> label is `CHANNEL_KIND_LABEL` in `mobile/PhoneShell.tsx`
-(line 1836); the mobile picker used to derive its label from the kind id and therefore
+that maps kind id -> label is `CHANNEL_KIND_LABEL` in
+`src/utils/shell/mobile/labels.ts`; the mobile picker used to derive its label from the kind id and therefore
 printed "Forum" no matter what the strings said.
 
 Tag colors live in `src/utils/forum-tag-colors.ts`: a curated palette, chosen
@@ -445,7 +456,10 @@ const myPubkey = useMyPubkey();
 const groups = useGroups();
 const admins = useAdmins(activeGroupId);
 
-// Imperative publishing:
+// Imperative use in a React file, inside <BridgeProvider> (the /app layout):
+const live = useBridge(); // null until the bridge is ready; useBridge comes from the same front door
+
+// Imperative publishing (non-React code keeps getBridge()):
 const bridge = await getBridge();
 await bridge.sendMessage(groupId, 'hello');
 await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
@@ -481,9 +495,11 @@ for where this sits relative to the bridgeCache.
 - **Playwright**: end-to-end specs in `scripts/e2e/` (`npm run test:e2e`), see [docs/data-system.md §14](docs/data-system.md)
 
 ### Conventions
-- Tests live in `tests/`, mirroring `src/`: `src/components/chat/Foo.tsx` is tested by `tests/components/chat/Foo.test.tsx`, which imports it as `@/components/chat/Foo`. `src/` holds no test files (`vitest.config.ts` only collects `tests/**` and `scripts/**`). Repo-wide invariant tests (`csp`, `service-worker-cache`, `hooks-after-early-return`, `no-em-dash`, `eslint-config`) sit at the top of `tests/`. The hooks-layer guard sits with the hooks it guards, `tests/hooks/hooks-layer.test.ts`; a hook's test lives under `tests/hooks/` like the hook (`src/hooks/chat/gallery/useZoomPan.ts` -> `tests/hooks/chat/gallery/`).
+- Tests live in `tests/`, mirroring `src/`: `src/components/chat/Foo.tsx` is tested by `tests/components/chat/Foo.test.tsx`, which imports it as `@/components/chat/Foo`. `src/` holds no test files (`vitest.config.ts` only collects `tests/**` and `scripts/**`). Repo-wide invariant tests (`csp`, `service-worker-cache`, `hooks-after-early-return`, `no-em-dash`, `eslint-config`) sit at the top of `tests/`. The hooks-layer guard sits with the hooks it guards, `tests/hooks/hooks-layer.test.ts`, and the components-only guard with the components, `tests/components/components-only.test.ts`; a hook's test lives under `tests/hooks/` like the hook (`src/hooks/chat/gallery/useZoomPan.ts` -> `tests/hooks/chat/gallery/`).
 - Two house rules are enforced, not just written down: `eslint.config.mjs` makes `max-lines` (300, blank and comment-only lines not counted) an error for `src/**`, and `tests/no-em-dash.test.ts` fails on a literal em dash (U+2014) anywhere in `src/`, `tests/`, `scripts/`, `docs/`, `content/` (the guides), `.github/`, `.claude/`, the text assets under `public/` (SVG, JSON, TXT, JS, manifest) or any file at the repo root (only the generated `package-lock.json` is left out). Neither has any exemption left. `tests/eslint-config.test.ts` also fails if a path-scoped glob in the lint config matches no file.
-- Shared setup, mocks and fixtures in `tests/support/` (`setup.ts`, `warm-bridge-modules.ts`, `mocks/webrtc.ts`, `mocks/nostr-bridge.ts`, `fixtures/`), imported as `@tests/support/...`; `mocks/ndk.ts` is a leftover
+- Shared setup, mocks and fixtures in `tests/support/` (`setup.ts`, `warm-bridge-modules.ts`, `mocks/webrtc.ts`, `mocks/nostr-bridge.ts`, `fake-bridge.ts`, `render-with-bridge.tsx`, `fixtures/`), imported as `@tests/support/...`; `mocks/ndk.ts` is a leftover
+- A new component or hook test fakes the bridge *instance*, not the module: `renderWithBridge(<X />, fakeBridge({ groups }))` (or `bridgeWrapper` for `renderHook`) runs the real hooks over seeded stores, and `fake.stores.groups.set(...)` inside `act` drives a change. `tests/bridge-mock-count.test.ts` only lets the number of `vi.mock('@/services/nostr-bridge', ...)` files go down.
+- The page bridge lives on `globalThis` (`bridge-slot.ts`), so `vi.resetModules()` does not forget it: a suite that wants a fresh bridge calls `unregisterBridge()` (the bridge harnesses do), and a non-React suite can `registerBridge(fake)` instead of mocking the client module.
 - Use `data-testid` attributes for reliable test selectors
 - Bridge integration tests use a `FakePool` that mocks `SimplePool` (see `bridge.test.ts`, 4806 lines / 144 cases, and `login-race.test.ts`). The fake must implement `subscribe`, `publish`, `close`, AND `ensureRelay` because `connect()` awaits the handshake.
 

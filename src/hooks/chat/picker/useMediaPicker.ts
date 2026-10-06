@@ -7,11 +7,11 @@ import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media-tag
 import { nostrActions, useMediaPacks, useMyMediaFavorites, useMyPubkey, type JsMediaItem, type JsMediaKind } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
 import { detectGifPresentation, inferMediaKind } from '@/utils/media-tags/media-kind';
-import type { PickedCustomEmoji } from '@/components/chat/picker/picker-types';
-import type { MediaCategory, MediaEntry, MediaPickerTab, RecentMediaEntry } from '@/components/chat/picker/media-catalog';
-import { loadRecentMedia, saveRecentMedia } from '@/components/chat/picker/recent-media';
+import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
+import type { MediaCategory, MediaEntry, MediaPickerTab, RecentMediaEntry } from '@/utils/chat/picker/media-catalog';
+import { loadRecentMedia, saveRecentMedia } from '@/services/recent-media';
 import { useGiphyResults } from './useGiphyResults';
-import { emojiTabMaps, personalMediaEntries, serverMediaEntries, visibleMediaSections } from '@/components/chat/picker/media-entries';
+import { emojiTabMaps, personalMediaEntries, serverMediaEntries, visibleMediaSections } from '@/utils/chat/picker/media-entries';
 
 /**
  * State and actions of the media picker: tab, category and query; the

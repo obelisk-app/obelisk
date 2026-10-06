@@ -4,8 +4,8 @@ import { type ReactNode } from 'react';
 import { useTranslation } from '@/i18n/context';
 import HintDot from '@/components/hints/HintDot';
 import type { SurfaceId } from '@/utils/hints/registry';
-import { type ScreenName, type NavState } from './url-state';
-import { NAV_ORDER, resolveParent } from './swipe-nav';
+import { type ScreenName, type NavState } from '@/utils/shell/mobile/url-state';
+import { NAV_ORDER, resolveParent } from '@/utils/shell/mobile/swipe-nav';
 
 interface NavTab { id: ScreenName; icon: ReactNode; label: string; badge?: number }
 

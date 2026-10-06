@@ -177,6 +177,13 @@ export function clearForLogout(t: LifecycleTargets): void {
   t.messages.clearFlushers();
   t.reactions.clearFlushers();
   t.messages.clearQuerySyncFallback();
+  // What the relay switch already clears and logout used to keep: the
+  // category nesting, the group creators and the reactions of groups that
+  // are gone, and the account's own mute list (`logout-is-fresh.test.ts`).
+  t.metadata.resetChildren();
+  t.membership.resetCreators();
+  t.reactions.clear();
+  t.lists.resetMuteList();
   // The next session must re-prove relay access from scratch.
   t.access.reset();
   resetAllClientState();

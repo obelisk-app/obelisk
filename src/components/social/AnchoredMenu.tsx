@@ -26,7 +26,7 @@
  */
 
 import type { ReactNode, RefObject } from 'react';
-import { cn } from '@/components/ui/cn';
+import { cn } from '@/utils/style/cn';
 import PopoverPanel from '@/components/ui/PopoverPanel';
 
 export default function AnchoredMenu({

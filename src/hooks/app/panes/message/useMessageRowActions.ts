@@ -28,7 +28,7 @@ import {
   type MessageReactionInput,
 } from '@/hooks/chat/useMessageActions';
 import { useTranslation } from '@/i18n/context';
-import { messageLink } from '@/app/app/panes/message/message-link';
+import { messageLink } from '@/utils/channel-link';
 
 /**
  * Everything a desktop message row can do to its message: react (from

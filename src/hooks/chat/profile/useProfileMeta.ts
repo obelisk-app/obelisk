@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { nostrActions, useUserMetadata, type JsUserMetadata } from '@/services/nostr-bridge';
-import { stripEmpty } from '@/components/chat/profile/profile-labels';
+import { stripEmpty } from '@/utils/identity/profile-labels';
 
 /**
  * A profile's kind 0: the live bridge copy laid over the server-fetched one

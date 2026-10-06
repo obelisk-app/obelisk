@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { BridgeImpl } from '@/services/nostr-bridge/client';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
@@ -26,14 +28,15 @@ const publishSignedMock = vi.fn(
 );
 const getNipSignerMock = vi.fn();
 
-vi.mock('@/services/nostr-bridge/client', () => ({
-  getBridgeImpl: () => ({
+// The page bridge is a registered fake: the real client module, no mock of it.
+const bridgeFake = {
     subscribeFilterWatched: subscribeMock,
     publishEvent: publishMock,
     publishSignedEvent: publishSignedMock,
     getNipSigner: getNipSignerMock,
-  }),
-}));
+  } as unknown as BridgeImpl;
+beforeEach(() => registerBridge(bridgeFake));
+afterEach(() => unregisterBridge());
 
 import { wrapForSelf, type NipSigner } from '@/lib/nip-59';
 import { startGroupsRelaySync, startDMRelaySync, D_TAG_GROUPS, READ_STATE_WATCHDOG_MS, __INTERNAL } from '@/services/read-state/relay-sync';

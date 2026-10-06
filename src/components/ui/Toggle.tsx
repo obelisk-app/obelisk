@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import Spinner from './Spinner';
 
 /** `loading`: the change is being saved. The switch is busy and ignores clicks, with a spinner in the knob. */

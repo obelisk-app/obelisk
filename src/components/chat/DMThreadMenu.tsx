@@ -23,7 +23,7 @@ import AnchoredMenu from '@/components/social/AnchoredMenu';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useModerationStore } from '@/store/moderation';
 import { useTranslation } from '@/i18n/context';
-import { safeNpub } from './dm-message/dm-message-utils';
+import { safeNpub } from '@/utils/identity/short-npub';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
 import { BanIcon, BellIcon, BellOffIcon, CheckBadgeIcon, KeyIcon, MoreIcon, UserIcon } from '@/components/ui/icons';
 import IconButton from '@/components/ui/IconButton';

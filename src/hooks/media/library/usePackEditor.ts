@@ -5,8 +5,9 @@ import { uploadToBlossom } from '@/services/blossom';
 import { isValidCustomEmojiName, normalizeCustomEmojiName } from '@/utils/media-tags/custom-emoji-tags';
 import { nostrActions } from '@/services/nostr-bridge';
 import type { JsMediaItem, JsMediaKind } from '@/services/nostr-bridge';
-import { uniqueName, validHttpUrl } from '@/components/media/library/pack-utils';
-import type { EditablePack } from '@/components/media/library/types';
+import { uniqueName } from '@/utils/media-library/pack-utils';
+import { isHttpUrl } from '@/utils/url/http-url';
+import type { EditablePack } from '@/utils/media-library/types';
 
 /**
  * The draft behind the pack editor: uploads become items with unique
@@ -49,7 +50,7 @@ export function usePackEditor(
     const names = new Set<string>();
     for (const item of draft.items) {
       const name = normalizeCustomEmojiName(item.name);
-      if (!isValidCustomEmojiName(name) || !validHttpUrl(item.url)) return setError('Every item needs a unique shortcode and HTTP(S) image URL.');
+      if (!isValidCustomEmojiName(name) || !isHttpUrl(item.url)) return setError('Every item needs a unique shortcode and HTTP(S) image URL.');
       if (names.has(name)) return setError(`Duplicate shortcode: :${name}:`);
       names.add(name);
     }

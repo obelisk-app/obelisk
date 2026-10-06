@@ -5,7 +5,7 @@ import { useTranslation } from '@/i18n/context';
 import MessageMediaPicker from '../MessageMediaPicker';
 import { AttachmentMenu, StickerIcon, VoiceNoteButton } from '../ComposerActions';
 import { useDismiss } from '@/hooks/useDismiss';
-import { MAX_PENDING } from './pending';
+import { MAX_PENDING } from '@/utils/chat/dm/pending';
 import type { DmComposerState } from '@/hooks/chat/dm-composer/useDmComposer';
 import IconButton from '@/components/ui/IconButton';
 

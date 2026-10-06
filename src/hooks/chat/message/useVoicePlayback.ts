@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { nextPlaybackRate } from '@/components/chat/message/audio-time';
+import { nextPlaybackRate } from '@/utils/chat/voice-playback';
 
 /**
  * Play state of one `<audio>` element: whether it is playing, the speed,

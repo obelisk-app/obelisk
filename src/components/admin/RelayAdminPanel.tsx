@@ -10,7 +10,7 @@ import {
 } from '@/services/nostr-bridge';
 import { useUserMetadata as useProfile } from '@/services/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
-import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { confirmDialog } from '@/services/confirm-dialog';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useMembersByGroupBulk } from '@/hooks/useMembersByGroupBulk';
 import Button from '@/components/ui/Button';

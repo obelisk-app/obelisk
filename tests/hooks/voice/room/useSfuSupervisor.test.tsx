@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { SfuStatus } from '@/components/voice/room/header';
+import type { SfuStatus } from '@/services/voice/room-events';
 
 const sfuControl = vi.hoisted(() => ({ ensureSfuRoomStarted: vi.fn(async (): Promise<string | null> => null) }));
 vi.mock('@/services/voice/sfu-control', () => ({ ensureSfuRoomStarted: sfuControl.ensureSfuRoomStarted }));

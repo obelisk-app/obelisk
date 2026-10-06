@@ -6,7 +6,7 @@ import RemoteImage from '@/components/ui/RemoteImage';
 import { Lightbox } from './gallery/Lightbox';
 import { useGifSelections } from '@/hooks/chat/gallery/useGifSelections';
 import { useLightboxIndex } from '@/hooks/chat/gallery/useLightboxIndex';
-import type { GifSelection } from './gallery/gif-selections';
+import type { GifSelection } from '@/utils/media-library/gif-selections';
 
 export { Lightbox, type LightboxProps } from './gallery/Lightbox';
 

@@ -1,4 +1,4 @@
-import type { MediaCategory } from './media-catalog';
+import type { MediaCategory } from '@/utils/chat/picker/media-catalog';
 import { RecentIcon } from './RecentIcon';
 
 export function MediaCategoryIcon({ category }: { category: MediaCategory }) {

@@ -6,22 +6,11 @@ import {
   LikeIcon,
   RepostButton,
   ReplyIcon,
-  formatCount,
 } from '@/components/social/NoteActions';
 
 const wrap = (ui: React.ReactNode) => render(
   <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
 );
-
-describe('formatCount', () => {
-  it('abbreviates large counts without jitter', () => {
-    expect(formatCount(0)).toBe('0');
-    expect(formatCount(999)).toBe('999');
-    expect(formatCount(1500)).toBe('1.5k');
-    expect(formatCount(25_000)).toBe('25k');
-    expect(formatCount(2_400_000)).toBe('2.4M');
-  });
-});
 
 describe('ActionButton', () => {
   it('renders an SVG icon rather than a unicode glyph', () => {

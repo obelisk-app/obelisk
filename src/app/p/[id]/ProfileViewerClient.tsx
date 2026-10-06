@@ -17,7 +17,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
-import { nip19 } from 'nostr-tools';
+import { safeNpub } from '@/utils/identity/short-npub';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
 import NostrProfile from '@/components/chat/NostrProfile';
 
@@ -58,12 +58,4 @@ function subscribeToViewport(onChange: () => void): () => void {
 
 function isMobileViewport(): boolean {
   return window.matchMedia(MOBILE_QUERY).matches;
-}
-
-function safeNpub(pubkey: string): string {
-  try {
-    return nip19.npubEncode(pubkey);
-  } catch {
-    return pubkey;
-  }
 }

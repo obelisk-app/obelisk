@@ -16,7 +16,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { Lightbox } from '@/components/chat/ImageGallery';
 import RemoteImage from '@/components/ui/RemoteImage';
-import { isVideo } from './media-type';
+import { isVideo } from '@/utils/attachments/attachments';
 
 export type CarouselItem = {
   url: string;

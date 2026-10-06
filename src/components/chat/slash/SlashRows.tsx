@@ -4,7 +4,7 @@ import { memo } from 'react';
 import ObeliskIcon from '@/components/ui/ObeliskIcon';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { RecentIcon } from '../picker/RecentIcon';
-import type { BotProfiles, SlashCommand, SlashCommandSection } from './slash-commands';
+import type { BotProfiles, SlashCommand, SlashCommandSection } from '@/utils/chat/slash/slash-commands';
 import OptionRow from '@/components/ui/OptionRow';
 
 export function BotAvatar({ picture, size }: { picture?: string | null; size: 'sm' | 'md' }) {

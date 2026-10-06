@@ -12,8 +12,8 @@
 
 import { useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { safeNpub } from './pubkey-npub';
-import { copyRaw } from './copy-raw';
+import { copyWithToast } from '@/services/clipboard';
+import { safeNpub } from '@/utils/identity/short-npub';
 import { usePreferences } from '@/hooks/usePreferences';
 import { useTranslation } from '@/i18n/context';
 import { useModerationStore } from '@/store/moderation';
@@ -58,10 +58,7 @@ export default function NoteMenu({
   const toast = (title: string) => useToastStore.getState().pushToast({ title, body: '' });
 
   const copy = (value: string, message: string) => {
-    // `Promise.resolve` because a clipboard shim can return undefined, and
-    // `.catch` on that throws out of the click handler: losing the toast.
-    void Promise.resolve(navigator.clipboard?.writeText(value)).catch(() => {});
-    toast(message);
+    copyWithToast(value, message);
     setOpen(false);
   };
 
@@ -193,7 +190,7 @@ export default function NoteMenu({
               variant="pillSecondary"
               size="xs"
               className="ml-auto"
-              onClick={() => copyRaw(note, t('social.rawCopied'))}
+              onClick={() => copyWithToast(rawEventJson(note), t('social.rawCopied'))}
               data-testid="note-raw-copy"
             >
               {t('social.copyJson')}

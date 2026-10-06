@@ -13,7 +13,7 @@ import { DmMessageBody } from '@/components/chat/DmMessageBody';
 import { DmMessageMenu } from '@/components/chat/DmMessageMenu';
 import { useDmThread, useDmThreadScroll } from '@/hooks/chat/useDmThread';
 import { avatarStyle } from '../avatar';
-import { timeOfDay } from '../labels';
+import { timeOfDay } from '@/utils/shell/mobile/labels';
 import BackButton from '../BackButton';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { DmProtocolNotice, DmProtocolSwitch } from '../../dm-protocol/DmProtocolSwitch';

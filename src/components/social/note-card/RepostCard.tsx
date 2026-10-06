@@ -17,8 +17,8 @@ import { useTranslation } from '@/i18n/context';
 import { embeddedRepostEvent, repostTarget } from '@/services/social/repost';
 import { RepostIcon } from '../NoteActions';
 import PlainNoteCard from './PlainNoteCard';
-import { bodyClickHandler } from './helpers';
-import type { NoteCardProps } from './types';
+import { bodyClickHandler } from '@/utils/social/note-card';
+import type { NoteCardProps } from '../NoteCard';
 import TextButton from '@/components/ui/TextButton';
 
 export default function RepostCard(props: NoteCardProps) {

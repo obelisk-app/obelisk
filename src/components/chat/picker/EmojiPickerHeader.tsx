@@ -3,7 +3,7 @@
 import { useTranslation } from '@/i18n/context';
 import { CloseIcon } from '@/components/ui/icons';
 import CloseButton from '@/components/ui/CloseButton';
-import { EMOJI_NAV } from './emoji-sections';
+import { EMOJI_NAV } from '@/utils/chat/picker/emoji-sections';
 import { MediaPickerSearch } from './MediaPickerSearch';
 import { RecentIcon } from './RecentIcon';
 import IconButton from '@/components/ui/IconButton';

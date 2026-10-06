@@ -14,6 +14,7 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import type { Event as NostrEvent, EventTemplate, VerifiedEvent } from 'nostr-tools';
+import { unregisterBridge } from './bridge-slot';
 
 export type Frame = unknown[];
 
@@ -145,11 +146,16 @@ export const authPrompts = (signEvent: { mock: { calls: unknown[][] } }): number
  * is counted rather than hidden), fresh modules, fake timers, and the hub
  * created first on the fake transport so the bridge's own `getRelayHub`
  * call finds it (options bind on the first call). The `afterEach` disposes
- * the bridge and restores the setup guard through `unstubAllGlobals`.
+ * and unregisters the bridge and restores the setup guard through
+ * `unstubAllGlobals`.
  */
 export function installFakeRelayPage(): void {
   beforeEach(async () => {
     vi.stubGlobal('WebSocket', FakeRelaySocket);
+    // The bridge's globalThis slot survives a module reset, so it is emptied
+    // explicitly; the reset stays for the hub, which must be created fresh on
+    // the fake transport below.
+    unregisterBridge();
     vi.resetModules();
     FakeRelaySocket.reset();
     window.localStorage.clear();
@@ -164,6 +170,7 @@ export function installFakeRelayPage(): void {
   afterEach(async () => {
     const { getBridgeImpl } = await import('./client');
     getBridgeImpl()?.dispose();
+    unregisterBridge();
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });

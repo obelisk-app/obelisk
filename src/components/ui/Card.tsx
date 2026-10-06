@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 export type CardSurface = 'dark' | 'black' | 'card' | 'translucent';
 /** `row` (`px-2 py-1.5`) is the bordered list-row card: one person, one tag, one member. */

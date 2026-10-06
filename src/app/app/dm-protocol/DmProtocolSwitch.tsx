@@ -2,7 +2,7 @@
 
 import Button from '@/components/ui/Button';
 import SegmentedControl from '@/components/ui/SegmentedControl';
-import { cn } from '@/components/ui/cn';
+import { cn } from '@/utils/style/cn';
 import { useTranslation } from '@/i18n/context';
 import type { DMProtocol } from '@/store/dm';
 import type { DmProtocolChoice } from '@/hooks/app/dm-protocol/useDmProtocolChoice';

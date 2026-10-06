@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
-import { clampMenuPosition, subMenuShift } from '@/components/chat/channel-menu/channel-menu-options';
+import { clampMenuPosition, subMenuShift } from '@/utils/chat/channel-menu-options';
 
 /** Keep the menu on screen; open submenus to the left near the right edge. */
 export function useMenuPlacement(ref: RefObject<HTMLElement | null>, x: number, y: number) {

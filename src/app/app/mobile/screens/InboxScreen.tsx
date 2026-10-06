@@ -27,7 +27,7 @@ import {
   useUnreadDmNotificationCount,
   useUnreadMentionCount,
 } from '@/hooks/notifications/useNotificationSelectors';
-import { type ScreenName } from '../url-state';
+import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { avatarStyle } from '../avatar';
 import RemoteImage from '@/components/ui/RemoteImage';
 

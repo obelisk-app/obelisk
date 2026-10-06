@@ -1,7 +1,7 @@
 'use client';
 
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
-import { type ScreenName } from './url-state';
+import { type ScreenName } from '@/utils/shell/mobile/url-state';
 
 /**
  * Persistent host for the in-call control bar. The bar stays mounted for the

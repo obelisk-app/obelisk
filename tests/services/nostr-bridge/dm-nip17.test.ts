@@ -25,6 +25,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { generateSecretKey, getPublicKey, finalizeEvent, nip04, type Event as NostrEvent } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
+import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 
 const fake = vi.hoisted(() => {
   const state = {
@@ -247,6 +248,10 @@ beforeEach(() => {
   fake.state.subscriptions = [];
   fake.state.rejectPublish = null;
   bunkerFake.remoteSk = null;
+  // A fresh bridge per test: its globalThis slot survives the module reset,
+  // so it is emptied here. The reset stays for the page RelayHub singleton and
+  // the module-level stores the bridge writes to.
+  unregisterBridge();
   vi.resetModules();
   delete (window as unknown as { nostr?: unknown }).nostr;
   if (typeof window !== 'undefined') window.localStorage.clear();
@@ -430,6 +435,7 @@ describe('NIP-17 history across a real page reload', () => {
       vi.useRealTimers();
     }
     // A reload: fresh modules and a fresh bridge, same localStorage.
+    unregisterBridge();
     vi.resetModules();
     expect((await load())[0].content).toBe('before the reload');
   });

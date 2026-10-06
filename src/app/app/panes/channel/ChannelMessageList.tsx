@@ -4,7 +4,7 @@ import type { JsGroup, JsMessage, JsReaction } from '@/services/nostr-bridge';
 import type { MessageZapTotal } from '@/hooks/chat/useMessageZaps';
 import { useTranslation } from '@/i18n/context';
 import { MessageRow } from '../MessageRow';
-import { isGroupedWith, type ChannelEmptyStage } from './channel-list-state';
+import { isGroupedWith, type ChannelEmptyStage } from '@/utils/chat/channel-list-state';
 
 /** Stable empty list so a message without reactions keeps the same prop identity. */
 const EMPTY_REACTIONS: never[] = [];

@@ -1,20 +1,5 @@
-import { nip19 } from 'nostr-tools';
-
 const HISTORY_KEY = 'obelisk-dex/search-history';
 const HISTORY_MAX = 10;
-
-/** A hex key, npub or nprofile to hex; anything else (a name) is `null`. */
-export function decodeNpub(s: string): string | null {
-  if (/^[0-9a-f]{64}$/i.test(s)) return s.toLowerCase();
-  if (s.startsWith('npub1') || s.startsWith('nprofile1')) {
-    try {
-      const decoded = nip19.decode(s);
-      if (decoded.type === 'npub') return decoded.data as string;
-      if (decoded.type === 'nprofile') return (decoded.data as { pubkey: string }).pubkey;
-    } catch { /* not a valid bech32 identity */ }
-  }
-  return null;
-}
 
 export function loadHistory(): string[] {
   if (typeof window === 'undefined') return [];

@@ -14,7 +14,7 @@ import { useCachedChannelHighlights } from '@/hooks/read-state/useChannelHighlig
 import { ChannelContextMenu } from '@/components/chat/ChannelContextMenu';
 import { isChannelMuted, useChannelPref } from '@/store/channel-prefs';
 import { useTranslation } from '@/i18n/context';
-import type { View } from '../view';
+import type { View } from '@/utils/shell/view';
 
 export function GroupNode({
   group,

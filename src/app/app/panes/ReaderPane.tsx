@@ -3,7 +3,7 @@
 import type { Event as NostrEvent } from 'nostr-tools';
 import ArticleReader from '@/components/social/ArticleCard';
 import NoteThread from '@/components/social/NoteThread';
-import { type FeedPaneMode } from '../feed-pane';
+import { type FeedPaneMode } from '@/utils/shell/feed-pane';
 import { useTranslation } from '@/i18n/context';
 import { ChevronLeftIcon } from '@/components/ui/icons';
 

@@ -8,91 +8,32 @@
  * and is suppressed outright in some embedded webviews, where `confirm()`
  * returns `false` and the action silently does nothing.
  *
- * Usage keeps the one-line shape of the native call:
- *
- *   if (!(await confirmDialog({ title: t('…'), confirmLabel: t('confirm.delete') }))) return;
- *
- * `<ConfirmDialogHost />` is mounted once in the root layout; `confirmDialog`
- * talks to it through a tiny module-level store, so any code path (a
- * component, a hook, a plain function) can ask without owning modal state.
+ * Callers ask through `confirmDialog` in `src/services/confirm-dialog.ts`;
+ * `<ConfirmDialogHost />` is mounted once in the root layout and renders
+ * whatever request is pending there, so any code path (a component, a hook,
+ * a plain function) can ask without owning modal state.
  */
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import Button from './Button';
 import Modal from './Modal';
 import { useTranslation } from '@/i18n/context';
 import { LogOutIcon, TrashIcon } from './icons';
+import {
+  getPendingConfirm, settleConfirm, subscribeConfirm, type PendingConfirm,
+} from '@/services/confirm-dialog';
 
-export interface ConfirmOptions {
-  title: string;
-  /** Optional second line: consequences, what can be undone. */
-  message?: string;
-  /** Defaults to the localized "Delete". */
-  confirmLabel?: string;
-  /** Defaults to the localized "Cancel". */
-  cancelLabel?: string;
-  /** `danger` (default) paints the confirm button red. */
-  tone?: 'danger' | 'default';
-  /** Badge above the title. Defaults to `trash` for danger, none otherwise. */
-  icon?: 'trash' | 'leave' | 'none';
-}
-
-interface Pending extends ConfirmOptions {
-  id: number;
-  resolve: (ok: boolean) => void;
-}
-
-let current: Pending | null = null;
-let nextId = 1;
-const listeners = new Set<() => void>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function settle(ok: boolean): void {
-  const pending = current;
-  if (!pending) return;
-  current = null;
-  emit();
-  pending.resolve(ok);
-}
-
-/**
- * Ask the user to confirm. Resolves `true` on confirm and `false` on cancel,
- * Escape or a backdrop click. A second request while one is open cancels the
- * first: two stacked "are you sure?" dialogs are never what anyone meant.
- * Without a mounted host (a test, a server render) it resolves `false`,
- * which is the safe answer for a destructive action.
- */
-export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
-  if (listeners.size === 0) return Promise.resolve(false);
-  settle(false);
-  return new Promise<boolean>((resolve) => {
-    current = { ...options, id: nextId++, resolve };
-    emit();
-  });
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-const getSnapshot = () => current;
 const getServerSnapshot = () => null;
 
 export function ConfirmDialogHost() {
-  const pending = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const pending = useSyncExternalStore(subscribeConfirm, getPendingConfirm, getServerSnapshot);
   // An unmounting host (route change, logout) must not leave a caller
   // awaiting forever.
-  useEffect(() => () => settle(false), []);
+  useEffect(() => () => settleConfirm(false), []);
   if (!pending) return null;
   return <ConfirmDialogPanel key={pending.id} pending={pending} />;
 }
 
-function ConfirmDialogPanel({ pending }: { pending: Pending }) {
+function ConfirmDialogPanel({ pending }: { pending: PendingConfirm }) {
   const { t } = useTranslation();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const tone = pending.tone ?? 'danger';
@@ -111,7 +52,7 @@ function ConfirmDialogPanel({ pending }: { pending: Pending }) {
 
   return (
     <Modal
-      onClose={() => settle(false)}
+      onClose={() => settleConfirm(false)}
       testId="confirm-dialog"
       panelClassName="w-full max-w-sm mx-4 rounded-2xl bg-lc-dark border border-lc-border p-6 shadow-xl"
       role="alertdialog"
@@ -143,7 +84,7 @@ function ConfirmDialogPanel({ pending }: { pending: Pending }) {
             ref={cancelRef}
             variant="outlinePill"
             size="lg"
-            onClick={() => settle(false)}
+            onClick={() => settleConfirm(false)}
             data-testid="confirm-dialog-cancel"
           >
             {pending.cancelLabel ?? t('common.cancel')}
@@ -151,7 +92,7 @@ function ConfirmDialogPanel({ pending }: { pending: Pending }) {
           <Button
             variant={tone === 'danger' ? 'danger' : 'pill'}
             size={tone === 'danger' ? 'lg' : 'sm'}
-            onClick={() => settle(true)}
+            onClick={() => settleConfirm(true)}
             data-testid="confirm-dialog-confirm"
           >
             {pending.confirmLabel ?? t('confirm.delete')}

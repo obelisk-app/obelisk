@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from 'react';
 import { useTranslation } from '@/i18n/context';
-import { cn } from '@/components/ui/cn';
+import { cn } from '@/utils/style/cn';
 import { ChevronLeftIcon } from '@/components/ui/icons';
 
 export interface BackButtonProps {

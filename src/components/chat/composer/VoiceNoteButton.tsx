@@ -2,7 +2,7 @@
 
 import { useTranslation } from '@/i18n/context';
 import { TrashIcon } from './composer-icons';
-import { formatDuration } from './recording-time';
+import { formatElapsed } from '@/utils/format/format-elapsed';
 import { useVoiceRecorder } from '@/hooks/chat/composer/useVoiceRecorder';
 import IconButton from '@/components/ui/IconButton';
 
@@ -29,7 +29,7 @@ export function VoiceNoteButton({
         </IconButton>
         <span className="flex items-center gap-2 px-1 font-mono text-sm text-red-400">
           <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" aria-hidden="true" />
-          <span data-testid="voice-recording-time">{formatDuration(elapsed)}</span>
+          <span data-testid="voice-recording-time">{formatElapsed(elapsed * 1000)}</span>
         </span>
         <IconButton
           tone="dangerSoft"

@@ -1,15 +1,8 @@
+import { isHttpUrl } from '@/utils/url/http-url';
+
 export interface MessageVoiceNote {
   readonly url: string;
   readonly durationSeconds: number;
-}
-
-function isHttpUrl(value: string): boolean {
-  try {
-    const protocol = new URL(value).protocol;
-    return protocol === 'http:' || protocol === 'https:';
-  } catch {
-    return false;
-  }
 }
 
 export function voiceNoteFromTags(

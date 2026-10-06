@@ -12,7 +12,7 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { useTranslation } from '@/i18n/context';
 import { usePackEditor } from '@/hooks/media/library/usePackEditor';
-import type { EditablePack } from './types';
+import type { EditablePack } from '@/utils/media-library/types';
 
 function KindOptions() {
   const { t } = useTranslation();

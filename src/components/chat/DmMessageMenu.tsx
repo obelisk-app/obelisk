@@ -24,7 +24,8 @@ import type { JsDirectMessage } from '@/services/nostr-bridge';
 import AnchoredMenu from '@/components/social/AnchoredMenu';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
 import { CopyIcon, HashIcon, KeyIcon, LinkIcon, MoreIcon, TerminalIcon } from '@/components/ui/icons';
-import { copy, safeNpub } from './dm-message/dm-message-utils';
+import { copyWithToast } from '@/services/clipboard';
+import { safeNpub } from '@/utils/identity/short-npub';
 import { DmRawEventDialog } from './dm-message/DmRawEventDialog';
 
 export { DmRawEventDialog } from './dm-message/DmRawEventDialog';
@@ -75,19 +76,19 @@ export function DmMessageMenu({ message, className = '' }: { message: JsDirectMe
         testId="dm-message-menu-panel"
       >
         {message.file ? (
-          <MenuItem icon={<LinkIcon />} label={t('dm.msg.copyFileLink')} onClick={done(() => copy(message.file!.url, t('dm.msg.copied')))} testId="dm-msg-copy-file" />
+          <MenuItem icon={<LinkIcon />} label={t('dm.msg.copyFileLink')} onClick={done(() => copyWithToast(message.file!.url, t('dm.msg.copied')))} testId="dm-msg-copy-file" />
         ) : (
-          <MenuItem icon={<CopyIcon />} label={t('dm.msg.copyText')} onClick={done(() => copy(message.content, t('dm.msg.copied')))} testId="dm-msg-copy-text" />
+          <MenuItem icon={<CopyIcon />} label={t('dm.msg.copyText')} onClick={done(() => copyWithToast(message.content, t('dm.msg.copied')))} testId="dm-msg-copy-text" />
         )}
         <MenuItem
           icon={<HashIcon />}
           label={t('dm.msg.copyId')}
-          onClick={done(() => copy(message.id, t('dm.msg.copied')))}
+          onClick={done(() => copyWithToast(message.id, t('dm.msg.copied')))}
           disabled={message.pending || message.failed}
           testId="dm-msg-copy-id"
         />
         {sender && (
-          <MenuItem icon={<KeyIcon />} label={t('dm.msg.copySender')} onClick={done(() => copy(safeNpub(sender), t('dm.msg.copied')))} testId="dm-msg-copy-sender" />
+          <MenuItem icon={<KeyIcon />} label={t('dm.msg.copySender')} onClick={done(() => copyWithToast(safeNpub(sender), t('dm.msg.copied')))} testId="dm-msg-copy-sender" />
         )}
         <MenuDivider />
         <MenuItem

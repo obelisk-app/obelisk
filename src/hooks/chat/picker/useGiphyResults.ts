@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { GIPHY_KEY, giphyEntries, giphyRequestUrl, type GiphyPayload } from '@/components/chat/picker/giphy';
-import type { MediaCategory, MediaEntry, MediaPickerTab } from '@/components/chat/picker/media-catalog';
+import { GIPHY_KEY, fetchGiphyEntries } from '@/services/giphy';
+import type { MediaCategory, MediaEntry, MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 
 /**
  * GIPHY results for the GIF / sticker tabs, debounced 250ms and aborted when
@@ -17,12 +17,8 @@ export function useGiphyResults(tab: MediaPickerTab, category: MediaCategory, qu
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setRemote([]);
-      const url = giphyRequestUrl(apiKey, tab, category, query);
       try {
-        const response = await fetch(url, { signal: controller.signal });
-        if (!response.ok) throw new Error('GIPHY request failed');
-        const payload = await response.json() as GiphyPayload;
-        setRemote(giphyEntries(payload, tab, category));
+        setRemote(await fetchGiphyEntries(apiKey, tab, category, query, controller.signal));
       } catch {
         if (!controller.signal.aborted) setRemote([]);
       }

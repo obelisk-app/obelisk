@@ -4,12 +4,12 @@ import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useAnchoredPosition, type PopoverFollow } from '@/hooks/useAnchoredPosition';
 import { useDismiss } from '@/hooks/useDismiss';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import { MENU_PANEL_CLASS } from './menu';
-import type { PopoverAlign, PopoverSide } from './popover-position';
+import type { PopoverAlign, PopoverSide } from '@/utils/layout/popover-position';
 
 export type { PopoverFollow } from '@/hooks/useAnchoredPosition';
-export type { PopoverAlign, PopoverSide } from './popover-position';
+export type { PopoverAlign, PopoverSide } from '@/utils/layout/popover-position';
 
 /**
  * The panel's look.

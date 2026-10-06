@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 export interface FieldProps {
   /** The `id` of the control this label describes. */

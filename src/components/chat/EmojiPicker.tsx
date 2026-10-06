@@ -7,17 +7,94 @@
  */
 import { EMOJI_CATEGORIES } from '@/lib/emoji';
 import { useTranslation } from '@/i18n/context';
-import { EMOJI_SECTIONS } from './picker/emoji-sections';
-import { emojiPickerClasses } from './picker/emoji-picker-classes';
+import { EMOJI_SECTIONS } from '@/utils/chat/picker/emoji-sections';
 import { useEmojiPicker } from '@/hooks/chat/picker/useEmojiPicker';
 import { useCategoryJump } from '@/hooks/chat/picker/useCategoryJump';
 import { EmojiCategoryNav, EmojiPickerSearchBar } from './picker/EmojiPickerHeader';
 import { CustomEmojiSection, EmojiCharButton, RecentEmojiSection } from './picker/EmojiGridParts';
-import type { EmojiPickerProps } from './picker/picker-types';
+import type { ReactNode } from 'react';
+import type { CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
+import type { JsMediaKind } from '@/services/nostr-bridge';
+import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
 
-export type { EmojiPickerProps, PickedCustomEmoji } from './picker/picker-types';
+export type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
 export { RecentIcon } from './picker/RecentIcon';
 export { MediaPickerSearch } from './picker/MediaPickerSearch';
+
+export interface EmojiPickerProps {
+  onPick: (emoji: string, custom?: PickedCustomEmoji) => void;
+  onClose: () => void;
+  /** Emojis disabled (e.g. ones the user already reacted with). */
+  disabledEmojis?: ReadonlySet<string>;
+  /** When true, picking does not record in recents (useful for previews). */
+  skipRecent?: boolean;
+  /**
+   * `popover` (default): small absolute-positioned floating panel for desktop.
+   * `sheet`: fills its parent (used inside the mobile bottom-sheet host).
+   * `floating`: the popover panel without its own positioning, for a host
+   * that places it (`FloatingPanel`, which escapes scroll containers).
+   */
+  variant?: 'popover' | 'sheet' | 'floating';
+  /** Popover direction relative to the trigger. Ignored for sheet variant. */
+  placement?: 'above' | 'below';
+  /**
+   * Which edge of the trigger the popover hangs from. Defaults to `right`
+   * (the composer/reaction buttons sit on the right of their row); triggers on
+   * the left of a panel need `left` or the popover runs off it.
+   */
+  align?: 'left' | 'right';
+  showClose?: boolean;
+  className?: string;
+  customEmojis?: CustomEmojiMap;
+  customMediaKinds?: Readonly<Record<string, JsMediaKind>>;
+  columns?: 7 | 12;
+  customEmojiAction?: ReactNode;
+  children?: ReactNode;
+}
+
+/**
+ * The emoji picker's class strings for a variant. Surfaces follow the rest
+ * of the app: a raised `lc-dark` panel on desktop (menus, modals), the
+ * `lc-card` sheet surface on mobile, never the page's own `lc-black`, which
+ * made the picker read as a hole in the chat. The colour lives in
+ * `--picker-surface` so the sticky section headers can match it exactly,
+ * including when MessageMediaPicker hosts this one.
+ */
+export function emojiPickerClasses({
+  variant = 'popover',
+  placement = 'above',
+  align = 'right',
+  columns,
+}: Pick<EmojiPickerProps, 'variant' | 'placement' | 'align' | 'columns'>) {
+  const isSheet = variant === 'sheet';
+  const popoverPlacementClass = placement === 'below' ? 'top-full mt-1' : 'bottom-full mb-1';
+  const panelClass = 'flex h-[430px] w-[360px] flex-col overflow-hidden rounded-xl border border-lc-border [--picker-surface:var(--color-lc-dark)] bg-[var(--picker-surface)] text-lc-white shadow-2xl ';
+  const containerClass = isSheet
+    ? 'flex h-full w-full flex-col bg-[var(--picker-surface,var(--color-lc-card))] p-2 text-lc-white '
+    : variant === 'floating'
+      ? panelClass
+      : `absolute ${align === 'left' ? 'left-0' : 'right-0'} ${popoverPlacementClass} z-30 ${panelClass}`;
+  const gridClass = columns === 12
+    ? 'grid grid-cols-12 gap-0.5'
+    : isSheet
+      ? 'grid grid-cols-7 gap-1.5'
+      : 'grid grid-cols-8 gap-1 px-3';
+  const emojiBtnClass = isSheet
+    ? 'flex aspect-square items-center justify-center rounded-md text-2xl active:bg-lc-border disabled:cursor-default disabled:opacity-40'
+    : 'flex aspect-square items-center justify-center rounded-md text-2xl hover:bg-lc-border disabled:cursor-default disabled:opacity-40';
+  const scrollClass = isSheet
+    ? 'relative min-h-0 flex-1 overflow-y-auto'
+    : 'relative min-h-0 flex-1 overflow-y-auto pb-3';
+  const sectionTitleClass = isSheet
+    ? 'sticky top-0 z-10 mb-2 border-b border-lc-border bg-[var(--picker-surface,var(--color-lc-card))] px-1 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted'
+    : 'sticky top-0 z-10 mb-2 bg-[var(--picker-surface,var(--color-lc-dark))] px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted';
+  const customImageClass = isSheet
+    ? 'h-[1.45em] w-[1.45em] object-contain'
+    : 'h-8 w-8 object-contain';
+  return { isSheet, containerClass, gridClass, emojiBtnClass, scrollClass, sectionTitleClass, customImageClass };
+}
+
+export type EmojiPickerClasses = ReturnType<typeof emojiPickerClasses>;
 
 const NO_DISABLED: ReadonlySet<string> = new Set<string>();
 

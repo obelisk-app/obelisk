@@ -17,6 +17,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { generateSecretKey, getPublicKey, type Event as NostrEvent } from 'nostr-tools';
+import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 
 const fake = vi.hoisted(() => {
   const state = {
@@ -122,6 +123,10 @@ warmBridgeModules();
 beforeEach(() => {
   fake.state.published = [];
   fake.state.subscriptions = [];
+  // A fresh bridge per test: its globalThis slot survives the module reset,
+  // so it is emptied here. The reset stays for the page RelayHub singleton and
+  // the module-level stores the bridge writes to.
+  unregisterBridge();
   vi.resetModules();
   window.localStorage.clear();
 });
@@ -201,6 +206,7 @@ describe('NIP-17 gift wraps from blocked and muted senders', () => {
     // Unblock, then a reload: fresh modules and a fresh bridge, same relay.
     first.moderation.getState().toggleBlock(alice.pkHex);
     first.impl.dispose();
+    unregisterBridge();
     vi.resetModules();
     fake.state.subscriptions = [];
     const second = await loginWatching(bob, alice.pkHex);

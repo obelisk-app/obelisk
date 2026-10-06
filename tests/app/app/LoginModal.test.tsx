@@ -2,7 +2,8 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nip19 } from 'nostr-tools';
 import { Nip46Signer } from '@nostr-wot/signers';
-import LoginModal, { copyConnectionUri, isTransientNip46Error, signerAppHref } from '@/app/app/LoginModal';
+import LoginModal, { isTransientNip46Error, signerAppHref } from '@/app/app/LoginModal';
+import { copyText } from '@/services/clipboard';
 import { LocaleProvider } from '@/i18n/context';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
@@ -45,8 +46,12 @@ vi.mock('@nostr-wot/data', async (importOriginal) => ({
   getPool: () => ({ publish }),
 }));
 
-vi.mock('@/app/app/GeneratedProfileEnhancements', () => ({
+vi.mock('@/utils/identity/display-name', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/utils/identity/display-name')>(),
   randomProfileName: () => 'Brave Badger',
+}));
+
+vi.mock('@/app/app/GeneratedProfileEnhancements', () => ({
   default: ({ onDraftChange }: { onDraftChange: (patch: Record<string, string>) => void }) => {
     updateDraft = onDraftChange;
     return null;
@@ -70,6 +75,8 @@ vi.mock('@nostr-wot/ui', async () => {
     },
     Modal: ({ children, classes }: { children: React.ReactNode; classes?: { modal?: string } }) =>
       React.createElement('div', { className: classes?.modal }, children),
+    NostrSessionProvider: ({ children }: { children: React.ReactNode }) => children,
+    SIGNER_STORAGE_KEY_NSEC: '@nostr-wot/ui:nsec',
   };
 });
 
@@ -101,7 +108,7 @@ describe('LoginModal generated identity flow', () => {
 
     expect(sdkProps.profileSetup).toBe(true);
     expect(sdkProps.closeOnSuccess).toBe(false);
-    expect(sdkProps.showRememberToggle).toBe(true);
+    expect(sdkProps.showRememberToggle).toBe(false);
     expect(sdkProps.nip46Relays).toEqual(['wss://public.obelisk.ar']);
     const permissions = (sdkProps.nip46Perms as string).split(',');
     expect(permissions).toContain('sign_event:22242');
@@ -234,7 +241,7 @@ describe('LoginModal generated identity flow', () => {
     vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(new Error('denied'));
     document.execCommand = vi.fn().mockReturnValue(true);
 
-    await expect(copyConnectionUri('nostrconnect://complete')).resolves.toBe(true);
+    await expect(copyText('nostrconnect://complete')).resolves.toBe(true);
 
     expect(document.execCommand).toHaveBeenCalledWith('copy');
     expect(document.querySelector('textarea')).toBeNull();

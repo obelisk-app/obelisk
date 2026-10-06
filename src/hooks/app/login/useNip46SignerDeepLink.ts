@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { copyConnectionUri, signerAppHref } from '@/app/app/login/signer-link';
+import { copyText } from '@/services/clipboard';
+import { signerAppHref } from '@/utils/nip46/signer-link';
 
 /**
  * Local patch for an "Open in signer app" deep-link button inside the SDK's
@@ -49,7 +50,7 @@ export function useNip46SignerDeepLink(): void {
       a.href = signerAppHref(uri, navigator.userAgent);
       a.className = 'nui-open-signer';
       a.rel = 'noopener noreferrer';
-      a.addEventListener('click', () => { void copyConnectionUri(uri); });
+      a.addEventListener('click', () => { void copyText(uri); });
       const arrow = document.createElement('span');
       arrow.setAttribute('aria-hidden', 'true');
       arrow.textContent = '↗'; // ↗
@@ -61,7 +62,7 @@ export function useNip46SignerDeepLink(): void {
       copy.className = 'nui-copy-signer';
       copy.textContent = 'Copy connection URI';
       copy.addEventListener('click', async () => {
-        copy.textContent = await copyConnectionUri(uri) ? 'Copied' : 'Copy failed: select URI below';
+        copy.textContent = await copyText(uri) ? 'Copied' : 'Copy failed: select URI below';
       });
       const hint = document.createElement('p');
       hint.className = 'nui-signer-copy-hint';

@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { useTranslation } from '@/i18n/context';
 import { RecentIcon } from './picker/RecentIcon';
 import { useDismiss } from '@/hooks/useDismiss';
-import { botLabel, sectionTitle, type BotProfiles, type SlashCommand, type SlashCommandSection } from './slash/slash-commands';
+import { botLabel, sectionTitle, type BotProfiles, type SlashCommand, type SlashCommandSection } from '@/utils/chat/slash/slash-commands';
 import { CommandRow, RailIcon } from './slash/SlashRows';
 import { useSlashList } from '@/hooks/chat/slash/useSlashList';
 
@@ -14,7 +14,7 @@ export {
   type SlashCommand,
   type SlashCommandParam,
   type SlashCommandSection,
-} from './slash/slash-commands';
+} from '@/utils/chat/slash/slash-commands';
 
 interface Props {
   /** Sections to list (already narrowed by `filter`). */

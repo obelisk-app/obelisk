@@ -1,5 +1,5 @@
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import { fieldNoteId } from './Field';
 
 type NativeProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'children' | 'aria-label'>;

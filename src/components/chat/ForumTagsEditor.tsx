@@ -6,7 +6,7 @@ import { useTranslation } from '@/i18n/context';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { CloseIcon } from '@/components/ui/icons';
-import { MAX_FORUM_TAGS, removeTagAt, tagEmojiValue, updateTagAt, withNewTag } from './forum/forum-tags';
+import { MAX_FORUM_TAGS, removeTagAt, tagEmojiValue, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
 import { TagColorPicker } from './forum/TagColorPicker';
 
 /**

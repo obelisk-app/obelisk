@@ -20,10 +20,10 @@
 
 import { NextResponse } from 'next/server';
 import { isX, type LinkPreview } from '@/utils/link-preview';
-import { cachedPreview, storePreview } from './preview-cache';
-import { previewGeneric } from './preview-generic';
-import { previewX } from './preview-x';
-import { rateLimited } from './rate-limit';
+import { cachedPreview, storePreview } from '@/services/server/link-preview/preview-cache';
+import { previewGeneric } from '@/services/server/link-preview/preview-generic';
+import { previewX } from '@/services/server/link-preview/preview-x';
+import { rateLimited } from '@/services/server/link-preview/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

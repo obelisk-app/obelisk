@@ -4,12 +4,12 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import FeedScreen from '@/components/social/FeedScreen';
 import { useTranslation } from '@/i18n/context';
 import { DMOptInBoundary } from '../DMOptInGate';
-import { canRestore } from '../feed-pane';
+import { canRestore } from '@/utils/shell/feed-pane';
 import { ChatLayout } from '../panes/ChatPanel';
 import { DMPanel } from '../panes/DMPanel';
 import { FeedPaneActions } from '../panes/ReaderPane';
 import { EmptyState } from '../panes/ShellStates';
-import type { View } from '../view';
+import type { View } from '@/utils/shell/view';
 import type { FeedPaneControls } from '@/hooks/app/shell/useDesktopLayout';
 
 type Props = {

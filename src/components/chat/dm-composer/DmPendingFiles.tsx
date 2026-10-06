@@ -3,7 +3,7 @@
 import { useTranslation } from '@/i18n/context';
 import { FileIcon, LockIcon, TrashIcon } from '@/components/ui/icons';
 import Spinner from '@/components/ui/Spinner';
-import type { PendingFile } from './pending';
+import type { PendingFile } from '@/utils/chat/dm/pending';
 import IconButton from '@/components/ui/IconButton';
 
 /**

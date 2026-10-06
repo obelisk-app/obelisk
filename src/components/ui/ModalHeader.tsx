@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import CloseButton from './CloseButton';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 export interface ModalHeaderProps {
   title: ReactNode;

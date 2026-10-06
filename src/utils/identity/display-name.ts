@@ -71,6 +71,16 @@ export function petnameFor(pubkey: string): string {
   return `${adjective} ${noun}`;
 }
 
+/**
+ * A random two-word name for a freshly generated key, drawn from the same
+ * vocabulary as `petnameFor` (the sign-up form kept a twelve-word copy of
+ * its own). Random, not derived from the key: it is only a suggestion the
+ * person can edit before it is published.
+ */
+export function randomProfileName(random: () => number = Math.random): string {
+  return `${ADJECTIVES[Math.floor(random() * ADJECTIVES.length)]} ${NOUNS[Math.floor(random() * NOUNS.length)]}`;
+}
+
 /** The profile fields any surface might hold. All optional, all untrusted. */
 export type NameLike = {
   displayName?: string | null;

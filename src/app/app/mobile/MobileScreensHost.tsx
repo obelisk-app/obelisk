@@ -1,9 +1,9 @@
 'use client';
 
 import type { ReactNode, RefObject } from 'react';
-import type { NavState, ScreenName } from './url-state';
-import { NAV_ORDER } from './swipe-nav';
-import { overlayScreenKeyFor, slotRoleFor } from './carousel-slots';
+import type { NavState, ScreenName } from '@/utils/shell/mobile/url-state';
+import { NAV_ORDER } from '@/utils/shell/mobile/swipe-nav';
+import { overlayScreenKeyFor, slotRoleFor } from '@/utils/shell/mobile/carousel-slots';
 import { renderTopLevelScreen, type MobileScreenProps } from './MobileScreens';
 import { MessageActionsSheet } from './sheets/MessageActionsSheet';
 import { ZapModalSheet } from './sheets/ZapModalSheet';

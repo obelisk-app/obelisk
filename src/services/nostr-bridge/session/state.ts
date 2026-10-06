@@ -10,6 +10,7 @@ import { DEFAULT_RELAY, DEFAULT_RELAYS } from '../relay-list';
 import type { PersistedSession } from '../session-storage';
 import { StateStore } from '../state-store';
 import type { RelayAccessState } from '../types';
+import type { SessionNotice } from './vault';
 
 export type LoginMethod = 'nsec' | 'nip07' | 'bunker';
 
@@ -40,4 +41,10 @@ export class SessionState {
    * the bridge's private session.
    */
   readonly myLoginMethod = new StateStore<LoginMethod | null>(null);
+  /**
+   * What the person should be told about keeping their session: it lives
+   * for this visit only (`not-remembered`), or a reload could not restore it
+   * (`./vault.ts`). Cleared when a login starts and on logout.
+   */
+  readonly sessionNotice = new StateStore<SessionNotice | null>(null);
 }

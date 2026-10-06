@@ -72,7 +72,7 @@ export interface LifecycleTargets {
   readonly voicePresence: Pick<VoicePresenceModule, 'reset'>;
   readonly access: Pick<RelayAccessModule, 'reset'>;
   readonly pings: Pick<PingsModule, 'stop' | 'recordRelayUse' | 'syncBackgroundWatch'>;
-  readonly lists: Pick<ListsModule, 'resetContactList' | 'seedContactListCache'>;
+  readonly lists: Pick<ListsModule, 'resetContactList' | 'resetMuteList' | 'seedContactListCache'>;
   /** The cold paint (`../seed.ts`). */
   seedCacheForRelay(relay: string): boolean;
   /** The facade's NIP-42 signer seam (`SessionSigner.signSessionAuth`). */

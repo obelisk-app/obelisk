@@ -1,4 +1,4 @@
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 /** Padding, radius and default text size. `sm` and `md` are the original two. */
 export type InputSize = 'xs' | 'sm' | 'md' | 'lg';

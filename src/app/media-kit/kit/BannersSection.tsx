@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslation } from '@/i18n/context';
-import { COPY, LINKS, MONO_BANNER, OG_IMAGE_URL } from './content';
+import { COPY, LINKS, MONO_BANNER, OG_IMAGE_URL } from '@/utils/media-kit/content';
 import { Section } from './kit-ui';
 import { BannerCard } from './BannerCard';
 import { GitHubSocialBanner, HeroBanner, LinkedInBanner, SquareBanner, XHeaderBanner } from './banners';

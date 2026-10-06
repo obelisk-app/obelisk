@@ -7,7 +7,7 @@ import { shortHost } from '@/utils/relay-url/url-host';
 import { subscribeVoiceJump } from '@/services/voice/jump-to-voice';
 import { useChatStore } from '@/store/chat';
 import { useRelayDeepLink } from '@/hooks/chat/useRelayDeepLink';
-import type { View } from '@/app/app/view';
+import type { View } from '@/utils/shell/view';
 
 /**
  * Where the desktop shell is: its `view`, plus every way something outside

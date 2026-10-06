@@ -11,6 +11,7 @@ import { getPreferences } from '@/services/preferences';
 import type { IncomingDmCallMessage } from '@/services/dm-call/protocol';
 import type { BridgeModules } from './compose';
 import type { LoginMethod } from './session/state';
+import type { SessionNotice } from './session/vault';
 import type { Listener, StateStore } from './state-store';
 import type {
   JsDirectMessage,
@@ -39,6 +40,7 @@ export abstract class BridgeReads {
   get myPubkey(): StateStore<string | null> { return this.m.state.myPubkey; }
   get myLoginMethod(): StateStore<LoginMethod | null> { return this.m.state.myLoginMethod; }
   get bunkerSignerReady(): StateStore<boolean> { return this.m.bunker.ready; }
+  get sessionNotice(): StateStore<SessionNotice | null> { return this.m.state.sessionNotice; }
   get groups(): StateStore<JsGroup[]> { return this.m.metadata.groups; }
   get groupMetadataEose(): StateStore<boolean> { return this.m.metadata.groupMetadataEose; }
   get childrenByParent(): StateStore<Record<string, string[]>> { return this.m.metadata.childrenByParent; }
@@ -90,6 +92,10 @@ export abstract class BridgeReads {
 
   subscribeBunkerSignerReady(cb: (ready: boolean) => void): Unsubscribe {
     return this.bunkerSignerReady.subscribe(cb);
+  }
+
+  subscribeSessionNotice(cb: (notice: SessionNotice | null) => void): Unsubscribe {
+    return this.sessionNotice.subscribe(cb);
   }
 
   subscribeGroups(cb: (groups: ReadonlyArray<JsGroup>) => void): Unsubscribe {

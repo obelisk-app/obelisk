@@ -21,13 +21,13 @@ import { useTranslation } from '@/i18n/context';
 import { useChannelHighlights } from '@/hooks/read-state/useChannelHighlights';
 import { useChannelGamesSubscription } from '@/hooks/chat/useChannelGames';
 import { LazyNewGameModal } from '../../lazy-mounts';
-import { type ScreenName } from '../url-state';
-import { channelHeaderLabel } from '../labels';
+import { type ScreenName } from '@/utils/shell/mobile/url-state';
+import { channelHeaderLabel } from '@/utils/shell/mobile/labels';
 import { ChannelSettingsSheet } from '../sheets/ChannelSettingsSheet';
 import { ChannelComposer } from './ChannelComposer';
 import { ChannelHeaderBar } from './channel/ChannelHeaderBar';
 import { ChannelTimeline } from './channel/ChannelTimeline';
-import { buildTimeline } from './channel/channel-timeline';
+import { buildTimeline } from '@/utils/chat/channel-timeline';
 import { useEnsureGroupMetadata, usePhoneChannelViewport, useReplyTarget } from '@/hooks/app/mobile/screens/channel/usePhoneChannel';
 
 export function ChannelScreen({

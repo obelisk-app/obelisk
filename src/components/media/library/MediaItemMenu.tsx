@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import CloseButton from '@/components/ui/CloseButton';
 import Modal from '@/components/ui/Modal';
 import { useTranslation } from '@/i18n/context';
-import type { SelectedMedia } from './types';
+import type { SelectedMedia } from '@/utils/media-library/types';
 
 /** What can be done with one item: view its pack, start a pack with it, favourite it. */
 export default function MediaItemMenu({ selection, favorite, busy, server, onClose, onViewPack, onFavorite, onCreatePack }: {

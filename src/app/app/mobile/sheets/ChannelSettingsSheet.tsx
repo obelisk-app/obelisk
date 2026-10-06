@@ -6,7 +6,7 @@ import { useChannelSettingsForm } from '@/hooks/chat/useChannelSettingsForm';
 import ForumTagsEditor from '@/components/chat/ForumTagsEditor';
 import { ChannelAppearanceInput } from '@/components/media/BlossomImageInput';
 import { useTranslation } from '@/i18n/context';
-import { CHANNEL_KIND_LABEL } from '../labels';
+import { CHANNEL_KIND_LABEL } from '@/utils/shell/mobile/labels';
 import { ManageMemberRowMobile } from './ManageMemberRowMobile';
 import Sheet from '@/components/ui/Sheet';
 import Input from '@/components/ui/Input';

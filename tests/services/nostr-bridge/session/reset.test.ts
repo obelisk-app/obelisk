@@ -108,7 +108,7 @@ function targets() {
     voicePresence: { reset: rec('voicePresence.reset') },
     access: { reset: rec('access.reset') },
     pings: { stop: rec('pings.stop'), recordRelayUse: vi.fn(), syncBackgroundWatch: vi.fn() },
-    lists: { resetContactList: rec('lists.resetContactList'), seedContactListCache: vi.fn() },
+    lists: { resetContactList: rec('lists.resetContactList'), resetMuteList: rec('lists.resetMuteList'), seedContactListCache: vi.fn() },
     seedCacheForRelay: vi.fn(() => false),
     signSessionAuth: vi.fn(),
   };
@@ -226,6 +226,10 @@ describe('session/reset', () => {
       'messages.clearFlushers',
       'reactions.clearFlushers',
       'messages.clearQuerySyncFallback',
+      'metadata.resetChildren',
+      'membership.resetCreators',
+      'reactions.clear',
+      'lists.resetMuteList',
       'access.reset',
       'resetAllClientState',
     ]);

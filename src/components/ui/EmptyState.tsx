@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import type { TextSize } from './Text';
 
 export type EmptyStatePadding = 'none' | 'sm' | 'md' | 'lg';

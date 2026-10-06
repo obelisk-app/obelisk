@@ -33,7 +33,7 @@ import { MembersPanel } from './MembersPanel';
 import { ChannelHeader } from './channel/ChannelHeader';
 import { ChannelMessageList } from './channel/ChannelMessageList';
 import { VoiceChatRail } from './channel/VoiceChatRail';
-import { channelEmptyStage } from './channel/channel-list-state';
+import { channelEmptyStage } from '@/utils/chat/channel-list-state';
 import { useChannelLoadGates, useCreatorAdminClaim } from '@/hooks/app/panes/channel/useChannelPanelState';
 import { useChannelViewport } from '@/hooks/app/panes/channel/useChannelViewport';
 

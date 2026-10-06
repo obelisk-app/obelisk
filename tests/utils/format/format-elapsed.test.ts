@@ -18,4 +18,11 @@ describe('formatElapsed', () => {
     expect(formatElapsed(1_999)).toBe('0:01');
     expect(formatElapsed(-5_000)).toBe('0:00');
   });
+
+  it('reads 0:00 for a duration that is not a finite number', () => {
+    expect(formatElapsed(Number.NaN)).toBe('0:00');
+    expect(formatElapsed(Number.POSITIVE_INFINITY)).toBe('0:00');
+    // The voice player passes seconds times 1000: a fractional second floors.
+    expect(formatElapsed(65.9 * 1000)).toBe('1:05');
+  });
 });

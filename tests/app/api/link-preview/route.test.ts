@@ -5,7 +5,7 @@ const lookup = vi.fn();
 vi.mock('node:dns/promises', () => ({ default: { lookup: (...a: unknown[]) => lookup(...a) } }));
 
 import { GET } from '@/app/api/link-preview/route';
-import { RATE_LIMIT, rateLimited } from '@/app/api/link-preview/rate-limit';
+import { RATE_LIMIT, rateLimited } from '@/services/server/link-preview/rate-limit';
 
 const page = (body: string) => new Response(body, { status: 200, headers: { 'content-type': 'text/html' } });
 const ask = (url: string, ip = '203.0.113.9') =>

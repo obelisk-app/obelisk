@@ -12,6 +12,9 @@ import type { MessagesStatus, RelayAccessState } from './types';
 import { type PersistedSession } from './session-storage';
 import type { SetRelayAccessOpts, TrackedSub } from './context';
 import { pageRelayHub } from './page-hub';
+import { bridgeSlot } from './bridge-slot';
+
+export { registerBridge, unregisterBridge } from './bridge-slot';
 import { type RemoteSigner } from './session/bunker';
 import { type PerGroupReqs } from './session/fanout';
 import { ANONYMOUS_IDENTITY, disposeSession } from './session/reset';
@@ -259,21 +262,26 @@ export class BridgeImpl extends BridgeCommands {
   }
 }
 
-let bridgePromise: Promise<BridgeImpl> | null = null;
-let bridgeInstance: BridgeImpl | null = null;
-
+/**
+ * The page bridge, created on first use. The instance and its promise live in
+ * the `globalThis` slot (`bridge-slot.ts`), so Fast Refresh re-evaluating this
+ * module finds the bridge the page already has instead of building a second
+ * one on the same hub. `<BridgeProvider>` adopts this same instance.
+ */
 export function getBridge(): Promise<BridgeImpl> {
-  if (!bridgePromise) {
-    bridgePromise = (async () => {
-      bridgeInstance = new BridgeImpl();
-      await bridgeInstance.initialize();
-      return bridgeInstance;
+  const slot = bridgeSlot();
+  if (!slot.promise) {
+    slot.promise = (async () => {
+      const instance = new BridgeImpl();
+      slot.instance = instance;
+      await instance.initialize();
+      return instance;
     })();
   }
-  return bridgePromise;
+  return slot.promise;
 }
 
-/** Returns the initialized singleton without creating it. */
+/** Returns the page bridge without creating it (`null` until something has). */
 export function getBridgeImpl(): BridgeImpl | null {
-  return bridgeInstance;
+  return bridgeSlot().instance;
 }

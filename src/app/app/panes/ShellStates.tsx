@@ -9,7 +9,7 @@ import { useDirectMessages } from '@/services/nostr-bridge';
 import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { useVoiceStore } from '@/store/voice';
 import { useTranslation } from '@/i18n/context';
-import type { View } from '../view';
+import type { View } from '@/utils/shell/view';
 
 export function RehydratingScreen() {
   const { t } = useTranslation();

@@ -399,7 +399,7 @@ npm run snap-games   # → public/og/guides/games/*.png
 
 `scripts/snap-game-shots.mjs` drives `/dev/game-shots` (a route that 404s in
 production) with Playwright. That page mounts the real board components over
-fixture *logs*: `src/app/dev/game-shots/fixtures.ts` builds kind 2390 events
+fixture *logs*: `src/utils/games/shots/fixtures.ts` builds kind 2390 events
 and hands them to `deriveSession`, so the pictures are the shipped engine
 rendering boards it derived, not mocked state. The Stacker table shot is
 played live with scripted keystrokes. A rules change that alters a board

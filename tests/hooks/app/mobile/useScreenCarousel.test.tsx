@@ -1,9 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChatStore } from '@/store/chat';
-import { initialNav, urlFor, type NavState } from '@/app/app/mobile/url-state';
+import { initialNav, urlFor, type NavState } from '@/utils/shell/mobile/url-state';
 
-vi.mock('@/app/app/mobile/swipe-target', () => ({
+vi.mock('@/utils/shell/mobile/swipe-target', () => ({
   shouldIgnoreMobileSwipeTarget: (target: EventTarget | null) =>
     !!target && (target as HTMLElement).dataset?.ignore === '1',
 }));

@@ -6,6 +6,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Event as NostrEvent } from 'nostr-tools';
+import type { BridgeImpl } from '@/services/nostr-bridge/client';
+import { bridgeWrapper } from '@tests/support/render-with-bridge';
 
 const A = 'a'.repeat(64);
 const B = 'b'.repeat(64);
@@ -16,20 +18,20 @@ const admins: Record<string, string[]> = { g1: [A] };
 const members: Record<string, string[]> = { g1: [A, B], g2: [B] };
 const ensured: string[] = [];
 
-vi.mock('@/services/nostr-bridge/client', () => ({
-  getBridge: () => Promise.resolve({
-    subscribeMyContactList: (cb: (e: NostrEvent | null) => void) => { cb(contactList); return () => {}; },
-    subscribeActiveCallByChannel: (cb: (m: Record<string, unknown>) => void) => { cb(calls); return () => {}; },
-    subscribeAdminsByGroup: (cb: (m: Record<string, string[]>) => void) => { cb(admins); return () => {}; },
-    subscribeMembersByGroup: (cb: (m: Record<string, string[]>) => void) => { cb(members); return () => {}; },
-    subscribeUserMetadataMap: (cb: (m: Record<string, { name?: string; displayName?: string }>) => void) => {
-      cb({ [A]: { displayName: 'Zed' }, [B]: { displayName: 'Amy' } });
-      return () => {};
-    },
-    ensureUserMetadata: (pk: string) => { ensured.push(pk); },
-  }),
-  getBridgeImpl: () => null,
-}));
+// A hand-built instance under the real provider: no module mock.
+const bridge = {
+  subscribeMyContactList: (cb: (e: NostrEvent | null) => void) => { cb(contactList); return () => {}; },
+  subscribeActiveCallByChannel: (cb: (m: Record<string, unknown>) => void) => { cb(calls); return () => {}; },
+  subscribeAdminsByGroup: (cb: (m: Record<string, string[]>) => void) => { cb(admins); return () => {}; },
+  subscribeMembersByGroup: (cb: (m: Record<string, string[]>) => void) => { cb(members); return () => {}; },
+  subscribeUserMetadataMap: (cb: (m: Record<string, { name?: string; displayName?: string }>) => void) => {
+    cb({ [A]: { displayName: 'Zed' }, [B]: { displayName: 'Amy' } });
+    return () => {};
+  },
+  ensureUserMetadata: (pk: string) => { ensured.push(pk); },
+} as unknown as BridgeImpl;
+const wrapper = bridgeWrapper(bridge);
+
 
 import * as sessionHooks from '@/services/nostr-bridge/hooks/session';
 import * as listHooks from '@/services/nostr-bridge/hooks/lists';
@@ -66,7 +68,7 @@ describe('nostr-bridge hooks', () => {
       id: 'c', pubkey: A, kind: 3, created_at: 1, sig: '', content: '',
       tags: [['p', B], ['p', B.toUpperCase()], ['p', 'not-a-key'], ['e', A]],
     };
-    const { result } = renderHook(() => stores.useMyFollows());
+    const { result } = renderHook(() => stores.useMyFollows(), { wrapper });
     await waitFor(() => expect(result.current).toEqual([B]));
   });
 
@@ -77,8 +79,8 @@ describe('nostr-bridge hooks', () => {
       live: { hostPubkey: A, status: 'open', participantCount: 2, expiresAt: now + 60, createdAt: now },
       empty: { hostPubkey: A, status: 'open', participantCount: 0, expiresAt: now + 60, createdAt: now },
     };
-    const live = renderHook(() => stores.useActiveCall('live'));
-    const empty = renderHook(() => stores.useActiveCall('empty'));
+    const live = renderHook(() => stores.useActiveCall('live'), { wrapper });
+    const empty = renderHook(() => stores.useActiveCall('empty'), { wrapper });
     await act(async () => { await Promise.resolve(); });
     expect(live.result.current?.participantCount).toBe(2);
     expect(empty.result.current).toBeNull();
@@ -87,7 +89,7 @@ describe('nostr-bridge hooks', () => {
   });
 
   it('useRelayPeople unions every channel, marks admins, asks for profiles and sorts by name', async () => {
-    const { result } = renderHook(() => stores.useRelayPeople());
+    const { result } = renderHook(() => stores.useRelayPeople(), { wrapper });
     await waitFor(() => expect(result.current).toHaveLength(2));
     expect(result.current.map((p) => [p.displayName, p.role])).toEqual([['Amy', 'member'], ['Zed', 'admin']]);
     expect(new Set(ensured)).toEqual(new Set([A, B]));

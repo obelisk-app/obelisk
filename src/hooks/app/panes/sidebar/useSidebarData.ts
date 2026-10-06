@@ -10,7 +10,7 @@ import {
 import { wotEngine } from '@/services/wot';
 import { useWotEnabled } from '@/hooks/wot/useWot';
 import { useRelayOperatorData } from '@/hooks/app/useRelayOperatorData';
-import { groupDistances } from '@/app/app/panes/sidebar/group-distance';
+import { groupDistances } from '@/utils/chat/group-distance';
 
 /**
  * The desktop sidebar's view of the operator data: the shared

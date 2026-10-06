@@ -17,7 +17,7 @@ import {
   stackerFixture,
   stackerWell,
   vestaFixture,
-} from './fixtures';
+} from '@/utils/games/shots/fixtures';
 
 /**
  * Every surface the game guides show, mounted from fixture logs.

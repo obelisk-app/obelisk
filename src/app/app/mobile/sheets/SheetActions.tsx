@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslation } from '@/i18n/context';
-import { cn } from '@/components/ui/cn';
+import { cn } from '@/utils/style/cn';
 
 export interface SheetPrimaryAction {
   label: string;

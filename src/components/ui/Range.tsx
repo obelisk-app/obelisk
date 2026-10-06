@@ -1,5 +1,5 @@
 import { forwardRef, type InputHTMLAttributes } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 /**
  * - `accent`: the visible slider in the accent color (settings).

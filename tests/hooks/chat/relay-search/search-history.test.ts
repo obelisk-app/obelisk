@@ -1,19 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { nip19 } from 'nostr-tools';
-import { decodeNpub, loadHistory, pushHistory, wipeHistory } from '@/hooks/chat/relay-search/search-history';
-
-describe('decodeNpub', () => {
-  const hex = 'cd'.repeat(32);
-  it('accepts hex, npub and nprofile', () => {
-    expect(decodeNpub(hex.toUpperCase())).toBe(hex);
-    expect(decodeNpub(nip19.npubEncode(hex))).toBe(hex);
-    expect(decodeNpub(nip19.nprofileEncode({ pubkey: hex }))).toBe(hex);
-  });
-  it('a name or a broken npub is null', () => {
-    expect(decodeNpub('alice')).toBeNull();
-    expect(decodeNpub('npub1broken')).toBeNull();
-  });
-});
+import { loadHistory, pushHistory, wipeHistory } from '@/hooks/chat/relay-search/search-history';
 
 describe('search history', () => {
   beforeEach(() => localStorage.clear());

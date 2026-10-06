@@ -5,7 +5,8 @@ import { useTranslation } from '@/i18n/context';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { InlineTagChip } from './InlineTagChip';
 import { ThreadGalleryCardSkeleton } from './ThreadCardSkeletons';
-import { formatTimeAgo, posterName } from './thread-card-utils';
+import { posterName } from '@/utils/chat/forum/forum-threads';
+import { relativeTime } from '@/utils/format/relative-time';
 import { useThreadCardData } from '@/hooks/chat/forum/useThreadCardData';
 
 export function ThreadGallery({
@@ -94,7 +95,7 @@ function ThreadGalleryCard({
           <span className="truncate">OP {opName}</span>
           <span className="shrink-0">
             {messages.length} {messages.length === 1 ? 'msg' : 'msgs'} ·{' '}
-            {formatTimeAgo(lastMsg.createdAt, t, locale)}
+            {relativeTime(lastMsg.createdAt, t, locale)}
           </span>
         </div>
       </div>

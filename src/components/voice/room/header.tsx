@@ -6,6 +6,7 @@
  * connections are still coming up. Pure presentation.
  */
 import { useTranslation } from '@/i18n/context';
+import type { SfuStatus } from '@/services/voice/room-events';
 
 /**
  * SFU upgrade status for the current call. Distinct from voice-client
@@ -20,7 +21,6 @@ import { useTranslation } from '@/i18n/context';
  *                      the watchdog window; likely the publisher is
  *                      not whitelisted on the SFU's trusted-author relay
  */
-export type SfuStatus = 'na' | 'starting' | 'connected' | 'unavailable' | 'unauthorized';
 
 /**
  * Compact SFU-status pill rendered between the room name and the

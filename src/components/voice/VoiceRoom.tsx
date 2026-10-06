@@ -36,7 +36,7 @@ import {
   listScreenSharers,
   resolveStage,
   splitParticipants,
-} from './room/stage-layout';
+} from '@/utils/voice/stage-layout';
 
 // `MeshSyncStatusPill` keeps its historical import path.
 export { MeshSyncStatusPill };

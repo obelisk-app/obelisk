@@ -3,7 +3,7 @@
 import HintDot from '@/components/hints/HintDot';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { useTranslation } from '@/i18n/context';
-import { colorFor, letterFor } from './relay-tile-style';
+import { colorFor, letterFor } from '@/utils/relay-url/relay-tile-style';
 import { useRelayTile } from '@/hooks/app/rail/useRelayTile';
 import { MENU_PANEL_CLASS, MenuItem } from '@/components/ui/menu';
 import RemoteImage from '@/components/ui/RemoteImage';

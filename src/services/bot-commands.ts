@@ -17,7 +17,7 @@
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl } from '@/services/nostr-bridge';
 import { KIND_NIP78_APP_DATA } from '@/utils/nip-kinds';
-import type { SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
+import type { SlashCommand } from '@/utils/chat/slash/slash-commands';
 
 export const BOT_ALIVE_SECS = 60 * 60;
 

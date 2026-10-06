@@ -13,3 +13,17 @@ export function shortNpubLabel(pubkey: string): string {
     return '';
   }
 }
+
+/**
+ * The full npub for a hex pubkey, or the input itself when it does not
+ * encode. This was written three times (the DM menus, the social menus and
+ * the public profile viewer); `useUserPanel`'s variant returns `null`
+ * instead and stays separate because its caller branches on that.
+ */
+export function safeNpub(pubkey: string): string {
+  try {
+    return hexToNpub(pubkey);
+  } catch {
+    return pubkey;
+  }
+}

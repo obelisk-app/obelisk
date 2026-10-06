@@ -9,13 +9,13 @@ import { SESSION_IDENTITY_ID, type Identity } from '@/lib/relay-hub';
 import { resetAllClientState } from '@/services/reset';
 import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/store/notifications';
 import { ensureChannelPrefsStoreForAccount } from '@/store/channel-prefs';
-import { cacheClearAll, cacheFreeSpaceForQuota } from '../cache';
+import { cacheClearAll } from '../cache';
 import { clearDecryptCache } from '../decrypt-cache';
-import { LEGACY_STORAGE_KEY, STORAGE_KEY } from '../session-storage';
 import { resetSignerQueue } from '../signer-queue';
 import { resetWrapLedger } from '../wrap-ledger';
 import type { PerGroupReqs } from './fanout';
 import type { LifecycleTargets } from './lifecycle';
+import { SessionPersistence } from './persistence';
 import { ANONYMOUS_IDENTITY, clearForLogout, resetSubscriptionState } from './reset';
 import { restoreSession } from './restore';
 
@@ -29,14 +29,19 @@ export interface LoginDeps {
 }
 
 export class LoginModule {
+  /** The record on disk, its sealed secrets and the vault key (`./persistence.ts`). */
+  private readonly store: SessionPersistence;
+
   constructor(
     private readonly t: LifecycleTargets,
     private readonly deps: LoginDeps,
-  ) {}
+  ) {
+    this.store = new SessionPersistence(t.state);
+  }
 
   /** Page load: the rail, then the stored session if there is one (`./restore.ts`). */
   initialize(): Promise<void> {
-    return restoreSession(this.t, { ...this.deps, persist: () => this.persist() });
+    return restoreSession(this.t, { ...this.deps, store: this.store });
   }
 
   async loginWithNsec(privKeyHex: string, pubKeyHex: string): Promise<void> {
@@ -66,8 +71,11 @@ export class LoginModule {
    * (nsec, NIP-07, bunker URL, NostrConnect QR).
    *
    * Order matters:
-   *   1. `persist()`, write session to localStorage so a refresh during the
-   *      connect handshake doesn't lose the credentials.
+   *   1. `seal()` then `persist()`: the secrets are sealed by the session
+   *      vault under a freshly rotated key, then the record is written so a
+   *      refresh during the connect handshake doesn't lose the credentials.
+   *      When the browser cannot keep a key the login goes on in memory and
+   *      `sessionNotice` says it will not be remembered.
    *   2. `resetSessionState()`: the hub gets the session identity (it
    *      rebinds sockets only when the pubkey changed) and the subscription
    *      bookkeeping restarts (`resetSubscriptionState`).
@@ -91,6 +99,7 @@ export class LoginModule {
   async finalizeLogin(): Promise<void> {
     const { t } = this;
     const { state } = t;
+    state.sessionNotice.set(null);
     t.browserEvents.wire();
     const previousPubkey = state.myPubkey.get();
     if (previousPubkey && previousPubkey !== state.session?.pubKeyHex) {
@@ -100,6 +109,8 @@ export class LoginModule {
       t.lists.resetContactList();
       t.media.reset();
     }
+    const sealing = this.store.seal();
+    if (sealing) await sealing;
     this.persist();
     // Point the seen-wrap ledger at this account before `connect()` opens the
     // kind-1059 subscriptions, otherwise the first replayed wraps are decrypted
@@ -192,29 +203,20 @@ export class LoginModule {
     clearDecryptCache();
     resetWrapLedger(null);
     this.t.state.session = null;
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-      // Wipe relay-scoped caches so the next identity doesn't paint with
-      // the previous one's admin/member lists. See cache.ts.
-      cacheClearAll();
-    }
+    this.t.state.sessionNotice.set(null);
+    // The record, the vault key and any SDK leftovers. The key delete is
+    // awaited after the synchronous teardown below so nothing waits on it.
+    const forgotten = this.store.forget();
+    // Wipe relay-scoped caches so the next identity doesn't paint with
+    // the previous one's admin/member lists. See cache.ts.
+    if (typeof window !== 'undefined') cacheClearAll();
     this.deps.dispose();
     clearForLogout(this.t);
+    await forgotten;
   }
 
+  /** Write the session record (sealed secrets only; see `./persistence.ts`). */
   persist(): void {
-    const session = this.t.state.session;
-    if (typeof window === 'undefined' || !session) return;
-    const json = JSON.stringify(session);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, json);
-    } catch {
-      // Quota, a lost session write logs the user out on the next
-      // reload. Sacrifice bridgeCache entries and retry once.
-      try {
-        if (cacheFreeSpaceForQuota()) window.localStorage.setItem(STORAGE_KEY, json);
-      } catch { /* degrade silently */ }
-    }
+    this.store.persist();
   }
 }

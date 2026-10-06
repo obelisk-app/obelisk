@@ -6,8 +6,8 @@ import { useConfiguredRelays } from '@/services/nostr-bridge';
 import { classifyDeepLinkRelay, useRelayDeepLink } from '@/hooks/chat/useRelayDeepLink';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
-import { type NavState, urlFor, parseUrl } from '@/app/app/mobile/url-state';
-import { buildSeedHistory } from '@/app/app/mobile/swipe-nav';
+import { type NavState, urlFor, parseUrl } from '@/utils/shell/mobile/url-state';
+import { buildSeedHistory } from '@/utils/shell/mobile/swipe-nav';
 import type { SlideDir } from './useScreenCarousel';
 
 export interface MobileHistorySyncInputs {

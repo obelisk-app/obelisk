@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslation } from '@/i18n/context';
-import type { ScreenName } from '../url-state';
+import type { ScreenName } from '@/utils/shell/mobile/url-state';
 
 /** Shown while a stored session reconnects, instead of telling the user they are logged out. */
 export function RehydratingScreen() {

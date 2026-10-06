@@ -13,7 +13,8 @@ import { useTranslation } from '@/i18n/context';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { InlineTagChip } from './InlineTagChip';
 import { ThreadCardSkeleton } from './ThreadCardSkeletons';
-import { formatTimeAgo, posterName } from './thread-card-utils';
+import { posterName } from '@/utils/chat/forum/forum-threads';
+import { relativeTime } from '@/utils/format/relative-time';
 import { useThreadCardData } from '@/hooks/chat/forum/useThreadCardData';
 
 export { ThreadGallery } from './ThreadGallery';
@@ -86,7 +87,7 @@ export function ThreadCard({
           <div className="flex flex-wrap gap-x-3 text-[11px] text-lc-muted mt-1.5">
             <span>OP {opName}</span>
             <span>{messages.length} {messages.length === 1 ? 'msg' : 'msgs'}</span>
-            <span>last {lastName} · {formatTimeAgo(lastMsg.createdAt, t, locale)}</span>
+            <span>last {lastName} · {relativeTime(lastMsg.createdAt, t, locale)}</span>
           </div>
         </div>
         {thread.picture && (

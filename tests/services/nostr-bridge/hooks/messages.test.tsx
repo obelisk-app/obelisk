@@ -10,6 +10,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import type { BridgeImpl } from '@/services/nostr-bridge/client';
+import { bridgeWrapper } from '@tests/support/render-with-bridge';
 
 const SESSION_KEY = 'obelisk-dex/session';
 const LEGACY_SESSION_KEY = 'obeliskord/session';
@@ -18,7 +20,7 @@ let mockLoggedIn = false;
 const subscribers = new Set<(v: boolean) => void>();
 let dmSubscribeCalls = 0;
 let dmUnsubscribeCalls = 0;
-let loadMoreMessagesMock: ReturnType<typeof vi.fn>;
+let loadMoreMessagesMock: ReturnType<typeof vi.fn<(groupId: string) => Promise<unknown>>>;
 const dmSnapshot = {
   ['b'.repeat(64)]: [
     {
@@ -36,28 +38,25 @@ function setMockLoggedIn(v: boolean) {
   subscribers.forEach((cb) => cb(v));
 }
 
-vi.mock('@/services/nostr-bridge/client', () => {
-  return {
-    getBridge: () =>
-      Promise.resolve({
-        subscribeIsLoggedIn: (cb: (v: boolean) => void) => {
-          subscribers.add(cb);
-          cb(mockLoggedIn);
-          return () => {
-            subscribers.delete(cb);
-          };
-        },
-        subscribeDirectMessages: (cb: (v: typeof dmSnapshot) => void) => {
-          dmSubscribeCalls += 1;
-          cb(dmSnapshot);
-          return () => {
-            dmUnsubscribeCalls += 1;
-          };
-        },
-        loadMoreMessages: loadMoreMessagesMock,
-      }),
-  };
-});
+// A hand-built instance under the real provider: no module mock.
+const bridge = {
+  subscribeIsLoggedIn: (cb: (v: boolean) => void) => {
+    subscribers.add(cb);
+    cb(mockLoggedIn);
+    return () => {
+      subscribers.delete(cb);
+    };
+  },
+  subscribeDirectMessages: (cb: (v: typeof dmSnapshot) => void) => {
+    dmSubscribeCalls += 1;
+    cb(dmSnapshot);
+    return () => {
+      dmUnsubscribeCalls += 1;
+    };
+  },
+  loadMoreMessages: (groupId: string) => loadMoreMessagesMock(groupId),
+} as unknown as BridgeImpl;
+const wrapper = bridgeWrapper(bridge);
 
 import { setPreference } from '@/services/preferences';
 import { useDirectMessages, useLoadEarlier } from '@/services/nostr-bridge/hooks/messages';
@@ -80,7 +79,7 @@ afterEach(() => {
 
 describe('useDirectMessages', () => {
   it('does not subscribe to relay DMs until local opt-in is enabled', async () => {
-    const { result } = renderHook(() => useDirectMessages());
+    const { result } = renderHook(() => useDirectMessages(), { wrapper });
 
     await Promise.resolve();
     expect(dmSubscribeCalls).toBe(0);
@@ -99,7 +98,7 @@ describe('useDirectMessages', () => {
 describe('useLoadEarlier', () => {
   it('marks the start reached only on a confirmed end result', async () => {
     loadMoreMessagesMock.mockResolvedValueOnce('end');
-    const { result } = renderHook(() => useLoadEarlier('g1'));
+    const { result } = renderHook(() => useLoadEarlier('g1'), { wrapper });
 
     let loadResult: unknown = null;
     await act(async () => {
@@ -115,7 +114,7 @@ describe('useLoadEarlier', () => {
 
   it('keeps pagination retryable when the bridge reports unavailable', async () => {
     loadMoreMessagesMock.mockResolvedValueOnce('unavailable');
-    const { result } = renderHook(() => useLoadEarlier('g1'));
+    const { result } = renderHook(() => useLoadEarlier('g1'), { wrapper });
 
     let loadResult: unknown = null;
     await act(async () => {
@@ -130,7 +129,7 @@ describe('useLoadEarlier', () => {
 
   it('does not immediately retry unavailable pagination while still at the top', async () => {
     loadMoreMessagesMock.mockResolvedValue('unavailable');
-    const { result } = renderHook(() => useLoadEarlier('g1'));
+    const { result } = renderHook(() => useLoadEarlier('g1'), { wrapper });
 
     await act(async () => {
       await result.current.loadEarlier();
@@ -147,7 +146,7 @@ describe('useLoadEarlier', () => {
 
   it('keeps pagination retryable when the bridge throws', async () => {
     loadMoreMessagesMock.mockRejectedValueOnce(new Error('relay down'));
-    const { result } = renderHook(() => useLoadEarlier('g1'));
+    const { result } = renderHook(() => useLoadEarlier('g1'), { wrapper });
 
     await act(async () => {
       await result.current.loadEarlier();
@@ -161,7 +160,7 @@ describe('useLoadEarlier', () => {
 
 describe('useIsRehydrating', () => {
   it('returns false when there is no stored session', async () => {
-    const { result } = renderHook(() => useIsRehydrating());
+    const { result } = renderHook(() => useIsRehydrating(), { wrapper });
     // After mount, the localStorage check resolves; without a session, no
     // rehydration is in flight.
     await waitFor(() => expect(result.current).toBe(false));
@@ -176,7 +175,7 @@ describe('useIsRehydrating', () => {
         relayUrl: 'wss://relay.example.com',
       }),
     );
-    const { result } = renderHook(() => useIsRehydrating());
+    const { result } = renderHook(() => useIsRehydrating(), { wrapper });
     // Initial render is `false` (mounted gate hasn't flipped yet); after the
     // mount effect lands we observe the rehydrating window.
     await waitFor(() => expect(result.current).toBe(true));
@@ -187,7 +186,7 @@ describe('useIsRehydrating', () => {
       SESSION_KEY,
       JSON.stringify({ pubKeyHex: 'a'.repeat(64), loginMethod: 'nsec', relayUrl: 'wss://r' }),
     );
-    const { result } = renderHook(() => useIsRehydrating());
+    const { result } = renderHook(() => useIsRehydrating(), { wrapper });
     await waitFor(() => expect(result.current).toBe(true));
 
     act(() => setMockLoggedIn(true));
@@ -201,7 +200,7 @@ describe('useIsRehydrating', () => {
       JSON.stringify({ pubKeyHex: 'a'.repeat(64), loginMethod: 'nsec', relayUrl: 'wss://r' }),
     );
     mockLoggedIn = true;
-    const { result } = renderHook(() => useIsRehydrating());
+    const { result } = renderHook(() => useIsRehydrating(), { wrapper });
     await waitFor(() => expect(result.current).toBe(false));
 
     // Simulate logout: storage is cleared *before* isLoggedIn flips to false
@@ -220,7 +219,7 @@ describe('useIsRehydrating', () => {
       LEGACY_SESSION_KEY,
       JSON.stringify({ pubKeyHex: 'a'.repeat(64), loginMethod: 'nsec', relayUrl: 'wss://r' }),
     );
-    const { result } = renderHook(() => useIsRehydrating());
+    const { result } = renderHook(() => useIsRehydrating(), { wrapper });
     await waitFor(() => expect(result.current).toBe(true));
   });
 });

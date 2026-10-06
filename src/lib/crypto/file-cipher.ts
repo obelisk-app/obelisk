@@ -14,6 +14,7 @@
 
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
+import { exact, subtle } from './webcrypto';
 
 export const FILE_CIPHER_ALGORITHM = 'aes-gcm';
 
@@ -36,21 +37,6 @@ export class FileIntegrityError extends Error {
     super(message);
     this.name = 'FileIntegrityError';
   }
-}
-
-function subtle(): SubtleCrypto {
-  const s = globalThis.crypto?.subtle;
-  if (!s) throw new Error('WebCrypto is unavailable (needs a secure context)');
-  return s;
-}
-
-// WebCrypto wants a BufferSource backed by a plain ArrayBuffer; a Uint8Array
-// view over a SharedArrayBuffer or a larger pool would be rejected or read
-// the wrong bytes, so copy into an exact-size buffer.
-function exact(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
-  const out = new Uint8Array(new ArrayBuffer(bytes.byteLength));
-  out.set(bytes);
-  return out;
 }
 
 export async function encryptFile(plaintext: Uint8Array): Promise<EncryptedFile> {

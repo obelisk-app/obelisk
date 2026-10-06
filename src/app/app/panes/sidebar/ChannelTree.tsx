@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { JsGroup } from '@/services/nostr-bridge';
 import type { LaidOutSidebar } from '@/services/channel-layout';
-import type { View } from '../../view';
+import type { View } from '@/utils/shell/view';
 import { GroupNode } from '../GroupNode';
 
 type Props = {

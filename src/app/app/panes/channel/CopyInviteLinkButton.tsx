@@ -3,7 +3,7 @@
 import { useCurrentRelayUrl } from '@/services/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
 import CopyButton from '@/components/ui/CopyButton';
-import { channelInviteLink } from './invite-link';
+import { channelInviteLink } from '@/utils/channel-link';
 
 /**
  * Copies this channel's invite link. On `CopyButton`, so the tick holds for

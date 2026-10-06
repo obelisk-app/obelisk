@@ -8,7 +8,7 @@ import type { MemberInfo } from '@/utils/message-text/mentions';
 import type { JsMemberInfo } from '@/services/nostr-bridge';
 import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
 import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
-import { findInvoices, findWelcomeBanner, hoistUrls, stripHoisted } from '@/components/chat/message/hoist';
+import { findInvoices, findWelcomeBanner, hoistUrls, stripHoisted } from '@/utils/message-text/hoist';
 
 /**
  * Split a message into what renders below the text (media, banner,

@@ -1,5 +1,5 @@
 import { forwardRef, type InputHTMLAttributes } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 export type FileInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>;
 

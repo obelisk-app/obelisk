@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nip19 } from 'nostr-tools';
-import RelayRolesAdminModal, { parsePubkeyInput } from '@/components/admin/RelayRolesAdminModal';
+import RelayRolesAdminModal from '@/components/admin/RelayRolesAdminModal';
 import * as roles from '@/services/relay-roles';
 import type { RelayRoles } from '@/services/relay-roles';
 import { LocaleProvider } from '@/i18n/context';
@@ -224,13 +224,6 @@ describe('RelayRolesAdminModal', () => {
 
     expect(screen.getByRole('button', { name: 'mod emoji' })).toHaveTextContent('🛡️');
     expect(screen.getByRole('button', { name: 'og emoji' })).toHaveTextContent('+');
-  });
-
-  it('accepts npub and hex pubkeys', () => {
-    expect(parsePubkeyInput(' ' + ALICE.toUpperCase() + ' ')).toBe(ALICE);
-    expect(parsePubkeyInput(nip19.npubEncode(BOB))).toBe(BOB);
-    expect(parsePubkeyInput(nip19.nprofileEncode({ pubkey: BOB, relays: [RELAY] }))).toBe(BOB);
-    expect(parsePubkeyInput('nope')).toBeNull();
   });
 
   it('names every field, closes with the icon button and never reads avatar letters off hex', () => {

@@ -37,7 +37,7 @@ import { LazyDmCallLayer, LazyGameModalHost } from '../lazy-mounts';
 import { BottomNav, hintSurfaceFor, shouldHideMobileBottomNav } from './BottomNav';
 import { MobileVoiceStatusSlot } from './MobileVoiceStatusSlot';
 import { MobileScreensHost } from './MobileScreensHost';
-import { slideClassFor } from './carousel-slots';
+import { slideClassFor } from '@/utils/shell/mobile/carousel-slots';
 import { LoginScreen } from './screens/LoginScreen';
 import { RehydratingScreen } from './screens/StatusScreens';
 import { renderScreenBody, type MobileScreenProps } from './MobileScreens';

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { filterProfileFeed, mediaUrls, type ProfileFeedTab } from '@/services/social/profile-feed';
 import { useFeed } from '@/hooks/social/useFeed';
-import type { MediaItem } from '@/components/chat/MediaGrid';
+import type { MediaItem } from '@/services/social/feed-media';
 
 /**
  * The profile's notes, the selected tab, and the media tiles for the media

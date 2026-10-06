@@ -18,8 +18,8 @@ import CodeBlock from '../CodeBlock';
 import ChannelLinkPill from '../ChannelLinkPill';
 import AttachmentCard from '../AttachmentCard';
 import { RemoteMediaPlaceholder } from '../RemoteMediaPlaceholder';
-import { autolinkLabel } from './autolink-label';
-import { chatLinkTarget, navigateInApp } from './chat-link';
+import { autolinkLabel } from '@/utils/message-text/autolink-label';
+import { chatLinkTarget, navigateInApp } from '@/utils/message-text/chat-link';
 import { processChildren, type MentionMap } from './placeholders';
 
 export interface MarkdownComponentOptions {

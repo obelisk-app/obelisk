@@ -9,7 +9,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { ScrollableRail } from './chrome';
 import { AudioChip, AudioTile, RailAudioTile, RailVideoTile, Stage, VideoTile } from './tiles';
-import type { ActiveStage, TracksByPubkey } from './stage-layout';
+import type { ActiveStage, TracksByPubkey } from '@/utils/voice/stage-layout';
 
 export function StageArea({
   activeStage, pinned, setPinned, videoPubkeys, audioPubkeys, selfPubkey, localCamStream, tracksByPubkey,

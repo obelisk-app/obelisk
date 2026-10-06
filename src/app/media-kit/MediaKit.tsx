@@ -9,14 +9,14 @@
  */
 import Link from 'next/link';
 import { useTranslation } from '@/i18n/context';
-import { LINKS, NAV_LINKS } from './kit/content';
+import { LINKS, NAV_LINKS } from '@/utils/media-kit/content';
 import { Section } from './kit/kit-ui';
 import { AboutSections } from './kit/AboutSections';
 import { BannersSection } from './kit/BannersSection';
 import { EmbedSections, PaletteSection, ShortCopySection } from './kit/ReferenceSections';
 import { GuidelinesSection } from './kit/GuidelinesSection';
 
-export { ASSETS } from './kit/content';
+export { ASSETS } from '@/utils/media-kit/content';
 
 export default function MediaKit() {
   const { t } = useTranslation();

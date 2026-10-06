@@ -29,7 +29,7 @@ import { useRemoteMediaGate } from '@/services/remote-media-gate';
 import type { JsDirectMessage } from '@/services/nostr-bridge';
 import { TextWithEmoji } from './dm-message/TextWithEmoji';
 import { useDmEmojis } from '@/hooks/chat/dm-message/useDmEmojis';
-import { splitDmImages } from './dm-message/dm-message-utils';
+import { splitDmImages } from '@/utils/chat/dm/dm-message-utils';
 
 export function DmMessageBody({ message }: { message: JsDirectMessage }) {
   const media = useRemoteMediaGate('dm', message.counterparty, message.outgoing);

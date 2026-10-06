@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { LocaleProvider } from '@/i18n/context';
 import type { Locale } from '@/i18n/index';
-import { ConfirmDialogHost, confirmDialog } from '@/components/ui/ConfirmDialog';
+import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
+import { confirmDialog } from '@/services/confirm-dialog';
 
 function mountHost(locale: Locale = 'en') {
   return render(<LocaleProvider initialLocale={locale}><ConfirmDialogHost /></LocaleProvider>);

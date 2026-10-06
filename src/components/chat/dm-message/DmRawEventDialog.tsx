@@ -7,7 +7,8 @@ import Modal from '@/components/ui/Modal';
 import { LockIcon } from '@/components/ui/icons';
 import Button from '@/components/ui/Button';
 import SegmentedControl from '@/components/ui/SegmentedControl';
-import { copy, json, rawEventFacts } from './dm-message-utils';
+import { copyWithToast } from '@/services/clipboard';
+import { json, rawEventFacts } from '@/utils/chat/dm/dm-message-utils';
 
 function RawEventView({ event, hint, warning, testId }: { event: DmRawEvent; hint: string; warning?: string | null; testId: string }) {
   const { t } = useTranslation();
@@ -34,7 +35,7 @@ function RawEventView({ event, hint, warning, testId }: { event: DmRawEvent; hin
         <Button
           variant="pillSecondary"
           size="xs"
-          onClick={() => copy(json(event), t('dm.msg.copied'))}
+          onClick={() => copyWithToast(json(event), t('dm.msg.copied'))}
           data-testid={`${testId}-copy`}
         >
           {t('social.copyJson')}

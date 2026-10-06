@@ -9,7 +9,7 @@ import { useTranslation } from '@/i18n/context';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useRelayPeople, useUserMetadata, type JsMemberInfo } from '@/services/nostr-bridge';
 import type { RelayRole } from '@/services/relay-roles';
-import { parsePubkeyInput } from './role-draft';
+import { parsePubkeyInput } from '@/utils/identity/parse-pubkey';
 
 /** The expanded member panel of one role: search relay members, grant, and the current holders to revoke. */
 export default function RoleMembers({ role, holders, busy, onGrant, onRevoke, onError }: {

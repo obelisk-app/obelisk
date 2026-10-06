@@ -14,19 +14,30 @@
  *   - nip46              → bridge.loginWithBunker(args.bunkerUri)
  *
  * The bridge receives the final signer only after the generated-key backup,
- * profile, and public-profile sharing steps are complete.
+ * profile, and public-profile sharing steps are complete, and a pasted nsec
+ * only after the person has read why that is the least safe way in
+ * (`login/PastedKeyNoticeStep.tsx`).
+ *
+ * The SDK modal runs inside its own `NostrSessionProvider` with in-memory
+ * signer storage (`src/services/login/signer-storage.ts`), so the widget never writes a
+ * pairing key or a "remembered" nsec to localStorage, and `autoRestore` is
+ * off: the bridge, not the SDK, restores sessions.
  */
 
-import { LoginModal as SdkLoginModal, type LoginMethodId } from '@nostr-wot/ui';
+import { LoginModal as SdkLoginModal, NostrSessionProvider, type LoginMethodId } from '@nostr-wot/ui';
 import type { ReactNode } from 'react';
+import { usePastedKeyStep } from '@/hooks/app/login/usePastedKeyStep';
 import { OBELISK_NIP46_PERMISSIONS } from '@/utils/nostr-signing-kinds';
 import GeneratedProfileEnhancements from './GeneratedProfileEnhancements';
 import { GeneratedNpubStep } from './login/GeneratedNpubStep';
 import { LOGIN_METHOD_ICONS } from './login/LoginIcons';
+import { PastedKeyNoticeStep } from './login/PastedKeyNoticeStep';
+import { SessionNoticeBanner } from './login/SessionNoticeBanner';
+import { loginSignerStorage } from '@/services/login/signer-storage';
 import { Nip46SignerDeepLink } from '@/hooks/app/login/useNip46SignerDeepLink';
 import { useLoginFlow } from '@/hooks/app/login/useLoginFlow';
 
-export { copyConnectionUri, isTransientNip46Error, signerAppHref } from './login/signer-link';
+export { isTransientNip46Error, signerAppHref } from '@/utils/nip46/signer-link';
 
 const NIP46_PERMS = OBELISK_NIP46_PERMISSIONS;
 
@@ -58,6 +69,7 @@ export default function LoginModal({
   headerSlot,
 }: LoginModalProps = {}) {
   const flow = useLoginFlow({ onSuccess, onClose });
+  const pasted = usePastedKeyStep(flow.onLogin);
 
   if (flow.generatedLogin) {
     return (
@@ -74,31 +86,45 @@ export default function LoginModal({
     );
   }
 
+  if (pasted.pending) {
+    return (
+      <PastedKeyNoticeStep
+        onClose={onClose ?? pasted.back}
+        onBack={pasted.back}
+        onContinue={() => void pasted.confirm()}
+        busy={pasted.busy}
+        error={pasted.error}
+      />
+    );
+  }
+
   return (
     <>
       <Nip46SignerDeepLink />
       <GeneratedProfileEnhancements onDraftChange={flow.updateGeneratedProfile} />
-      <SdkLoginModal
-        key={flow.nip46Retry}
-        open
-        onClose={flow.closeLogin}
-        closeOnSuccess={false}
-        title={title}
-        subtitle={subtitle}
-        flatLayout
-        showRememberToggle
-        profileSetup
-        nip46Relays={['wss://public.obelisk.ar']}
-        nip46Perms={NIP46_PERMS}
-        nip46Metadata={NIP46_METADATA}
-        methods={methods}
-        modalClasses={{ modal: 'obelisk-login-modal' }}
-        {...(flow.hideTransientError ? { styles: { error: { display: 'none' } } } : {})}
-        onError={flow.handleSdkError}
-        methodIcons={LOGIN_METHOD_ICONS}
-        {...(headerSlot ? { slots: { header: headerSlot } } : {})}
-        onLogin={flow.onLogin}
-      />
+      <NostrSessionProvider autoRestore={false} signerStorage={loginSignerStorage} theme="la-crypta">
+        <SdkLoginModal
+          key={flow.nip46Retry}
+          open
+          onClose={flow.closeLogin}
+          closeOnSuccess={false}
+          title={title}
+          subtitle={subtitle}
+          flatLayout
+          showRememberToggle={false}
+          profileSetup
+          nip46Relays={['wss://public.obelisk.ar']}
+          nip46Perms={NIP46_PERMS}
+          nip46Metadata={NIP46_METADATA}
+          methods={methods}
+          modalClasses={{ modal: 'obelisk-login-modal' }}
+          {...(flow.hideTransientError ? { styles: { error: { display: 'none' } } } : {})}
+          onError={flow.handleSdkError}
+          methodIcons={LOGIN_METHOD_ICONS}
+          slots={{ ...(headerSlot ? { header: headerSlot } : {}), beforeMethods: <SessionNoticeBanner /> }}
+          onLogin={pasted.intercept}
+        />
+      </NostrSessionProvider>
     </>
   );
 }

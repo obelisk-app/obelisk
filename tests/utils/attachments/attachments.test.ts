@@ -6,6 +6,8 @@ import {
   isAudioMime,
   extensionFor,
   isUploadUrl,
+  isAudioOnlyWebm,
+  isVideo,
   isVideoUrl,
   isAudioUrl,
   filenameFromUrl,
@@ -266,5 +268,28 @@ describe('splitContentForEditing', () => {
     const { text, attachments } = splitContentForEditing(content);
     expect(text).toBe('');
     expect(attachments).toHaveLength(1);
+  });
+});
+
+describe('isVideo', () => {
+  it('trusts the MIME type when there is one', () => {
+    expect(isVideo({ url: 'https://x/a.mp4', mimeType: 'image/png' })).toBe(false);
+    expect(isVideo({ url: 'https://x/a', mimeType: 'video/webm' })).toBe(true);
+  });
+
+  it('falls back to the extension, query strings and fragments included', () => {
+    expect(isVideo({ url: 'https://x/a.MOV?x=1' })).toBe(true);
+    expect(isVideo({ url: 'https://x/a.m4v#t=3' })).toBe(true);
+    expect(isVideo({ url: 'https://x/a.jpg' })).toBe(false);
+  });
+});
+
+describe('isAudioOnlyWebm', () => {
+  it('spots a picture-less webm as a voice note', () => {
+    expect(isAudioOnlyWebm('https://x/a.webm', 0, 3)).toBe(true);
+    expect(isAudioOnlyWebm('https://x/a.webm?x=1', 0, 3)).toBe(true);
+    expect(isAudioOnlyWebm('https://x/a.webm', 640, 3)).toBe(false);
+    expect(isAudioOnlyWebm('https://x/a.mp4', 0, 3)).toBe(false);
+    expect(isAudioOnlyWebm('https://x/a.webm', 0, Number.POSITIVE_INFINITY)).toBe(false);
   });
 });

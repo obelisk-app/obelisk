@@ -1,5 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 /**
  * The icon-only button, round by default: the composer's mic, emoji and

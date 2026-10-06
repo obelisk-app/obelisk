@@ -17,7 +17,7 @@ import {
 import { applyLayout } from '@/services/channel-layout';
 import { useTranslation } from '@/i18n/context';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-import { type ScreenName } from '../url-state';
+import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { MobileServerBanner, MobileServerRail } from '../MobileServerRail';
 import { AddRelaySheet } from '../sheets/AddRelaySheet';
 import { CreateChannelSheet } from '../sheets/CreateChannelSheet';

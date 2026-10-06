@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { normalizeCustomEmojiName } from '@/utils/media-tags/custom-emoji-tags';
 import MediaThumb from '@/components/media/MediaThumb';
 import { StarIcon } from '@/components/ui/icons';
-import type { MediaEntry } from './media-catalog';
+import type { MediaEntry } from '@/utils/chat/picker/media-catalog';
 
 /** A titled grid of media tiles, each with a favourite star; an optional leading tile (the create control). */
 export function MediaSection({ title, entries, onPick, favoriteUrls, onFavorite, onMediaLoad, onMediaError, children }: {

@@ -19,14 +19,8 @@
 import { isVideoUrl } from '@/utils/attachments/attachments';
 import { useTranslation } from '@/i18n/context';
 import RemoteImage from '@/components/ui/RemoteImage';
+import type { MediaItem } from '@/services/social/feed-media';
 
-export type MediaItem = {
-  key: string;
-  url: string;
-  multiple?: boolean;
-  /** Where the tile came from, when the host opens the post rather than the image. */
-  noteId?: string;
-};
 
 /** Every Nth tile spans 2×2. 7 keeps the pattern from looking like columns. */
 const FEATURE_EVERY = 7;

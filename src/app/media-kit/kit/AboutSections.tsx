@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useTranslation } from '@/i18n/context';
-import { ASSETS, PITCHES } from './content';
+import { ASSETS, PITCHES } from '@/utils/media-kit/content';
 import { CopyButton, Section } from './kit-ui';
 
 /** The pitches (EN/ES, short and long) and the downloadable logos and icons. */

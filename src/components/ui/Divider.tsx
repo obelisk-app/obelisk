@@ -1,4 +1,4 @@
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 export type DividerSpacing = 'none' | 'sm' | 'md';
 

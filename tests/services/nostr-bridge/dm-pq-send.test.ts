@@ -19,6 +19,7 @@ import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { generateSecretKey, getPublicKey, finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { derivePqKeys, buildAttestationTags, isPqEnvelope, PQC_KIND, type PqKeys } from '@nostr-wot/pq';
+import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 
 const fake = vi.hoisted(() => {
   const state = {
@@ -226,6 +227,10 @@ warmBridgeModules();
 beforeEach(async () => {
   fake.state.published = [];
   fake.state.subscriptions = [];
+  // A fresh bridge per test: its globalThis slot survives the module reset,
+  // so it is emptied here. The reset stays for the page RelayHub singleton and
+  // the module-level stores the bridge writes to.
+  unregisterBridge();
   vi.resetModules();
   delete (window as unknown as { nostr?: unknown }).nostr;
   window.localStorage.clear();

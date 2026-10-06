@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import EmptyState, { type EmptyStatePadding } from './EmptyState';
 import ErrorState from './ErrorState';
 import Spinner from './Spinner';

@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import { ALIGN_CLASS, GAP_CLASS, type Align, type Gap } from './Stack';
 
 export type Justify = 'start' | 'center' | 'end' | 'between';

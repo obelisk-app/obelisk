@@ -5,7 +5,7 @@ import { useTranslation } from '@/i18n/context';
 import { useChannelActions } from '@/hooks/chat/useChannelActions';
 import { useMutedLabel } from '@/hooks/chat/useMutedLabel';
 import Sheet from '@/components/ui/Sheet';
-import { MUTE_OPTIONS, NOTIFY_OPTIONS, type ChannelMenuTarget } from './channel-menu-options';
+import { MUTE_OPTIONS, NOTIFY_OPTIONS, type ChannelMenuTarget } from '@/utils/chat/channel-menu-options';
 
 /** The phone's long-press version of the channel menu, as a sheet with drill-in views. */
 export function ChannelActionSheet({ target, onClose }: { target: ChannelMenuTarget; onClose: () => void }) {

@@ -1,0 +1,29 @@
+import { describe, expect, it } from 'vitest';
+import { MAX_FORUM_TAGS, newForumTagId, removeTagAt, tagEmojiValue, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
+
+const tag = (id: string) => ({ id, name: id, emoji: null, color: null });
+
+describe('forum tag list helpers', () => {
+  it('mints an 8-character slug', () => {
+    expect(newForumTagId()).toMatch(/^[a-z0-9]{1,8}$/);
+  });
+
+  it('patches and removes by index without touching the input', () => {
+    const tags = [tag('a'), tag('b')];
+    expect(updateTagAt(tags, 1, { name: 'B' })[1].name).toBe('B');
+    expect(removeTagAt(tags, 0).map((t) => t.id)).toEqual(['b']);
+    expect(tags.map((t) => t.name)).toEqual(['a', 'b']);
+  });
+
+  it('appends a blank tag until the list is full', () => {
+    const next = withNewTag([tag('a')]);
+    expect(next).toHaveLength(2);
+    expect(next?.[1]).toMatchObject({ name: '', emoji: null, color: null });
+    expect(withNewTag(Array.from({ length: MAX_FORUM_TAGS }, (_, i) => tag(String(i))))).toBeNull();
+  });
+
+  it('caps an emoji at 4 code units and treats empty as none', () => {
+    expect(tagEmojiValue('🌐🌐🌐')).toBe('🌐🌐');
+    expect(tagEmojiValue('')).toBeNull();
+  });
+});

@@ -15,7 +15,8 @@
  */
 
 import { useRef, useState } from 'react';
-import { safeNpub } from './pubkey-npub';
+import { copyWithToast } from '@/services/clipboard';
+import { safeNpub } from '@/utils/identity/short-npub';
 import { useTranslation } from '@/i18n/context';
 import { usePreferences } from '@/hooks/usePreferences';
 import { useModerationStore } from '@/store/moderation';
@@ -60,10 +61,7 @@ export default function ProfileMenu({
     useToastStore.getState().pushToast({ title, body: displayName });
 
   const copy = (value: string, message: string) => {
-    // `Promise.resolve` because a clipboard shim can return undefined, and
-    // `.catch` on that throws out of the click handler: losing the toast.
-    void Promise.resolve(navigator.clipboard?.writeText(value)).catch(() => {});
-    toast(message);
+    copyWithToast(value, message);
     setOpen(false);
   };
 

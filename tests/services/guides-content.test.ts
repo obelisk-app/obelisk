@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { listSlugs, readGuide } from '@/services/guides';
 import { HERO_REGISTRY } from '@/components/guides/svg';
-import { HERO_ASSET_META } from '@/components/guides/svg/asset-meta';
+import { HERO_ASSET_META } from '@/utils/guides/asset-meta';
 import { SHOT_META } from '@/components/guides/Shot';
 import { CLIP_META } from '@/components/guides/Clip';
 

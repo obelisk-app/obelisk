@@ -1,9 +1,9 @@
 'use client';
 
-import type { SlashCommand } from './slash/slash-commands';
-import { activeParamIndex, tokenize } from './slash/slash-scaffold';
+import type { SlashCommand } from '@/utils/chat/slash/slash-commands';
+import { activeParamIndex, tokenize } from '@/utils/chat/slash/slash-scaffold';
 
-export { activeParamIndex, scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from './slash/slash-scaffold';
+export { activeParamIndex, scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/utils/chat/slash/slash-scaffold';
 
 interface Props {
   command: SlashCommand;

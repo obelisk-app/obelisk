@@ -1,5 +1,5 @@
 import { forwardRef, useId, useMemo, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import Field, { fieldNoteId } from './Field';
 import InputEnd, { endSlotCount, type InputClear, type InputSecret, type InputStatus } from './InputEnd';
 import {

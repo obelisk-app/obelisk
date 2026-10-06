@@ -316,24 +316,29 @@ src/app/app/mobile/
 ├── PhoneShell.tsx       (the state machine: go, pushNav, BottomNav,
 │                         onTabPress, popstate handler, drag carousel,
 │                         openers, screen renderers, seed/init)
+└── mobile-shell.css     (.drag-layer, .drag-slot.*, .drag-overlay,
+                          .screen-anim slide keyframes, sheet keyframes)
+
+src/utils/shell/mobile/  (the pure navigation rules, no React)
 ├── url-state.ts         (NavState shape, urlFor/parseUrl, initialNav)
 ├── swipe-nav.ts         (NAV_ORDER, SUB_TO_NAV, resolveParent,
 │                         neighborsFor, decideSwipeNav, decideSnap,
 │                         buildSeedHistory)
-└── mobile-shell.css     (.drag-layer, .drag-slot.*, .drag-overlay,
-                          .screen-anim slide keyframes, sheet keyframes)
+├── carousel-slots.ts    (slot roles, swipe axis, rubber band)
+├── swipe-target.ts      (which touch targets never start a swipe)
+└── labels.ts            (channel header halves, CHANNEL_KIND_LABEL)
 ```
 
 The shell's hooks live in the hooks layer, `src/hooks/app/mobile/`
 (`useMobileNavState`, `useMobileNavActions`, `useMobileHistorySync`,
 `useScreenCarousel`, `useCarouselDrag`, `useKeyboardInset` for the
 visualViewport keyboard inset, ...). Their tests are under
-`tests/hooks/app/mobile/`; `tests/app/app/mobile/swipe-nav.test.ts` covers
+`tests/hooks/app/mobile/`; `tests/utils/shell/mobile/swipe-nav.test.ts` covers
 the swipe decisions.
 
 When you add a new screen or transition, the order of operations is:
 
-1. Add the `ScreenName` to `url-state.ts`.
+1. Add the `ScreenName` to `src/utils/shell/mobile/url-state.ts`.
 2. Decide its parent context: static (add to `SUB_TO_NAV`) or
    dynamic (thread `parentScreen` through the opener).
 3. Add it to the screen catalog table in this doc.

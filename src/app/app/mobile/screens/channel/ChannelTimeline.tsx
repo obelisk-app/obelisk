@@ -3,7 +3,7 @@
 import type { JsMessage, JsReaction, MessagesStatus } from '@/services/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
 import { ChannelMessage, EMPTY_REACTIONS } from '../ChannelMessage';
-import type { TimelineItem } from './channel-timeline';
+import type { TimelineItem } from '@/utils/chat/channel-timeline';
 
 type Props = {
   items: ReadonlyArray<TimelineItem>;

@@ -19,14 +19,13 @@ import { setActiveVoiceClient, getActiveVoiceClient } from '@/services/voice/act
 import type { VoiceSigner } from '@/services/voice/constants';
 import type { ActiveCallInfo } from '@/services/nostr-bridge';
 import { useVoiceStore } from '@/store/voice';
-import type { SfuStatus } from '@/components/voice/room/header';
 import type { AuthGate } from './useVoiceRoomGate';
 import { useSfuSupervisor } from './useSfuSupervisor';
 import {
-  hydrateFromClient, makeRoomEvents, resetRoomState, NO_LOCAL, NO_LOCAL_VIDEO, type LocalTrackFlags, type LocalVideoTracks,
-} from '@/components/voice/room/room-events';
+  hydrateFromClient, makeRoomEvents, resetRoomState, NO_LOCAL, NO_LOCAL_VIDEO, type LocalTrackFlags, type LocalVideoTracks, type SfuStatus,
+} from '@/services/voice/room-events';
 
-export type { LocalTrackFlags, LocalVideoTracks } from '@/components/voice/room/room-events';
+export type { LocalTrackFlags, LocalVideoTracks } from '@/services/voice/room-events';
 
 export interface VoiceRoomClientState {
   /** True while this component's channel is the joined one. */

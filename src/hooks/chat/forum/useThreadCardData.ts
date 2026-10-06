@@ -8,7 +8,7 @@ import {
   type JsForumTag,
   type JsGroup,
 } from '@/services/nostr-bridge';
-import { resolveTopics } from '@/components/chat/forum/thread-card-utils';
+import { resolveTopics } from '@/utils/chat/forum/forum-threads';
 
 /**
  * What a publication card shows: its messages and load status, the opening

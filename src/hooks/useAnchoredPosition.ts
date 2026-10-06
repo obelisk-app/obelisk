@@ -4,7 +4,7 @@ import {
   type PopoverAlign,
   type PopoverPlacement,
   type PopoverSide,
-} from '@/components/ui/popover-position';
+} from '@/utils/layout/popover-position';
 
 /**
  * What a popover does when the page under it scrolls or resizes.

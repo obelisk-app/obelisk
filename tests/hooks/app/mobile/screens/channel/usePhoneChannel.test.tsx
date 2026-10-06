@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { JsMessage } from '@/services/nostr-bridge';
-import { buildTimeline } from '@/app/app/mobile/screens/channel/channel-timeline';
+import { buildTimeline } from '@/utils/chat/channel-timeline';
 import { useReplyTarget } from '@/hooks/app/mobile/screens/channel/usePhoneChannel';
 
 const msg = (id: string, createdAt: number) => ({ id, pubkey: 'a', content: id, createdAt }) as JsMessage;

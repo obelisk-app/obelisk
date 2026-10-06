@@ -7,7 +7,7 @@ import SegmentedControl from '@/components/ui/SegmentedControl';
 import { CONTENT_FILTERS, type ContentFilter } from '@/services/social/kinds';
 import type { FeedSort } from '@/services/social/rank';
 import { FollowingIcon, GlobeIcon } from './icons';
-import type { FeedTab } from './types';
+import type { FeedKind } from '@/services/social/feed';
 import Button from '@/components/ui/Button';
 
 /** Source segment, content filters, sort, and the action cluster on the right. */
@@ -29,8 +29,8 @@ export default function FeedToolbar({
   onOpenSettings,
   actions,
 }: {
-  tab: FeedTab;
-  onTab: (value: FeedTab) => void;
+  tab: FeedKind;
+  onTab: (value: FeedKind) => void;
   followCount: number;
   relayCount: number;
   /** Phone or half-width pane: the chips go behind one filter button. */

@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
+import type { BridgeImpl } from '@/services/nostr-bridge/client';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
   parseRelayEmojiSet,
@@ -22,10 +24,10 @@ const bridgeMocks = vi.hoisted(() => ({
   subscribeFilterWatched: vi.fn(),
 }));
 
-vi.mock('@/services/nostr-bridge/client', () => ({
-  getBridge: vi.fn().mockResolvedValue({}),
-  getBridgeImpl: () => ({ publishEvent: bridgeMocks.publishEvent, subscribeFilterWatched: bridgeMocks.subscribeFilterWatched }),
-}));
+// The page bridge is a registered fake: the real client module, no mock of it.
+const bridgeFake = { publishEvent: bridgeMocks.publishEvent, subscribeFilterWatched: bridgeMocks.subscribeFilterWatched } as unknown as BridgeImpl;
+beforeEach(() => registerBridge(bridgeFake));
+afterEach(() => unregisterBridge());
 
 function event(tags: string[][]): NostrEvent {
   return {

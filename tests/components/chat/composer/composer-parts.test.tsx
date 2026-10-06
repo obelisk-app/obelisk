@@ -1,18 +1,10 @@
 import { fireEvent, render, renderHook, act, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@/i18n/context';
-import { formatDuration } from '@/components/chat/composer/recording-time';
 import { AttachmentMenu, promptForContact } from '@/components/chat/composer/AttachmentMenu';
 import { useFileDrag } from '@/hooks/chat/composer/useFileDrag';
 
 const renderLocalized = (ui: React.ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
-
-describe('formatDuration', () => {
-  it('prints m:ss', () => {
-    expect(formatDuration(0)).toBe('0:00');
-    expect(formatDuration(75)).toBe('1:15');
-  });
-});
 
 describe('promptForContact', () => {
   afterEach(() => vi.unstubAllGlobals());

@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { finalizeEvent, generateSecretKey, getPublicKey, type Event as NostrEvent } from 'nostr-tools';
 import { normalizeURL } from 'nostr-tools/utils';
+import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 
 const fake = vi.hoisted(() => {
   const state = {
@@ -149,6 +150,10 @@ beforeEach(() => {
   fake.state.pools = [];
   fake.state.published = [];
   fake.state.subscriptions = [];
+  // A fresh bridge per test: its globalThis slot survives the module reset,
+  // so it is emptied here. The reset stays for the page RelayHub singleton and
+  // the module-level stores the bridge writes to.
+  unregisterBridge();
   vi.resetModules();
   if (typeof window !== 'undefined') window.localStorage.clear();
 });

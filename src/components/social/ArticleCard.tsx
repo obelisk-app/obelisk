@@ -24,9 +24,9 @@ import RemoteImage from '@/components/ui/RemoteImage';
 import Text from '@/components/ui/Text';
 import UserAvatar from '@/components/ui/UserAvatar';
 import MessageContent from '@/components/chat/MessageContent';
-import { articleDate, articleMeta, readingMinutes } from './article-meta';
+import { articleDate, articleMeta, readingMinutes } from '@/utils/social/article-meta';
 import { useArticleHighlights } from '@/hooks/social/useArticleHighlights';
-export { articleMeta, readingMinutes, type ArticleMeta } from './article-meta';
+export { articleMeta, readingMinutes, type ArticleMeta } from '@/utils/social/article-meta';
 
 /** Compact card for a feed row. */
 export function ArticleCard({

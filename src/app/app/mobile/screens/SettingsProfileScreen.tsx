@@ -3,7 +3,7 @@
 import { useMyPubkey } from '@/services/nostr-bridge';
 import NostrProfile from '@/components/chat/NostrProfile';
 import { useTranslation } from '@/i18n/context';
-import { type ScreenName } from '../url-state';
+import { type ScreenName } from '@/utils/shell/mobile/url-state';
 
 export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
   const { t } = useTranslation();

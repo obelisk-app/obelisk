@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import sitemap from '@/app/sitemap';
-import { snapshotPaths } from '@/components/guides/svg/asset-meta';
+import { snapshotPaths } from '@/utils/guides/asset-meta';
 import { LOCALES } from '@/i18n';
 import { guidesHref } from '@/utils/guides/guide-urls';
 

@@ -1,3 +1,4 @@
+import { isHttpUrl } from '@/utils/url/http-url';
 import { isValidCustomEmojiName, normalizeCustomEmojiName } from './custom-emoji-tags';
 
 export interface MessageSticker {
@@ -7,15 +8,6 @@ export interface MessageSticker {
 }
 
 const PACK_ADDRESS_RE = /^30030:[0-9a-f]{64}:.+$/;
-
-function isHttpUrl(value: string): boolean {
-  try {
-    const protocol = new URL(value).protocol;
-    return protocol === 'http:' || protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
 
 export function stickerFromTags(
   content: string,

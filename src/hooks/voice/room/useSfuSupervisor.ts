@@ -7,7 +7,7 @@
  */
 import { useEffect, type Dispatch, type SetStateAction } from 'react';
 import { ensureSfuRoomStarted } from '@/services/voice/sfu-control';
-import type { SfuStatus } from '@/components/voice/room/header';
+import type { SfuStatus } from '@/services/voice/room-events';
 
 export function useSfuSupervisor({ active, expectSfu, channelId, republishCounter, setSfuStatus }: {
   /** Gate resolved to `ready` and the user has joined. */

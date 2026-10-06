@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import type { SlashCommand } from '@/components/chat/slash/slash-commands';
+import type { SlashCommand } from '@/utils/chat/slash/slash-commands';
 
 /**
  * Stable row callbacks and keyboard-follow scrolling for the command list.

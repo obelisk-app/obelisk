@@ -5,7 +5,7 @@ import { nostrActions } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
 import { emojiTagsForContent, mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
 import { groupReactions } from '@/utils/message-text/emoji-shortcodes';
-import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { confirmDialog } from '@/services/confirm-dialog';
 
 export interface MessageReactionInput {
   readonly id: string;

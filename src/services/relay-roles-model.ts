@@ -194,3 +194,13 @@ export function rolesByPubkey(state: RelayRoles): Record<string, RelayRole[]> {
   // `state.roles` is already sorted, so each list comes out most-senior-first.
   return out;
 }
+
+/** What Save would publish, as a comparable string: id, name, tier, color, emoji per role. */
+export function serializeRoles(list: ReadonlyArray<RelayRole>): string {
+  return JSON.stringify(list.map((role) => [role.id, role.name, role.tier, role.color, role.emoji]));
+}
+
+/** Tiers are dense and descending by list position: top row is most senior. */
+export function retier(roles: ReadonlyArray<RelayRole>): RelayRole[] {
+  return roles.map((role, index) => ({ ...role, tier: roles.length - index }));
+}

@@ -1,4 +1,4 @@
-import type { MediaPickerTab } from './media-catalog';
+import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 
 /** Emoji / GIF / Stickers switch along the picker's bottom edge. */
 export function PickerTabs({

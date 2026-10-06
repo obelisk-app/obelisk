@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { LocaleProvider } from '@/i18n/context';
-import { MeshSyncStatusPill, RoomHeader, type SfuStatus } from '@/components/voice/room/header';
+import { MeshSyncStatusPill, RoomHeader } from '@/components/voice/room/header';
+import type { SfuStatus } from '@/services/voice/room-events';
 
 const renderLocalized = (ui: React.ReactElement) => render(
   <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,

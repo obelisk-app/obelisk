@@ -1,5 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 
 /** `selected` is the one green every chip uses when it is on. */
 export type ChipState = 'idle' | 'selected';

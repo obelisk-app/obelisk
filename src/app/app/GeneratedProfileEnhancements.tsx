@@ -2,15 +2,9 @@
 
 import { useEffect } from 'react';
 import { nsecToBytes } from '@nostr-wot/data';
-
-const ADJECTIVES = ['Brave', 'Calm', 'Cosmic', 'Electric', 'Lucky', 'Lunar', 'Mighty', 'Neon', 'Quiet', 'Swift', 'Wild', 'Wise'];
-const NOUNS = ['Badger', 'Condor', 'Falcon', 'Fox', 'Jaguar', 'Llama', 'Otter', 'Puma', 'Raven', 'Tiger', 'Wolf', 'Zorro'];
+import { randomProfileName } from '@/utils/identity/display-name';
 
 type ProfileDraft = { name?: string; about?: string; picture?: string; banner?: string };
-
-export function randomProfileName(random = Math.random): string {
-  return `${ADJECTIVES[Math.floor(random() * ADJECTIVES.length)]} ${NOUNS[Math.floor(random() * NOUNS.length)]}`;
-}
 
 function filePicker(kind: 'picture' | 'banner', onPick: (file: File, picker: HTMLLabelElement) => void): HTMLLabelElement {
   const label = document.createElement('label');

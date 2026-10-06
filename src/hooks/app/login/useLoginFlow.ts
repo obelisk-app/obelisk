@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LoginMethodId } from '@nostr-wot/ui';
 import { profileUrl } from '@/services/social/note-links';
-import { publishGeneratedProfile, routeToBridge, type GeneratedProfileDraft, type LoginArgs } from '@/app/app/login/login-bridge';
-import { isTransientNip46Error } from '@/app/app/login/signer-link';
+import { publishGeneratedProfile, routeToBridge, type GeneratedProfileDraft, type LoginArgs } from '@/services/login/login-bridge';
+import { isTransientNip46Error } from '@/utils/nip46/signer-link';
 
 type SdkLogin = {
   pubkey: string;

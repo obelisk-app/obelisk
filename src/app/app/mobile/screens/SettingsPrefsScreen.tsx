@@ -17,8 +17,8 @@ import { setDmOptInEnabled } from '@/services/dm/opt-in';
 import { useDmOptInEnabled } from '@/hooks/dm/useDmOptInEnabled';
 import { useHintsStore } from '@/store/hints';
 import { useToastStore } from '@/store/toast';
-import { type ScreenName } from '../url-state';
-import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { type ScreenName } from '@/utils/shell/mobile/url-state';
+import { confirmDialog } from '@/services/confirm-dialog';
 import { DisconnectConfirmSheet } from '../sheets/DisconnectConfirmSheet';
 import BackButton from '../BackButton';
 

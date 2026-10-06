@@ -7,7 +7,7 @@ import UserAvatar from '@/components/ui/UserAvatar';
 import RemoteImage from '@/components/ui/RemoteImage';
 import Button from '@/components/ui/Button';
 import { CloseIcon } from '@/components/ui/icons';
-import { profileShortNpub } from './profile-labels';
+import { profileShortNpub } from '@/utils/identity/profile-labels';
 import IconButton from '@/components/ui/IconButton';
 
 type Meta = Partial<JsUserMetadata> | null | undefined;

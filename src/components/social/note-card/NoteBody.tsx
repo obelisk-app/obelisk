@@ -11,7 +11,7 @@ import Card from '@/components/ui/Card';
 import NoteContent from '../NoteContent';
 import { ArticleCard } from '../ArticleCard';
 import MediaCarousel from '../MediaCarousel';
-import { LONG_NOTE_CHARS } from './helpers';
+import { LONG_NOTE_CHARS } from '@/utils/social/note-card';
 import TextButton from '@/components/ui/TextButton';
 
 /** What a card shows under its header, per render mode (article, highlight, group, file, ...). */

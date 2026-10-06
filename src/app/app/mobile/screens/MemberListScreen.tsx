@@ -17,7 +17,7 @@ import { type RelayRole } from '@/services/relay-roles';
 import { useTranslation } from '@/i18n/context';
 import { useChatStore } from '@/store/chat';
 import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
-import { channelHeaderLabel } from '../labels';
+import { channelHeaderLabel } from '@/utils/shell/mobile/labels';
 import BackButton from '../BackButton';
 import RemoteImage from '@/components/ui/RemoteImage';
 

@@ -29,7 +29,7 @@ import { useMessageBody } from '@/hooks/chat/message/useMessageBody';
 import { useMarkdownComponents, useMessageMediaGate } from '@/hooks/chat/message/useMessageMedia';
 import { useMarkdownBody } from '@/hooks/chat/message/useMarkdownBody';
 
-export { autolinkLabel } from './message/autolink-label';
+export { autolinkLabel } from '@/utils/message-text/autolink-label';
 export { VoiceMessage } from './message/VoiceMessage';
 
 export default function MessageContent({

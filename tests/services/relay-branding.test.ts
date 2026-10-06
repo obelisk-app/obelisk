@@ -1,10 +1,12 @@
-import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
+import type { BridgeImpl } from '@/services/nostr-bridge/client';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 
 const mocks = vi.hoisted(() => ({ publishEvent: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('@/services/nostr-bridge/client', () => ({
-  getBridge: vi.fn().mockResolvedValue({}),
-  getBridgeImpl: () => ({ publishEvent: mocks.publishEvent }),
-}));
+// The page bridge is a registered fake: the real client module, no mock of it.
+const bridgeFake = { publishEvent: mocks.publishEvent } as unknown as BridgeImpl;
+beforeEach(() => registerBridge(bridgeFake));
+afterEach(() => unregisterBridge());
 import type { Event as NostrEvent } from 'nostr-tools';
 import { publishLayout, relayOperatorAuthors } from '@/services/channel-layout';
 import { parseBranding, publishBranding, toTags, EMPTY_BRANDING, type RelayBranding } from '@/services/relay-branding';

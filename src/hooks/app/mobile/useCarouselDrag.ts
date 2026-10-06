@@ -15,10 +15,10 @@
 import { useCallback, useRef, type RefObject } from 'react';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/dm';
-import { type NavState, initialNav } from '@/app/app/mobile/url-state';
-import { decideSnap, decideSwipeNav, neighborsFor } from '@/app/app/mobile/swipe-nav';
-import { shouldIgnoreMobileSwipeTarget } from '@/app/app/mobile/swipe-target';
-import { CAROUSEL_TRANSITION, rubberBandDx, swipeAxis } from '@/app/app/mobile/carousel-slots';
+import { type NavState, initialNav } from '@/utils/shell/mobile/url-state';
+import { decideSnap, decideSwipeNav, neighborsFor } from '@/utils/shell/mobile/swipe-nav';
+import { shouldIgnoreMobileSwipeTarget } from '@/utils/shell/mobile/swipe-target';
+import { CAROUSEL_TRANSITION, rubberBandDx, swipeAxis } from '@/utils/shell/mobile/carousel-slots';
 
 type DragInfo = {
   startX: number;

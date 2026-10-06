@@ -9,6 +9,10 @@
  * Preserved keys (NOT wiped):
  *   - `obelisk-dex/session`: the active session; wiping it would log the
  *     user out, which is not what "clear cache" should do.
+ *     Its secrets are sealed by the session vault, whose key lives in
+ *     IndexedDB (`obelisk-vault`, `src/lib/crypto/session-vault.ts`). This
+ *     sweep touches only localStorage, so the key survives it; do not add
+ *     IndexedDB to it, or the kept record could no longer be opened.
  *   - `obelisk-dex/relays`: the configured relay list; tied to the session.
  *   - `obelisk:preferences`: explicit settings the user just chose.
  *

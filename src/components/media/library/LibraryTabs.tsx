@@ -1,6 +1,6 @@
 'use client';
 
-import type { LibraryTab } from './types';
+import type { LibraryTab } from '@/utils/media-library/types';
 
 const tabClass = 'w-full rounded-lg px-3 py-2 text-left text-sm transition';
 

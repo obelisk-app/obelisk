@@ -49,9 +49,9 @@ vi.mock('@/app/app/mobile/screens/ChannelScreen', () => ({ ChannelScreen: StaleP
 
 import { DesktopMain } from '@/app/app/shell/DesktopMain';
 import { renderScreenBody, type MobileScreenProps } from '@/app/app/mobile/MobileScreens';
-import type { NavState } from '@/app/app/mobile/url-state';
+import type { NavState } from '@/utils/shell/mobile/url-state';
 import type { FeedPaneControls } from '@/hooks/app/shell/useDesktopLayout';
-import type { View } from '@/app/app/view';
+import type { View } from '@/utils/shell/view';
 import { LocaleProvider } from '@/i18n/context';
 
 /** Every render that showed a message belonging to another channel. */

@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
+import type { BridgeImpl } from '@/services/nostr-bridge/client';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
 type Watcher = { filter: Filter; onEvent: (ev: NostrEvent) => void; unsub: ReturnType<typeof vi.fn> };
@@ -8,17 +10,17 @@ const mocks = vi.hoisted(() => ({
   publishEvent: vi.fn(),
 }));
 
-vi.mock('@/services/nostr-bridge/client', () => ({
-  getBridge: vi.fn().mockResolvedValue({}),
-  getBridgeImpl: () => ({
+// The page bridge is a registered fake: the real client module, no mock of it.
+const bridgeFake = {
     publishEvent: mocks.publishEvent,
     subscribeFilterWatched: (filter: Filter, onEvent: (ev: NostrEvent) => void) => {
       const unsub = vi.fn();
       mocks.watchers.push({ filter, onEvent, unsub });
       return unsub;
     },
-  }),
-}));
+  } as unknown as BridgeImpl;
+beforeEach(() => registerBridge(bridgeFake));
+afterEach(() => unregisterBridge());
 
 import { publishRoleHolders, subscribeRelayRoles } from '@/services/relay-roles-sync';
 import { roleCatalogDTag, roleHoldersDTag, type RelayRoles } from '@/services/relay-roles-model';

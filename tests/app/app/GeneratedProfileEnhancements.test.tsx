@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { nip19 } from 'nostr-tools';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import GeneratedProfileEnhancements, { randomProfileName } from '@/app/app/GeneratedProfileEnhancements';
+import GeneratedProfileEnhancements from '@/app/app/GeneratedProfileEnhancements';
 
 const uploadToBlossom = vi.fn()
   .mockResolvedValueOnce('https://cdn.example/avatar.jpg')
@@ -14,7 +14,6 @@ const nsec = nip19.nsecEncode(new Uint8Array(32).fill(1));
 
 describe('GeneratedProfileEnhancements', () => {
   it('renders media previews and puts the name suggestion inside the name field', async () => {
-    expect(randomProfileName(() => 0)).toBe('Brave Badger');
     const onDraftChange = vi.fn();
     render(
       <div className="nui-modal-overlay">

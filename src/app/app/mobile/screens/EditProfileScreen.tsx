@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useMyPubkey, useUserMetadata } from '@/services/nostr-bridge';
 import { useProfileEditorForm } from '@/hooks/chat/useProfileEditorForm';
 import { useTranslation } from '@/i18n/context';
-import { type ScreenName } from '../url-state';
+import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { NameAvatar } from '../avatar';
 import FileInput from '@/components/ui/FileInput';
 import Input from '@/components/ui/Input';

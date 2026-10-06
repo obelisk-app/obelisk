@@ -3,7 +3,7 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { useTranslation } from '@/i18n/context';
 import Button from './Button';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import { CloseIcon } from './icons';
 
 /**

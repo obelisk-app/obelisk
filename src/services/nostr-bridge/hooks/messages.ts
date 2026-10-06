@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePreferences } from '@/hooks/usePreferences';
 import { getBridge } from '../client';
 import type { JsDirectMessage, JsMessage, JsReaction, JsUserMetadata, LoadMoreMessagesResult, MessagesStatus } from '../types';
+import { useBridgeContext } from './provider';
 import { useSubscription } from './subscription';
 
 export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
@@ -50,6 +51,9 @@ export function useLoadEarlier(groupId: string | null): {
   const [lastResult, setLastResult] = useState<LoadMoreMessagesResult | null>(null);
   const inFlightRef = useRef(false);
   const retryBlockedUntilRef = useRef(0);
+  // The provider's bridge when there is one; `getBridge()` otherwise (and
+  // in the moment before the provider has adopted the page bridge).
+  const { bridge: provided } = useBridgeContext();
 
   useEffect(() => {
     setReachedStart(false);
@@ -63,7 +67,7 @@ export function useLoadEarlier(groupId: string | null): {
     inFlightRef.current = true;
     setLoading(true);
     try {
-      const bridge = await getBridge();
+      const bridge = provided ?? (await getBridge());
       const result = await bridge.loadMoreMessages(groupId);
       setLastResult(result);
       if (result === 'end') {
@@ -83,7 +87,7 @@ export function useLoadEarlier(groupId: string | null): {
       inFlightRef.current = false;
       setLoading(false);
     }
-  }, [groupId, reachedStart]);
+  }, [groupId, reachedStart, provided]);
 
   return { loadEarlier, loading, reachedStart, lastResult };
 }

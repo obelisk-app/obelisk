@@ -22,7 +22,7 @@ vi.mock('@/services/nostr-bridge', async () => {
 });
 
 const confirmDialog = vi.fn();
-vi.mock('@/components/ui/ConfirmDialog', () => ({
+vi.mock('@/services/confirm-dialog', () => ({
   confirmDialog: (...a: unknown[]) => confirmDialog(...a),
 }));
 

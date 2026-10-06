@@ -9,8 +9,8 @@
  * `suppressSlideRef` the shell consults when it renders.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
-import type { NavState } from '@/app/app/mobile/url-state';
-import { neighborsFor } from '@/app/app/mobile/swipe-nav';
+import type { NavState } from '@/utils/shell/mobile/url-state';
+import { neighborsFor } from '@/utils/shell/mobile/swipe-nav';
 import { useCarouselDrag } from './useCarouselDrag';
 import { useCarouselTabs } from './useCarouselTabs';
 

@@ -11,7 +11,7 @@ import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import { useTranslation } from '@/i18n/context';
 import EmptyState from '@/components/ui/EmptyState';
 import EmojiPicker, { MediaPickerSearch, type PickedCustomEmoji } from './EmojiPicker';
-import type { MediaPickerTab } from './picker/media-catalog';
+import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 import { useMediaPicker } from '@/hooks/chat/picker/useMediaPicker';
 import { CreateMediaControl } from './picker/CreateMediaControl';
 import { MediaCategoryNav } from './picker/MediaCategoryNav';
@@ -19,7 +19,7 @@ import { MediaSection } from './picker/MediaSection';
 import { PickerTabs } from './picker/PickerTabs';
 import TextButton from '@/components/ui/TextButton';
 
-export type { MediaPickerTab } from './picker/media-catalog';
+export type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 
 const NO_CUSTOM_EMOJIS: CustomEmojiMap = {};
 

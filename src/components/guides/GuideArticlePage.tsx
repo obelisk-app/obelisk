@@ -18,7 +18,7 @@ import {
   DIAGRAM_ASSET_META,
   snapshotPaths,
   type GuideAssetMeta,
-} from '@/components/guides/svg/asset-meta';
+} from '@/utils/guides/asset-meta';
 import { SHOT_META, shotPath } from '@/components/guides/Shot';
 import Navbar from '@/components/marketing/Navbar';
 import Footer from '@/components/marketing/Footer';

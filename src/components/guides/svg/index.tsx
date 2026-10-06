@@ -25,7 +25,7 @@ import {
   DIAGRAM_ASSET_META,
   snapshotPaths,
   type GuideAssetMeta,
-} from './asset-meta';
+} from '@/utils/guides/asset-meta';
 
 export const HERO_REGISTRY: Record<string, ComponentType> = {
   'what-is-obelisk': WhatIsObeliskHero,

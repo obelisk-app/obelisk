@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslation } from '@/i18n/context';
-import { COLORS, EMBED_BADGE, EMBED_HTML_BANNER, EMBED_OG, OG_IMAGE_URL, SHORT_COPY } from './content';
+import { COLORS, EMBED_BADGE, EMBED_HTML_BANNER, EMBED_OG, OG_IMAGE_URL, SHORT_COPY } from '@/utils/media-kit/content';
 import { CodeBlock, CopyButton, Section } from './kit-ui';
 import { EmbedPreview } from './BannerCard';
 

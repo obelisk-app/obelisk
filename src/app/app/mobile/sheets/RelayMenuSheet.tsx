@@ -11,7 +11,7 @@ import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
 import RelayRolesAdminModal from '@/components/admin/RelayRolesAdminModal';
 import { type RelayRoles } from '@/services/relay-roles';
 import { useTranslation } from '@/i18n/context';
-import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { confirmDialog } from '@/services/confirm-dialog';
 import { avatarStyle } from '../avatar';
 import { EditBrandingSheet } from './EditBrandingSheet';
 import { ManageCategoriesSheet } from './ManageCategoriesSheet';

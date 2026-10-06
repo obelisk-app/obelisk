@@ -11,7 +11,7 @@ import VoiceStatusBar from '@/components/voice/VoiceStatusBar';
 import { useVoiceStore } from '@/store/voice';
 import { applyLayout } from '@/services/channel-layout';
 import { useTranslation } from '@/i18n/context';
-import type { View } from '../view';
+import type { View } from '@/utils/shell/view';
 import { CreateGroupSection } from './CreateGroupSection';
 import { SidebarMe } from './SidebarMe';
 import { ChannelTree } from './sidebar/ChannelTree';

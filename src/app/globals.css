@@ -1221,7 +1221,7 @@ button:not(:disabled),
 
 /* Generated-key confirmation controls should read as full-size choices, not
  * browser-default checkboxes floating beside a paragraph. */
-.obelisk-login-modal :is(.nui-warning, label:not([class]):has(> input[type="checkbox"])) {
+.obelisk-login-modal .nui-warning {
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
@@ -1236,11 +1236,19 @@ button:not(:disabled),
   font-size: 14px !important;
   line-height: 1.4;
 }
-.obelisk-login-modal :is(.nui-warning, label:not([class])):has(input:checked) {
+.obelisk-login-modal .nui-warning:has(input:checked) {
   border-color: color-mix(in oklab, var(--color-lc-green) 48%, transparent);
   background: color-mix(in oklab, var(--color-lc-green) 8%, #0f0f0f);
 }
 .obelisk-login-modal input[type="checkbox"] { width: 22px; height: 22px; }
+
+/* The SDK's "Remember on this device" box: the one unclassed label around a
+ * checkbox (the backup acknowledgement is `.nui-warning`). Obelisk keeps the
+ * session itself, sealed, and gives the SDK memory-only storage that drops a
+ * remembered nsec (src/services/login/signer-storage.ts), so the box could only
+ * promise something that does not happen. The selector is pinned against the
+ * real widget by tests/app/app/LoginSdkStorage.integration.test.tsx. */
+.obelisk-login-modal label:not([class]):has(> input[type="checkbox"]) { display: none !important; }
 
 /* Backup first: the public npub belongs on the final sharing screen. */
 .obelisk-login-modal h3 + p + div:has(> .nui-key-display) { display: none !important; }

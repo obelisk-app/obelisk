@@ -31,7 +31,7 @@ vi.mock('@/services/social/relay-status', () => {
 });
 
 import { MobileServerBanner, MobileServerRail, RelayTile } from '@/app/app/mobile/MobileServerRail';
-import { shouldIgnoreMobileSwipeTarget } from '@/app/app/mobile/swipe-target';
+import { shouldIgnoreMobileSwipeTarget } from '@/utils/shell/mobile/swipe-target';
 /** Every screen in the shell reads copy from the dictionary now. */
 const renderLocalized = (ui: React.ReactElement) => render(
   <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,

@@ -4,27 +4,26 @@
  * other. Before the per-group subscription each row subscribed to the whole
  * messages-by-group map, so one message re-rendered every row.
  *
- * The bridge is replaced at its client module by a fake whose
+ * The page bridge is a registered fake (no module mock) whose
  * `subscribeMessagesByGroup` is backed by the bridge's own `StateStore`, so
  * subscribe-with-replay and same-value suppression behave as in the app.
  */
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { afterEach, describe, expect, it, beforeEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { StateStore } from '@/services/nostr-bridge/state-store';
-import type { JsMessage } from '@/services/nostr-bridge';
+import type { BridgeImpl, JsMessage } from '@/services/nostr-bridge';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
 
 const byGroup = new StateStore<Record<string, JsMessage[]>>({});
 const bridgeSubs = { opened: 0, closed: 0 };
 
-vi.mock('@/services/nostr-bridge/client', () => ({
-  getBridge: () => Promise.resolve({
-    subscribeMessagesByGroup: (cb: (v: Record<string, JsMessage[]>) => void) => {
-      bridgeSubs.opened++;
-      const off = byGroup.subscribe(cb);
-      return () => { bridgeSubs.closed++; off(); };
-    },
-  }),
-}));
+const bridge = {
+  subscribeMessagesByGroup: (cb: (v: Record<string, JsMessage[]>) => void) => {
+    bridgeSubs.opened++;
+    const off = byGroup.subscribe(cb);
+    return () => { bridgeSubs.closed++; off(); };
+  },
+} as unknown as BridgeImpl;
 
 const { useCachedChannelHighlights } = await import('@/hooks/read-state/useChannelHighlights');
 const { useReadStateStore } = await import('@/store/read-state');
@@ -54,7 +53,12 @@ async function mountSidebar() {
   return view;
 }
 
+afterEach(() => {
+  unregisterBridge();
+});
+
 beforeEach(() => {
+  registerBridge(bridge);
   renders.clear();
   bridgeSubs.opened = 0;
   bridgeSubs.closed = 0;

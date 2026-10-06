@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { cn } from './cn';
+import { cn } from '@/utils/style/cn';
 import UserAvatar from './UserAvatar';
 
 /** `sm` is the 28px avatar of dense pickers; `md` the 32px of member lists. */

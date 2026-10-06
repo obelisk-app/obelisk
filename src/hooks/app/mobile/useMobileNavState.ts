@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { type NavState, initialNav, urlFor } from '@/app/app/mobile/url-state';
+import { type NavState, initialNav, urlFor } from '@/utils/shell/mobile/url-state';
 import type { SlideDir } from './useScreenCarousel';
 
 /**

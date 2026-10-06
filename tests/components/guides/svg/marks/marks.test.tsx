@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { DIAGRAM_REGISTRY, Mark } from '@/components/guides/svg/index';
-import { DIAGRAM_ASSET_META } from '@/components/guides/svg/asset-meta';
+import { DIAGRAM_ASSET_META } from '@/utils/guides/asset-meta';
 import DexMark from '@/components/guides/svg/marks/DexMark';
 import SfuMark from '@/components/guides/svg/marks/SfuMark';
 import BotsMark from '@/components/guides/svg/marks/BotsMark';

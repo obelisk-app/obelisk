@@ -17,7 +17,7 @@
  */
 import { useCallback, useEffect, useRef } from 'react';
 import { getBridge, nostrActions } from '@/services/nostr-bridge';
-import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import { confirmDialog } from '@/services/confirm-dialog';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { useTranslation } from '@/i18n/context';
 

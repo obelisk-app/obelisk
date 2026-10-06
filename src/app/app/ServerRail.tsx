@@ -19,7 +19,7 @@ import { useTranslation } from '@/i18n/context';
 import { AddRelayModal } from './rail/AddRelayModal';
 import { RailTile } from './rail/RailTile';
 import { RelayTile } from './rail/RelayTile';
-import { confirmAndRemoveRelay } from './rail/remove-relay';
+import { confirmAndRemoveRelay } from '@/services/remove-relay';
 
 
 type RailMode = { kind: 'dm' } | { kind: 'feed' } | { kind: 'relay'; url: string };

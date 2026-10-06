@@ -4,7 +4,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslation } from '@/i18n/context';
 import { ReaderPaneContent, ReaderPaneHeader } from '../panes/ReaderPane';
 import { ResizablePane } from '../panes/ResizablePane';
-import { THREAD_PANE_KEY } from './desktop-layout';
+import { THREAD_PANE_KEY } from '@/utils/shell/desktop-layout';
 
 type Props = {
   article: NostrEvent | null;

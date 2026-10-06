@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@/i18n/context';
-import MediaGrid, { type MediaItem } from '@/components/chat/MediaGrid';
+import MediaGrid from '@/components/chat/MediaGrid';
+import type { MediaItem } from '@/services/social/feed-media';
 
 const items = (count: number): MediaItem[] => Array.from({ length: count }, (_, i) => ({
   key: `k${i}`,

@@ -23,6 +23,7 @@
  * real stores do; a hook that handed out a fresh `[]` every render would
  * re-fire any effect keyed on it.
  */
+import { createElement, Fragment } from 'react';
 import type {
   BridgeImpl,
   JsDirectMessage,
@@ -133,11 +134,19 @@ const hookDefaults = {
   useGroupCreators: () => EMPTY_RECORD,
   useMyMutes: () => EMPTY_LIST,
   useMyLoginMethod: () => 'nsec' as const,
+  useSessionNotice: () => null,
   useBunkerSignerReady: () => false,
   useSignerReady: () => true,
   useRelayAccess: () => 'ok' as const,
   useActiveCall: () => null,
   useActiveCallByChannel: () => EMPTY_RECORD,
+  // The provider renders its children and nothing else: a module mock has no
+  // instance to hand out. `useBridge` follows the suite's `getBridgeImpl`
+  // override (see `bridgeMock`), so a component moved from `getBridgeImpl()`
+  // to `useBridge()` sees the same fake.
+  BridgeProvider: ({ children }) => createElement(Fragment, null, children),
+  useBridge: () => null,
+  useBridgeReady: () => true,
 } satisfies Partial<Bridge> satisfies Required<Omit<Bridge, 'nostrActions' | 'getBridge' | 'getBridgeImpl'>>;
 
 /**
@@ -148,9 +157,11 @@ const hookDefaults = {
  * `getBridgeImpl` defaults to `null`, the real "no bridge yet" answer.
  */
 export function bridgeMock(overrides: BridgeMock = {}): BridgeMock {
+  const getBridgeImpl = overrides.getBridgeImpl;
   return {
     ...hookDefaults,
     getBridgeImpl: () => null,
+    ...(getBridgeImpl ? { useBridge: () => (getBridgeImpl() as BridgeImpl | null) } : {}),
     ...overrides,
     nostrActions: { ...overrides.nostrActions },
   };

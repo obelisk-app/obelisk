@@ -23,13 +23,13 @@ import {
   RehydratingScreen,
 } from './panes/ShellStates';
 import { useEdgeSwipeOpen } from '@/hooks/app/useEdgeSwipeOpen';
-import { surfaceForView } from './view';
+import { surfaceForView } from '@/utils/shell/view';
 import { DesktopDrawer } from './shell/DesktopDrawer';
 import { DesktopMain } from './shell/DesktopMain';
 import { FeedSplitPane } from './shell/FeedSplitPane';
 import { LoggedOutScreen } from './shell/LoggedOutScreen';
 import { ReaderPaneSlot } from './shell/ReaderPaneSlot';
-import { PROFILE_PANE_KEY, railModeFor } from './shell/desktop-layout';
+import { PROFILE_PANE_KEY, railModeFor } from '@/utils/shell/desktop-layout';
 import { useDesktopChrome, useFeedPane } from '@/hooks/app/shell/useDesktopLayout';
 import { useDesktopNavigation } from '@/hooks/app/shell/useDesktopNavigation';
 import { useExploredProfile, useReaderPane } from '@/hooks/app/shell/useShellPanes';

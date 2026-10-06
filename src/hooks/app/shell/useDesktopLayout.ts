@@ -8,15 +8,15 @@ import {
   restoreFeed,
   toggleFeed,
   type FeedPaneState,
-} from '@/app/app/feed-pane';
-import type { View } from '@/app/app/view';
+} from '@/utils/shell/feed-pane';
+import type { View } from '@/utils/shell/view';
 import {
   SHOW_MEMBERS_KEY,
   SIDEBAR_KEY,
   feedHostFor,
   readSidebarWidth,
   viewForFeedPane,
-} from '@/app/app/shell/desktop-layout';
+} from '@/utils/shell/desktop-layout';
 
 /** Drawer open state, the sidebar width and the member list toggle, remembered. */
 export function useDesktopChrome() {

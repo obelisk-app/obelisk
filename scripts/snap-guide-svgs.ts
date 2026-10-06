@@ -17,7 +17,7 @@ import {
   HERO_ASSET_META,
   DIAGRAM_ASSET_META,
   type GuideAssetMeta,
-} from '../src/components/guides/svg/asset-meta';
+} from '@/utils/guides/asset-meta';
 
 const OUT_DIR = join(process.cwd(), 'public', 'og', 'guides');
 

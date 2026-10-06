@@ -20,11 +20,11 @@ import { useChannelActions } from '@/hooks/chat/useChannelActions';
 import { useMutedLabel } from '@/hooks/chat/useMutedLabel';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
 import { AtIcon, BellIcon, BellOffIcon, CheckCircleIcon, ChevronRightIcon, ClockIcon, LinkIcon, StarIcon } from '@/components/ui/icons';
-import { MUTE_OPTIONS, NOTIFY_OPTIONS, type ChannelMenuTarget } from './channel-menu/channel-menu-options';
+import { MUTE_OPTIONS, NOTIFY_OPTIONS, type ChannelMenuTarget } from '@/utils/chat/channel-menu-options';
 import { useMenuDismiss, useMenuPlacement } from '@/hooks/chat/channel-menu/useMenuPlacement';
 import { SubMenu } from './channel-menu/SubMenu';
 
-export type { ChannelMenuTarget } from './channel-menu/channel-menu-options';
+export type { ChannelMenuTarget } from '@/utils/chat/channel-menu-options';
 export { ChannelActionSheet } from './channel-menu/ChannelActionSheet';
 
 export function ChannelContextMenu({

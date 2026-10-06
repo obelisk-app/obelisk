@@ -1,10 +1,10 @@
 'use client';
 
 import FeedScreen from '@/components/social/FeedScreen';
-import { canRestore } from '../feed-pane';
+import { canRestore } from '@/utils/shell/feed-pane';
 import { FeedPaneActions } from '../panes/ReaderPane';
 import { ResizablePane } from '../panes/ResizablePane';
-import { FEED_PANE_KEY } from './desktop-layout';
+import { FEED_PANE_KEY } from '@/utils/shell/desktop-layout';
 import type { FeedPaneControls } from '@/hooks/app/shell/useDesktopLayout';
 
 /** The feed as a resizable column beside a group chat. */

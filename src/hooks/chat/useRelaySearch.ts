@@ -45,7 +45,8 @@ import { searchGroups } from '@/services/group-search';
 import { isEmptyQuery, nameMatches, parseSearchQuery, type ParsedQuery } from '@/utils/search-query';
 import { fetchRelayInfo, supportsSearch } from '@/services/relay-info';
 import { useChatStore } from '@/store/chat';
-import { decodeNpub, loadHistory, pushHistory, wipeHistory } from './relay-search/search-history';
+import { parsePubkeyInput } from '@/utils/identity/parse-pubkey';
+import { loadHistory, pushHistory, wipeHistory } from './relay-search/search-history';
 import type { RelaySearch, RelaySearchOptions } from './relay-search/types';
 
 export type { RelaySearch, RelaySearchOptions } from './relay-search/types';
@@ -79,7 +80,7 @@ export function useRelaySearch({ activeGroupId = null }: RelaySearchOptions = {}
   }, [relayUrl]);
 
   const resolvePubkey = useCallback((value: string): string | null => {
-    const hex = decodeNpub(value);
+    const hex = parsePubkeyInput(value);
     if (hex) return hex;
     const hit = people.find((p) => nameMatches(p.displayName, value))
       ?? people.find((p) => nameMatches(p.nip05, value));

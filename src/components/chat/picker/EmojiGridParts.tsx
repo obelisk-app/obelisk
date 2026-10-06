@@ -2,11 +2,11 @@
 
 import type { ReactNode } from 'react';
 import MediaThumb from '@/components/media/MediaThumb';
-import type { EmojiPickerClasses } from './emoji-picker-classes';
-import type { RecentPickerEntry } from './custom-emoji-entries';
-import type { CustomEmojiEntry, PickedCustomEmoji } from './picker-types';
+import type { RecentPickerEntry } from '@/utils/chat/picker/custom-emoji-entries';
+import type { CustomEmojiEntry, PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
 
-type GridClasses = Pick<EmojiPickerClasses, 'gridClass' | 'emojiBtnClass' | 'sectionTitleClass' | 'customImageClass'>;
+/** The grid's slice of `emojiPickerClasses` (in `EmojiPicker.tsx`). */
+type GridClasses = { gridClass: string; emojiBtnClass: string; sectionTitleClass: string; customImageClass: string };
 
 /** One Unicode emoji in a grid; disabled (and titled so) when already reacted. */
 export function EmojiCharButton({

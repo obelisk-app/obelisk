@@ -9,7 +9,7 @@ import { mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media-tags/cu
 import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
 import { checkDmAttachment, encryptAndUploadDmFile } from '@/services/dm-attachments';
 import { dmFileCategory } from '@/utils/attachments/dm-file';
-import type { MediaPickerTab } from '@/components/chat/picker/media-catalog';
+import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 import { usePreviewUrls } from './usePreviewUrls';
 import {
   MAX_PENDING,
@@ -19,7 +19,7 @@ import {
   nextId,
   type PendingFile,
   type PendingVoice,
-} from '@/components/chat/dm-composer/pending';
+} from '@/utils/chat/dm/pending';
 
 /**
  * Draft, pending encrypted uploads, voice note and picker state of a DM

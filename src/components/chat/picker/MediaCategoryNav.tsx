@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslation } from '@/i18n/context';
-import { MEDIA_CATEGORIES, type MediaCategory } from './media-catalog';
+import { MEDIA_CATEGORIES, type MediaCategory } from '@/utils/chat/picker/media-catalog';
 import { MediaCategoryIcon } from './MediaCategoryIcon';
 
 /** The GIF / sticker category bar. */

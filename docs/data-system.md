@@ -20,11 +20,43 @@ cookie.
 
 ## 2. Login methods
 
-| Method | Signer | Persisted in localStorage | First-publish latency |
+| Method | Signer | Persisted in localStorage (`obelisk-dex/session`) | First-publish latency |
 |---|---|---|---|
-| **NIP-07 extension** | `window.nostr` (Alby, nos2x, …) | `pubKeyHex`, `loginMethod: 'nip07'`, `relayUrl` | ~0 (extension is in-process) |
-| **nsec (raw key)** | `nostr-tools` `finalizeEvent` | `privKeyHex`, `pubKeyHex`, `loginMethod: 'nsec'`, `relayUrl` | ~0 (local crypto) |
-| **NIP-46 bunker** | `BunkerSigner` from `nostr-tools/nip46` | `pubKeyHex`, `loginMethod: 'bunker'`, `bunkerUrl`, `bunkerLocalSecretHex`, `relayUrl` | 1-3s (remote signer round-trip) |
+| **NIP-07 extension** | `window.nostr` (Alby, nos2x, …) | `v: 2`, `pubKeyHex`, `loginMethod: 'nip07'`, `relayUrl` | ~0 (extension is in-process) |
+| **nsec (raw key)** | `nostr-tools` `finalizeEvent` | `v: 2`, `pubKeyHex`, `loginMethod: 'nsec'`, `relayUrl`, `sealed` (holds `privKeyHex`) | ~0 (local crypto) |
+| **NIP-46 bunker** | `BunkerSigner` from `nostr-tools/nip46` | `v: 2`, `pubKeyHex`, `loginMethod: 'bunker'`, `relayUrl`, `sealed` (holds `bunkerUrl`, `bunkerLocalSecretHex`) | 1-3s (remote signer round-trip) |
+
+### Secrets at rest: the session vault
+
+No secret is written to localStorage in the clear. `sealed` is an AES-GCM box
+(`{ v: 1, iv, ct }`, base64url, bound to `pubKeyHex` as additional data) made
+by `src/lib/crypto/session-vault.ts`, whose key is a non-extractable
+`CryptoKey` stored in IndexedDB (`obelisk-vault` / `keys` / `session-key`):
+the browser can use it, no script can read its bytes. The key is rotated on
+every login and deleted on logout. The bridge side is
+`src/services/nostr-bridge/session/persistence.ts` (seal once per login,
+write synchronously from the cached box, open on reload) and `./vault.ts`.
+
+- **A pre-vault record** (secrets in plain JSON) is sealed and rewritten on
+  the first load that finds it; the plaintext is gone once that write lands.
+- **No IndexedDB or no WebCrypto** (some private windows, storage turned
+  off, a non-secure origin): the login works for that visit only, nothing is
+  written, and `sessionNotice` is `not-remembered` (a toast says so). A
+  plaintext record found in that state is erased the same way.
+- **A sealed record that will not open** (key gone, box tampered with,
+  IndexedDB gone since): the record is erased, the person is logged out, and
+  `sessionNotice` (`vault-unavailable`, `key-missing`, `unlock-failed`) is
+  explained above the login methods.
+- **The SDK login widget** gets memory-only signer storage
+  (`src/app/app/login/signer-storage.ts`), so its NIP-46 pairing record and
+  "remembered" nsec never reach localStorage; the bridge erases the two
+  `@nostr-wot/ui:*` keys older builds left behind on every load and logout.
+
+This protects the key on disk (a copied profile, a backup, a script that
+greps storage files). It does not protect it from code running inside the
+page, which can ask the browser to decrypt exactly as the app does; a
+browser extension (NIP-07) or a bunker (NIP-46) keeps the key out of the
+page entirely, which is why pasting an nsec shows a notice recommending them.
 
 Bunker has two entry shapes: a `bunker://...` URL (paste flow) and a
 `nostrconnect://...` URI (QR flow). Both end up creating the same kind of
@@ -39,7 +71,7 @@ page-reload rehydration path in `initialize()` route through the private
 `finalizeLogin()`:
 
 ```
-1. persist()                     // write session to localStorage
+1. seal() + persist()            // seal the secrets, write the session record
 2. resetPoolForSessionChange()   // close + rebuild SimplePool with the new session
 3. await connect()               // ensureRelay handshake + run the orchestrator
 4. isLoggedIn.set(true)          // flip the gate AppShell observes
@@ -376,7 +408,8 @@ The Preferences panel exposes a "Clear local cache" button backed by
 - `obelisk:voice-chat-width`
 
 **Preserved**:
-- `obelisk-dex/session`: the active session.
+- `obelisk-dex/session`: the active session. Its sealed secrets need the
+  vault key in IndexedDB, which the sweep does not touch.
 - `obelisk-dex/relays`: the configured relay list.
 - `obelisk:preferences`: settings the user just chose.
 

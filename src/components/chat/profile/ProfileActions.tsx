@@ -2,7 +2,7 @@
 
 import { useTranslation } from '@/i18n/context';
 import Button from '@/components/ui/Button';
-import { cn } from '@/components/ui/cn';
+import { cn } from '@/utils/style/cn';
 
 /** Follow and message buttons under someone else's bio, plus the follow error. */
 export function ProfileActions({

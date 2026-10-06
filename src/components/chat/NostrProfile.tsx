@@ -33,7 +33,7 @@ import { ProfileHeader } from './profile/ProfileHeader';
 import { ProfileActions } from './profile/ProfileActions';
 import { ProfileFeedTabs } from './profile/ProfileFeedTabs';
 import { ProfileMediaLightbox } from './profile/ProfileMediaLightbox';
-import { copyWithToast } from './profile/profile-labels';
+import { copyWithToast } from '@/services/clipboard';
 import { useProfileMeta } from '@/hooks/chat/profile/useProfileMeta';
 import { useProfileFollow } from '@/hooks/chat/profile/useProfileFollow';
 import { useProfileFeed } from '@/hooks/chat/profile/useProfileFeed';

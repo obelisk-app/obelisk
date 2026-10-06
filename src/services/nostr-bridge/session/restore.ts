@@ -8,13 +8,14 @@
 import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/store/notifications';
 import { ensureChannelPrefsStoreForAccount } from '@/store/channel-prefs';
 import { DEFAULT_RELAY, isImportableRelayUrl, normalizeConfiguredRelayUrl } from '../relay-list';
-import { LEGACY_STORAGE_KEY, STORAGE_KEY, readMigrated, type PersistedSession } from '../session-storage';
+import { LEGACY_STORAGE_KEY, STORAGE_KEY, readMigrated } from '../session-storage';
 import type { LifecycleTargets } from './lifecycle';
 import type { LoginDeps } from './login';
+import type { SessionPersistence } from './persistence';
 
 export interface RestoreDeps extends Pick<LoginDeps, 'connect' | 'restoreConfiguredRelays' | 'ensureRelayInList'> {
-  /** Write the session back (the stored relay URL was repaired). */
-  persist(): void;
+  /** The record on disk: opens the sealed secrets, migrates a plaintext record, writes it back. */
+  store: Pick<SessionPersistence, 'load' | 'persist'>;
 }
 
 export async function restoreSession(t: LifecycleTargets, deps: RestoreDeps): Promise<void> {
@@ -23,12 +24,18 @@ export async function restoreSession(t: LifecycleTargets, deps: RestoreDeps): Pr
   const raw = readMigrated(STORAGE_KEY, LEGACY_STORAGE_KEY);
   if (!raw) return;
   try {
-    const parsed = JSON.parse(raw) as PersistedSession;
+    // Opens the vault before connect(): a reload during the handshake must
+    // find a sealed record, never a half-migrated one. Null when the vault
+    // could not open it; the record is gone and `sessionNotice` says why.
+    // Awaited only when there is a vault to wait for (see `load`).
+    const loaded = deps.store.load(raw);
+    const parsed = loaded instanceof Promise ? await loaded : loaded;
+    if (!parsed) return;
     const storedRelayUrl = parsed.relayUrl;
     parsed.relayUrl = normalizeConfiguredRelayUrl(parsed.relayUrl);
     if (!isImportableRelayUrl(parsed.relayUrl)) parsed.relayUrl = DEFAULT_RELAY;
     state.session = parsed;
-    if (parsed.relayUrl !== storedRelayUrl) deps.persist();
+    if (parsed.relayUrl !== storedRelayUrl) deps.store.persist();
     t.browserEvents.wire();
     state.currentRelayUrl.set(parsed.relayUrl);
     state.relays = [parsed.relayUrl];
