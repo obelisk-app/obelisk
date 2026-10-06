@@ -173,7 +173,19 @@
     "paid": "✅ Paga",
     "paidBy": "✅ Paga · {name}",
     "pay": "Pagar",
-    "paying": "Pagando…"
+    "paying": "Pagando…",
+    "amount": "{amount} sats",
+    "noAmount": "Sem valor",
+    "noAmountReason": "Esta invoice não diz quanto pagar, e as carteiras do navegador só pagam invoices com valor. Peça a quem enviou uma com valor.",
+    "confirmPrompt": "Pagar {amount} sats com a sua carteira?",
+    "confirmFor": "Referente a: {description}",
+    "confirm": "Confirmar pagamento",
+    "noWallet": "Nenhuma carteira Lightning encontrada neste navegador. Instale uma extensão WebLN como o Alby (ela também conecta uma carteira que você já tem, via Nostr Wallet Connect), recarregue a página e tente de novo.",
+    "expiredReason": "Esta invoice expirou. Peça uma nova a quem enviou.",
+    "alreadyPaid": "Esta invoice já foi paga.",
+    "inProgress": "Esta invoice já está sendo paga.",
+    "payFailed": "O pagamento não foi concluído.",
+    "paidToast": "⚡ Você pagou {amount} sats"
   },
   "mentions": {
     "navigation": "Navegação de menções",

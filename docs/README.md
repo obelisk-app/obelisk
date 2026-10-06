@@ -15,7 +15,7 @@ Detailed specs, plans and references for Obelisk subsystems. High-level roadmap 
 - [server-banner.md](server-banner.md) - relay-level banner image.
 - [uploads.md](uploads.md) - Blossom storage, URL format, and voice-note event contract.
 - [search.md](search.md) - NIP-50 search (`bridge.searchMessages`) and query syntax.
-- [bitcoin-zaps-nwc.md](bitcoin-zaps-nwc.md) - NWC wallet connection + zap flow.
+- [bitcoin-zaps-nwc.md](bitcoin-zaps-nwc.md) - the one wallet path (WebLN), zaps, and paying invoices posted in chat.
 
 ## Operations
 

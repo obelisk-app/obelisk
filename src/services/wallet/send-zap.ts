@@ -1,13 +1,15 @@
-import { isWebLNAvailable, requestZapInvoice } from '@nostr-wot/wallet';
+import { requestZapInvoice } from '@nostr-wot/wallet';
 import { getDefaultRelays } from '@nostr-wot/data';
 import { getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
 import { KIND_REACTION } from '@/utils/nip-kinds';
 import type { NipSigner } from '@/lib/nip-59';
 import { codeOrMessage } from '@/utils/errors/codes';
+import { connectWallet, isWalletAvailable } from './wallet';
 
 /**
- * Sending a zap from a channel: pay through the user's WebLN wallet, then post
- * a ⚡ reaction carrying the invoice so everyone in the channel sees it.
+ * Sending a zap from a channel: pay through the user's wallet (`./wallet`, the
+ * same path invoice cards pay through), then post a ⚡ reaction carrying the
+ * invoice so everyone in the channel sees it.
  *
  * Why not `zapViaWebLN` from @nostr-wot/wallet: it returns only the preimage,
  * and the in-channel marker needs the invoice and the signed zap request. If
@@ -52,7 +54,7 @@ export type ZapCheck = { ok: true; zap: ReadyZap } | { ok: false; reason: ZapErr
 /** The first reason this zap cannot start, before anything leaves the browser. */
 export function checkZap(draft: ZapDraft): ZapCheck {
   if (!draft.lud16) return { ok: false, reason: 'noAddress' };
-  if (!isWebLNAvailable()) return { ok: false, reason: 'noWallet' };
+  if (!isWalletAvailable()) return { ok: false, reason: 'noWallet' };
   if (!draft.amountSats || draft.amountSats <= 0) return { ok: false, reason: 'invalidAmount' };
   if (!draft.signer) return { ok: false, reason: 'noSigner' };
   return { ok: true, zap: { ...draft, lud16: draft.lud16, signer: draft.signer } };
@@ -76,9 +78,8 @@ export interface ZapResult {
  * a retry that would pay twice.
  */
 export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
-  const webln = window.webln;
-  if (!webln) throw new ZapError('noWallet');
-  await webln.enable();
+  const wallet = await connectWallet();
+  if (!wallet) throw new ZapError('noWallet');
 
   const relays = Array.from(new Set([
     ...(zap.currentRelay ? [zap.currentRelay] : []),
@@ -97,7 +98,7 @@ export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
     comment: zap.comment.trim() || undefined,
   });
 
-  await webln.sendPayment(invoice);
+  await wallet.pay(invoice);
   return postZapMarker(zap, { invoice, zapRequest, amountMsats });
 }
 

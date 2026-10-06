@@ -10,6 +10,7 @@ describe('bolt11', () => {
     const p = parseBolt11(SAMPLE);
     expect(p.paymentHash).toMatch(/^[0-9a-f]{64}$/);
     expect(p.amountSats).toBe(5000);
+    expect(p.amountMsats).toBe(5_000_000);
     expect(p.expiresAt).toBeGreaterThan(p.timestamp);
   });
 

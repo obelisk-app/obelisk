@@ -1,57 +1,30 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { parseBolt11, type ParsedInvoice } from '@/utils/bolt11';
-import { useMyPubkey, useNipSigner, useUserMetadata } from '@/services/nostr-bridge';
-import { formatPubkey } from '@nostr-wot/data';
-import { useLocalWallet } from '@/hooks/wallet/useLocalWallet';
 import { useTranslations } from 'next-intl';
-import { useFormat } from '@/i18n/useFormat';
-import { useHasExpired } from '@/hooks/useHasExpired';
 import Button from '@/components/ui/Button';
+import { useInvoiceCard } from '@/hooks/chat/useInvoiceCard';
 
 interface Props {
   invoice: string;
+  /** The message and channel the invoice came in; unused until paid state is published to the channel. */
   messageId?: string;
   channelId?: string;
 }
 
-interface PaidState {
-  payerPubkey: string;
-  paidAt: string;
-}
-
 /**
- * Renders a public BOLT11 invoice posted in chat as a payable card.
- * Any channel member with an NWC wallet can click Pay; the local NWC
- * payment flow runs entirely client-side.
+ * A BOLT11 invoice posted in chat, as a payable card. Pay asks for one
+ * confirm click showing the amount and description, then pays through the
+ * same browser wallet zaps use (`src/services/wallet/`).
  *
- * TODO(decentralized-invoice-tracking): the previous /api/invoices/* server
- * orchestrated race protection and broadcast paid-state across clients via
- * Socket.io. With the relays-only architecture we no longer have a server
- * to coordinate. The replacement is to publish a kind:9735-style
- * "invoice paid" Nostr event in the channel; other clients listen and
- * flip their own local paid state. Until that lands, paid state is
- * device-local only: refreshing or opening the channel from a different
- * device will not show "Paid" for invoices another user paid.
+ * Paid state is this browser's own record: other members, and this browser
+ * after a reload, do not see who paid. Publishing an "invoice paid" event in
+ * the channel would let every client show it; nothing does that yet.
  */
-export default function InvoiceCard({ invoice, messageId: _messageId, channelId: _channelId }: Props) {
-  const { formatNumber } = useFormat();
+export default function InvoiceCard({ invoice }: Props) {
   const t = useTranslations();
-  const myPubkey = useMyPubkey();
-  const signer = useNipSigner();
-  const { client: _walletClient } = useLocalWallet(myPubkey, signer);
+  const card = useInvoiceCard(invoice);
 
-  const parsed = useMemo<ParsedInvoice | null>(() => {
-    try { return parseBolt11(invoice); } catch { return null; }
-  }, [invoice]);
-
-  const [paid, setPaid] = useState<PaidState | null>(null);
-  const [busy, setBusy] = useState(false);
-  const payerMeta = useUserMetadata(paid?.payerPubkey ?? null);
-  const hasExpired = useHasExpired(parsed?.expiresAt);
-
-  if (!parsed) {
+  if (card.view === 'invalid') {
     return (
       <span className="block mt-1 px-3 py-2 rounded-lg border border-lc-border text-xs text-lc-muted">
         {t('chat.invoice.invalid')}
@@ -59,25 +32,7 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
     );
   }
 
-  const expired = !paid && hasExpired;
-
-  const pay = async () => {
-    if (busy || paid || expired) return;
-    if (!_walletClient) return;
-    setBusy(true);
-    try {
-      await _walletClient.payInvoice({ invoice });
-      setPaid({ payerPubkey: myPubkey || '?', paidAt: new Date().toISOString() });
-    } catch {
-      // The wallet surface has no inline error UI yet.
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const payerName = paid
-    ? payerMeta?.displayName ?? payerMeta?.name ?? (paid.payerPubkey.length === 64 ? formatPubkey(paid.payerPubkey) : null)
-    : null;
+  const showError = card.error && card.view !== 'paid';
 
   return (
     <span
@@ -89,32 +44,62 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
           <span className="text-lc-green text-lg" aria-hidden>⚡</span>
           <span className="min-w-0">
             <span className="block text-sm font-semibold text-lc-white">
-              {formatNumber(parsed.amountSats)} sats
+              {card.view === 'noAmount' ? t('chat.invoice.noAmount') : t('chat.invoice.amount', { amount: card.amount })}
             </span>
-            {parsed.description && (
-              <span className="block text-[11px] text-lc-muted truncate">{parsed.description}</span>
+            {card.description && (
+              <span className="block text-[11px] text-lc-muted truncate">{card.description}</span>
             )}
           </span>
         </span>
-        {paid ? (
+        {card.view === 'paid' ? (
           <span className="shrink-0 text-[11px] text-lc-green font-semibold" data-testid="invoice-paid">
-            {payerName ? t('chat.invoice.paidBy', { name: payerName }) : t('chat.invoice.paid')}
+            {card.payerName ? t('chat.invoice.paidBy', { name: card.payerName }) : t('chat.invoice.paid')}
           </span>
-        ) : expired ? (
+        ) : card.view === 'expired' ? (
           <span className="shrink-0 text-[11px] text-lc-muted">{t('chat.invoice.expired')}</span>
-        ) : (
+        ) : card.view === 'ready' || card.view === 'paying' ? (
           <Button
             variant="pill"
             size="xs"
-            onClick={pay}
-            disabled={busy}
+            onClick={card.requestPay}
+            disabled={card.view === 'paying'}
             className="shrink-0"
             data-testid="invoice-pay-btn"
           >
-            {t(busy ? 'chat.invoice.paying' : 'chat.invoice.pay')}
+            {t(card.view === 'paying' ? 'chat.invoice.paying' : 'chat.invoice.pay')}
           </Button>
-        )}
+        ) : null}
       </span>
+      {card.view === 'noAmount' && (
+        <span className="mt-2 block text-[11px] text-lc-muted" data-testid="invoice-no-amount">
+          {t('chat.invoice.noAmountReason')}
+        </span>
+      )}
+      {card.view === 'confirming' && (
+        <span className="mt-2 block rounded-lg border border-lc-border bg-lc-card/60 p-2" data-testid="invoice-confirm">
+          <span className="block text-xs text-lc-white">
+            {t('chat.invoice.confirmPrompt', { amount: card.amount })}
+          </span>
+          {card.description && (
+            <span className="mt-1 block text-[11px] text-lc-muted break-words">
+              {t('chat.invoice.confirmFor', { description: card.description })}
+            </span>
+          )}
+          <span className="mt-2 flex gap-2">
+            <Button variant="pill" size="xs" onClick={card.confirm} data-testid="invoice-confirm-btn">
+              {t('chat.invoice.confirm')}
+            </Button>
+            <Button variant="outlinePill" size="xs" onClick={card.cancel} data-testid="invoice-cancel-btn">
+              {t('common.cancel')}
+            </Button>
+          </span>
+        </span>
+      )}
+      {showError && (
+        <span role="alert" className="mt-2 block text-[11px] text-red-400" data-testid="invoice-error">
+          {card.error}
+        </span>
+      )}
       <span className="mt-2 block text-[10px] text-lc-muted font-mono truncate" title={invoice}>
         {invoice.slice(0, 30)}…{invoice.slice(-10)}
       </span>

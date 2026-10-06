@@ -173,7 +173,19 @@
     "paid": "✅ Paid",
     "paidBy": "✅ Paid · {name}",
     "pay": "Pay",
-    "paying": "Paying…"
+    "paying": "Paying…",
+    "amount": "{amount} sats",
+    "noAmount": "No amount set",
+    "noAmountReason": "This invoice does not say how much to pay, and browser wallets can only pay invoices that do. Ask the sender for one with an amount.",
+    "confirmPrompt": "Pay {amount} sats from your wallet?",
+    "confirmFor": "For: {description}",
+    "confirm": "Confirm payment",
+    "noWallet": "No Lightning wallet found in this browser. Install a WebLN extension such as Alby (it can also connect a wallet you already have, through Nostr Wallet Connect), then reload the page and try again.",
+    "expiredReason": "This invoice has expired. Ask the sender for a new one.",
+    "alreadyPaid": "This invoice is already paid.",
+    "inProgress": "This invoice is already being paid.",
+    "payFailed": "The payment did not go through.",
+    "paidToast": "⚡ Paid {amount} sats"
   },
   "mentions": {
     "navigation": "Mention navigation",

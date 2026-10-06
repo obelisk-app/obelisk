@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useCurrentRelayUrl, useNipSigner } from '@/services/nostr-bridge';
 import { useToastStore } from '@/store/toast';
 import { useTranslations } from 'next-intl';
@@ -41,17 +41,32 @@ export function useSendZap({ recipient, amountSats, comment, lud16, displayName,
   const currentRelay = useCurrentRelayUrl();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set before the first await, so a second click in the same tick (before
+  // `busy` has re-rendered the button disabled) cannot start a second payment.
+  const inFlight = useRef(false);
 
   const send = async () => {
+    if (inFlight.current) return;
     const check = checkZap({ recipient, amountSats, comment, lud16, signer, currentRelay });
     if (!check.ok) {
       setError(t(ERROR_KEY[check.reason]));
       return;
     }
+    inFlight.current = true;
     setBusy(true);
     setError(null);
+    let markerError: string | null;
     try {
-      const { markerError } = await sendZap(check.zap);
+      ({ markerError } = await sendZap(check.zap));
+    } catch (e) {
+      setError(e instanceof ZapError ? t(ERROR_KEY[e.code]) : errorText(t, e, 'chat.zap.failed'));
+      inFlight.current = false;
+      setBusy(false);
+      return;
+    }
+    // The money has moved. From here nothing may show a failure or re-enable
+    // Zap (busy stays on until the modal closes), or the user could pay twice.
+    try {
       const title = t('chat.zap.sent', { amount: formatNumber(amountSats), name: displayName });
       useToastStore.getState().pushToast(markerError
         ? {
@@ -63,12 +78,10 @@ export function useSendZap({ recipient, amountSats, comment, lud16, displayName,
           }),
         }
         : { title, body: comment.trim() || '' });
-      onSent();
     } catch (e) {
-      setError(e instanceof ZapError ? t(ERROR_KEY[e.code]) : errorText(t, e, 'chat.zap.failed'));
-    } finally {
-      setBusy(false);
+      console.warn('[zap] sent, but the confirmation toast failed', e);
     }
+    onSent();
   };
 
   return { send, busy, error };

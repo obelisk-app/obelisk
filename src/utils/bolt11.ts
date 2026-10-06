@@ -2,7 +2,10 @@ import { decode } from 'light-bolt11-decoder';
 
 export interface ParsedInvoice {
   paymentHash: string;
+  /** Whole sats, rounded down. 0 when the invoice sets no amount. */
   amountSats: number;
+  /** The exact amount, in millisats. 0 when the invoice sets no amount. */
+  amountMsats: number;
   description: string;
   expiresAt: number; // unix seconds
   timestamp: number;
@@ -16,19 +19,20 @@ export function parseBolt11(invoice: string): ParsedInvoice {
   const dec = decode(invoice);
   let paymentHash = '';
   let description = '';
-  let amountSats = 0;
+  let amountMsats = 0;
   let timestamp = 0;
   for (const s of dec.sections) {
     if (s.name === 'payment_hash') paymentHash = s.value as string;
     if (s.name === 'description') description = (s.value as string) ?? '';
-    if (s.name === 'amount') amountSats = Math.floor(Number(s.value) / 1000);
+    if (s.name === 'amount') amountMsats = Number(s.value) || 0;
     if (s.name === 'timestamp') timestamp = Number(s.value);
   }
   if (!paymentHash) throw new Error('invoice missing payment_hash');
   const expiry = Number(dec.expiry) || 3600;
   return {
     paymentHash,
-    amountSats,
+    amountSats: Math.floor(amountMsats / 1000),
+    amountMsats,
     description,
     timestamp,
     expiresAt: timestamp + expiry,
