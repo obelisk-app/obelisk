@@ -362,6 +362,7 @@
       "channels": "Os canais e mensagens em cache são apagados deste dispositivo e a página recarrega. Tudo volta a carregar pelos relays; nada do que você publicou é afetado.",
       "profiles": "Os nomes e fotos salvos são apagados e a página recarrega. Eles voltam a carregar pelos relays.",
       "readState": "As posições de leitura, contagens de não lidas e alertas deste dispositivo são apagados e a página recarrega. As posições sincronizadas pelos seus relays voltam; os alertas não.",
+      "dmMessages": "A cópia criptografada das suas mensagens diretas é apagada deste dispositivo e a página recarrega. Suas mensagens são baixadas dos relays de novo, e o seu assinador vai pedir para descriptografar cada uma.",
       "dms": "A criptografia que você escolheu para cada pessoa é esquecida e a página recarrega. Suas mensagens não são afetadas.",
       "preferences": "Suas configurações, layout e itens recentes voltam ao padrão e a página recarrega.",
       "personal": "Silenciados, bloqueados, escolhas de notificação por canal e figurinhas salvas neste dispositivo são apagados de vez e a página recarrega. Eles não estão guardados em nenhum outro lugar.",

@@ -20,6 +20,7 @@ import Button from '@/components/ui/Button';
 import CloseButton from '@/components/ui/CloseButton';
 import { DmProtocolNotice, DmProtocolSwitch } from '../dm-protocol/DmProtocolSwitch';
 import { useDmProtocolChoice } from '@/hooks/app/dm-protocol/useDmProtocolChoice';
+import { DmUnlock } from '@/components/chat/DmUnlock';
 
 // Exported for tests only - mounted internally by `AppShell`, same as
 // `RelayTopBar` / `SidebarMe`. The conversation itself (order, dividers,
@@ -86,6 +87,7 @@ export function DMPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
           />
         </span>
       </header>
+      <DmUnlock className="shrink-0 border-b border-lc-border" />
       <DmProtocolNotice choice={protocolChoice} />
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
         {thread.items.length === 0 ? (

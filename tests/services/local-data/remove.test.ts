@@ -1,7 +1,8 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VAULT_DB, VAULT_STORE } from '@/lib/crypto/session-vault';
-import { openStore } from '@/lib/crypto/vault-idb';
+import { openStore, putRecord } from '@/lib/crypto/vault-idb';
+import { DM_STORE_DB } from '@/services/nostr-bridge/dm/store-db';
 import {
   LOCAL_DATA_CATEGORIES,
   lowerAllWriteFences,
@@ -184,5 +185,50 @@ describe('measuring', () => {
     expect((await measureLocalData(cachesDouble.asCacheStorage(), document)).analytics.present).toBe(false);
     localStorage.setItem('obelisk:analytics-consent', 'denied');
     expect((await measureLocalData(cachesDouble.asCacheStorage(), document)).analytics).toEqual({ bytes: null, present: true });
+  });
+});
+
+describe('the encrypted DM store', () => {
+  async function seedDmStore(): Promise<void> {
+    const db = await openStore(idb, DM_STORE_DB, 'records');
+    try {
+      await putRecord(db, 'records', `dm:${'a'.repeat(64)}:${'b'.repeat(64)}`, { v: 1, iv: 'x'.repeat(16), ct: 'y'.repeat(200) });
+    } finally {
+      db.close();
+    }
+  }
+
+  it('its Remove stops the store writing, deletes only its database and reloads, without logging out', async () => {
+    await seedDmStore();
+    const forgetDirectMessages = vi.fn(async () => undefined);
+    await removeLocalDataCategory('dmMessages', { ...env, forgetDirectMessages });
+    expect(forgetDirectMessages).toHaveBeenCalledTimes(1);
+    expect(await databaseNames()).not.toContain(DM_STORE_DB);
+    expect(await databaseNames()).toContain(VAULT_DB);
+    expect(env.logout).not.toHaveBeenCalled();
+    expect(env.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('removing the login deletes the vault but leaves the DM store to the logout', async () => {
+    await seedDmStore();
+    await removeLocalDataCategory('login', env);
+    expect(env.logout).toHaveBeenCalledTimes(1);
+    expect(await databaseNames()).not.toContain(VAULT_DB);
+    expect(await databaseNames()).toContain(DM_STORE_DB);
+  });
+
+  it('remove everything deletes it with the vault', async () => {
+    await seedDmStore();
+    await removeEverything(env);
+    expect(await databaseNames()).not.toContain(DM_STORE_DB);
+    expect(await databaseNames()).not.toContain(VAULT_DB);
+  });
+
+  it('is sized from its records, and absent when there is none', async () => {
+    expect((await measureLocalData(cachesDouble.asCacheStorage(), document, idb)).dmMessages).toEqual({ bytes: 0, present: false });
+    await seedDmStore();
+    const usage = await measureLocalData(cachesDouble.asCacheStorage(), document, idb);
+    expect(usage.dmMessages.present).toBe(true);
+    expect(usage.dmMessages.bytes).toBeGreaterThan(400);
   });
 });

@@ -1,0 +1,51 @@
+import { act, fireEvent, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DmUnlock } from '@/components/chat/DmUnlock';
+import { setPreference } from '@/services/preferences';
+import type { DmLockState } from '@/services/nostr-bridge';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
+
+function mount(lock: DmLockState, locale: 'en' | 'es' | 'pt' = 'en') {
+  const unlockDirectMessages = vi.fn(async () => undefined);
+  const bridge = fakeBridge({ dmLock: lock }, { unlockDirectMessages });
+  renderWithBridge(<DmUnlock />, bridge, { locale });
+  return { bridge, unlockDirectMessages };
+}
+
+afterEach(() => setPreference('directMessagesEnabled', false));
+
+describe('DmUnlock', () => {
+  it('opening a DM surface asks once to open the DMs, and shows nothing once open', () => {
+    setPreference('directMessagesEnabled', true);
+    const { bridge, unlockDirectMessages } = mount({ status: 'locked', unopened: [] });
+    expect(unlockDirectMessages).toHaveBeenCalledTimes(1);
+    act(() => bridge.stores.dmLock.set({ status: 'unlocked', unopened: [] }));
+    expect(screen.queryByTestId('dm-unlocking')).toBeNull();
+    expect(screen.queryByTestId('dm-unlock-failed')).toBeNull();
+    expect(unlockDirectMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks nothing while DMs are turned off', () => {
+    setPreference('directMessagesEnabled', false);
+    const { unlockDirectMessages } = mount({ status: 'locked', unopened: [] });
+    expect(unlockDirectMessages).not.toHaveBeenCalled();
+  });
+
+  it('says the signer is being asked, then offers a retry when it said no, and never asks again by itself', () => {
+    setPreference('directMessagesEnabled', true);
+    const { bridge, unlockDirectMessages } = mount({ status: 'unlocking', unopened: [] });
+    expect(screen.getByTestId('dm-unlocking')).toHaveTextContent('Your signer may ask you to approve');
+    act(() => bridge.stores.dmLock.set({ status: 'failed', unopened: [] }));
+    expect(screen.getByTestId('dm-unlock-failed')).toHaveTextContent('still locked');
+    expect(unlockDirectMessages).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('dm-unlock-retry'));
+    expect(unlockDirectMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it('speaks Spanish and Portuguese', () => {
+    setPreference('directMessagesEnabled', true);
+    mount({ status: 'failed', unopened: [] }, 'es');
+    expect(screen.getByTestId('dm-unlock-retry')).toHaveTextContent('Probar de nuevo');
+  });
+});

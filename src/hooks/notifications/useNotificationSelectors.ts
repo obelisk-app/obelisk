@@ -15,6 +15,7 @@ import {
   type MentionNotification,
 } from '@/store/notifications';
 import { useReadStateStore } from '@/store/read-state';
+import { useDmLock } from '@/services/nostr-bridge';
 
 const EMPTY_MENTIONS: ReadonlyArray<MentionNotification> = [];
 
@@ -77,16 +78,33 @@ export function useDmNotificationCursor(): number {
   return useReadStateStore((s) => s.inboxLastReadAt);
 }
 
+/**
+ * Gift wraps that arrived while DMs are locked, are not in the encrypted
+ * store, and are newer than the DM cursor. Their sender is inside the
+ * encryption, so the bell shows them as one "N new direct messages" row
+ * rather than as cards. Zero once DMs are open: they are cards by then.
+ */
+export function useLockedDmCount(): number {
+  const { status, unopened } = useDmLock();
+  const cursor = useDmNotificationCursor();
+  return useMemo(
+    () => (status === 'unlocked' ? 0 : unopened.filter((at) => at > cursor).length),
+    [status, unopened, cursor],
+  );
+}
+
+/** Unread DM cards plus the locked "N new" row. */
 export function useUnreadDmNotificationCount(): number {
   const dms = useDmNotifications();
   const cursor = useDmNotificationCursor();
+  const locked = useLockedDmCount();
   return useMemo(() => {
-    let n = 0;
+    let n = locked;
     for (const d of dms) {
       if (!isDmNotificationRead(d, cursor)) n++;
     }
     return n;
-  }, [dms, cursor]);
+  }, [dms, cursor, locked]);
 }
 
 /**

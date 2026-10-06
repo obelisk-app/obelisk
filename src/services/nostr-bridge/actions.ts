@@ -63,6 +63,8 @@ export const nostrActions = {
     (await getBridge()).cancelPendingMessage(groupId, clientTag),
   cancelPendingDirectMessage: async (counterparty: string, clientTag: string) =>
     (await getBridge()).cancelPendingDirectMessage(counterparty, clientTag),
+  /** Settings > Data on this device: stop the encrypted DM store writing before its database goes. */
+  forgetDirectMessages: async () => (await getBridge()).forgetDirectMessages(),
   joinGroup: async (groupId: string) => (await getBridge()).joinGroup(groupId),
   leaveGroup: async (groupId: string) => (await getBridge()).leaveGroup(groupId),
   createGroup: async (opts: Parameters<Awaited<ReturnType<typeof getBridge>>['createGroup']>[0]) =>

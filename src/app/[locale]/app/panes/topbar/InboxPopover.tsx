@@ -14,14 +14,16 @@ import type { InboxStreams } from '@/hooks/app/panes/topbar/useTopBarPopovers';
 import SegmentedControl from '@/components/ui/SegmentedControl';
 
 /** The bell's popover: mentions on this relay and DMs, each with its own read cursor. */
-export function InboxPopover({ inbox, onMentionClick, onDmClick }: {
+export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
   inbox: InboxStreams;
   onMentionClick: (m: MentionNotification) => void;
   onDmClick: (d: DmNotification) => void;
+  /** The locked DMs row: open the DMs, which unlocks them. */
+  onOpenDms: () => void;
 }) {
   const t = useTranslations();
   const { formatTime } = useFormat();
-  const { notifTab, setNotifTab, mentions, mentionCursor, dmNotifications, dmCursor, tabItems, tabUnread } = inbox;
+  const { notifTab, setNotifTab, mentions, mentionCursor, dmNotifications, dmCursor, tabHasItems, tabUnread, lockedDms } = inbox;
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div
@@ -36,7 +38,7 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick }: {
             "Clear" is neutral because it is destructive-ish and should
             not invite a reflexive click. */}
         <div className="flex items-center gap-1.5">
-          {tabItems.length > 0 && tabUnread > 0 && (
+          {tabHasItems && tabUnread > 0 && (
             <button
               onClick={inbox.handleMarkRead}
               data-testid="notif-mark-read"
@@ -48,7 +50,7 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick }: {
               {t('shell.desktop.inbox.markRead')}
             </button>
           )}
-          {tabItems.length > 0 && (
+          {tabHasItems && (
             <button
               onClick={inbox.handleClear}
               data-testid="notif-clear"
@@ -91,7 +93,7 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick }: {
         />
       </div>
       <div className="overflow-y-auto flex-1">
-        {tabItems.length === 0 ? (
+        {!tabHasItems ? (
           <div className="px-4 py-8 text-center text-sm text-lc-muted">
             {notifTab === 'mentions'
               ? t('shell.desktop.inbox.caughtUpMentions')
@@ -112,13 +114,23 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick }: {
           </ul>
         ) : (
           <ul className="flex flex-col">
+            {lockedDms > 0 && (
+              <InboxRow
+                read={false}
+                label={t('shell.inbox.locked.count', { count: lockedDms })}
+                preview={t('shell.inbox.locked.hint')}
+                onClick={onOpenDms}
+                testId="notif-dm-locked"
+              />
+            )}
             {dmNotifications.map((d) => (
               <InboxRow
                 key={d.id}
                 read={isDmNotificationRead(d, dmCursor)}
                 label={t('shell.inbox.type.dm')}
                 time={formatTime(d.createdAt)}
-                preview={d.preview}
+                // No preview while DMs are locked: the text is still encrypted.
+                preview={d.preview ?? t('common.ping.newDm')}
                 onClick={() => onDmClick(d)}
               />
             ))}
@@ -130,24 +142,26 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick }: {
   );
 }
 
-function InboxRow({ read, label, time, preview, onClick }: {
+function InboxRow({ read, label, time, preview, onClick, testId }: {
   read: boolean;
   label: string;
-  time: string;
+  time?: string;
   preview: string | null | undefined;
   onClick: () => void;
+  testId?: string;
 }) {
   return (
     <li>
       <button
         onClick={onClick}
+        data-testid={testId}
         className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-lc-card/60 transition-colors ${read ? '' : 'bg-lc-olive/30'}`}
       >
         <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${read ? 'bg-transparent' : 'bg-lc-green'}`} />
         <div className="flex-1 min-w-0">
           <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
             {label}
-            <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{time}</span>
+            {time && <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{time}</span>}
           </div>
           {preview && (
             <div className="text-sm text-lc-white truncate"><MentionText content={preview} /></div>

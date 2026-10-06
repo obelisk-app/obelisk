@@ -21,6 +21,7 @@ import UserAvatar from '@/components/ui/UserAvatar';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import SegmentedControl from '@/components/ui/SegmentedControl';
+import { DmUnlock } from '@/components/chat/DmUnlock';
 
 type Tab = 'follows' | 'others';
 
@@ -106,6 +107,8 @@ export default function DMList({
           </Button>
         </div>
       </div>
+
+      <DmUnlock className="shrink-0 border-b border-lc-border" />
 
       {composing && (
         <DMComposer

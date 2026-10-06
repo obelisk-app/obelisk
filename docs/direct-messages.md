@@ -10,7 +10,9 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 
 | Path | Responsibility |
 |---|---|
-| `src/services/nostr-bridge/dm/` | The DM modules, wired by `compose-dm.ts`: `send.ts` (optimistic placeholder, per-thread protocol choice, retry), `nip17.ts` (seal and gift-wrap to the recipient's inbox and to ourselves), `nip04.ts` (the opt-out path), `inbox.ts` (the kind 4 and kind 1059 REQs, the `'dm'` AUTH lease), `thread.ts` (dedupe and placeholder replacement into a thread), `relays.ts` and `relay-cache.ts` (NIP-65 and kind-10050 lookups, the gift-wrap ladder), `inbox-list.ts` (publishing our own kind 10050), `calls.ts` (DM call control messages) |
+| `src/services/nostr-bridge/dm/` | The DM modules, wired by `compose-dm.ts`: `send.ts` (optimistic placeholder, per-thread protocol choice, retry), `nip17.ts` (seal and gift-wrap to the recipient's inbox and to ourselves), `nip04.ts` (the opt-out path), `inbox.ts` (the kind 4 and kind 1059 REQs, the `'dm'` AUTH lease), `thread.ts` (dedupe and placeholder replacement into a thread, the bell card), `relays.ts` and `relay-cache.ts` (NIP-65 and kind-10050 lookups, the gift-wrap ladder), `inbox-list.ts` (publishing our own kind 10050), `calls.ts` (DM call control messages), and the encrypted store (below): `store.ts` (locked / unlocked, what is held, what is kept), `store-key.ts` (the DM key wrapped by the signer), `store-db.ts` (the IndexedDB layout), `store-record.ts` (what one stored message holds) |
+| `src/lib/crypto/record-cipher.ts` | AES-256-GCM boxes under a non-extractable key held in memory. |
+| `src/components/chat/DmUnlock.tsx`, `src/hooks/dm/useDmUnlock.ts` | Mounted on every DM surface: opening one opens the DMs, and says so while the signer is asked or after it said no. |
 | `src/services/nostr-bridge/session/dm-signer.ts` | The signer the DM transport uses, adapted from the session's login method. |
 | `src/services/nostr-bridge/dm/types.ts` | `JsDirectMessage`: the only DM shape the UI ever sees (re-exported from `types.ts`). |
 | `src/services/nostr-bridge/hooks/messages.ts` | `useDirectMessages()` over the bridge's `dmsByPeer` store, exported from the front door. |
@@ -37,7 +39,9 @@ Both inbound paths are live: kind-4 events and kind-1059 wraps ingest into the s
 
 Rumor kinds the bridge reads out of a wrap: **14** (chat), **15** (file message, below) and **25055** (call control, never enters `dmsByPeer`; see [docs/voice/dm-calls.md](voice/dm-calls.md)).
 
-The wrap ledger (`wrap-ledger.ts`, scope `dm:inert`) remembers only wraps that **never produce a thread entry** (call signals, kinds we don't read, file messages we can't decrypt), so they aren't re-opened on the next load. **Chat wraps are never recorded**: decrypted DMs live in memory only, so re-opening the wrap is how a reload gets the message back. (The retired `dm` scope recorded chat wraps too, and from 2026-08-22 to 2026-09-26 every already-opened NIP-17 message was missing after a page reload; stored ledgers still carry its bit, which nothing reads.) A new rumor kind must still ship its receive path with its send path: an older build files it as inert and won't open it again.
+The wrap ledger (`wrap-ledger.ts`, scope `dm:inert`) remembers only wraps that **never produce a thread entry** (call signals, kinds we don't read, file messages we can't decrypt), so they aren't re-opened on the next load. **Chat wraps are never recorded there**: the encrypted store (below) is what remembers them, through its own index, so removing either one can never hide a message. (The retired `dm` scope recorded chat wraps in the ledger while the messages lived in memory only, and from 2026-08-22 to 2026-09-26 every already-opened NIP-17 message was missing after a page reload; stored ledgers still carry its bit, which nothing reads.) A new rumor kind must still ship its receive path with its send path: an older build files it as inert and won't open it again.
+
+Until 2026-10-06 the reload path (`session/restore.ts`) never pointed the ledger at the account, so after a reload it remembered nothing and every inert wrap was opened again; it now does, as `finalizeLogin` always did.
 
 ## Files, voice notes, stickers
 
@@ -220,29 +224,53 @@ The bridge treats `senderPubkey` (recovered from the seal) as the author and nev
 
 An outgoing wrap that arrives from another device carries the real recipient in the rumor's `p` tag; an inbound one is from the sender directly. `ingestGiftWrap` (`dm/inbox.ts`) distinguishes them the same way `@nostr-wot/dm`'s own `handleGiftWrap` does.
 
-## Storage
+## Storage: the encrypted DM store
 
-**No DM thread is written to disk, and no DM events are cached.** kind 4 and kind 1059 are deliberately excluded from `bridgeCache` (see [docs/data-system.md §9](data-system.md)). `dmsByPeer` is in-memory and rebuilds from relays on every load. One exception: the bell's DM alert card (`pushDmNotification` in `dm/thread.ts`) keeps up to 280 characters of the decrypted message as its `preview`, and the notifications store persists it in `obelisk-notifications:{myPubkey}` until the card is cleared. Settings > Data on this device removes it with the read positions.
+The owner's decision (2026-10-06): DMs are kept on the device encrypted with AES-256, opened once per visit with the signer, and kept decrypted in memory only from the moment the person asks for them.
 
-The only persisted DM state is `obelisk-dm-store:{myPubkey}`, holding the per-peer protocol overrides. Its `merge` explicitly discards `threads` / `messages` so a legacy PWA install that still has them on disk never merges them back into memory. Read cursors live in `obelisk-read-state:{myPubkey}` (see [docs/read-state.md](read-state.md)).
+**What is kept.** Every DM the app opens (received, our own sends, NIP-04 and NIP-17, file messages with their decryption metadata, the rumor tags, and the raw rumor and wire event for "View raw event") is saved as one AES-256-GCM box in IndexedDB, database `obelisk-dms`, store `records`, key `dm:<pubkey>:<wire id>`. Each box has a fresh 12-byte IV and is bound to its account and wire id as additional data (`store-record.ts`), so a box moved to another slot or account does not open. DMs have no reactions in Obelisk, so there are none to keep. Our own sends are kept when they settle: a NIP-04 under its event id, a NIP-17 under its self-copy's wrap id (the one that comes back to us), so the echo is never decrypted again.
+
+**The key.** One random 32-byte key per account. It is stored only wrapped, under `key:<pubkey>` in the same database, as a NIP-78 app-data event (kind 30078, `d` = `obelisk:dm-key:v1`) whose content is the key NIP-44 encrypted to the user's own pubkey through the session signer (`store-key.ts`). The event is **not signed and not published**: signing would cost a second prompt and adds nothing (NIP-44 to oneself is authenticated with a conversation key only the user's signer can derive), and publishing would tell relays this pubkey uses Obelisk without helping another device, which has no copy of the boxes. Once unwrapped, the bytes are imported as a non-extractable `CryptoKey` (`src/lib/crypto/record-cipher.ts`), the byte copy is zeroed, the decrypt memo's entry for it is dropped, and the key lives in the bridge's memory only. It is dropped on logout and on account switch, and dies with the page.
+
+**Locked until asked.** A page load decrypts nothing DM-related and asks the signer nothing (`store.ts`):
+
+- Kind 4 events and gift wraps that arrive are held in memory as they came off the relay (ciphertext; at most `MAX_HELD`, oldest dropped, since the relays send them again).
+- The read-state sync waits too: while DMs are on and locked it opens no gift wrap it has not classified (`sync-ingest.ts`), and it never opens one the store holds (that wrap is a DM, and it records the verdict).
+- `DmUnlock`, on every DM surface (the lists, a thread, the compose screen; the bell's DM alerts open one of these), calls `unlockDirectMessages()`. That is **one signer call**: `nip44Decrypt` of the wrapped key, or the first time on a device `nip44Encrypt` of a new one. An extension or bunker that asks shows one prompt; an nsec session, whose signer is in the page, shows none. Then the stored boxes are opened locally (no signer call per message) and put back in their threads, the held events go to their ingest, which skips every one the store holds, and new messages are opened and saved as they arrive. A refusal leaves the DMs locked (`failed`) with a retry; it is never answered with another prompt by itself.
+- A wrapped key that the signer opens into something that is not a key is treated as lost: the account's boxes are deleted and a new key is made (the messages come back from the relays).
+
+**What the store skips.** A wrap or kind 4 whose message is stored is never sent to the signer again. The store's index (its record keys) is the authority, not the localStorage ledger. A box that does not open (tampered, or under a lost key) is deleted, so its wire id is unknown again and the relay's copy is opened and saved afresh.
+
+**The bell.** A DM card (`obelisk-notifications:{myPubkey}`) is saved as wire id, sender and time; its `preview` is memory only (`partialize` drops it; saved-data version 2 erased the text older versions wrote). While locked, a card says "New direct message" with its sender. A kind 4 that arrives while locked raises such a card at once (its sender is on the wire); a gift wrap's sender is inside the encryption, so the held wraps the store does not hold and that are newer than the DM cursor are counted in one "N new direct messages" row that opens the DMs. On unlock each card gets its text from the decrypted message (`fillDmPreview`), without a second chime.
+
+**What stays in the clear on disk.** The wire ids (public relay event ids, already in the ledger) and so the number of stored messages; the DM card's sender and time while it is uncleared; the per-peer DM read cursors (the read-state cache), so who you DM with. Not the text, not the file keys, not the rumor.
+
+**What this protects against.** A copied browser profile, a backup, malware or a person that reads the disk without the user's signer: they find ciphertext and a key wrapped to the user's Nostr key. **What it does not.** Code running inside the page once DMs are open (it can read memory, or ask the signer as the app does); someone with the user's nsec or an unlocked signer; the relays' own copies, which are as before.
+
+**Lifecycle.** Logout deletes the account's key and boxes. Settings > Data on this device lists "Direct messages (encrypted)" as its own category with its size and a Remove (the bridge stops writing and drops the key, the database is deleted, the page reloads, and the DMs are fetched and decrypted from the relays again, one signer round trip per wrap as before). Remove everything deletes the database with the vault. Removing the login deletes only the vault: the logout it runs deletes the current account's DM store. Two accounts on one browser have separate keys and slots, and neither can open the other's boxes. Without IndexedDB (some private windows, storage off) unlocking needs no key, DMs work for the visit in memory only and nothing is written.
+
+**Consequence: DM calls.** An incoming DM call invite is a gift wrap too, so it does not ring until the DMs are opened in that tab.
+
+The only other persisted DM state is `obelisk-dm-store:{myPubkey}` (a localStorage key despite the name), holding the per-peer protocol overrides. Its `merge` explicitly discards `threads` / `messages` so a legacy PWA install that still has them on disk never merges them back into memory. Read cursors live in `obelisk-read-state:{myPubkey}` (see [docs/read-state.md](read-state.md)). Kind 4 and kind 1059 stay excluded from `bridgeCache` (see [docs/data-system.md §9](data-system.md)).
 
 `dmsByPeer` deliberately survives a relay switch: DMs follow the user, not the relay. It is cleared on logout and account switch.
 
 ## Notifications
 
-Incoming DMs push a card onto the DM notification stream (`useNotificationsStore.pushDmNotification`) unless the user is actively watching that thread (`isUserWatchingDM`). Relay-agnostic on purpose, because DMs are the cross-relay stream. Group mentions are a separate stream with a separate cursor.
+Incoming DMs push a card onto the DM notification stream (`useNotificationsStore.pushDmNotification`) unless the user is actively watching that thread (`isUserWatchingDM`). Relay-agnostic on purpose, because DMs are the cross-relay stream. Group mentions are a separate stream with a separate cursor. While the DMs are locked a card has no text (see Storage above).
 
 ## Operational notes
 
 - **Self-hosted instances** need no configuration. There is no DM-related env var, migration, or admin setting.
-- **Bunker users** get one signer round trip per send (the seal encrypt plus the seal signature) and one per inbound wrap. Bunker sessions cannot send post-quantum: NIP-46's `nip44_encrypt` request has no field for `recipientKemKey`, and `Nip46Signer` throws rather than silently downgrading.
+- **Bunker users** get one signer round trip per send (the seal encrypt plus the seal signature) and one per inbound wrap that is not already in the encrypted store, plus one per visit to open the store. Bunker sessions cannot send post-quantum: NIP-46's `nip44_encrypt` request has no field for `recipientKemKey`, and `Nip46Signer` throws rather than silently downgrading.
 - **nsec sessions** cannot send post-quantum either. Obelisk never sees a BIP-39 seed, so there is nothing to derive ML-KEM keys from, and `@nostr-wot/pq` rejects a 32-byte secp256k1 key as seed input because that derivation would be circular.
 
 ## Troubleshooting
 
 - **"Sent a message but they never got it."** Check whether the recipient has published a kind-10050. Without one the wrap falls to their NIP-65 read set, and without that to our own active relay, neither of which is guaranteed to overlap with what they actually read. They can fix it once, for everyone, with any modern client.
 - **"Older NIP-17 messages vanish after a reload, only new ones show."** That was the wrap ledger recording chat wraps as seen (fixed 2026-09-26, see Protocols). If it comes back, check what `hasSeenWrap` is being asked in `ingestGiftWrap` (`dm/inbox.ts`).
-- **"My own DMs are missing after a reload."** Nothing is cached, so the whole thread rebuilds from relays on every load and takes a moment. If an outgoing NIP-17 message never comes back, its self-copy did not land: check whether we have a published kind-10050 (`ensureDmInboxRelaysPublished`) and whether the relay accepted the second wrap. Messages sent before the self-copy shipped are gone from the sender's side for good; the recipient still has them.
+- **"My DMs are empty after a reload."** They are locked until a DM surface opens; if the signer was asked and said no (or did not answer), the list shows a retry. Settings > Data on this device > Direct messages (encrypted) > Remove starts the store over.
+- **"My own DMs are missing after a reload."** A message sent from this device is kept in the encrypted store when it settles. One sent from another device comes back only through its self-copy. If an outgoing NIP-17 message never comes back, its self-copy did not land: check whether we have a published kind-10050 (`ensureDmInboxRelaysPublished`) and whether the relay accepted the second wrap. Messages sent before the self-copy shipped are gone from the sender's side for good; the recipient still has them.
 - **"The post-quantum toggle is on but nothing is post-quantum."** Almost certainly `capabilityUnknown`: the extension does not advertise `nip44.schemes`. The settings status row says so explicitly.
 - **"Every old message shows a mark."** It should not: marks aggregate to transitions. If you see one per bubble, `threadMarks` is not being used.
 
@@ -253,6 +281,8 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - Original (superseded) DM design: [`docs/superpowers/specs/2026-04-26-direct-messages-design.md`](superpowers/specs/2026-04-26-direct-messages-design.md)
 
 ## Tests
+
+- `tests/services/nostr-bridge/dm/store.test.ts`, `store-lifecycle.test.ts`: the encrypted store end to end on the fake relay pool with a fake IndexedDB and a counting NIP-07 extension: no message text anywhere on disk after receiving, reading and sending; a reload shows nothing until the unlock, then everything with exactly one signer decrypt and no wrap re-sent to the signer; the bell without and with text; nsec with no extension call; a tampered box re-fetched; no IndexedDB; logout; Remove; two accounts; the ledger after a reload. `store-module.test.ts` (a refusal and the retry, the read-state wait, a lost key), `store-record.test.ts`, `tests/lib/crypto/record-cipher.test.ts`.
 
 - `tests/services/nostr-bridge/dm-nip17.test.ts`: NIP-17 default, inbox routing, forged-authorship rejection, all three login methods.
 - `tests/services/nostr-bridge/dm-pq-send.test.ts`: post-quantum send and receive, every negative case, the classic fallback.

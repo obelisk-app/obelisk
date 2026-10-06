@@ -167,6 +167,7 @@ export interface JsReaction {
 }
 
 export type { DmRawEvent, JsDirectMessage } from './dm/types';
+export type { DmLockState, DmLockStatus } from './dm/store';
 
 export type JsMediaKind = 'emoji' | 'gif' | 'sticker';
 

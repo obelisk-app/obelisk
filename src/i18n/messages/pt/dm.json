@@ -14,8 +14,8 @@
   "title": "Mensagens diretas",
   "newMessage": "Nova mensagem",
   "clearCache": "Limpar cache de DMs",
-  "clearCacheTitle": "Limpar cache de DMs (sem efeito nesta versão)",
-  "clearCacheAlert": "A limpeza do cache de DMs é só local; este cliente mantém os DMs apenas em memória. Recarregue para limpar.",
+  "clearCacheTitle": "Onde suas mensagens diretas ficam guardadas",
+  "clearCacheAlert": "As mensagens diretas que você abriu ficam guardadas neste dispositivo, criptografadas com uma chave que o seu assinador abre uma vez por visita. Para apagá-las, abra Configurações > Dados neste dispositivo.",
   "conversationOptions": "Opções da conversa",
   "viewProfile": "Ver perfil",
   "new": "Novo DM",
@@ -85,5 +85,10 @@
     "decrypted": "Conteúdo descriptografado",
     "keyWarning": "Contém a chave de descriptografia do arquivo: qualquer pessoa a quem você der este JSON pode abri-lo.",
     "unavailable": "Ainda não disponível para esta mensagem."
+  },
+  "lock": {
+    "unlocking": "Abrindo suas mensagens. Seu assinador pode pedir que você aprove.",
+    "failed": "Suas mensagens continuam trancadas: o assinador não as abriu.",
+    "retry": "Tentar de novo"
   }
 }

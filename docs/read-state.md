@@ -311,7 +311,12 @@ During the migration window it also runs the wrap path below.
 be narrowed (the wrap author is a throwaway key and `created_at` is fuzzed),
 so it delivers every wrap addressed to the user, overwhelmingly real NIP-17
 DMs, each costing two signer round-trips to open and discard. `wrap-ledger.ts`
-exists to remember those verdicts across reloads. For each event:
+exists to remember those verdicts across reloads. Before opening anything:
+a wrap the encrypted DM store holds is a DM and is skipped (and recorded),
+and while DMs are on and locked no unclassified wrap is opened at all: it
+waits for the DM unlock, so a page load never asks the signer on its own
+(see [direct-messages.md, Storage](direct-messages.md#storage-the-encrypted-dm-store)).
+For each event:
 
 1. `unwrapForSelf(wrap, signer)`: NIP-44 decrypt the wrap content to
    recover the seal (kind 13), verify `seal.pubkey === me`, NIP-44

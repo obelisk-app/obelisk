@@ -31,6 +31,14 @@ export interface Nip04Deps {
   ingestDM(params: IngestDmParams): void;
   /** Settle the optimistic placeholder (`dm/send.ts`). */
   settle: DmSettle;
+  /** While DMs are locked, keep the event unopened for the unlock (`dm/store.ts`). True when held. */
+  holdLocked(ev: NostrEvent): boolean;
+  /** The encrypted store already holds this event's message. */
+  isStored(wireId: string): boolean;
+  /** A message arrived while locked: alert with the sender, no text (`dm/thread.ts`). */
+  alertLocked(ev: NostrEvent): void;
+  /** Keep our own sent message in the encrypted store, so its echo is not decrypted again. */
+  rememberOwn(params: IngestDmParams): void;
 }
 
 export class Nip04Module {
@@ -63,6 +71,17 @@ export class Nip04Module {
         { id: event.id, createdAt: event.created_at, protocol: 'nip04', pq: false, raw: { wire: event } },
         content,
       );
+      this.deps.rememberOwn({
+        id: event.id,
+        createdAt: event.created_at,
+        plaintext: content,
+        outgoing: true,
+        counterparty: recipientPubkey,
+        protocol: 'nip04',
+        pq: false,
+        notifyId: event.id,
+        raw: { wire: event },
+      });
     } catch {
       this.deps.settle.markFailed(recipientPubkey, clientTag);
     }
@@ -78,6 +97,13 @@ export class Nip04Module {
     if ((!isOutgoing && recipient !== me) || (isOutgoing && !recipient)) return;
     const counterparty = isOutgoing ? (recipient ?? '') : ev.pubkey;
     if (!counterparty) return;
+    // Locked: not opened until the person asks for their DMs. The sender is
+    // on the wire, so a new incoming one still raises a card, without text.
+    if (this.deps.holdLocked(ev)) {
+      if (!isOutgoing && !this.deps.isStored(ev.id)) this.deps.alertLocked(ev);
+      return;
+    }
+    if (this.deps.isStored(ev.id)) return;
     let plaintext: string;
     try {
       // Background lane: nobody is waiting on an inbound DM the way they wait

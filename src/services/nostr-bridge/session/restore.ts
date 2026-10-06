@@ -9,6 +9,7 @@ import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/sto
 import { ensureChannelPrefsStoreForAccount } from '@/store/channel-prefs';
 import { DEFAULT_RELAY, isImportableRelayUrl, normalizeConfiguredRelayUrl } from '../relay-list';
 import { LEGACY_STORAGE_KEY, STORAGE_KEY, readMigrated } from '../session-storage';
+import { resetWrapLedger } from '../wrap-ledger';
 import type { LifecycleTargets } from './lifecycle';
 import type { LoginDeps } from './login';
 import type { SessionPersistence } from './persistence';
@@ -49,6 +50,12 @@ export async function restoreSession(t: LifecycleTargets, deps: RestoreDeps): Pr
     ensureNotificationsStoreForAccount(parsed.pubKeyHex);
     ensureChannelPrefsStoreForAccount(parsed.pubKeyHex);
     useNotificationsStore.getState().registerRelay(parsed.relayUrl);
+    // The other two steps finalizeLogin takes before connect(): the seen-wrap
+    // ledger and the encrypted DM store, pointed at this account. The reload
+    // path used to skip the ledger, so after a reload it remembered nothing
+    // and every gift wrap was opened again.
+    resetWrapLedger(parsed.pubKeyHex);
+    t.dmStore.attach(parsed.pubKeyHex);
     // Seed the stores from localStorage so the sidebar paints last-known
     // state instantly while the live REQs catch up. Stale-while-revalidate:
     // arriving relay events overwrite via each module's newest-wins ingest.

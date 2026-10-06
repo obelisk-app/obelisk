@@ -362,6 +362,7 @@
       "channels": "Se borran de este dispositivo los canales y mensajes en caché y la página se recarga. Todo vuelve a cargar desde los relays; nada de lo que publicaste se toca.",
       "profiles": "Se borran los nombres y fotos guardados y la página se recarga. Vuelven a cargar desde los relays.",
       "readState": "Se borran las posiciones de lectura, los no leídos y los avisos de este dispositivo y la página se recarga. Las posiciones sincronizadas en tus relays vuelven; los avisos no.",
+      "dmMessages": "Se borra de este dispositivo la copia cifrada de tus mensajes directos y la página se recarga. Tus mensajes se vuelven a descargar de los relays, y tu firmante te va a pedir descifrar cada uno.",
       "dms": "Se olvida el cifrado que elegiste para cada persona y la página se recarga. Tus mensajes no se tocan.",
       "preferences": "Tus ajustes, el diseño y los recientes vuelven a los valores por defecto y la página se recarga.",
       "personal": "Los silenciados, bloqueados, elecciones de notificación por canal y stickers guardados en este dispositivo se borran para siempre y la página se recarga. No están guardados en ningún otro lado.",

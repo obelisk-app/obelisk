@@ -54,11 +54,15 @@
       },
       "readState": {
         "title": "Posiciones de lectura, no leídos y avisos",
-        "purpose": "Dónde dejaste de leer, qué está sin leer, y tus avisos de menciones y mensajes, cada uno con una vista previa corta. Las posiciones de lectura también se sincronizan, cifradas, a través de tus relays, así que normalmente vuelven."
+        "purpose": "Dónde dejaste de leer, qué está sin leer, y tus avisos de menciones y mensajes. Un aviso de mención guarda una vista previa corta; un aviso de mensaje directo guarda solo quién lo mandó y cuándo. Las posiciones de lectura también se sincronizan, cifradas, a través de tus relays, así que normalmente vuelven."
+      },
+      "dmMessages": {
+        "title": "Mensajes directos (cifrados)",
+        "purpose": "Los mensajes directos que ya abriste, para no descargarlos y descifrarlos uno por uno en cada visita. Van cifrados con una clave propia, y esa clave está cerrada con tu clave de Nostr: tu extensión, tu app firmante o la clave que pegaste la abre una vez por visita, cuando abrís tus mensajes. Borrarlos solo borra esta copia: los mensajes se vuelven a descargar y descifrar desde los relays."
       },
       "dms": {
         "title": "Ajustes de mensajes directos",
-        "purpose": "Qué cifrado usar con cada persona. Los mensajes en sí no se guardan acá: se descargan y se descifran de nuevo cada vez."
+        "purpose": "Qué cifrado usar con cada persona. Los mensajes en sí están en Mensajes directos (cifrados)."
       },
       "preferences": {
         "title": "Preferencias y diseño",
@@ -95,7 +99,7 @@
     },
     "other": {
       "title": "Otras formas de borrarlo",
-      "logout": "Cerrá sesión. Tu login, la conexión de billetera y la caché de canales y mensajes se borran de este dispositivo. Las preferencias, las posiciones de lectura y los silenciados quedan, listos para cuando vuelvas.",
+      "logout": "Cerrá sesión. Tu login, la conexión de billetera, tus mensajes directos cifrados y la caché de canales y mensajes se borran de este dispositivo. Las preferencias, las posiciones de lectura y los silenciados quedan, listos para cuando vuelvas.",
       "browser": "Borrá los datos del sitio obelisk.ar en tu navegador. Elimina todo lo de esta página de una vez, login incluido:",
       "chrome": "Chrome: Configuración > Privacidad y seguridad > Configuración de sitios > Ver los permisos y datos almacenados en sitios. Buscá obelisk.ar y borrá sus datos.",
       "firefox": "Firefox: hacé clic en el candado de la barra de direcciones y después en Limpiar cookies y datos del sitio.",

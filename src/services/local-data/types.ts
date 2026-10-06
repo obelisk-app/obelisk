@@ -12,6 +12,7 @@ export type LocalDataCategoryId =
   | 'channels'
   | 'profiles'
   | 'readState'
+  | 'dmMessages'
   | 'dms'
   | 'preferences'
   | 'personal'

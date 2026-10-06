@@ -26,6 +26,7 @@ export function browserRemovalEnv(): RemovalEnv {
     logout: () => nostrActions.logout(),
     disconnectWallet: () => disconnectNwcWallet(),
     forgetAnalytics: () => forgetAnalyticsConsent(),
+    forgetDirectMessages: () => nostrActions.forgetDirectMessages(),
     reload: () => window.location.reload(),
     relocate: () => {
       const { pathname, search, hash } = window.location;

@@ -26,6 +26,7 @@ import type {
   Unsubscribe,
 } from './types';
 import type { ActiveCallInfo } from './voice-presence';
+import type { DmLockState } from './dm/store';
 
 export abstract class BridgeReads {
   protected abstract readonly m: BridgeModules;
@@ -53,6 +54,7 @@ export abstract class BridgeReads {
   get reactionsByGroup(): StateStore<Record<string, Record<string, JsReaction[]>>> { return this.m.reactions.reactionsByGroup; }
   get myMutes(): StateStore<string[]> { return this.m.lists.myMutes; }
   get dmsByPeer(): StateStore<Record<string, JsDirectMessage[]>> { return this.m.dmsByPeer; }
+  get dmLock(): StateStore<DmLockState> { return this.m.dm.dmStore.lock; }
   get userMetadata(): StateStore<Record<string, JsUserMetadata>> { return this.m.profiles.userMetadata; }
   get myContactList(): StateStore<NostrEvent | null> { return this.m.lists.myContactList; }
   get myContactListReady(): StateStore<boolean> { return this.m.lists.myContactListReady; }
@@ -173,6 +175,11 @@ export abstract class BridgeReads {
     this.m.dm.dmInbox.wanted = true;
     if (!this.m.dm.dmInbox.subscribed) this.m.dm.dmInbox.subscribe();
     return this.dmsByPeer.subscribe(cb);
+  }
+
+  /** Whether the DMs are open this page session, and the gift wraps waiting while they are not. */
+  subscribeDmLock(cb: (state: DmLockState) => void): Unsubscribe {
+    return this.dmLock.subscribe(cb);
   }
 
   subscribeMyContactList(cb: (event: NostrEvent | null) => void): Unsubscribe {

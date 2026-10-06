@@ -34,6 +34,9 @@ const bridgeFake = {
     publishEvent: publishMock,
     publishSignedEvent: publishSignedMock,
     getNipSigner: getNipSignerMock,
+    // The encrypted DM store holds nothing and DMs are open: every wrap is read here.
+    isStoredDmWrap: () => false,
+    deferUntilDmsUnlocked: () => false,
   } as unknown as BridgeImpl;
 beforeEach(() => registerBridge(bridgeFake));
 afterEach(() => unregisterBridge());
@@ -184,6 +187,57 @@ describe('startGroupsRelaySync ingest', () => {
     expect(cursors['g1']).toBe(5000);
     expect(cursors['g2']).toBe(10_000);
     expect(cursors['g3']).toBeUndefined();
+  });
+
+  it('leaves a wrap unopened while DMs are locked, and opens it once they are', async () => {
+    let onEvent: ((ev: NostrEvent) => void) | null = null;
+    subscribeMock.mockImplementation((_f, cb) => { onEvent = cb; return () => {}; });
+    const waiting: Array<() => void> = [];
+    const fake = bridgeFake as unknown as { deferUntilDmsUnlocked: (fn: () => void) => boolean };
+    const real = fake.deferUntilDmsUnlocked;
+    fake.deferUntilDmsUnlocked = (fn) => { waiting.push(fn); return true; };
+    try {
+      const decrypt = vi.spyOn(signer, 'nip44Decrypt');
+      activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
+      const wrap = await wrapForSelf({
+        kind: 30078,
+        tags: [['d', D_TAG_GROUPS]],
+        content: JSON.stringify({ v: 1, groups: { g1: { lastReadAt: 7000 } } }),
+        created_at: Math.floor(Date.now() / 1000),
+      }, signer);
+      decrypt.mockClear();
+      onEvent!(wrap);
+      await vi.runOnlyPendingTimersAsync();
+      expect(decrypt).not.toHaveBeenCalled();
+      expect(useReadStateStore.getState().groupCursors.g1).toBeUndefined();
+
+      waiting.forEach((fn) => fn());
+      await vi.runOnlyPendingTimersAsync();
+      await Promise.resolve();
+      expect(decrypt).toHaveBeenCalled();
+      expect(useReadStateStore.getState().groupCursors.g1).toBe(7000);
+    } finally {
+      fake.deferUntilDmsUnlocked = real;
+    }
+  });
+
+  it('never opens a wrap the encrypted DM store holds', async () => {
+    let onEvent: ((ev: NostrEvent) => void) | null = null;
+    subscribeMock.mockImplementation((_f, cb) => { onEvent = cb; return () => {}; });
+    const fake = bridgeFake as unknown as { isStoredDmWrap: (id: string) => boolean };
+    const real = fake.isStoredDmWrap;
+    fake.isStoredDmWrap = () => true;
+    try {
+      const decrypt = vi.spyOn(signer, 'nip44Decrypt');
+      activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
+      const wrap = await wrapForSelf({ kind: 14, tags: [], content: 'a DM', created_at: 1 }, signer);
+      decrypt.mockClear();
+      onEvent!(wrap);
+      await vi.runOnlyPendingTimersAsync();
+      expect(decrypt).not.toHaveBeenCalled();
+    } finally {
+      fake.isStoredDmWrap = real;
+    }
   });
 
   /** Route each captured subscription by the kind it asked for. */

@@ -72,10 +72,16 @@ export interface MentionNotification {
 }
 
 export interface DmNotification {
-  /** The kind-4 event id, also the dedupe key. */
+  /** The wire event's id (the kind 4's, or the gift wrap's), also the dedupe key. */
   readonly id: string;
   readonly senderPubkey: string;
-  readonly preview: string;
+  /**
+   * The start of the message, in memory only: never persisted (the saved
+   * card is id, sender and time). Absent while DMs are locked, which the
+   * bell shows as "New direct message"; filled from the decrypted message
+   * once they are opened (`fillDmPreview`).
+   */
+  readonly preview?: string;
   /** Unix **milliseconds**. */
   readonly createdAt: number;
 }
@@ -112,6 +118,8 @@ interface NotificationsActions {
   pushMention: (n: MentionNotification) => boolean;
   /** Append a DM card. Drops anything at/older than the DM cursor. Returns `true` when added. */
   pushDmNotification: (n: DmNotification) => boolean;
+  /** Give card `id` its preview once the message is decrypted. Returns `true` when the card exists. */
+  fillDmPreview: (id: string, preview: string) => boolean;
   /** The user actually saw mention `id` on `relay`. */
   markMentionSeen: (relay: string, id: string) => void;
   /** Channel right-click → "Mark as read": every card for that channel. */
@@ -179,6 +187,16 @@ export const useNotificationsStore = create<NotificationsStore>()(
         return next.some((d) => d.id === n.id);
       },
 
+      fillDmPreview: (id, preview) => {
+        const cards = get().dmNotifications;
+        const card = cards.find((d) => d.id === id);
+        if (!card) return false;
+        if (card.preview !== preview) {
+          set({ dmNotifications: cards.map((d) => (d.id === id ? { ...d, preview } : d)) });
+        }
+        return true;
+      },
+
       markMentionSeen: (relay, id) => set((state) => {
         const list = state.mentionsByRelay[relay];
         if (!list?.some((m) => m.id === id && !m.seen)) return state;
@@ -234,7 +252,9 @@ export const useNotificationsStore = create<NotificationsStore>()(
       partialize: (state): NotificationsPersisted => ({
         mentionsByRelay: state.mentionsByRelay,
         mentionCursorByRelay: state.mentionCursorByRelay,
-        dmNotifications: state.dmNotifications,
+        // A DM card is saved without its preview: DM text is only ever on
+        // disk inside the encrypted DM store (docs/direct-messages.md).
+        dmNotifications: state.dmNotifications.map(({ id, senderPubkey, createdAt }) => ({ id, senderPubkey, createdAt })),
       }),
       ...versionedPersist<NotificationsStore, NotificationsPersisted>({
         version: NOTIFICATIONS_STORE_VERSION,

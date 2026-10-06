@@ -86,6 +86,11 @@ export function memoizeDecrypt(
   return promise;
 }
 
+/** Drop one memoized result: a decrypt whose plaintext must not linger (the DM store's key). */
+export function forgetDecrypt(scheme: 'nip04' | 'nip44', peer: string, ciphertext: string): void {
+  entries.delete(`${scheme}:${peer}:${ciphertext}`);
+}
+
 /**
  * Drop every memoized plaintext. Called on logout / session change: these
  * entries are decrypted message content belonging to the outgoing identity.

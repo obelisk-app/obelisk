@@ -18,6 +18,7 @@ import BackButton from '../BackButton';
 import RemoteImage from '@/components/ui/RemoteImage';
 import { DmProtocolNotice, DmProtocolSwitch } from '../../dm-protocol/DmProtocolSwitch';
 import { useDmProtocolChoice } from '@/hooks/app/dm-protocol/useDmProtocolChoice';
+import { DmUnlock } from '@/components/chat/DmUnlock';
 
 /**
  * Phone skin of a DM conversation. Order, dividers, post-quantum marks,
@@ -68,6 +69,7 @@ export function DmThreadScreen({
       <div className="dm-protocol-bar">
         <DmProtocolSwitch choice={protocolChoice} />
       </div>
+      <DmUnlock />
       <DmProtocolNotice choice={protocolChoice} className="px-3.5" />
 
       <div className="dm-messages native-scroll-y" ref={scrollRef}>

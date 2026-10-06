@@ -54,11 +54,15 @@
       },
       "readState": {
         "title": "Read positions, unread counts and alerts",
-        "purpose": "Where you stopped reading, what is unread, and your mention and message alerts, with a short preview of each. Read positions are also synced, encrypted, through your relays, so they usually come back."
+        "purpose": "Where you stopped reading, what is unread, and your mention and message alerts. A mention alert keeps a short preview; a direct message alert keeps only who sent it and when. Read positions are also synced, encrypted, through your relays, so they usually come back."
+      },
+      "dmMessages": {
+        "title": "Direct messages (encrypted)",
+        "purpose": "The direct messages you have opened, so they are not downloaded and decrypted one by one on every visit. They are encrypted with a key of their own, and that key is locked with your Nostr key: your extension, signer app or pasted key opens it once per visit, when you open your messages. Removing them only removes this copy: the messages are downloaded and decrypted from the relays again."
       },
       "dms": {
         "title": "Direct message settings",
-        "purpose": "Which encryption to use with each person. The messages themselves are not kept here: they are downloaded and decrypted again each time."
+        "purpose": "Which encryption to use with each person. The messages themselves are under Direct messages (encrypted)."
       },
       "preferences": {
         "title": "Preferences and layout",
@@ -95,7 +99,7 @@
     },
     "other": {
       "title": "Other ways to remove it",
-      "logout": "Log out. Your login, the wallet connection and the cached channels and messages are removed from this device. Preferences, read positions and mutes stay, ready for when you come back.",
+      "logout": "Log out. Your login, the wallet connection, your encrypted direct messages and the cached channels and messages are removed from this device. Preferences, read positions and mutes stay, ready for when you come back.",
       "browser": "Clear the site data for obelisk.ar in your browser. It deletes everything on this page at once, the login included:",
       "chrome": "Chrome: Settings > Privacy and security > Site settings > View permissions and data stored across sites. Search for obelisk.ar and delete its data.",
       "firefox": "Firefox: click the padlock in the address bar, then Clear cookies and site data.",

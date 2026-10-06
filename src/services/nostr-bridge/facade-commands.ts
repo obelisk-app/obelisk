@@ -75,6 +75,24 @@ export abstract class BridgeCommands extends BridgeReads {
     return this.m.reactions.removeReaction(groupId, reactionEventId);
   }
 
+  // -- The encrypted DM store: `dm/store.ts`.
+  /** Open the DMs: one signer call for the key, then the stored messages. Idempotent. */
+  unlockDirectMessages(): Promise<void> {
+    return this.m.dm.dmStore.unlock();
+  }
+  /** Settings is about to delete the store: stop writing and drop the key. */
+  forgetDirectMessages(): Promise<void> {
+    return this.m.dm.dmStore.forget();
+  }
+  /** The encrypted store holds this gift wrap's message: it is a DM, not read state. */
+  isStoredDmWrap(wireId: string): boolean {
+    return this.m.dm.dmStore.knows(wireId);
+  }
+  /** While DMs are on and locked, run `fn` once they are opened. True when deferred. */
+  deferUntilDmsUnlocked(fn: () => void): boolean {
+    return this.m.dm.dmStore.defer(fn);
+  }
+
   sendDirectMessage(recipientPubkey: string, content: string, extraTags: string[][] = []): Promise<void> {
     return this.m.dm.dmSend.sendDirectMessage(recipientPubkey, content, extraTags);
   }

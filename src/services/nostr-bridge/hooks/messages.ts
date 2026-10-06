@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePreferences } from '@/hooks/usePreferences';
-import type { JsDirectMessage, JsMessage, JsReaction, JsUserMetadata, LoadMoreMessagesResult, MessagesStatus } from '../types';
+import type { DmLockState, JsDirectMessage, JsMessage, JsReaction, JsUserMetadata, LoadMoreMessagesResult, MessagesStatus } from '../types';
 import { useBridge } from './provider';
 import { useSubscription } from './subscription';
 
@@ -129,4 +129,15 @@ export function useDirectMessages(): Readonly<Record<string, ReadonlyArray<JsDir
     NO_DMS,
     [dmEnabled],
   );
+}
+
+const DM_LOCKED: DmLockState = Object.freeze({ status: 'locked', unopened: Object.freeze([]) as ReadonlyArray<number> });
+
+/**
+ * Whether the DMs are open this page session (`locked` until a DM surface
+ * asks, then `unlocking`, `unlocked`, or `failed` when the signer said no),
+ * and the gift wraps waiting unopened while they are not.
+ */
+export function useDmLock(): DmLockState {
+  return useSubscription<DmLockState>((b, cb) => b.subscribeDmLock(cb), DM_LOCKED);
 }

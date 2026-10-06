@@ -14,6 +14,7 @@ import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { avatarStyle } from '../avatar';
 import { useScreenScrollMemo } from '@/hooks/app/mobile/useScreenScrollMemo';
 import RemoteImage from '@/components/ui/RemoteImage';
+import { DmUnlock } from '@/components/chat/DmUnlock';
 
 export function MobileDmOptInScreen({
   onSecondary,
@@ -97,6 +98,7 @@ export function DmsListScreen({
           </button>
         </div>
       </div>
+      <DmUnlock />
 
       <div className="dms-tabs native-scroll-x">
         <button className={`filter-tab ${tab === 'follows' ? 'active' : ''}`} onClick={() => setTab('follows')}>

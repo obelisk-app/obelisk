@@ -108,6 +108,7 @@ async function loginWatching(me: ReturnType<typeof makeKeypair>, peer: string) {
   const alert = await import('@/services/notifications/alert');
   const bridge = await getBridge();
   await bridge.loginWithNsec(me.skHex, me.pkHex);
+  await bridge.unlockDirectMessages();
   setPreference('directMessagesEnabled', true);
   const announce = vi.spyOn(alert, 'announceIncoming');
   const view = { thread: [] as Thread, peers: [] as string[] };

@@ -38,11 +38,12 @@
  * `subscribeAndIngest` re-seeds from on mount. Skipping the wrap does not
  * skip its outcome.
  *
- * **DM messages are the exception, and are never recorded.** Decrypted DMs
- * are deliberately kept in memory only (docs/direct-messages.md, "no DM
- * plaintext on disk"), so their wrap *is* the only way back to them after a
- * reload. The old `dm` scope recorded chat wraps as seen and so hid every
- * already-opened NIP-17 message after a page reload: only new ones showed.
+ * **DM messages are the exception, and are never recorded here.** The
+ * encrypted DM store (`dm/store.ts`) keeps them and its own index of which
+ * wraps it holds, so removing the ledger or the store can never hide a
+ * message behind a "seen" mark the other no longer backs. The old `dm`
+ * scope recorded chat wraps as seen while the messages lived in memory only,
+ * and so hid every already-opened NIP-17 message after a page reload.
  * `dm:inert` records only wraps with nothing to show; stored masks still
  * carry the old `dm` bit (1), which nothing reads any more.
  *

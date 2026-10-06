@@ -17,6 +17,7 @@ import type { PublishSignedOpts } from '../publish';
 import { pushRelayDebug } from '../relay-debug';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { DmSend, DmSettle } from './send';
+import type { IngestDmParams } from './thread';
 
 export type Nip17Context = Pick<BridgeContext, 'session'>;
 
@@ -29,6 +30,8 @@ export interface Nip17Deps {
   ownInbox(): string[];
   /** Settle the optimistic placeholder (`dm/send.ts`). */
   settle: DmSettle;
+  /** Keep our own sent message in the encrypted store, keyed by the wrap that will come back to us. */
+  rememberOwn(params: IngestDmParams): void;
 }
 
 export class Nip17SendModule {
@@ -114,6 +117,7 @@ export class Nip17SendModule {
       // sender on the socket carrying an ephemeral-keyed wrap. See
       // `PublishModule.publishSignedEvent`.
       await this.deps.publishSignedEvent(wrap, inboxRelays, { authMode: 'last-resort' });
+      const raw = { rumor: { ...inner, id: rumorId }, wire: wrap };
       this.deps.settle.replacePending(
         recipientPubkey,
         clientTag,
@@ -128,13 +132,21 @@ export class Nip17SendModule {
         // NIP-17 fuzzes both the seal's and the wrap's timestamps up to 2
         // days into the past for privacy, so the wrap's own timestamp would
         // make the just-sent message appear to have been sent days ago.
-        { id: rumorId, createdAt, protocol: 'nip17', pq, file, tags: extraTags, raw: { rumor: { ...inner, id: rumorId }, wire: wrap } },
+        { id: rumorId, createdAt, protocol: 'nip17', pq, file, tags: extraTags, raw },
         content,
       );
+      // Kept encrypted under the self-copy's wrap id, the one that comes
+      // back to us, so its echo is not decrypted again; under the
+      // recipient's wrap id when there is no self-copy.
+      const own = (wireId: string) => this.deps.rememberOwn({
+        id: rumorId, createdAt, plaintext: content, outgoing: true, counterparty: recipientPubkey,
+        protocol: 'nip17', pq, notifyId: wireId, ...(file ? { file } : {}), tags: extraTags, raw,
+      });
       // Second wrap, addressed to us. Deliberately after the recipient's
       // copy has been published and the thread settled: this is history
       // durability, not delivery, and it must never gate the send.
-      await this.publishSelfCopy(me, inner, pq ? pqPlan?.selfKemKey ?? null : null, inboxRelays);
+      const selfCopyId = await this.publishSelfCopy(me, inner, pq ? pqPlan?.selfKemKey ?? null : null, inboxRelays, own);
+      if (!selfCopyId) own(wrap.id);
     } catch {
       this.deps.settle.markFailed(recipientPubkey, clientTag);
     }
@@ -185,10 +197,14 @@ export class Nip17SendModule {
     inner: UnsignedEvent,
     selfKemKey: string | null,
     recipientCopyRelays: readonly string[] = [],
-  ): Promise<void> {
+    onSealed: (wrapId: string) => void = () => undefined,
+  ): Promise<string | null> {
+    // The wrap id handed to `onSealed`: the message is kept under it even
+    // when the publish then fails, so the caller need not keep it again.
+    let sealed: string | null = null;
     try {
       const signer = this.deps.dmSigner();
-      if (!signer) return;
+      if (!signer) return null;
       let wrap: NostrEvent;
       if (selfKemKey) {
         try {
@@ -233,16 +249,21 @@ export class Nip17SendModule {
           reason: 'own inbox is a subset of the recipient copy targets', // i18n-exempt: relay debug panel text
         });
       }
+      // Before the publish, so the echo finds the message already kept.
+      sealed = wrap.id;
+      onSealed(wrap.id);
       // `quiet`: the user already saw one "Publishing" entry for this
       // message, and a second one for a copy addressed to themselves reads
       // as the message being sent twice.
       await this.deps.publishSignedEvent(wrap, targets, { quiet: true, authMode: 'last-resort' });
+      return sealed;
     } catch (e) {
       pushRelayDebug({
         kind: 'dm-self-copy-failed',
         eventKind: KIND_GIFT_WRAP,
         reason: e instanceof Error ? e.message : String(e),
       });
+      return sealed;
     }
   }
 }

@@ -3,7 +3,7 @@
  * subscribe on each relay and merge newer state into the store through the
  * scope's `apply`. See `relay-sync.ts` for the two scopes and transports.
  */
-import type { Filter } from 'nostr-tools';
+import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridgeImpl, hasSeenWrap, markWrapSeen, cacheGet, cacheSet } from '@/services/nostr-bridge';
 import { unwrapForSelf } from '@/lib/nip-59';
 import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/utils/nip-kinds';
@@ -47,6 +47,8 @@ export function subscribeAndIngest<T>(
   }
 
   const unsubFns: Array<() => void> = [];
+  /** Cleaned up: an open waiting for the DM unlock is dropped. */
+  let stopped = false;
 
   // Replaceable transport: ask for exactly our own event. One event back, one
   // decrypt. The gift-wrap path below can only filter on `#p`, so it receives
@@ -81,12 +83,10 @@ export function subscribeAndIngest<T>(
 
   const filter: Filter = { kinds: [KIND_GIFT_WRAP], '#p': [signer.pubkey] };
   for (const relay of opts.relays) {
-    const unsub = impl.subscribeFilterWatched(filter, async (ev) => {
-      // The `#p`-only filter delivers every gift wrap addressed to us,
-      // overwhelmingly NIP-17 DMs, which this scope opens (two signer
-      // round-trips) only to discard on the `kind`/`d` checks below. Skip the
-      // ones a previous session already classified.
+    const open = async (ev: NostrEvent): Promise<void> => {
+      // Checked again after a wait: the DM unlock may have stored it meanwhile.
       if (hasSeenWrap(opts.ledgerScope, ev.id)) return;
+      if (impl.isStoredDmWrap(ev.id)) { markWrapSeen(opts.ledgerScope, ev.id); return; }
       const rumor = await unwrapForSelf(ev, signer);
       if (!rumor) return;
       // Marked before the filters, not after: "not my scope's rumor" is a
@@ -101,8 +101,25 @@ export function subscribeAndIngest<T>(
       apply(payload, rumor.created_at);
       newestApplied = rumor.created_at;
       cacheSet(relay, cacheKind, opts.dTag, { payload, createdAt: rumor.created_at });
+    };
+    const unsub = impl.subscribeFilterWatched(filter, (ev) => {
+      // The `#p`-only filter delivers every gift wrap addressed to us,
+      // overwhelmingly NIP-17 DMs, which this scope opens (two signer
+      // round-trips) only to discard on the `kind`/`d` checks below. Skip the
+      // ones a previous session already classified, and the ones the
+      // encrypted DM store holds: those are DMs, not read state.
+      if (hasSeenWrap(opts.ledgerScope, ev.id)) return;
+      if (impl.isStoredDmWrap(ev.id)) { markWrapSeen(opts.ledgerScope, ev.id); return; }
+      // While DMs are on and locked, opening a wrap would ask the signer
+      // before the person asked for anything, and would decrypt their own
+      // sent DMs (self-copies are self-authored too). Wait for the unlock.
+      if (impl.deferUntilDmsUnlocked(() => { if (!stopped) void open(ev); })) return;
+      void open(ev);
     }, { relays: [relay], watchdogMs: READ_STATE_WATCHDOG_MS });
     unsubFns.push(unsub);
   }
-  return () => unsubFns.forEach((fn) => fn());
+  return () => {
+    stopped = true;
+    unsubFns.forEach((fn) => fn());
+  };
 }

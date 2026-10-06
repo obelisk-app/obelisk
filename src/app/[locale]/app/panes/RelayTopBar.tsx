@@ -25,7 +25,8 @@ export function RelayTopBar({
   relay: string;
   onOpenSidebar?: () => void;
   onJumpToChannel?: (channelId: string) => void;
-  onJumpToDm?: (peer: string) => void;
+  /** Open the DMs on `peer`'s thread, or on the list (`null`). */
+  onJumpToDm?: (peer: string | null) => void;
   /** True on the feed, the only surface that reads the social relay tier. */
   onSocialSurface?: boolean;
 }) {
@@ -57,6 +58,10 @@ export function RelayTopBar({
   };
   const handleDmClick = (d: DmNotification) => {
     onJumpToDm?.(d.senderPubkey);
+    setNotifOpen(false);
+  };
+  const handleOpenDms = () => {
+    onJumpToDm?.(null);
     setNotifOpen(false);
   };
 
@@ -130,7 +135,7 @@ export function RelayTopBar({
           </svg>
         </Button>
       </div>
-      {notifOpen && <InboxPopover inbox={inbox} onMentionClick={handleMentionClick} onDmClick={handleDmClick} />}
+      {notifOpen && <InboxPopover inbox={inbox} onMentionClick={handleMentionClick} onDmClick={handleDmClick} onOpenDms={handleOpenDms} />}
       {helpOpen && <HelpPopover onClose={() => setHelpOpen(false)} />}
       {/*
         The relay's own page, which is where "who runs this and what are its

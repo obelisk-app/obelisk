@@ -54,6 +54,7 @@ export {
   useUserMetadata,
   useReactions,
   useDirectMessages,
+  useDmLock,
 } from './hooks/messages';
 export {
   useMembershipReady,
@@ -78,6 +79,8 @@ export type {
   JsReaction,
   JsDirectMessage,
   DmRawEvent,
+  DmLockState,
+  DmLockStatus,
   JsMediaFavorites,
   JsMediaItem,
   JsMediaKind,

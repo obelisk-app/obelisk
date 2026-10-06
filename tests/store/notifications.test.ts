@@ -366,11 +366,41 @@ describe('notifications saved-data migrations', () => {
     expect(persisted()).toEqual({
       mentionsByRelay: { [RELAY_A]: [{ ...oldCard, reason: 'mention' }, reply] },
       mentionCursorByRelay: { [RELAY_A]: 500 },
-      dmNotifications: [dm],
+      // The DM text an old version saved does not come back (version 1 -> 2).
+      dmNotifications: [{ id: 'd', senderPubkey: 'pk', createdAt: 9 }],
     });
     const saved = readBlob(key(pk));
     expect(saved?.version).toBe(NOTIFICATIONS_STORE_VERSION);
     expect(saved?.state.mentionsByRelay).toEqual({ [RELAY_A]: [{ ...oldCard, reason: 'mention' }, reply] });
+  });
+
+  it('a version 1 DM card loses the message text it carried, in memory and on disk', () => {
+    const pk = freshPubkey();
+    const secret = 'meet me at the usual place';
+    seedBlob(key(pk), {
+      mentionsByRelay: {},
+      mentionCursorByRelay: {},
+      dmNotifications: [{ id: 'd1', senderPubkey: 'pk', preview: secret, createdAt: 9 }],
+    }, 1);
+
+    ensureNotificationsStoreForAccount(pk);
+
+    expect(useNotificationsStore.getState().dmNotifications).toEqual([{ id: 'd1', senderPubkey: 'pk', createdAt: 9 }]);
+    // Rewritten at once, not on the next change.
+    expect(window.localStorage.getItem(key(pk))).not.toContain(secret);
+    expect(readBlob(key(pk))?.version).toBe(NOTIFICATIONS_STORE_VERSION);
+  });
+
+  it('keeps a DM preview in memory and never writes it', () => {
+    const pk = freshPubkey();
+    ensureNotificationsStoreForAccount(pk);
+    const store = useNotificationsStore.getState();
+    store.pushDmNotification({ id: 'live', senderPubkey: 'pk', preview: 'the plaintext', createdAt: Date.now() + 1_000 });
+    expect(useNotificationsStore.getState().dmNotifications[0].preview).toBe('the plaintext');
+    expect(window.localStorage.getItem(key(pk))).not.toContain('the plaintext');
+    expect(store.fillDmPreview('live', 'again')).toBe(true);
+    expect(store.fillDmPreview('absent', 'x')).toBe(false);
+    expect(window.localStorage.getItem(key(pk))).not.toContain('again');
   });
 
   it('drops a broken card without losing the rest of the log', () => {

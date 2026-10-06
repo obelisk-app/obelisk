@@ -129,7 +129,7 @@ Three login methods, four entry points on the bridge (`session/login.ts`, `sessi
 
 The page-reload path (`session/restore.ts`) repeats these steps rather than calling `finalizeLogin`, so a step added to one must be added to the other. `isLoggedIn` is the contract for "the chat UI may mount". Do not add an auth store or a backend session.
 
-No secret is stored in the clear. `src/lib/crypto/session-vault.ts` holds one non-extractable AES-GCM key in IndexedDB (`obelisk-vault`); the nsec, bunker URL and bunker client key are sealed with it before the record is written to `obelisk-dex/session` (`session/persistence.ts`), and a pre-vault plaintext record is migrated on load. When the browser cannot keep a key the login stays in memory and `useSessionNotice` says it will not be remembered. A connected NWC wallet is sealed the same way under a second key (`wallet-key`), so the rotation every login does never touches it; with no IndexedDB it too lasts for the visit only, and Settings says so. The SDK login widget runs on memory-only storage (`src/services/login/signer-storage.ts`). Details: [docs/data-system.md](docs/data-system.md).
+No secret is stored in the clear. `src/lib/crypto/session-vault.ts` holds one non-extractable AES-GCM key in IndexedDB (`obelisk-vault`); the nsec, bunker URL and bunker client key are sealed with it before the record is written to `obelisk-dex/session` (`session/persistence.ts`), and a pre-vault plaintext record is migrated on load. When the browser cannot keep a key the login stays in memory and `useSessionNotice` says it will not be remembered. A connected NWC wallet is sealed the same way under a second key (`wallet-key`), so the rotation every login does never touches it; with no IndexedDB it too lasts for the visit only, and Settings says so. Opened DMs are kept only as AES-256-GCM boxes in IndexedDB (`obelisk-dms`) under a per-account key the user's signer wraps, opened once per visit when a DM surface asks (`DmUnlock`); until then nothing DM-related is decrypted and the signer is not asked ([docs/direct-messages.md](docs/direct-messages.md#storage-the-encrypted-dm-store)). The SDK login widget runs on memory-only storage (`src/services/login/signer-storage.ts`). Details: [docs/data-system.md](docs/data-system.md).
 
 ## i18n
 
@@ -198,7 +198,7 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | `tests/app/[locale]/app/lazy-mounts.test.tsx` | Voice, games, DM calls and game engines stay out of the shell's first download |
 | `tests/app/[locale]/app/navigation-invariants.test.ts`, `deep-link-gate.test.ts` | Desktop navigation goes through the shell's view state; `?relay=` deep links go through `useRelayDeepLink` |
 | `tests/csp.test.ts`, `tests/service-worker-cache.test.ts` | The CSP from `src/proxy.ts`; what `public/sw.js` may cache |
-| `tests/services/local-data/inventory-guard.test.ts` | Every storage key, persisted store and IndexedDB database in `src/` is in the local-data inventory; `NOT_STORAGE` is shrink-only |
+| `tests/services/local-data/inventory-guard.test.ts` | Every storage key, persisted store and IndexedDB database in `src/` is in the local-data inventory; IndexedDB only from the session vault and the DM store; `NOT_STORAGE` is shrink-only |
 | `tests/services/analytics/gtag.test.ts` | Only `src/services/analytics/gtag.ts` loads gtag.js; no layout or page carries it |
 
 `scripts/check-source-bytes.sh` (CI) rejects raw control bytes in tracked files.

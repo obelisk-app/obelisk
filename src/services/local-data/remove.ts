@@ -8,7 +8,7 @@
  * of the bridge: `cache-clear.ts` and the error panel import it too.
  */
 import { categoryById } from './categories';
-import { deleteVaultDatabases, removeCookies, removeOfflineFiles } from './browser-stores';
+import { deleteDatabases, removeCookies, removeOfflineFiles } from './browser-stores';
 import { clearWebStorage, keyMatcher, removeWebStorageKeys } from './web-storage';
 import { raiseWriteFence } from './write-fence';
 import type { LocalDataCategoryId } from './types';
@@ -20,6 +20,8 @@ export interface RemovalEnv {
   readonly disconnectWallet?: () => Promise<void>;
   /** Forget the Analytics answer in memory too: Analytics stops and the question is asked again. */
   readonly forgetAnalytics?: () => void;
+  /** Stop the encrypted DM store writing and drop its key, before its database is deleted. */
+  readonly forgetDirectMessages?: () => Promise<void>;
   /** Reload the page. */
   readonly reload: () => void;
   /** Reload on the same page without the language prefix, so no language is forced. */
@@ -62,19 +64,21 @@ export async function removeLocalDataCategory(id: LocalDataCategoryId, env: Remo
   if (after === 'logout') {
     await quietly(env.logout);
     removeWebStorageKeys([id]);
-    await deleteVaultDatabases(env.indexedDB);
+    await deleteDatabases([id], env.indexedDB);
   } else {
     if (id === 'wallet' && env.disconnectWallet) await quietly(env.disconnectWallet);
+    if (id === 'dmMessages' && env.forgetDirectMessages) await quietly(env.forgetDirectMessages);
     removeWebStorageKeys([id]);
+    await deleteDatabases([id], env.indexedDB);
   }
   env.reload();
 }
 
 /**
  * "Remove everything from this device": log out, then empty both web
- * storages, delete the vault database, the offline caches and the service
- * worker registration, the Analytics answer and the cookies (language,
- * analytics), then reload.
+ * storages, delete every database (the vault, the encrypted DM store), the
+ * offline caches and the service worker registration, the Analytics answer
+ * and the cookies (language, analytics), then reload.
  */
 export async function removeEverything(env: RemovalEnv): Promise<void> {
   // Every key on this origin is the app's, so every write is fenced.
@@ -82,7 +86,7 @@ export async function removeEverything(env: RemovalEnv): Promise<void> {
   env.forgetAnalytics?.();
   await quietly(env.logout);
   clearWebStorage();
-  await deleteVaultDatabases(env.indexedDB);
+  await deleteDatabases(undefined, env.indexedDB);
   await removeOfflineFiles(env.caches, env.serviceWorker);
   removeCookies(['language', 'analytics'], env.document);
   env.relocate();

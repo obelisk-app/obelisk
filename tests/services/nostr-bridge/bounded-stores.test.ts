@@ -9,6 +9,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { MAX_TOMBSTONES, ModerationModule } from '@/services/nostr-bridge/groups/moderation';
 import { MAX_PRESENCE_STAMPS, VoicePresenceModule } from '@/services/nostr-bridge/voice-presence';
 import { RelayAccessModule } from '@/services/nostr-bridge/relay-access';
+import { DmStoreModule, MAX_DEFERRED, MAX_HELD } from '@/services/nostr-bridge/dm/store';
 import { StateStore } from '@/services/nostr-bridge/state-store';
 import { KIND_EVENT_DELETION, KIND_GROUP_DELETE_EVENT, KIND_VOICE_PRESENCE } from '@/utils/nip-kinds';
 import type { RelayAccessState } from '@/services/nostr-bridge/types';
@@ -105,5 +106,26 @@ describe('RelayAccessModule verdict memory', () => {
       relayAccess.set({ [url]: 'ok' });
     }
     expect(access.rememberedVerdictCount()).toBe(64);
+  });
+});
+
+describe('DmStoreModule, held while locked', () => {
+  it('holds at most MAX_HELD events and MAX_DEFERRED waits, dropping the oldest first', async () => {
+    // No IndexedDB here: the unlock below opens for the visit without a key.
+    const signer = { pubkey: hex(1), signEvent: vi.fn(), nip44Encrypt: vi.fn(), nip44Decrypt: vi.fn() };
+    const reingest = vi.fn();
+    const store = new DmStoreModule({ nipSigner: () => signer, replay: vi.fn(), reingest, dmsEnabled: () => true });
+    store.attach(hex(1));
+    for (let i = 0; i < MAX_HELD + 50; i++) store.hold(event(1059, [['p', hex(1)]], hex(2), i + 1), 'wrap');
+    const unopened = store.lock.get().unopened;
+    expect(unopened).toHaveLength(MAX_HELD);
+    expect(unopened[0]).toBe(51 * 1000);
+    const waits = Array.from({ length: MAX_DEFERRED + 10 }, () => vi.fn());
+    for (const fn of waits) store.defer(fn);
+    expect(waits.filter((fn) => fn.mock.calls.length > 0)).toHaveLength(0);
+    await store.unlock();
+    expect(reingest).toHaveBeenCalledTimes(MAX_HELD);
+    expect(waits.slice(0, 10).every((fn) => fn.mock.calls.length === 0)).toBe(true);
+    expect(waits.slice(10).every((fn) => fn.mock.calls.length === 1)).toBe(true);
   });
 });

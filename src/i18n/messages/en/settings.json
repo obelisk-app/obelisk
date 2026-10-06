@@ -362,6 +362,7 @@
       "channels": "Cached channels and messages are deleted from this device and the page reloads. Everything loads again from the relays; nothing you published is affected.",
       "profiles": "Saved names and pictures are deleted and the page reloads. They load again from the relays.",
       "readState": "Read positions, unread counts and alerts on this device are deleted and the page reloads. Read positions synced through your relays come back; alerts do not.",
+      "dmMessages": "The encrypted copy of your direct messages is deleted from this device and the page reloads. Your messages are downloaded from the relays again, and your signer is asked to decrypt each one.",
       "dms": "Your encryption choice for each person is forgotten and the page reloads. Your messages are not affected.",
       "preferences": "Your settings, layout and recent items go back to the defaults and the page reloads.",
       "personal": "Mutes, blocks, channel notification choices and saved stickers made on this device are deleted for good and the page reloads. They are not stored anywhere else.",

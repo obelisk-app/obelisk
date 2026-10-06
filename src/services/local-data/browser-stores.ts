@@ -1,6 +1,7 @@
 /**
- * The local data that is not in web storage: the session vault's IndexedDB
- * database, the service worker's Cache Storage, and the cookies.
+ * The local data that is not in web storage: the IndexedDB databases (the
+ * session vault, the encrypted DM store), the service worker's Cache
+ * Storage, and the cookies.
  * Each removal is best effort and never throws; each takes its browser API
  * as an optional argument so tests can hand in a double.
  */
@@ -8,14 +9,21 @@ import { cookieNamesOn, expireCookie } from '@/services/cookies';
 import { LOCAL_DATA, entryMatches } from './inventory';
 import type { LocalDataCategoryId } from './types';
 
-const VAULT_DBS = LOCAL_DATA.filter((e) => e.area === 'indexedDB').map((e) => e.key);
+const DATABASES = LOCAL_DATA.filter((e) => e.area === 'indexedDB');
 const CACHE_PREFIXES = LOCAL_DATA.filter((e) => e.area === 'cacheStorage').map((e) => e.key);
 const COOKIES = LOCAL_DATA.filter((e) => e.area === 'cookie');
 
-/** Delete the session vault database. Resolves once deleted, blocked or failed. */
-export function deleteVaultDatabases(factory: IDBFactory | undefined = globalThis.indexedDB): Promise<void> {
+/**
+ * Delete the IndexedDB databases of `categories` (every one when omitted).
+ * Resolves once each is deleted, blocked or failed.
+ */
+export function deleteDatabases(
+  categories?: ReadonlyArray<LocalDataCategoryId>,
+  factory: IDBFactory | undefined = globalThis.indexedDB,
+): Promise<void> {
   if (!factory) return Promise.resolve();
-  return Promise.all(VAULT_DBS.map((name) => new Promise<void>((resolve) => {
+  const names = DATABASES.filter((e) => !categories || categories.includes(e.category)).map((e) => e.key);
+  return Promise.all(names.map((name) => new Promise<void>((resolve) => {
     try {
       const req = factory.deleteDatabase(name);
       req.onsuccess = () => resolve();
@@ -26,6 +34,59 @@ export function deleteVaultDatabases(factory: IDBFactory | undefined = globalThi
       resolve();
     }
   }))).then(() => undefined);
+}
+
+function openExisting(factory: IDBFactory, name: string): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = factory.open(name);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error ?? new Error('IndexedDB open failed'));
+    req.onblocked = () => reject(new Error('IndexedDB open blocked'));
+  });
+}
+
+/** Approximate bytes in one store: each value as JSON, counted as UTF-16. */
+function storeBytes(db: IDBDatabase, store: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let bytes = 0;
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor) return;
+      bytes += (String(cursor.key).length + (JSON.stringify(cursor.value) ?? '').length) * 2;
+      cursor.continue();
+    };
+    tx.oncomplete = () => resolve(bytes);
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB read failed'));
+  });
+}
+
+/**
+ * Roughly how much the databases of `category` hold, or `null` when this
+ * browser cannot say (no IndexedDB, or no `databases()` to ask without
+ * creating one). Only databases that already exist are opened.
+ */
+export async function databasesBytes(
+  category: LocalDataCategoryId,
+  factory: IDBFactory | undefined = globalThis.indexedDB,
+): Promise<number | null> {
+  if (!factory || typeof factory.databases !== 'function') return null;
+  try {
+    const existing = new Set((await factory.databases()).map((d) => d.name));
+    let bytes = 0;
+    for (const { key } of DATABASES.filter((e) => e.category === category && existing.has(e.key))) {
+      const db = await openExisting(factory, key);
+      try {
+        for (const store of Array.from(db.objectStoreNames)) bytes += await storeBytes(db, store);
+      } finally {
+        db.close();
+      }
+    }
+    return bytes;
+  } catch {
+    return null;
+  }
 }
 
 function cacheStorage(store?: CacheStorage): CacheStorage | null {

@@ -11,6 +11,7 @@ export const CONFIRM_KEYS: Record<LocalDataCategoryId, MessageKey> = {
   channels: 'settings.localData.confirm.channels',
   profiles: 'settings.localData.confirm.profiles',
   readState: 'settings.localData.confirm.readState',
+  dmMessages: 'settings.localData.confirm.dmMessages',
   dms: 'settings.localData.confirm.dms',
   preferences: 'settings.localData.confirm.preferences',
   personal: 'settings.localData.confirm.personal',

@@ -14,8 +14,8 @@
   "title": "Direct Messages",
   "newMessage": "New message",
   "clearCache": "Clear DM cache",
-  "clearCacheTitle": "Clear DM cache (no-op in this build)",
-  "clearCacheAlert": "DM cache wipe is local-only; this client keeps DMs in memory only. Refresh to clear.",
+  "clearCacheTitle": "Where your direct messages are kept",
+  "clearCacheAlert": "Direct messages you have opened are kept on this device, encrypted with a key your signer unlocks once per visit. To remove them, open Settings > Data on this device.",
   "conversationOptions": "Conversation options",
   "viewProfile": "View profile",
   "new": "New DM",
@@ -85,5 +85,10 @@
     "decrypted": "Decrypted content",
     "keyWarning": "Contains the file's decryption key: anyone you give this JSON to can open the file.",
     "unavailable": "Not available for this message yet."
+  },
+  "lock": {
+    "unlocking": "Opening your messages. Your signer may ask you to approve.",
+    "failed": "Your messages are still locked: the signer did not open them.",
+    "retry": "Try again"
   }
 }

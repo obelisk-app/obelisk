@@ -1,6 +1,7 @@
 /**
  * The DM half of the bridge's wiring: the relay lookups, the send path, the
- * two protocols, the thread ingest, call control and the inbox REQs, each
+ * two protocols, the thread ingest, call control, the inbox REQs and the
+ * encrypted store that keeps opened messages (`dm/store.ts`), each
  * handed the narrow callbacks it needs into the rest of the bridge
  * (`./compose.ts`). Moved from the facade's constructor.
  */
@@ -10,8 +11,11 @@ import { Nip04Module } from './dm/nip04';
 import { Nip17SendModule } from './dm/nip17';
 import { DmRelaysModule } from './dm/relays';
 import { DmSendModule, type SettledDm } from './dm/send';
-import { DmThreadModule } from './dm/thread';
+import { DmStoreModule } from './dm/store';
+import { DmThreadModule, type IngestDmParams } from './dm/thread';
+import { getPreferences } from '@/services/preferences';
 import type { BridgeModules } from './compose';
+import { buildNipSigner } from './session/nip-signer';
 
 export class DmModules {
   readonly dmRelays: DmRelaysModule;
@@ -21,8 +25,24 @@ export class DmModules {
   readonly nip04: Nip04Module;
   readonly dmCalls: DmCallsModule;
   readonly dmInbox: DmInboxModule;
+  readonly dmStore: DmStoreModule;
 
   constructor(private readonly m: BridgeModules) {
+    this.dmStore = new DmStoreModule({
+      // Interactive lane: the person just opened their DMs and is waiting.
+      nipSigner: () => buildNipSigner(this.m.state.session, this.m.bunker, 'interactive'),
+      replay: (params) => this.dmThread.ingest(params, { replay: true }),
+      reingest: (ev, kind) => void (kind === 'wrap' ? this.dmInbox.ingestGiftWrap(ev) : this.nip04.ingestIncoming(ev)),
+      dmsEnabled: () => getPreferences().directMessagesEnabled,
+    });
+    // Every message opened from a relay goes to its thread and into the store.
+    const ingestDM = (params: IngestDmParams) => {
+      this.dmThread.ingest(params);
+      this.dmStore.save(params);
+    };
+    const rememberOwn = (params: IngestDmParams) => this.dmStore.save(params);
+    const holdLocked = (kind: 'wrap' | 'nip04') => (ev: Parameters<DmStoreModule['hold']>[0]) => this.dmStore.hold(ev, kind);
+    const isStored = (wireId: string) => this.dmStore.knows(wireId);
     this.dmRelays = new DmRelaysModule(this.m.ctx, {
       dmSigner: () => this.m.dmSigner(),
       publishSignedEvent: (ev, relays, opts) => this.m.publisher.publishSignedEvent(ev, relays, opts),
@@ -44,6 +64,7 @@ export class DmModules {
       publishSignedEvent: (ev, relays, opts) => this.m.publisher.publishSignedEvent(ev, relays, opts),
       ownInbox,
       settle: dmSettle,
+      rememberOwn,
     });
     this.dmThread = new DmThreadModule(this.m.ctx, {
       forgetPending: (clientTag) => this.dmSend.forgetPending(clientTag),
@@ -55,8 +76,12 @@ export class DmModules {
       fetchRecipientReadRelays: (pubkey) => this.dmRelays.fetchRecipientReadRelays(pubkey),
       decrypt: (sender, ciphertext, lane) => this.m.seams.decryptNip04(sender, ciphertext, lane),
       generation: () => this.m.connection.generation,
-      ingestDM: (params) => this.dmThread.ingest(params),
+      ingestDM,
       settle: dmSettle,
+      holdLocked: holdLocked('nip04'),
+      isStored,
+      alertLocked: (ev) => this.dmThread.alertLocked(ev),
+      rememberOwn,
     });
     this.dmCalls = new DmCallsModule(this.m.ctx, {
       dmSigner: () => this.m.dmSigner(),
@@ -73,7 +98,9 @@ export class DmModules {
       generation: () => this.m.connection.generation,
       ingestNip04: (ev) => this.nip04.ingestIncoming(ev),
       ingestCall: (message, sender) => this.dmCalls.ingest(message, sender),
-      ingestDM: (params) => this.dmThread.ingest(params),
+      ingestDM,
+      holdLocked: holdLocked('wrap'),
+      isStored,
     });
   }
 }

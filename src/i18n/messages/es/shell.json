@@ -16,6 +16,10 @@
       "minutes": "{n}m",
       "hours": "{n}h",
       "days": "{n}d"
+    },
+    "locked": {
+      "count": "{count, plural, one {# mensaje directo nuevo} other {# mensajes directos nuevos}}",
+      "hint": "Abrí tus mensajes para leerlos."
     }
   },
   "rail": {

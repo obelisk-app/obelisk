@@ -123,6 +123,7 @@ const hookDefaults = {
   useReactions: () => EMPTY_RECORD,
   useChildrenByParent: () => EMPTY_RECORD,
   useDirectMessages: () => EMPTY_RECORD,
+  useDmLock: () => ({ status: 'unlocked' as const, unopened: EMPTY_LIST }),
   useAdmins: () => EMPTY_LIST,
   useAdminsByGroup: () => EMPTY_RECORD,
   useMembers: () => EMPTY_LIST,

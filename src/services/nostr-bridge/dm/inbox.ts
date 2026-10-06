@@ -36,6 +36,10 @@ export interface DmInboxDeps {
   ingestNip04(ev: NostrEvent): Promise<void>;
   ingestCall(message: UnsignedEvent & { id: string }, senderPubkey: string): void;
   ingestDM(params: IngestDmParams): void;
+  /** While DMs are locked, keep the wrap unopened for the unlock (`dm/store.ts`). True when held. */
+  holdLocked(ev: NostrEvent): boolean;
+  /** The encrypted store already holds this wrap's message: no signer call needed. */
+  isStored(wireId: string): boolean;
 }
 
 export class DmInboxModule {
@@ -146,10 +150,17 @@ export class DmInboxModule {
     if (!session) return;
     // Before any decrypt: a wrap we already know produces nothing for a
     // thread (a call signal, a kind we don't read) isn't worth two signer
-    // round-trips again. Chat wraps are never in this set, decrypted DMs are
-    // memory-only, so re-opening their wrap is how a reload gets them back.
-    // See `../wrap-ledger.ts`.
+    // round-trips again. Chat wraps are never in this set: the encrypted
+    // store's own index is what remembers them (`isStored` below), so
+    // removing one of the two can never hide a message. See
+    // `../wrap-ledger.ts`.
     if (hasSeenWrap('dm:inert', ev.id)) return;
+    // Locked: nothing is opened until the person asks for their DMs. The
+    // wrap waits in the store, which hands it back here on unlock.
+    if (this.deps.holdLocked(ev)) return;
+    // Opened before and kept, encrypted: the unlock already put it back in
+    // its thread from the store, so the signer is not asked again.
+    if (this.deps.isStored(ev.id)) return;
     const me = session.pubKeyHex;
     const generation = this.deps.generation();
     // A fresh signer + tracker per call: `unwrapGiftWrap` doesn't report

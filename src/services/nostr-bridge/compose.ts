@@ -213,6 +213,7 @@ export class BridgeModules {
       dmSend: this.dm.dmSend,
       dmsByPeer: this.dmsByPeer,
       dmRelays: this.dm.dmRelays,
+      dmStore: this.dm.dmStore,
       messages: this.messages.lifecycle(),
       reactions: this.reactions,
       moderation: this.moderation,

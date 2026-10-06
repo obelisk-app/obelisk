@@ -45,7 +45,12 @@ export class DmThreadModule {
     private readonly deps: DmThreadDeps,
   ) {}
 
-  ingest(params: IngestDmParams): void {
+  /**
+   * `replay`: the message comes back from the encrypted store on unlock. It
+   * fills its bell card's preview and may restore a card, but never chimes:
+   * it is history, not news.
+   */
+  ingest(params: IngestDmParams, opts: { replay?: boolean } = {}): void {
     const { id, createdAt, plaintext, outgoing, counterparty, protocol, pq, notifyId, file, tags, raw } = params;
     const dm: JsDirectMessage = {
       id,
@@ -101,17 +106,41 @@ export class DmThreadModule {
     // Relay-agnostic on purpose: DMs are the one thing that runs
     // cross-relay (NIP-65 read+write union), so they are not scoped to
     // the active relay the way mentions are.
-    if (!isNew || outgoing) return;
-    if (isUserWatchingDM(counterparty)) return;
-    const added = useNotificationsStore.getState().pushDmNotification({
+    if (outgoing) return;
+    // A file message's `content` is a Blossom URL; the card shows the
+    // filename instead (or nothing, the UI labels it an attachment). The
+    // preview stays in memory: the notifications store never saves it.
+    const preview = file ? (file.name ?? '') : plaintext.slice(0, 280);
+    const notifications = useNotificationsStore.getState();
+    // A card raised while DMs were locked, or saved by an earlier visit,
+    // gets its text now and does not ring again.
+    if (notifications.fillDmPreview(notifyId, preview)) return;
+    if (!isNew || isUserWatchingDM(counterparty)) return;
+    const added = notifications.pushDmNotification({
       id: notifyId,
       senderPubkey: counterparty,
-      // A file message's `content` is a Blossom URL; the card shows the
-      // filename instead (or nothing, the UI labels it an attachment).
-      preview: file ? (file.name ?? '') : plaintext.slice(0, 280),
+      preview,
       createdAt: createdAt * 1000,
     });
-    if (!added) return;
+    if (added && !opts.replay) this.announce(notifyId, counterparty, createdAt);
+  }
+
+  /**
+   * A kind-4 DM that arrived while DMs are locked: its sender is on the
+   * wire, its text is not opened. The card says "New direct message" from
+   * the sender until the person opens their DMs.
+   */
+  alertLocked(ev: { id: string; pubkey: string; created_at: number }): void {
+    if (isUserWatchingDM(ev.pubkey)) return;
+    const added = useNotificationsStore.getState().pushDmNotification({
+      id: ev.id,
+      senderPubkey: ev.pubkey,
+      createdAt: ev.created_at * 1000,
+    });
+    if (added) this.announce(ev.id, ev.pubkey, ev.created_at);
+  }
+
+  private announce(notifyId: string, counterparty: string, createdAt: number): void {
     announceIncoming({
       kind: 'dm',
       id: notifyId,

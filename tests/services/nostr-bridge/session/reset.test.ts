@@ -74,6 +74,7 @@ function targets() {
     dmSend: { clearPending: rec('dmSend.clearPending') },
     dmsByPeer,
     dmRelays: { ensureInboxPublished: vi.fn() },
+    dmStore: { attach: vi.fn(), destroy: vi.fn(async () => undefined) },
     messages,
     reactions: {
       subscribed: () => { log.push('reactions.subscribed'); return ['g2']; },

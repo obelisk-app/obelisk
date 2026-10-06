@@ -63,6 +63,9 @@ const DEFAULTS: { readonly [K in StoreName]: () => StoreValue<K> } = {
   reactionsByGroup: () => ({}),
   myMutes: () => [],
   dmsByPeer: () => ({}),
+  // Open, so DM surfaces render as they did before the store existed; a
+  // test of the locked state seeds `{ status: 'locked', unopened: [...] }`.
+  dmLock: () => ({ status: 'unlocked', unopened: [] }),
   userMetadata: () => ({}),
   myContactList: () => null,
   myContactListReady: () => true,
@@ -109,6 +112,7 @@ function reads(s: FakeStores) {
     subscribeReactions: (g, cb) => s.reactionsByGroup.subscribe((m) => cb(m[g] ?? EMPTY_RECORD)),
     subscribeChildrenByParent: (cb) => s.childrenByParent.subscribe(cb),
     subscribeDirectMessages: (cb) => s.dmsByPeer.subscribe(cb),
+    subscribeDmLock: (cb) => s.dmLock.subscribe(cb),
     subscribeMyContactList: (cb) => s.myContactList.subscribe(cb),
     subscribeMyContactListReady: (cb) => s.myContactListReady.subscribe(cb),
     subscribeMediaPacks: (cb) => s.mediaPacks.subscribe(cb),

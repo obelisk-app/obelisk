@@ -55,6 +55,11 @@ write synchronously from the cached box, open on reload) and `./vault.ts`.
   "remembered" nsec never reach localStorage; the bridge erases the two
   `@nostr-wot/ui:*` keys older builds left behind on every load and logout.
 
+Direct messages are kept on disk the same way in spirit, under a key of
+their own that the signer wraps rather than one the browser keeps: the
+encrypted DM store (`obelisk-dms`), opened once per visit when the person
+opens their DMs. See [direct-messages.md, Storage](direct-messages.md#storage-the-encrypted-dm-store).
+
 This protects the key on disk (a copied profile, a backup, a script that
 greps storage files). It does not protect it from code running inside the
 page, which can ask the browser to decrypt exactly as the app does; a
@@ -412,7 +417,7 @@ Everything the app keeps in the browser is listed, as one typed list, in
 `src/services/local-data/` (`inventory-cache.ts` for what the relays can
 send again, `inventory-device.ts` for choices and secrets). Each entry says
 what it holds, why it exists, whether it is per account and whether it is
-sensitive, and belongs to one of eleven categories a person sees in
+sensitive, and belongs to one of twelve categories a person sees in
 **Settings > Data on this device** (desktop: its own sidebar section; phone:
 Preferences > Data on this device) and on `/help/local-data`:
 
@@ -421,6 +426,7 @@ Preferences > Data on this device) and on `/help/local-data`:
 | `channels` | bridge cache (all but profiles and read-state), relay info, recent relays | reload |
 | `profiles` | bridge cache kinds 0 and 3, profile-sync blobs, SDK TTL caches | reload |
 | `readState` | `obelisk-read-state:*`, `obelisk-notifications:*`, `obelisk-wrap-ledger:*`, the read-state sync cache | reload |
+| `dmMessages` | the `obelisk-dms` IndexedDB database: each account's DM key (wrapped by its signer) and one AES-256-GCM box per opened DM | `forgetDirectMessages()` (stop writing, drop the key), delete the database, reload |
 | `dms` | `obelisk-dm-store:*` (per-peer protocol only) | reload |
 | `preferences` | `obelisk:preferences`, layout widths, collapsed groups, hints, recents, game keys | reload |
 | `personal` | `obelisk:moderation:*`, `obelisk-channel-prefs:*`, `obelisk:personal-stickers` (exist only here) | reload |
@@ -431,8 +437,8 @@ Preferences > Data on this device) and on `/help/local-data`:
 | `analytics` | the Analytics answer (`obelisk:analytics-consent`) and, only if it is "allow", the `_ga` and `_ga_<id>` cookies gtag.js sets | `forgetAnalyticsConsent()` (opt-out flag, answer gone), expire the cookies; the question is asked again |
 
 **Remove everything from this device** logs out, empties localStorage and
-sessionStorage, deletes the vault database, the offline caches and the
-service worker registration, forgets the Analytics answer, expires the
+sessionStorage, deletes the vault and DM store databases, the offline
+caches and the service worker registration, forgets the Analytics answer, expires the
 language and analytics cookies, and reloads.
 
 ### Google Analytics only after consent

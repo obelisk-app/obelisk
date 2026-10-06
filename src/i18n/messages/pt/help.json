@@ -54,11 +54,15 @@
       },
       "readState": {
         "title": "Posições de leitura, não lidas e alertas",
-        "purpose": "Onde você parou de ler, o que está sem ler, e os seus alertas de menções e mensagens, cada um com uma prévia curta. As posições de leitura também são sincronizadas, criptografadas, pelos seus relays, então costumam voltar."
+        "purpose": "Onde você parou de ler, o que está sem ler, e os seus alertas de menções e mensagens. Um alerta de menção guarda uma prévia curta; um alerta de mensagem direta guarda só quem enviou e quando. As posições de leitura também são sincronizadas, criptografadas, pelos seus relays, então costumam voltar."
+      },
+      "dmMessages": {
+        "title": "Mensagens diretas (criptografadas)",
+        "purpose": "As mensagens diretas que você já abriu, para não baixar e descriptografar uma por uma a cada visita. Elas ficam criptografadas com uma chave própria, e essa chave fica trancada com a sua chave Nostr: sua extensão, seu app assinador ou a chave que você colou a abre uma vez por visita, quando você abre suas mensagens. Apagá-las só apaga esta cópia: as mensagens são baixadas e descriptografadas dos relays de novo."
       },
       "dms": {
         "title": "Configurações de mensagens diretas",
-        "purpose": "Qual criptografia usar com cada pessoa. As mensagens em si não ficam guardadas aqui: são baixadas e descriptografadas de novo a cada vez."
+        "purpose": "Qual criptografia usar com cada pessoa. As mensagens em si ficam em Mensagens diretas (criptografadas)."
       },
       "preferences": {
         "title": "Preferências e layout",
@@ -95,7 +99,7 @@
     },
     "other": {
       "title": "Outras formas de apagar",
-      "logout": "Saia da conta. O seu login, a conexão da carteira e o cache de canais e mensagens são removidos deste dispositivo. Preferências, posições de leitura e silenciados ficam, prontos para quando você voltar.",
+      "logout": "Saia da conta. O seu login, a conexão da carteira, suas mensagens diretas criptografadas e o cache de canais e mensagens são removidos deste dispositivo. Preferências, posições de leitura e silenciados ficam, prontos para quando você voltar.",
       "browser": "Apague os dados do site obelisk.ar no seu navegador. Isso remove tudo desta página de uma vez, inclusive o login:",
       "chrome": "Chrome: Configurações > Privacidade e segurança > Configurações do site > Ver permissões e dados armazenados nos sites. Busque obelisk.ar e apague os dados.",
       "firefox": "Firefox: clique no cadeado da barra de endereços e depois em Limpar cookies e dados de sites.",

@@ -268,6 +268,7 @@ describe('post-quantum DM sending', () => {
     setPreference('postQuantumEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
+    await bridge.unlockDirectMessages();
     await bridge.sendDirectMessage(bob.pkHex, 'quantum safe hello');
     const wrap = await waitForWrap();
 
@@ -300,6 +301,7 @@ describe('post-quantum DM sending', () => {
     setPreference('postQuantumEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
+    await bridge.unlockDirectMessages();
 
     let last: Record<string, ReadonlyArray<{ pq?: boolean; protocol?: string; pending?: boolean }>> = {};
     bridge.subscribeDirectMessages((byPeer) => { last = byPeer as typeof last; });
@@ -328,6 +330,7 @@ describe('post-quantum DM sending', () => {
     setPreference('postQuantumEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
+    await bridge.unlockDirectMessages();
 
     let last: Record<string, ReadonlyArray<{ pq?: boolean; pending?: boolean; failed?: boolean }>> = {};
     bridge.subscribeDirectMessages((byPeer) => { last = byPeer as typeof last; });
@@ -358,6 +361,7 @@ describe('post-quantum DM sending', () => {
     setPreference('postQuantumEnabled', false);
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
+    await bridge.unlockDirectMessages();
     await bridge.sendDirectMessage(bob.pkHex, 'opted out');
     const wrap = await waitForWrap();
 
@@ -382,6 +386,7 @@ describe('post-quantum DM sending', () => {
     setPreference('postQuantumEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
+    await bridge.unlockDirectMessages();
     await bridge.sendDirectMessage(bob.pkHex, 'unknown capability');
     const wrap = await waitForWrap();
 
@@ -411,6 +416,7 @@ describe('post-quantum DM sending', () => {
     setPreference('postQuantumEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
+    await bridge.unlockDirectMessages();
 
     let last: Record<string, ReadonlyArray<{ pq?: boolean; pending?: boolean; failed?: boolean }>> = {};
     bridge.subscribeDirectMessages((byPeer) => { last = byPeer as typeof last; });
@@ -454,6 +460,7 @@ describe('post-quantum DM self-copy', () => {
     setPreference('postQuantumEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
+    await bridge.unlockDirectMessages();
     bridge.subscribeDirectMessages(() => {});
     await bridge.sendDirectMessage(bob.pkHex, 'both copies protected');
     const wraps = await waitForWraps(2);
@@ -498,6 +505,7 @@ describe('post-quantum DM self-copy', () => {
     setPreference('postQuantumEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
+    await bridge.unlockDirectMessages();
     bridge.subscribeDirectMessages(() => {});
     await bridge.sendDirectMessage(bob.pkHex, 'classic both ways');
     const wraps = await waitForWraps(2);
@@ -522,6 +530,7 @@ describe('post-quantum DM self-copy', () => {
     setPreference('postQuantumEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
+    await bridge.unlockDirectMessages();
 
     let last: Record<string, ReadonlyArray<{ content: string; pq?: boolean; outgoing: boolean; pending?: boolean }>> = {};
     bridge.subscribeDirectMessages((byPeer) => { last = byPeer as typeof last; });
@@ -563,6 +572,7 @@ describe('post-quantum DM receiving', () => {
     setPreference('directMessagesEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNip07(bob.pkHex);
+    await bridge.unlockDirectMessages();
 
     let last: Record<string, ReadonlyArray<{ content: string; protocol?: string; pq?: boolean }>> = {};
     bridge.subscribeDirectMessages((byPeer) => { last = byPeer as typeof last; });
@@ -599,6 +609,7 @@ describe('post-quantum DM receiving', () => {
     setPreference('directMessagesEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNip07(bob.pkHex);
+    await bridge.unlockDirectMessages();
 
     let last: Record<string, ReadonlyArray<{ content: string; pq?: boolean }>> = {};
     bridge.subscribeDirectMessages((byPeer) => { last = byPeer as typeof last; });

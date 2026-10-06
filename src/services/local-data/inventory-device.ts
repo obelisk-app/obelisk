@@ -120,6 +120,12 @@ export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
     holds: 'The same, under the pre-rename key.', why: 'None any more.',
     perAccount: false, sensitive: true, legacy: true, source: 'src/hooks/marketing/useSavedAccount.ts',
   },
+  // ---- direct messages, encrypted -------------------------------------------
+  {
+    id: 'dm-archive', area: 'indexedDB', key: 'obelisk-dms', match: 'exact', category: 'dmMessages',
+    holds: 'Per account: the DM key, NIP-44 wrapped to the user\'s own pubkey by their signer (an unsigned kind 30078 kept only here), and one AES-256-GCM box per opened DM, keyed by its wire id.',
+    why: 'Opened DMs come back on a reload with one signer call (the key), not two per gift wrap.', perAccount: true, sensitive: true, source: 'src/services/nostr-bridge/dm/store-db.ts',
+  },
   // ---- the wallet connection ----------------------------------------------
   {
     id: 'nwc-wallet', area: LS, key: 'obelisk-dex/nwc:', match: 'prefix', category: 'wallet',

@@ -10,6 +10,7 @@ import {
   useMentionNotifications,
   useNotificationBadgeCount,
   useUnreadDmNotificationCount,
+  useLockedDmCount,
   useUnreadMentionCount,
 } from '@/hooks/notifications/useNotificationSelectors';
 
@@ -56,6 +57,7 @@ export function useInboxStreams(relay: string) {
   const dmCursor = useReadStateStore((s) => s.inboxLastReadAt);
   const unreadMentions = useUnreadMentionCount(relay);
   const unreadDms = useUnreadDmNotificationCount();
+  const lockedDms = useLockedDmCount();
   const unreadInboxCount = useNotificationBadgeCount(relay);
   const markMentionsRead = useNotificationsStore((s) => s.markMentionsRead);
   const clearMentions = useNotificationsStore((s) => s.clearMentions);
@@ -85,8 +87,10 @@ export function useInboxStreams(relay: string) {
   return {
     notifTab, setNotifTab,
     mentions, mentionCursor, dmNotifications, dmCursor,
-    unreadMentions, unreadDms, unreadInboxCount,
+    unreadMentions, unreadDms, unreadInboxCount, lockedDms,
     tabItems: notifTab === 'mentions' ? mentions : dmNotifications,
+    /** The open tab has something to list: cards, or the locked DMs row. */
+    tabHasItems: notifTab === 'mentions' ? mentions.length > 0 : dmNotifications.length > 0 || lockedDms > 0,
     tabUnread: notifTab === 'mentions' ? unreadMentions : unreadDms,
     handleMarkRead,
     handleClear,

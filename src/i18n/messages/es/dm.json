@@ -14,8 +14,8 @@
   "title": "Mensajes directos",
   "newMessage": "Mensaje nuevo",
   "clearCache": "Limpiar caché de DMs",
-  "clearCacheTitle": "Limpiar caché de DMs (sin efecto en este build)",
-  "clearCacheAlert": "La limpieza de caché de DMs es local; este cliente mantiene los DMs solo en memoria. Recargá para limpiar.",
+  "clearCacheTitle": "Dónde se guardan tus mensajes directos",
+  "clearCacheAlert": "Los mensajes directos que abriste se guardan en este dispositivo, cifrados con una clave que tu firmante abre una vez por visita. Para borrarlos, abrí Ajustes > Datos en este dispositivo.",
   "conversationOptions": "Opciones de la conversación",
   "viewProfile": "Ver perfil",
   "new": "Nuevo DM",
@@ -85,5 +85,10 @@
     "decrypted": "Contenido descifrado",
     "keyWarning": "Contiene la clave de descifrado del archivo: cualquiera a quien le des este JSON puede abrirlo.",
     "unavailable": "Todavía no está disponible para este mensaje."
+  },
+  "lock": {
+    "unlocking": "Abriendo tus mensajes. Puede que tu firmante te pida aprobarlo.",
+    "failed": "Tus mensajes siguen cerrados: el firmante no los abrió.",
+    "retry": "Probar de nuevo"
   }
 }

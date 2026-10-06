@@ -1,11 +1,12 @@
 /**
  * How much each category takes, for the settings screen. Web storage is
  * measured exactly (characters, as UTF-16 bytes); the offline files from
- * their Content-Length headers; the vault key and the language cookie are
- * a few bytes each and are reported as present or not, not sized.
+ * their Content-Length headers; the encrypted DM store by reading its
+ * records; the vault key and the language cookie are a few bytes each and
+ * are reported as present or not, not sized.
  */
 import { LOCAL_DATA_CATEGORIES } from './categories';
-import { cookiesIn, offlineFilesBytes } from './browser-stores';
+import { cookiesIn, databasesBytes, offlineFilesBytes } from './browser-stores';
 import { keysIn, localStorageBytes } from './web-storage';
 import type { LocalDataCategoryId } from './types';
 
@@ -38,9 +39,15 @@ export function measureWebStorage(doc?: Document): LocalDataUsage {
   return out;
 }
 
-/** Add the offline files' size (async: Cache Storage). */
-export async function measureLocalData(store?: CacheStorage, doc?: Document): Promise<LocalDataUsage> {
+/** Add the offline files' and the encrypted DM store's size (async: Cache Storage, IndexedDB). */
+export async function measureLocalData(
+  store?: CacheStorage,
+  doc?: Document,
+  factory?: IDBFactory,
+): Promise<LocalDataUsage> {
   const usage = measureWebStorage(doc);
+  const dmBytes = await databasesBytes('dmMessages', factory);
+  if (dmBytes !== null) usage.dmMessages = { bytes: dmBytes, present: dmBytes > 0 };
   const offline = await offlineFilesBytes(store);
   const base = usage.offline.bytes ?? 0;
   usage.offline = offline === null

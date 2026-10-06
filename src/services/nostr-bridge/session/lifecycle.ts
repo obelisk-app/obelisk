@@ -9,6 +9,7 @@ import type { RelayHub } from '@/lib/relay-hub';
 import type { DmInboxModule } from '../dm/inbox';
 import type { DmRelaysModule } from '../dm/relays';
 import type { DmSendModule } from '../dm/send';
+import type { DmStoreModule } from '../dm/store';
 import type { GroupMetadataModule } from '../groups/metadata';
 import type { MembershipModule } from '../groups/membership';
 import type { ModerationModule } from '../groups/moderation';
@@ -59,6 +60,8 @@ export interface LifecycleTargets {
   readonly dmSend: Pick<DmSendModule, 'clearPending'>;
   readonly dmsByPeer: StateStore<Record<string, JsDirectMessage[]>>;
   readonly dmRelays: Pick<DmRelaysModule, 'ensureInboxPublished'>;
+  /** The encrypted DM store: pointed at the account on login and reload, deleted on logout. */
+  readonly dmStore: Pick<DmStoreModule, 'attach' | 'destroy'>;
   readonly messages: MessagesLifecycle;
   readonly reactions: Pick<ReactionsModule, 'subscribed' | 'forgetSubscriptions' | 'clearFlushers' | 'clear' | 'hasPerGroup'>;
   readonly moderation: Pick<ModerationModule, 'forgetSubscriptions' | 'reset'>;

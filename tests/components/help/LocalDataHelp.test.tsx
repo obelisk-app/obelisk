@@ -96,3 +96,27 @@ describe('the local data FAQ entry', () => {
     expect(answer).toContain('help/local-data');
   });
 });
+
+describe('what the help and FAQ say about direct messages', () => {
+  const WORDS = {
+    en: { dm: 'direct message', dms: 'direct messages', once: 'once per visit', encrypted: 'encrypted' },
+    es: { dm: 'mensaje directo', dms: 'mensajes directos', once: 'una vez por visita', encrypted: 'cifrad' },
+    pt: { dm: 'mensagem direta', dms: 'mensagens diretas', once: 'uma vez por visita', encrypted: 'criptografad' },
+  } as const;
+
+  it.each(LOCALES)('names the encrypted DM store, its signer unlock, and drops the old preview disclosure (%s)', (locale) => {
+    const t = translator(locale);
+    const w = WORDS[locale];
+    const purpose = t('help.localData.categories.dmMessages.purpose');
+    expect(purpose.toLowerCase()).toContain(w.dms);
+    expect(purpose).toContain(w.once);
+    expect(purpose).toContain('relays');
+    // A DM alert keeps who and when, not the text.
+    expect(t('help.localData.categories.readState.purpose').toLowerCase()).toContain(w.dm);
+    expect(t('help.localData.categories.dms.purpose')).toContain(t('help.localData.categories.dmMessages.title'));
+    expect(t('help.localData.other.logout').toLowerCase()).toContain(w.dms);
+    expect(t('marketing.faq.q11.answer').toLowerCase()).toContain(w.dms);
+    expect(t('marketing.faq.q11.answer')).toContain(w.encrypted);
+    expect(t('settings.localData.confirm.dmMessages')).toContain('relays');
+  });
+});

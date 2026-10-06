@@ -24,6 +24,7 @@ import {
   useDmNotifications,
   useMentionCursor,
   useMentionNotifications,
+  useLockedDmCount,
   useUnreadDmNotificationCount,
   useUnreadMentionCount,
 } from '@/hooks/notifications/useNotificationSelectors';
@@ -34,6 +35,7 @@ import RemoteImage from '@/components/ui/RemoteImage';
 type InboxFilter = 'mentions' | 'dms';
 
 export function InboxScreen({
+  go,
   selectGroup,
   selectPeer,
 }: {
@@ -47,6 +49,7 @@ export function InboxScreen({
   const dmNotifications = useDmNotifications();
   const unreadMentions = useUnreadMentionCount(relay);
   const unreadDms = useUnreadDmNotificationCount();
+  const lockedDms = useLockedDmCount();
   const markMentionsRead = useNotificationsStore((s) => s.markMentionsRead);
   const markAllAsRead = useReadStateStore((s) => s.markAllAsRead);
   const groups = useGroups();
@@ -71,7 +74,7 @@ export function InboxScreen({
     selectGroup(m.channelId, g?.kind ?? 'text');
   };
 
-  const isEmpty = tab === 'mentions' ? mentions.length === 0 : dmNotifications.length === 0;
+  const isEmpty = tab === 'mentions' ? mentions.length === 0 : dmNotifications.length === 0 && lockedDms === 0;
 
   return (
     <div className="screen active" data-screen="inbox">
@@ -111,9 +114,14 @@ export function InboxScreen({
           ? mentions.map((m) => (
             <MentionInboxCard key={m.id} mention={m} onJump={() => handleMentionJump(m)} />
           ))
-          : dmNotifications.map((d) => (
-            <DmInboxCard key={d.id} dm={d} onJump={() => selectPeer(d.senderPubkey)} />
-          ))}
+          : (
+            <>
+              {lockedDms > 0 && <LockedDmsCard count={lockedDms} onJump={() => go('dms-list')} />}
+              {dmNotifications.map((d) => (
+                <DmInboxCard key={d.id} dm={d} onJump={() => selectPeer(d.senderPubkey)} />
+              ))}
+            </>
+          )}
       </div>
     </div>
   );
@@ -194,7 +202,8 @@ function DmInboxCard({ dm, onJump }: { dm: DmNotification; onJump: () => void })
   return (
     <NotificationCard
       senderPubkey={dm.senderPubkey}
-      preview={dm.preview}
+      // No preview while DMs are locked: the text is still encrypted.
+      preview={dm.preview ?? t('common.ping.newDm')}
       createdAt={dm.createdAt}
       isRead={isDmNotificationRead(dm, cursor)}
       label={t('shell.inbox.type.dm')}
@@ -204,6 +213,19 @@ function DmInboxCard({ dm, onJump }: { dm: DmNotification; onJump: () => void })
       }
       onJump={onJump}
     />
+  );
+}
+
+/** Gift wraps that came in while DMs are locked: their sender is still encrypted, so one row for all. */
+function LockedDmsCard({ count, onJump }: { count: number; onJump: () => void }) {
+  const t = useTranslations();
+  return (
+    <button className="mention-card" onClick={onJump} data-testid="inbox-dm-locked">
+      <div className="mc-context">
+        <span className="notif-type dm">{t('shell.inbox.locked.count', { count })}</span>
+      </div>
+      <div className="mc-text" style={{ marginTop: 6, color: 'var(--app-text-dim)' }}>{t('shell.inbox.locked.hint')}</div>
+    </button>
   );
 }
 

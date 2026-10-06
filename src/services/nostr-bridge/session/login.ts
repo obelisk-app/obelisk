@@ -117,6 +117,9 @@ export class LoginModule {
     // kind-1059 subscriptions, otherwise the first replayed wraps are decrypted
     // against an empty ledger and the reload saving is lost.
     resetWrapLedger(state.session?.pubKeyHex ?? null);
+    // Same reason for the encrypted DM store: it holds the wraps it already
+    // opened, and an account switch drops the previous account's key.
+    t.dmStore.attach(state.session?.pubKeyHex ?? null);
     const perGroup = this.resetSessionState();
     // Pin the active relays to the session's relay before connect(). Without
     // this, any drift between `currentRelayUrl` (what the UI shows as active)
@@ -203,6 +206,9 @@ export class LoginModule {
     resetSignerQueue();
     clearDecryptCache();
     resetWrapLedger(null);
+    // The DM key leaves memory now; its wrapped copy and the encrypted
+    // messages are deleted below, with the rest of the account's secrets.
+    const dmStoreGone = this.t.dmStore.destroy();
     this.t.state.session = null;
     this.t.state.sessionNotice.set(null);
     // The record, the vault key and any SDK leftovers. The key delete is
@@ -213,7 +219,7 @@ export class LoginModule {
     if (typeof window !== 'undefined') cacheClearAll();
     this.deps.dispose();
     clearForLogout(this.t);
-    await forgotten;
+    await Promise.all([forgotten, dmStoreGone]);
   }
 
   /** Write the session record (sealed secrets only; see `./persistence.ts`). */

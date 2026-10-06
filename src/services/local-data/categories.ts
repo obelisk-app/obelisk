@@ -48,6 +48,12 @@ export const LOCAL_DATA_CATEGORIES: ReadonlyArray<LocalDataCategory> = [
     after: 'reload',
   },
   {
+    id: 'dmMessages',
+    titleKey: 'help.localData.categories.dmMessages.title',
+    purposeKey: 'help.localData.categories.dmMessages.purpose',
+    after: 'reload',
+  },
+  {
     id: 'dms',
     titleKey: 'help.localData.categories.dms.title',
     purposeKey: 'help.localData.categories.dms.purpose',

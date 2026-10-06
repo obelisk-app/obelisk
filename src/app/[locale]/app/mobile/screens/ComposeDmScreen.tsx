@@ -11,6 +11,7 @@ import { useNostrUserSearch, type UserHit } from '@/hooks/useNostrUserSearch';
 import { avatarStyle } from '../avatar';
 import Input from '@/components/ui/Input';
 import RemoteImage from '@/components/ui/RemoteImage';
+import { DmUnlock } from '@/components/chat/DmUnlock';
 
 export function ComposeDmScreen({ back, selectPeer }: { back: () => void; selectPeer: (peer: string) => void }) {
   const t = useTranslations();
@@ -41,6 +42,7 @@ export function ComposeDmScreen({ back, selectPeer }: { back: () => void; select
           {t('dm.compose.next')}
         </button>
       </div>
+      <DmUnlock />
       <div className="compose-dm-to">
         <label htmlFor={toId} className="compose-dm-to-label">{t('dm.compose.to')}</label>
         <Input
