@@ -8,6 +8,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { RemoteTrack, VoiceClient, VoiceClientEvents } from '@/services/voice/client';
 import { useVoiceStore } from '@/store/voice';
+import type { VoiceErrorCode } from '@/services/voice/errors';
 
 /** Where an SFU channel's upgrade stands, as the room header shows it. */
 export type SfuStatus = 'na' | 'starting' | 'connected' | 'unavailable' | 'unauthorized';
@@ -87,7 +88,7 @@ export interface RoomEventDeps extends RoomStateSinks {
   setSfuStatus: Dispatch<SetStateAction<SfuStatus>>;
   /** The topology dropped back after a connected SFU; the supervisor republishes. */
   bumpRepublish: () => void;
-  setError: (message: string | null) => void;
+  setError: (code: VoiceErrorCode | null) => void;
   /** The owning effect was cleaned up; late events must not touch state. */
   isCancelled: () => boolean;
   /** The running client's camera and screen tracks, read when its local tracks change. */
@@ -132,10 +133,10 @@ export function makeRoomEvents(deps: RoomEventDeps): VoiceClientEvents {
         deps.bumpRepublish();
       }
     },
-    onError: (m) => {
+    onError: (code) => {
       if (cancelled()) return;
-      deps.setError(m);
-      useVoiceStore.getState().setError(m);
+      deps.setError(code);
+      useVoiceStore.getState().setError(code);
     },
   };
 }

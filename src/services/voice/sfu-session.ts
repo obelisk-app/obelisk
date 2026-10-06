@@ -175,7 +175,7 @@ export class SfuSession {
         });
         if (!this.deps.isJoined() || this.active) return;
         if (!picked) {
-          try { this.events.onError?.('The SFU closed this call and no SFU is reachable to reopen it.'); }
+          try { this.events.onError?.('sfuClosed'); }
           catch (err) { console.warn('[voice] onError handler threw', err); }
           return;
         }

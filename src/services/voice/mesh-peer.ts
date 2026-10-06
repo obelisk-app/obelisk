@@ -146,7 +146,7 @@ export function openMeshPeer(host: MeshPeerHost, remotePubkey: string): void {
               payload: { event: 'rejected-room-full' },
             });
             host.metrics.peers.tornDown++;
-            try { room.events.onError?.('Room is full. Try again when someone leaves.'); }
+            try { room.events.onError?.('roomFull'); }
             catch (e) { console.warn('[voice] onError threw on room-full', e); }
             // Use a microtask so the current signal-routing call returns
             // before we dismantle our own state.

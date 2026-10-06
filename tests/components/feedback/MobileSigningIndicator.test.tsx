@@ -24,10 +24,10 @@ describe('MobileSigningIndicator', () => {
     const { pushActivity, resolveActivity } = await import('@/services/activity-log');
     const { default: MobileSigningIndicator } = await import('@/components/feedback/MobileSigningIndicator');
     const { LocaleProvider } = await import('@tests/support/intl');
-    const id = pushActivity('Waiting for bunker signature', 'kind 9', {
+    const id = pushActivity('signBunker', undefined, {
       operation: 'sign',
       eventKind: 9,
-      description: 'Send message',
+      description: 'message',
     });
 
     render(

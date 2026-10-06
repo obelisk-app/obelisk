@@ -3,6 +3,7 @@
  * and the validators a relay URL passes before it is connected to or kept
  * in the rail. Pure string and URL logic; `relay-url.ts` owns equality.
  */
+import { CodedError } from '@/utils/errors/codes';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 
 export const DEFAULT_RELAY = 'wss://public.obelisk.ar';
@@ -63,17 +64,17 @@ export function validateRelayUrl(url: string): void {
   try {
     parsed = new URL(url);
   } catch {
-    throw new Error(`"${url}" is not a valid URL`);
+    throw new CodedError('invalid-relay-url', `"${url}" is not a valid URL`);
   }
   if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') {
-    throw new Error(`relay URL must use ws:// or wss:// (got ${parsed.protocol})`);
+    throw new CodedError('invalid-relay-url', `relay URL must use ws:// or wss:// (got ${parsed.protocol})`);
   }
   const host = parsed.hostname;
-  if (!host) throw new Error('relay URL has no hostname');
+  if (!host) throw new CodedError('invalid-relay-url', 'relay URL has no hostname');
   const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':'); // v4 or v6
   const isLocalhost = host === 'localhost';
   if (!isIp && !isLocalhost && !host.includes('.')) {
-    throw new Error(`"${host}" is not a valid relay hostname (single-label hosts are not allowed)`);
+    throw new CodedError('invalid-relay-url', `"${host}" is not a valid relay hostname (single-label hosts are not allowed)`);
   }
 }
 

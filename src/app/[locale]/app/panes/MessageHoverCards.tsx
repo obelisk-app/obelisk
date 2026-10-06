@@ -62,7 +62,7 @@ export function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
   const extra = entries.length - shown.length;
   return (
     <HoverCardShell
-      title={`⚡ ${formatNumber(zapTotal.totalSats)} sats · ${t('shell.desktop.zaps.count', { count: zapTotal.count })}`}
+      title={`⚡ ${t('shell.desktop.zaps.sats', { amount: formatNumber(zapTotal.totalSats) })} · ${t('shell.desktop.zaps.count', { count: zapTotal.count })}`}
     >
       <ul className="space-y-0.5">
         {shown.map(([pk, sats]) => (

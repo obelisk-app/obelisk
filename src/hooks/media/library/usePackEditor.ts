@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { uploadToBlossom } from '@/services/blossom';
 import { isValidCustomEmojiName, normalizeCustomEmojiName } from '@/utils/media-tags/custom-emoji-tags';
 import { nostrActions } from '@/services/nostr-bridge';
@@ -19,6 +20,7 @@ export function usePackEditor(
   initialKind: JsMediaKind,
   onSaved: (pack: EditablePack) => Promise<void>,
 ) {
+  const t = useTranslations();
   const [draft, setDraft] = useState<EditablePack>({ ...pack, items: [...pack.items] });
   const [newItemKind, setNewItemKind] = useState<JsMediaKind>(initialKind);
   const [busy, setBusy] = useState(false);
@@ -38,7 +40,8 @@ export function usePackEditor(
       }
       setDraft((current) => ({ ...current, items: [...current.items, ...added] }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Upload failed.');
+      console.warn('[media] pack upload failed', cause);
+      setError(t('media.error.uploadFailed'));
     } finally {
       setBusy(false);
     }
@@ -46,12 +49,12 @@ export function usePackEditor(
 
   const save = async () => {
     const title = draft.title.trim();
-    if (!title) return setError('Pack name is required.');
+    if (!title) return setError(t('media.error.nameRequired'));
     const names = new Set<string>();
     for (const item of draft.items) {
       const name = normalizeCustomEmojiName(item.name);
-      if (!isValidCustomEmojiName(name) || !isHttpUrl(item.url)) return setError('Every item needs a unique shortcode and HTTP(S) image URL.');
-      if (names.has(name)) return setError(`Duplicate shortcode: :${name}:`);
+      if (!isValidCustomEmojiName(name) || !isHttpUrl(item.url)) return setError(t('media.error.invalidItems'));
+      if (names.has(name)) return setError(t('media.error.duplicate', { name }));
       names.add(name);
     }
     setBusy(true);
@@ -61,7 +64,8 @@ export function usePackEditor(
       await nostrActions.saveMediaPack(saved);
       await onSaved(saved);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save pack.');
+      console.warn('[media] saving the pack failed', cause);
+      setError(t('media.error.savePack'));
     } finally {
       setBusy(false);
     }

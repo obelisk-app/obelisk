@@ -133,7 +133,7 @@ describe('dm-call store with the session not loaded yet', () => {
     await flush();
     loader.fail(new Error('chunk failed'));
     await accepting;
-    expect(useDmCallStore.getState()).toMatchObject({ status: 'ended', endReason: 'error', error: 'chunk failed' });
+    expect(useDmCallStore.getState()).toMatchObject({ status: 'ended', endReason: 'error', error: 'load' });
     expect(sent.map((s) => s.msg.type)).toEqual(['decline']);
 
     __resetDmCallsForTests();

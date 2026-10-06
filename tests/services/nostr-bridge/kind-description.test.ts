@@ -10,16 +10,16 @@ import {
 import { eventKindDescription } from '@/services/nostr-bridge/kind-description';
 
 describe('eventKindDescription', () => {
-  it('names the kinds the activity log shows', () => {
-    expect(eventKindDescription(KIND_CLIENT_AUTH)).toBe('NIP-42 relay auth');
-    expect(eventKindDescription(KIND_GROUP_CHAT_MESSAGE)).toBe('Send message');
-    expect(eventKindDescription(KIND_ENCRYPTED_DM)).toBe('Direct message');
-    expect(eventKindDescription(KIND_GROUP_METADATA)).toBe('Group metadata');
-    expect(eventKindDescription(KIND_NIP78_APP_DATA)).toBe('App data');
-    expect(eventKindDescription(KIND_RELAY_LIST)).toBe('Relay list');
+  it('codes the kinds the activity log shows (the indicators translate them)', () => {
+    expect(eventKindDescription(KIND_CLIENT_AUTH)).toBe('relayAuth');
+    expect(eventKindDescription(KIND_GROUP_CHAT_MESSAGE)).toBe('message');
+    expect(eventKindDescription(KIND_ENCRYPTED_DM)).toBe('dm');
+    expect(eventKindDescription(KIND_GROUP_METADATA)).toBe('groupMetadata');
+    expect(eventKindDescription(KIND_NIP78_APP_DATA)).toBe('appData');
+    expect(eventKindDescription(KIND_RELAY_LIST)).toBe('relayList');
   });
 
   it('falls back to a generic label', () => {
-    expect(eventKindDescription(1)).toBe('Nostr event');
+    expect(eventKindDescription(1)).toBe('event');
   });
 });

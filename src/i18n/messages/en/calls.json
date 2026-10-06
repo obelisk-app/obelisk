@@ -36,6 +36,17 @@
       "error": "Call failed"
     },
     "fullscreen": "Full screen",
-    "exitFullscreen": "Exit full screen"
+    "exitFullscreen": "Exit full screen",
+    "error": {
+      "load": "Couldn't load the call.",
+      "mic": "Microphone unavailable.",
+      "send": "Couldn't send the call.",
+      "camera": "Couldn't turn the camera on or off.",
+      "flip": "Couldn't switch camera.",
+      "screen": "Couldn't share your screen.",
+      "permission": "Microphone or camera access is blocked. Allow it in your browser and try again.",
+      "noDevice": "No microphone or camera was found.",
+      "deviceBusy": "Another app is using your microphone or camera."
+    }
   }
 }

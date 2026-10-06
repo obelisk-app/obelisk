@@ -5,6 +5,7 @@
  * relay-debug lines around it. Split from `publish.ts` (round 16) so the
  * publish module holds only the relay round.
  */
+import { CodedError, codeOrMessage, type ActivityCode } from '@/utils/errors/codes';
 import { finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
 import { KIND_VOICE_PRESENCE } from '@/utils/nip-kinds';
 import { failActivity, pushActivity, resolveActivity } from '@/services/activity-log';
@@ -26,7 +27,7 @@ export interface SignDeps {
 
 export type SignableTemplate = { kind: number; content: string; tags: string[][]; created_at: number };
 
-function errorText(e: unknown): string {
+function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
@@ -43,16 +44,12 @@ export async function signForSession(
   opts: { quiet?: boolean; startDeadlineMs?: number } = {},
 ): Promise<NostrEvent> {
   const queueOpts = opts.startDeadlineMs !== undefined ? { startDeadlineMs: opts.startDeadlineMs } : undefined;
-  const signLabel =
-    session.loginMethod === 'nip07'
-      ? 'Waiting for extension signature'
-      : session.loginMethod === 'bunker'
-        ? 'Waiting for bunker signature'
-        : 'Signing event';
+  const signLabel: ActivityCode =
+    session.loginMethod === 'nip07' ? 'signExtension' : session.loginMethod === 'bunker' ? 'signBunker' : 'signLocal';
   const description = eventKindDescription(template.kind);
   const signId = opts.quiet ? null : pushActivity(
     signLabel,
-    'kind ' + template.kind,
+    undefined,
     { operation: 'sign', eventKind: template.kind, description },
   );
   pushRelayDebug({ kind: 'sign-start', eventKind: template.kind, status: description });
@@ -62,7 +59,7 @@ export async function signForSession(
       event = finalizeEvent(template, hexToBytes(session.privKeyHex));
     } else if (session.loginMethod === 'nip07') {
       const win = window.nostr;
-      if (!win) throw new Error('NIP-07 extension unavailable');
+      if (!win) throw new CodedError('extension-missing', 'NIP-07 extension unavailable');
       event = (await enqueueSignerOp(
         'interactive',
         `signEvent:${template.kind}`,
@@ -75,14 +72,14 @@ export async function signForSession(
         { lane: 'interactive', label: `signEvent:${template.kind}`, ...queueOpts },
       );
     } else {
-      throw new Error(`Login method ${session.loginMethod} cannot sign events in this build`);
+      throw new CodedError('signer-unsupported', `Login method ${session.loginMethod} cannot sign events in this build`); // i18n-exempt: developer message; readers get the code
     }
     if (template.kind === KIND_VOICE_PRESENCE) deps.onSigned(event);
     if (signId != null) resolveActivity(signId);
     pushRelayDebug({ kind: 'sign-ok', eventKind: template.kind, status: description });
   } catch (e) {
-    if (signId != null) failActivity(signId, errorText(e));
-    pushRelayDebug({ kind: 'sign-error', eventKind: template.kind, status: description, reason: errorText(e) });
+    if (signId != null) failActivity(signId, codeOrMessage(e));
+    pushRelayDebug({ kind: 'sign-error', eventKind: template.kind, status: description, reason: messageOf(e) });
     throw e;
   }
   return event;

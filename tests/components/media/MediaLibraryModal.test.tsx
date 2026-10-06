@@ -108,6 +108,15 @@ describe('MediaLibraryModal', () => {
     });
   });
 
+  it('speaks Spanish: tabs, filters, counts and the save chip', () => {
+    render(<LocaleProvider initialLocale="es"><MediaLibraryModal embedded onClose={() => {}} /></LocaleProvider>);
+    expect(screen.getAllByRole('button', { name: 'Mercado' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Mis packs' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Todos' })).toBeInTheDocument();
+    expect(screen.getByText('6 ítems')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Guardar Cat pack' })).toHaveTextContent('Guardar pack');
+  });
+
   it('renders inside an existing settings workspace without another modal', () => {
     renderLocalized(<MediaLibraryModal embedded onClose={() => {}} />);
 

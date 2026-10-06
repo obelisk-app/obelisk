@@ -1,89 +1,54 @@
 'use client';
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
+import { createTranslator } from 'next-intl';
 import { clearAllClientCacheExceptSession } from '@/services/cache-clear';
+import { errorCodeOf } from '@/utils/errors/codes';
 import Button from '@/components/ui/Button';
 import TextButton from '@/components/ui/TextButton';
+import en from '@/i18n/messages/en/errors.json';
+import es from '@/i18n/messages/es/errors.json';
+import pt from '@/i18n/messages/pt/errors.json';
 
 /**
  * The recovery UI behind `app/error.tsx` and `app/global-error.tsx`.
  *
- * Deliberately dependency-free: no `useTranslation`, no Zustand store, no
+ * Deliberately provider-free: no `useTranslations`, no Zustand store, no
  * bridge. An error boundary that throws while rendering its own fallback
  * escalates to the next boundary up, and at the root there is none, which
  * lands the user on exactly the blank client-side-exception screen this
  * component exists to replace. So locale comes off `<html lang>` (stamped
  * by the root layout, and still readable in `global-error.tsx` where the
- * layout, and therefore `LocaleProvider`, is gone) rather than context,
- * and the only imports are a pure localStorage helper and the `Button`
- * primitive (plain markup, no context, no store), neither with module-level
- * side effects.
+ * layout, and therefore the intl provider, is gone) rather than context,
+ * and the copy is the `errors` module's three files, imported here
+ * directly and read with next-intl's context-free `createTranslator`. The
+ * other imports are a pure localStorage helper, the error-code reader and
+ * the `Button` primitives (plain markup, no context, no store), none with
+ * module-level side effects.
  */
 
-type Copy = {
-  title: string;
-  body: string;
-  retry: string;
-  reload: string;
-  clear: string;
-  clearing: string;
-  cleared: (n: number) => string;
-  home: string;
-  details: string;
-};
+type PanelLocale = 'en' | 'es' | 'pt';
 
-const COPY: Record<'en' | 'es' | 'pt', Copy> = {
-  en: {
-    title: 'Something broke on this screen',
-    body:
-      'The chat surface hit an error and stopped rendering. Your keys and your messages are safe: nothing was lost, this is only the view. Try again first; if it keeps happening, clearing the local cache rebuilds it from the relay.',
-    retry: 'Try again',
-    reload: 'Reload the page',
-    clear: 'Clear local cache and reload',
-    clearing: 'Clearing…',
-    cleared: (n) => `Cleared ${n} ${n === 1 ? 'entry' : 'entries'}, reloading…`,
-    home: 'Back to home',
-    details: 'Error details',
-  },
-  es: {
-    title: 'Algo se rompió en esta pantalla',
-    body:
-      'El chat encontró un error y dejó de renderizar. Tus claves y tus mensajes están a salvo: no se perdió nada, es solo la vista. Probá de nuevo; si sigue pasando, limpiar el caché local lo reconstruye desde el relay.',
-    retry: 'Probar de nuevo',
-    reload: 'Recargar la página',
-    clear: 'Limpiar caché local y recargar',
-    clearing: 'Limpiando…',
-    cleared: (n) => `Se limpiaron ${n} ${n === 1 ? 'entrada' : 'entradas'}, recargando…`,
-    home: 'Volver al inicio',
-    details: 'Detalles del error',
-  },
-  pt: {
-    title: 'Algo quebrou nesta tela',
-    body:
-      'O chat encontrou um erro e parou de renderizar. Suas chaves e suas mensagens estão a salvo: nada se perdeu, é só a tela. Tente de novo; se continuar acontecendo, limpar o cache local reconstrói tudo a partir do relay.',
-    retry: 'Tentar de novo',
-    reload: 'Recarregar a página',
-    clear: 'Limpar o cache local e recarregar',
-    clearing: 'Limpando…',
-    cleared: (n) => `${n} ${n === 1 ? 'entrada limpa' : 'entradas limpas'}, recarregando…`,
-    home: 'Voltar ao início',
-    details: 'Detalhes do erro',
-  },
-};
+const MESSAGES = { en, es, pt } satisfies Record<PanelLocale, typeof en>;
+
+function translatorFor(locale: PanelLocale) {
+  return createTranslator({ locale, messages: MESSAGES[locale] });
+}
 
 /** Locale off `<html lang>`, set by the root layout, no provider needed. */
-function readLocale(): 'en' | 'es' | 'pt' {
-  if (typeof document === 'undefined') return 'es';
+function readLocale(): PanelLocale {
+  if (typeof document === 'undefined') return 'en';
   const lang = document.documentElement.lang;
   return lang === 'es' || lang === 'pt' ? lang : 'en';
 }
 
 /** `<html lang>` is fixed for the life of the document: nothing to watch. */
 const subscribeToNothing = () => () => {};
-// Mirrors i18n's DEFAULT_LOCALE, duplicated on purpose: importing it would
-// pull both JSON dictionaries into the error chunk, and this component's
-// whole contract is that it loads and renders with nothing else available.
-const serverLocale = (): 'en' | 'es' | 'pt' => 'en';
+// Mirrors i18n's DEFAULT_LOCALE, duplicated on purpose: importing the
+// routing config would pull the rest of the i18n setup into the error
+// chunk, and this component's whole contract is that it loads and renders
+// with nothing else available.
+const serverLocale = (): PanelLocale => 'en';
 
 export default function ErrorPanel({
   error,
@@ -99,7 +64,8 @@ export default function ErrorPanel({
   // other through a post-mount setState.
   const locale = useSyncExternalStore(subscribeToNothing, readLocale, serverLocale);
   const [clearedCount, setClearedCount] = useState<number | null>(null);
-  const t = COPY[locale];
+  const t = translatorFor(locale);
+  const code = errorCodeOf(error);
 
   // Next.js swallows the original error in production builds, so without
   // this the console shows only a digest and the stack is unrecoverable.
@@ -129,13 +95,18 @@ export default function ErrorPanel({
       className="flex min-h-screen w-full items-center justify-center bg-lc-black px-4 py-10 text-lc-white"
     >
       <div className="lc-card w-full max-w-lg p-6 sm:p-8">
-        <h1 className="text-xl font-semibold sm:text-2xl">{t.title}</h1>
-        <p className="mt-3 text-sm leading-relaxed text-lc-muted">{t.body}</p>
+        <h1 className="text-xl font-semibold sm:text-2xl">{t('panel.title')}</h1>
+        <p className="mt-3 text-sm leading-relaxed text-lc-muted">{t('panel.body')}</p>
+        {code && (
+          <p className="mt-3 text-sm leading-relaxed text-lc-white" data-testid="error-panel-reason">
+            {t(`codes.${code}`)}
+          </p>
+        )}
 
         {detail && (
           <details className="mt-5 rounded-xl border border-lc-border bg-lc-black/60">
             <summary className="cursor-pointer px-4 py-2.5 text-xs font-medium text-lc-muted">
-              {t.details}
+              {t('panel.details')}
             </summary>
             <pre
               data-testid="error-panel-detail"
@@ -149,7 +120,7 @@ export default function ErrorPanel({
         <div className="mt-6 flex flex-wrap gap-3">
           {reset && (
             <Button variant="pill" size="md" onClick={reset} data-testid="error-retry">
-              {t.retry}
+              {t('panel.retry')}
             </Button>
           )}
           <Button
@@ -158,7 +129,7 @@ export default function ErrorPanel({
             onClick={() => window.location.reload()}
             data-testid="error-reload"
           >
-            {t.reload}
+            {t('panel.reload')}
           </Button>
         </div>
 
@@ -168,7 +139,7 @@ export default function ErrorPanel({
             disabled={clearedCount !== null}
             data-testid="error-clear-cache"
           >
-            {clearedCount === null ? t.clear : t.clearing}
+            {clearedCount === null ? t('panel.clear') : t('panel.clearing')}
           </TextButton>
           {/* A hard navigation, not next/link: client-side routing would
               carry the broken JS state into the landing page, and the
@@ -177,13 +148,13 @@ export default function ErrorPanel({
             onClick={() => { window.location.href = locale === 'en' ? '/' : `/${locale}`; }}
             data-testid="error-home"
           >
-            {t.home}
+            {t('panel.home')}
           </TextButton>
         </div>
 
         {clearedCount !== null && (
           <p className="mt-3 text-xs text-lc-green" data-testid="error-cleared-note">
-            {t.cleared(clearedCount)}
+            {t('panel.cleared', { count: clearedCount })}
           </p>
         )}
       </div>

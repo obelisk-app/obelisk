@@ -7,6 +7,7 @@
  * (localStorage); the in-memory profile state is `profiles.ts`, reached
  * through `deps.ingest`.
  */
+import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { KIND_METADATA } from '@/utils/nip-kinds';
 import type { BridgeContext } from './context';
@@ -58,7 +59,7 @@ export class OwnProfileModule {
 
   async edit(opts: EditUserMetadataOptions, options: { create?: boolean } = {}): Promise<void> {
     const session = this.ctx.session();
-    if (!session) throw new Error('Not logged in');
+    if (!session) throw new CodedError('not-logged-in', 'Not logged in');
     const me = session.pubKeyHex;
     const profileRelays = Array.from(new Set([...this.ctx.relays(), ...DEFAULT_PROFILE_LOOKUP_RELAYS]));
 
@@ -80,7 +81,7 @@ export class OwnProfileModule {
         ...(cachedEvent ? [cachedKind0ToEvent(cachedEvent)] : []),
       ]);
       if (!existingEvent && !profileQuery.complete) {
-        throw new Error('Could not load your current profile. Try again.');
+        throw new CodedError('profile-load-failed', 'Could not load your current profile. Try again.');
       }
     }
     const existing = existingEvent ? (JSON.parse(existingEvent.content) as Record<string, unknown>) : {};
@@ -154,7 +155,7 @@ export class OwnProfileModule {
       { cache: 'fresh' },
     );
     const newest = newestEvent(result.events.filter((e) => e.kind === KIND_METADATA && e.pubkey === pubkey));
-    if (!newest && !result.complete) throw new Error('Profile lookup timed out');
+    if (!newest && !result.complete) throw new CodedError('profile-lookup-timeout', 'Profile lookup timed out');
     return newest;
   }
 }

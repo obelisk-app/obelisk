@@ -4,6 +4,7 @@
  * post-quantum NIP-44 path and the pq-envelope tracker the gift-wrap ingest
  * reads back. Pure move from `client.ts` (`getDmSigner`).
  */
+import { CodedError } from '@/utils/errors/codes';
 import { finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { isPqEnvelope } from '@nostr-wot/pq';
@@ -58,7 +59,7 @@ export function buildDmSigner(
       }
       if (session.loginMethod === 'nip07') {
         const w = (window as unknown as { nostr?: { signEvent: (e: unknown) => Promise<NostrEvent> } }).nostr;
-        if (!w) throw new Error('NIP-07 extension unavailable');
+        if (!w) throw new CodedError('extension-missing', 'NIP-07 extension unavailable');
         return enqueueSignerOp(lane, `signEvent:${template.kind}`, () => w.signEvent(template));
       }
       if (session.loginMethod === 'bunker') {
@@ -67,7 +68,7 @@ export function buildDmSigner(
           { lane, label: `signEvent:${template.kind}` },
         );
       }
-      throw new Error(`Cannot sign with login method ${session.loginMethod}`);
+      throw new CodedError('signer-unsupported', `Cannot sign with login method ${session.loginMethod}`); // i18n-exempt: developer message; readers get the code
     },
     nip04Encrypt: (recipientPubkey, plaintext) => deps.encryptNip04(recipientPubkey, plaintext, lane),
     nip04Decrypt: (senderPubkey, ciphertext) => deps.decryptNip04(senderPubkey, ciphertext, lane),
@@ -89,10 +90,10 @@ export function buildDmSigner(
               };
             };
           }).nostr;
-          if (!w?.nip44?.encrypt) throw new Error('Extension does not support NIP-44 encryption');
+          if (!w?.nip44?.encrypt) throw new CodedError('extension-no-nip44', 'Extension does not support NIP-44 encryption');
           return enqueueSignerOp(lane, 'nip44Encrypt:pq', () => w.nip44!.encrypt(recipientPubkey, plaintext, opts));
         }
-        throw new Error(`Post-quantum NIP-44 encryption is not available for login method ${session.loginMethod}`);
+        throw new CodedError('pq-unavailable', `Post-quantum NIP-44 encryption is not available for login method ${session.loginMethod}`);
       }
       if (session.loginMethod === 'nsec' && session.privKeyHex) {
         const sk = hexToBytes(session.privKeyHex);
@@ -103,7 +104,7 @@ export function buildDmSigner(
         const w = (window as unknown as {
           nostr?: { nip44?: { encrypt: (p: string, t: string) => Promise<string> } };
         }).nostr;
-        if (!w?.nip44?.encrypt) throw new Error('Extension does not support NIP-44 encryption');
+        if (!w?.nip44?.encrypt) throw new CodedError('extension-no-nip44', 'Extension does not support NIP-44 encryption');
         return enqueueSignerOp(lane, 'nip44Encrypt', () => w.nip44!.encrypt(recipientPubkey, plaintext));
       }
       if (session.loginMethod === 'bunker') {
@@ -112,7 +113,7 @@ export function buildDmSigner(
           { lane, label: 'nip44Encrypt' },
         );
       }
-      throw new Error(`Cannot NIP-44 encrypt with login method ${session.loginMethod}`);
+      throw new CodedError('signer-unsupported', `Cannot NIP-44 encrypt with login method ${session.loginMethod}`); // i18n-exempt: developer message; readers get the code
     },
     nip44Decrypt: async (senderPubkey, ciphertext) => {
       // Deliberately OUTSIDE the memo below: the gift-wrap ingest reads
@@ -129,7 +130,7 @@ export function buildDmSigner(
         const w = (window as unknown as {
           nostr?: { nip44?: { decrypt: (p: string, c: string) => Promise<string> } };
         }).nostr;
-        if (!w?.nip44?.decrypt) throw new Error('Extension does not support NIP-44 decryption');
+        if (!w?.nip44?.decrypt) throw new CodedError('extension-no-nip44', 'Extension does not support NIP-44 decryption');
         return memoizeDecrypt('nip44', senderPubkey, ciphertext, () =>
           enqueueSignerOp(lane, 'nip44Decrypt', () => w.nip44!.decrypt(senderPubkey, ciphertext)),
         );
@@ -142,7 +143,7 @@ export function buildDmSigner(
           ),
         );
       }
-      throw new Error(`Cannot NIP-44 decrypt with login method ${session.loginMethod}`);
+      throw new CodedError('signer-unsupported', `Cannot NIP-44 decrypt with login method ${session.loginMethod}`); // i18n-exempt: developer message; readers get the code
     },
   };
 }

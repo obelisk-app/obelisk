@@ -42,7 +42,7 @@ export class AuthRepublisher {
     try {
       const [result] = await publishRound(this.hub, [url], event, 'auth-first');
       if (result.status === 'rejected' && reasonText(result) === AUTH_UNAVAILABLE) return null;
-      pushRelayDebug({ kind: 'publish-retry', relays: [url], eventKind: event.kind, reason: 'refused before AUTH; retried authenticated' });
+      pushRelayDebug({ kind: 'publish-retry', relays: [url], eventKind: event.kind, reason: 'refused before AUTH; retried authenticated' }); // i18n-exempt: relay debug panel text
       if (result.status === 'rejected') this.refusedOnGeneration.set(url, generation);
       return result;
     } finally {

@@ -21,7 +21,7 @@
     "encrypted": "Cifrada de extremo a extremo",
     "ipHidden": "Tu IP está oculta, por relé",
     "close": "Cerrar",
-    "needsDms": "Activa los mensajes directos para llamar",
+    "needsDms": "Activá los mensajes directos para llamar",
     "ended": {
       "local-hangup": "Llamada finalizada",
       "remote-hangup": "Llamada finalizada",
@@ -36,6 +36,17 @@
       "error": "La llamada falló"
     },
     "fullscreen": "Pantalla completa",
-    "exitFullscreen": "Salir de pantalla completa"
+    "exitFullscreen": "Salir de pantalla completa",
+    "error": {
+      "load": "No se pudo cargar la llamada.",
+      "mic": "El micrófono no está disponible.",
+      "send": "No se pudo enviar la llamada.",
+      "camera": "No se pudo prender o apagar la cámara.",
+      "flip": "No se pudo cambiar de cámara.",
+      "screen": "No se pudo compartir la pantalla.",
+      "permission": "El acceso al micrófono o a la cámara está bloqueado. Permitilo en el navegador y probá de nuevo.",
+      "noDevice": "No se encontró ningún micrófono ni cámara.",
+      "deviceBusy": "Otra app está usando tu micrófono o tu cámara."
+    }
   }
 }

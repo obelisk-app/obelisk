@@ -38,7 +38,7 @@ export type VaultErrorCode = 'unavailable' | 'unlock-failed' | 'key-missing';
 export class VaultError extends Error {
   readonly code: VaultErrorCode;
   constructor(code: VaultErrorCode, message?: string) {
-    super(message ?? `Session vault: ${code}`);
+    super(message ?? `Session vault: ${code}`); // i18n-exempt: developer message; readers get the code
     this.name = 'VaultError';
     this.code = code;
   }

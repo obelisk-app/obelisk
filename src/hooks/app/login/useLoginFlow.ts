@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import type { LoginMethodId } from '@nostr-wot/ui';
 import { profileUrl } from '@/services/social/note-links';
 import { publishGeneratedProfile, routeToBridge, type GeneratedProfileDraft, type LoginArgs } from '@/services/login/login-bridge';
@@ -24,6 +25,7 @@ type SdkLogin = {
  */
 export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; onClose?: () => void }) {
   const router = useRouter();
+  const t = useTranslations();
   const [generatedLogin, setGeneratedLogin] = useState<LoginArgs | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState('');
@@ -95,7 +97,7 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
     const link = profileUrl(generatedLogin.pubkey);
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'My Nostr profile', url: link });
+        await navigator.share({ title: t('shell.login.shareTitle'), url: link });
       } else {
         await navigator.clipboard?.writeText(link);
         setShared(true);

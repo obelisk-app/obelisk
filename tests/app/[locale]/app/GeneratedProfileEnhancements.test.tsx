@@ -1,4 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
+
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: LocaleProvider });
 import userEvent from '@testing-library/user-event';
 import { nip19 } from 'nostr-tools';
 import { useState } from 'react';

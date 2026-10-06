@@ -48,9 +48,11 @@ export interface AuthRecord {
   lastError: string | null;
 }
 
+/** The relay refused this challenge once already. `code` is the app's `auth-refused`. */
 export class AuthRefusedError extends Error {
+  readonly code = 'auth-refused';
   constructor(url: string) {
-    super(`relay ${url} refused this challenge; not signing it again`);
+    super(`relay ${url} refused this challenge; not signing it again`); // i18n-exempt: developer message; readers get the code
     this.name = 'AuthRefusedError';
   }
 }

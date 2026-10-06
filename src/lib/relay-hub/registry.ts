@@ -157,7 +157,7 @@ export class SubscriptionRegistry {
   onSocketForget(entry: SocketEntry): void {
     const bucket = this.scheduler.buckets.get(entry.key);
     if (!bucket) return;
-    for (const live of Array.from(bucket.subs.values())) this.scheduler.terminate(live, 'socket closed');
+    for (const live of Array.from(bucket.subs.values())) this.scheduler.terminate(live, 'socket closed'); // i18n-exempt: subscription close reason for logs, not shown
     this.scheduler.forget(entry.key);
   }
 
@@ -165,7 +165,7 @@ export class SubscriptionRegistry {
     for (const entry of this.sockets.forIdentity(identityId)) {
       const bucket = this.scheduler.buckets.get(entry.key);
       if (!bucket) continue;
-      for (const live of Array.from(bucket.subs.values())) this.scheduler.terminate(live, 'identity removed');
+      for (const live of Array.from(bucket.subs.values())) this.scheduler.terminate(live, 'identity removed'); // i18n-exempt: subscription close reason for logs, not shown
     }
   }
 
@@ -187,7 +187,7 @@ export class SubscriptionRegistry {
 
   dispose(): void {
     for (const [key, bucket] of Array.from(this.scheduler.buckets.entries())) {
-      for (const live of Array.from(bucket.subs.values())) this.scheduler.terminate(live, 'hub disposed');
+      for (const live of Array.from(bucket.subs.values())) this.scheduler.terminate(live, 'hub disposed'); // i18n-exempt: subscription close reason for logs, not shown
       this.scheduler.forget(key);
     }
   }

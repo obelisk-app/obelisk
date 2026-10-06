@@ -65,7 +65,7 @@ export function RelayBrandingModal({
         <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-lc-border px-5 py-3">
           <Button variant="pillSecondary" size="xs" onClick={onClose}>{t('common.cancel')}</Button>
           <Button type="submit" form="relay-branding-form" disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t('common.saving') : t('common.save')}
           </Button>
         </footer>
     </Modal>

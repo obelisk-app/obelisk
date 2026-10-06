@@ -66,7 +66,7 @@ export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
           {draft.items.map((item, index) => (
             <div key={`${index}-${item.url}`} className="grid items-center gap-2 rounded-lg border border-lc-border p-2 sm:grid-cols-[3rem_10rem_7rem_minmax(0,1fr)_auto]">
               <div className="flex h-12 w-12 items-center justify-center rounded bg-lc-black p-1">{item.url && <MediaThumb src={item.url} alt="" className="max-h-full max-w-full object-contain" />}</div>
-              <Input value={item.name} onChange={(event) => updateItem(index, { name: event.target.value })} placeholder="shortcode" aria-label={t('media.itemShortcode', { n: String(index + 1) })} />
+              <Input value={item.name} onChange={(event) => updateItem(index, { name: event.target.value })} placeholder={t('media.pack.shortcodePlaceholder')} aria-label={t('media.itemShortcode', { n: String(index + 1) })} />
               <Select size="md" className="w-full" value={item.kind} onChange={(event) => updateItem(index, { kind: event.target.value as JsMediaKind })} aria-label={t('media.itemType', { n: String(index + 1) })}>
                 <KindOptions />
               </Select>
@@ -80,7 +80,7 @@ export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
       {error && <div className="border-t border-lc-border px-4 py-2 text-xs text-red-300" role="alert">{error}</div>}
       <footer className="flex justify-end gap-2 border-t border-lc-border p-4">
         <Button variant="secondary" size="lg" onClick={onClose}>{t('common.cancel')}</Button>
-        <Button size="lg" disabled={busy} onClick={() => void save()}>{busy ? "Saving…" : "Save pack"}</Button>
+        <Button size="lg" disabled={busy} onClick={() => void save()}>{t(busy ? 'media.pack.saving' : 'media.pack.save')}</Button>
       </footer>
     </Modal>
   );

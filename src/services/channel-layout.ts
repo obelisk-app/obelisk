@@ -14,6 +14,8 @@
  * at the bottom. Categories with no children still render (operator can
  * drop channels into them).
  */
+import { translate } from '@/i18n/runtime';
+import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
 import { KIND_NIP78_APP_DATA as KIND_LAYOUT } from '@/utils/nip-kinds';
@@ -50,7 +52,8 @@ function parseLayout(ev: NostrEvent): ChannelLayout {
     if (t[0] === 'category' && t[1] && t[2] !== undefined) {
       categories.push({
         id: t[1],
-        name: t[2] || 'Untitled',
+        // A category saved with an empty name; the app shell's translator names it.
+        name: t[2] || translate('errors.status.untitledCategory'),
         position: parseInt(t[3] ?? '0', 10) || 0,
       });
     } else if (t[0] === 'channel' && t[1]) {
@@ -127,7 +130,7 @@ export function subscribeLayout(
 export async function publishLayout(relayUrl: string, layout: ChannelLayout): Promise<void> {
   await getBridge();
   const impl = getBridgeImpl();
-  if (!impl) throw new Error('nostr bridge not initialized');
+  if (!impl) throw new CodedError('not-ready', 'nostr bridge not initialized');
   await impl.publishEvent({
     kind: KIND_LAYOUT,
     content: '',

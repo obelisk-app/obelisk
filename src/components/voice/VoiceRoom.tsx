@@ -16,6 +16,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import type { VoiceClient } from '@/services/voice/client';
+import type { VoiceErrorCode } from '@/services/voice/errors';
 import { useVoiceStore } from '@/store/voice';
 import { useActiveCall, useGroups, useCurrentRelayUrl, useMyLoginMethod } from '@/services/nostr-bridge';
 import { shouldUseSfuTopology } from '@/services/voice/topology';
@@ -68,7 +69,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   // Shared by the gate (which pushes role changes into the running client)
   // and the client hook (which owns it).
   const clientRef = useRef<VoiceClient | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<VoiceErrorCode | null>(null);
 
   const { gate, selfPubkey } = useVoiceRoomGate(channelId, clientRef, setError);
   const {
@@ -110,7 +111,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         <Spinner />
         <div className="mt-3 text-sm text-neutral-300">{t('voice.loadingMembership')}</div>
         <div className="mt-1 font-mono text-xs text-neutral-500 break-all">{channelId}</div>
-        {error && <div className="mt-3 text-xs text-red-400">{error}</div>}
+        {error && <div className="mt-3 text-xs text-red-400">{t(`voice.error.${error}`)}</div>}
       </CenteredPanel>
     );
   }

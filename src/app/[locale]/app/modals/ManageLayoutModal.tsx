@@ -158,7 +158,7 @@ export function ManageLayoutModal({
               {t('common.cancel')}
             </Button>
             <Button onClick={save} disabled={saving}>
-              {saving ? 'Publishing…' : 'Publish layout'}
+              {saving ? t('shell.desktop.layout.publishing') : t('shell.desktop.layout.publish')}
             </Button>
           </div>
         </footer>

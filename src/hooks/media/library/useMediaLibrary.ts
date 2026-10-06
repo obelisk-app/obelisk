@@ -57,7 +57,8 @@ export function useMediaLibrary({
     try {
       await nostrActions.saveMediaFavorites(next);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Could not save favorites.');
+      console.warn('[media] saving favorites failed', error);
+      setMessage(t('media.error.saveFavorites'));
     } finally {
       setBusy(false);
     }
@@ -68,7 +69,10 @@ export function useMediaLibrary({
     setBusy(true);
     setMessage(null);
     try {
-      if (!myPubkey) throw new Error("Log in to upload media.");
+      if (!myPubkey) {
+        setMessage(t('media.error.loginToUpload'));
+        return;
+      }
       const url = await uploadToBlossom(file);
       const name = normalizeCustomEmojiName(file.name) || "media";
       const kind = kindFilter === "all" ? inferMediaKind(url) : kindFilter;
@@ -80,9 +84,10 @@ export function useMediaLibrary({
         packAddresses: favorites.packAddresses,
       });
       setTab("favorites");
-      setMessage("Uploaded :" + name + ": to individual favorites.");
+      setMessage(t('media.notice.uploaded', { name }));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not upload media.");
+      console.warn('[media] upload failed', error);
+      setMessage(t('media.error.upload'));
     } finally {
       setBusy(false);
     }
@@ -119,9 +124,10 @@ export function useMediaLibrary({
     setMessage(null);
     try {
       await nostrActions.deleteMediaPack(pack.address);
-      setMessage('Deleted “' + pack.title + '”.');
+      setMessage(t('media.notice.deleted', { title: pack.title }));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Could not delete pack.');
+      console.warn('[media] deleting the pack failed', error);
+      setMessage(t('media.error.deletePack'));
     } finally {
       setBusy(false);
     }
@@ -138,13 +144,14 @@ export function useMediaLibrary({
     try {
       await publishRelayEmojiSet(server.relayUrl, {
         ...server.emojiSet,
-        title: server.emojiSet.title || "Server packs",
+        title: server.emojiSet.title || t('media.serverPacks'),
         emojis: [],
         packAddresses,
       });
-      setMessage((selected ? "Removed “" : "Added “") + pack.title + (selected ? "” from" : "” to") + " this server.");
+      setMessage(t(selected ? 'media.notice.removedFromServer' : 'media.notice.addedToServer', { title: pack.title }));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not update server packs.");
+      console.warn('[media] updating the server packs failed', error);
+      setMessage(t('media.error.serverPacks'));
       throw error;
     } finally {
       setBusy(false);

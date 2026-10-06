@@ -39,7 +39,8 @@
       "urlHint": "Paste a NIP-29 group relay URL. Each relay is a separate “server” in the rail.",
       "adding": "Adding…",
       "add": "Add",
-      "added": "Added"
+      "added": "Added",
+      "noDescription": "No description"
     },
     "confirmRemoveBody": "You can add it back later."
   },
@@ -100,7 +101,12 @@
       "forumHint": "A feed of publications, each with its own chat",
       "voiceHelp": "Adds a <tag></tag> tag. Members open <url></url> to join.",
       "sfuHelp": "Adds a <tag></tag> tag. Same join surface as voice, but the channel signals to operators “expect a big room”. An authorized SFU joins and forwards everyone’s media so the room scales past the 8-peer mesh ceiling.",
-      "forumHelp": "Adds a <tag></tag> tag (the wire value keeps its original name). The channel renders as a feed of publications instead of a chat stream: each publication is its own channel, with its own conversation."
+      "forumHelp": "Adds a <tag></tag> tag (the wire value keeps its original name). The channel renders as a feed of publications instead of a chat stream: each publication is its own channel, with its own conversation.",
+      "settingsTitle": "Channel settings · #{name}",
+      "forumTagsHint": "Curated; published as NIP-29 tag metadata",
+      "forumTagsHelp": "Pick a small set of categories so members can browse publications by topic. Authors pick from this list: they can't invent new tags. Each tag gets its own color automatically; set one explicitly if you want a specific hue. Emoji is optional but helps the chip row scan at a glance.",
+      "saving": "Saving…",
+      "saveChanges": "Save changes"
     },
     "composer": {
       "replyingTo": "Replying to",
@@ -165,7 +171,12 @@
     },
     "channels": {
       "loading": "Loading channels…",
-      "empty": "No channels on this relay yet."
+      "empty": "No channels on this relay yet.",
+      "uncategorized": "Uncategorized",
+      "unread": "{count, plural, one {# unread message} other {# unread messages}}",
+      "mentions": "{count, plural, one {# mention or reply} other {# mentions or replies}}",
+      "expandPublications": "Expand publications",
+      "collapsePublications": "Collapse publications"
     },
     "header": {
       "openMenu": "Open menu"
@@ -175,7 +186,29 @@
     },
     "server": {
       "settings": "Server settings",
-      "settingsHelp": "Available only to the relay operator."
+      "settingsHelp": "Available only to the relay operator.",
+      "items": {
+        "profile": {
+          "title": "Server profile & banner",
+          "description": "Name, icon, banner, and description."
+        },
+        "emoji": {
+          "title": "Emoji, GIFs & stickers",
+          "description": "Server favorites, packs, and marketplace."
+        },
+        "channels": {
+          "title": "Channels & categories",
+          "description": "Category names and channel ordering."
+        },
+        "roles": {
+          "title": "Roles & ranks",
+          "description": "Tiered badges shown next to member names."
+        },
+        "members": {
+          "title": "Members & moderation",
+          "description": "Review, demote, and kick across channels."
+        }
+      }
     },
     "branding": {
       "appearance": "Appearance",
@@ -192,18 +225,36 @@
       "empty": "No categories yet. Add one above to start organizing.",
       "dropHere": "Drop channels here",
       "allPlaced": "All channels are placed in categories.",
-      "saveHelp": "Saved as a single replaceable kind 30078 event signed by you."
+      "saveHelp": "Saved as a single replaceable kind 30078 event signed by you.",
+      "publishing": "Publishing…",
+      "publish": "Publish layout",
+      "grabChannel": "Grab channel {name}",
+      "grabCategory": "Grab category {name}",
+      "uncategorizedOption": "(uncategorized)"
     },
     "me": {
       "profile": "Profile",
-      "settings": "Settings"
+      "settings": "Settings",
+      "you": "You"
     },
     "members": {
       "addPlaceholder": "npub1… or hex pubkey",
       "addLabel": "Member npub or hex pubkey",
       "loading": "Loading members…",
       "demoteHelp": "Strip admin role; keep them in the channel as a regular member.",
-      "remove": "Remove"
+      "remove": "Remove",
+      "asAdmin": "As admin",
+      "adding": "Adding…",
+      "add": "Add",
+      "emptyPublic": "No members yet. Not required: the relay whitelist controls access.",
+      "emptyPrivate": "No members yet. Add at least one to grant access.",
+      "confirmDemote": "Demote {name} to member?",
+      "confirmRemove": "Remove {name} from the channel?",
+      "demoteLabel": "Demote {name}",
+      "removeLabel": "Remove {name}",
+      "copied": "Copied",
+      "roleAdmin": "Admin",
+      "roleMember": "Member"
     },
     "tags": {
       "emoji": "Tag emoji",
@@ -216,7 +267,10 @@
       "url": "SFU URL",
       "verified": "Verified",
       "help": "Enter one SFU URL. Obelisk verifies its <info></info> descriptor and stores the returned identity automatically. Calls authenticate directly to the SFU; Nostr relays are only a compatibility fallback.",
-      "verifyHelp": "The SFU checks your signed Nostr identity and whitelist when you join. The full pubkey above is available for advanced verification."
+      "verifyHelp": "The SFU checks your signed Nostr identity and whitelist when you join. The full pubkey above is available for advanced verification.",
+      "checking": "Checking…",
+      "verify": "Verify",
+      "capacity": "up to {count, plural, one {# participant} other {# participants}}"
     },
     "voice": {
       "liveTitle": "Live call in progress",
@@ -224,7 +278,8 @@
     },
     "gotIt": "Got it",
     "zaps": {
-      "count": "{count, plural, one {# zap} other {# zaps}}"
+      "count": "{count, plural, one {# zap} other {# zaps}}",
+      "sats": "{amount} sats"
     }
   },
   "search": {
@@ -358,6 +413,34 @@
       },
       "vaultUnavailable": "This browser can't keep your key safely between visits, so you were logged out. A signer extension or a bunker keeps you signed in without storing a key here.",
       "unlockFailed": "We couldn't unlock your saved key, so you were logged out. Log in again."
+    },
+    "title": "Connect to Nostr",
+    "subtitle": "Choose your login method",
+    "npubHelp": "Your npub is your public profile address. Share it so people can find and follow you. It is safe to share: your nsec is the key that stays private.",
+    "linkCopied": "Link copied",
+    "shareMyProfile": "Share my profile",
+    "connecting": "Connecting…",
+    "enter": "Enter Obelisk",
+    "shareTitle": "My Nostr profile",
+    "profile": {
+      "uploadBanner": "Upload banner",
+      "aboutOptional": "About (optional)",
+      "suggestName": "Suggest another name",
+      "chooseImage": "Choose an image file.",
+      "uploading": "Uploading…",
+      "change": "Change",
+      "changeBanner": "Change banner",
+      "uploadFailed": "Upload failed",
+      "retry": "Retry",
+      "retryBanner": "Retry banner"
+    },
+    "signer": {
+      "useBunkerUri": "Use bunker URI",
+      "openApp": "Open in signer app",
+      "copyUri": "Copy connection URI",
+      "copied": "Copied",
+      "copyFailed": "Copy failed: select the URI below",
+      "fallbackHint": "Fallback: copy it, then in Amber open New application → Paste from clipboard."
     }
   },
   "channel": {
@@ -369,6 +452,57 @@
       "help": "Channels are public and open by default: anyone the relay accepts can read and post. You can lock it down later in <settings></settings>.",
       "nameOn": "Channel name · on {relay}",
       "examplePlaceholder": "general"
+    }
+  },
+  "status": {
+    "offline": {
+      "title": "You’re offline",
+      "body": "Cached channels and messages remain available. Reconnecting when your network returns."
+    },
+    "connecting": {
+      "title": "Connecting to {host}…",
+      "body": "Waiting for the relay handshake."
+    },
+    "disconnected": {
+      "title": "Connection lost",
+      "body": "Reconnecting in the background."
+    },
+    "cannotReach": "Cannot reach {host}",
+    "authenticating": {
+      "title": "Authenticating with {host}…",
+      "bunker": "Approve the signing request in your bunker app.",
+      "nip07": "Approve the signing request in your Nostr extension.",
+      "local": "Signing the relay AUTH challenge…"
+    },
+    "authRequired": {
+      "title": "Not authenticated to {host}",
+      "reapprove": "NIP-42 AUTH did not complete. Reapprove the signing request.",
+      "reload": "NIP-42 AUTH did not complete. Try reloading."
+    },
+    "restricted": {
+      "title": "Not whitelisted on {host}",
+      "body": "Your pubkey is signed in, but this relay won’t serve or accept events. Ask the operator to add you, or switch relays."
+    },
+    "unreachable": {
+      "body": "The relay isn’t responding. Retrying in the background."
+    },
+    "error": {
+      "title": "Relay error on {host}",
+      "body": "The relay rejected the request. Try reloading or switching relays."
+    },
+    "modal": {
+      "authBunker": "Approve the signing request in your bunker app to complete NIP-42 AUTH.",
+      "authNip07": "Approve the signing request in your Nostr extension to complete NIP-42 AUTH.",
+      "authFailed": "NIP-42 AUTH did not complete. Try reloading or switching login methods.",
+      "unreachable": "The relay isn’t responding. It may be offline, blocked by your network, or briefly unavailable. We’ll keep trying in the background. Switch relays if you need to keep working.",
+      "restricted": "This relay accepted your signature but won’t serve or accept events from your pubkey. Ask the operator to add you to its allowlist, or switch relays."
+    },
+    "connection": {
+      "connected": "Connected",
+      "connecting": "Connecting",
+      "disconnected": "Disconnected",
+      "offline": "Offline",
+      "error": "Error: {detail}"
     }
   }
 }

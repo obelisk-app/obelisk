@@ -1,4 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render as rtlRender, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { LocaleProvider } from '@tests/support/intl';
+
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: LocaleProvider });
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RelayAccessState } from '@/services/nostr-bridge';
 
@@ -77,5 +81,15 @@ describe('RelayStatusBanner test ids', () => {
     const banner = screen.getByTestId('connection-loss-banner');
     expect(banner).toHaveAttribute('data-state', 'disconnected');
     expect(banner).toHaveTextContent('Connection lost');
+  });
+
+  it('speaks the reader\'s language, host included', () => {
+    mockBridge.relayAccess = 'restricted';
+
+    rtlRender(<LocaleProvider initialLocale="es"><RelayStatusBanner /></LocaleProvider>);
+
+    const banner = screen.getByTestId('relay-access-banner');
+    expect(banner).toHaveTextContent('No estás en la whitelist de public.obelisk.ar');
+    expect(banner).toHaveTextContent('Pedile al operador que te agregue');
   });
 });

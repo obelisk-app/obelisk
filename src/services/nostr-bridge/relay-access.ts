@@ -10,6 +10,7 @@ import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { BoundedMap } from '@/lib/relay-hub';
 import { KIND_METADATA } from '@/utils/nip-kinds';
 import { dismissActivity, failActivity, pushActivity, resolveActivity } from '@/services/activity-log';
+import type { ActivityCode, ErrorCode, EventKindLabel } from '@/utils/errors/codes';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { BridgeContext, SetRelayAccessOpts, TrackedSub } from './context';
 import type { RelayAccessState, Unsubscribe } from './types';
@@ -130,10 +131,11 @@ export class RelayAccessModule {
       const host = (() => {
         try { return new URL(url).host; } catch { return url; }
       })();
+      // The host rides as the detail: the indicator reads it into the title.
       const id = pushActivity(
-        'Authenticating with ' + host,
-        'NIP-42 relay AUTH: approve in your signer',
-        { operation: 'sign', description: 'NIP-42 relay auth' },
+        'relayAuth' satisfies ActivityCode,
+        host,
+        { operation: 'sign', description: 'relayAuth' satisfies EventKindLabel },
       );
       this.authActivityIds.set(key, id);
     } else if (cur[key] === 'authenticating' && state !== 'authenticating') {
@@ -142,9 +144,9 @@ export class RelayAccessModule {
         if (state === 'ok') {
           resolveActivity(id);
         } else if (state === 'auth-required') {
-          failActivity(id, 'AUTH was not accepted by the relay');
+          failActivity(id, 'auth-refused' satisfies ErrorCode);
         } else if (state === 'restricted') {
-          failActivity(id, 'pubkey is not whitelisted on this relay');
+          failActivity(id, 'not-whitelisted' satisfies ErrorCode);
         } else if (state === 'unreachable') {
           // Transient: the socket dropped mid-AUTH. The reconnect path
           // will fire a fresh AUTH activity if it actually re-authenticates.
@@ -152,7 +154,7 @@ export class RelayAccessModule {
           // unreachable" toast even when the next round-trip succeeds.
           dismissActivity(id);
         } else if (state === 'error') {
-          failActivity(id, 'relay rejected the request');
+          failActivity(id, 'relay-error' satisfies ErrorCode);
         } else {
           dismissActivity(id);
         }

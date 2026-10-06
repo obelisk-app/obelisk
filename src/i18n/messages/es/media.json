@@ -39,5 +39,73 @@
   "remote": {
     "show": "Mostrar contenido",
     "hint": "Oculto hasta que lo pidas. Cargarlo le revelaría tu dirección IP al servidor que lo aloja."
+  },
+  "tabs": {
+    "discover": "Mercado",
+    "mine": "Mis packs",
+    "favorites": "Favoritos"
+  },
+  "filter": {
+    "all": "Todos",
+    "emoji": "Emojis",
+    "gif": "GIFs",
+    "sticker": "Stickers"
+  },
+  "itemCount": "{count, plural, one {# ítem} other {# ítems}}",
+  "item": {
+    "open": "Abrir acciones de :{name}:",
+    "favorite": "Marcar :{name}: como favorito",
+    "unfavorite": "Quitar :{name}: de favoritos",
+    "addFavorite": "Agregar :{name}: a favoritos",
+    "removeFavorite": "Quitar :{name}: de favoritos",
+    "removeFromServer": "Quitar :{name}: del servidor",
+    "fromPack": "{kind} de {title}",
+    "individual": "{kind} · Favorito suelto",
+    "viewPack": "Ver {title}",
+    "addToFavorites": "Agregar el ítem a favoritos",
+    "removeFromFavorites": "Quitar el ítem de favoritos"
+  },
+  "pack": {
+    "save": "Guardar pack",
+    "saved": "Guardado",
+    "saveNamed": "Guardar {title}",
+    "unsaveNamed": "Quitar {title} de los packs guardados",
+    "addToServer": "Agregar el pack al servidor",
+    "removeFromServer": "Quitar el pack del servidor",
+    "saving": "Guardando…",
+    "newTitle": "Pack nuevo",
+    "itemTitle": "Pack {name}",
+    "shortcodePlaceholder": "atajo"
+  },
+  "empty": {
+    "mine": "Creá tu primer pack de medios reutilizable.",
+    "favorites": "Marcá un pack o un ítem como favorito para tenerlo en todos los servidores.",
+    "none": "No se encontraron packs."
+  },
+  "serverPacksSelected": "{count, plural, one {# pack seleccionado.} other {# packs seleccionados.}} Agregá o quitá packs existentes acá abajo.",
+  "notice": {
+    "uploaded": "Se subió :{name}: a tus favoritos sueltos.",
+    "deleted": "Se eliminó “{title}”.",
+    "addedToServer": "Se agregó “{title}” a este servidor.",
+    "removedFromServer": "Se quitó “{title}” de este servidor."
+  },
+  "error": {
+    "saveFavorites": "No se pudieron guardar los favoritos.",
+    "loginToUpload": "Iniciá sesión para subir medios.",
+    "upload": "No se pudo subir el archivo.",
+    "deletePack": "No se pudo eliminar el pack.",
+    "serverPacks": "No se pudieron actualizar los packs del servidor.",
+    "uploadFailed": "Falló la subida.",
+    "nameRequired": "El pack necesita un nombre.",
+    "invalidItems": "Cada ítem necesita un atajo único y una URL de imagen HTTP(S).",
+    "duplicate": "Atajo repetido: :{name}:",
+    "savePack": "No se pudo guardar el pack."
+  },
+  "blossom": {
+    "uploading": "Subiendo…",
+    "upload": "Subir",
+    "uploadPicture": "Subir foto de perfil",
+    "uploadBanner": "Subir banner",
+    "urlPlaceholder": "https://… o subí una"
   }
 }

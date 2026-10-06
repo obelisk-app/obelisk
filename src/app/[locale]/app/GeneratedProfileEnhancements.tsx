@@ -1,18 +1,23 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { nsecToBytes } from '@nostr-wot/data';
 import { randomProfileName } from '@/utils/identity/display-name';
 
 type ProfileDraft = { name?: string; about?: string; picture?: string; banner?: string };
 
-function filePicker(kind: 'picture' | 'banner', onPick: (file: File, picker: HTMLLabelElement) => void): HTMLLabelElement {
+function filePicker(
+  kind: 'picture' | 'banner',
+  bannerPrompt: string,
+  onPick: (file: File, picker: HTMLLabelElement) => void,
+): HTMLLabelElement {
   const label = document.createElement('label');
   label.className = `obelisk-media-picker obelisk-${kind}-picker`;
   label.dataset.kind = kind;
   const prompt = document.createElement('span');
   prompt.className = 'obelisk-media-prompt';
-  prompt.textContent = kind === 'picture' ? '＋' : 'Upload banner';
+  prompt.textContent = kind === 'picture' ? '＋' : bannerPrompt;
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -32,6 +37,7 @@ export default function GeneratedProfileEnhancements({
 }: {
   onDraftChange?: (patch: ProfileDraft) => void;
 }): null {
+  const t = useTranslations();
   useEffect(() => {
     let secretKey: Uint8Array | null = null;
     let observer: MutationObserver | null = null;
@@ -59,16 +65,16 @@ export default function GeneratedProfileEnhancements({
       // get NotFoundError on the next update.
       modal.querySelector<HTMLElement>('.nui-profile-skip')?.setAttribute('hidden', '');
       for (const paragraph of modal.querySelectorAll<HTMLElement>('p')) {
-        if (paragraph.textContent?.trim().startsWith('Optional.')) {
+        if (paragraph.textContent?.trim().startsWith('Optional.')) { // i18n-exempt: matches the SDK's English copy
           paragraph.hidden = true;
         }
       }
 
       // Optionality moves onto the one field that actually is optional.
       for (const label of modal.querySelectorAll<HTMLElement>('.nui-profile-field-label')) {
-        if (label.textContent?.trim() === 'About' && !label.dataset.obeliskOptional) {
+        if (label.textContent?.trim() === 'About' && !label.dataset.obeliskOptional) { // i18n-exempt: matches the SDK's English label
           label.dataset.obeliskOptional = 'true';
-          label.textContent = 'About (optional)';
+          label.textContent = t('shell.login.profile.aboutOptional');
         }
       }
 
@@ -81,7 +87,7 @@ export default function GeneratedProfileEnhancements({
       // is carried to publish through the draft, which `publishGeneratedProfile`
       // already falls back to when the user leaves the field empty.
       const nameInput = modal.querySelector<HTMLInputElement>(
-        'input[placeholder="Satoshi"], input[data-obelisk-name]',
+        'input[placeholder="Satoshi"], input[data-obelisk-name]', // i18n-exempt: selector for the SDK's placeholder
       );
       if (nameInput && !nameInput.dataset.obeliskName) {
         nameInput.dataset.obeliskName = 'true';
@@ -94,8 +100,8 @@ export default function GeneratedProfileEnhancements({
         button.type = 'button';
         button.className = 'obelisk-random-name';
         button.textContent = '🎲';
-        button.title = 'Suggest another name';
-        button.setAttribute('aria-label', 'Suggest another name');
+        button.title = t('shell.login.profile.suggestName');
+        button.setAttribute('aria-label', t('shell.login.profile.suggestName'));
         button.addEventListener('click', () => {
           suggestion = randomProfileName();
           nameInput.placeholder = suggestion;
@@ -130,12 +136,12 @@ export default function GeneratedProfileEnhancements({
 
       const upload = async (kind: 'picture' | 'banner', file: File, picker: HTMLLabelElement) => {
         if (!file.type.startsWith('image/')) {
-          error.textContent = 'Choose an image file.';
+          error.textContent = t('shell.login.profile.chooseImage');
           return;
         }
         const prompt = picker.querySelector<HTMLElement>('.obelisk-media-prompt');
         const input = picker.querySelector<HTMLInputElement>('input');
-        if (prompt) prompt.textContent = 'Uploading…';
+        if (prompt) prompt.textContent = t('shell.login.profile.uploading');
         if (input) input.disabled = true;
         error.textContent = '';
         try {
@@ -149,20 +155,21 @@ export default function GeneratedProfileEnhancements({
           }
           image.src = url;
           picker.classList.add('has-image');
-          if (prompt) prompt.textContent = kind === 'picture' ? 'Change' : 'Change banner';
+          if (prompt) prompt.textContent = kind === 'picture' ? t('shell.login.profile.change') : t('shell.login.profile.changeBanner');
           // Same rule as the name field: never write into the SDK's controlled
           // input. The upload reaches publish through the draft instead.
           onDraftChange({ [kind]: url });
         } catch (uploadError) {
-          error.textContent = uploadError instanceof Error ? uploadError.message : 'Upload failed';
-          if (prompt) prompt.textContent = kind === 'picture' ? 'Retry' : 'Retry banner';
+          error.textContent = uploadError instanceof Error ? uploadError.message : t('shell.login.profile.uploadFailed');
+          if (prompt) prompt.textContent = kind === 'picture' ? t('shell.login.profile.retry') : t('shell.login.profile.retryBanner');
         } finally {
           if (input) input.disabled = false;
         }
       };
 
-      const bannerPicker = filePicker('banner', (file, picker) => void upload('banner', file, picker));
-      const picturePicker = filePicker('picture', (file, picker) => void upload('picture', file, picker));
+      const bannerPrompt = t('shell.login.profile.uploadBanner');
+      const bannerPicker = filePicker('banner', bannerPrompt, (file, picker) => void upload('banner', file, picker));
+      const picturePicker = filePicker('picture', bannerPrompt, (file, picker) => void upload('picture', file, picker));
       media.append(bannerPicker, picturePicker, error);
       pictureInput.insertAdjacentElement('afterend', media);
     };
@@ -184,7 +191,7 @@ export default function GeneratedProfileEnhancements({
       window.clearInterval(interval);
       observer?.disconnect();
     };
-  }, [onDraftChange]);
+  }, [onDraftChange, t]);
 
   return null;
 }

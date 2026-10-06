@@ -53,8 +53,7 @@ async function failSfuStart(target: SfuBootstrapTarget, deps: SfuSessionDeps, cl
   // mesh fallback would silently change the call's semantics (peer cap,
   // forwarding, recording capability) and the channel admin's pin is
   // an explicit choice we shouldn't override on a transient outage.
-  const msg = err instanceof Error ? err.message : String(err);
-  try { deps.room.events.onError?.(`Could not connect to the SFU: ${msg}`); } catch (err) {
+  try { deps.room.events.onError?.('sfuConnect'); } catch (err) {
     console.warn('[voice] onError handler threw', err);
   }
   throw err;

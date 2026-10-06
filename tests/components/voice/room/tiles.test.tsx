@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render as rtlRender, screen } from '@testing-library/react';
+import { LocaleProvider } from '@tests/support/intl';
 import { useVoiceStore } from '@/store/voice';
 import { FakeMediaStream, FakeMediaStreamTrack } from '@tests/support/mocks/webrtc';
 
@@ -8,6 +9,9 @@ vi.mock('@/services/nostr-bridge', () => ({
 }));
 
 import { AudioChip, AudioTile, Avatar, QualityDot, RailAudioTile, Stage, VideoTile } from '@/components/voice/room/tiles';
+
+/** The tiles read their copy through next-intl, so every render gets the English messages. */
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: LocaleProvider });
 
 const A = 'a'.repeat(64);
 const B = 'b'.repeat(64);

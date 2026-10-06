@@ -20,6 +20,8 @@ import { newPack } from '@/utils/media-library/pack-utils';
 import { useMediaLibrary, type LibraryServer } from '@/hooks/media/library/useMediaLibrary';
 import type { LibraryTab, MediaFilter, SelectedMedia } from '@/utils/media-library/types';
 
+const MEDIA_FILTERS: readonly MediaFilter[] = ['all', 'emoji', 'gif', 'sticker'];
+
 /**
  * Media packs: browse the marketplace, your own packs and favourites, or
  * (with `server`) pick the packs a relay offers. Opened with
@@ -66,8 +68,8 @@ export default function MediaLibraryModal({
         onClose();
       }}
       onCreatePack={() => {
-        const draft = newPack();
-        setEditing({ ...draft, title: selectedMedia.item.name + " pack", items: [selectedMedia.item] });
+        const draft = newPack(t('media.pack.newTitle'));
+        setEditing({ ...draft, title: t('media.pack.itemTitle', { name: selectedMedia.item.name }), items: [selectedMedia.item] });
         setSelectedMedia(null);
       }}
     />;
@@ -104,7 +106,7 @@ export default function MediaLibraryModal({
         <LibraryTabs tab={tab} setTab={setTab} server={!!server} />
         {!server && <div className="mt-auto grid gap-2">
           <Button variant="outline" tone="accent" size="sm" disabled={busy} onClick={() => uploadRef.current?.click()}>{t('media.upload')}</Button>
-          <Button size="lg" onClick={() => setEditing(newPack())}>{t('media.createPack')}</Button>
+          <Button size="lg" onClick={() => setEditing(newPack(t('media.pack.newTitle')))}>{t('media.createPack')}</Button>
         </div>}
       </aside>
 
@@ -130,13 +132,13 @@ export default function MediaLibraryModal({
 
         {!server && <div className="grid shrink-0 grid-cols-2 gap-2 border-b border-lc-border p-2 sm:hidden">
           <Button variant="outline" tone="accent" size="sm" disabled={busy} onClick={() => uploadRef.current?.click()}>{t('media.upload')}</Button>
-          <Button size="lg" onClick={() => setEditing(newPack())}>{t('media.createPack')}</Button>
+          <Button size="lg" onClick={() => setEditing(newPack(t('media.pack.newTitle')))}>{t('media.createPack')}</Button>
         </div>}
 
         <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-lc-border px-4 py-2" role="group" aria-label={t('media.filterByType')}>
-          {([['all', 'All'], ['emoji', 'Emoji'], ['gif', 'GIFs'], ['sticker', 'Stickers']] as Array<[MediaFilter, string]>).map(([value, label]) => (
+          {MEDIA_FILTERS.map((value) => (
             <Chip key={value} onClick={() => setKindFilter(value)} state={kindFilter === value ? 'selected' : 'idle'}>
-              {label}
+              {t(`media.filter.${value}`)}
             </Chip>
           ))}
         </div>
@@ -145,7 +147,7 @@ export default function MediaLibraryModal({
           {tab === "server" && server && (
             <Card as="section" surface="translucent" padding="lg" data-testid="server-pack-summary" className="mb-5">
               <h2 className="font-semibold text-lc-white">{t('media.serverPacks')}</h2>
-              <p className="mt-1 text-xs text-lc-muted">{(server.emojiSet.packAddresses ?? []).length} packs selected. Add or remove existing packs below.</p>
+              <p className="mt-1 text-xs text-lc-muted">{t('media.serverPacksSelected', { count: (server.emojiSet.packAddresses ?? []).length })}</p>
               <p className="mt-2 text-xs text-lc-muted">{t('media.serverPacksHelp')}</p>
               {server.emojiSet.emojis.length > 0 && <p className="mt-2 text-xs text-amber-300">{t('media.legacyHelp')}</p>}
             </Card>
@@ -188,7 +190,7 @@ export default function MediaLibraryModal({
           </div>
           {visiblePacks.length === 0 && (
             <EmptyState padding="none" className="py-16">
-              {tab === 'mine' ? 'Create your first reusable media pack.' : tab === 'favorites' ? 'Favorite a pack or individual item to keep it across servers.' : 'No packs found.'}
+              {t(tab === 'mine' ? 'media.empty.mine' : tab === 'favorites' ? 'media.empty.favorites' : 'media.empty.none')}
             </EmptyState>
           )}
         </div>
@@ -233,8 +235,8 @@ export default function MediaLibraryModal({
           else setSelectedMedia(null);
         }}
         onCreatePack={() => {
-          const draft = newPack();
-          setEditing({ ...draft, title: selectedMedia.item.name + " pack", items: [selectedMedia.item] });
+          const draft = newPack(t('media.pack.newTitle'));
+          setEditing({ ...draft, title: t('media.pack.itemTitle', { name: selectedMedia.item.name }), items: [selectedMedia.item] });
           setSelectedMedia(null);
         }}
       />}

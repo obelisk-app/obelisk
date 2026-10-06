@@ -5,6 +5,7 @@
  * (`./nip-signer.ts`) and the DM transport one (`./dm-signer.ts`). Pure
  * move from `client.ts`.
  */
+import { CodedError, type ActivityCode } from '@/utils/errors/codes';
 import { finalizeEvent, type Event as NostrEvent, type EventTemplate, type VerifiedEvent } from 'nostr-tools';
 import { trackActivity } from '@/services/activity-log';
 import type { BridgeContext } from '../context';
@@ -31,7 +32,7 @@ export class SessionSigner {
     template: { kind: number; content: string; tags: string[][]; created_at?: number },
   ): Promise<NostrEvent> {
     const session = this.ctx.session();
-    if (!session) throw new Error('Not logged in');
+    if (!session) throw new CodedError('not-logged-in', 'Not logged in');
     const fullTemplate = {
       kind: template.kind,
       content: template.content,
@@ -44,30 +45,30 @@ export class SessionSigner {
     }
     if (session.loginMethod === 'nip07') {
       const win = window.nostr;
-      if (!win) throw new Error('NIP-07 extension unavailable');
+      if (!win) throw new CodedError('extension-missing', 'NIP-07 extension unavailable');
       return await trackActivity(
-        'Waiting for extension signature',
+        'signExtension' satisfies ActivityCode,
         () => enqueueSignerOp(
           'interactive',
           `signEvent:${template.kind}`,
           () => win.signEvent(fullTemplate) as Promise<NostrEvent>,
         ),
-        "kind " + template.kind,
+        undefined,
         { operation: "sign", eventKind: template.kind, description: eventKindDescription(template.kind) },
       );
     }
     if (session.loginMethod === 'bunker') {
       return await trackActivity(
-        'Waiting for bunker signature',
+        'signBunker' satisfies ActivityCode,
         () => this.bunker.run(
           (b) => b.signEvent(fullTemplate) as Promise<NostrEvent>,
           { lane: 'interactive', label: `signEvent:${template.kind}` },
         ),
-        "kind " + template.kind,
+        undefined,
         { operation: "sign", eventKind: template.kind, description: eventKindDescription(template.kind) },
       );
     }
-    throw new Error(`Login method ${session.loginMethod} cannot sign events in this build`);
+    throw new CodedError('signer-unsupported', `Login method ${session.loginMethod} cannot sign events in this build`); // i18n-exempt: developer message; readers get the code
   }
 
   /**
@@ -78,7 +79,7 @@ export class SessionSigner {
    */
   signSessionAuth(evt: EventTemplate): Promise<VerifiedEvent> {
     const session = this.ctx.session();
-    if (!session) return Promise.reject(new Error('Not logged in'));
+    if (!session) return Promise.reject(new CodedError('not-logged-in', 'Not logged in'));
     const unsigned = { kind: evt.kind, content: evt.content, tags: evt.tags, created_at: evt.created_at };
     return (async (): Promise<VerifiedEvent> => {
       if (session.loginMethod === 'nsec' && session.privKeyHex) {
@@ -88,21 +89,21 @@ export class SessionSigner {
         const win = (window as unknown as {
           nostr?: { signEvent: (event: EventTemplate) => Promise<VerifiedEvent> };
         }).nostr;
-        if (!win) throw new Error('NIP-07 extension unavailable');
+        if (!win) throw new CodedError('extension-missing', 'NIP-07 extension unavailable');
         return trackActivity(
-          'Waiting for extension signature',
+          'signExtension' satisfies ActivityCode,
           () => enqueueSignerOp(
             'interactive',
             'nip42-auth',
             () => win.signEvent(unsigned) as Promise<VerifiedEvent>,
           ),
-          'NIP-42 relay auth',
+          undefined,
           { operation: 'sign', eventKind: evt.kind, description: eventKindDescription(evt.kind) },
         );
       }
       if (session.loginMethod === 'bunker') {
         return trackActivity(
-          'Waiting for bunker signature',
+          'signBunker' satisfies ActivityCode,
           // The deadline is handed to `withBunkerSigner` rather than wrapped
           // around it so it starts when the request reaches the signer, not
           // when it joins the queue. See that method's doc comment.
@@ -115,11 +116,11 @@ export class SessionSigner {
               deadlineMessage: 'Remote signer did not answer NIP-42 relay authentication',
             },
           ),
-          'NIP-42 relay auth',
+          undefined,
           { operation: 'sign', eventKind: evt.kind, description: eventKindDescription(evt.kind) },
         );
       }
-      throw new Error('Cannot sign auth event with current login method');
+      throw new CodedError('signer-unsupported', 'Cannot sign auth event with current login method');
     })();
   }
 

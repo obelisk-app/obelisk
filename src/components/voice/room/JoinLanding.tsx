@@ -6,6 +6,7 @@
  * from the last attempt. Pure presentation.
  */
 import type { ActiveCallInfo } from '@/services/nostr-bridge';
+import type { VoiceErrorCode } from '@/services/voice/errors';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import { PassiveCallRoster, StageBackdrop } from './chrome';
@@ -22,7 +23,7 @@ export function JoinLanding({
   /** The user is in another channel's call while looking at this one. */
   browsingWhileConnected: boolean;
   onJoin: () => void;
-  error: string | null;
+  error: VoiceErrorCode | null;
   chatSlot?: React.ReactNode;
   isChatOpen?: boolean;
 }) {
@@ -45,10 +46,8 @@ export function JoinLanding({
             <div className="text-xl font-semibold text-lc-white mb-1">{displayName}</div>
             <div className="text-sm text-lc-muted mb-5">
               {passiveCount > 0
-                ? passiveCount + ' ' + (passiveCount === 1 ? 'person is' : 'people are') + ' in this call.'
-                : activeCall
-                  ? 'This call is live.'
-                  : 'No one is detected in this call yet.'}
+                ? t('voice.landing.inCall', { count: passiveCount })
+                : t(activeCall ? 'voice.landing.live' : 'voice.landing.empty')}
               {browsingWhileConnected && (
                 <span className="block mt-1 text-lc-white/70">{t('voice.stayConnected')}</span>
               )}
@@ -68,7 +67,7 @@ export function JoinLanding({
             >
               {t('voice.join')}
             </Button>
-            {error && <div className="mt-4 text-xs text-red-300">{error}</div>}
+            {error && <div className="mt-4 text-xs text-red-300">{t(`voice.error.${error}`)}</div>}
           </div>
         </div>
       </div>

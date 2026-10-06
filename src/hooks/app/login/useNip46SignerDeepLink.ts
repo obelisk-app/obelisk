@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { copyText } from '@/services/clipboard';
 import { signerAppHref } from '@/utils/nip46/signer-link';
 
@@ -20,6 +21,7 @@ import { signerAppHref } from '@/utils/nip46/signer-link';
  *       this hook, its component and the matching `.nui-open-signer` CSS rule.
  */
 export function useNip46SignerDeepLink(): void {
+  const t = useTranslations();
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
@@ -34,7 +36,8 @@ export function useNip46SignerDeepLink(): void {
       const qrWrap = document.querySelector<HTMLElement>('.nui-modal .nui-qr-wrap');
       const uri = qrWrap?.querySelector<HTMLElement>('.nui-key-display')?.textContent?.trim();
       const pasteTab = document.querySelector<HTMLButtonElement>('.nui-modal .nui-tabs [role="tab"]:last-child');
-      if (pasteTab?.textContent?.trim() === 'Paste URI') pasteTab.textContent = 'Use bunker URI';
+      // 'Paste URI' is the SDK's own (English) tab label, matched to rename it.
+      if (pasteTab?.textContent?.trim() === 'Paste URI') pasteTab.textContent = t('shell.login.signer.useBunkerUri');
 
       if (!qrWrap || !uri || !uri.startsWith('nostrconnect://')) {
         removeInjected();
@@ -55,18 +58,18 @@ export function useNip46SignerDeepLink(): void {
       arrow.setAttribute('aria-hidden', 'true');
       arrow.textContent = '↗'; // ↗
       const label = document.createElement('span');
-      label.textContent = 'Open in signer app';
+      label.textContent = t('shell.login.signer.openApp');
       a.append(arrow, label);
       const copy = document.createElement('button');
       copy.type = 'button';
       copy.className = 'nui-copy-signer';
-      copy.textContent = 'Copy connection URI';
+      copy.textContent = t('shell.login.signer.copyUri');
       copy.addEventListener('click', async () => {
-        copy.textContent = await copyText(uri) ? 'Copied' : 'Copy failed: select URI below';
+        copy.textContent = await copyText(uri) ? t('shell.login.signer.copied') : t('shell.login.signer.copyFailed');
       });
       const hint = document.createElement('p');
       hint.className = 'nui-signer-copy-hint';
-      hint.textContent = 'Fallback: copy it, then in Amber open New application → Paste from clipboard.';
+      hint.textContent = t('shell.login.signer.fallbackHint');
       actions.append(a, copy, hint);
       const qr = qrWrap.querySelector('.nui-qr');
       if (qr) qr.insertAdjacentElement('afterend', actions);
@@ -82,7 +85,7 @@ export function useNip46SignerDeepLink(): void {
       observer.disconnect();
       removeInjected();
     };
-  }, []);
+  }, [t]);
 }
 
 /** Mounted beside the SDK modal while its picker is open; renders nothing itself. */

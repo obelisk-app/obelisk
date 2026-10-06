@@ -48,12 +48,26 @@ async function createAuthEvent(fileHash: string, secretKey?: Uint8Array, server?
   return btoa(JSON.stringify(event));
 }
 
+/**
+ * Every server refused an upload. `reasons` (one per server, `host: why`) and
+ * the message are for logs; the UI shows its own "upload failed" copy.
+ */
+export class BlossomUploadError extends Error {
+  readonly reasons: readonly string[];
+
+  constructor(reasons: readonly string[]) {
+    super(`blossom upload failed: ${reasons.length > 0 ? reasons.join('; ') : 'no server to try'}`);
+    this.name = 'BlossomUploadError';
+    this.reasons = reasons;
+  }
+}
+
 export async function uploadToBlossom(file: File, secretKey?: Uint8Array): Promise<string> {
   const buffer = new Uint8Array(await file.arrayBuffer());
   const hash = bytesToHex(sha256(buffer));
   const authToken = await createAuthEvent(hash, secretKey);
 
-  let lastError: Error | null = null;
+  const reasons: string[] = [];
 
   for (const server of BLOSSOM_SERVERS) {
     try {
@@ -68,18 +82,18 @@ export async function uploadToBlossom(file: File, secretKey?: Uint8Array): Promi
 
       if (!res.ok) {
         const text = await res.text().catch(() => res.statusText);
-        throw new Error(`${server}: ${res.status} ${text}`);
+        throw new Error(`${res.status} ${text}`);
       }
 
       const data = await res.json();
       return data.url as string;
     } catch (err) {
-      lastError = err as Error;
-      console.warn(`Blossom upload failed on ${server}:`, err);
+      reasons.push(`${server}: ${(err as Error).message}`);
+      console.warn('[blossom] upload failed on', server, err);
     }
   }
 
-  throw lastError || new Error('All Blossom servers failed');
+  throw new BlossomUploadError(reasons);
 }
 
 /**
@@ -140,5 +154,5 @@ export async function uploadEncryptedBlob(
     }
   }
 
-  throw new Error(`Upload failed (${reasons.join('; ') || 'no servers'})`);
+  throw new BlossomUploadError(reasons);
 }

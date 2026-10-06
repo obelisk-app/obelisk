@@ -32,7 +32,7 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
       onClose={onClose}
       panelClassName="lc-card flex max-h-[90vh] w-full max-w-xl mx-4 flex-col overflow-hidden bg-lc-dark"
     >
-        <ModalHeader title={`Channel settings · #${group.name ?? group.id.slice(0, 8)}`} onClose={onClose} />
+        <ModalHeader title={t('shell.desktop.channel.settingsTitle', { name: group.name ?? group.id.slice(0, 8) })} onClose={onClose} />
         <div className="flex-1 overflow-y-auto">
           <form onSubmit={(e) => void saveMeta(e)} id="channel-meta-form" className="space-y-7 p-5">
             {/* Appearance ----------------------------------------------- */}
@@ -166,7 +166,7 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                           disabled={sfuChecking}
                           className="shrink-0"
                         >
-                          {sfuChecking ? 'Checking…' : 'Verify'}
+                          {sfuChecking ? t('shell.desktop.sfu.checking') : t('shell.desktop.sfu.verify')}
                         </Button>
                       </div>
                     </div>
@@ -174,7 +174,7 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                       <div className="rounded-md border border-lc-green/30 bg-lc-green/5 p-2 text-[11px] text-lc-muted">
                         <span className="text-lc-green">{t('shell.desktop.sfu.verified')}</span>
                         {sfuVerified.region ? ` · ${sfuVerified.region}` : ''}
-                        {sfuVerified.cap ? ` · up to ${sfuVerified.cap} participants` : ''}
+                        {sfuVerified.cap ? ` · ${t('shell.desktop.sfu.capacity', { count: sfuVerified.cap })}` : ''}
                         <div className="mt-1 break-all font-mono text-lc-white/70">{sfuVerified.pubkey}</div>
                       </div>
                     )}
@@ -195,14 +195,9 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
               <section className="space-y-3" data-testid="forum-tags-editor">
                 <SectionHeader
                   title={t('shell.desktop.channel.forumTags')}
-                  hint="Curated; emitted as forum-tag NIP-29 metadata"
+                  hint={t('shell.desktop.channel.forumTagsHint')}
                 />
-                <p className="text-[11px] text-lc-muted">
-                  Pick a small set of categories so members can browse publications by topic.
-                  Authors pick from this list: they can&apos;t invent new tags. Each tag gets
-                  its own colour automatically; set one explicitly if you want a specific
-                  hue. Emoji is optional but helps the chip row scan at a glance.
-                </p>
+                <p className="text-[11px] text-lc-muted">{t('shell.desktop.channel.forumTagsHelp')}</p>
                 <ForumTagsEditor value={forumTags} onChange={setForumTags} />
               </section>
             )}
@@ -240,10 +235,10 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                 data-testid="add-member-admin-toggle"
                 className="shrink-0 whitespace-nowrap font-medium"
               >
-                {makeAdmin ? '👑 As admin' : 'As admin'}
+                {makeAdmin ? `👑 ${t('shell.desktop.members.asAdmin')}` : t('shell.desktop.members.asAdmin')}
               </Chip>
               <Button type="submit" variant="pill" size="sm" disabled={memberBusy || !newMember.trim()} className="shrink-0">
-                {memberBusy ? 'Adding…' : 'Add'}
+                {memberBusy ? t('shell.desktop.members.adding') : t('shell.desktop.members.add')}
               </Button>
             </form>
             {memberErr && <div className="text-sm text-red-400">{memberErr}</div>}
@@ -253,9 +248,9 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
               ))}
               {members.length === 0 && (
                 <div className="rounded-lg border border-dashed border-lc-border px-3 py-4 text-center text-xs text-lc-muted">
-                  No members yet. {access === 'public'
-                    ? 'Not required: relay whitelist controls access.'
-                    : 'Add at least one to grant access.'}
+                  {access === 'public'
+                    ? t('shell.desktop.members.emptyPublic')
+                    : t('shell.desktop.members.emptyPrivate')}
                 </div>
               )}
             </div>
@@ -268,7 +263,7 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
               {t('common.cancel')}
             </Button>
             <Button type="submit" form="channel-meta-form" disabled={savingMeta}>
-              {savingMeta ? 'Saving…' : 'Save changes'}
+              {savingMeta ? t('shell.desktop.channel.saving') : t('shell.desktop.channel.saveChanges')}
             </Button>
           </div>
         </footer>

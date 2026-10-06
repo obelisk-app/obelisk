@@ -82,7 +82,7 @@ describe('VoiceStatusBar', () => {
     renderBar();
     const muted = useVoiceStore.getState().isMuted;
     fireEvent.click(screen.getByTitle(muted ? 'Unmute' : 'Mute'));
-    await waitFor(() => expect(useVoiceStore.getState().error).toBe('Permission denied'));
+    await waitFor(() => expect(useVoiceStore.getState().error).toBe('mic'));
   });
 
   it('renders nothing without a current call', () => {
@@ -117,7 +117,7 @@ describe('VoiceStatusBar', () => {
     await waitFor(() => expect(client.setCameraEnabled).toHaveBeenCalledWith(true));
     expect(useVoiceStore.getState().error).toBeNull();
     fireEvent.click(screen.getByTestId('voice-bar-screenshare'));
-    await waitFor(() => expect(useVoiceStore.getState().error).toBe('No screen'));
+    await waitFor(() => expect(useVoiceStore.getState().error).toBe('screen'));
   });
 
   it('offers the camera flip only with the camera on and two cameras, and surfaces a flip failure', async () => {
@@ -134,7 +134,7 @@ describe('VoiceStatusBar', () => {
       renderBar();
       const flip = await screen.findByTestId('voice-bar-switch-camera');
       fireEvent.click(flip);
-      await waitFor(() => expect(useVoiceStore.getState().error).toBe('flip failed'));
+      await waitFor(() => expect(useVoiceStore.getState().error).toBe('switchCamera'));
     } finally {
       nav.mediaDevices = prev;
     }

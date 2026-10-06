@@ -3,6 +3,7 @@
  * the session's login method, for the read-state sync engine and the zap /
  * NWC flow (`useNipSigner`). Pure move from `client.ts` (`getNipSigner`).
  */
+import { CodedError } from '@/utils/errors/codes';
 import { finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import type { NipSigner } from '@/lib/nip-59';
@@ -45,7 +46,7 @@ export function buildNipSigner(
       }
       if (session.loginMethod === 'nip07') {
         const w = (window as unknown as { nostr?: { signEvent: (e: unknown) => Promise<NostrEvent> } }).nostr;
-        if (!w) throw new Error('NIP-07 extension unavailable');
+        if (!w) throw new CodedError('extension-missing', 'NIP-07 extension unavailable');
         return enqueueSignerOp(lane, `signEvent:${template.kind}`, () => w.signEvent(template));
       }
       if (session.loginMethod === 'bunker') {
@@ -54,7 +55,7 @@ export function buildNipSigner(
           { lane, label: `signEvent:${template.kind}` },
         );
       }
-      throw new Error(`Cannot sign with login method ${session.loginMethod}`);
+      throw new CodedError('signer-unsupported', `Cannot sign with login method ${session.loginMethod}`); // i18n-exempt: developer message; readers get the code
     },
     nip44Encrypt: async (recipientPubkey, plaintext) => {
       if (session.loginMethod === 'nsec' && session.privKeyHex) {
@@ -66,7 +67,7 @@ export function buildNipSigner(
         const w = (window as unknown as {
           nostr?: { nip44?: { encrypt: (p: string, t: string) => Promise<string> } };
         }).nostr;
-        if (!w?.nip44?.encrypt) throw new Error('Extension does not support NIP-44 encryption');
+        if (!w?.nip44?.encrypt) throw new CodedError('extension-no-nip44', 'Extension does not support NIP-44 encryption');
         return enqueueSignerOp(lane, 'nip44Encrypt', () => w.nip44!.encrypt(recipientPubkey, plaintext));
       }
       if (session.loginMethod === 'bunker') {
@@ -75,7 +76,7 @@ export function buildNipSigner(
           { lane, label: 'nip44Encrypt' },
         );
       }
-      throw new Error(`Cannot NIP-44 encrypt with login method ${session.loginMethod}`);
+      throw new CodedError('signer-unsupported', `Cannot NIP-44 encrypt with login method ${session.loginMethod}`); // i18n-exempt: developer message; readers get the code
     },
     nip44Decrypt: async (senderPubkey, ciphertext) => {
       if (session.loginMethod === 'nsec' && session.privKeyHex) {
@@ -90,7 +91,7 @@ export function buildNipSigner(
         const w = (window as unknown as {
           nostr?: { nip44?: { decrypt: (p: string, c: string) => Promise<string> } };
         }).nostr;
-        if (!w?.nip44?.decrypt) throw new Error('Extension does not support NIP-44 decryption');
+        if (!w?.nip44?.decrypt) throw new CodedError('extension-no-nip44', 'Extension does not support NIP-44 decryption');
         return memoizeDecrypt('nip44', senderPubkey, ciphertext, () =>
           enqueueSignerOp(lane, 'nip44Decrypt', () => w.nip44!.decrypt(senderPubkey, ciphertext)),
         );
@@ -103,7 +104,7 @@ export function buildNipSigner(
           ),
         );
       }
-      throw new Error(`Cannot NIP-44 decrypt with login method ${session.loginMethod}`);
+      throw new CodedError('signer-unsupported', `Cannot NIP-44 decrypt with login method ${session.loginMethod}`); // i18n-exempt: developer message; readers get the code
     },
   };
 }

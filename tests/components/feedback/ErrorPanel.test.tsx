@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ErrorPanel from '@/components/feedback/ErrorPanel';
+import { CodedError } from '@/utils/errors/codes';
 
 const reload = vi.fn();
 
@@ -105,6 +106,30 @@ describe('ErrorPanel', () => {
     document.documentElement.lang = 'es';
     render(<ErrorPanel error={boom()} reset={() => {}} />);
     expect(screen.getByText('Algo se rompió en esta pantalla')).toBeInTheDocument();
+  });
+
+  it('counts the cleared entries in the reader\'s language, plural rules included', () => {
+    vi.useFakeTimers();
+    document.documentElement.lang = 'pt';
+    window.localStorage.setItem('obelisk-cache-v4/wss:relay/9/group', '{"v":1}');
+
+    render(<ErrorPanel error={boom()} reset={() => {}} />);
+    fireEvent.click(screen.getByTestId('error-clear-cache'));
+
+    expect(screen.getByTestId('error-cleared-note')).toHaveTextContent('1 entrada limpa, recarregando');
+  });
+
+  it('says what went wrong when the error carries a code, and keeps the English message in the details', () => {
+    document.documentElement.lang = 'es';
+    const err = Object.assign(new CodedError('offline', 'browser offline'), { digest: 'd1' });
+    render(<ErrorPanel error={err} reset={() => {}} />);
+    expect(screen.getByTestId('error-panel-reason')).toHaveTextContent('Estás sin conexión.');
+    expect(screen.getByTestId('error-panel-detail')).toHaveTextContent('browser offline');
+  });
+
+  it('shows no reason line for an uncoded error', () => {
+    render(<ErrorPanel error={boom()} reset={() => {}} />);
+    expect(screen.queryByTestId('error-panel-reason')).toBeNull();
   });
 
   it('logs the original error, which production builds otherwise swallow', () => {

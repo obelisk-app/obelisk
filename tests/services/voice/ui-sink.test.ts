@@ -67,14 +67,14 @@ describe('voiceStoreSink', () => {
     voiceStoreSink.setPeerQuality(PEER, {
       level: 'good', rttMs: 50, loss: 0, jitterMs: 5, outboundVideoBps: null, outboundFps: null, qualityLimitationReason: null,
     });
-    voiceStoreSink.setError('boom');
+    voiceStoreSink.setError('cameraLimit');
     voiceStoreSink.setLocalTracks({ mic: true, camera: true, screen: false });
     const s = useVoiceStore.getState();
     expect(s.isSignalingDegraded).toBe(true);
     expect(s.speakingPubkeys[PEER]).toBe(true);
     expect(s.localMutedPubkeys[PEER]).toBe(true);
     expect(s.peerQuality[PEER]?.level).toBe('good');
-    expect(s.error).toBe('boom');
+    expect(s.error).toBe('cameraLimit');
     expect(s.isMuted).toBe(false);
     expect(s.isCameraOn).toBe(true);
     expect(s.isScreenSharing).toBe(false);

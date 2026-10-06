@@ -39,7 +39,8 @@
       "urlHint": "Cole a URL de um relay de grupos NIP-29. Cada relay é um “servidor” separado na barra lateral.",
       "adding": "Adicionando…",
       "add": "Adicionar",
-      "added": "Adicionado"
+      "added": "Adicionado",
+      "noDescription": "Sem descrição"
     },
     "confirmRemoveBody": "Você pode adicioná-lo novamente depois."
   },
@@ -100,7 +101,12 @@
       "forumHint": "Um feed de publicações, cada uma com seu próprio chat",
       "voiceHelp": "Adiciona uma etiqueta <tag></tag>. Os membros abrem <url></url> para entrar.",
       "sfuHelp": "Adiciona uma etiqueta <tag></tag>. A entrada é a mesma da voz, mas o canal avisa aos operadores “espere uma sala grande”. Um SFU autorizado entra e encaminha a mídia de todos, então a sala passa do teto de 8 pares da malha.",
-      "forumHelp": "Adiciona uma etiqueta <tag></tag> (o valor no protocolo mantém o nome original). O canal aparece como um feed de publicações em vez de um chat: cada publicação é seu próprio canal, com sua própria conversa."
+      "forumHelp": "Adiciona uma etiqueta <tag></tag> (o valor no protocolo mantém o nome original). O canal aparece como um feed de publicações em vez de um chat: cada publicação é seu próprio canal, com sua própria conversa.",
+      "settingsTitle": "Configurações do canal · #{name}",
+      "forumTagsHint": "Curadas; publicadas como metadados de etiquetas NIP-29",
+      "forumTagsHelp": "Escolha um conjunto pequeno de categorias para que os membros naveguem pelas publicações por tema. Os autores escolhem desta lista: não podem inventar etiquetas novas. Cada etiqueta recebe uma cor própria automaticamente; defina uma manualmente se quiser um tom específico. O emoji é opcional, mas ajuda a ler a fileira de etiquetas num relance.",
+      "saving": "Salvando…",
+      "saveChanges": "Salvar alterações"
     },
     "composer": {
       "replyingTo": "Respondendo a",
@@ -165,7 +171,12 @@
     },
     "channels": {
       "loading": "Carregando canais…",
-      "empty": "Ainda não há canais neste relay."
+      "empty": "Ainda não há canais neste relay.",
+      "uncategorized": "Sem categoria",
+      "unread": "{count, plural, one {# mensagem não lida} other {# mensagens não lidas}}",
+      "mentions": "{count, plural, one {# menção ou resposta} other {# menções ou respostas}}",
+      "expandPublications": "Mostrar publicações",
+      "collapsePublications": "Ocultar publicações"
     },
     "header": {
       "openMenu": "Abrir menu"
@@ -175,7 +186,29 @@
     },
     "server": {
       "settings": "Configurações do servidor",
-      "settingsHelp": "Disponível apenas para o operador do relay."
+      "settingsHelp": "Disponível apenas para o operador do relay.",
+      "items": {
+        "profile": {
+          "title": "Perfil e banner do servidor",
+          "description": "Nome, ícone, banner e descrição."
+        },
+        "emoji": {
+          "title": "Emojis, GIFs e figurinhas",
+          "description": "Favoritos do servidor, pacotes e marketplace."
+        },
+        "channels": {
+          "title": "Canais e categorias",
+          "description": "Nomes das categorias e ordem dos canais."
+        },
+        "roles": {
+          "title": "Cargos e níveis",
+          "description": "Insígnias por nível ao lado do nome de cada membro."
+        },
+        "members": {
+          "title": "Membros e moderação",
+          "description": "Revise, rebaixe e expulse em todos os canais."
+        }
+      }
     },
     "branding": {
       "appearance": "Aparência",
@@ -192,18 +225,36 @@
       "empty": "Ainda não há categorias. Adicione uma acima para começar a organizar.",
       "dropHere": "Solte canais aqui",
       "allPlaced": "Todos os canais estão em categorias.",
-      "saveHelp": "Salvo como um único evento substituível kind 30078 assinado por você."
+      "saveHelp": "Salvo como um único evento substituível kind 30078 assinado por você.",
+      "publishing": "Publicando…",
+      "publish": "Publicar layout",
+      "grabChannel": "Segurar o canal {name}",
+      "grabCategory": "Segurar a categoria {name}",
+      "uncategorizedOption": "(sem categoria)"
     },
     "me": {
       "profile": "Perfil",
-      "settings": "Configurações"
+      "settings": "Configurações",
+      "you": "Você"
     },
     "members": {
       "addPlaceholder": "npub1… ou pubkey em hex",
       "addLabel": "npub ou pubkey em hex do membro",
       "loading": "Carregando membros…",
       "demoteHelp": "Remove o cargo de admin; continua no canal como membro comum.",
-      "remove": "Remover"
+      "remove": "Remover",
+      "asAdmin": "Como admin",
+      "adding": "Adicionando…",
+      "add": "Adicionar",
+      "emptyPublic": "Ainda não há membros. Não é necessário: a whitelist do relay controla o acesso.",
+      "emptyPrivate": "Ainda não há membros. Adicione pelo menos um para dar acesso.",
+      "confirmDemote": "Rebaixar {name} para membro?",
+      "confirmRemove": "Remover {name} do canal?",
+      "demoteLabel": "Rebaixar {name}",
+      "removeLabel": "Remover {name}",
+      "copied": "Copiado",
+      "roleAdmin": "Admin",
+      "roleMember": "Membro"
     },
     "tags": {
       "emoji": "Emoji da etiqueta",
@@ -216,7 +267,10 @@
       "url": "URL do SFU",
       "verified": "Verificado",
       "help": "Informe uma URL de SFU. O Obelisk verifica o descritor <info></info> e guarda a identidade retornada automaticamente. As chamadas autenticam direto no SFU; os relays Nostr são só um fallback de compatibilidade.",
-      "verifyHelp": "O SFU confere sua identidade Nostr assinada e a whitelist quando você entra. A pubkey completa acima está disponível para verificação avançada."
+      "verifyHelp": "O SFU confere sua identidade Nostr assinada e a whitelist quando você entra. A pubkey completa acima está disponível para verificação avançada.",
+      "checking": "Verificando…",
+      "verify": "Verificar",
+      "capacity": "até {count, plural, one {# participante} other {# participantes}}"
     },
     "voice": {
       "liveTitle": "Chamada em andamento",
@@ -224,7 +278,8 @@
     },
     "gotIt": "Entendi",
     "zaps": {
-      "count": "{count, plural, one {# zap} other {# zaps}}"
+      "count": "{count, plural, one {# zap} other {# zaps}}",
+      "sats": "{amount} sats"
     }
   },
   "search": {
@@ -358,6 +413,34 @@
       },
       "vaultUnavailable": "Este navegador não consegue guardar sua chave com segurança entre visitas, então sua sessão foi encerrada. Uma extensão de assinatura ou um bunker mantém você conectado sem guardar uma chave aqui.",
       "unlockFailed": "Não conseguimos abrir sua chave salva, então sua sessão foi encerrada. Entre de novo."
+    },
+    "title": "Conecte-se ao Nostr",
+    "subtitle": "Escolha como entrar",
+    "npubHelp": "Sua npub é o endereço público do seu perfil. Compartilhe para que as pessoas encontrem e sigam você. É seguro compartilhar: sua nsec é a chave que fica privada.",
+    "linkCopied": "Link copiado",
+    "shareMyProfile": "Compartilhar meu perfil",
+    "connecting": "Conectando…",
+    "enter": "Entrar no Obelisk",
+    "shareTitle": "Meu perfil Nostr",
+    "profile": {
+      "uploadBanner": "Enviar banner",
+      "aboutOptional": "Sobre (opcional)",
+      "suggestName": "Sugerir outro nome",
+      "chooseImage": "Escolha um arquivo de imagem.",
+      "uploading": "Enviando…",
+      "change": "Trocar",
+      "changeBanner": "Trocar banner",
+      "uploadFailed": "Falha no envio",
+      "retry": "Tentar de novo",
+      "retryBanner": "Tentar o banner de novo"
+    },
+    "signer": {
+      "useBunkerUri": "Usar URI de bunker",
+      "openApp": "Abrir no app de assinatura",
+      "copyUri": "Copiar URI de conexão",
+      "copied": "Copiado",
+      "copyFailed": "Não foi possível copiar: selecione a URI abaixo",
+      "fallbackHint": "Alternativa: copie e depois, no Amber, abra New application → Paste from clipboard."
     }
   },
   "channel": {
@@ -369,6 +452,57 @@
       "help": "Os canais são públicos e abertos por padrão: qualquer pessoa que o relay aceite pode ler e publicar. Você pode restringi-lo depois em <settings></settings>.",
       "nameOn": "Nome do canal · em {relay}",
       "examplePlaceholder": "geral"
+    }
+  },
+  "status": {
+    "offline": {
+      "title": "Você está offline",
+      "body": "Os canais e mensagens em cache continuam disponíveis. Reconectamos quando sua rede voltar."
+    },
+    "connecting": {
+      "title": "Conectando a {host}…",
+      "body": "Aguardando o handshake do relay."
+    },
+    "disconnected": {
+      "title": "Conexão perdida",
+      "body": "Reconectando em segundo plano."
+    },
+    "cannotReach": "Não foi possível conectar a {host}",
+    "authenticating": {
+      "title": "Autenticando em {host}…",
+      "bunker": "Aprove o pedido de assinatura no seu app de bunker.",
+      "nip07": "Aprove o pedido de assinatura na sua extensão Nostr.",
+      "local": "Assinando o desafio AUTH do relay…"
+    },
+    "authRequired": {
+      "title": "Sem autenticação em {host}",
+      "reapprove": "O AUTH NIP-42 não foi concluído. Aprove o pedido de assinatura de novo.",
+      "reload": "O AUTH NIP-42 não foi concluído. Tente recarregar."
+    },
+    "restricted": {
+      "title": "Você não está na whitelist de {host}",
+      "body": "Sua pubkey está conectada, mas este relay não entrega nem aceita eventos. Peça ao operador para adicionar você, ou troque de relay."
+    },
+    "unreachable": {
+      "body": "O relay não está respondendo. Tentando de novo em segundo plano."
+    },
+    "error": {
+      "title": "Erro do relay em {host}",
+      "body": "O relay recusou o pedido. Tente recarregar ou trocar de relay."
+    },
+    "modal": {
+      "authBunker": "Aprove o pedido de assinatura no seu app de bunker para concluir o AUTH NIP-42.",
+      "authNip07": "Aprove o pedido de assinatura na sua extensão Nostr para concluir o AUTH NIP-42.",
+      "authFailed": "O AUTH NIP-42 não foi concluído. Tente recarregar ou entrar com outro método.",
+      "unreachable": "O relay não está respondendo. Ele pode estar fora do ar, bloqueado pela sua rede ou indisponível por um momento. Vamos continuar tentando em segundo plano. Troque de relay se precisar continuar trabalhando.",
+      "restricted": "Este relay aceitou sua assinatura, mas não entrega nem aceita eventos da sua pubkey. Peça ao operador para adicionar você à whitelist dele, ou troque de relay."
+    },
+    "connection": {
+      "connected": "Conectado",
+      "connecting": "Conectando",
+      "disconnected": "Desconectado",
+      "offline": "Offline",
+      "error": "Erro: {detail}"
     }
   }
 }

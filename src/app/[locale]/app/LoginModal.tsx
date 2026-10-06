@@ -26,6 +26,7 @@
 
 import { LoginModal as SdkLoginModal, NostrSessionProvider, type LoginMethodId } from '@nostr-wot/ui';
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { usePastedKeyStep } from '@/hooks/app/login/usePastedKeyStep';
 import { OBELISK_NIP46_PERMISSIONS } from '@/utils/nostr-signing-kinds';
 import GeneratedProfileEnhancements from './GeneratedProfileEnhancements';
@@ -64,10 +65,11 @@ export default function LoginModal({
   onSuccess,
   methods,
   onClose,
-  title = 'Connect to Nostr',
-  subtitle = 'Choose your login method',
+  title,
+  subtitle,
   headerSlot,
 }: LoginModalProps = {}) {
+  const t = useTranslations();
   const flow = useLoginFlow({ onSuccess, onClose });
   const pasted = usePastedKeyStep(flow.onLogin);
 
@@ -108,8 +110,8 @@ export default function LoginModal({
           open
           onClose={flow.closeLogin}
           closeOnSuccess={false}
-          title={title}
-          subtitle={subtitle}
+          title={title ?? t('shell.login.title')}
+          subtitle={subtitle ?? t('shell.login.subtitle')}
           flatLayout
           showRememberToggle={false}
           profileSetup

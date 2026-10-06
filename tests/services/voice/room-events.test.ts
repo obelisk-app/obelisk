@@ -67,7 +67,7 @@ describe('makeRoomEvents', () => {
     ev.onPeerConnectionStatesChange?.({});
     ev.onLocalTracksChange?.({ mic: true, camera: true, screen: true });
     ev.onTopologyChange?.('f'.repeat(64));
-    ev.onError?.('late');
+    ev.onError?.('roomFull');
     expect(s.setParticipants).not.toHaveBeenCalled();
     expect(s.setLocal).not.toHaveBeenCalled();
     expect(setError).not.toHaveBeenCalled();
@@ -78,7 +78,7 @@ describe('makeRoomEvents', () => {
     const setSfuStatus = vi.fn();
     const bumpRepublish = vi.fn();
     const setError = vi.fn();
-    useVoiceStore.getState().setError('Could not connect to the SFU');
+    useVoiceStore.getState().setError('sfuConnect');
     const ev = makeRoomEvents({ ...sinks(), expectSfu: true, setSfuStatus, bumpRepublish, setError, isCancelled: () => false, readLocalVideo: noVideo });
     ev.onTopologyChange?.('f'.repeat(64));
     expect(setSfuStatus).toHaveBeenCalledWith('connected');
@@ -101,9 +101,9 @@ describe('makeRoomEvents', () => {
   it('errors reach both the room and the store', () => {
     const setError = vi.fn();
     const ev = makeRoomEvents({ ...sinks(), expectSfu: false, setSfuStatus: vi.fn(), bumpRepublish: vi.fn(), setError, isCancelled: () => false, readLocalVideo: noVideo });
-    ev.onError?.('mic denied');
-    expect(setError).toHaveBeenCalledWith('mic denied');
-    expect(useVoiceStore.getState().error).toBe('mic denied');
+    ev.onError?.('permission');
+    expect(setError).toHaveBeenCalledWith('permission');
+    expect(useVoiceStore.getState().error).toBe('permission');
   });
 });
 

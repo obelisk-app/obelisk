@@ -30,46 +30,24 @@ import type { SfuStatus } from '@/services/voice/room-events';
  * or silently dropped to the mesh, without occupying its own row of
  * chrome. Plain voice / non-sfu channels render nothing ('na').
  */
+const SFU_PILL = {
+  starting: { tone: 'bg-amber-500/15 border-amber-400/40 text-amber-100', dot: 'bg-amber-300', pulse: true },
+  connected: { tone: 'bg-emerald-500/15 border-emerald-400/40 text-emerald-100', dot: 'bg-emerald-300', pulse: false },
+  unavailable: { tone: 'bg-amber-500/15 border-amber-400/40 text-amber-100', dot: 'bg-amber-300', pulse: false },
+  unauthorized: { tone: 'bg-rose-500/15 border-rose-400/40 text-rose-100', dot: 'bg-rose-300', pulse: false },
+} as const;
+
 function SfuStatusPill({ status }: { status: SfuStatus }) {
+  const t = useTranslations();
   if (status === 'na') return null;
-  const variants = {
-    starting: {
-      label: 'SFU connecting',
-      detail: 'Asking the SFU to open this big-room call.',
-      tone: 'bg-amber-500/15 border-amber-400/40 text-amber-100',
-      dot: 'bg-amber-300',
-      pulse: true,
-    },
-    connected: {
-      label: 'SFU connected',
-      detail: 'Big-room mode active: media is routed through the SFU.',
-      tone: 'bg-emerald-500/15 border-emerald-400/40 text-emerald-100',
-      dot: 'bg-emerald-300',
-      pulse: false,
-    },
-    unavailable: {
-      label: 'SFU unavailable',
-      detail: 'No big-room SFU is advertising. Falling back to peer-to-peer mesh (max 4 participants).',
-      tone: 'bg-amber-500/15 border-amber-400/40 text-amber-100',
-      dot: 'bg-amber-300',
-      pulse: false,
-    },
-    unauthorized: {
-      label: 'SFU rejected',
-      detail: 'Big-room start was rejected. Your account may not be whitelisted on the SFU’s trusted relay. Call is on peer-to-peer mesh (max 4 participants).',
-      tone: 'bg-rose-500/15 border-rose-400/40 text-rose-100',
-      dot: 'bg-rose-300',
-      pulse: false,
-    },
-  } as const;
-  const v = variants[status];
+  const v = SFU_PILL[status];
   return (
     <div
       role="status"
       aria-live="polite"
       data-testid="sfu-status"
       data-sfu-status={status}
-      title={v.detail}
+      title={t(`voice.sfu.${status}.detail`)}
       className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium leading-none ${v.tone}`}
     >
       <span className="relative inline-flex h-1.5 w-1.5">
@@ -78,7 +56,7 @@ function SfuStatusPill({ status }: { status: SfuStatus }) {
         )}
         <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${v.dot}`} />
       </span>
-      <span>{v.label}</span>
+      <span>{t(`voice.sfu.${status}.label`)}</span>
     </div>
   );
 }
@@ -86,9 +64,7 @@ function SfuStatusPill({ status }: { status: SfuStatus }) {
 export function MeshSyncStatusPill({ count }: { count: number }) {
   const t = useTranslations();
   if (count <= 0) return null;
-  const detail = count === 1
-    ? 'Peer detected; WebRTC media channels are still syncing in the background.'
-    : count + ' peers detected; WebRTC media channels are still syncing in the background.';
+  const detail = t('voice.meshSyncDetail', { count });
   return (
     <div
       role="status"

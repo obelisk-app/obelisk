@@ -36,6 +36,17 @@
       "error": "A chamada falhou"
     },
     "fullscreen": "Tela cheia",
-    "exitFullscreen": "Sair da tela cheia"
+    "exitFullscreen": "Sair da tela cheia",
+    "error": {
+      "load": "Não foi possível carregar a chamada.",
+      "mic": "Microfone indisponível.",
+      "send": "Não foi possível enviar a chamada.",
+      "camera": "Não foi possível ligar ou desligar a câmera.",
+      "flip": "Não foi possível trocar de câmera.",
+      "screen": "Não foi possível compartilhar a tela.",
+      "permission": "O acesso ao microfone ou à câmera está bloqueado. Permita no navegador e tente de novo.",
+      "noDevice": "Nenhum microfone ou câmera foi encontrado.",
+      "deviceBusy": "Outro app está usando seu microfone ou sua câmera."
+    }
   }
 }

@@ -5,6 +5,7 @@
  * The NIP-46 logins are `./bunker-login.ts`; the teardown lists are
  * `./reset.ts`. Pure move from `client.ts`.
  */
+import { CodedError } from '@/utils/errors/codes';
 import { SESSION_IDENTITY_ID, type Identity } from '@/lib/relay-hub';
 import { resetAllClientState } from '@/services/reset';
 import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/store/notifications';
@@ -56,7 +57,7 @@ export class LoginModule {
 
   async loginWithNip07(pubkeyHex: string): Promise<void> {
     if (typeof window === 'undefined' || !window.nostr) {
-      throw new Error('No NIP-07 browser extension detected');
+      throw new CodedError('extension-missing', 'No NIP-07 browser extension detected');
     }
     this.t.state.session = {
       pubKeyHex: pubkeyHex,

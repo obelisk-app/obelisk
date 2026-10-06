@@ -3,7 +3,14 @@
     "controlChannel": "canal de controle",
     "sfuReliability": "confiabilidade do SFU",
     "title": "depuração de voz",
-    "noClient": "nenhum VoiceClient montado"
+    "noClient": "nenhum VoiceClient montado",
+    "peers": "pares",
+    "discovery": "descoberta",
+    "signals": "sinais",
+    "dropped": "descartados",
+    "relay": "relay",
+    "rateLimit": "limite de taxa",
+    "events": "eventos"
   },
   "switchCamera": "Trocar de câmera",
   "videoQuality": "Qualidade de vídeo",
@@ -27,5 +34,103 @@
     "roomPlaceholder": "nome da sala",
     "title": "Entrar em uma sala de voz",
     "enter": "Entrar na sala"
+  },
+  "controls": {
+    "mute": "Silenciar",
+    "unmute": "Ativar microfone",
+    "deafen": "Desativar áudio",
+    "undeafen": "Ativar áudio",
+    "cameraOn": "Ligar câmera",
+    "cameraOff": "Desligar câmera",
+    "shareScreen": "Compartilhar tela",
+    "stopShare": "Parar de compartilhar",
+    "showChat": "Mostrar chat",
+    "hideChat": "Ocultar chat"
+  },
+  "tile": {
+    "you": "Você · {name}",
+    "youPresenting": "Você está apresentando",
+    "presenting": "{name} está apresentando",
+    "pin": "Fixar",
+    "pinned": "Fixado",
+    "pinToStage": "Fixar no palco",
+    "unpin": "Desafixar",
+    "muteForMe": "Silenciar só para mim",
+    "unmuteForMe": "Reativar o som (só para você)",
+    "fullscreen": "Tela cheia",
+    "exitFullscreen": "Sair da tela cheia"
+  },
+  "quality": {
+    "connecting": "Conectando…",
+    "tooltip": "{level} · {detail}",
+    "level": {
+      "excellent": "Excelente",
+      "good": "Boa",
+      "fair": "Regular",
+      "poor": "Ruim",
+      "unknown": "Desconhecida"
+    },
+    "sendRate": "{kbps} kbps de envio",
+    "rtt": "{ms} ms RTT",
+    "loss": "{percent}% de perda"
+  },
+  "landing": {
+    "inCall": "{count, plural, one {# pessoa está nesta chamada.} other {# pessoas estão nesta chamada.}}",
+    "live": "Esta chamada está em andamento.",
+    "empty": "Ninguém foi detectado nesta chamada ainda."
+  },
+  "roster": {
+    "more": "+{count} a mais",
+    "syncingCount": "{count, plural, one {# participante detectado; os nomes ainda estão sincronizando.} other {# participantes detectados; os nomes ainda estão sincronizando.}}",
+    "syncing": "Sincronizando a lista de participantes.",
+    "live": "Ao vivo"
+  },
+  "sfu": {
+    "starting": {
+      "label": "Conectando ao SFU",
+      "detail": "Pedindo ao SFU para abrir esta chamada de sala grande."
+    },
+    "connected": {
+      "label": "SFU conectado",
+      "detail": "Modo sala grande ativo: o áudio e o vídeo passam pelo SFU."
+    },
+    "unavailable": {
+      "label": "SFU indisponível",
+      "detail": "Nenhum SFU de sala grande está se anunciando. A chamada passa para mesh peer-to-peer (máximo de 4 participantes)."
+    },
+    "unauthorized": {
+      "label": "SFU recusado",
+      "detail": "O início da sala grande foi recusado. Talvez sua conta não esteja liberada no relay confiável do SFU. A chamada segue em mesh peer-to-peer (máximo de 4 participantes)."
+    }
+  },
+  "meshSyncDetail": "{count, plural, one {Participante detectado; os canais de mídia WebRTC ainda estão sincronizando em segundo plano.} other {# participantes detectados; os canais de mídia WebRTC ainda estão sincronizando em segundo plano.}}",
+  "error": {
+    "notLoggedIn": "Faça login para entrar na voz.",
+    "membership": "Não foi possível carregar a associação do canal. Este ID de canal é válido?",
+    "notMember": "Você não é membro deste canal de voz.",
+    "cameraLimit": "Limite de câmeras atingido (4/4). Peça para alguém desligar a câmera.",
+    "cameraEvicted": "Limite de câmeras atingido: sua câmera foi desligada.",
+    "screenTaken": "Já tem uma tela sendo compartilhada. Só é permitida uma por vez.",
+    "screenEvicted": "Outro compartilhamento de tela ficou com a vaga da sala. O seu foi interrompido.",
+    "roomFull": "A sala está cheia. Tente de novo quando alguém sair.",
+    "sfuConnect": "Não foi possível conectar ao SFU.",
+    "sfuUnreachable": "Nenhum SFU está acessível para este canal. Peça ao admin do canal para conferir se o SFU fixado está online.",
+    "sfuSwitched": "O canal mudou para o modo SFU, mas nenhum SFU está acessível.",
+    "sfuClosed": "O SFU encerrou esta chamada e nenhum SFU está acessível para reabri-la.",
+    "permission": "O acesso ao microfone ou à câmera está bloqueado. Permita no navegador e tente de novo.",
+    "noDevice": "Nenhum microfone ou câmera foi encontrado.",
+    "deviceBusy": "Outro app está usando seu microfone ou sua câmera.",
+    "mic": "Não foi possível ativar o microfone.",
+    "camera": "Não foi possível ligar ou desligar a câmera.",
+    "switchCamera": "Não foi possível trocar de câmera.",
+    "screen": "Não foi possível compartilhar a tela.",
+    "quality": "Não foi possível mudar a qualidade de vídeo.",
+    "join": "Não foi possível entrar na chamada.",
+    "sfuUrlInvalid": "A URL do SFU precisa ser uma URL http(s) válida.",
+    "sfuInfoHttp": "O SFU não respondeu à consulta /info.",
+    "sfuNotObelisk": "Essa URL não é um SFU do Obelisk.",
+    "sfuInfoInvalid": "O SFU devolveu uma resposta /info inválida.",
+    "sfuOriginMismatch": "O SFU anuncia uma URL diferente da que você informou.",
+    "relayRefused": "O relay recusou a chamada. Talvez você não tenha acesso neste relay."
   }
 }

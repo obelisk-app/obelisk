@@ -21,11 +21,11 @@ export function RelaySettingsModal({
 }) {
   const t = useTranslations();
   const items = [
-    ['profile', 'Server profile & banner', 'Name, icon, banner, and description.', onBranding],
-    ['emoji', 'Emoji, GIFs & stickers', 'Server favorites, packs, and marketplace.', onEmojis],
-    ['channels', 'Channels & categories', 'Category names and channel ordering.', onLayout],
-    ['roles', 'Roles & ranks', 'Tiered badges shown next to member names.', onRoles],
-    ['members', 'Members & moderation', 'Review, demote, and kick across channels.', onMembers],
+    ['profile', onBranding],
+    ['emoji', onEmojis],
+    ['channels', onLayout],
+    ['roles', onRoles],
+    ['members', onMembers],
   ] as const;
 
   return (
@@ -38,9 +38,9 @@ export function RelaySettingsModal({
         <CloseButton onClick={onClose} />
       </header>
       <div className="grid gap-2 p-4">
-        {items.map(([icon, title, description, action]) => (
+        {items.map(([icon, action]) => (
           <button
-            key={title}
+            key={icon}
             onClick={() => { onClose(); action(); }}
             className="flex items-center gap-4 rounded-lg border border-lc-border p-4 text-left hover:border-lc-green/50 hover:bg-lc-card"
           >
@@ -48,8 +48,8 @@ export function RelaySettingsModal({
               <RelaySettingsIcon kind={icon} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-lc-white">{title}</span>
-              <span className="mt-1 block text-xs text-lc-muted">{description}</span>
+              <span className="block text-sm font-semibold text-lc-white">{t(`shell.desktop.server.items.${icon}.title`)}</span>
+              <span className="mt-1 block text-xs text-lc-muted">{t(`shell.desktop.server.items.${icon}.description`)}</span>
             </span>
             <svg className="shrink-0 text-lc-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>

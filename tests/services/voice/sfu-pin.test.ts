@@ -69,5 +69,14 @@ describe('fetchSfuInfo', () => {
     await expect(fetchSfuInfo('https://sfu.obelisk.ar')).rejects.toThrow(
       'SFU /info URL does not match',
     );
+    await expect(fetchSfuInfo('https://sfu.obelisk.ar')).rejects.toMatchObject({ code: 'sfuOriginMismatch' });
+  });
+
+  it('carries a code the settings form can translate', async () => {
+    await expect(fetchSfuInfo('not a url')).rejects.toMatchObject({ code: 'sfuUrlInvalid' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 502 })));
+    await expect(fetchSfuInfo('https://sfu.obelisk.ar')).rejects.toMatchObject({ code: 'sfuInfoHttp' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ service: 'other' }), { status: 200 })));
+    await expect(fetchSfuInfo('https://sfu.obelisk.ar')).rejects.toMatchObject({ code: 'sfuNotObelisk' });
   });
 });

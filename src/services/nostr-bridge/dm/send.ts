@@ -6,6 +6,7 @@
  * `dm/nip17.ts`); this module only picks one and settles the placeholder.
  * Pure move from `client.ts`.
  */
+import { CodedError } from '@/utils/errors/codes';
 import { useDMStore, type DMProtocol } from '@/store/dm';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 import type { BridgeContext } from '../context';
@@ -116,14 +117,14 @@ export class DmSendModule {
    */
   async sendDirectFile(recipientPubkey: string, file: JsDmFile): Promise<void> {
     if (resolveDmProtocol(recipientPubkey) !== 'nip17') {
-      throw new Error('Encrypted files need NIP-17 for this conversation');
+      throw new CodedError('files-need-nip17', 'Encrypted files need NIP-17 for this conversation');
     }
     this.startDirectSend(recipientPubkey, file.url, file);
   }
 
   private startDirectSend(recipientPubkey: string, content: string, file?: JsDmFile, extraTags: string[][] = []): void {
     const session = this.ctx.session();
-    if (!session) throw new Error('Not logged in');
+    if (!session) throw new CodedError('not-logged-in', 'Not logged in');
     const clientTag = generateClientTag();
     const createdAt = Math.floor(Date.now() / 1000);
     // Per-thread override (`useDMStore.protocolOverrides`) if the user

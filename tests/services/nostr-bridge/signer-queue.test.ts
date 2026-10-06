@@ -134,7 +134,7 @@ describe('signer queue', () => {
     const stranded = enqueueSignerOp('interactive', 'stranded', async () => 'never');
     resetSignerQueue();
 
-    await expect(stranded).rejects.toThrow('Signer queue reset');
+    await expect(stranded).rejects.toMatchObject({ message: 'Signer queue reset', code: 'signer-reset' });
     expect(signerQueueStats()).toEqual({ interactive: 0, background: 0, inFlight: 0 });
 
     // Settle the blocker so it doesn't leak into the next test.
@@ -165,9 +165,11 @@ describe('signer queue start deadline', () => {
     const run = vi.fn(async () => 'late');
     const stale = enqueueSignerOp('interactive', 'voice-answer', run, { startDeadlineMs: 15_000 });
     const staleResult = expect(stale).rejects.toBeInstanceOf(SignerQueueTimeoutError);
+    const staleCode = expect(stale).rejects.toMatchObject({ code: 'signer-timeout' });
 
     await vi.advanceTimersByTimeAsync(15_000);
     await staleResult;
+    await staleCode;
     expect(signerQueueStats().interactive).toBe(0);
 
     blocker.resolve();

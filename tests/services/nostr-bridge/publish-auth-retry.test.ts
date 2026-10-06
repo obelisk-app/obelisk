@@ -156,7 +156,10 @@ describe('authRetryOnRestricted', () => {
     const relay = fake.relay(VOICE_RELAY);
     relay.refuseBeforeAuth = 'restricted: Access denied: your pubkey is not whitelisted';
 
-    await expect(impl.publishEvent(signal, toVoiceRelay)).rejects.toThrow(/restricted/);
+    const refused = impl.publishEvent(signal, toVoiceRelay);
+    await expect(refused).rejects.toThrow(/restricted/);
+    // The relay's words stay in the message; the reader gets the code.
+    await expect(refused).rejects.toMatchObject({ code: 'publish-rejected' });
     expect(relay.authCalls).toBe(0);
   });
 

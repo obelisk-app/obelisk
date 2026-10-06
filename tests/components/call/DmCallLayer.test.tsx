@@ -48,6 +48,12 @@ describe('DM call UI', () => {
     expect(screen.queryByTestId('dm-call-view')).toBeNull();
   });
 
+  it('shows a call error by its code, in the reader language', () => {
+    useDmCallStore.setState({ status: 'ended', peer: BOB, endReason: 'error', error: 'permission' });
+    render(<LocaleProvider initialLocale="es"><DmCallLayer /></LocaleProvider>);
+    expect(screen.getByRole('alert')).toHaveTextContent('El acceso al micrófono o a la cámara está bloqueado.');
+  });
+
   it('a voice-only invite offers no video accept', () => {
     useDmCallStore.setState({ status: 'incoming', peer: BOB, video: false });
     renderLocalized(<DmCallLayer />);

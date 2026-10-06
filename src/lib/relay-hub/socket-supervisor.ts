@@ -70,7 +70,7 @@ export class ReconnectSupervisor {
     // more after our own `close()`; only a drop of an up socket is a drop.
     if (entry.connection !== 'connected') return;
     entry.connection = 'reconnecting';
-    entry.lastError = 'relay connection closed';
+    entry.lastError = 'relay connection closed'; // i18n-exempt: socket status for logs and the voice debug overlay
     this.listener.onDrop(entry);
     if (isWanted(entry)) {
       this.scheduleRetry(entry);

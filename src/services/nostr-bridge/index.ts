@@ -24,6 +24,10 @@ export {
   useSessionNotice,
 } from './hooks/session';
 export type { SessionNotice } from './session/vault';
+// What the bridge's errors and activity entries carry. Types only: the
+// runtime helpers (`CodedError`, `errorText`) live in `@/utils/errors/`, so a
+// test that fakes this module still gets the real ones.
+export type { ActivityCode, ErrorCode, EventKindLabel } from '@/utils/errors/codes';
 export {
   useMyContactList,
   useMyContactListReady,

@@ -45,7 +45,7 @@ export function LayoutCategoryCard({
           onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; drag.grabCategory(cat.id); }}
           onDragEnd={drag.endDrag}
           className="cursor-grab active:cursor-grabbing"
-          aria-label={`Grab category ${cat.name}`}
+          aria-label={t('shell.desktop.layout.grabCategory', { name: cat.name })}
           title={t('shell.desktop.layout.dragCategory')}
         >
           <DragHandleIcon />

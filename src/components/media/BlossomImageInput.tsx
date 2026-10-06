@@ -70,11 +70,11 @@ export function ChannelAppearanceInput({
       </div>
       <div className="flex flex-wrap gap-2">
         {([
-          ['picture', 'Upload profile picture'],
-          ['banner', 'Upload banner'],
+          ['picture', t('media.blossom.uploadPicture')],
+          ['banner', t('media.blossom.uploadBanner')],
         ] as const).map(([kind, label]) => (
           <label key={kind} className="lc-pill lc-pill-secondary cursor-pointer whitespace-nowrap text-xs">
-            {uploading === kind ? 'Uploading…' : label}
+            {uploading === kind ? t('media.blossom.uploading') : label}
             <FileInput
               accept="image/*"
               aria-label={label}
@@ -97,12 +97,13 @@ export default function BlossomImageInput({
   label,
   value,
   onChange,
-  placeholder = 'https://… or upload',
+  placeholder,
   shape = 'square',
   hint,
   accept = 'image/*',
   showPreview = true,
 }: Props) {
+  const t = useTranslations();
   const urlId = useId();
   const { uploading: slot, error, upload } = useBlossomUpload<'file'>();
   const uploading = slot !== null;
@@ -131,11 +132,11 @@ export default function BlossomImageInput({
           id={urlId}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('media.blossom.urlPlaceholder')}
           className="flex-1 transition-colors"
         />
         <label className="lc-pill lc-pill-secondary text-xs cursor-pointer whitespace-nowrap">
-          {uploading ? 'Uploading…' : 'Upload'}
+          {t(uploading ? 'media.blossom.uploading' : 'media.blossom.upload')}
           <FileInput
             accept={accept}
             disabled={uploading}

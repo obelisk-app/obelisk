@@ -3,6 +3,7 @@
  * NIP-04 crypto dispatched by login method, the send for a thread the user
  * pinned to NIP-04, and the inbound ingest. Pure move from `client.ts`.
  */
+import { CodedError } from '@/utils/errors/codes';
 import { nip04, type Event as NostrEvent } from 'nostr-tools';
 import { KIND_ENCRYPTED_DM } from '@/utils/nip-kinds';
 import type { BridgeContext } from '../context';
@@ -41,7 +42,7 @@ export class Nip04Module {
   /** Encrypt, sign and publish a kind 4, then settle the placeholder (`dm/send.ts`). */
   async publish({ recipientPubkey, content, clientTag, createdAt, file }: DmSend): Promise<void> {
     try {
-      if (file) throw new Error('NIP-04 cannot carry an encrypted file');
+      if (file) throw new CodedError('files-need-nip17', 'NIP-04 cannot carry an encrypted file');
       const cipher = await this.encrypt(recipientPubkey, content);
       // NIP-04 DMs are delivered to the recipient's NIP-65 read relays; without
       // this, sends to anyone whose read set doesn't include the active relays will
@@ -105,13 +106,13 @@ export class Nip04Module {
     lane: SignerLane = 'interactive',
   ): Promise<string> {
     const session = this.ctx.session();
-    if (!session) throw new Error('Not logged in');
+    if (!session) throw new CodedError('not-logged-in', 'Not logged in');
     if (session.loginMethod === 'nsec' && session.privKeyHex) {
       return nip04.encrypt(session.privKeyHex, recipientPubkey, content);
     }
     if (session.loginMethod === 'nip07') {
       const ext = window.nostr?.nip04;
-      if (!ext?.encrypt) throw new Error('Extension does not support NIP-04 encryption');
+      if (!ext?.encrypt) throw new CodedError('extension-no-nip04', 'Extension does not support NIP-04 encryption');
       return enqueueSignerOp(lane, 'nip04Encrypt', () => ext.encrypt(recipientPubkey, content));
     }
     if (session.loginMethod === 'bunker') {
@@ -120,7 +121,7 @@ export class Nip04Module {
         { lane, label: 'nip04Encrypt' },
       );
     }
-    throw new Error('Cannot encrypt with current login method');
+    throw new CodedError('signer-unsupported', 'Cannot encrypt with current login method');
   }
 
   async decrypt(
@@ -129,13 +130,13 @@ export class Nip04Module {
     lane: SignerLane = 'interactive',
   ): Promise<string> {
     const session = this.ctx.session();
-    if (!session) throw new Error('Not logged in');
+    if (!session) throw new CodedError('not-logged-in', 'Not logged in');
     if (session.loginMethod === 'nsec' && session.privKeyHex) {
       return nip04.decrypt(session.privKeyHex, senderPubkey, ciphertext);
     }
     if (session.loginMethod === 'nip07') {
       const ext = window.nostr?.nip04;
-      if (!ext?.decrypt) throw new Error('Extension does not support NIP-04 decryption');
+      if (!ext?.decrypt) throw new CodedError('extension-no-nip04', 'Extension does not support NIP-04 decryption');
       return memoizeDecrypt('nip04', senderPubkey, ciphertext, () =>
         enqueueSignerOp(lane, 'nip04Decrypt', () => ext.decrypt(senderPubkey, ciphertext)),
       );
@@ -148,6 +149,6 @@ export class Nip04Module {
         ),
       );
     }
-    throw new Error('Cannot decrypt with current login method');
+    throw new CodedError('signer-unsupported', 'Cannot decrypt with current login method');
   }
 }

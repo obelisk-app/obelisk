@@ -103,7 +103,7 @@ export function createPoolLike(hub: HubInternals): PoolLike {
             maybeEose();
             if (closeOnEose) {
               handles.get(url)?.release();
-              markClosed(url, 'closed by caller');
+              markClosed(url, 'closed by caller'); // i18n-exempt: CLOSED reason token, the one nostr-tools uses
             }
           },
           onClosed: (_relay, reason) => markClosed(url, reason),
@@ -115,7 +115,7 @@ export function createPoolLike(hub: HubInternals): PoolLike {
       }
     }
     return {
-      close: (reason = 'closed by caller') => {
+      close: (reason = 'closed by caller') => { // i18n-exempt: CLOSED reason token, the one nostr-tools uses
         for (const [url, handle] of handles) {
           handle.release();
           markClosed(url, reason);

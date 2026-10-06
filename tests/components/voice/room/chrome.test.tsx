@@ -46,6 +46,6 @@ describe('small panels', () => {
   it('centre their content and spin', () => {
     renderLocalized(<CenteredPanel><Spinner /><span>hello</span></CenteredPanel>);
     expect(screen.getByText('hello')).toBeInTheDocument();
-    expect(screen.getByLabelText('loading')).toBeInTheDocument();
+    expect(screen.getByLabelText('Loading…')).toBeInTheDocument();
   });
 });

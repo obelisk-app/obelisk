@@ -53,6 +53,7 @@
  * that forgets to think about it gets prioritized, which is the safe failure.
  */
 
+import { CodedError } from '@/utils/errors/codes';
 import { pushRelayDebug } from './relay-debug';
 
 export type SignerLane = 'interactive' | 'background';
@@ -78,9 +79,9 @@ interface QueueEntry {
  * The op was still waiting for the signer when its start deadline passed.
  * It never reached the signer, so nothing was signed.
  */
-export class SignerQueueTimeoutError extends Error {
+export class SignerQueueTimeoutError extends CodedError {
   constructor(label: string, ms: number) {
-    super(`Signer queue: ${label} did not start within ${ms} ms`);
+    super('signer-timeout', `Signer queue: ${label} did not start within ${ms} ms`); // i18n-exempt: developer message; readers get the code
     this.name = 'SignerQueueTimeoutError';
   }
 }
@@ -195,7 +196,7 @@ export function resetSignerQueue(): void {
   for (const entry of pending) {
     if (entry.deadline) clearTimeout(entry.deadline);
     try {
-      entry.reject(new Error('Signer queue reset'));
+      entry.reject(new CodedError('signer-reset', 'Signer queue reset'));
     } catch {
       // A rejection handler that throws must not stop us clearing the rest.
     }

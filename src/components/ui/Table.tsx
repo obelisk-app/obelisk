@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/utils/style/cn';
 import EmptyState, { type EmptyStatePadding } from './EmptyState';
 import ErrorState from './ErrorState';
@@ -90,6 +91,7 @@ export default function Table<Row>({
   rowClassName,
   className,
 }: TableProps<Row>) {
+  const t = useTranslations();
   const failed = error !== undefined && error !== null && error !== false;
   const isEmpty = !failed && !loading && rows.length === 0;
   if (isEmpty && emptyPlacement === 'replace') {
@@ -115,7 +117,7 @@ export default function Table<Row>({
         {!failed && loading && (
           <tr>
             <td colSpan={columns.length} className="px-3 py-6 text-center">
-              <Spinner label={loadingLabel ?? 'Loading'} />
+              <Spinner label={loadingLabel ?? t('common.loading')} />
             </td>
           </tr>
         )}

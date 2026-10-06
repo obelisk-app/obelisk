@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { JsGroup } from '@/services/nostr-bridge';
 import type { LaidOutSidebar } from '@/services/channel-layout';
 import type { View } from '@/utils/shell/view';
@@ -17,6 +18,7 @@ type Props = {
 
 /** The operator's categories with their channels, then whatever no category claims. */
 export function ChannelTree({ laidOut, groupsById, childrenByParent, view, onSelect, distanceById }: Props) {
+  const t = useTranslations();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggleCollapsed = (id: string) =>
     setCollapsed((c) => ({ ...c, [id]: !c[id] }));
@@ -52,7 +54,7 @@ export function ChannelTree({ laidOut, groupsById, childrenByParent, view, onSel
       {laidOut.uncategorized.length > 0 && (
         laidOut.categories.length > 0 ? (
           <CategorySection
-            name="Uncategorized"
+            name={t('shell.desktop.channels.uncategorized')}
             collapsed={!!collapsed['__uncat__']}
             onToggle={() => toggleCollapsed('__uncat__')}
             channelCount={laidOut.uncategorized.length}

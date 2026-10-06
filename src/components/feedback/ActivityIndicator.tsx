@@ -6,6 +6,7 @@ import { usePreferences } from '@/hooks/usePreferences';
 import RelayStatusBanner from '@/app/[locale]/app/RelayStatusBanner';
 import { useTranslations } from 'next-intl';
 import { CloseIcon } from '@/components/ui/icons';
+import { activityDetail, activityTitle } from '@/utils/errors/activity-text';
 
 export default function ActivityIndicator({ hideSigning = false }: { hideSigning?: boolean }) {
   const items = useActivityLog();
@@ -34,6 +35,7 @@ export default function ActivityIndicator({ hideSigning = false }: { hideSigning
 
 function ActivityRow({ entry }: { entry: ActivityEntry }) {
   const t = useTranslations();
+  const detail = activityDetail(t, entry);
   const color =
     entry.status === 'error'
       ? 'border-red-500/40 bg-red-950/80 text-red-100'
@@ -50,10 +52,10 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
     >
       <StatusGlyph status={entry.status} />
       <div className="min-w-0 flex-1">
-        <div className="font-semibold leading-tight">{entry.label}</div>
-        {activityDetail(entry) ? (
+        <div className="font-semibold leading-tight">{activityTitle(t, entry)}</div>
+        {detail ? (
           <div className="mt-0.5 break-words text-[11px] leading-snug opacity-80">
-            {activityDetail(entry)}
+            {detail}
           </div>
         ) : null}
       </div>
@@ -69,12 +71,6 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       ) : null}
     </div>
   );
-}
-
-function activityDetail(entry: ActivityEntry): string | undefined {
-  const kind = entry.eventKind == null ? null : 'kind ' + entry.eventKind;
-  if (entry.description && kind) return entry.description + ' · ' + kind;
-  return entry.description ?? kind ?? entry.detail;
 }
 
 function StatusGlyph({ status }: { status: ActivityEntry['status'] }) {

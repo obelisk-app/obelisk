@@ -19,6 +19,7 @@ import { setActiveVoiceClient, getActiveVoiceClient } from '@/services/voice/act
 import type { VoiceSigner } from '@/services/voice/constants';
 import type { ActiveCallInfo } from '@/services/nostr-bridge';
 import { useVoiceStore } from '@/store/voice';
+import { voiceErrorCode, type VoiceErrorCode } from '@/services/voice/errors';
 import type { AuthGate } from './useVoiceRoomGate';
 import { useSfuSupervisor } from './useSfuSupervisor';
 import {
@@ -61,7 +62,7 @@ export function useVoiceRoomClient({
   activeCall: ActiveCallInfo | null;
   currentRelayUrl: string | null;
   loginMethod: VoiceSigner | null;
-  setError: (message: string | null) => void;
+  setError: (code: VoiceErrorCode | null) => void;
 }): VoiceRoomClientState {
   const [participants, setParticipants] = useState<string[]>([]);
   const [remoteTracks, setRemoteTracks] = useState<RemoteTrack[]>([]);
@@ -202,11 +203,12 @@ export function useVoiceRoomClient({
           if (getActiveVoiceClient() === client) setActiveVoiceClient(null);
           if (clientRef.current === client) clientRef.current = null;
         }
-        const msg = e instanceof Error ? e.message : String(e);
+        console.warn('[voice] join failed', e);
+        const code = voiceErrorCode(e, 'join');
         if (!cancelled) {
           setJoinedChannelId(null);
-          setError(msg);
-          useVoiceStore.getState().setError(msg);
+          setError(code);
+          useVoiceStore.getState().setError(code);
           useVoiceStore.getState().setConnecting(false);
         }
       }

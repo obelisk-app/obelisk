@@ -9,6 +9,7 @@
  * AUTH-and-republish round `publish-auth.ts` (injected), and the reading of
  * each round's results `publish-results.ts`.
  */
+import { CodedError, type ActivityCode, type ErrorCode } from '@/utils/errors/codes';
 import type { Event as NostrEvent } from 'nostr-tools';
 import type { PublishAuthMode, RelayHub } from '@/lib/relay-hub';
 import { KIND_CONTACT_LIST, KIND_EMOJI_FAVORITES, KIND_EMOJI_SET } from '@/utils/nip-kinds';
@@ -105,7 +106,7 @@ export class PublishModule {
       : (relayOpts as PublishOpts);
     const extraRelays = normalized.extraRelays ?? [];
     const session = this.ctx.session();
-    if (!session) throw new Error('Not logged in');
+    if (!session) throw new CodedError('not-logged-in', 'Not logged in');
     // `quiet`: best-effort background publish (e.g. lazy member self-add).
     // Suppress the activity-bar lifecycle so the user doesn't see a
     // Publishing/Failed toast for a write the relay routinely declines.
@@ -159,15 +160,15 @@ export class PublishModule {
     const authMode = opts?.authMode ?? 'always';
     const roundAuth: PublishAuthMode = authMode === 'always' && this.deps.getAuthSigner() ? 'policy' : 'never';
     const pubId = opts?.quiet ? null : pushActivity(
-      'Publishing to relays',
-      "kind " + event.kind + " -> " + targetRelays.length + " relay(s)",
+      'publish' satisfies ActivityCode,
+      undefined,
       { operation: "publish", eventKind: event.kind, description: eventKindDescription(event.kind) },
     );
     pushRelayDebug({ kind: "publish-start", relays: targetRelays, eventKind: event.kind, status: eventKindDescription(event.kind) });
 
     const results = await this.firstRound(event, targetRelays, roundAuth);
     if (results === null) {
-      if (pubId != null) resolveActivity(pubId, `ephemeral → ${targetRelays.length} relay(s)`);
+      if (pubId != null) resolveActivity(pubId);
       return event;
     }
 
@@ -180,7 +181,7 @@ export class PublishModule {
     // read of the signer: a timeout is not a demand for identification, so
     // the retry must honour `authMode`.
     if (timedOutEverywhere(acceptedOf(results), results)) {
-      pushRelayDebug({ kind: "publish-retry", relays: targetRelays, eventKind: event.kind, reason: "all relays timed out" });
+      pushRelayDebug({ kind: "publish-retry", relays: targetRelays, eventKind: event.kind, reason: "all relays timed out" }); // i18n-exempt: relay debug panel text
       finalResults = await publishRound(this.deps.hub, targetRelays, event, roundAuth);
       reportRetryRejections(finalResults, targetRelays, (url, state) => this.ctx.setRelayAccess(url, state));
     }
@@ -201,7 +202,7 @@ export class PublishModule {
         kind: 'publish-auth-escalation',
         relays: targetRelays,
         eventKind: event.kind,
-        reason: 'anonymous publish refused with auth-required; retrying authenticated',
+        reason: 'anonymous publish refused with auth-required; retrying authenticated', // i18n-exempt: relay debug panel text
       });
       finalResults = await this.escalate(event, targetRelays, finalResults);
       reportRetryRejections(finalResults, targetRelays, (url, state) => this.ctx.setRelayAccessDeferred(url, state));
@@ -210,14 +211,12 @@ export class PublishModule {
     const joined = alreadyJoined(event, finalResults);
     if (accepted.length === 0 && !joined) {
       const msg = rejectionMessage(event, finalResults, targetRelays);
-      if (pubId != null) failActivity(pubId, msg);
+      const code: ErrorCode = timedOutEverywhere(accepted, finalResults) ? 'publish-timeout' : 'publish-rejected';
+      if (pubId != null) failActivity(pubId, code);
       pushRelayDebug({ kind: "publish-error", relays: targetRelays, eventKind: event.kind, reason: msg });
-      throw new Error(msg);
+      throw new CodedError(code, msg);
     }
-    if (pubId != null) resolveActivity(
-      pubId,
-      joined ? 'already joined' : "accepted by " + accepted.length + "/" + targetRelays.length,
-    );
+    if (pubId != null) resolveActivity(pubId);
     pushRelayDebug({ kind: "publish-ok", relays: targetRelays, eventKind: event.kind, payload: { accepted: accepted.length, total: targetRelays.length, alreadyJoined: joined } });
     return event;
   }

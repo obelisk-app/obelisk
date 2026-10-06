@@ -2,7 +2,7 @@ import { getPublicKey } from 'nostr-tools/pure';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { ENCRYPTED_BLOSSOM_SERVERS, uploadEncryptedBlob, uploadToBlossom } from '@/services/blossom';
+import { BlossomUploadError, ENCRYPTED_BLOSSOM_SERVERS, uploadEncryptedBlob, uploadToBlossom } from '@/services/blossom';
 
 const { signEventTemplate } = vi.hoisted(() => ({ signEventTemplate: vi.fn() }));
 vi.mock('@/services/nostr-bridge', () => ({ nostrActions: { signEventTemplate } }));
@@ -28,6 +28,17 @@ describe('uploadToBlossom', () => {
     expect(event.kind).toBe(24242);
     expect(event.pubkey).toBe(getPublicKey(secretKey));
     expect(signEventTemplate).not.toHaveBeenCalled();
+  });
+
+  it('when every server refuses, says so as one BlossomUploadError with a reason per server', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 413, text: async () => 'too big' }));
+    const file = { type: 'image/png', arrayBuffer: async () => new Uint8Array([1]).buffer } as File;
+    const err = await uploadToBlossom(file, new Uint8Array(32).fill(2)).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(BlossomUploadError);
+    expect((err as BlossomUploadError).reasons).toHaveLength(3);
+    expect((err as BlossomUploadError).reasons[0]).toContain('413 too big');
+    warn.mockRestore();
   });
 });
 

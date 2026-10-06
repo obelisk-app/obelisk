@@ -39,5 +39,73 @@
   "remote": {
     "show": "Mostrar mídia",
     "hint": "Oculta até você pedir. Carregá-la revelaria seu endereço IP ao servidor que a hospeda."
+  },
+  "tabs": {
+    "discover": "Mercado",
+    "mine": "Meus pacotes",
+    "favorites": "Favoritos"
+  },
+  "filter": {
+    "all": "Todos",
+    "emoji": "Emojis",
+    "gif": "GIFs",
+    "sticker": "Figurinhas"
+  },
+  "itemCount": "{count, plural, one {# item} other {# itens}}",
+  "item": {
+    "open": "Abrir ações de :{name}:",
+    "favorite": "Favoritar :{name}:",
+    "unfavorite": "Remover :{name}: dos favoritos",
+    "addFavorite": "Adicionar :{name}: aos favoritos",
+    "removeFavorite": "Remover :{name}: dos favoritos",
+    "removeFromServer": "Remover :{name}: do servidor",
+    "fromPack": "{kind} de {title}",
+    "individual": "{kind} · Favorito solto",
+    "viewPack": "Ver {title}",
+    "addToFavorites": "Adicionar o item aos favoritos",
+    "removeFromFavorites": "Remover o item dos favoritos"
+  },
+  "pack": {
+    "save": "Salvar pacote",
+    "saved": "Salvo",
+    "saveNamed": "Salvar {title}",
+    "unsaveNamed": "Remover {title} dos pacotes salvos",
+    "addToServer": "Adicionar o pacote ao servidor",
+    "removeFromServer": "Remover o pacote do servidor",
+    "saving": "Salvando…",
+    "newTitle": "Novo pacote",
+    "itemTitle": "Pacote {name}",
+    "shortcodePlaceholder": "atalho"
+  },
+  "empty": {
+    "mine": "Crie seu primeiro pacote de mídia reutilizável.",
+    "favorites": "Favorite um pacote ou um item para tê-lo em todos os servidores.",
+    "none": "Nenhum pacote encontrado."
+  },
+  "serverPacksSelected": "{count, plural, one {# pacote selecionado.} other {# pacotes selecionados.}} Adicione ou remova pacotes existentes abaixo.",
+  "notice": {
+    "uploaded": ":{name}: foi enviado para os favoritos soltos.",
+    "deleted": "“{title}” foi excluído.",
+    "addedToServer": "“{title}” foi adicionado a este servidor.",
+    "removedFromServer": "“{title}” foi removido deste servidor."
+  },
+  "error": {
+    "saveFavorites": "Não foi possível salvar os favoritos.",
+    "loginToUpload": "Faça login para enviar mídia.",
+    "upload": "Não foi possível enviar a mídia.",
+    "deletePack": "Não foi possível excluir o pacote.",
+    "serverPacks": "Não foi possível atualizar os pacotes do servidor.",
+    "uploadFailed": "O envio falhou.",
+    "nameRequired": "O pacote precisa de um nome.",
+    "invalidItems": "Cada item precisa de um atalho único e de uma URL de imagem HTTP(S).",
+    "duplicate": "Atalho repetido: :{name}:",
+    "savePack": "Não foi possível salvar o pacote."
+  },
+  "blossom": {
+    "uploading": "Enviando…",
+    "upload": "Enviar",
+    "uploadPicture": "Enviar foto de perfil",
+    "uploadBanner": "Enviar banner",
+    "urlPlaceholder": "https://… ou envie uma"
   }
 }

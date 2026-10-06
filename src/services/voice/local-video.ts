@@ -12,6 +12,7 @@ import type { RoomState } from './room-state';
 import type { VideoSlotKind, VoicePresence } from './types';
 import { getPreset } from './quality';
 import { MAX_CAMERAS } from './constants';
+import { VoiceError } from './errors';
 import type { SfuPublisher } from './local-media-publish';
 import {
   buildVideoSlotList,
@@ -82,9 +83,8 @@ export class LocalVideo {
       // claimed. Race-overflow (two peers claim simultaneously) is
       // resolved by `enforceVideoSlotCap` once beacons round-trip.
       if (!this.canClaimVideoSlot('camera')) {
-        const err = new Error('Camera limit reached (4/4). Ask someone to turn off their camera.');
-        this.room.ui.setError(err.message);
-        throw err;
+        this.room.ui.setError('cameraLimit');
+        throw new VoiceError('cameraLimit', 'Camera limit reached (4/4). Ask someone to turn off their camera.');
       }
       const quality = this.room.ui.readVideoQuality().videoQuality;
       const preset = getPreset(quality);
@@ -174,9 +174,8 @@ export class LocalVideo {
       // Same room-wide video-slot cap as camera; screen-share counts as
       // one slot regardless of whether screen-audio is attached.
       if (!this.canClaimVideoSlot('screen')) {
-        const err = new Error('A screen is already being shared. Only one screen share is allowed.');
-        this.room.ui.setError(err.message);
-        throw err;
+        this.room.ui.setError('screenTaken');
+        throw new VoiceError('screenTaken', 'A screen is already being shared. Only one screen share is allowed.');
       }
       const generation = this.host.generation();
       const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -289,9 +288,7 @@ export class LocalVideo {
       } else {
         void this.setScreenShareEnabled(false);
       }
-      this.room.ui.setError(kind === 'camera'
-        ? 'Camera limit reached: your camera was disabled.'
-        : 'Another screen share won the room slot. Your screen share was stopped.');
+      this.room.ui.setError(kind === 'camera' ? 'cameraEvicted' : 'screenEvicted');
     }
   }
 }

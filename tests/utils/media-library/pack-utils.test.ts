@@ -28,10 +28,11 @@ describe('uniqueName', () => {
 });
 
 describe('newPack', () => {
-  it('starts empty with a fresh identifier each time', () => {
-    const a = newPack();
-    const b = newPack();
+  it('starts empty with a fresh identifier each time, under the title it is given', () => {
+    const a = newPack('Pack nuevo');
+    const b = newPack('Pack nuevo');
     expect(a.items).toEqual([]);
+    expect(a.title).toBe('Pack nuevo');
     expect(a.identifier).not.toBe(b.identifier);
   });
 });

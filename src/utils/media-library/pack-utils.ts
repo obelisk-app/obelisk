@@ -11,13 +11,13 @@ export function uniqueName(raw: string, used: Set<string>): string {
   return name;
 }
 
-/** An empty pack with a fresh `d` identifier. */
-export function newPack(): EditablePack {
+/** An empty pack with a fresh `d` identifier, titled `title` (the caller's translated "New pack"). */
+export function newPack(title: string): EditablePack {
   return {
     identifier: typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    title: 'New pack',
+    title,
     description: '',
     image: '',
     items: [],

@@ -28,19 +28,19 @@ export function RelayAccessModal() {
   const isAuth = access === 'auth-required';
   const isUnreachable = access === 'unreachable';
   const title = isAuth
-    ? `Not authenticated to ${host}`
+    ? t('shell.status.authRequired.title', { host })
     : isUnreachable
-      ? `Cannot reach ${host}`
-      : `Not whitelisted on ${host}`;
+      ? t('shell.status.cannotReach', { host })
+      : t('shell.status.restricted.title', { host });
   const body = isAuth
     ? loginMethod === 'bunker'
-      ? 'Approve the signing request in your bunker app to complete NIP-42 AUTH.'
+      ? t('shell.status.modal.authBunker')
       : loginMethod === 'nip07'
-        ? 'Approve the signing request in your Nostr extension to complete NIP-42 AUTH.'
-        : 'NIP-42 AUTH did not complete. Try reloading or switching login methods.'
+        ? t('shell.status.modal.authNip07')
+        : t('shell.status.modal.authFailed')
     : isUnreachable
-      ? 'The relay isn’t responding. It may be offline, blocked by your network, or briefly unavailable. We’ll keep trying in the background. Switch relays if you need to keep working.'
-      : 'This relay accepted your signature but won’t serve or accept events from your pubkey. Ask the operator to add you to its allowlist, or switch relays.';
+      ? t('shell.status.modal.unreachable')
+      : t('shell.status.modal.restricted');
 
   const tone = isAuth ? 'yellow' : 'red';
 

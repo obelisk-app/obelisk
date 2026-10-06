@@ -5,6 +5,7 @@
  * serialized runner every bunker round-trip goes through. Pure move from
  * `client.ts`.
  */
+import { CodedError } from '@/utils/errors/codes';
 import { BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
 import type { BridgeContext } from '../context';
 import { hexToBytes } from '../hex';
@@ -84,10 +85,10 @@ export class BunkerModule {
     if (this.signer) return this.signer;
     const session = this.ctx.session();
     if (!session || session.loginMethod !== 'bunker' || !session.bunkerUrl || !session.bunkerLocalSecretHex) {
-      throw new Error('No bunker session to rehydrate');
+      throw new CodedError('bunker-no-session', 'No bunker session to rehydrate');
     }
     const bp = await parseBunkerInput(session.bunkerUrl);
-    if (!bp) throw new Error('Invalid stored bunker URL');
+    if (!bp) throw new CodedError('bunker-no-session', 'Invalid stored bunker URL');
     // Read again after the await, as the facade did: a logout while the URL
     // was parsing throws here instead of rebuilding the old account's signer.
     const localSecret = hexToBytes(this.ctx.session()!.bunkerLocalSecretHex!);
@@ -133,7 +134,7 @@ export class BunkerModule {
     const invoke = (s: RemoteSigner): Promise<T> =>
       enqueueSignerOp(lane, label, () =>
         opts?.deadlineMs
-          ? withDeadline(operation(s), opts.deadlineMs, opts.deadlineMessage ?? 'Remote signer timed out')
+          ? withDeadline(operation(s), opts.deadlineMs, opts.deadlineMessage ?? 'Remote signer timed out') // i18n-exempt: developer message; withDeadline rejects with signer-timeout
           : operation(s),
         opts?.startDeadlineMs !== undefined ? { startDeadlineMs: opts.startDeadlineMs } : undefined,
       );

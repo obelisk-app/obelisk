@@ -4,6 +4,7 @@
  * exact same event, cancel, and the deletion of one's own message. Pure
  * move from `client.ts`.
  */
+import { CodedError } from '@/utils/errors/codes';
 import type { MessagesContext, MessagesDeps } from './module';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { KIND_EVENT_DELETION, KIND_GROUP_CHAT_MESSAGE } from '@/utils/nip-kinds';
@@ -30,7 +31,7 @@ export class MessageSend {
     emojiTags: ReadonlyArray<ReadonlyArray<string>> = [],
   ): Promise<void> {
     const session = this.ctx.session();
-    if (!session) throw new Error('Not logged in');
+    if (!session) throw new CodedError('not-logged-in', 'Not logged in');
     const clientTag = generateClientTag();
     const createdAt = Math.floor(Date.now() / 1000);
     const replyToCopy = replyTo ? { id: replyTo.id, pubkey: replyTo.pubkey } : null;

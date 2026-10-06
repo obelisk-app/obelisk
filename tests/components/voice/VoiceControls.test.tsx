@@ -162,7 +162,7 @@ describe('VoiceControls behaviours', () => {
     await waitFor(() => expect(activeClient.setCameraEnabled).toHaveBeenCalled());
     expect(useVoiceStore.getState().error).toBeNull();
     fireEvent.click(screen.getByTestId('screen-share-btn'));
-    await waitFor(() => expect(screen.getByTestId('voice-error')).toHaveTextContent('no display'));
+    await waitFor(() => expect(screen.getByTestId('voice-error')).toHaveTextContent("Couldn't share your screen."));
   });
 
   it('a mic failure is surfaced, and the chat toggle is wired through', async () => {
@@ -170,7 +170,7 @@ describe('VoiceControls behaviours', () => {
     const onToggleChat = vi.fn();
     renderLocalized(<VoiceControls onLeave={() => {}} onToggleChat={onToggleChat} isChatOpen={false} />);
     fireEvent.click(screen.getByTestId('mute-btn'));
-    await waitFor(() => expect(screen.getByTestId('voice-error')).toHaveTextContent('mic blocked'));
+    await waitFor(() => expect(screen.getByTestId('voice-error')).toHaveTextContent("Couldn't turn on the microphone."));
     fireEvent.click(screen.getByTestId('voice-chat-toggle'));
     expect(onToggleChat).toHaveBeenCalledTimes(1);
   });
@@ -184,7 +184,7 @@ describe('VoiceControls behaviours', () => {
       useVoiceStore.setState({ isCameraOn: true });
       renderLocalized(<VoiceControls onLeave={() => {}} />);
       fireEvent.click(await screen.findByTestId('switch-camera-btn'));
-      await waitFor(() => expect(screen.getByTestId('voice-error')).toHaveTextContent('flip failed'));
+      await waitFor(() => expect(screen.getByTestId('voice-error')).toHaveTextContent("Couldn't switch camera."));
     } finally {
       nav.mediaDevices = prev;
     }
@@ -195,7 +195,7 @@ describe('VoiceControls behaviours', () => {
     renderLocalized(<VoiceControls onLeave={() => {}} />);
     fireEvent.click(screen.getByTestId('quality-btn'));
     fireEvent.click(screen.getByTestId('quality-out-1080p'));
-    await waitFor(() => expect(screen.getByTestId('voice-error')).toHaveTextContent('no sender'));
+    await waitFor(() => expect(screen.getByTestId('voice-error')).toHaveTextContent("Couldn't change the video quality."));
     expect(useVoiceStore.getState().videoQuality).toBe('1080p');
   });
 });
@@ -219,9 +219,20 @@ describe('VoiceControls error surface', () => {
     }
   });
 
-  it('renders the current error message', () => {
+  it('renders an error code in the reader language, and any other text as it is', () => {
+    useVoiceStore.setState({ error: 'cameraLimit' });
+    const { unmount } = renderLocalized(<VoiceControls onLeave={() => {}} />);
+    expect(screen.getByTestId('voice-error')).toHaveTextContent('Camera limit reached (4/4).');
+    unmount();
     useVoiceStore.setState({ error: 'mic blocked' });
-    renderLocalized(<VoiceControls onLeave={() => {}} />);
+    render(<LocaleProvider initialLocale="es"><VoiceControls onLeave={() => {}} /></LocaleProvider>);
     expect(screen.getByTestId('voice-error')).toHaveTextContent('mic blocked');
+  });
+
+  it('names a missing device instead of repeating the browser wording', async () => {
+    activeClient.setCameraEnabled.mockRejectedValueOnce(Object.assign(new Error('Requested device not found'), { name: 'NotFoundError' }));
+    render(<LocaleProvider initialLocale="es"><VoiceControls onLeave={() => {}} /></LocaleProvider>);
+    fireEvent.click(screen.getByTestId('camera-btn'));
+    await waitFor(() => expect(screen.getByTestId('voice-error')).toHaveTextContent('No se encontró ningún micrófono ni cámara.'));
   });
 });

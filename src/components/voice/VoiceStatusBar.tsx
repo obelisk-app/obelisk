@@ -14,6 +14,7 @@ import { useGroups } from '@/services/nostr-bridge';
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient, setActiveVoiceClient } from '@/services/voice/active-client';
 import { requestVoiceJump } from '@/services/voice/jump-to-voice';
+import { voiceErrorCode } from '@/services/voice/errors';
 import { useTranslations } from 'next-intl';
 import {
   CameraOffIcon, CameraOnIcon, DeafenOffIcon, DeafenOnIcon, LeaveIcon, MicOffIcon, MicOnIcon,
@@ -63,7 +64,7 @@ export default function VoiceStatusBar() {
     // Same surface as the in-room controls: a denied microphone from the
     // sidebar must say so, not leave the button doing nothing.
     try { await c.setMicEnabled(isMuted); }
-    catch (e) { useVoiceStore.getState().setError(e instanceof Error ? e.message : String(e)); }
+    catch (e) { useVoiceStore.getState().setError(voiceErrorCode(e, 'mic')); }
   };
 
   const handleToggleDeafen = () => {
@@ -80,9 +81,8 @@ export default function VoiceStatusBar() {
     if (!c) return;
     try { await c.setCameraEnabled(!isCameraOn); }
     catch (err) {
-      const e = err as { name?: string };
-      if (e?.name !== 'NotAllowedError') {
-        useVoiceStore.getState().setError((err as Error).message);
+      if ((err as { name?: string })?.name !== 'NotAllowedError') {
+        useVoiceStore.getState().setError(voiceErrorCode(err, 'camera'));
       }
     }
   };
@@ -92,9 +92,8 @@ export default function VoiceStatusBar() {
     if (!c) return;
     try { await c.switchCamera(); }
     catch (err) {
-      const e = err as { name?: string };
-      if (e?.name !== 'NotAllowedError') {
-        useVoiceStore.getState().setError((err as Error).message);
+      if ((err as { name?: string })?.name !== 'NotAllowedError') {
+        useVoiceStore.getState().setError(voiceErrorCode(err, 'switchCamera'));
       }
     }
   };
@@ -104,9 +103,8 @@ export default function VoiceStatusBar() {
     if (!c) return;
     try { await c.setScreenShareEnabled(!isScreenSharing); }
     catch (err) {
-      const e = err as { name?: string };
-      if (e?.name !== 'NotAllowedError') {
-        useVoiceStore.getState().setError((err as Error).message);
+      if ((err as { name?: string })?.name !== 'NotAllowedError') {
+        useVoiceStore.getState().setError(voiceErrorCode(err, 'screen'));
       }
     }
   };
@@ -171,13 +169,13 @@ export default function VoiceStatusBar() {
         </div>
 
         <div className="flex items-center gap-1 w-full">
-          <SmallBtn active={!isMuted} danger={isMuted} onClick={handleToggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
+          <SmallBtn active={!isMuted} danger={isMuted} onClick={handleToggleMute} title={t(isMuted ? 'voice.controls.unmute' : 'voice.controls.mute')}>
             {isMuted ? <MicOffIcon size={14} /> : <MicOnIcon size={14} />}
           </SmallBtn>
-          <SmallBtn active={!isDeafened} danger={isDeafened} onClick={handleToggleDeafen} title={isDeafened ? 'Undeafen' : 'Deafen'}>
+          <SmallBtn active={!isDeafened} danger={isDeafened} onClick={handleToggleDeafen} title={t(isDeafened ? 'voice.controls.undeafen' : 'voice.controls.deafen')}>
             {isDeafened ? <DeafenOffIcon size={14} /> : <DeafenOnIcon size={14} />}
           </SmallBtn>
-          <SmallBtn active={isCameraOn} onClick={handleToggleCamera} title={isCameraOn ? 'Camera off' : 'Camera on'} data-testid="voice-bar-camera">
+          <SmallBtn active={isCameraOn} onClick={handleToggleCamera} title={t(isCameraOn ? 'voice.controls.cameraOff' : 'voice.controls.cameraOn')} data-testid="voice-bar-camera">
             {isCameraOn ? <CameraOnIcon size={14} /> : <CameraOffIcon size={14} />}
           </SmallBtn>
           {isCameraOn && hasMultipleCameras && (
@@ -185,7 +183,7 @@ export default function VoiceStatusBar() {
               <SwitchCameraIcon size={14} />
             </SmallBtn>
           )}
-          <SmallBtn active={isScreenSharing} onClick={handleToggleScreen} title={isScreenSharing ? 'Stop sharing' : 'Share screen'} data-testid="voice-bar-screenshare">
+          <SmallBtn active={isScreenSharing} onClick={handleToggleScreen} title={t(isScreenSharing ? 'voice.controls.stopShare' : 'voice.controls.shareScreen')} data-testid="voice-bar-screenshare">
             <ScreenShareIcon size={14} sharing={isScreenSharing} />
           </SmallBtn>
         </div>

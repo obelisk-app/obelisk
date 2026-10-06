@@ -33,10 +33,7 @@ export function GeneratedNpubStep({ pubkey, onClose, onBack, shared, onShare, fi
         <div className="nui-form-head">
           <span className="obelisk-step-done" aria-hidden="true">✓</span>
           <h3 className="nui-form-title">{t('shell.login.profileReady')}</h3>
-          <p className="nui-form-sub">
-            Your npub is your public profile address. Share it so people can find
-            and follow you. It is safe to share: your nsec is the key that stays private.
-          </p>
+          <p className="nui-form-sub">{t('shell.login.npubHelp')}</p>
         </div>
         <div className="nui-key-display">{npub}</div>
         <div className="obelisk-share-actions">
@@ -59,12 +56,12 @@ export function GeneratedNpubStep({ pubkey, onClose, onBack, shared, onShare, fi
             onClick={onShare}
             data-testid="share-generated-profile"
           >
-            {shared ? 'Link copied' : 'Share my profile'}
+            {shared ? t('shell.login.linkCopied') : t('shell.login.shareMyProfile')}
           </button>
         </div>
         {finishError && <p className="nui-error" role="alert">{finishError}</p>}
         <button type="button" className="nui-login-button" disabled={finishing} onClick={onFinish}>
-          {finishing ? 'Connecting…' : 'Enter Obelisk'}
+          {finishing ? t('shell.login.connecting') : t('shell.login.enter')}
         </button>
       </div>
     </Modal>

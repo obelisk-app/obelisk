@@ -7,6 +7,8 @@
  * state from the voice store, never from the client.
  */
 import { useRef } from 'react';
+import { useTranslations } from 'next-intl';
+import { useFormat } from '@/i18n/useFormat';
 import { useUserMetadata as useProfile } from '@/services/nostr-bridge';
 import { useAutoplayVideo } from '@/hooks/useAutoplayVideo';
 import { useTileSpeaking } from '@/hooks/useTileSpeaking';
@@ -23,6 +25,7 @@ export function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTogglePin 
   pinned: boolean;
   onTogglePin: () => void;
 }) {
+  const t = useTranslations();
   const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -31,8 +34,8 @@ export function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTogglePin 
   useAutoplayVideo(videoRef, videoStream);
   const label =
     kind === 'screen'
-      ? isLocal ? 'You are presenting' : `${name} is presenting`
-      : isLocal ? `You · ${name}` : name;
+      ? isLocal ? t('voice.tile.youPresenting') : t('voice.tile.presenting', { name })
+      : isLocal ? t('voice.tile.you', { name }) : name;
   return (
     <div
       ref={containerRef}
@@ -58,7 +61,7 @@ export function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTogglePin 
         <button
           type="button"
           onClick={onTogglePin}
-          title={pinned ? 'Unpin' : 'Pin to stage'}
+          title={t(pinned ? 'voice.tile.unpin' : 'voice.tile.pinToStage')}
           className={
             'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] backdrop-blur transition-colors ' +
             (pinned
@@ -70,7 +73,7 @@ export function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTogglePin 
             <path d="M12 17v5" />
             <path d="M9 10.76V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4.76a2 2 0 0 0 .55 1.39l1.65 1.7A1 1 0 0 1 16.5 15.5h-9A1 1 0 0 1 6.8 13.85l1.65-1.7A2 2 0 0 0 9 10.76z" />
           </svg>
-          {pinned ? 'Pinned' : 'Pin'}
+          {t(pinned ? 'voice.tile.pinned' : 'voice.tile.pin')}
         </button>
       </div>
     </div>
@@ -85,6 +88,7 @@ export function VideoTile({ pubkey, isLocal, videoStream, onPin, fit = 'cover', 
   fit?: 'cover' | 'contain';
   fillParent?: boolean;
 }) {
+  const t = useTranslations();
   const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -113,7 +117,7 @@ export function VideoTile({ pubkey, isLocal, videoStream, onPin, fit = 'cover', 
         (fillParent ? 'w-full h-full' : 'w-full aspect-video')
       }
       data-testid="video-tile"
-      title={onPin ? 'Pin to stage' : undefined}
+      title={onPin ? t('voice.tile.pinToStage') : undefined}
     >
       {videoStream ? (
         <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full ${fitClass} ${isLocal ? 'scale-x-[-1]' : ''}`} />
@@ -128,27 +132,30 @@ export function VideoTile({ pubkey, isLocal, videoStream, onPin, fit = 'cover', 
       </div>
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2.5 py-1.5 flex items-center gap-1.5">
         {!isLocal && <QualityDot pubkey={pubkey} />}
-        <span className="text-xs text-white font-medium truncate">{isLocal ? `You · ${name}` : name}</span>
+        <span className="text-xs text-white font-medium truncate">{isLocal ? t('voice.tile.you', { name }) : name}</span>
       </div>
     </div>
   );
 }
 
 export function QualityDot({ pubkey }: { pubkey: string }) {
+  const t = useTranslations();
+  const { formatNumber } = useFormat();
   const sample = useVoiceStore((s) => s.peerQuality[pubkey]) as QualitySample | undefined;
-  const color = qualityColor(sample?.level ?? 'unknown');
+  const level = sample?.level ?? 'unknown';
+  const color = qualityColor(level);
   const tooltip = sample
     ? [
-        sample.outboundVideoBps != null ? `${Math.round(sample.outboundVideoBps / 1000)} kbps↑` : null,
-        sample.rttMs != null ? `${Math.round(sample.rttMs)} ms RTT` : null,
-        sample.loss != null ? `${(sample.loss * 100).toFixed(1)}% loss` : null,
+        sample.outboundVideoBps != null ? t('voice.quality.sendRate', { kbps: Math.round(sample.outboundVideoBps / 1000) }) : null,
+        sample.rttMs != null ? t('voice.quality.rtt', { ms: Math.round(sample.rttMs) }) : null,
+        sample.loss != null ? t('voice.quality.loss', { percent: formatNumber(sample.loss * 100, { maximumFractionDigits: 1, minimumFractionDigits: 1 }) }) : null,
       ].filter(Boolean).join(' · ')
-    : 'Connecting…';
+    : t('voice.quality.connecting');
   return (
     <span
       className="inline-block w-2 h-2 rounded-full shrink-0"
       style={{ background: color, boxShadow: `0 0 6px ${color}` }}
-      title={`${sample?.level ?? 'unknown'} - ${tooltip}`}
+      title={t('voice.quality.tooltip', { level: t(`voice.quality.level.${level}`), detail: tooltip })}
       data-testid="peer-quality-dot"
       data-quality={sample?.level ?? 'unknown'}
     />
@@ -180,6 +187,7 @@ export function AudioTile({ pubkey, isLocal }: {
   pubkey: string;
   isLocal: boolean;
 }) {
+  const t = useTranslations();
   const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const speaking = useTileSpeaking(pubkey);
@@ -196,7 +204,7 @@ export function AudioTile({ pubkey, isLocal }: {
       </div>
       <div className="mt-2 text-xs text-white font-medium truncate max-w-full flex items-center gap-1.5">
         {!isLocal && <QualityDot pubkey={pubkey} />}
-        <span className="truncate">{isLocal ? `You · ${name}` : name}</span>
+        <span className="truncate">{isLocal ? t('voice.tile.you', { name }) : name}</span>
       </div>
       {!isLocal && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
@@ -211,6 +219,7 @@ export function RailAudioTile({ pubkey, isLocal }: {
   pubkey: string;
   isLocal: boolean;
 }) {
+  const t = useTranslations();
   const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const speaking = useTileSpeaking(pubkey);
@@ -223,7 +232,7 @@ export function RailAudioTile({ pubkey, isLocal }: {
       data-testid="voice-participant"
     >
       <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={10} speaking={speaking} />
-      <span className="text-[11px] text-white/85 truncate max-w-full px-1">{isLocal ? `You · ${name}` : name}</span>
+      <span className="text-[11px] text-white/85 truncate max-w-full px-1">{isLocal ? t('voice.tile.you', { name }) : name}</span>
       {!isLocal && (
         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <MuteForMeButton pubkey={pubkey} compact />
@@ -237,6 +246,7 @@ export function AudioChip({ pubkey, isLocal }: {
   pubkey: string;
   isLocal: boolean;
 }) {
+  const t = useTranslations();
   const meta = useProfile(pubkey);
   const name = meta?.displayName || meta?.name || pubkey.slice(0, 8);
   const speaking = useTileSpeaking(pubkey);
@@ -249,7 +259,7 @@ export function AudioChip({ pubkey, isLocal }: {
       data-testid="voice-participant"
     >
       <Avatar pubkey={pubkey} picture={meta?.picture} name={name} size={6} speaking={speaking} />
-      <span className="text-xs text-white/85 truncate max-w-[10rem]">{isLocal ? `You · ${name}` : name}</span>
+      <span className="text-xs text-white/85 truncate max-w-[10rem]">{isLocal ? t('voice.tile.you', { name }) : name}</span>
       {!isLocal && <MuteForMeButton pubkey={pubkey} compact />}
     </div>
   );

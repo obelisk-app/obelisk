@@ -12,12 +12,22 @@ import type { DmCallMediaState, DmCallPhase, DmCallSession } from '@/services/dm
 import { loadDmCallSession } from '@/services/dm-call/load-session';
 import { iceTransportPolicyFor, leaveGroupVoice, lost, send } from './dm-call-policy';
 import { clearRinging, rt } from './dm-call-runtime';
+import { mediaDeviceProblem, type MediaDeviceProblem } from '@/services/voice/errors';
 
 export type DmCallStatus = 'idle' | 'outgoing' | 'incoming' | 'connecting' | 'active' | 'reconnecting' | 'ended';
 
 export type DmCallEndReason =
   | 'local-hangup' | 'remote-hangup' | 'declined' | 'busy' | 'no-answer' | 'missed'
   | 'cancelled' | 'answered-elsewhere' | 'connect-failed' | 'connection-lost' | 'error';
+
+/** A failure the call card shows, resolved as `calls.call.error.<code>`. */
+export type DmCallErrorCode = 'load' | 'mic' | 'send' | 'camera' | 'flip' | 'screen' | MediaDeviceProblem;
+
+/** A browser media problem by name when there is one, otherwise `fallback`. */
+function callErrorCode(e: unknown, fallback: DmCallErrorCode): DmCallErrorCode {
+  console.warn('[dm-call]', fallback, 'failed', e);
+  return mediaDeviceProblem(e) ?? fallback;
+}
 
 export const EMPTY_MEDIA: DmCallMediaState = {
   micOn: true,
@@ -46,7 +56,7 @@ export interface DmCallState {
   /** ms epoch the media connected - for the call timer. */
   connectedAt: number | null;
   endReason: DmCallEndReason | null;
-  error: string | null;
+  error: DmCallErrorCode | null;
 
   startCall: (peer: string, video: boolean) => Promise<void>;
   acceptCall: (video: boolean) => Promise<void>;
@@ -128,7 +138,7 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
         Session = (await loading).DmCallSession;
       } catch (e) {
         if (get().callId !== callId) return;
-        set({ error: (e as Error).message || 'could not load the call' });
+        set({ error: callErrorCode(e, 'load') });
         finishCall('error');
         return;
       }
@@ -139,7 +149,7 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
       try {
         await s.acquireMedia();
       } catch (e) {
-        set({ error: (e as Error).message || 'microphone unavailable' });
+        set({ error: callErrorCode(e, 'mic') });
         finishCall('error');
         return;
       }
@@ -156,7 +166,7 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
       try {
         await send(peer, { type: 'invite', callId, eph: s.selfEph, relays, video });
       } catch (e) {
-        set({ error: (e as Error).message || 'could not send the call' });
+        set({ error: callErrorCode(e, 'send') });
         finishCall('error');
       }
     },
@@ -173,7 +183,7 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
         Session = (await loading).DmCallSession;
       } catch (e) {
         if (rt.pendingInvite !== invite || get().status !== 'incoming') return;
-        set({ error: (e as Error).message || 'could not load the call' });
+        set({ error: callErrorCode(e, 'load') });
         void send(invite.from, { type: 'decline', callId: invite.callId }, true).catch(lost('decline'));
         finishCall('error');
         return;
@@ -186,7 +196,7 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
       try {
         await s.acquireMedia();
       } catch (e) {
-        set({ error: (e as Error).message || 'microphone unavailable' });
+        set({ error: callErrorCode(e, 'mic') });
         void send(invite.from, { type: 'decline', callId: invite.callId }, true).catch(lost('decline'));
         finishCall('error');
         return;
@@ -230,15 +240,15 @@ export const useDmCallStore = create<DmCallState>((set, get) => {
 
     setMic(on) { rt.session?.setMic(on); },
     async setCamera(on) {
-      try { await rt.session?.setCamera(on); } catch (e) { set({ error: (e as Error).message }); }
+      try { await rt.session?.setCamera(on); } catch (e) { set({ error: callErrorCode(e, 'camera') }); }
     },
     async flipCamera() {
-      try { await rt.session?.flipCamera(); } catch (e) { set({ error: (e as Error).message }); }
+      try { await rt.session?.flipCamera(); } catch (e) { set({ error: callErrorCode(e, 'flip') }); }
     },
     async setScreenShare(on) {
       try { await rt.session?.setScreenShare(on); } catch (e) {
         // Cancelling the browser's picker is not an error worth showing.
-        if ((e as Error).name !== 'NotAllowedError') set({ error: (e as Error).message });
+        if ((e as Error).name !== 'NotAllowedError') set({ error: callErrorCode(e, 'screen') });
       }
     },
 

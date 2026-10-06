@@ -6,6 +6,7 @@
  * the work.
  */
 import { pickSfu } from './sfu-control';
+import { VoiceError } from './errors';
 import type { MeshSession } from './mesh-session';
 import type { SfuSession } from './sfu-session';
 import type { RoomState } from './room-state';
@@ -55,7 +56,8 @@ export class TopologySwitch {
         return null;
       });
       if (!picked) {
-        throw new Error(
+        throw new VoiceError(
+          'sfuUnreachable',
           'No SFU is currently reachable for this channel. Ask the channel admin to verify the pinned SFU is online.',
         );
       }
@@ -102,7 +104,7 @@ export class TopologySwitch {
           // Channel just reclassified to voice-sfu but the pinned SFU is
           // unreachable. Surface to the UI; do not silently keep meshing:
           // the channel admin's intent is "use the SFU", not "best effort".
-          try { room.events.onError?.('Channel switched to SFU mode but no SFU is reachable.'); }
+          try { room.events.onError?.('sfuSwitched'); }
           catch (err) { console.warn('[voice] onError handler threw', err); }
           return;
         }

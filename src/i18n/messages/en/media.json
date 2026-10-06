@@ -39,5 +39,73 @@
   "remote": {
     "show": "Show media",
     "hint": "Hidden until you ask. Loading it would tell its host your IP address."
+  },
+  "tabs": {
+    "discover": "Marketplace",
+    "mine": "My packs",
+    "favorites": "Favorites"
+  },
+  "filter": {
+    "all": "All",
+    "emoji": "Emoji",
+    "gif": "GIFs",
+    "sticker": "Stickers"
+  },
+  "itemCount": "{count, plural, one {# item} other {# items}}",
+  "item": {
+    "open": "Open :{name}: actions",
+    "favorite": "Favorite :{name}:",
+    "unfavorite": "Remove favorite :{name}:",
+    "addFavorite": "Add :{name}: to favorites",
+    "removeFavorite": "Remove :{name}: from favorites",
+    "removeFromServer": "Remove :{name}: from server",
+    "fromPack": "{kind} from {title}",
+    "individual": "{kind} · Individual favorite",
+    "viewPack": "View {title}",
+    "addToFavorites": "Add item to favorites",
+    "removeFromFavorites": "Remove item from favorites"
+  },
+  "pack": {
+    "save": "Save pack",
+    "saved": "Saved",
+    "saveNamed": "Save {title}",
+    "unsaveNamed": "Remove {title} from saved packs",
+    "addToServer": "Add pack to server",
+    "removeFromServer": "Remove pack from server",
+    "saving": "Saving…",
+    "newTitle": "New pack",
+    "itemTitle": "{name} pack",
+    "shortcodePlaceholder": "shortcode"
+  },
+  "empty": {
+    "mine": "Create your first reusable media pack.",
+    "favorites": "Favorite a pack or individual item to keep it across servers.",
+    "none": "No packs found."
+  },
+  "serverPacksSelected": "{count, plural, one {# pack selected.} other {# packs selected.}} Add or remove existing packs below.",
+  "notice": {
+    "uploaded": "Uploaded :{name}: to individual favorites.",
+    "deleted": "Deleted “{title}”.",
+    "addedToServer": "Added “{title}” to this server.",
+    "removedFromServer": "Removed “{title}” from this server."
+  },
+  "error": {
+    "saveFavorites": "Couldn't save favorites.",
+    "loginToUpload": "Log in to upload media.",
+    "upload": "Couldn't upload media.",
+    "deletePack": "Couldn't delete the pack.",
+    "serverPacks": "Couldn't update the server packs.",
+    "uploadFailed": "Upload failed.",
+    "nameRequired": "Pack name is required.",
+    "invalidItems": "Every item needs a unique shortcode and an HTTP(S) image URL.",
+    "duplicate": "Duplicate shortcode: :{name}:",
+    "savePack": "Couldn't save the pack."
+  },
+  "blossom": {
+    "uploading": "Uploading…",
+    "upload": "Upload",
+    "uploadPicture": "Upload profile picture",
+    "uploadBanner": "Upload banner",
+    "urlPlaceholder": "https://… or upload"
   }
 }

@@ -15,6 +15,7 @@
 import { useVoiceStore } from '@/store/voice';
 import type { VideoQuality } from './quality';
 import type { QualitySample } from './stats';
+import type { VoiceErrorCode } from './errors';
 
 export interface LocalTracksState {
   mic: boolean;
@@ -33,8 +34,8 @@ export interface VoiceUiSink {
   setPeerMuted(pubkey: string, muted: boolean): void;
   setPeerQuality(pubkey: string, sample: QualitySample): void;
   clearPeerQuality(pubkey: string): void;
-  /** A user-facing error the room should surface. */
-  setError(message: string): void;
+  /** A user-facing error the room should surface, as a `voice.error` code. */
+  setError(code: VoiceErrorCode): void;
   /** Mirror of the client's local track state (mic enabled = not muted). */
   setLocalTracks(local: LocalTracksState): void;
   /** The user's persisted quality preferences, read when a track or peer is set up. */
@@ -53,7 +54,7 @@ export const voiceStoreSink: VoiceUiSink = {
   },
   setPeerQuality: (pubkey, sample) => useVoiceStore.getState().setPeerQuality(pubkey, sample),
   clearPeerQuality: (pubkey) => useVoiceStore.getState().clearPeerQuality(pubkey),
-  setError: (message) => useVoiceStore.getState().setError(message),
+  setError: (code) => useVoiceStore.getState().setError(code),
   setLocalTracks: (local) => {
     const s = useVoiceStore.getState();
     s.setMuted(!local.mic);

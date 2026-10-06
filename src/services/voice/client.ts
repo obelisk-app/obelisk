@@ -31,6 +31,7 @@ import type { RoomState, VoiceClientEvents } from './room-state';
 import { RoomMembership } from './membership';
 import { assembleVoiceRoom } from './client-assembly';
 import { TopologySwitch } from './topology-switch';
+import { VoiceError } from './errors';
 import type { VoiceClientOptions } from './client-options';
 import { VoiceClientSurface } from './client-surface';
 // The owner-facing types live with the state they describe.
@@ -88,7 +89,7 @@ export class VoiceClient extends VoiceClientSurface {
     this.channelId = channelId;
     this.ui = options.uiSink ?? voiceStoreSink;
     const pk = getSelfPubkey();
-    if (!pk) throw new Error('Not logged in to nostr');
+    if (!pk) throw new VoiceError('notLoggedIn', 'Not logged in to nostr');
     this.selfPubkey = pk;
     this.membership = new RoomMembership(pk, options);
     const built = assembleVoiceRoom(channelId, pk, options, this.ui, this.metrics, {
@@ -138,7 +139,7 @@ export class VoiceClient extends VoiceClientSurface {
   async join(): Promise<void> {
     if (this.joined) return;
     if (!this.canJoin()) {
-      throw new Error('You are not a member of this voice channel.');
+      throw new VoiceError('notMember', 'You are not a member of this voice channel.');
     }
     this.joined = true;
 

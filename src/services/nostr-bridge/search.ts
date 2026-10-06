@@ -3,6 +3,7 @@
  * `has:` filtering the relay cannot do. Pure move from `client.ts` (round 4
  * plan, step 8); reads no bridge state beyond the context.
  */
+import { CodedError } from '@/utils/errors/codes';
 import type { Filter } from 'nostr-tools';
 import { KIND_GROUP_CHAT_MESSAGE } from '@/utils/nip-kinds';
 import { extractMentionPubkeysFromMessage } from '@/utils/message-text/mentions';
@@ -54,7 +55,7 @@ export async function searchMessages(ctx: SearchContext, opts: JsSearchOptions):
   if (opts.until) filter.until = opts.until;
 
   const { events, complete } = await ctx.queryRelaysWithConfidence(ctx.relays(), filter, SEARCH_TIMEOUT_MS);
-  if (events.length === 0 && !complete) throw new Error('Search timed out. Try again.');
+  if (events.length === 0 && !complete) throw new CodedError('search-timeout', 'Search timed out. Try again.');
 
   const URL_RE = /https?:\/\/\S+/i;
   const IMG_RE = /https?:\/\/\S+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?\S*)?/i;

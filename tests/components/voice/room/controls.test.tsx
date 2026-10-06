@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render as rtlRender, screen } from '@testing-library/react';
+import { LocaleProvider } from '@tests/support/intl';
 import { useVoiceStore } from '@/store/voice';
 import { FullscreenButton, MuteForMeButton } from '@/components/voice/room/controls';
+
+/** The tiles read their copy through next-intl, so every render gets the English messages. */
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: LocaleProvider });
 
 const A = 'a'.repeat(64);
 

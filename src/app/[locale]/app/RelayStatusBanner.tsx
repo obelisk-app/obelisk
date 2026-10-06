@@ -10,113 +10,8 @@ import {
   useCurrentRelayUrl,
 } from '@/services/nostr-bridge';
 import { shortHost } from '@/utils/relay-url/url-host';
-
-type Severity = 'info' | 'warn' | 'error';
-
-interface Status {
-  state: string;
-  severity: Severity;
-  label: string;
-  detail?: string;
-  spinner?: boolean;
-}
-
-function computeStatus(
-  conn: string,
-  access: ReturnType<typeof useRelayAccess>,
-  loginMethod: ReturnType<typeof useMyLoginMethod>,
-  host: string,
-): Status | null {
-  // ── Connection-state takes precedence ────────────────────────────
-  if (conn === 'Offline') {
-    return {
-      state: 'offline',
-      severity: 'warn',
-      label: 'You’re offline',
-      detail: 'Cached channels and messages remain available. Reconnecting when your network returns.',
-    };
-  }
-  if (conn === 'Connecting') {
-    return {
-      state: 'connecting',
-      severity: 'warn',
-      label: `Connecting to ${host}…`,
-      detail: 'Waiting for the relay handshake.',
-      spinner: true,
-    };
-  }
-  if (conn === 'Disconnected') {
-    return {
-      state: 'disconnected',
-      severity: 'error',
-      label: 'Connection lost',
-      detail: 'Reconnecting in the background.',
-      spinner: true,
-    };
-  }
-  if (conn.startsWith('Error:')) {
-    return {
-      state: 'error',
-      severity: 'error',
-      label: `Cannot reach ${host}`,
-      detail: conn.slice('Error:'.length).trim(),
-    };
-  }
-  // conn === 'Connected' from here.
-  if (access === 'authenticating') {
-    const detail =
-      loginMethod === 'bunker'
-        ? 'Approve the signing request in your bunker app.'
-        : loginMethod === 'nip07'
-          ? 'Approve the signing request in your Nostr extension.'
-          : 'Signing the relay AUTH challenge…';
-    return {
-      state: 'authenticating',
-      severity: 'warn',
-      label: `Authenticating with ${host}…`,
-      detail,
-      spinner: true,
-    };
-  }
-  if (access === 'auth-required') {
-    return {
-      state: 'auth-required',
-      severity: 'warn',
-      label: `Not authenticated to ${host}`,
-      detail:
-        loginMethod === 'bunker' || loginMethod === 'nip07'
-          ? 'NIP-42 AUTH did not complete. Reapprove the signing request.'
-          : 'NIP-42 AUTH did not complete. Try reloading.',
-    };
-  }
-  if (access === 'restricted') {
-    return {
-      state: 'restricted',
-      severity: 'error',
-      label: `Not whitelisted on ${host}`,
-      detail:
-        'Your pubkey is signed in, but this relay won’t serve or accept events. Ask the operator to add you, or switch relays.',
-    };
-  }
-  if (access === 'unreachable') {
-    return {
-      state: 'unreachable',
-      severity: 'error',
-      label: `Cannot reach ${host}`,
-      detail: 'The relay isn’t responding. Retrying in the background.',
-    };
-  }
-  if (access === 'error') {
-    return {
-      state: 'error',
-      severity: 'error',
-      label: `Relay error on ${host}`,
-      detail: 'The relay rejected the request. Try reloading or switching relays.',
-    };
-  }
-  // 'ok' or 'unknown' - nothing to surface.
-  return null;
-}
+import { useTranslations } from 'next-intl';
+import { relayStatus, type Severity } from '@/utils/shell/relay-status';
 
 const SEVERITY_CLASSES: Record<Severity, string> = {
   info: 'bg-lc-card/60 border-lc-border text-lc-white',
@@ -136,13 +31,14 @@ function bannerTestId(state: string): 'connection-loss-banner' | 'relay-access-b
 
 /** Shared relay row inside the bottom-right activity stack. */
 export default function RelayStatusBanner({ hideAuthenticating = false }: { hideAuthenticating?: boolean }) {
+  const t = useTranslations();
   const isLoggedIn = useIsLoggedIn();
   const conn = useConnectionState();
   const access = useRelayAccess();
   const loginMethod = useMyLoginMethod();
   const relay = useCurrentRelayUrl();
   if (!isLoggedIn || !relay) return null;
-  const status = computeStatus(conn, access, loginMethod, shortHost(relay));
+  const status = relayStatus(conn, access, loginMethod, shortHost(relay), t);
   if (!status || (hideAuthenticating && (status.state === 'authenticating' || status.state === 'auth-required'))) return null;
   return (
     <div

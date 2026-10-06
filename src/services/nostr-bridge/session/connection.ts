@@ -7,6 +7,7 @@
  * their retry and their REQs; nothing here schedules a reconnect. Pure move
  * from `client.ts`.
  */
+import { CodedError, codeOrMessage, type ActivityCode } from '@/utils/errors/codes';
 import { SESSION_IDENTITY_ID, type AuthLease, type RelayHub, type RelayStatus } from '@/lib/relay-hub';
 import { failActivity, pushActivity, resolveActivity } from '@/services/activity-log';
 import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '../page-hub';
@@ -125,7 +126,7 @@ export class ConnectionModule {
     }
     if (!this.sessionSocketUp.delete(key)) return;
     if (!this.state.session) return;
-    this.state.connectionState.set(isBrowserOffline() ? "Offline" : "Disconnected");
+    this.state.connectionState.set(isBrowserOffline() ? "Offline" : "Disconnected"); // i18n-exempt: connection-state token the shells compare, not copy
     // The REQs stay in the registry and come back on the next generation;
     // the verdicts do not: they were this generation's answers, and the
     // re-issued REQs must re-prove access (and the next AUTH must not be
@@ -133,7 +134,7 @@ export class ConnectionModule {
     this.deps.resetAccess();
     this.deps.setRelayAccess(status.url, 'unreachable');
     if (this.reconnectActivityId === null) {
-      this.reconnectActivityId = pushActivity('Reconnecting to relay', status.url, { operation: 'connect' });
+      this.reconnectActivityId = pushActivity('reconnect' satisfies ActivityCode, status.url, { operation: 'connect' });
     }
   }
 
@@ -155,7 +156,7 @@ export class ConnectionModule {
     this.state.myLoginMethod.set(session.loginMethod);
     this.state.isLoggedIn.set(true);
     if (this.reconnectActivityId !== null) {
-      resolveActivity(this.reconnectActivityId, `reconnected to ${url}`);
+      resolveActivity(this.reconnectActivityId, url);
       this.reconnectActivityId = null;
     }
   }
@@ -183,16 +184,12 @@ export class ConnectionModule {
     const state = this.state;
     if (isBrowserOffline()) {
       state.connectionState.set("Offline");
-      throw new Error("browser offline");
+      throw new CodedError('offline', "browser offline");
     }
     const generation = ++this.generation;
     const relaySnapshot = [...state.relays];
     state.connectionState.set('Connecting');
-    const activityId = pushActivity(
-      'Connecting to relays',
-      state.relays.length === 1 ? state.relays[0] : String(state.relays.length) + " relays",
-      { operation: 'connect' },
-    );
+    const activityId = pushActivity('connect' satisfies ActivityCode, relaySnapshot.join(', '), { operation: 'connect' });
     pushRelayDebug({ kind: 'connect-start', relays: relaySnapshot });
     try {
       // First-response wins: resolve as soon as ONE relay handshakes. Slower
@@ -247,18 +244,18 @@ export class ConnectionModule {
       try {
         await Promise.any(handles);
       } catch {
-        throw new Error('no relays connected');
+        throw new CodedError('no-relays-connected', 'no relays connected');
       }
       state.connectionState.set('Connected');
-      // Activity message reflects the snapshot at the moment the gate
-      // flipped, not the final count, slower relays may still be
-      // handshaking.
-      resolveActivity(activityId, `connected to ${relaySnapshot.length === 1 ? relaySnapshot[0] : `${relaySnapshot.length} relays`}`);
+      // The entry keeps the relays it set out for as its detail; slower
+      // ones may still be handshaking when the gate flips.
+      resolveActivity(activityId);
     } catch (e: unknown) {
       // The hub keeps every socket this call reached held and retries it;
       // its registry issues the pending REQs when one opens.
-      state.connectionState.set(isBrowserOffline() ? "Offline" : "Error:" + (e as Error).message);
-      failActivity(activityId, (e as Error).message);
+      // `Error:` then the code (the banner translates it) or the error's own words.
+      state.connectionState.set(isBrowserOffline() ? "Offline" : "Error:" + codeOrMessage(e)); // i18n-exempt: connection-state token the shells compare, not copy
+      failActivity(activityId, codeOrMessage(e));
       throw e;
     }
   }

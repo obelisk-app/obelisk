@@ -75,7 +75,7 @@ export function DebugOverlay() {
       {!metrics && <div style={{ color: '#a3a3a3' }}>{t('voice.voiceDebug.noClient')}</div>}
       {metrics && (
         <>
-          <Section title="peers">
+          <Section title={t('voice.voiceDebug.peers')}>
             <Row k="connected" v={metrics.peers.connected} />
             <Row k="ever" v={metrics.peers.ever} />
             <Row k="tornDown" v={metrics.peers.tornDown} />
@@ -87,23 +87,23 @@ export function DebugOverlay() {
             <Row k="ping" v={`${metrics.controlChannel.pingSent}/${metrics.controlChannel.pongRcvd}`} />
             <Row k="lastRtt" v={metrics.controlChannel.lastRttMs ?? '-'} />
           </Section>
-          <Section title="discovery">
+          <Section title={t('voice.voiceDebug.discovery')}>
             <Row k="viaRelay" v={metrics.transitive.discoveredViaRelay} />
             <Row k="viaControl" v={metrics.transitive.discoveredViaControl} />
           </Section>
-          <Section title="signals">
+          <Section title={t('voice.voiceDebug.signals')}>
             <Row k="sent/rcvd" v={`${metrics.signals.sent}/${metrics.signals.rcvd}`} />
             <Row k="bye-control" v={metrics.signals.byeViaControl} />
             <Row k="bye-relay" v={metrics.signals.byeViaRelay} />
           </Section>
-          <Section title="dropped">
+          <Section title={t('voice.voiceDebug.dropped')}>
             <Row k="wot" v={metrics.signalsDropped.wot} highlight={metrics.signalsDropped.wot > 0} />
             <Row k="membFinal" v={metrics.signalsDropped.membershipFinal} highlight={metrics.signalsDropped.membershipFinal > 0} />
             <Row k="membDefer" v={metrics.signalsDropped.membershipDeferred} />
             <Row k="overflow" v={metrics.signalsDropped.deferredOverflow} highlight={metrics.signalsDropped.deferredOverflow > 0} />
             <Row k="notForMe" v={metrics.signalsDropped.notForMe} />
           </Section>
-          <Section title="relay">
+          <Section title={t('voice.voiceDebug.relay')}>
             <Row k="beacons s/r" v={`${metrics.beacons.sent}/${metrics.beacons.rcvd}`} />
             <Row k="publishFail" v={metrics.relay.publishFail} highlight={metrics.relay.publishFail > 0} />
             <Row k="auth wait/timeout" v={`${metrics.relay.authWaited}/${metrics.relay.authTimedOut}`} />
@@ -111,7 +111,7 @@ export function DebugOverlay() {
               <Row k="lastErr" v={metrics.relay.lastError.slice(0, 40)} highlight />
             )}
           </Section>
-          <Section title="rate-limit">
+          <Section title={t('voice.voiceDebug.rateLimit')}>
             <Row k="hit" v={metrics.rateLimit.hit} highlight={metrics.rateLimit.hit > 0} />
             <Row k="backoff" v={`${metrics.rateLimit.backoffMs}ms`} />
           </Section>
@@ -134,7 +134,7 @@ export function DebugOverlay() {
           </Section>
         </>
       )}
-      <div style={{ fontWeight: 600, marginTop: 8, marginBottom: 4 }}>events</div>
+      <div style={{ fontWeight: 600, marginTop: 8, marginBottom: 4 }}>{t('voice.voiceDebug.events')}</div>
       {events.length === 0 && <div style={{ color: '#a3a3a3' }}>-</div>}
       {events.map((ev, i) => (
         <div key={i} style={{ color: ev.kind === 'relay-error' || ev.kind === 'signal-dropped' ? '#ef4444' : '#a3a3a3' }}>

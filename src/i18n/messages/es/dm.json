@@ -77,12 +77,12 @@
   "raw": {
     "title": "Evento en bruto",
     "tabMessage": "Mensaje descifrado",
-    "tabWire": "En el relé",
-    "rumorHint": "El mensaje en sí (kind {kind}), tal como solo tú y la otra persona pueden leerlo. No está firmado a propósito: el sello dentro del gift wrap es lo que prueba quién lo envió.",
-    "wrapHint": "Lo que guardan los relés: un gift wrap (kind 1059) firmado por una clave de un solo uso. Los relés solo ven a quién va dirigido, no el remitente, la hora ni el contenido.",
-    "nip04Hint": "Un mensaje directo NIP-04 heredado (kind 4). El contenido está cifrado, pero remitente, destinatario y hora son visibles para cualquier relé.",
+    "tabWire": "En el relay",
+    "rumorHint": "El mensaje en sí (kind {kind}), tal como solo vos y la otra persona pueden leerlo. No está firmado a propósito: el sello dentro del gift wrap es lo que prueba quién lo envió.",
+    "wrapHint": "Lo que guardan los relays: un gift wrap (kind 1059) firmado por una clave de un solo uso. Los relays solo ven a quién va dirigido, no el remitente, la hora ni el contenido.",
+    "nip04Hint": "Un mensaje directo NIP-04 heredado (kind 4). El contenido está cifrado, pero remitente, destinatario y hora son visibles para cualquier relay.",
     "decrypted": "Contenido descifrado",
     "keyWarning": "Contiene la clave de descifrado del archivo: cualquiera a quien le des este JSON puede abrirlo.",
-    "unavailable": "Aún no disponible para este mensaje."
+    "unavailable": "Todavía no está disponible para este mensaje."
   }
 }

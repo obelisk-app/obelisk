@@ -7,6 +7,7 @@
  */
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient } from '@/services/voice/active-client';
+import { voiceErrorCode } from '@/services/voice/errors';
 import { VIDEO_QUALITIES, type VideoQuality } from '@/services/voice/quality';
 import { useTranslations } from 'next-intl';
 
@@ -23,7 +24,7 @@ export default function QualityPopover() {
     const client = getActiveVoiceClient();
     if (client) {
       try { await client.applyVideoQuality(q); }
-      catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+      catch (e) { setError(voiceErrorCode(e, 'quality')); }
     }
   };
 
@@ -32,7 +33,7 @@ export default function QualityPopover() {
     const client = getActiveVoiceClient();
     if (client) {
       try { await client.broadcastReceivedQuality(q); }
-      catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+      catch (e) { setError(voiceErrorCode(e, 'quality')); }
     }
   };
 

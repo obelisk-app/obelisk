@@ -10,6 +10,7 @@ vi.mock('@/services/blossom', () => ({ uploadToBlossom: mocks.uploadToBlossom })
 vi.mock('@/services/nostr-bridge', () => ({ nostrActions: { saveMediaPack: mocks.saveMediaPack } }));
 
 import { usePackEditor } from '@/hooks/media/library/usePackEditor';
+import { LocaleProvider } from '@tests/support/intl';
 import type { EditablePack } from '@/utils/media-library/types';
 
 const PACK: EditablePack = { identifier: 'p1', title: ' Cats ', description: '', image: '', items: [] };
@@ -26,7 +27,7 @@ beforeEach(() => {
 describe('usePackEditor', () => {
   it('uploads images only, with unique shortcodes in the chosen kind', async () => {
     mocks.uploadToBlossom.mockResolvedValueOnce('https://cdn/a.png').mockResolvedValueOnce('https://cdn/b.png');
-    const { result } = renderHook(() => usePackEditor(PACK, 'gif', vi.fn()));
+    const { result } = renderHook(() => usePackEditor(PACK, 'gif', vi.fn()), { wrapper: LocaleProvider });
     await act(() => result.current.addFiles(fileList([
       new File(['a'], 'cat.png', { type: 'image/png' }),
       new File(['b'], 'cat.png', { type: 'image/png' }),
@@ -40,14 +41,14 @@ describe('usePackEditor', () => {
 
   it('reports a failed upload', async () => {
     mocks.uploadToBlossom.mockRejectedValueOnce(new Error('blossom down'));
-    const { result } = renderHook(() => usePackEditor(PACK, 'gif', vi.fn()));
+    const { result } = renderHook(() => usePackEditor(PACK, 'gif', vi.fn()), { wrapper: LocaleProvider });
     await act(() => result.current.addFiles(fileList([new File(['a'], 'a.png', { type: 'image/png' })])));
-    expect(result.current.error).toBe('blossom down');
+    expect(result.current.error).toBe('Upload failed.');
     expect(result.current.busy).toBe(false);
   });
 
   it('refuses a pack with no name', async () => {
-    const { result } = renderHook(() => usePackEditor({ ...PACK, title: '   ' }, 'gif', vi.fn()));
+    const { result } = renderHook(() => usePackEditor({ ...PACK, title: '   ' }, 'gif', vi.fn()), { wrapper: LocaleProvider });
     await act(() => result.current.save());
     expect(result.current.error).toBe('Pack name is required.');
     expect(mocks.saveMediaPack).not.toHaveBeenCalled();
@@ -57,7 +58,7 @@ describe('usePackEditor', () => {
     const { result } = renderHook(() => usePackEditor({
       ...PACK,
       items: [{ name: 'cat', url: 'javascript:alert(1)', kind: 'sticker' }],
-    }, 'gif', vi.fn()));
+    }, 'gif', vi.fn()), { wrapper: LocaleProvider });
     await act(() => result.current.save());
     expect(result.current.error).toMatch(/HTTP\(S\)/);
 
@@ -67,7 +68,7 @@ describe('usePackEditor', () => {
         { name: 'cat', url: 'https://x/a.png', kind: 'sticker' },
         { name: 'cat', url: 'https://x/b.png', kind: 'sticker' },
       ],
-    }, 'gif', vi.fn()));
+    }, 'gif', vi.fn()), { wrapper: LocaleProvider });
     await act(() => dup.result.current.save());
     expect(dup.result.current.error).toBe('Duplicate shortcode: :cat:');
     expect(mocks.saveMediaPack).not.toHaveBeenCalled();
@@ -78,14 +79,14 @@ describe('usePackEditor', () => {
     const { result } = renderHook(() => usePackEditor({
       ...PACK,
       items: [{ name: 'cat', url: 'https://x/a.png', kind: 'sticker' }],
-    }, 'gif', onSaved));
+    }, 'gif', onSaved), { wrapper: LocaleProvider });
     await act(() => result.current.save());
     expect(mocks.saveMediaPack).toHaveBeenCalledWith(expect.objectContaining({ title: 'Cats' }));
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ title: 'Cats' }));
   });
 
   it('edits, adds and removes rows', () => {
-    const { result } = renderHook(() => usePackEditor(PACK, 'emoji', vi.fn()));
+    const { result } = renderHook(() => usePackEditor(PACK, 'emoji', vi.fn()), { wrapper: LocaleProvider });
     act(() => result.current.addUrlItem());
     expect(result.current.draft.items).toEqual([{ name: '', url: '', kind: 'emoji' }]);
     act(() => result.current.updateItem(0, { name: 'wave' }));

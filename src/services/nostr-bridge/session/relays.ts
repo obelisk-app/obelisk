@@ -7,6 +7,7 @@
  * (`./reset.ts`), repaints from the new relay's cache and reconnects. Pure
  * move from `client.ts`.
  */
+import { CodedError } from '@/utils/errors/codes';
 import { useNotificationsStore } from '@/store/notifications';
 import {
   DEFAULT_RELAYS,
@@ -81,7 +82,7 @@ export class RelayRail {
     const { state } = t;
     const normalized = normalizeConfiguredRelayUrl(url);
     validateRelayUrl(normalized);
-    if (!isImportableRelayUrl(normalized)) throw new Error("relay URL must be a public wss:// hostname");
+    if (!isImportableRelayUrl(normalized)) throw new CodedError('invalid-relay-url', "relay URL must be a public wss:// hostname");
     const previousRelays = [...state.relays];
     t.connection.generation++;
     // Preserve only the mounted channel. Background subscriptions belong to
@@ -135,7 +136,7 @@ export class RelayRail {
     const trimmed = normalizeConfiguredRelayUrl(url);
     if (!trimmed) return;
     validateRelayUrl(trimmed);
-    if (!isImportableRelayUrl(trimmed)) throw new Error("relay URL must be a public wss:// hostname");
+    if (!isImportableRelayUrl(trimmed)) throw new CodedError('invalid-relay-url', "relay URL must be a public wss:// hostname");
     // Register in the rail only, do NOT add it to the active relay list.
     // NIP-29 channels are per-relay, so subscribing to multiple relays
     // simultaneously mixes channels from different servers into the same

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const uploadEncryptedBlob = vi.hoisted(() => vi.fn());
 vi.mock('@/services/blossom', () => ({ uploadEncryptedBlob }));
 
-import { baseMime, checkDmAttachment, encryptAndUploadDmFile } from '@/services/dm-attachments';
+import { baseMime, checkDmAttachment, DmAttachmentRejectedError, encryptAndUploadDmFile } from '@/services/dm-attachments';
 import { decryptFile } from '@/lib/crypto/file-cipher';
 
 describe('dm-attachments', () => {
@@ -27,7 +27,9 @@ describe('dm-attachments', () => {
   });
 
   it('refuses before uploading when the file is not allowed', async () => {
-    await expect(encryptAndUploadDmFile(new File(['x'], 'a.exe', { type: 'application/x-msdownload' }))).rejects.toThrow();
+    const refused = encryptAndUploadDmFile(new File(['x'], 'a.exe', { type: 'application/x-msdownload' }));
+    await expect(refused).rejects.toBeInstanceOf(DmAttachmentRejectedError);
+    await expect(refused).rejects.toMatchObject({ problem: 'type' });
     expect(uploadEncryptedBlob).not.toHaveBeenCalled();
   });
 });

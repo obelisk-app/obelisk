@@ -23,6 +23,7 @@ import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
 import { getBridge, getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
 import { KIND_NIP78_APP_DATA as KIND_NIP78 } from '@/utils/nip-kinds';
+import { VoiceError } from './errors';
 
 export interface SfuPin {
   pubkey: string;
@@ -63,31 +64,31 @@ export async function fetchSfuInfo(rawUrl: string): Promise<SfuEndpointInfo> {
   try {
     base = new URL(rawUrl.trim());
   } catch {
-    throw new Error('SFU URL must be a valid http(s) URL');
+    throw new VoiceError('sfuUrlInvalid', 'SFU URL must be a valid http(s) URL');
   }
   if (base.protocol !== 'https:' && base.protocol !== 'http:') {
-    throw new Error('SFU URL must be http(s)://');
+    throw new VoiceError('sfuUrlInvalid', 'SFU URL must be http(s)://');
   }
   const url = base.origin;
   const response = await fetch(new URL('/info', url), {
     headers: { accept: 'application/json' },
     signal: AbortSignal.timeout(5000),
   });
-  if (!response.ok) throw new Error(`SFU /info returned HTTP ${response.status}`);
+  if (!response.ok) throw new VoiceError('sfuInfoHttp', `SFU /info returned HTTP ${response.status}`);
   const info = await response.json() as Record<string, unknown>;
-  if (info.service !== 'obelisk-sfu') throw new Error('URL is not an Obelisk SFU');
+  if (info.service !== 'obelisk-sfu') throw new VoiceError('sfuNotObelisk', 'URL is not an Obelisk SFU');
   if (typeof info.pubkey !== 'string' || !/^[0-9a-f]{64}$/i.test(info.pubkey)) {
-    throw new Error('SFU /info returned an invalid pubkey');
+    throw new VoiceError('sfuInfoInvalid', 'SFU /info returned an invalid pubkey');
   }
   if (typeof info.url === 'string') {
     let advertised: URL;
     try {
       advertised = new URL(info.url);
     } catch {
-      throw new Error('SFU /info returned an invalid URL');
+      throw new VoiceError('sfuInfoInvalid', 'SFU /info returned an invalid URL');
     }
     if (advertised.origin !== url) {
-      throw new Error('SFU /info URL does not match the configured origin');
+      throw new VoiceError('sfuOriginMismatch', 'SFU /info URL does not match the configured origin');
     }
   }
   const relays = Array.isArray(info.relays)

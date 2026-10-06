@@ -10,6 +10,7 @@
 import { useEffect, useState, type MutableRefObject } from 'react';
 import { getBridge, type BridgeImpl } from '@/services/nostr-bridge';
 import type { VoiceClient } from '@/services/voice/client';
+import { voiceErrorCode, type VoiceErrorCode } from '@/services/voice/errors';
 
 export type AuthGate =
   | { phase: 'init' }
@@ -22,7 +23,7 @@ const LOADING: AuthGate = { phase: 'loading-roles' };
 export function useVoiceRoomGate(
   channelId: string,
   clientRef: MutableRefObject<VoiceClient | null>,
-  setError: (message: string) => void,
+  setError: (code: VoiceErrorCode) => void,
 ): { gate: AuthGate; selfPubkey: string } {
   // The decision is stored with the channel it was made for. A decision for
   // another channel reads as "loading" here, so switching channels never
@@ -54,7 +55,7 @@ export function useVoiceRoomGate(
         bridgeRef = bridge;
         const pk = bridge.getPublicKey();
         if (!pk) {
-          setError('You must be logged in to join voice.');
+          setError('notLoggedIn');
           return;
         }
         setSelfPubkey(pk);
@@ -119,12 +120,12 @@ export function useVoiceRoomGate(
         resolveTimer = setTimeout(() => {
           if (cancelled) return;
           if (!membershipReady) {
-            setError('Could not load channel membership. Is this a valid channel id?');
+            setError('membership');
           }
         }, 12000);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        if (!cancelled) setError(msg);
+        console.warn('[voice] membership gate failed', e);
+        if (!cancelled) setError(voiceErrorCode(e, 'membership'));
       }
     })();
 

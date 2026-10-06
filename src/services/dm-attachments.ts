@@ -22,6 +22,17 @@ import type { JsDmFile } from '@/utils/attachments/dm-file';
 
 export type DmAttachmentError = 'type' | 'size';
 
+/** A file `checkDmAttachment` refused; the UI shows `dm.file.badType` or `dm.file.tooLarge` by `problem`. */
+export class DmAttachmentRejectedError extends Error {
+  readonly problem: DmAttachmentError;
+
+  constructor(problem: DmAttachmentError) {
+    super(`dm attachment rejected: ${problem}`);
+    this.name = 'DmAttachmentRejectedError';
+    this.problem = problem;
+  }
+}
+
 /**
  * `MediaRecorder` reports `audio/webm;codecs=opus`; the allowlist holds bare
  * types. Strip parameters before checking or every voice note is refused.
@@ -55,7 +66,7 @@ export async function encryptAndUploadDmFile(
   opts: { durationSeconds?: number } = {},
 ): Promise<JsDmFile> {
   const problem = checkDmAttachment(file);
-  if (problem) throw new Error(problem === 'type' ? 'Unsupported file type' : 'File too large');
+  if (problem) throw new DmAttachmentRejectedError(problem);
   const plaintext = new Uint8Array(await file.arrayBuffer());
   const [enc, dim] = await Promise.all([encryptFile(plaintext), imageDimensions(file)]);
   const url = await uploadEncryptedBlob(enc.ciphertext);

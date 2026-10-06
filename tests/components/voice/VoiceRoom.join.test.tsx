@@ -195,7 +195,7 @@ describe('VoiceRoom join page', () => {
     fireEvent.click(await screen.findByTestId('join-voice-btn'));
 
     expect(await screen.findByTestId('join-voice-btn')).toBeInTheDocument();
-    expect(screen.getByText(/restricted: Access denied/i)).toBeInTheDocument();
+    expect(screen.getByText('The relay refused the call. You may not have access on this relay.')).toBeInTheDocument();
     expect(voiceHarness.activeClient).toBeNull();
   });
 

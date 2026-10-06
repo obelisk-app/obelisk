@@ -5,6 +5,7 @@ import { shortHost } from '@/utils/relay-url/url-host';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import RemoteImage from '@/components/ui/RemoteImage';
+import { connectionLabel } from '@/utils/shell/relay-status';
 
 type Props = {
   relay: string;
@@ -79,8 +80,8 @@ export function SidebarHeader({
           )}
         </div>
         <span
-          title={conn}
-          aria-label={conn}
+          title={connectionLabel(conn, t)}
+          aria-label={connectionLabel(conn, t)}
           className={
             'inline-block h-2.5 w-2.5 shrink-0 rounded-full ' +
             (conn === 'Connected' ? 'bg-lc-green' : conn === 'Connecting' ? 'bg-yellow-500' : 'bg-red-500')

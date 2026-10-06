@@ -23,13 +23,13 @@ export default function PackViewer({ pack, favorite, itemFavorites, busy, server
   onServer: () => void;
 }) {
   const t = useTranslations();
-  const serverLabel = serverSelected ? "Remove pack from server" : "Add pack to server";
+  const serverLabel = t(serverSelected ? 'media.pack.removeFromServer' : 'media.pack.addToServer');
   return (
     <Modal onClose={onClose} closeOnEscape={closeOnEscape} testId="media-pack-viewer" panelClassName="lc-card mx-3 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden bg-lc-dark">
       <header className="flex items-start justify-between gap-4 border-b border-lc-border p-4">
         <div className="min-w-0">
           <h2 className="truncate font-semibold text-lc-white">{pack.title}</h2>
-          <p className="mt-1 text-xs text-lc-muted">{pack.description ? pack.description + " · " : ""}{pack.items.length} items</p>
+          <p className="mt-1 text-xs text-lc-muted">{pack.description ? pack.description + ' · ' : ''}{t('media.itemCount', { count: pack.items.length })}</p>
         </div>
         <CloseButton onClick={onClose} label={t('media.closeViewer')} />
       </header>
@@ -41,7 +41,7 @@ export default function PackViewer({ pack, favorite, itemFavorites, busy, server
           ? (serverSelected
             ? <Button variant="outline" tone="danger" size="sm" disabled={busy} onClick={onServer}>{serverLabel}</Button>
             : <Button size="lg" disabled={busy} onClick={onServer}>{serverLabel}</Button>)
-          : <Chip size="touch" state={favorite ? 'selected' : 'idle'} disabled={busy} onClick={onFavorite} aria-label={favorite ? "Remove " + pack.title + " from saved packs" : "Save " + pack.title}>{favorite ? "★ Saved" : "☆ Save pack"}</Chip>}
+          : <Chip size="touch" state={favorite ? 'selected' : 'idle'} disabled={busy} onClick={onFavorite} aria-label={favorite ? t('media.pack.unsaveNamed', { title: pack.title }) : t('media.pack.saveNamed', { title: pack.title })}>{favorite ? '★' : '☆'} {t(favorite ? 'media.pack.saved' : 'media.pack.save')}</Chip>}
       </footer>
     </Modal>
   );

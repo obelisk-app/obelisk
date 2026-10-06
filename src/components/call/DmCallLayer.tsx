@@ -214,7 +214,7 @@ export function DmCallView() {
       </div>
       {/* Shown on the ended card too: "Call failed" alone doesn't say that the
           microphone permission was refused. */}
-      {s.error && <p className="px-4 pt-2 text-center text-xs text-red-400" role="alert">{s.error}</p>}
+      {s.error && <p className="px-4 pt-2 text-center text-xs text-red-400" role="alert">{t(`calls.call.error.${s.error}`)}</p>}
       <div className="flex shrink-0 items-center justify-center gap-3 px-4 py-4">
         {ended ? (
           <ControlButton onClick={() => s.dismiss()} label={t('calls.call.close')} testId="dm-call-close">

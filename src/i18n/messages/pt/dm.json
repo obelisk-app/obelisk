@@ -77,10 +77,10 @@
   "raw": {
     "title": "Evento bruto",
     "tabMessage": "Mensagem descriptografada",
-    "tabWire": "No relé",
+    "tabWire": "No relay",
     "rumorHint": "A mensagem em si (kind {kind}), como só você e a outra pessoa podem lê-la. Não é assinada de propósito: o selo dentro do gift wrap é o que prova quem a enviou.",
-    "wrapHint": "O que os relés guardam: um gift wrap (kind 1059) assinado por uma chave de uso único. Os relés só veem para quem é endereçado, não o remetente, a hora nem o conteúdo.",
-    "nip04Hint": "Uma mensagem direta NIP-04 legada (kind 4). O conteúdo é criptografado, mas remetente, destinatário e hora ficam visíveis para qualquer relé.",
+    "wrapHint": "O que os relays guardam: um gift wrap (kind 1059) assinado por uma chave de uso único. Os relays só veem para quem é endereçado, não o remetente, a hora nem o conteúdo.",
+    "nip04Hint": "Uma mensagem direta NIP-04 legada (kind 4). O conteúdo é criptografado, mas remetente, destinatário e hora ficam visíveis para qualquer relay.",
     "decrypted": "Conteúdo descriptografado",
     "keyWarning": "Contém a chave de descriptografia do arquivo: qualquer pessoa a quem você der este JSON pode abri-lo.",
     "unavailable": "Ainda não disponível para esta mensagem."

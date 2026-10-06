@@ -3,7 +3,14 @@
     "controlChannel": "control channel",
     "sfuReliability": "sfu reliability",
     "title": "voice debug",
-    "noClient": "no VoiceClient mounted"
+    "noClient": "no VoiceClient mounted",
+    "peers": "peers",
+    "discovery": "discovery",
+    "signals": "signals",
+    "dropped": "dropped",
+    "relay": "relay",
+    "rateLimit": "rate limit",
+    "events": "events"
   },
   "switchCamera": "Switch camera",
   "videoQuality": "Video quality",
@@ -27,5 +34,103 @@
     "roomPlaceholder": "room name",
     "title": "Join a voice room",
     "enter": "Enter room"
+  },
+  "controls": {
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "deafen": "Deafen",
+    "undeafen": "Undeafen",
+    "cameraOn": "Turn on camera",
+    "cameraOff": "Turn off camera",
+    "shareScreen": "Share screen",
+    "stopShare": "Stop sharing",
+    "showChat": "Show chat",
+    "hideChat": "Hide chat"
+  },
+  "tile": {
+    "you": "You · {name}",
+    "youPresenting": "You are presenting",
+    "presenting": "{name} is presenting",
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "pinToStage": "Pin to stage",
+    "unpin": "Unpin",
+    "muteForMe": "Mute for me only",
+    "unmuteForMe": "Unmute (just for you)",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen"
+  },
+  "quality": {
+    "connecting": "Connecting…",
+    "tooltip": "{level} · {detail}",
+    "level": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "fair": "Fair",
+      "poor": "Poor",
+      "unknown": "Unknown"
+    },
+    "sendRate": "{kbps} kbps up",
+    "rtt": "{ms} ms RTT",
+    "loss": "{percent}% loss"
+  },
+  "landing": {
+    "inCall": "{count, plural, one {# person is in this call.} other {# people are in this call.}}",
+    "live": "This call is live.",
+    "empty": "No one is detected in this call yet."
+  },
+  "roster": {
+    "more": "+{count} more",
+    "syncingCount": "{count, plural, one {# participant detected; roster names are still syncing.} other {# participants detected; roster names are still syncing.}}",
+    "syncing": "Roster is syncing.",
+    "live": "Live"
+  },
+  "sfu": {
+    "starting": {
+      "label": "SFU connecting",
+      "detail": "Asking the SFU to open this big-room call."
+    },
+    "connected": {
+      "label": "SFU connected",
+      "detail": "Big-room mode active: media is routed through the SFU."
+    },
+    "unavailable": {
+      "label": "SFU unavailable",
+      "detail": "No big-room SFU is advertising. Falling back to peer-to-peer mesh (max 4 participants)."
+    },
+    "unauthorized": {
+      "label": "SFU rejected",
+      "detail": "Big-room start was rejected. Your account may not be whitelisted on the SFU’s trusted relay. Call is on peer-to-peer mesh (max 4 participants)."
+    }
+  },
+  "meshSyncDetail": "{count, plural, one {Peer detected; WebRTC media channels are still syncing in the background.} other {# peers detected; WebRTC media channels are still syncing in the background.}}",
+  "error": {
+    "notLoggedIn": "Log in to join voice.",
+    "membership": "Couldn't load the channel membership. Is this a valid channel id?",
+    "notMember": "You aren’t a member of this voice channel.",
+    "cameraLimit": "Camera limit reached (4/4). Ask someone to turn off their camera.",
+    "cameraEvicted": "Camera limit reached: your camera was turned off.",
+    "screenTaken": "A screen is already being shared. Only one screen share is allowed.",
+    "screenEvicted": "Another screen share won the room slot. Your screen share was stopped.",
+    "roomFull": "Room is full. Try again when someone leaves.",
+    "sfuConnect": "Couldn't connect to the SFU.",
+    "sfuUnreachable": "No SFU is reachable for this channel. Ask the channel admin to check that the pinned SFU is online.",
+    "sfuSwitched": "Channel switched to SFU mode but no SFU is reachable.",
+    "sfuClosed": "The SFU closed this call and no SFU is reachable to reopen it.",
+    "permission": "Microphone or camera access is blocked. Allow it in your browser and try again.",
+    "noDevice": "No microphone or camera was found.",
+    "deviceBusy": "Another app is using your microphone or camera.",
+    "mic": "Couldn't turn on the microphone.",
+    "camera": "Couldn't turn the camera on or off.",
+    "switchCamera": "Couldn't switch camera.",
+    "screen": "Couldn't share your screen.",
+    "quality": "Couldn't change the video quality.",
+    "join": "Couldn't join the call.",
+    "sfuUrlInvalid": "The SFU URL must be a valid http(s) URL.",
+    "sfuInfoHttp": "The SFU did not answer its /info check.",
+    "sfuNotObelisk": "That URL is not an Obelisk SFU.",
+    "sfuInfoInvalid": "The SFU sent an invalid /info answer.",
+    "sfuOriginMismatch": "The SFU advertises a different URL than the one you entered.",
+    "relayRefused": "The relay refused the call. You may not have access on this relay."
   }
 }

@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import CloseButton from '@/components/ui/CloseButton';
 import Overlay from '@/components/ui/Overlay';
 import type { MessageKey } from '@/i18n/keys';
+import { activityDetail, activityTitle } from '@/utils/errors/activity-text';
 
 export default function MobileSigningIndicator() {
   const t = useTranslations();
@@ -45,8 +46,7 @@ function SigningPopup({ entry, onClose }: { entry: ActivityEntry | null; onClose
   const t = useTranslations();
 
   const statusKey: MessageKey = entry ? `mobile.signing.${entry.status}` : 'mobile.signing.idle';
-  const kind = entry?.eventKind == null ? null : `kind ${entry.eventKind}`;
-  const detail = [entry?.description, kind].filter(Boolean).join(' · ') || entry?.detail;
+  const detail = entry ? activityDetail(t, entry) : undefined;
 
   return (
     // Overlay owns the backdrop click and Escape. Not portalled: the popup
@@ -74,7 +74,7 @@ function SigningPopup({ entry, onClose }: { entry: ActivityEntry | null; onClose
         </div>
         {entry ? (
           <div className="mt-4 rounded-xl border border-lc-border bg-lc-black p-3">
-            <div className="text-sm font-medium">{entry.label}</div>
+            <div className="text-sm font-medium">{activityTitle(t, entry)}</div>
             {detail && <div className="mt-1 break-words text-xs text-lc-muted">{detail}</div>}
           </div>
         ) : (

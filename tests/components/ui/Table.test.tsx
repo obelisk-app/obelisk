@@ -1,6 +1,10 @@
-import { render, screen, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { render as rtlRender, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import Table, { type TableColumn } from '@/components/ui/Table';
+import { LocaleProvider } from '@tests/support/intl';
+
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: LocaleProvider });
 
 interface Person { id: string; name: string; sats: number }
 
@@ -78,6 +82,13 @@ describe('Table', () => {
     expect(screen.queryByText('Alice')).toBeNull();
     expect(screen.queryByText('Nothing')).toBeNull();
     expect(within(table).getAllByRole('row')).toHaveLength(2);
+  });
+
+  it('names the spinner in the reader\'s language when the caller gives no label', () => {
+    rtlRender(<Table columns={columns} rows={rows} rowKey={rowKey} aria-label="t" loading />, {
+      wrapper: ({ children }) => <LocaleProvider initialLocale="es">{children}</LocaleProvider>,
+    });
+    expect(screen.getByRole('status', { name: 'Cargando…' })).toBeInTheDocument();
   });
 });
 

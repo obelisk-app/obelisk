@@ -82,7 +82,7 @@ describe('startSfuClient', () => {
     await expect(startSfuClient(target, deps, SFU, advert('https://sfu.example'))).rejects.toThrow('not on the allow-list');
     expect(target).toEqual({ pubkey: null, client: null });
     expect(events.onTopologyChange).toHaveBeenCalledWith(null);
-    expect(events.onError).toHaveBeenCalledWith('Could not connect to the SFU: not on the allow-list');
+    expect(events.onError).toHaveBeenCalledWith('sfuConnect');
     expect(clients).toHaveLength(1);
   });
 

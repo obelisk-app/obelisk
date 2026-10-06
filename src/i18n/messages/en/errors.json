@@ -1,1 +1,109 @@
-{}
+{
+  "generic": "Something went wrong. Try again.",
+  "codes": {
+    "not-logged-in": "You are not logged in. Log in and try again.",
+    "not-ready": "Obelisk is still starting. Try again in a moment.",
+    "offline": "You are offline. Check your connection.",
+    "no-relays-connected": "Could not connect to any relay.",
+    "extension-missing": "No Nostr browser extension found. Install or unlock one and try again.",
+    "extension-no-nip04": "Your browser extension cannot encrypt or decrypt NIP-04 messages.",
+    "extension-no-nip44": "Your browser extension cannot encrypt or decrypt NIP-44 messages.",
+    "signer-no-nip44": "Your signer does not support NIP-44 encryption.",
+    "signer-unsupported": "Your login method cannot sign this here. Log in with an extension or a remote signer.",
+    "pq-unavailable": "Post-quantum encryption needs a browser extension that supports it.",
+    "signer-timeout": "Your signer did not answer in time. Check it and try again.",
+    "signer-reset": "Cancelled because your session changed.",
+    "publish-rejected": "No relay accepted this.",
+    "publish-timeout": "No relay answered in time. Check your connection and try again.",
+    "auth-refused": "The relay did not accept your authentication.",
+    "not-whitelisted": "This relay only accepts keys on its list, and yours is not on it.",
+    "relay-error": "The relay rejected the request.",
+    "invalid-relay-url": "That is not a valid relay address. Use a public wss:// address.",
+    "dms-off": "Direct messages are turned off in your settings.",
+    "files-need-nip17": "Encrypted files need NIP-17, and this conversation uses NIP-04.",
+    "search-timeout": "Search timed out. Try again.",
+    "own-packs-only": "You can only delete your own packs.",
+    "profile-load-failed": "Could not load your current profile. Try again.",
+    "profile-lookup-timeout": "Looking up the profile took too long. Try again.",
+    "mute-list-load-failed": "Could not load your mute list. Try again.",
+    "invalid-bunker-url": "That bunker address is not valid.",
+    "bunker-missing-secret": "The remote signer pairing is incomplete. Pair it again.",
+    "bunker-no-session": "There is no remote signer session to restore. Log in again.",
+    "nostrconnect-cancelled": "Connection cancelled.",
+    "call-relay-failed": "Could not reach a relay for the call."
+  },
+  "activity": {
+    "signExtension": {
+      "pending": "Waiting for extension signature",
+      "ok": "Signed",
+      "error": "Signature failed"
+    },
+    "signBunker": {
+      "pending": "Waiting for bunker signature",
+      "ok": "Signed",
+      "error": "Signature failed"
+    },
+    "signLocal": {
+      "pending": "Signing event",
+      "ok": "Signed",
+      "error": "Signature failed"
+    },
+    "publish": {
+      "pending": "Publishing to relays",
+      "ok": "Published",
+      "error": "Publish failed"
+    },
+    "connect": {
+      "pending": "Connecting to relays",
+      "ok": "Connected",
+      "error": "Could not connect"
+    },
+    "reconnect": {
+      "pending": "Reconnecting to relay",
+      "ok": "Reconnected",
+      "error": "Could not reconnect"
+    },
+    "relayAuth": {
+      "pending": "Authenticating with {target}",
+      "ok": "Authenticated with {target}",
+      "error": "Relay authentication failed"
+    },
+    "bunkerConnect": {
+      "pending": "Connecting to your remote signer",
+      "ok": "Remote signer connected",
+      "error": "Remote signer connection failed"
+    },
+    "bunkerScan": {
+      "pending": "Scan the QR code with your Nostr signer",
+      "ok": "Signer connected",
+      "error": "QR pairing failed"
+    }
+  },
+  "kinds": {
+    "number": "kind {kind}",
+    "relayAuth": "NIP-42 relay auth",
+    "message": "Send message",
+    "dm": "Direct message",
+    "groupMetadata": "Group metadata",
+    "groupAdmins": "Group admins",
+    "groupMembers": "Group members",
+    "reaction": "Reaction",
+    "appData": "App data",
+    "relayList": "Relay list",
+    "event": "Nostr event"
+  },
+  "status": {
+    "untitledCategory": "Untitled"
+  },
+  "panel": {
+    "title": "Something broke on this screen",
+    "body": "The chat surface hit an error and stopped rendering. Your keys and your messages are safe: nothing was lost, this is only the view. Try again first; if it keeps happening, clearing the local cache rebuilds it from the relay.",
+    "retry": "Try again",
+    "reload": "Reload the page",
+    "clear": "Clear local cache and reload",
+    "clearing": "Clearing…",
+    "cleared": "{count, plural, one {Cleared # entry} other {Cleared # entries}}, reloading…",
+    "home": "Back to home",
+    "details": "Error details"
+  }
+}

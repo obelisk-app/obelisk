@@ -3,6 +3,7 @@
  * favorites (kind 10030). Owns the two stores, the newest-wins stamps and the
  * library REQs. Pure move from `client.ts` (round 4 plan, step 8).
  */
+import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { KIND_EMOJI_FAVORITES, KIND_EMOJI_SET, KIND_EVENT_DELETION } from '@/utils/nip-kinds';
 import { EMPTY_MEDIA_FAVORITES, mediaFavoriteTags, mediaPackTags, parseMediaFavorites, parseMediaPack } from '@/utils/media-tags/media-packs';
@@ -34,7 +35,7 @@ export class MediaPacksModule {
     pack: Pick<JsMediaPack, 'identifier' | 'title' | 'description' | 'image' | 'items'>,
   ): Promise<void> {
     const author = this.ctx.session()?.pubKeyHex ?? null;
-    if (!author) throw new Error('Not logged in.');
+    if (!author) throw new CodedError('not-logged-in', 'Not logged in.');
     const address = "30030:" + author + ":" + pack.identifier;
     const previousAt = Math.max(
       this.mediaPacks.get()[address]?.createdAt ?? 0,
@@ -54,7 +55,7 @@ export class MediaPacksModule {
   async deleteMediaPack(address: string): Promise<void> {
     const author = this.ctx.session()?.pubKeyHex ?? null;
     const pack = this.mediaPacks.get()[address];
-    if (!author || !pack || pack.author !== author) throw new Error('You can only delete your own packs.');
+    if (!author || !pack || pack.author !== author) throw new CodedError('own-packs-only', 'You can only delete your own packs.');
     const createdAt = Math.max(Math.floor(Date.now() / 1000), pack.createdAt + 1);
     await this.ctx.publishEvent({
       kind: KIND_EVENT_DELETION,

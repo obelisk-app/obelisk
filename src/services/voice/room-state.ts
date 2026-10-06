@@ -15,6 +15,7 @@
  * It owns no topology: nothing here subscribes, dials, publishes or decides
  * whether the room is on mesh or on an SFU.
  */
+import type { VoiceErrorCode } from './errors';
 import type { Peer } from './peer';
 import { SpeakingDetector } from './speaking-detector';
 import type { VoiceUiSink } from './ui-sink';
@@ -53,7 +54,8 @@ export interface VoiceClientEvents {
    * tell users whether their `voice-sfu` channel actually reached the SFU.
    */
   onTopologyChange?(sfuPubkey: string | null): void;
-  onError?(message: string): void;
+  /** A failure the room shows; resolved as `voice.error.<code>` by the UI. */
+  onError?(code: VoiceErrorCode): void;
   onLeft?(reason?: string): void;
 }
 

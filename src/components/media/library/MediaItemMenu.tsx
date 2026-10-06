@@ -25,7 +25,7 @@ export default function MediaItemMenu({ selection, favorite, busy, server, onClo
       <header className="flex items-center justify-between border-b border-lc-border p-4">
         <div>
           <h2 className="font-semibold text-lc-white">:{item.name}:</h2>
-          <p className="mt-1 text-xs capitalize text-lc-muted">{item.kind}{pack ? " from " + pack.title : " · Individual favorite"}</p>
+          <p className="mt-1 text-xs text-lc-muted">{pack ? t('media.item.fromPack', { kind: t(`media.kind.${item.kind}`), title: pack.title }) : t('media.item.individual', { kind: t(`media.kind.${item.kind}`) })}</p>
         </div>
         <CloseButton onClick={onClose} label={t('media.closeActions')} />
       </header>
@@ -33,9 +33,9 @@ export default function MediaItemMenu({ selection, favorite, busy, server, onClo
         <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
       </div>
       <div className="grid gap-2 p-4">
-        {pack && <Button variant="secondary" size="lg" onClick={onViewPack}>View {pack.title}</Button>}
+        {pack && <Button variant="secondary" size="lg" onClick={onViewPack}>{t('media.item.viewPack', { title: pack.title })}</Button>}
         {!server && onCreatePack && <Button variant="outline" tone="accent" size="sm" onClick={onCreatePack}>{t('media.createPackWithItem')}</Button>}
-        {!server && <Button size="lg" disabled={busy} onClick={onFavorite}>{favorite ? "Remove item from favorites" : "Add item to favorites"}</Button>}
+        {!server && <Button size="lg" disabled={busy} onClick={onFavorite}>{t(favorite ? 'media.item.removeFromFavorites' : 'media.item.addToFavorites')}</Button>}
       </div>
     </Modal>
   );

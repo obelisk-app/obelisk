@@ -8,6 +8,8 @@
 import { useEffect, useState } from 'react';
 import { useVoiceStore } from '@/store/voice';
 import { getActiveVoiceClient } from '@/services/voice/active-client';
+import { voiceErrorCode } from '@/services/voice/errors';
+import { voiceErrorText } from '@/utils/voice/error-text';
 import { useTranslations } from 'next-intl';
 import QualityPopover from './QualityPopover';
 import {
@@ -59,9 +61,8 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
     if (!client) return;
     try { await client.switchCamera(); }
     catch (e) {
-      const err = e as { name?: string; message?: string };
-      if (err?.name === 'NotAllowedError') return;
-      setError(err?.message || 'Failed to switch camera');
+      if ((e as { name?: string })?.name === 'NotAllowedError') return;
+      setError(voiceErrorCode(e, 'switchCamera'));
     }
   };
 
@@ -71,7 +72,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
     try {
       await client.setMicEnabled(isMuted);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(voiceErrorCode(e, 'mic'));
     }
   };
 
@@ -95,9 +96,8 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
     try {
       await client.setCameraEnabled(!isCameraOn);
     } catch (e) {
-      const err = e as { name?: string; message?: string };
-      if (err?.name === 'NotAllowedError') return;
-      setError(err?.message || 'Failed to toggle camera');
+      if ((e as { name?: string })?.name === 'NotAllowedError') return;
+      setError(voiceErrorCode(e, 'camera'));
     }
   };
 
@@ -107,9 +107,8 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
     try {
       await client.setScreenShareEnabled(!isScreenSharing);
     } catch (e) {
-      const err = e as { name?: string; message?: string };
-      if (err?.name === 'NotAllowedError') return;
-      setError(err?.message || 'Failed to share screen');
+      if ((e as { name?: string })?.name === 'NotAllowedError') return;
+      setError(voiceErrorCode(e, 'screen'));
     }
   };
 
@@ -120,7 +119,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           className="pointer-events-auto text-xs text-red-200 bg-red-600/30 backdrop-blur-md border border-red-500/30 px-3 py-1.5 rounded-full shadow-lg"
           data-testid="voice-error"
         >
-          {error}
+          {voiceErrorText(t, error)}
         </div>
       )}
       <div
@@ -131,7 +130,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           active={!isMuted}
           danger={isMuted}
           onClick={handleToggleMute}
-          title={isMuted ? 'Unmute' : 'Mute'}
+          title={t(isMuted ? 'voice.controls.unmute' : 'voice.controls.mute')}
           data-testid="mute-btn"
         >
           {isMuted ? <MicOffIcon /> : <MicOnIcon />}
@@ -141,7 +140,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           active={!isDeafened}
           danger={isDeafened}
           onClick={handleToggleDeafen}
-          title={isDeafened ? 'Undeafen' : 'Deafen'}
+          title={t(isDeafened ? 'voice.controls.undeafen' : 'voice.controls.deafen')}
           data-testid="deafen-btn"
         >
           {isDeafened ? <DeafenOffIcon /> : <DeafenOnIcon />}
@@ -150,7 +149,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
         <CircleBtn
           active={isCameraOn}
           onClick={handleToggleCamera}
-          title={isCameraOn ? 'Turn off camera' : 'Turn on camera'}
+          title={t(isCameraOn ? 'voice.controls.cameraOff' : 'voice.controls.cameraOn')}
           data-testid="camera-btn"
         >
           {isCameraOn ? <CameraOnIcon /> : <CameraOffIcon />}
@@ -170,7 +169,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
         <CircleBtn
           active={isScreenSharing}
           onClick={handleToggleScreenShare}
-          title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
+          title={t(isScreenSharing ? 'voice.controls.stopShare' : 'voice.controls.shareScreen')}
           data-testid="screen-share-btn"
           className="hidden sm:flex"
         >
@@ -181,7 +180,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           <CircleBtn
             active={!!isChatOpen}
             onClick={onToggleChat}
-            title={isChatOpen ? 'Hide chat' : 'Show chat'}
+            title={t(isChatOpen ? 'voice.controls.hideChat' : 'voice.controls.showChat')}
             data-testid="voice-chat-toggle"
           >
             <ChatIcon />

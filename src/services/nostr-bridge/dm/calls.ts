@@ -5,6 +5,7 @@
  * call store) instead of a thread. The call's media signaling is
  * `src/services/dm-call/`, not this. Pure move from `client.ts`.
  */
+import { CodedError } from '@/utils/errors/codes';
 import { finalizeEvent, getEventHash, type Event as NostrEvent, type UnsignedEvent } from 'nostr-tools';
 import { generateSecretKey } from 'nostr-tools/pure';
 import { v2 as nip44 } from 'nostr-tools/nip44';
@@ -75,10 +76,10 @@ export class DmCallsModule {
     opts: { selfNotice?: boolean } = {},
   ): Promise<void> {
     const me = this.ctx.session()?.pubKeyHex;
-    if (!me) throw new Error('Not logged in');
-    if (!getPreferences().directMessagesEnabled) throw new Error('Direct messages are off');
+    if (!me) throw new CodedError('not-logged-in', 'Not logged in');
+    if (!getPreferences().directMessagesEnabled) throw new CodedError('dms-off', 'Direct messages are off');
     const signer = this.deps.dmSigner();
-    if (!signer) throw new Error('Not logged in');
+    if (!signer) throw new CodedError('not-logged-in', 'Not logged in');
     const now = Math.floor(Date.now() / 1000);
     const rumor: UnsignedEvent = {
       pubkey: me,
@@ -116,7 +117,7 @@ export class DmCallsModule {
     rumor: UnsignedEvent,
     expiresAt: number,
   ): Promise<NostrEvent> {
-    if (!signer.nip44Encrypt) throw new Error('Signer does not support NIP-44');
+    if (!signer.nip44Encrypt) throw new CodedError('signer-no-nip44', 'Signer does not support NIP-44');
     const fuzzed = () => Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 2 * 24 * 3600);
     const inner = { ...rumor, id: getEventHash(rumor) };
     const seal = await signer.signEvent({

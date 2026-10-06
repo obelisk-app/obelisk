@@ -3,6 +3,7 @@
  * plus the wiring that feeds the WoT engine its own-pubkey, mute and block
  * sets. Pure move from `client.ts` (round 4 plan, step 8).
  */
+import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { KIND_CONTACT_LIST, KIND_MUTE_LIST } from '@/utils/nip-kinds';
 import { getPreferences } from '@/services/preferences';
@@ -74,7 +75,7 @@ export class ListsModule {
 
   async setMuted(pubkey: string, muted: boolean): Promise<void> {
     const session = this.ctx.session();
-    if (!session) throw new Error('Not logged in');
+    if (!session) throw new CodedError('not-logged-in', 'Not logged in');
     const me = session.pubKeyHex;
     const muteRelays = Array.from(new Set([...this.ctx.relays(), ...PROFILE_RELAYS]));
 
@@ -90,7 +91,7 @@ export class ListsModule {
     );
     const existingMuteEvent = newestEvent(muteQuery.events);
     if (!existingMuteEvent && !muteQuery.complete) {
-      throw new Error('Could not load your mute list. Try again.');
+      throw new CodedError('mute-list-load-failed', 'Could not load your mute list. Try again.');
     }
     const existingTags = existingMuteEvent?.tags ?? [];
     const existingContent = existingMuteEvent?.content ?? '';

@@ -3,6 +3,7 @@
  * active, configured and profile relays, plus the media packs its favorites
  * reference. Pure move from `client.ts` (round 4 plan, step 8).
  */
+import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { KIND_EMOJI_FAVORITES, KIND_EMOJI_SET } from '@/utils/nip-kinds';
 import { PROFILE_RELAYS } from './profile-sync-cache';
@@ -21,7 +22,7 @@ export interface AccountExport {
 
 export async function exportAccountData(ctx: ExportContext): Promise<AccountExport> {
   const pubkey = ctx.session()?.pubKeyHex ?? null;
-  if (!pubkey) throw new Error("Log in before creating a backup.");
+  if (!pubkey) throw new CodedError('not-logged-in', "Log in before creating a backup.");
   const relays = uniqueRelayUrls([
     ...ctx.relays(),
     ...ctx.configuredRelays.get(),

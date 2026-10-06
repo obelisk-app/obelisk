@@ -29,7 +29,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
         data-testid={`member-confirm-${pubkey}`}
       >
         <span className="min-w-0 flex-1 truncate text-xs text-lc-white">
-          {demoting ? `Demote ${name} to member?` : `Remove ${name} from the channel?`}
+          {demoting ? t('shell.desktop.members.confirmDemote', { name }) : t('shell.desktop.members.confirmRemove', { name })}
         </span>
         <Button
           variant="ghost"
@@ -47,7 +47,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           className="shrink-0"
           data-testid={`member-confirm-ok-${pubkey}`}
         >
-          {demoting ? 'Demote' : 'Remove'}
+          {demoting ? t('common.confirm.demote') : t('common.confirm.remove')}
         </Button>
       </div>
     );
@@ -68,7 +68,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           className="block max-w-full truncate font-mono text-[10px] text-lc-muted hover:text-lc-white"
           data-testid={`member-npub-${pubkey}`}
         >
-          {copied ? 'Copied' : npub}
+          {copied ? t('shell.desktop.members.copied') : npub}
         </button>
       </div>
       {/* Dimmed until the row is hovered or something inside it has focus, so
@@ -82,7 +82,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
             onClick={() => ask('demote')}
             className="rounded-full px-2.5 hover:bg-lc-dark"
             title={t('shell.desktop.members.demoteHelp')}
-            aria-label={`Demote ${name}`}
+            aria-label={t('shell.desktop.members.demoteLabel', { name })}
             data-testid={`member-demote-${pubkey}`}
           >
             {t('mobile.members.demote')}
@@ -94,7 +94,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           tone="danger"
           onClick={() => ask('remove')}
           className="rounded-full px-2.5 text-red-400"
-          aria-label={`Remove ${name}`}
+          aria-label={t('shell.desktop.members.removeLabel', { name })}
           data-testid={`member-remove-${pubkey}`}
         >
           {t('shell.desktop.members.remove')}
@@ -110,6 +110,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
  * which renders operator-defined relay roles (see docs/relay-roles.md).
  */
 function MemberRoleBadge({ isAdmin }: { isAdmin: boolean }) {
+  const t = useTranslations();
   return (
     <span
       className={
@@ -119,7 +120,7 @@ function MemberRoleBadge({ isAdmin }: { isAdmin: boolean }) {
           : 'border-lc-border text-lc-muted')
       }
     >
-      {isAdmin ? 'Admin' : 'Member'}
+      {isAdmin ? t('shell.desktop.members.roleAdmin') : t('shell.desktop.members.roleMember')}
     </span>
   );
 }

@@ -97,6 +97,7 @@ describe('a DM call on the relay hub', () => {
     await flush();
     callSocket?.rejectPublish(signal.id, 'auth-required: members only');
     await expect(refused).rejects.toThrow(/auth-required/);
+    await expect(refused).rejects.toMatchObject({ code: 'call-relay-failed' });
     expect(callSocket?.sentAuth).toEqual([]);
     expect(session.calls).toHaveLength(promptsBefore);
   });

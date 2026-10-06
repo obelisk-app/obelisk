@@ -18,6 +18,7 @@
  * `destroy()` removes the identity from the hub (its sockets, records and
  * cached reads go with it): a finished call leaves nothing behind.
  */
+import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { normalizeURL } from 'nostr-tools/utils';
 import { currentRelayHub, type RelayHub } from '@/lib/relay-hub';
@@ -50,7 +51,7 @@ function normalized(url: string): string {
 /** The page's hub; a DM call never runs before the bridge has created it. */
 export function pageHubForCalls(): CallHub {
   const hub = currentRelayHub();
-  if (!hub) throw new Error('DM call started before the relay hub exists');
+  if (!hub) throw new CodedError('not-ready', 'DM call started before the relay hub exists');
   return hub;
 }
 
@@ -84,7 +85,7 @@ export function createCallPool(hub: CallHub, callId: string, pubkey: string): Ca
     async publish(relays, event) {
       const rows = await hub.publish({ relays, event, identityId, authMode: 'never' });
       if (rows.some((r) => r.status === 'ok')) return rows;
-      throw new Error(rows.map((r) => `${r.url}: ${r.reason ?? r.status}`).join('; ') || 'no call relay');
+      throw new CodedError('call-relay-failed', rows.map((r) => `${r.url}: ${r.reason ?? r.status}`).join('; ') || 'no call relay'); // i18n-exempt: developer message; readers get the code
     },
     destroy() {
       if (destroyed) return;

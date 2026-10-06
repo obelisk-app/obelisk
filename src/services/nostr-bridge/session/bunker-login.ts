@@ -4,6 +4,7 @@
  * same install sequence as every other login (`LoginModule.finalizeLogin`).
  * Pure move from `client.ts`.
  */
+import { CodedError, codeOrMessage, type ActivityCode, type ErrorCode } from '@/utils/errors/codes';
 import { getPublicKey } from 'nostr-tools';
 import { BunkerSigner, createNostrConnectURI, parseBunkerInput } from 'nostr-tools/nip46';
 import { generateSecretKey } from 'nostr-tools/pure';
@@ -31,8 +32,8 @@ export class BunkerLogin {
     options?: { onAuthUrl?: (url: string) => void; clientSecretHex?: string; signer?: RemoteSigner },
   ): Promise<string> {
     const bp = await parseBunkerInput(bunkerUrl);
-    if (!bp) throw new Error('Invalid bunker URL');
-    if (options?.signer && !options.clientSecretHex) throw new Error('Paired remote signer is missing its client secret');
+    if (!bp) throw new CodedError('invalid-bunker-url', 'Invalid bunker URL');
+    if (options?.signer && !options.clientSecretHex) throw new CodedError('bunker-missing-secret', 'Paired remote signer is missing its client secret');
     // When a host pre-paired the remote signer (e.g. the @nostr-wot/ui
     // QR / paste flow), it must hand us the SAME client secret it paired
     // with, otherwise the bunker rejects our connect request because
@@ -46,7 +47,7 @@ export class BunkerLogin {
     const signerOptions = { onauth: this.bunker.openAuthUrl };
     const pairedSigner = options?.signer;
     const signer = pairedSigner ?? BunkerSigner.fromBunker(localSecret, bp, signerOptions);
-    const connectId = pushActivity('Connecting to bunker', 'waiting for remote signer');
+    const connectId = pushActivity('bunkerConnect' satisfies ActivityCode);
     let pubKeyHex: string;
     try {
       // If the SDK hands us a client secret, it already completed the
@@ -56,7 +57,7 @@ export class BunkerLogin {
       if (!pairedByHost) await (signer as BunkerSigner).connect();
       pubKeyHex = await signer.getPublicKey();
     } catch (e) {
-      failActivity(connectId, e instanceof Error ? e.message : String(e));
+      failActivity(connectId, codeOrMessage(e));
       throw e;
     }
     resolveActivity(connectId);
@@ -99,7 +100,7 @@ export class BunkerLogin {
     });
 
     let cancelled = false;
-    const scanId = pushActivity('Waiting for QR scan', 'open your Nostr signer to approve');
+    const scanId = pushActivity('bunkerScan' satisfies ActivityCode);
     const waitForConnection = async (): Promise<string> => {
       this.bunker.onAuth = options?.onAuthUrl ?? null;
       let signer;
@@ -110,13 +111,13 @@ export class BunkerLogin {
           },
         }, 60000);
       } catch (e) {
-        failActivity(scanId, e instanceof Error ? e.message : String(e));
+        failActivity(scanId, codeOrMessage(e));
         throw e;
       }
-      resolveActivity(scanId, 'signer connected');
+      resolveActivity(scanId);
       if (cancelled) {
         try { signer.close(); } catch { /* ignore */ }
-        throw new Error('NostrConnect cancelled');
+        throw new CodedError('nostrconnect-cancelled', 'NostrConnect cancelled');
       }
       const pubKeyHex = await signer.getPublicKey();
       // Reconstruct a bunker:// URL from the signer's resolved BunkerPointer
@@ -142,7 +143,7 @@ export class BunkerLogin {
     return {
       uri,
       waitForConnection,
-      cancel: () => { cancelled = true; failActivity(scanId, 'cancelled'); },
+      cancel: () => { cancelled = true; failActivity(scanId, 'nostrconnect-cancelled' satisfies ErrorCode); },
     };
   }
 }

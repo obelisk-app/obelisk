@@ -1,4 +1,8 @@
-/** Human label for an event kind, used by the activity log's sign/publish entries. */
+/**
+ * The activity log's name for an event kind, as a code: the indicators read
+ * it as `errors.kinds.<label>` in the reader's language.
+ */
+import type { EventKindLabel } from '@/utils/errors/codes';
 import {
   KIND_CLIENT_AUTH,
   KIND_ENCRYPTED_DM,
@@ -11,15 +15,15 @@ import {
   KIND_RELAY_LIST,
 } from '@/utils/nip-kinds';
 
-export function eventKindDescription(kind: number): string {
-  if (kind === KIND_CLIENT_AUTH) return 'NIP-42 relay auth';
-  if (kind === KIND_GROUP_CHAT_MESSAGE) return 'Send message';
-  if (kind === KIND_ENCRYPTED_DM) return 'Direct message';
-  if (kind === KIND_GROUP_METADATA) return 'Group metadata';
-  if (kind === KIND_GROUP_ADMINS) return 'Group admins';
-  if (kind === KIND_GROUP_MEMBERS) return 'Group members';
-  if (kind === KIND_REACTION) return 'Reaction';
-  if (kind === KIND_NIP78_APP_DATA) return 'App data';
-  if (kind === KIND_RELAY_LIST) return 'Relay list';
-  return 'Nostr event';
+export function eventKindDescription(kind: number): EventKindLabel {
+  if (kind === KIND_CLIENT_AUTH) return 'relayAuth';
+  if (kind === KIND_GROUP_CHAT_MESSAGE) return 'message';
+  if (kind === KIND_ENCRYPTED_DM) return 'dm';
+  if (kind === KIND_GROUP_METADATA) return 'groupMetadata';
+  if (kind === KIND_GROUP_ADMINS) return 'groupAdmins';
+  if (kind === KIND_GROUP_MEMBERS) return 'groupMembers';
+  if (kind === KIND_REACTION) return 'reaction';
+  if (kind === KIND_NIP78_APP_DATA) return 'appData';
+  if (kind === KIND_RELAY_LIST) return 'relayList';
+  return 'event';
 }

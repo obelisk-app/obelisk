@@ -99,11 +99,11 @@ export function alreadyJoined(event: NostrEvent, results: PublishResults): boole
     && results.some((r) => r.status !== 'fulfilled' && reasonOf(r).toLowerCase().includes('already a member'));
 }
 
-/** The error a fully refused publish throws, naming each relay's reason. */
+/** The English message of the error a fully refused publish throws, naming each relay's reason (readers get its code). */
 export function rejectionMessage(event: NostrEvent, results: PublishResults, targetRelays: readonly string[]): string {
   const reasons = results
     .map((r, i) => (r.status === 'fulfilled' ? null : `${targetRelays[i]}: ${reasonOf(r)}`))
     .filter(Boolean)
     .join('; ');
-  return `Relay rejected event (kind ${event.kind}). ${reasons || 'no relay accepted'}`;
+  return `Relay rejected event (kind ${event.kind}). ${reasons || 'no relay accepted'}`; // i18n-exempt: developer message of the publish-rejected CodedError
 }

@@ -50,7 +50,7 @@ export function ChannelOrderRow({
         onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; onGrab(); }}
         onDragEnd={onDragEnd}
         className="cursor-grab active:cursor-grabbing"
-        aria-label={`Grab channel ${channel.name ?? channel.id}`}
+        aria-label={t('shell.desktop.layout.grabChannel', { name: channel.name ?? channel.id })}
         title={t('shell.desktop.layout.dragChannel')}
       >
         <DragHandleIcon />
@@ -66,7 +66,7 @@ export function ChannelOrderRow({
         onChange={(e) => onChangeCategory(e.target.value || null)}
         aria-label={t('shell.desktop.layout.channelCategory', { channel: channel.name ?? channel.id.slice(0, 12) })}
       >
-        <option value="">(uncategorized)</option>
+        <option value="">{t('shell.desktop.layout.uncategorizedOption')}</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}

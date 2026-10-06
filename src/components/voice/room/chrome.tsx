@@ -22,7 +22,7 @@ export function PassiveCallRoster({ pubkeys, count, mode }: {
   if (count <= 0 && pubkeys.length === 0) return null;
   const visible = pubkeys.slice(0, 6);
   const hidden = Math.max(0, count - visible.length);
-  const topology = mode === 'sfu' ? 'SFU' : mode === 'mesh' ? 'Mesh' : 'Live';
+  const topology = mode === 'sfu' ? 'SFU' : mode === 'mesh' ? 'Mesh' : t('voice.roster.live'); // i18n-exempt: SFU and Mesh are topology names
   return (
     <div
       className="mx-auto mb-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-left"
@@ -37,13 +37,13 @@ export function PassiveCallRoster({ pubkeys, count, mode }: {
           {visible.map((pk) => <PassiveCallParticipant key={pk} pubkey={pk} />)}
           {hidden > 0 && (
             <span className="inline-flex min-w-0 items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-lc-muted">
-              +{hidden} more
+              {t('voice.roster.more', { count: hidden })}
             </span>
           )}
         </div>
       ) : (
         <div className="text-xs text-lc-muted">
-          {count > 0 ? count + ' participant' + (count === 1 ? '' : 's') + ' detected; roster names are still syncing.' : 'Roster is syncing.'}
+          {count > 0 ? t('voice.roster.syncingCount', { count }) : t('voice.roster.syncing')}
         </div>
       )}
     </div>
@@ -185,5 +185,6 @@ export function CenteredPanel({ children }: { children: React.ReactNode }) {
 }
 
 export function Spinner() {
-  return <div className="w-6 h-6 border-2 border-neutral-700 border-t-lc-green rounded-full animate-spin mx-auto" aria-label="loading" />;
+  const t = useTranslations();
+  return <div className="w-6 h-6 border-2 border-neutral-700 border-t-lc-green rounded-full animate-spin mx-auto" aria-label={t('common.loading')} />;
 }

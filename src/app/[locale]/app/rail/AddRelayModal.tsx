@@ -107,7 +107,7 @@ function SuggestedRelayItem({
   const { busy, error: err, add } = useSuggestedRelayAdd(url, alreadyAdded, onAdded);
 
   const name = info?.name || shortHost(url);
-  const description = info?.description || '<an undescribed relay>';
+  const description = info?.description || t('shell.rail.addModal.noDescription');
   const icon = info?.icon || faviconFor(url);
   const initials = letterFor(shortHost(url));
   const accent = colorFor(shortHost(url));

@@ -1,11 +1,13 @@
 'use client';
 
 /** Per-tile controls: mute-for-me (local only, via the voice store) and fullscreen. */
+import { useTranslations } from 'next-intl';
 import { useVoiceStore } from '@/store/voice';
 import { toggleFullscreen } from '@/utils/fullscreen';
 import { useFullscreenState } from '@/hooks/voice/useFullscreenState';
 
 export function MuteForMeButton({ pubkey, compact = false }: { pubkey: string; compact?: boolean }) {
+  const t = useTranslations();
   const muted = useVoiceStore((s) => !!s.localMutedPubkeys[pubkey]);
   const muteLocally = useVoiceStore((s) => s.muteLocally);
   const unmuteLocally = useVoiceStore((s) => s.unmuteLocally);
@@ -18,7 +20,7 @@ export function MuteForMeButton({ pubkey, compact = false }: { pubkey: string; c
         if (muted) unmuteLocally(pubkey);
         else muteLocally(pubkey);
       }}
-      title={muted ? 'Unmute (just for you)' : 'Mute for me only'}
+      title={t(muted ? 'voice.tile.unmuteForMe' : 'voice.tile.muteForMe')}
       data-testid="mute-for-me"
       data-muted={muted}
       className={
@@ -51,6 +53,7 @@ export function MuteForMeButton({ pubkey, compact = false }: { pubkey: string; c
 }
 
 export function FullscreenButton({ targetRef }: { targetRef: { current: HTMLElement | null } }) {
+  const t = useTranslations();
   const isFullscreen = useFullscreenState(targetRef);
   return (
     <button
@@ -59,7 +62,7 @@ export function FullscreenButton({ targetRef }: { targetRef: { current: HTMLElem
         e.stopPropagation();
         void toggleFullscreen(targetRef.current);
       }}
-      title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+      title={t(isFullscreen ? 'voice.tile.exitFullscreen' : 'voice.tile.fullscreen')}
       data-testid="fullscreen-toggle"
       data-fullscreen={isFullscreen}
       className={

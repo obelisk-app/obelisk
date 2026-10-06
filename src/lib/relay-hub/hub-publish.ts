@@ -79,7 +79,7 @@ async function publishOne(deps: PublishDeps, url: string, spec: PublishSpec, ide
       const message = errorMessage(err);
       if (message === TIMEOUT_MARKER) {
         // An ephemeral kind is fire-and-forget; many relays never OK it.
-        return ephemeral ? { url, status: 'ok', reason: 'no ack (ephemeral kind)' } : { url, status: 'timeout', reason: null };
+        return ephemeral ? { url, status: 'ok', reason: 'no ack (ephemeral kind)' } : { url, status: 'timeout', reason: null }; // i18n-exempt: publish row reason for logs, not shown
       }
       if (message.startsWith('auth-required:') && authMode === 'policy' && entry.relay.onauth) {
         const ok = await awaitAuth(deps.auth, entry);

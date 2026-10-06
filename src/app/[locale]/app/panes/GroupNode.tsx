@@ -124,7 +124,7 @@ export function GroupNode({
           {muted && <span title={t('chat.channelMenu.muted')} aria-label={t('chat.channelMenu.muted')} className="text-[11px]">🔕</span>}
           {unread > 0 && (
             <span
-              aria-label={`${unread} unread message${unread === 1 ? '' : 's'}`}
+              aria-label={t('shell.desktop.channels.unread', { count: unread })}
               className="text-xs tabular-nums text-lc-muted"
             >
               {unread > 99 ? '99+' : unread}
@@ -132,7 +132,7 @@ export function GroupNode({
           )}
           {mentionsOrReplies > 0 && (
             <span
-              aria-label={`${mentionsOrReplies} mention${mentionsOrReplies === 1 ? '' : 's'} or reply`}
+              aria-label={t('shell.desktop.channels.mentions', { count: mentionsOrReplies })}
               className="rounded-full bg-lc-green px-1.5 py-px text-[10px] font-bold text-lc-black"
             >
               {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
@@ -143,8 +143,8 @@ export function GroupNode({
           <button
             onClick={toggleCollapsed}
             className="flex shrink-0 items-center justify-center px-2 py-1.5 text-lc-white/70 hover:text-lc-green"
-            aria-label={collapsed ? 'Expand publications' : 'Collapse publications'}
-            title={collapsed ? 'Expand publications' : 'Collapse publications'}
+            aria-label={collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
+            title={collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
           >
             <svg
               className={`h-3.5 w-3.5 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}

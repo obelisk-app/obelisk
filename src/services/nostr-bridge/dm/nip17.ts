@@ -5,6 +5,7 @@
  * devices. Post-quantum when the conversation qualifies. Pure move from
  * `client.ts`; the inbound half is `dm/inbox.ts`.
  */
+import { CodedError } from '@/utils/errors/codes';
 import { getEventHash, type Event as NostrEvent, type UnsignedEvent } from 'nostr-tools';
 import { KIND_DM_FILE_RUMOR } from '@/utils/nip-kinds';
 import { KIND_GIFT_WRAP, buildChatMessage, sealAndGiftWrap } from '@nostr-wot/dm';
@@ -47,9 +48,9 @@ export class Nip17SendModule {
   async publish({ recipientPubkey, content, clientTag, createdAt, file, extraTags }: DmSend): Promise<void> {
     try {
       const me = this.ctx.session()?.pubKeyHex;
-      if (!me) throw new Error('Not logged in');
+      if (!me) throw new CodedError('not-logged-in', 'Not logged in');
       const signer = this.deps.dmSigner();
-      if (!signer) throw new Error('Not logged in');
+      if (!signer) throw new CodedError('not-logged-in', 'Not logged in');
       // ONE rumor, sealed twice, once for the recipient, once for us (see
       // `publishSelfCopy`). The rumor's id is what deduplicates the
       // two copies on ingest, so the second wrap must reuse this exact
@@ -229,7 +230,7 @@ export class Nip17SendModule {
           kind: 'dm-self-copy-shares-relay',
           relays: targets,
           eventKind: KIND_GIFT_WRAP,
-          reason: 'own inbox is a subset of the recipient copy targets',
+          reason: 'own inbox is a subset of the recipient copy targets', // i18n-exempt: relay debug panel text
         });
       }
       // `quiet`: the user already saw one "Publishing" entry for this

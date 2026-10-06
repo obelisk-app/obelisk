@@ -1,1 +1,109 @@
-{}
+{
+  "generic": "Algo salió mal. Probá de nuevo.",
+  "codes": {
+    "not-logged-in": "No iniciaste sesión. Entrá y probá de nuevo.",
+    "not-ready": "Obelisk todavía está arrancando. Probá de nuevo en un momento.",
+    "offline": "Estás sin conexión. Revisá tu conexión.",
+    "no-relays-connected": "No se pudo conectar con ningún relay.",
+    "extension-missing": "No encontramos una extensión de Nostr en el navegador. Instalá o desbloqueá una y probá de nuevo.",
+    "extension-no-nip04": "Tu extensión no puede cifrar ni descifrar mensajes NIP-04.",
+    "extension-no-nip44": "Tu extensión no puede cifrar ni descifrar mensajes NIP-44.",
+    "signer-no-nip44": "Tu firmante no admite cifrado NIP-44.",
+    "signer-unsupported": "Tu método de inicio de sesión no puede firmar esto acá. Entrá con una extensión o un firmante remoto.",
+    "pq-unavailable": "El cifrado poscuántico necesita una extensión del navegador que lo admita.",
+    "signer-timeout": "Tu firmante no respondió a tiempo. Revisalo y probá de nuevo.",
+    "signer-reset": "Se canceló porque cambió tu sesión.",
+    "publish-rejected": "Ningún relay aceptó esto.",
+    "publish-timeout": "Ningún relay respondió a tiempo. Revisá tu conexión y probá de nuevo.",
+    "auth-refused": "El relay no aceptó tu autenticación.",
+    "not-whitelisted": "Este relay solo acepta las claves de su lista, y la tuya no está.",
+    "relay-error": "El relay rechazó el pedido.",
+    "invalid-relay-url": "Esa no es una dirección de relay válida. Usá una dirección wss:// pública.",
+    "dms-off": "Los mensajes directos están desactivados en tu configuración.",
+    "files-need-nip17": "Los archivos cifrados necesitan NIP-17, y esta conversación usa NIP-04.",
+    "search-timeout": "La búsqueda tardó demasiado. Probá de nuevo.",
+    "own-packs-only": "Solo podés borrar tus propios paquetes.",
+    "profile-load-failed": "No se pudo cargar tu perfil actual. Probá de nuevo.",
+    "profile-lookup-timeout": "Buscar el perfil tardó demasiado. Probá de nuevo.",
+    "mute-list-load-failed": "No se pudo cargar tu lista de silenciados. Probá de nuevo.",
+    "invalid-bunker-url": "Esa dirección de bunker no es válida.",
+    "bunker-missing-secret": "La vinculación con el firmante remoto quedó incompleta. Vinculalo de nuevo.",
+    "bunker-no-session": "No hay una sesión de firmante remoto para restaurar. Entrá de nuevo.",
+    "nostrconnect-cancelled": "Conexión cancelada.",
+    "call-relay-failed": "No se pudo llegar a un relay para la llamada."
+  },
+  "activity": {
+    "signExtension": {
+      "pending": "Esperando la firma de la extensión",
+      "ok": "Firmado",
+      "error": "No se pudo firmar"
+    },
+    "signBunker": {
+      "pending": "Esperando la firma del bunker",
+      "ok": "Firmado",
+      "error": "No se pudo firmar"
+    },
+    "signLocal": {
+      "pending": "Firmando el evento",
+      "ok": "Firmado",
+      "error": "No se pudo firmar"
+    },
+    "publish": {
+      "pending": "Publicando en los relays",
+      "ok": "Publicado",
+      "error": "No se pudo publicar"
+    },
+    "connect": {
+      "pending": "Conectando con los relays",
+      "ok": "Conectado",
+      "error": "No se pudo conectar"
+    },
+    "reconnect": {
+      "pending": "Reconectando con el relay",
+      "ok": "Reconectado",
+      "error": "No se pudo reconectar"
+    },
+    "relayAuth": {
+      "pending": "Autenticando con {target}",
+      "ok": "Autenticado con {target}",
+      "error": "Falló la autenticación con el relay"
+    },
+    "bunkerConnect": {
+      "pending": "Conectando con tu firmante remoto",
+      "ok": "Firmante remoto conectado",
+      "error": "No se pudo conectar con el firmante remoto"
+    },
+    "bunkerScan": {
+      "pending": "Escaneá el código QR con tu firmante de Nostr",
+      "ok": "Firmante conectado",
+      "error": "No se pudo vincular por QR"
+    }
+  },
+  "kinds": {
+    "number": "kind {kind}",
+    "relayAuth": "Autenticación NIP-42 con el relay",
+    "message": "Enviar mensaje",
+    "dm": "Mensaje directo",
+    "groupMetadata": "Metadatos del grupo",
+    "groupAdmins": "Admins del grupo",
+    "groupMembers": "Miembros del grupo",
+    "reaction": "Reacción",
+    "appData": "Datos de la app",
+    "relayList": "Lista de relays",
+    "event": "Evento de Nostr"
+  },
+  "status": {
+    "untitledCategory": "Sin título"
+  },
+  "panel": {
+    "title": "Algo se rompió en esta pantalla",
+    "body": "El chat encontró un error y dejó de renderizar. Tus claves y tus mensajes están a salvo: no se perdió nada, es solo la vista. Probá de nuevo; si sigue pasando, limpiar el caché local lo reconstruye desde el relay.",
+    "retry": "Probar de nuevo",
+    "reload": "Recargar la página",
+    "clear": "Limpiar caché local y recargar",
+    "clearing": "Limpiando…",
+    "cleared": "{count, plural, one {Se limpió # entrada} other {Se limpiaron # entradas}}, recargando…",
+    "home": "Volver al inicio",
+    "details": "Detalles del error"
+  }
+}

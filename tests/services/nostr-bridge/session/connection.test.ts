@@ -56,10 +56,11 @@ describe('session/connection', () => {
 
   it('marks the relay unreachable and rethrows when no handshake succeeds', async () => {
     const { conn, deps, state } = setup(async () => { throw new Error('refused'); });
-    await expect(conn.connect()).rejects.toThrow('no relays connected');
+    await expect(conn.connect()).rejects.toMatchObject({ message: 'no relays connected', code: 'no-relays-connected' });
     await Promise.resolve();
     expect(deps.setRelayAccess).toHaveBeenCalledWith(RELAY, 'unreachable');
-    expect(state.connectionState.get()).toBe('Error:no relays connected');
+    // The suffix is the code, so the banner can translate it (errorText reads a bare code).
+    expect(state.connectionState.get()).toBe('Error:no-relays-connected');
   });
 
   it('reads a drop of a socket it saw up, and opens the gate when the hub brings it back', () => {
