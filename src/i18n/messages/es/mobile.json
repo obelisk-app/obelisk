@@ -239,7 +239,7 @@
   },
   "zap": {
     "title": "Enviar un zap",
-    "walletHint": "Billetera · NWC · revisá en preferencias",
+    "walletHint": "Billetera · NWC o WebLN · revisá en Preferencias",
     "custom": "otro"
   },
   "relay": {

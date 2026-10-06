@@ -56,7 +56,7 @@
       "title": "Chat em três painéis, lista de membros e reações",
       "alt": "Obelisk no computador, no Chat Geral público: barra de servidores, lista de canais, mensagens no centro com reações e prévia de link, e a lista de membros à direita.",
       "desc": "O layout familiar do Discord (barra de servidores, lista de canais, fluxo de mensagens, barra lateral de membros) ligado direto aos eventos NIP-29 do relay. Cada mensagem é um evento Nostr assinado: sem backend, sem formato proprietário.",
-      "features": "Respostas, reações e prévias de link|A lista de membros mostra ao vivo os membros NIP-29 do relay|Mande um zap Lightning em qualquer mensagem via NIP-57 + NWC"
+      "features": "Respostas, reações e prévias de link|A lista de membros mostra ao vivo os membros NIP-29 do relay|Mande um zap Lightning em qualquer mensagem via NIP-57, pago via NWC ou uma extensão WebLN"
     },
     "shot2": {
       "badge": "Publicações",

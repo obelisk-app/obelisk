@@ -143,7 +143,7 @@ The session record lives in `localStorage`, but its secrets (an nsec, a bunker U
 - Real-time chat (groups, channels, reactions, mentions, NIP-50 search)
 - Voice channels (P2P mesh, optional SFU for larger rooms)
 - Encrypted DMs (NIP-17 gift wraps by default, NIP-04 per thread on request; NIP-65 / kind 10050 relay routing) and 1:1 voice and video calls
-- Bitcoin zaps in chat and paying invoices posted in chat (NIP-57 zaps through a WebLN browser wallet; no wallet credentials reach Obelisk)
+- Bitcoin zaps in chat and paying invoices posted in chat (NIP-57 zaps, paid by a wallet connected with Nostr Wallet Connect in Settings > Wallet, else a WebLN browser extension; the connection link is sealed in the browser and no Obelisk server is in the payment path)
 - Operator-controlled branding & layout (NIP-78, kind 30078)
 - Image uploads (Blossom, BUD-01 auth)
 

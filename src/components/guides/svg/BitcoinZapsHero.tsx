@@ -158,7 +158,7 @@ export default function BitcoinZapsHero() {
       {/* legend */}
       <g fontSize="11" fontWeight="600">
         <circle cx="40" cy="24" r="6" fill="#f7b32b" />
-        <text x="52" y="28" fill="#fafafa">Lightning (NIP-47)</text> {/* i18n-exempt: protocol name */}
+        <text x="52" y="28" fill="#fafafa">Lightning (NIP-57)</text> {/* i18n-exempt: protocol name */}
         <circle cx="220" cy="24" r="6" fill="#b4f953" />
         <text x="232" y="28" fill="#fafafa">{t('guides.art.bitcoinZaps.chatMessage')}</text>
       </g>

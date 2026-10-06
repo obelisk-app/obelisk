@@ -3,6 +3,7 @@
 **Date:** 2026-04-26
 **Status:** Approved (user said "go ahead, do not wait for approval")
 **Author:** Claude (brainstormed with Leon)
+**Superseded:** written for the retired Postgres server. The relay-only app has no wallet server, no `/api/wallet` routes and no Socket.io; payments are described in [../../bitcoin-zaps-nwc.md](../../bitcoin-zaps-nwc.md).
 
 ## 1. Goals
 

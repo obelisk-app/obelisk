@@ -56,7 +56,7 @@
       "title": "Three-pane chat, member list and reactions",
       "alt": "Obelisk desktop view of the public General Chat: server rail, channel list, central message stream with reactions and a link preview, and the right-side member list.",
       "desc": "The familiar Discord layout (server rail, channel list, message stream, member sidebar) wired straight to NIP-29 events on the relay. Every message is a signed Nostr event: no backend, no proprietary format.",
-      "features": "Replies, reactions and rich link previews|Member list reflects the relay's NIP-29 roster live|Lightning zap any message via NIP-57 + NWC"
+      "features": "Replies, reactions and rich link previews|Member list reflects the relay's NIP-29 roster live|Lightning zap any message via NIP-57, paid with NWC or a WebLN extension"
     },
     "shot2": {
       "badge": "Publications",

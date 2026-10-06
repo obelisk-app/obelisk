@@ -7,7 +7,8 @@ so the next pass on the SFU project has a punch list.
 The dex client was tightened in this same change to:
 
 - Drop "fall back to mesh" when the SFU is unreachable. SFU-pinned channels
-  now error clearly instead of silently degrading to a 6–8-peer mesh.
+  now error clearly instead of silently degrading to a mesh, which holds at most 4 people
+  (`MAX_PARTICIPANTS` in `src/services/voice/constants.ts`).
 - Prune remote tracks on `peerLeft` and on every `participantList` snapshot,
   not just on `producerClosed`. This works around (1) below.
 

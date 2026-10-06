@@ -53,7 +53,7 @@
       "howObeliskWorks": "Cómo funciona Obelisk: la app web de Obelisk en tu navegador firma eventos con tu clave (en una extensión, una app firmante o una sesión cifrada en el dispositivo) y los manda directo a tu servidor, un relay NIP-29 dibujado como el Obelisco, que guarda canales, mensajes y roles y hace cumplir sus reglas. La app llega por su cuenta a otros relays Nostr para perfiles y DMs; la voz va de par a par o por un SFU, y los zaps se pagan desde una wallet Lightning.",
       "wot": "Grafo de Web of Trust de Nostr para frenar el spam: tu pubkey en el centro, nodos verde lima de alta confianza conectados a través de tus follows, y nodos de spam con borde rojo empujados a la periferia.",
       "futureRelays": "El futuro de Nostr: una malla de grupos basados en relays que intercambian mensajes NIP-29 cifrados sin servidor central, con todos los relays en pie de igualdad.",
-      "bitcoinZaps": "Zaps de Bitcoin Lightning en el chat: un mensaje de chat al que entra un rayo brillante, con partículas de satoshis orbitando, que representa un zap enviado por Nostr Wallet Connect (NIP-47).",
+      "bitcoinZaps": "Zaps de Bitcoin Lightning en el chat: un mensaje de chat al que entra un rayo brillante, con partículas de satoshis orbitando, que representa un zap pagado desde tu wallet Lightning, por Nostr Wallet Connect (NIP-47) o una extensión WebLN del navegador.",
       "adminCli": "Las herramientas de admin de Obelisk dentro de la app: los ajustes del servidor del operador del relay (perfil, emojis, canales, roles, miembros) y los ajustes de canal de un admin (acceso, tipo, miembros), que publican eventos firmados en un relay NIP-29 que los hace cumplir.",
       "swapAnything": "El ecosistema Obelisk: un relay Nostr que podés alojar vos mismo, conectado a un cliente de chat, un SFU de voz y un motor de bots: cada pieza se puede reemplazar por separado, nada queda atado.",
       "obeliskBots": "Ilustración del zap bot de Obelisk: un robot con estilo y anteojos negros que escucha recibos de zap y reacciones de grupo en Nostr, y después publica anuncios kind 9 firmados en grupos NIP-29.",
@@ -114,8 +114,8 @@
     },
     "bitcoinZaps": {
       "title": "Zaps de Bitcoin en el chat",
-      "desc": "Un mensaje de chat al que entra un rayo brillante, con partículas de sats orbitando, que representa un zap Lightning enviado por Nostr Wallet Connect.",
-      "wallet": "wallet NWC",
+      "desc": "Un mensaje de chat al que entra un rayo brillante, con partículas de sats orbitando, que representa un zap Lightning pagado desde tu wallet, por Nostr Wallet Connect o una extensión WebLN.",
+      "wallet": "Tu wallet",
       "chatMessage": "mensaje de chat"
     },
     "adminCli": {

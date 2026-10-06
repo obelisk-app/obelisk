@@ -239,7 +239,7 @@
   },
   "zap": {
     "title": "Send a zap",
-    "walletHint": "Wallet · NWC · check on settings",
+    "walletHint": "Wallet · NWC or WebLN · see Preferences",
     "custom": "custom"
   },
   "relay": {

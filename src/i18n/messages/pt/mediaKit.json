@@ -134,7 +134,7 @@
     "tagline": "Chat em grupo com identidade Nostr",
     "oneLiner": "Sem e-mails. Sem senhas. Identidade criptográfica.",
     "shortPitch": "Obelisk é um chat em grupo no estilo Discord em que a identidade vem do seu par de chaves Nostr. Sem e-mails, sem senhas: só identidade criptográfica.",
-    "longPitch": "Obelisk é um aplicativo de chat em grupo que funciona inteiramente sobre relays Nostr. Implementa o NIP-29 para grupos, NIP-04/NIP-17 para mensagens diretas, voz P2P via WebRTC sinalizado pelo Nostr mais voz por SFU para salas grandes, e pagamentos Lightning via NIP-47 (Nostr Wallet Connect). Sem backend, sem banco de dados: o cliente fala direto com os relays.",
+    "longPitch": "Obelisk é um aplicativo de chat em grupo que funciona inteiramente sobre relays Nostr. Implementa o NIP-29 para grupos, NIP-04/NIP-17 para mensagens diretas, voz P2P via WebRTC sinalizado pelo Nostr mais voz por SFU para salas grandes, e zaps Lightning via NIP-57, pagos via Nostr Wallet Connect (NIP-47) ou uma extensão WebLN do navegador. Sem backend, sem banco de dados: o cliente fala direto com os relays.",
     "monoTagline": "Chat em grupo nativo do Nostr",
     "poweredBy": "Com tecnologia Obelisk",
     "ogComment": "Adicione estas tags ao head da sua página para as prévias de compartilhamento"

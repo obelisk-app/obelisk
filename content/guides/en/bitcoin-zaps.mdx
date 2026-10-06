@@ -1,6 +1,6 @@
 ---
 title: Bitcoin zaps in chat
-description: Obelisk lets you send Bitcoin over Lightning directly from a chat message using NIP-57 zaps and Nostr Wallet Connect (NIP-47). No custodian, no platform fee, no middleman. Just your wallet, the recipient's wallet, and a signed Nostr event.
+description: Obelisk lets you send Bitcoin over Lightning directly from a chat message using NIP-57 zaps, paid by a wallet you connect with Nostr Wallet Connect (NIP-47) or by a WebLN browser extension. No custodian, no platform fee, no middleman. Just your wallet, the recipient's wallet, and a signed Nostr event.
 heroComponent: bitcoin-zaps
 publishedAt: '2026-04-18'
 updatedAt: '2026-10-06'
@@ -11,32 +11,33 @@ tags: [bitcoin, lightning, nwc, nip-47, nip-57, zaps]
 
 A **zap** is a Lightning payment that's also a public Nostr event. You pay sats to someone over Lightning, and the receipt (a signed `kind 9735` event) is published to the relay so everyone in the conversation sees that the sats moved.
 
-In Obelisk, a zap is just a button on a message. Click it, pick an amount, your wallet signs and pays the invoice, the recipient's wallet receives, and the chat shows the zap inline.
+In Obelisk, a zap is just a button on a message. Click it, pick an amount, your wallet pays the invoice, the recipient's wallet receives, and the chat shows the zap inline.
 
 ## What's involved
 
-Zapping uses two NIPs:
+- **NIP-57** defines the zap request and receipt events and the LNURL flow that turns a Nostr identity into a Lightning invoice.
+- **Your wallet** pays that invoice, in one of two ways:
+  - a wallet you connect with **Nostr Wallet Connect** (NWC, NIP-47): Obelisk sends the payment request to your wallet over a Nostr relay;
+  - a **WebLN browser extension** such as Alby: Obelisk hands it the invoice inside the browser.
 
-- **NIP-57**: defines the zap request/receipt event format and the LNURL flow that turns a Nostr identity into a Lightning invoice
-- **NIP-47**: Nostr Wallet Connect (NWC), the protocol that lets the app ask your wallet to pay an invoice over Nostr, without ever holding your keys
-
-Combined, they let Obelisk send sats from your wallet to anyone with a `lud16` (Lightning address) in their Nostr profile, without us touching the funds, the keys, or even the wallet.
+Either way, Obelisk sends sats from your wallet to anyone with a `lud16` (Lightning address) in their Nostr profile, and never touches the funds or your wallet's keys.
 
 ## How it works in the app
 
-1. **Connect a wallet.** Open settings, paste a Nostr Wallet Connect URI from any NWC-compatible wallet (Alby Hub, Mutiny, Phoenix, etc.). The URI is stored in your browser, encrypted to your Nostr key.
+1. **Set up a wallet.** Either open **Settings > Wallet** (on the phone, **Preferences**) and paste the Nostr Wallet Connect link from your wallet's app (Alby Hub, for example), or install a WebLN extension such as Alby. If you have both, the connected wallet pays. The zap window says which one will.
 2. **Pick a message.** Click the zap button on a chat message.
-3. **Pick an amount.** Default amounts are configurable; you can also enter a custom number.
-4. **Sign and pay.** Obelisk builds a `kind 9734` zap request, sends it to the recipient's LNURL endpoint to get a Lightning invoice, and asks your wallet to pay the invoice: over NWC, or through a browser wallet extension (WebLN).
-5. **The receipt appears.** The recipient's LNURL endpoint publishes a `kind 9735` zap receipt to the relay. The chat shows the zap.
+3. **Pick an amount.** Choose a quick amount (21 to 21,000 sats) or type your own.
+4. **Sign and pay.** Obelisk builds a `kind 9734` zap request, signs it with your Nostr key, sends it to the recipient's LNURL endpoint to get a Lightning invoice, and asks your wallet to pay it.
+5. **The zap appears.** Obelisk posts a ⚡ reaction carrying the invoice to the channel, and the recipient's LNURL endpoint publishes a `kind 9735` zap receipt. The chat shows the zap.
 
 <Diagram name="zap-flow" caption="The whole zap, end to end. No Obelisk server is in it: the invoice comes from the recipient's Lightning address, your wallet pays it, and the receipt reaches the chat through the relays." />
 
 ## What's private and what isn't
 
 - **The amount and recipient are public.** Anyone reading the channel can see "Alice zapped Bob 1000 sats."
-- **Your wallet's balance is private.** Obelisk never sees it; NWC just passes pay-invoice commands.
-- **Your wallet keys are private.** They never leave your wallet. Obelisk only has permission to ask it to pay invoices, within whatever spend limit you set.
+- **Your wallet's balance is private.** Obelisk never asks for it, or for your history.
+- **Your wallet keys are private.** They never leave your wallet. Over NWC, Obelisk asks the wallet to pay invoices and, when the connection allows it, for its name and spending limit, so Settings can show them. The wallet enforces the limit you set there.
+- **The connection link stays on this device.** The NWC link can spend from your wallet, so Obelisk seals it with a key your browser keeps, for your account only, and never stores it in the clear. Disconnecting or logging out deletes it. If the browser cannot keep that key, the wallet stays connected only until you close or reload the page.
 - **The Lightning routing is private** the same way any Lightning payment is: onion-routed, no on-chain footprint.
 
 ## What does it cost?

@@ -1,6 +1,6 @@
 ---
 title: Zaps de bitcoin no chat
-description: 'O Obelisk permite enviar bitcoin pela Lightning direto de uma mensagem de chat, usando zaps NIP-57 e Nostr Wallet Connect (NIP-47). Sem custodiante, sem taxa de plataforma, sem intermediário: só a sua carteira, a carteira de quem recebe e um evento Nostr assinado.'
+description: 'O Obelisk permite enviar bitcoin pela Lightning direto de uma mensagem de chat, usando zaps NIP-57, pagos por uma carteira que você conecta com Nostr Wallet Connect (NIP-47) ou por uma extensão WebLN do navegador. Sem custodiante, sem taxa de plataforma, sem intermediário: só a sua carteira, a carteira de quem recebe e um evento Nostr assinado.'
 heroComponent: bitcoin-zaps
 publishedAt: '2026-04-18'
 updatedAt: '2026-10-06'
@@ -11,32 +11,33 @@ tags: [bitcoin, lightning, nwc, nip-47, nip-57, zaps]
 
 Um **zap** é um pagamento Lightning que também é um evento Nostr público. Você paga sats para alguém pela Lightning, e o recibo (um evento `kind 9735` assinado) é publicado no relay, para todo mundo na conversa ver que os sats se moveram.
 
-No Obelisk, um zap é só um botão numa mensagem. Você clica, escolhe um valor, sua carteira assina e paga a fatura, a carteira de quem recebe recebe, e o chat mostra o zap ali mesmo.
+No Obelisk, um zap é só um botão numa mensagem. Você clica, escolhe um valor, sua carteira paga a fatura, a carteira de quem recebe recebe, e o chat mostra o zap ali mesmo.
 
 ## O que está envolvido
 
-Zapear usa duas NIPs:
+- **NIP-57** define os eventos de pedido e de recibo de zap, e o fluxo LNURL que transforma uma identidade Nostr numa fatura Lightning.
+- **Sua carteira** paga essa fatura, de um destes dois jeitos:
+  - uma carteira que você conecta com **Nostr Wallet Connect** (NWC, NIP-47): o Obelisk envia o pedido de pagamento à sua carteira por um relay Nostr;
+  - uma **extensão WebLN do navegador**, como o Alby: o Obelisk entrega a fatura a ela dentro do navegador.
 
-- **NIP-57**: define o formato dos eventos de pedido e recibo de zap, e o fluxo LNURL que transforma uma identidade Nostr numa fatura Lightning
-- **NIP-47**: Nostr Wallet Connect (NWC), o protocolo que permite ao app pedir que sua carteira pague uma fatura via Nostr, sem nunca ter as suas chaves
-
-Juntas, elas deixam o Obelisk enviar sats da sua carteira para qualquer pessoa que tenha um `lud16` (endereço Lightning) no perfil Nostr, sem que a gente toque nos fundos, nas chaves ou na carteira.
+Dos dois jeitos, o Obelisk envia sats da sua carteira para qualquer pessoa que tenha um `lud16` (endereço Lightning) no perfil Nostr, sem nunca tocar nos fundos nem nas chaves da sua carteira.
 
 ## Como funciona no app
 
-1. **Conecte uma carteira.** Abra as preferências e cole um URI de Nostr Wallet Connect de qualquer carteira compatível com NWC (Alby Hub, Mutiny, Phoenix etc.). O URI fica guardado no seu navegador, criptografado para a sua chave Nostr.
+1. **Prepare uma carteira.** Abra **Configurações > Carteira** (no celular, **Preferências**) e cole o link de Nostr Wallet Connect que o app da sua carteira fornece (o Alby Hub, por exemplo), ou instale uma extensão WebLN como o Alby. Se você tiver as duas, quem paga é a carteira conectada. A janela do zap mostra qual vai pagar.
 2. **Escolha uma mensagem.** Clique no botão de zap da mensagem.
-3. **Escolha um valor.** Os valores padrão são configuráveis; você também pode digitar um número qualquer.
-4. **Assine e pague.** O Obelisk monta um pedido de zap `kind 9734`, envia ao endpoint LNURL de quem recebe para obter uma fatura Lightning, e pede à sua carteira que pague a fatura: via NWC, ou por uma extensão de carteira no navegador (WebLN).
-5. **O recibo aparece.** O endpoint LNURL de quem recebe publica um recibo de zap `kind 9735` no relay. O chat mostra o zap.
+3. **Escolha um valor.** Use um valor rápido (de 21 a 21.000 sats) ou digite o seu.
+4. **Assine e pague.** O Obelisk monta um pedido de zap `kind 9734`, assina com a sua chave Nostr, envia ao endpoint LNURL de quem recebe para obter uma fatura Lightning, e pede à sua carteira que a pague.
+5. **O zap aparece.** O Obelisk publica no canal uma reação ⚡ com a fatura, e o endpoint LNURL de quem recebe publica um recibo de zap `kind 9735`. O chat mostra o zap.
 
 <Diagram name="zap-flow" caption="O zap inteiro, de ponta a ponta. Nenhum servidor do Obelisk participa: a fatura vem do endereço Lightning de quem recebe, sua carteira paga, e o recibo chega ao chat pelos relays." />
 
 ## O que é privado e o que não é
 
 - **O valor e quem recebe são públicos.** Qualquer pessoa lendo o canal vê "Alice zapeou 1000 sats para Bob".
-- **O saldo da sua carteira é privado.** O Obelisk nunca o vê; o NWC só passa comandos de pagar fatura.
-- **As chaves da sua carteira são privadas.** Elas nunca saem da carteira. O Obelisk só tem permissão para pedir que ela pague faturas, dentro do limite de gasto que você definir.
+- **O saldo da sua carteira é privado.** O Obelisk nunca o pede, nem o seu histórico.
+- **As chaves da sua carteira são privadas.** Elas nunca saem da carteira. Via NWC, o Obelisk pede à carteira que pague faturas e, quando a conexão permite, o nome dela e o limite de gastos, para mostrá-los nas Configurações. Você define o limite na sua carteira, e ela o aplica.
+- **O link de conexão fica neste dispositivo.** O link NWC pode gastar da sua carteira, então o Obelisk o lacra com uma chave que o seu navegador guarda, só para a sua conta, e nunca o guarda em texto aberto. Desconectar ou sair da conta o apaga. Se o navegador não conseguir guardar essa chave, a carteira fica conectada só até você fechar ou recarregar a página.
 - **O roteamento Lightning é privado** do mesmo jeito que qualquer pagamento Lightning: roteado em cebola, sem pegada on-chain.
 
 ## Quanto custa?

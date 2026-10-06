@@ -34,7 +34,7 @@
       },
       "bitcoinZaps": {
         "title": "Zaps de Bitcoin no chat",
-        "desc": "Mande sats de qualquer mensagem com zaps NIP-57 e Nostr Wallet Connect. Sem plataforma, sem taxa."
+        "desc": "Mande sats de qualquer mensagem com zaps NIP-57, pagos com Nostr Wallet Connect ou uma extensão do navegador. Sem plataforma, sem taxa."
       },
       "adminCli": {
         "title": "Admins e papéis NIP-29",
@@ -127,7 +127,7 @@
     },
     "zaps": {
       "title": "Zaps de Bitcoin no chat",
-      "desc": "Mande sats de qualquer mensagem com zaps NIP-57 e Nostr Wallet Connect (NIP-47). Sem custodiante, sem taxa de plataforma, sem intermediário."
+      "desc": "Mande sats de qualquer mensagem com zaps NIP-57, pagos por uma carteira que você conecta com Nostr Wallet Connect (NIP-47) ou por uma extensão WebLN do navegador. Sem custodiante, sem taxa de plataforma, sem intermediário."
     },
     "games": {
       "title": "Jogos no relay",
@@ -230,7 +230,7 @@
     },
     "phase3": {
       "title": "Zaps Lightning",
-      "items": "Pedidos de zap NIP-57|Nostr Wallet Connect (NIP-47)|Valores de zap por mensagem"
+      "items": "Pedidos de zap NIP-57|Carteiras Nostr Wallet Connect (NIP-47) e WebLN|Valores de zap por mensagem"
     },
     "phase6": {
       "title": "Remoção do backend",
@@ -259,7 +259,7 @@
       "nip29": "Grupos administrados pelo relay",
       "nip17": "DMs com gift wrap",
       "nostrWot": "Perfis, WoT, gift wrap, pós-quântico",
-      "zaps": "Zaps Lightning e NWC",
+      "zaps": "Zaps Lightning via NWC ou WebLN",
       "zustand": "Estado do cliente",
       "tailwind": "Estilos"
     }
