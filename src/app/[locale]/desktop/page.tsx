@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import IntlScope from '@/i18n/IntlScope';
 import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
 import { tourJsonLd, tourMetadata, type Tour } from '@/utils/seo/showcase';
+import JsonLd from '@/components/seo/JsonLd';
 import DesktopShowcase from './DesktopShowcase';
 
 const TOUR: Tour = {
@@ -12,8 +13,6 @@ const TOUR: Tour = {
     { path: '/pictures-for-posts/desktop-forums-view.png', nameKey: 'seo.desktop.shots.publications', width: 1470, height: 799 },
     { path: '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png', nameKey: 'seo.desktop.shots.voice', width: 1470, height: 799 },
   ],
-  ogImage: { url: '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png', width: 1470, height: 799 },
-  twitterImage: '/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png',
   keywords: [
     'Discord alternative desktop', 'Nostr desktop chat', 'NIP-29 group chat', 'mediasoup SFU voice',
     'self-hosted Discord', 'Nostr publications', 'encrypted group DMs', 'Lightning zaps chat',
@@ -31,7 +30,7 @@ export default async function DesktopPage({ params }: LocaleParams) {
   const jsonLd = tourJsonLd(TOUR, await getTranslations({ locale }), locale);
   return (
     <IntlScope scope="showcase">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <JsonLd data={jsonLd} />
       <DesktopShowcase />
     </IntlScope>
   );

@@ -14,9 +14,11 @@
  */
 
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { pageLocale } from '@/i18n/page-locale';
-import { localizedAlternates, ogLocales } from '@/utils/seo/alternates';
+import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
+import { cardAlt, cardImage } from '@/utils/seo/og';
 import { Link } from '@/i18n/navigation';
 import { serverLocale } from '@/services/server/locale';
 import { parseIdentifier } from '@/services/social/identifier';
@@ -28,7 +30,6 @@ import {
   fetchAuthorRelays,
   fetchProfilesForViewer,
   topHashtags,
-  type ViewerProfile,
 } from '@/services/server/nostr-fetch';
 import ViewerHeader from '@/components/social/ViewerHeader';
 import AuthorContext from '@/app/[locale]/notes/[id]/AuthorContext';
@@ -39,57 +40,47 @@ export const revalidate = 300;
 
 type Params = { params: Promise<{ id: string; locale: string }> };
 
-/** kind-0 metadata only - the feed itself needs a signed-in client. */
-async function resolve(id: string): Promise<ViewerProfile | null> {
+/** The pubkey an `/p/<id>` names, or a 404 when the id is not a profile identifier. */
+function profilePubkey(id: string): string {
   const target = parseIdentifier(id);
-  if (!target || target.kind !== 'profile') return null;
-  return fetchAuthorForViewer(target.pubkey);
+  if (!target || target.kind !== 'profile') notFound();
+  return target.pubkey;
 }
 
+/**
+ * Someone's Nostr profile: out of search (`noindex, follow`) for the same
+ * reason as a note; the card is what the page is for.
+ */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const locale = await pageLocale(params);
   const t = await getTranslations({ locale });
   const { id } = await params;
-  const profile = await resolve(id);
+  const path = `/p/${id}`;
+  const profile = await fetchAuthorForViewer(profilePubkey(id));
   if (!profile) {
-    return { title: t('seo.profile.notFound'), robots: { index: false } };
+    const title = t('seo.profile.notFound');
+    return noindexMetadata({ locale, path, title, image: cardImage(locale, path, cardAlt(t, renderedTitle(title))) });
   }
 
   const name = displayNameFor(profile);
-  const description = profile.about?.trim().slice(0, 200) || t('seo.profile.onNostr', { name });
-
-  return {
-    // The root layout's template already appends "· Obelisk"; adding it
-    // here produced "Name · Obelisk · Obelisk" in the tab and in previews.
+  return noindexMetadata({
+    locale,
+    path,
+    // The root layout's template already appends "· Obelisk".
     title: name,
-    description,
-    // User content: English canonical, all three languages as alternates.
-    alternates: localizedAlternates(locale, `/p/${id}`, 'en'),
-    openGraph: {
-      ...ogLocales(locale),
-      type: 'profile',
-      title: name,
-      description,
-      siteName: 'Obelisk',
-      ...(profile.picture ? { images: [{ url: profile.picture }] } : {}),
-    },
-    twitter: {
-      card: 'summary',
-      title: name,
-      description,
-      ...(profile.picture ? { images: [profile.picture] } : {}),
-    },
-  };
+    description: profile.about?.trim().slice(0, 200) || t('seo.profile.onNostr', { name }),
+    type: 'profile',
+    image: cardImage(locale, path, cardAlt(t, renderedTitle(name))),
+  });
 }
 
 export default async function ProfileViewerPage({ params }: Params) {
   const { t } = await serverLocale();
   const { id } = await params;
-  const target = parseIdentifier(id);
-  const pubkey = target?.kind === 'profile' ? target.pubkey : null;
-  const profile = pubkey ? await fetchAuthorForViewer(pubkey) : null;
+  const pubkey = profilePubkey(id);
+  const profile = await fetchAuthorForViewer(pubkey);
 
-  if (!pubkey || !profile) {
+  if (!profile) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-lc-black px-5 text-center text-lc-white">
         <div>

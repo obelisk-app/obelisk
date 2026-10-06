@@ -1,93 +1,44 @@
-'use client';
-
-import { use, useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
-import { useRouter } from '@/i18n/navigation';
-import { nostrActions } from '@/services/nostr-bridge';
+import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
+import { pageLocale } from '@/i18n/page-locale';
+import type { MessageKey } from '@/i18n/keys';
 import { decodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
-import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
-import { errorText } from '@/utils/errors/error-text';
+import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
+import { cardAlt, cardImage } from '@/utils/seo/og';
+import RelayShareLanding from './RelayShareLanding';
 
-const RELAY_BRANDING: Record<string, { logo: string; alt: string }> = {
-  'wss://lacrypta-relay.obelisk.ar': { logo: '/lacrypta-logo.png', alt: 'La Crypta' }, // i18n-exempt: the relay's brand name
+/** Relays with their own share-link card, by URL: the copy is in `seo.relay.<brand>`. */
+const RELAY_BRANDING: Record<string, 'laCrypta'> = {
+  'wss://lacrypta-relay.obelisk.ar': 'laCrypta',
 };
 
-export default function RelayShareLinkPage({ params }: { params: Promise<{ code: string }> }) {
-  const t = useTranslations();
-  const { code } = use(params);
-  const router = useRouter();
-  // The relay is a pure function of the code; only the add/switch outcome
-  // is state.
-  const relayUrl = useMemo(() => decodeRelayShareCode(code), [code]);
-  const [joinError, setJoinError] = useState<string | null>(null);
-  const error = relayUrl ? joinError : t('settings.relayShare.invalid');
+type Params = { params: Promise<{ code: string; locale: string }> };
 
-  useEffect(() => {
-    const url = relayUrl;
-    if (!url) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        try {
-          await nostrActions.addRelay(url);
-        } catch (e) {
-          // addRelay throws if already added or unreachable - only surface
-          // the unreachable case. We probe by checking the message.
-          const msg = (e as Error).message || '';
-          if (!/already/i.test(msg)) throw e;
-        }
-        if (cancelled) return;
-        await nostrActions.switchRelay(url);
-        if (cancelled) return;
-        // Encode the relay in the URL so AppShell's deep-link effect re-applies
-        // it on mount. Without this, a logged-out visitor whose switchRelay()
-        // can't persist (no session yet) loses the choice on the next reload,
-        // and `initialize()` restores the prior session's relay.
-        const host = (() => {
-          try { return new URL(url).host; } catch { return url.replace(/^wss?:\/\//, '').replace(/\/+$/, ''); }
-        })();
-        router.replace(`/app?relay=${encodeURIComponent(host)}`);
-      } catch (e) {
-        if (!cancelled) setJoinError(errorText(t, e, 'settings.relayShare.failed'));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [relayUrl, router, t]);
+/**
+ * A share link adds a relay and forwards to the app: a doorway, not a page
+ * to find in search (`noindex, follow`). What matters is its card, so the
+ * image is named here, at its public URL: the file convention would build
+ * it from the internal route, `/en/r/...`, which only redirects.
+ */
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const locale = await pageLocale(params);
+  const { code } = await params;
+  const t = await getTranslations({ locale });
+  const relayUrl = decodeRelayShareCode(code);
+  const brand = relayUrl ? RELAY_BRANDING[relayUrl] : undefined;
+  const path = `/r/${encodeURIComponent(code)}`;
+  const title = brand ? t(`seo.relay.${brand}.title` as MessageKey) : t('seo.relay.pageTitle');
+  return noindexMetadata({
+    locale,
+    path,
+    title,
+    description: brand ? t(`seo.relay.${brand}.description` as MessageKey) : t('seo.relay.fallbackDescription'),
+    image: cardImage(locale, path, cardAlt(t, renderedTitle(title))),
+  });
+}
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-lc-black p-6">
-      <div className="lc-card w-full max-w-md rounded-2xl border border-lc-border bg-lc-dark p-6 text-center">
-        {error ? (
-          <>
-            <h1 className="text-lg font-bold text-lc-white">{t('common.relayLanding.failed')}</h1>
-            <p className="mt-2 text-sm text-lc-muted">{error}</p>
-            <Button onClick={() => router.replace('/app')} className="mt-4">
-              {t('common.relayLanding.goToApp')}
-            </Button>
-          </>
-        ) : (
-          <>
-            {relayUrl && RELAY_BRANDING[relayUrl] && (
-              <Image
-                src={RELAY_BRANDING[relayUrl].logo}
-                alt={RELAY_BRANDING[relayUrl].alt}
-                width={96}
-                height={96}
-                className="mx-auto mb-4 h-24 w-24 rounded-xl object-contain"
-                priority
-              />
-            )}
-            <h1 className="text-lg font-bold text-lc-white">{t('common.relayLanding.connecting')}</h1>
-            {relayUrl && (
-              <p className="mt-2 break-all font-mono text-xs text-lc-muted">{relayUrl}</p>
-            )}
-            <div className="lc-spinner mx-auto mt-4" />
-          </>
-        )}
-      </div>
-    </main>
-  );
+export default async function Page({ params }: Params) {
+  await pageLocale(params);
+  const { code } = await params;
+  return <RelayShareLanding code={code} />;
 }

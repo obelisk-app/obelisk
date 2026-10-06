@@ -11,7 +11,9 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { pageLocale } from '@/i18n/page-locale';
-import { localizedAlternates, ogLocales } from '@/utils/seo/alternates';
+import { NOINDEX, noindexMetadata, renderedTitle } from '@/utils/seo/page';
+import { cardAlt, cardImage } from '@/utils/seo/og';
+import { hashtagFromSegment } from '@/utils/social/hashtag-segment';
 import { Link } from '@/i18n/navigation';
 import {
   displayNameFor,
@@ -33,41 +35,32 @@ export const revalidate = 120;
 
 type Params = { params: Promise<{ tag: string; locale: string }> };
 
-/** Tags are lowercase on the wire; anything else finds nothing. */
-function normalizeTag(raw: string): string | null {
-  let value: string;
-  try {
-    value = decodeURIComponent(raw);
-  } catch {
-    value = raw;
-  }
-  const clean = value.trim().replace(/^#/, '').toLowerCase();
-  // Same character class the composer uses when it builds `t` tags.
-  return /^[\p{L}\p{N}_-]{1,80}$/u.test(clean) ? clean : null;
-}
-
+/**
+ * Recent notes under a hashtag, from relays: out of search (`noindex,
+ * follow`), like the note and profile pages; an endless set of URLs whose
+ * content is other people's.
+ */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const locale = await pageLocale(params);
   const t = await getTranslations({ locale });
   const { tag } = await params;
-  const clean = normalizeTag(tag);
-  if (!clean) return { title: t('seo.tag.notFound'), robots: { index: false } };
-
+  const clean = hashtagFromSegment(tag);
+  if (!clean) return { title: t('seo.tag.notFound'), robots: NOINDEX };
+  const path = `/t/${encodeURIComponent(clean)}`;
   const title = `#${clean}`;
-  const description = t('seo.tag.description', { tag: clean });
-  return {
+  return noindexMetadata({
+    locale,
+    path,
     title,
-    description,
-    alternates: localizedAlternates(locale, `/t/${encodeURIComponent(clean)}`, 'en'),
-    openGraph: { ...ogLocales(locale), type: 'website', title, description, siteName: 'Obelisk' },
-    twitter: { card: 'summary', title, description },
-  };
+    description: t('seo.tag.description', { tag: clean }),
+    image: cardImage(locale, path, cardAlt(t, renderedTitle(title))),
+  });
 }
 
 export default async function HashtagPage({ params }: Params) {
   const { t, locale } = await serverLocale();
   const { tag } = await params;
-  const clean = normalizeTag(tag);
+  const clean = hashtagFromSegment(tag);
 
   if (!clean) {
     return (

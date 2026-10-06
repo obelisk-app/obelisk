@@ -14,9 +14,6 @@ export default function FAQItem({ id, question, answer }: Props) {
     <div
       className="lc-card overflow-hidden"
       data-testid={`faq-item-${id}`}
-      itemScope
-      itemProp="mainEntity"
-      itemType="https://schema.org/Question"
     >
       <button
         type="button"
@@ -27,7 +24,6 @@ export default function FAQItem({ id, question, answer }: Props) {
       >
         <h3
           className="text-base md:text-[17px] font-semibold text-lc-white pr-4 leading-snug"
-          itemProp="name"
         >
           {question}
         </h3>
@@ -46,14 +42,10 @@ export default function FAQItem({ id, question, answer }: Props) {
         className={`grid transition-[grid-template-rows] duration-300 ease-out ${
           open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
         }`}
-        itemScope
-        itemProp="acceptedAnswer"
-        itemType="https://schema.org/Answer"
       >
         <div className="overflow-hidden">
           <div
             className="px-6 pb-6 text-[15px] text-lc-muted leading-7"
-            itemProp="text"
           >
             {answer}
           </div>

@@ -25,11 +25,12 @@ describe('FAQItem', () => {
     expect(button.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('emits schema.org microdata attributes', () => {
+  it('carries no microdata: the FAQPage JSON-LD in FaqSection is the one description of the FAQ', () => {
+    // Questions marked up here with no FAQPage around them were a second,
+    // orphaned copy of what the JSON-LD already says.
     render(<FAQItem id="q1" question="What?" answer="Because." />);
     const wrapper = screen.getByTestId('faq-item-q1');
-    expect(wrapper.getAttribute('itemtype')).toBe('https://schema.org/Question');
-    expect(wrapper.querySelector('[itemprop="name"]')?.textContent).toBe('What?');
-    expect(wrapper.querySelector('[itemprop="text"]')?.textContent).toContain('Because.');
+    expect(wrapper.querySelector('[itemscope], [itemprop], [itemtype]')).toBeNull();
+    expect(wrapper.hasAttribute('itemtype')).toBe(false);
   });
 });

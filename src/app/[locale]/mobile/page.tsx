@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import IntlScope from '@/i18n/IntlScope';
 import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
 import { tourJsonLd, tourMetadata, type Tour } from '@/utils/seo/showcase';
+import JsonLd from '@/components/seo/JsonLd';
 import MobileShowcase from './MobileShowcase';
 
 const TOUR: Tour = {
@@ -13,8 +14,6 @@ const TOUR: Tour = {
     { path: '/pictures-for-posts/mobile-login-modal.png', nameKey: 'seo.mobile.shots.login', width: 720, height: 1600 },
     { path: '/pictures-for-posts/mobile-own-profile-view.png', nameKey: 'seo.mobile.shots.profile', width: 720, height: 1600 },
   ],
-  ogImage: { url: '/pictures-for-posts/mobile-showcase-readme.png', width: 3320, height: 1840 },
-  twitterImage: '/pictures-for-posts/mobile-showcase-readme.png',
   keywords: [
     'mobile Discord alternative', 'Nostr mobile chat', 'mobile group chat app', 'NIP-29 mobile',
     'NIP-46 bunker mobile', 'Amber signer', 'mobile voice channels', 'PWA group chat',
@@ -32,7 +31,7 @@ export default async function MobilePage({ params }: LocaleParams) {
   const jsonLd = tourJsonLd(TOUR, await getTranslations({ locale }), locale);
   return (
     <IntlScope scope="showcase">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <JsonLd data={jsonLd} />
       <MobileShowcase />
     </IntlScope>
   );

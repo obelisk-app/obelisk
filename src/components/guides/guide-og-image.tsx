@@ -4,6 +4,7 @@ import { readGuide } from '@/services/guides';
 import type { Locale } from '@/i18n';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { localizedPath } from '@/utils/seo/alternates';
+import { guideSeoText } from '@/utils/seo/guide';
 
 export const ogImageSize = { width: 1200, height: 630 };
 
@@ -17,7 +18,8 @@ export async function renderGuideOgImage(locale: Locale, slug: string) {
   try {
     const guide = await readGuide(locale, slug);
     title = guide.frontmatter.title;
-    description = guide.frontmatter.description;
+    // The search description: written to fit, so the card never cuts it.
+    description = guideSeoText(guide.frontmatter).description;
     tags = guide.frontmatter.tags || [];
   } catch {
     // fall through with defaults
@@ -76,7 +78,7 @@ export async function renderGuideOgImage(locale: Locale, slug: string) {
               fontWeight: 700,
             }}
           >
-            {t('seo.guides.ogLabel')}
+            {t('seo.card.label.guide')}
           </div>
         </div>
 

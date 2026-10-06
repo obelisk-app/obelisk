@@ -5,7 +5,12 @@ import type { Locale } from '@/i18n';
 
 export interface GuideFrontmatter {
   title: string;
+  /** The lede under the title, on the page and on its card. */
   description: string;
+  /** What a search result shows, when the title alone is too short or too long for one. */
+  seoTitle?: string;
+  /** About 70 to 160 characters: the description cut to what a search result shows. */
+  seoDescription?: string;
   heroComponent: string;
   publishedAt: string;
   updatedAt: string;
@@ -90,9 +95,19 @@ export async function readGuide(
   const { data, content } = matter(raw);
   return {
     slug,
-    frontmatter: data as GuideFrontmatter,
+    frontmatter: { ...data, publishedAt: dateField(data.publishedAt), updatedAt: dateField(data.updatedAt) } as GuideFrontmatter,
     content,
   };
+}
+
+/**
+ * Front-matter dates as `YYYY-MM-DD` strings. Quoted dates arrive as
+ * strings; an unquoted `2026-10-06` is parsed by YAML into a Date, which
+ * would otherwise reach the sitemap and JSON-LD as a full timestamp.
+ */
+function dateField(value: unknown): string {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return typeof value === 'string' ? value : '';
 }
 
 /** The article in this language, or the English one when it isn't translated. */
@@ -104,6 +119,15 @@ async function readRaw(locale: Locale, slug: string, root?: string): Promise<str
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT' || locale === FALLBACK_LOCALE) throw err;
     return fs.readFile(path.join(rootDir(root), FALLBACK_LOCALE, `${safe}.mdx`), 'utf8');
+  }
+}
+
+/** The guide, or null when the slug is invalid or no file exists (the caller 404s). */
+export async function readGuideOrNull(locale: Locale, slug: string, root?: string): Promise<Guide | null> {
+  try {
+    return await readGuide(locale, slug, root);
+  } catch {
+    return null;
   }
 }
 

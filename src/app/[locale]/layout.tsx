@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import { headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
-import { LOCALES } from '@/i18n';
+import { DEFAULT_LOCALE, LOCALES, isLocale } from '@/i18n';
 import IntlScope from '@/i18n/IntlScope';
 import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
 import { PWA_ROUTE_GUARD, siteJsonLd, siteMetadata } from '@/utils/seo/site';
@@ -28,19 +28,27 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-/** Site-wide metadata in the URL's language; each page adds its own canonical. */
+/**
+ * Site-wide metadata in the URL's language; each page adds its own canonical.
+ * A segment that is not a language (`/dev/...`, `/x.txt`, which skip the
+ * proxy) gets English here rather than a throw: the page itself still 404s,
+ * and this way the 404 keeps a title.
+ */
 export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
-  const locale = await pageLocale(params);
+  const { locale: segment } = await params;
+  const locale = isLocale(segment) ? segment : DEFAULT_LOCALE;
   return siteMetadata(await getTranslations({ locale }), locale);
 }
 
+/**
+ * Readers can zoom every public page; the app shell and the voice room turn
+ * zoom off in their own layouts.
+ */
 export const viewport: Viewport = {
   themeColor: '#0a0a0a',
   colorScheme: 'dark',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
 };
 
@@ -71,7 +79,7 @@ export default async function LocaleLayout({ children, params }: LocaleParams & 
           // hydration sees nonce="" on the live element. This is intended;
           // suppress the otherwise-confusing warning.
           suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
         />
         {/* PWA route guard (see PWA_ROUTE_GUARD): an installed app opened
             on the landing page jumps to the chat shell in the same

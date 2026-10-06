@@ -8,7 +8,7 @@ import { formatDate, formatDateTime, formatNumber, formatTime, intlLocale } from
  * product, in any language, before or after Portuguese existed.
  */
 describe('formatting in the app’s language', () => {
-  it('maps our locale union onto the BCP-47 tags we publish', () => {
+  it('maps our locale union onto the regional variety the copy is written in', () => {
     expect(intlLocale('en')).toBe('en-US');
     expect(intlLocale('es')).toBe('es-AR');
     expect(intlLocale('pt')).toBe('pt-BR');

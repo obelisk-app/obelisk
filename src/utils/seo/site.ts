@@ -13,7 +13,9 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@/i18n';
 import type { Translate } from '@/i18n/keys';
-import { HREFLANG, SITE_URL, absoluteUrl, ogLocales } from './alternates';
+import { SITE_URL, ogLocales } from './alternates';
+import { SCHEMA, organizationNode, websiteNode } from './jsonld';
+import { SITE_NAME, X_HANDLE } from './page';
 
 const KEYWORDS = [
   'Discord alternative', 'Nostr login', 'Nostr chat', 'Nostr Discord', 'no email no password chat',
@@ -21,8 +23,6 @@ const KEYWORDS = [
   'sovereign identity chat', 'NIP-07', 'NIP-46 bunker', 'Web of Trust',
   'open source Discord alternative', 'La Crypta',
 ];
-
-export const OG_IMAGE = '/og/obelisk.png?v=2';
 
 export function siteMetadata(t: Translate, locale: Locale): Metadata {
   return {
@@ -45,65 +45,35 @@ export function siteMetadata(t: Translate, locale: Locale): Metadata {
       apple: '/icon-512.png',
     },
     manifest: '/manifest.webmanifest',
+    // The fallback for a page that sets none of its own (a 404); the
+    // image comes from `[locale]/opengraph-image.tsx`. Every real page
+    // builds its full card through `pageMetadata`, because Next replaces
+    // `openGraph` and `twitter` wholesale rather than merging these in.
     openGraph: {
-      title: t('seo.site.ogTitle'),
-      description: t('seo.site.ogDescription'),
-      siteName: 'Obelisk',
+      title: t('seo.site.title'),
+      description: t('seo.site.description'),
+      siteName: SITE_NAME,
       ...ogLocales(locale),
       type: 'website',
-      images: [{ url: OG_IMAGE, width: 1200, height: 630, type: 'image/png', alt: t('seo.site.ogImageAlt') }],
     },
-    twitter: {
-      card: 'summary_large_image',
-      title: t('seo.site.ogTitle'),
-      description: t('seo.site.twitterDescription'),
-      creator: '@lacryptaar',
-      images: [OG_IMAGE],
-    },
+    twitter: { card: 'summary_large_image', site: X_HANDLE, creator: X_HANDLE },
+    // Indexing is the default and needs no tag; a page that must stay out
+    // sets `robots` itself (`noindexMetadata`), which replaces this whole
+    // object. These are Google's preview allowances only.
     robots: {
-      index: true,
-      follow: true,
-      nocache: false,
-      googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
+      googleBot: { 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
     },
   };
 }
 
-/** `WebSite` + `Organization` + `SoftwareApplication`, in the page's language. */
+/**
+ * `WebSite` + `Organization` on every page, in the page's language. The app
+ * itself (`WebApplication`) is described on the landing page only.
+ */
 export function siteJsonLd(t: Translate, locale: Locale) {
-  const home = absoluteUrl(locale, '/');
   return {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'WebSite',
-        '@id': `${SITE_URL}/#website`,
-        url: home,
-        name: 'Obelisk',
-        description: t('seo.site.jsonLd.websiteDescription'),
-        inLanguage: HREFLANG[locale],
-        publisher: { '@id': `${SITE_URL}/#organization` },
-      },
-      {
-        '@type': 'Organization',
-        '@id': `${SITE_URL}/#organization`,
-        name: 'La Crypta',
-        url: 'https://lacrypta.ar',
-        logo: `${SITE_URL}/icon-512.png`,
-      },
-      {
-        '@type': 'SoftwareApplication',
-        name: 'Obelisk',
-        applicationCategory: 'CommunicationApplication',
-        operatingSystem: 'Web',
-        description: t('seo.site.jsonLd.appDescription'),
-        inLanguage: HREFLANG[locale],
-        url: home,
-        image: `${SITE_URL}/icon-512.png`,
-        author: { '@id': `${SITE_URL}/#organization` },
-        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-      },
-    ],
+    '@context': SCHEMA,
+    '@graph': [websiteNode(locale, t('seo.site.jsonLd.websiteDescription')), organizationNode()],
   };
 }
 

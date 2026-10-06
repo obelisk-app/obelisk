@@ -14,14 +14,23 @@ import { DEFAULT_LOCALE, LOCALES, type Locale } from '@/i18n';
 
 export const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
 
-/** BCP-47 tags for `hreflang` and JSON-LD `inLanguage`. */
+/**
+ * `hreflang`, JSON-LD `inLanguage` and `<html lang>`: the language alone.
+ * One Spanish version serves every Spanish-speaking country and one
+ * Portuguese version Brazil and Portugal; a region code (`es-AR`) would tell
+ * search engines the page is for Argentina only, and a reader in Mexico or
+ * Spain would be sent to the x-default (English) instead.
+ */
 export const HREFLANG: Record<Locale, string> = {
-  en: 'en-US',
-  es: 'es-AR',
-  pt: 'pt-BR',
+  en: 'en',
+  es: 'es',
+  pt: 'pt',
 };
 
-/** OpenGraph `og:locale` values. */
+/**
+ * OpenGraph `og:locale` values. The format needs a territory, and these name
+ * the variety the copy is written in: Argentine Spanish, Brazilian Portuguese.
+ */
 export const OG_LOCALE: Record<Locale, string> = {
   en: 'en_US',
   es: 'es_AR',
@@ -59,12 +68,12 @@ export function languageAlternates(path: string): Record<string, string> {
 }
 
 /**
- * `alternates` for `generateMetadata`. The canonical is this language's
- * URL; pass `canonicalLocale` to point every language at one URL instead
- * (user content such as `/p/<npub>`, where only the chrome is translated).
+ * `alternates` for `generateMetadata`: the canonical is this language's own
+ * URL, and every language (plus x-default) is listed, the same set on all
+ * three versions so each one confirms the others.
  */
-export function localizedAlternates(locale: Locale, path: string, canonicalLocale: Locale = locale) {
-  return { canonical: absoluteUrl(canonicalLocale, path), languages: languageAlternates(path) };
+export function localizedAlternates(locale: Locale, path: string) {
+  return { canonical: absoluteUrl(locale, path), languages: languageAlternates(path) };
 }
 
 /** `openGraph.locale` and `alternateLocale` for one language. */

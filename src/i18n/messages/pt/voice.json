@@ -33,7 +33,8 @@
   "voicePage": {
     "roomPlaceholder": "nome da sala",
     "title": "Entrar em uma sala de voz",
-    "enter": "Entrar na sala"
+    "enter": "Entrar na sala",
+    "hint": "Digite o mesmo nome em dois dispositivos, com duas chaves Nostr diferentes, para começar uma chamada. Áudio, vídeo e compartilhamento de tela vão direto entre os dois por WebRTC; pelo relay passa só a sinalização."
   },
   "controls": {
     "mute": "Silenciar",

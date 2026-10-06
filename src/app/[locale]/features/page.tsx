@@ -7,7 +7,7 @@ import ShootingStars from '@/components/marketing/ShootingStars';
 import { getTranslations } from 'next-intl/server';
 import IntlScope from '@/i18n/IntlScope';
 import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
-import { absoluteUrl, localizedAlternates, ogLocales } from '@/utils/seo/alternates';
+import { standardPageMetadata } from '@/utils/seo/standard';
 
 /**
  * The screenshots. Their copy - title, description, and the alt text a
@@ -61,10 +61,7 @@ const FEATURES = [
 export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
   const locale = await pageLocale(params);
   const t = await getTranslations({ locale });
-  return {
-    title: t('seo.features.title'),
-    description: t('seo.features.description'),
-    alternates: localizedAlternates(locale, '/features'),
+  return standardPageMetadata(t, locale, 'features', '/features', {
     // Search terms, not copy: these are what people type into a search box,
     // and they are typed in English even by readers browsing in Spanish.
     keywords: [
@@ -77,27 +74,7 @@ export async function generateMetadata({ params }: LocaleParams): Promise<Metada
       'Nostr multiplayer games',
       'self-hosted community chat',
     ],
-    openGraph: {
-      title: t('seo.features.ogTitle'),
-      description: t('seo.features.ogDescription'),
-      url: absoluteUrl(locale, '/features'),
-      siteName: 'Obelisk',
-      ...ogLocales(locale),
-      type: 'website',
-      images: [{
-        url: '/pictures-for-posts/mobile-showcase-readme.png',
-        width: 3320,
-        height: 1840,
-        alt: t('marketing.features.item.pwa.alt'),
-      }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: t('seo.features.twitterTitle'),
-      description: t('seo.features.twitterDescription'),
-      images: ['/pictures-for-posts/mobile-showcase-readme.png'],
-    },
-  };
+  });
 }
 
 export default async function FeaturesPage({ params }: LocaleParams) {

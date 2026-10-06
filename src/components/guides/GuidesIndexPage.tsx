@@ -1,64 +1,37 @@
-import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import type { Locale } from '@/i18n';
 import { listAllGuides } from '@/services/guides';
 import { guidePath } from '@/utils/guides/guide-urls';
-import { absoluteUrl, localizedAlternates, ogLocales } from '@/utils/seo/alternates';
+import { absoluteUrl } from '@/utils/seo/alternates';
+import { breadcrumbJsonLd, collectionJsonLd } from '@/utils/seo/jsonld';
 import GuideCard from '@/components/guides/GuideCard';
 import Navbar from '@/components/marketing/Navbar';
 import Footer from '@/components/marketing/Footer';
-
-export async function buildGuidesIndexMetadata(locale: Locale): Promise<Metadata> {
-  const t = await getTranslations({ locale });
-  const title = t('seo.guides.title');
-  const description = t('seo.guides.description');
-  return {
-    title,
-    description,
-    alternates: localizedAlternates(locale, guidePath()),
-    openGraph: {
-      title,
-      description,
-      url: absoluteUrl(locale, guidePath()),
-      siteName: 'Obelisk',
-      ...ogLocales(locale),
-      type: 'website',
-    },
-    twitter: { card: 'summary_large_image', title, description },
-  };
-}
+import JsonLd from '@/components/seo/JsonLd';
 
 export default async function GuidesIndexPage({ locale }: { locale: Locale }) {
   const guides = await listAllGuides(locale);
   const t = await getTranslations({ locale });
 
-  const breadcrumbLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Obelisk',
-        item: absoluteUrl(locale, '/'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: t('guides.index.title'),
-        item: absoluteUrl(locale, guidePath()),
-      },
-    ],
-  };
+  const url = absoluteUrl(locale, guidePath());
+  const breadcrumb = breadcrumbJsonLd([
+    { name: 'Obelisk', url: absoluteUrl(locale, '/') },
+    { name: t('guides.index.title'), url },
+  ]);
+  const collection = collectionJsonLd({
+    locale,
+    url,
+    name: t('guides.index.heading'),
+    description: t('guides.index.subtitle'),
+    items: guides.map((g) => ({ name: g.frontmatter.title, url: absoluteUrl(locale, guidePath(g.slug)) })),
+  });
 
   return (
     <div className="min-h-screen bg-lc-black lc-grid-bg">
       <Navbar />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
-      />
+      <JsonLd data={collection} />
+      <JsonLd data={breadcrumb} />
 
       <main className="max-w-6xl mx-auto px-6 pt-28 pb-24">
         <div className="mb-10">

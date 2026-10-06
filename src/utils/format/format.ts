@@ -8,21 +8,25 @@
  * changed nothing. That was already wrong before Portuguese existed.
  *
  * The locale a component has is our `Locale` union ('en' | 'es' | 'pt'),
- * which is not what `Intl` wants; `HREFLANG` already maps it to the BCP-47
- * tags we publish in the page head, so the same map is the one source of
- * truth for both.
+ * which is not what `Intl` wants; `INTL_LOCALE` names the regional variety
+ * the copy is written in (Argentine Spanish, Brazilian Portuguese), so
+ * dates and numbers read the way the sentences around them do. The page
+ * head's `hreflang` is the plain language instead (`src/utils/seo/alternates.ts`):
+ * that one says who the page is for, this one how to write a date.
  *
  * Use `useFormat()` from a component. These functions take the locale
  * explicitly so server-rendered pages can use them too, with the locale
  * from `serverLocale()`.
  */
 
-import { HREFLANG } from '@/utils/seo/alternates';
 import { DEFAULT_LOCALE, type Locale } from '@/i18n';
+
+/** The BCP-47 tag `Intl` formats with, per language. */
+export const INTL_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-AR', pt: 'pt-BR' };
 
 /** The BCP-47 tag `Intl` expects for one of our locales. */
 export function intlLocale(locale: Locale): string {
-  return HREFLANG[locale] ?? HREFLANG[DEFAULT_LOCALE];
+  return INTL_LOCALE[locale] ?? INTL_LOCALE[DEFAULT_LOCALE];
 }
 
 type When = Date | number;

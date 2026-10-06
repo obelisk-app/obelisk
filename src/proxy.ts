@@ -3,6 +3,7 @@ import createMiddleware from 'next-intl/middleware';
 import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALES, detectLocale, isLocale } from './i18n/index';
 import { routing } from './i18n/routing';
 import { buildCsp } from './utils/csp';
+import { isCrawler } from './utils/seo/crawler';
 
 /**
  * Per-request CSP nonce, first-visit language, and URL locales.
@@ -15,8 +16,9 @@ import { buildCsp } from './utils/csp';
  *      visitor's language says otherwise: the `locale` cookie (a language
  *      they picked) always wins; without a cookie, the CDN's country and
  *      then Accept-Language may redirect to `/es/...` or `/pt/...`. With no
- *      signal at all (a crawler) the page stays English at `/`. A prefixed
- *      URL is never redirected: the URL is the language.
+ *      signal at all the page stays English at `/`. A crawler or a
+ *      link-preview bot is never redirected (it must read the URL it asked
+ *      for), and a prefixed URL never is either: the URL is the language.
  *   3. next-intl maps the URL to the `[locale]` route and keeps the cookie
  *      in step with the URL's language; we add the nonce to the request
  *      headers it forwards, so `headers()` in the layout reads it, and set
@@ -38,6 +40,8 @@ const PREFIXED = new RegExp(`^/(${LOCALES.join('|')})(?:/|$)`);
 function preferredRedirect(request: NextRequest): URL | null {
   const { pathname, search } = request.nextUrl;
   if (PREFIXED.test(pathname)) return null;
+  // Crawlers and link-preview bots get the URL they asked for (see isCrawler).
+  if (isCrawler(request.headers.get('user-agent'))) return null;
   const cookie = request.cookies.get(LOCALE_COOKIE)?.value ?? null;
   const country = COUNTRY_HEADERS.map((h) => request.headers.get(h)).find(Boolean) ?? null;
   const locale = isLocale(cookie)

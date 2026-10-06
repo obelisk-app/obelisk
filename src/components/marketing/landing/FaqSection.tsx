@@ -4,6 +4,8 @@ import { useTranslations } from 'next-intl';
 import FAQItem from '../FAQItem';
 import RevealSection from './RevealSection';
 import { FAQ_IDS } from './landing-data';
+import JsonLd from '@/components/seo/JsonLd';
+import { faqJsonLd } from '@/utils/seo/jsonld';
 
 /**
  * The FAQ accordion, with its FAQPage JSON-LD for search engines.
@@ -15,24 +17,10 @@ export default function FaqSection() {
     question: t(`marketing.faq.${id}.question`),
     answer: t(`marketing.faq.${id}.answer`),
   }));
-  const faqJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faqItems.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer,
-      },
-    })),
-  };
   return (
     <RevealSection id="faq" className="py-24 px-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
+      {/* The same strings the accordion renders, so the markup matches the page. */}
+      <JsonLd data={faqJsonLd(faqItems)} />
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">

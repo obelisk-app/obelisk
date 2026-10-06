@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import sitemap from '@/app/sitemap';
+import robots from '@/app/robots';
 import { snapshotPaths } from '@/utils/guides/asset-meta';
+import { readGuide } from '@/services/guides';
 
 let entries: Awaited<ReturnType<typeof sitemap>>;
 
@@ -11,21 +13,45 @@ beforeAll(async () => {
   entries = await sitemap();
 });
 
-describe('sitemap: every page in every language', () => {
-  it('lists each public page three times: English unprefixed, /es and /pt', () => {
-    for (const path of ['', '/app', '/mobile', '/desktop', '/features', '/help', '/help/local-data', '/media-kit', '/guides']) {
+describe('sitemap: every indexed page in every language', () => {
+  it('lists each indexed page three times: English unprefixed, /es and /pt', () => {
+    for (const path of ['', '/mobile', '/desktop', '/features', '/help', '/help/local-data', '/media-kit', '/guides']) {
       for (const url of [`${SITE}${path}`, `${SITE}/es${path}`, `${SITE}/pt${path}`]) {
         expect(entries.some((e) => e.url === url), url).toBe(true);
       }
     }
   });
 
-  it('gives every entry en-US, es-AR, pt-BR and x-default alternates', () => {
+  it('lists no page that is kept out of search', () => {
+    for (const e of entries) expect(e.url, e.url).not.toMatch(/\/(app|voice|notes|p|t|r)(\/|$)/);
+  });
+
+  it('gives every entry en, es, pt and x-default alternates, itself among them', () => {
     for (const e of entries) {
       const langs = e.alternates?.languages as Record<string, string> | undefined;
-      expect(Object.keys(langs ?? {}).sort(), e.url).toEqual(['en-US', 'es-AR', 'pt-BR', 'x-default']);
+      expect(Object.keys(langs ?? {}).sort(), e.url).toEqual(['en', 'es', 'pt', 'x-default']);
       expect(Object.values(langs ?? {})).toContain(e.url);
     }
+  });
+
+  it('dates a guide by its front matter, never by the build', async () => {
+    for (const [prefix, locale] of [['', 'en'], ['/es', 'es'], ['/pt', 'pt']] as const) {
+      const entry = entries.find((e) => e.url === `${SITE}${prefix}/guides/vesta`);
+      const { frontmatter } = await readGuide(locale, 'vesta');
+      expect(entry?.lastModified).toBe(frontmatter.updatedAt);
+    }
+    // A page with no content date carries none, rather than today's.
+    for (const path of ['', '/features', '/media-kit']) {
+      const entry = entries.find((e) => e.url === `${SITE}${path}`);
+      expect(entry?.lastModified, path).toBeUndefined();
+    }
+    expect(entries.every((e) => !(e.lastModified instanceof Date))).toBe(true);
+  });
+
+  it('dates the guides index by its newest guide', () => {
+    const index = entries.find((e) => e.url === `${SITE}/guides`);
+    const newest = entries.filter((e) => isArticle(e.url) && !/\/(es|pt)\//.test(e.url)).map((e) => String(e.lastModified)).sort().pop();
+    expect(index?.lastModified).toBe(newest);
   });
 
   it('has the same guide slugs in every language', () => {
@@ -68,5 +94,14 @@ describe('sitemap: every page in every language', () => {
       expect(imgs).toContain(`${SITE}${snapshotPaths('swap-anything', locale).png}`);
       for (const url of imgs) expect(url, url).toContain(`/og/guides/${locale}/`);
     }
+  });
+});
+
+describe('robots.txt', () => {
+  it('points at the sitemap and keeps crawlers out of the API and the dev harness only', () => {
+    const r = robots();
+    expect(r.sitemap).toBe(`${SITE}/sitemap.xml`);
+    expect(r.rules).toEqual([{ userAgent: '*', allow: '/', disallow: ['/api/', '/dev/'] }]);
+    expect('host' in r).toBe(false);
   });
 });

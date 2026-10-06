@@ -33,7 +33,8 @@
   "voicePage": {
     "roomPlaceholder": "room name",
     "title": "Join a voice room",
-    "enter": "Enter room"
+    "enter": "Enter room",
+    "hint": "Enter the same name on two devices, logged in with two different Nostr keys, to start a call. Audio, video and screen sharing go peer to peer over WebRTC; only the signaling goes through the relay."
   },
   "controls": {
     "mute": "Mute",

@@ -5,7 +5,7 @@ import { LocaleProvider } from '@tests/support/intl';
 const push = vi.fn();
 vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({ useRouter: () => ({ push }) }));
 
-import VoiceLandingPage from '@/app/[locale]/voice/page';
+import VoiceLandingPage from '@/app/[locale]/voice/VoiceRoomForm';
 
 function mount() {
   render(<LocaleProvider initialLocale="en"><VoiceLandingPage /></LocaleProvider>);
@@ -24,5 +24,10 @@ describe('/voice landing page', () => {
   it('names the room input for screen readers', () => {
     mount();
     expect(screen.getByRole('textbox', { name: 'room name' })).toBe(screen.getByPlaceholderText('room name'));
+  });
+
+  it('explains the test in the page language, from the messages', () => {
+    render(<LocaleProvider initialLocale="es"><VoiceLandingPage /></LocaleProvider>);
+    expect(screen.getByText(/Escribí el mismo nombre en dos dispositivos/)).toBeInTheDocument();
   });
 });

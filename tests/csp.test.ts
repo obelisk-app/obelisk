@@ -94,6 +94,20 @@ describe('locale proxy', () => {
     expect(res.headers.get('x-middleware-rewrite')).toBe('https://obelisk.test/en');
   });
 
+  it.each([
+    'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+    'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)',
+    'Twitterbot/1.0',
+    'WhatsApp/2.23.20.0',
+    'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+  ])('never language-redirects a crawler or link-preview bot: %s', (ua) => {
+    const res = proxy(new NextRequest('https://obelisk.test/guides/vesta', {
+      headers: { 'user-agent': ua, 'accept-language': 'es', 'x-vercel-ip-country': 'BR' },
+    }));
+    expect(location(res)).toBeNull();
+    expect(res.headers.get('x-middleware-rewrite')).toBe('https://obelisk.test/en/guides/vesta');
+  });
+
   it('the cookie also moves an unprefixed URL to the picked language', () => {
     const res = proxy(new NextRequest('https://obelisk.test/app', { headers: { cookie: `${LOCALE_COOKIE}=pt` } }));
     expect(location(res)).toBe('https://obelisk.test/pt/app');

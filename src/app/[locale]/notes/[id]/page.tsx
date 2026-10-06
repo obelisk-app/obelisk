@@ -14,9 +14,11 @@
  */
 
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { pageLocale } from '@/i18n/page-locale';
-import { localizedAlternates, ogLocales } from '@/utils/seo/alternates';
+import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
+import { cardAlt, cardImage } from '@/utils/seo/og';
 import { parseIdentifier } from '@/services/social/identifier';
 import {
   displayNameFor,
@@ -44,20 +46,25 @@ export const revalidate = 60;
 
 type Params = { params: Promise<{ id: string; locale: string }> };
 
+/**
+ * Someone else's note, read from relays: kept out of search (`noindex,
+ * follow`), because the text is theirs, already public on every Nostr
+ * client, and a search engine would otherwise index any note anyone links.
+ * What this page is for is the card a chat app shows for a pasted link.
+ */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const locale = await pageLocale(params);
   const t = await getTranslations({ locale });
   const { id } = await params;
   const target = parseIdentifier(id);
-  if (!target) {
-    return { title: t('seo.notes.notFound'), robots: { index: false } };
-  }
+  if (!target) notFound();
 
+  const path = `/notes/${id}`;
   const note = await fetchEventForViewer(target);
+  // Not found on the relays this time; it may be there on the next request.
   if (!note) {
-    // Don't index a page we couldn't resolve - it may resolve later, but a
-    // crawler shouldn't cache the empty version as canonical.
-    return { title: t('seo.notes.notFound'), robots: { index: false } };
+    const title = t('seo.notes.notFound');
+    return noindexMetadata({ locale, path, title, image: cardImage(locale, path, cardAlt(t, renderedTitle(title))) });
   }
 
   const author = await fetchAuthorForViewer(note.pubkey);
@@ -66,35 +73,24 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     untitledArticle: t('seo.notes.untitledArticle'),
     sharedMedia: t('seo.notes.sharedMedia'),
   });
-  const images = preview.image ? [{ url: preview.image }] : undefined;
-
-  return {
+  return noindexMetadata({
+    locale,
+    path,
     title: preview.title,
     description: preview.description,
-    // User content: the chrome is translated, the note is not, so all three
-    // URLs name the English one as canonical rather than triple the index.
-    alternates: localizedAlternates(locale, `/notes/${id}`, 'en'),
-    openGraph: {
-      ...ogLocales(locale),
-      type: preview.isArticle ? 'article' : 'website',
-      title: preview.title,
-      description: preview.description,
-      siteName: 'Obelisk',
-      ...(images ? { images } : {}),
-    },
-    twitter: {
-      card: preview.image ? 'summary_large_image' : 'summary',
-      title: preview.title,
-      description: preview.description,
-      ...(preview.image ? { images: [preview.image] } : {}),
-    },
-  };
+    type: preview.isArticle ? 'article' : 'website',
+    // Its own card, not the note's picture: a picture in a note can be any
+    // size or format (WebP, a tall screenshot) and most previews drop it.
+    image: cardImage(locale, path, cardAlt(t, renderedTitle(preview.title))),
+  });
 }
 
 export default async function NoteViewerPage({ params }: Params) {
   const { id } = await params;
   const target = parseIdentifier(id);
-  const note = target ? await fetchEventForViewer(target) : null;
+  // Not a note identifier at all: a real 404, sent before anything streams.
+  if (!target) notFound();
+  const note = await fetchEventForViewer(target);
 
   // Author context, in parallel - a bare note is a fragment, and four
   // sequential relay round-trips would be slower than the note itself.

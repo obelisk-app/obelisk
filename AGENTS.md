@@ -27,6 +27,7 @@ npm test                # vitest run, everything under tests/ (and scripts/**/*.
 npx vitest run tests/path/to/file.test.ts   # one file
 npm run test:e2e        # Playwright (test:e2e:voice for the voice set; *:headed variants)
 npm run build           # next build --webpack
+npm run seo:check       # build, start, crawl every route as search and preview bots do; fails on any SEO problem (docs/i18n.md#seo)
 bash scripts/check-source-bytes.sh          # rejects raw control bytes in tracked files
 npx tsx scripts/i18n/hardcoded-baseline.ts  # regenerate the hardcoded-strings baseline
 ```
@@ -192,6 +193,7 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | `tests/i18n/route-scopes.test.ts` | Every route renders inside an `IntlScope`, and no client file reachable from a route reads a module the route does not ship |
 | `tests/i18n/call-arguments.test.ts` | Every literal `t('key', {...})` passes exactly the arguments the English message declares |
 | `tests/i18n/next-config.test.ts` | Old guide URLs redirect permanently; the proxy sees the request URL as sent |
+| `tests/utils/seo/guide-content.test.ts`, `tests/app/og-images.test.ts` | Every guide's search title and description fit (45-57, 145-157 characters, all languages); every indexed page has its own `opengraph-image` route |
 | `tests/utils/nip-kinds.test.ts` | No local `KIND_` constant or raw numeric kinds filter outside its shrink-only debt lists |
 | `tests/hooks-after-early-return.test.ts` | No hook call after an early return in a component |
 | `tests/app/dev/dev-routes.test.ts` | Nothing under `src/app/dev/` is routable outside `next dev` |

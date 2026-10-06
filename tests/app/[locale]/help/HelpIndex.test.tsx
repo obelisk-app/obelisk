@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
-import HelpPage from '@/app/[locale]/help/page';
+import HelpPage from '@/app/[locale]/help/HelpIndex';
 
 vi.mock('@/components/marketing/Navbar', () => ({ default: () => <nav>Obelisk</nav> }));
 vi.mock('@/components/marketing/Footer', () => ({ default: () => <footer /> }));
