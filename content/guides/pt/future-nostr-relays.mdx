@@ -1,54 +1,52 @@
 ---
-title: O que está no roadmap
-description: O Obelisk já é um cliente Nostr puro, sem backend. Veja o que ainda está sendo construído (canais de voz, login por bunker NIP-46, criptografia NIP-44 v2 e um build de exportação estática que roda em qualquer CDN).
+title: O que já saiu e o que vem por aí
+description: O Obelisk é um cliente Nostr puro, sem backend. Canais de voz, login com app de assinatura NIP-46, criptografia NIP-44 v2 e o app instalável já saíram. O que falta é um build de exportação estática e notificações push com o app fechado.
 heroComponent: future-relays
 publishedAt: '2026-04-16'
-updatedAt: '2026-04-28'
+updatedAt: '2026-10-06'
 tags: [roadmap, nostr, nip-46, nip-44, voice]
 ---
 
 ## Onde estamos
 
-A grande migração está **pronta**. O Obelisk já foi um app híbrido (banco Postgres, servidor Socket.io, autenticação própria), com Nostr só para o login. Hoje o banco não existe mais, o serviço de autenticação não existe mais, e o app é um frontend falando direto com relays NIP-29. Grupos NIP-29, DMs criptografados (NIP-04 + NIP-17) e zaps Lightning (NIP-57 + NIP-47) funcionam sem nenhuma infraestrutura operada pelo Obelisk.
+A grande migração está **feita**. O Obelisk era um app híbrido (banco de dados Postgres, servidor Socket.io, autenticação própria) que usava o Nostr só para o login. Hoje o banco de dados não existe mais, o serviço de autenticação também não, e o app é um frontend que fala direto com relays NIP-29. Grupos NIP-29, DMs criptografados (NIP-04 + NIP-17) e zaps Lightning (NIP-57 + NIP-47) funcionam sem nenhuma infraestrutura operada pelo Obelisk.
 
-Dito isso, ainda falta coisa de verdade. Segue o roadmap.
+Quase tudo o que esta página listava como "próximo passo" já saiu. Veja o que existe hoje no app e o que ainda falta.
 
-## Login por bunker NIP-46
+## Já saiu: login com app de assinatura NIP-46
 
-Hoje você entra com uma extensão NIP-07 ou colando uma nsec no navegador. Os dois funcionam, mas nenhum é ótimo no celular. O **NIP-46** ("Nostr Connect" / bunker) permite manter sua chave privada num app assinador separado (seu telefone, um dispositivo de hardware ou um serviço remoto) e fazer o Obelisk pedir assinaturas por um relay.
+Além de uma extensão NIP-07 no navegador ou de colar um nsec, agora dá para entrar com **NIP-46** ("Nostr Connect" / bunker): sua chave privada fica num app de assinatura separado (Amber, nsec.app, um dispositivo de hardware ou um serviço remoto), e o Obelisk pede as assinaturas a ele por um relay. Escaneie um QR code ou cole um link de bunker. No celular, é o jeito de entrar sem entregar sua chave ao navegador. A tela de login também pode gerar uma chave nova para você.
 
-Status: **próximo da fila.** Acrescenta uma terceira opção de login sem mexer no resto do app.
+## Já saiu: criptografia NIP-44 v2
 
-## Criptografia NIP-44 v2
+As DMs NIP-17 vão embrulhadas (gift wrap) e seladas com **NIP-44 v2**, o padrão moderno de criptografia do Nostr: versionado, autenticado e com derivação de chaves correta. O NIP-17 é o padrão de toda conversa nova; o NIP-04 continua disponível por conversa para quem usa um cliente que ainda precisa dele. Além disso, um selo pós-quântico é adicionado sempre que o seu app de assinatura e a outra pessoa têm chaves pós-quânticas.
 
-Os DMs hoje usam NIP-04 (criptografia legada) e NIP-17 (gift wrap, que esconde metadados). Os dois funcionam, mas o NIP-04 tem fraquezas conhecidas. O **NIP-44 v2** é o padrão moderno de criptografia do Nostr: versionado, autenticado, com derivação de chaves adequada.
+## Já saiu: canais de voz
 
-Status: **planejado.** A migração é direta; estamos acompanhando a adoção nos apps assinadores para não quebrar a interoperabilidade.
+A voz voltou, sem o servidor Socket.io de que precisava antes. As salas pequenas são **WebRTC com sinalização por eventos Nostr**: os navegadores se conectam direto numa malha entre participantes de até quatro pessoas. Para salas maiores, um admin do canal o transforma num canal de voz para salas grandes e escolhe um **SFU mediasoup** para encaminhá-lo, que pode ser um hospedado por você. Os dois tipos têm áudio, câmera e compartilhamento de tela, e as DMs também têm chamadas a dois.
 
-## Canais de voz
+## Já saiu: app instalável (PWA)
 
-A voz era implementada com um servidor de sinalização Socket.io. Isso não cabe numa arquitetura sem backend, então removemos. A substituição é **WebRTC ponto a ponto com sinalização pelo relay**: os pares trocam candidatos ICE como eventos Nostr efêmeros e depois falam direto. Sem relay de áudio central, sem Socket.io, sem servidor para manter.
+O Obelisk tem um manifesto de app web e um service worker, então você pode **instalá-lo na tela inicial** pelo menu do navegador, sem loja de apps. O service worker guarda a base do app, e as últimas mensagens de cada canal ficam no aparelho para que uma recarga apareça na hora. Com o app aberto, novas DMs e menções chegam como notificações do sistema.
 
-Status: **em projeto.** É a maior peça de trabalho do roadmap.
+## Ainda falta: build de exportação estática
 
-## Build de exportação estática
-
-Hoje o app é compilado com `next build` e servido por Node. Sem backend atrás dele, não há motivo real para precisar de um processo Node: a coisa toda pode ser uma pasta de arquivos estáticos. Acrescentar `output: 'export'` ao `next.config.ts` e abrir mão de algumas suposições específicas do Next nos leva a um build que você pode jogar no GitHub Pages, Cloudflare Pages, S3, IPFS ou qualquer host estático.
+Hoje o app é compilado com `next build` e servido pelo Node. A parte de servidor é pequena (cabeçalhos de segurança, o redirecionamento de idioma na primeira visita, as prévias de links e as páginas públicas de posts e perfis), mas existe, então o Obelisk ainda não pode ir para uma hospedagem puramente estática. Tirar essas peças do caminho daria um build para colocar no GitHub Pages, Cloudflare Pages, S3, IPFS ou qualquer hospedagem estática.
 
 Status: **planejado.** Algumas rotas precisam de ajuste antes.
 
-## PWA instalável
+## Ainda falta: notificações push
 
-Comunidades que vivem no celular querem um ícone na tela inicial, não uma aba de navegador. Um **build PWA** com cache de mensagens offline-first e notificações push (via Web Push API + um despachante do lado do relay) está na lista.
+As notificações só funcionam enquanto o Obelisk está aberto numa aba. **Web Push** (notificações que chegam com o app fechado) precisa de um despachante do lado do relay e ainda não foi feito.
 
-Status: **planejado, depois da voz.**
+Status: **planejado.**
 
-## O que *não está mais* no roadmap
+## O que *não* está mais no roadmap
 
-- **PostgreSQL.** Foi embora.
-- **Servidor Socket.io.** Foi embora (só volta como um remendo temporário de sinalização, se o WebRTC precisar).
-- **Painel de administração centralizado.** Admins de grupo são eventos NIP-29; não há nada para administrar centralmente.
-- **Serviço de pontuação de rede de confiança.** Spam agora é o que o relay aplicar.
+- **PostgreSQL.** Saiu.
+- **Servidor Socket.io.** Saiu. A sinalização de voz roda pelo Nostr.
+- **Um backend de administração separado.** As ferramentas de admin ficam no app e publicam eventos NIP-29; o relay faz valer cada um.
+- **Serviço de pontuação de Web of Trust.** Não é mais um servidor: a confiança vem da extensão e do SDK do Nostr WoT no seu navegador, e cada relay aplica a própria admissão.
 
 <RelatedGuides items={[
   { slug: "what-is-obelisk" },

@@ -1,4 +1,5 @@
-import { COPY, GLOW_GRADIENT, GRID_OVERLAY } from '@/utils/media-kit/content';
+import { useTranslations } from 'next-intl';
+import { BRAND_NAME, GLOW_GRADIENT, GRID_OVERLAY } from '@/utils/media-kit/content';
 import { ObeliskMark } from './kit-ui';
 
 /** Where each layer of a centered composition sits, as % of the banner. */
@@ -18,6 +19,7 @@ type CenteredLayout = {
 // tagline and one-liner beneath. The OG image, the GitHub preview and the
 // square avatar are this one picture at different aspect ratios.
 function CenteredBanner({ layout: l }: { layout: CenteredLayout }) {
+  const t = useTranslations();
   return (
     <div
       className="relative w-full overflow-hidden"
@@ -74,17 +76,17 @@ function CenteredBanner({ layout: l }: { layout: CenteredLayout }) {
         style={{ top: l.titleTop }}
       >
         <span className={`${l.titleClass} font-extrabold tracking-tight`}>
-          {COPY.name}
+          {BRAND_NAME}
         </span>
         <span className={`mt-1 text-lc-muted ${l.taglineClass}`}>
-          {COPY.tagline}
+          {t('mediaKit.brand.tagline')}
         </span>
       </div>
       <p
         className="absolute text-center text-lc-green font-semibold text-[10px] sm:text-xs md:text-sm w-full"
         style={{ bottom: l.oneLinerBottom }}
       >
-        {COPY.oneLiner}
+        {t('mediaKit.brand.oneLiner')}
       </p>
     </div>
   );
@@ -170,6 +172,7 @@ function HorizontalBanner({
   oneLinerClass: string;
   showOneLiner?: boolean;
 }) {
+  const t = useTranslations();
   return (
     <div
       className="relative w-full overflow-hidden"
@@ -234,16 +237,16 @@ function HorizontalBanner({
         style={{ left: textLeft, top: '50%', transform: 'translateY(-50%)' }}
       >
         <div className={`font-extrabold tracking-tight ${titleClass}`}>
-          {COPY.name}
+          {BRAND_NAME}
         </div>
         <div className={`mt-1 text-lc-muted ${taglineClass}`}>
-          {COPY.tagline}
+          {t('mediaKit.brand.tagline')}
         </div>
         {showOneLiner && (
           <div
             className={`mt-3 text-lc-green font-semibold ${oneLinerClass}`}
           >
-            {COPY.oneLiner}
+            {t('mediaKit.brand.oneLiner')}
           </div>
         )}
       </div>

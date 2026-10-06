@@ -1,22 +1,32 @@
 import { useTranslations } from 'next-intl';
 
+/**
+ * A NIP-57 zap as Obelisk sends it. The sender's client signs the zap
+ * request, the recipient's LNURL server answers with an invoice, the sender's
+ * wallet pays it (WebLN in the browser, or NWC over a Nostr relay), and the
+ * LNURL server publishes the kind 9735 receipt that every client shows. No
+ * Obelisk server is anywhere in the money path.
+ */
+const LANE_X = { C: 110, W: 335, L: 565, R: 790 } as const;
+type Lane = keyof typeof LANE_X;
+
 export default function ZapFlowDiagram() {
   const t = useTranslations();
-  const rows = [
-    { y: 75,  from: 'C',  to: 'S',  label: '1. POST /api/wallet/zap { amountSats }',    dir: 'right' as const }, // i18n-exempt: an API call, drawn as code
-    { y: 120, from: 'S',  to: 'RW', label: t('guides.art.zapFlow.makeInvoice'),         dir: 'right' as const },
-    { y: 165, from: 'RW', to: 'S',  label: t('guides.art.zapFlow.invoice'),             dir: 'left'  as const },
-    { y: 210, from: 'S',  to: 'SW', label: '4. NWC payInvoice',                         dir: 'right' as const }, // i18n-exempt: an NWC method name
-    { y: 255, from: 'SW', to: 'S',  label: t('guides.art.zapFlow.preimage'),            dir: 'left'  as const },
-    { y: 300, from: 'S',  to: 'C',  label: '6. Socket.io new-message ⚡',               dir: 'left'  as const }, // i18n-exempt: an event name, drawn as code
+  const rows: { y: number; from: Lane; to: Lane; label: string }[] = [
+    { y: 84, from: 'C', to: 'L', label: t('guides.art.zapFlow.request') },
+    { y: 126, from: 'L', to: 'C', label: t('guides.art.zapFlow.invoice') },
+    { y: 168, from: 'C', to: 'W', label: t('guides.art.zapFlow.pay') },
+    { y: 210, from: 'W', to: 'L', label: t('guides.art.zapFlow.paid') },
+    { y: 252, from: 'L', to: 'R', label: t('guides.art.zapFlow.receipt') },
+    { y: 294, from: 'R', to: 'C', label: t('guides.art.zapFlow.shown') },
   ];
-  const LANE_X = { C: 90, S: 340, RW: 590, SW: 810 };
-  const LANE_LABEL: Record<keyof typeof LANE_X, string> = {
+  const laneLabel: Record<Lane, string> = {
     C: t('guides.art.zapFlow.client'),
-    S: t('guides.art.zapFlow.server'),
-    RW: t('guides.art.zapFlow.receiver'),
-    SW: t('guides.art.zapFlow.sender'),
+    W: t('guides.art.zapFlow.wallet'),
+    L: t('guides.art.zapFlow.lnurl'),
+    R: t('guides.art.zapFlow.relays'),
   };
+  const lanes = Object.keys(LANE_X) as Lane[];
 
   return (
     <svg
@@ -29,56 +39,31 @@ export default function ZapFlowDiagram() {
       <rect width="900" height="360" fill="#0a0a0a" />
 
       {/* lane headers */}
-      {(Object.keys(LANE_X) as Array<keyof typeof LANE_X>).map((lane) => (
+      {lanes.map((lane) => (
         <g key={lane}>
-          <rect
-            x={LANE_X[lane] - 70}
-            y="12"
-            width="140"
-            height="32"
-            rx="16"
-            fill="#2d3a1a"
-            stroke="#b4f953"
-            strokeWidth="1.5"
-          />
-          <text
-            x={LANE_X[lane]}
-            y="33"
-            textAnchor="middle"
-            fontSize="12"
-            fontWeight="700"
-            fill="#b4f953"
-          >
-            {LANE_LABEL[lane]}
+          <rect x={LANE_X[lane] - 95} y="12" width="190" height="32" rx="16" fill="#2d3a1a" stroke="#b4f953" strokeWidth="1.5" />
+          <text x={LANE_X[lane]} y="33" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953">
+            {laneLabel[lane]}
           </text>
         </g>
       ))}
 
       {/* lane lines */}
       <g stroke="#262626" strokeWidth="1" strokeDasharray="3 3">
-        {(Object.keys(LANE_X) as Array<keyof typeof LANE_X>).map((lane) => (
-          <line
-            key={lane}
-            x1={LANE_X[lane]}
-            y1="48"
-            x2={LANE_X[lane]}
-            y2="340"
-          />
+        {lanes.map((lane) => (
+          <line key={lane} x1={LANE_X[lane]} y1="48" x2={LANE_X[lane]} y2="312" />
         ))}
       </g>
 
       {/* arrows */}
       {rows.map((r, i) => {
-        const x1 = LANE_X[r.from as keyof typeof LANE_X];
-        const x2 = LANE_X[r.to as keyof typeof LANE_X];
-        const midX = (x1 + x2) / 2;
+        const x1 = LANE_X[r.from];
+        const x2 = LANE_X[r.to];
+        const right = x2 > x1;
         return (
           <g key={i}>
             <line
-              x1={x1}
-              y1={r.y}
-              x2={x2}
-              y2={r.y}
+              x1={x1} y1={r.y} x2={x2} y2={r.y}
               stroke="#b4f953"
               strokeWidth="1.8"
               strokeDasharray="6 6"
@@ -87,26 +72,23 @@ export default function ZapFlowDiagram() {
             />
             <polygon
               points={
-                r.dir === 'right'
+                right
                   ? `${x2 - 8},${r.y - 5} ${x2},${r.y} ${x2 - 8},${r.y + 5}`
                   : `${x2 + 8},${r.y - 5} ${x2},${r.y} ${x2 + 8},${r.y + 5}`
               }
               fill="#b4f953"
             />
-            <text
-              x={midX}
-              y={r.y - 8}
-              textAnchor="middle"
-              fontSize="11"
-              fontWeight="600"
-              fill="#fafafa"
-              fontFamily="monospace"
-            >
+            <text x={(x1 + x2) / 2} y={r.y - 8} textAnchor="middle" fontSize="11" fontWeight="600" fill="#fafafa" fontFamily="monospace">
               {r.label}
             </text>
           </g>
         );
       })}
+
+      {/* footnote */}
+      <text x="450" y="340" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3">
+        {t('guides.art.zapFlow.note')}
+      </text>
     </svg>
   );
 }

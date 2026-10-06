@@ -101,6 +101,7 @@ export const ROADMAP_PHASES = [
   { key: 'phase6', num: '6', status: 'done' as const },
   { key: 'phase4', num: '4', status: 'done' as const },
   { key: 'phase5', num: '5', status: 'done' as const },
+  { key: 'phase7', num: '7', status: 'upcoming' as const },
 ] as const;
 
 import type { MessageKey } from '@/i18n/keys';

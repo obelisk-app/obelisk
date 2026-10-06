@@ -3,7 +3,7 @@ title: Bitcoin zaps in chat
 description: Obelisk lets you send Bitcoin over Lightning directly from a chat message using NIP-57 zaps and Nostr Wallet Connect (NIP-47). No custodian, no platform fee, no middleman. Just your wallet, the recipient's wallet, and a signed Nostr event.
 heroComponent: bitcoin-zaps
 publishedAt: '2026-04-18'
-updatedAt: '2026-04-28'
+updatedAt: '2026-10-06'
 tags: [bitcoin, lightning, nwc, nip-47, nip-57, zaps]
 ---
 
@@ -27,8 +27,10 @@ Combined, they let Obelisk send sats from your wallet to anyone with a `lud16` (
 1. **Connect a wallet.** Open settings, paste a Nostr Wallet Connect URI from any NWC-compatible wallet (Alby Hub, Mutiny, Phoenix, etc.). The URI is stored in your browser, encrypted to your Nostr key.
 2. **Pick a message.** Click the zap button on a chat message.
 3. **Pick an amount.** Default amounts are configurable; you can also enter a custom number.
-4. **Sign and pay.** Obelisk builds a `kind 9734` zap request, sends it to the recipient's LNURL endpoint to get a Lightning invoice, and asks your wallet (over NWC) to pay the invoice.
+4. **Sign and pay.** Obelisk builds a `kind 9734` zap request, sends it to the recipient's LNURL endpoint to get a Lightning invoice, and asks your wallet to pay the invoice: over NWC, or through a browser wallet extension (WebLN).
 5. **The receipt appears.** The recipient's LNURL endpoint publishes a `kind 9735` zap receipt to the relay. The chat shows the zap.
+
+<Diagram name="zap-flow" caption="The whole zap, end to end. No Obelisk server is in it: the invoice comes from the recipient's Lightning address, your wallet pays it, and the receipt reaches the chat through the relays." />
 
 ## What's private and what isn't
 

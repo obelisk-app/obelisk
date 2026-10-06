@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { COLORS, EMBED_BADGE, EMBED_HTML_BANNER, EMBED_OG, OG_IMAGE_URL, SHORT_COPY } from '@/utils/media-kit/content';
+import { COLORS, embedBadge, embedHtmlBanner, embedOg, OG_IMAGE_URL, SHORT_COPY } from '@/utils/media-kit/content';
 import { CodeBlock, CopyButton, Section } from './kit-ui';
 import { EmbedPreview } from './BannerCard';
 
@@ -50,20 +50,23 @@ export function ShortCopySection() {
       description={t('mediaKit.desc.shortCopy')}
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        {SHORT_COPY.map(({ labelKey, lang, value }) => (
-          <div
-            key={value}
-            className="lc-card p-4 flex items-center justify-between gap-3"
-          >
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-widest text-lc-green">
-                {t(labelKey, lang ? { lang } : undefined)}
+        {SHORT_COPY.map((item) => {
+          const value = 'valueKey' in item ? t(item.valueKey) : item.value;
+          return (
+            <div
+              key={item.labelKey}
+              className="lc-card p-4 flex items-center justify-between gap-3"
+            >
+              <div className="min-w-0">
+                <div className="text-xs uppercase tracking-widest text-lc-green">
+                  {t(item.labelKey)}
+                </div>
+                <div className="text-sm truncate">{value}</div>
               </div>
-              <div className="text-sm truncate">{value}</div>
+              <CopyButton text={value} />
             </div>
-            <CopyButton text={value} />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Section>
   );
@@ -83,13 +86,13 @@ export function EmbedSections() {
         <div className="space-y-6">
           <EmbedPreview
             title={t('mediaKit.bannerPill')}
-            html={EMBED_HTML_BANNER}
+            html={embedHtmlBanner(t('mediaKit.brand.tagline'))}
             filename="obelisk-banner-pill.png"
             pixelWidth={1200}
           />
           <EmbedPreview
             title={t('mediaKit.poweredByBadge')}
-            html={EMBED_BADGE}
+            html={embedBadge(t('mediaKit.brand.poweredBy'))}
             filename="obelisk-powered-by-badge.png"
             pixelWidth={600}
           />
@@ -123,7 +126,13 @@ export function EmbedSections() {
             </a>
           </div>
         </div>
-        <CodeBlock code={EMBED_OG} />
+        <CodeBlock
+          code={embedOg({
+            comment: t('mediaKit.brand.ogComment'),
+            tagline: t('mediaKit.brand.tagline'),
+            oneLiner: t('mediaKit.brand.oneLiner'),
+          })}
+        />
       </Section>
     </>
   );

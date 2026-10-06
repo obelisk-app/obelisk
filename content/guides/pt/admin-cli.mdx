@@ -1,67 +1,79 @@
 ---
 title: Admins, membros e moderação no NIP-29
-description: Não existe mais painel de administração do Obelisk. A moderação vive no relay. Admins, membros, expulsões e banimentos são todos eventos NIP-29 padrão que qualquer cliente Nostr consegue ler. Veja como funciona o modelo de papéis, o que você pode fazer e o que permanece auditável.
+description: Como os admins cuidam hoje de uma comunidade de relay no Obelisk. Os admins de um canal editam o canal e seus membros nas configurações do canal; o operador do relay cuida de cargos, membros, emojis e da ordem dos canais nas configurações do servidor. Cada ação é um evento NIP-29 padrão que qualquer cliente Nostr consegue ler.
 heroComponent: admin-cli
 publishedAt: '2026-04-18'
-updatedAt: '2026-04-28'
+updatedAt: '2026-10-06'
 tags: [moderation, nip-29, admins, roles]
 ---
 
 ## Onde a moderação vive
 
-No Obelisk híbrido antigo, os admins viviam numa tabela do Postgres e um painel web de administração chamava uma API HTTP para banir gente. No Obelisk novo, **tudo isso está no relay**. Moderação não é um recurso do app, é um recurso do NIP-29.
+No Obelisk híbrido antigo, os admins viviam numa tabela do Postgres e um painel web de administração chamava uma API HTTP para tirar gente. No Obelisk novo, **as permissões vivem no relay**. As ferramentas de admin estão no app, mas cada clique publica um evento NIP-29 assinado, e quem faz valer é o relay.
 
 Isso significa que:
 
-- Qualquer cliente NIP-29 mostra a mesma lista de admins, lista de membros, expulsões e banimentos.
+- Qualquer cliente NIP-29 consegue mostrar a mesma lista de admins e de membros.
 - Trocar de cliente não muda as permissões.
-- Trocar de relay *muda*: a moderação é por relay e por grupo, porque quem aplica é o relay.
+- Trocar de relay *muda*: a moderação é por relay e por grupo, porque é o relay que a aplica.
 
-## Os eventos que importam
+## Dois tipos de admin
 
-O NIP-29 define um conjunto pequeno de kinds de evento. Os que afetam a moderação:
+O Obelisk tem dois níveis de autoridade, e eles nunca se misturam:
 
-| Kind  | O que é                                          |
-|-------|--------------------------------------------------|
-| `9007`  | Criação do grupo (quem assina vira admin)       |
-| `9000`  | Adicionar usuário (incluir membro)               |
-| `9001`  | Remover usuário (expulsar)                       |
-| `9005`  | Apagar evento (remoção de mensagem pela moderação) |
-| `9002`  | Editar metadados                                 |
-| `39000` | Metadados do grupo (substituível)                |
-| `39001` | Lista de admins (substituível)                   |
-| `39002` | Lista de membros (substituível)                  |
+- **Admins de canal.** Um canal é um grupo NIP-29. Os admins dele são as pessoas listadas no evento `39001` mais recente do relay para esse grupo. Eles cuidam daquele canal e só dele.
+- **O operador do relay.** A chave que o relay declara como operador (o npub em `contact` no documento NIP-11 dele, ou então o `pubkey`). Só o operador vê as configurações do servidor, e só os eventos dele mudam coisas do relay inteiro, como cargos, categorias e a identidade visual.
 
-Toda ação que um moderador toma é um desses eventos, assinado por ele e datado pelo relay. Não há registro de moderação escondido: os eventos *são* o registro.
+## Configurações do canal (admins de canal)
 
-## Os papéis
+Abra um canal e entre nas configurações pelo cabeçalho do canal (no celular, pela folha de configurações do canal). Dali um admin pode:
 
-- **Admin**: listado no evento `39001` mais recente. Pode editar metadados, adicionar ou remover membros, promover ou rebaixar outros admins, expulsar e apagar mensagens.
-- **Membro**: listado no evento `39002` mais recente. Pode publicar mensagens.
-- **Todo o resto**: no máximo leitura, dependendo das flags de metadados do grupo (`público` vs. `privado`).
+- **Editar o canal**: nome, descrição, ícone e banner.
+- **Definir quem entra**: *público* (todos leem e escrevem), *somente leitura* (todos leem, membros escrevem) ou *privado* (oculto, só para membros).
+- **Escolher o tipo de canal**: texto, voz e vídeo (uma malha direta entre participantes para salas pequenas), voz para salas grandes (por um SFU que você escolhe e verifica) ou publicações (um feed de posts, cada um com o próprio chat, com tags curadas).
+- **Gerenciar membros**: adicionar alguém pelo npub ou pela chave hex (se quiser, como admin), rebaixar um admin a membro ou tirar alguém do canal.
 
-Na interface do Obelisk, esses papéis aparecem como selos ao lado dos nomes, botões de "expulsar" e "banir" no menu de contexto, e uma seção de admins nas configurações do grupo. Por baixo, cada clique publica um dos eventos acima.
+No próprio chat, um admin pode **apagar qualquer mensagem** do canal ("Apagar para todo mundo") e limpar as reações dela.
 
-## O que um admin faz de verdade
+## Configurações do servidor (operador do relay)
 
-- **Promover um membro a admin**: publicar um novo `39001` incluindo a pubkey dele.
-- **Expulsar alguém**: publicar um evento `9001` com a pubkey da pessoa. O relay passa a recusar as mensagens dela.
-- **Apagar uma mensagem ruim**: publicar um evento `9005` referenciando o ID do evento em questão.
-- **Renomear ou mudar a identidade do grupo**: publicar um `9002` (editar metadados).
+O operador do relay tem um botão de configurações do servidor no topo da lista de canais. Ele abre cinco ferramentas:
 
-Tudo isso passa pela interface do Obelisk hoje. Não há painel de administração separado porque não há nada sobre o que "painelar": os eventos vão direto para o relay.
+- **Perfil e banner do servidor**: o nome, o ícone, o banner e a descrição que todo mundo vê para o relay.
+- **Emojis, GIFs e figurinhas**: os favoritos e pacotes do próprio servidor, que todos os membros veem.
+- **Canais e categorias**: os nomes das categorias e a ordem dos canais dentro delas.
+- **Cargos e níveis**: selos por nível (nome, cor, emoji) que aparecem ao lado do nome de cada membro. Um membro pode ter vários; o mais alto é o que aparece. Cargos são rótulos, não permissões: o relay continua conhecendo só admins e membros.
+- **Membros e moderação**: uma tabela com todos os admins e membros de todos os canais do relay, filtrável por nome, cargo e canal, para rebaixar ou tirar pessoas em lote.
 
-## E banir em vários relays?
+## Os eventos por trás dos botões
 
-Banimentos NIP-29 são por relay. Se alguém é banido do seu grupo no relay A, nada impede a pessoa de criar o mesmo ID de grupo no relay B e postar lá. Isso é por projeto: relays são soberanos. Se banimentos portáteis importam para você, rode o seu relay (ou um conjunto de relays que você controle) e replique o estado do grupo entre eles.
+Cada ação acima é um destes eventos, assinado pelo admin e com o horário do relay. Não existe log de moderação escondido: os eventos *são* o log.
+
+| Kind  | O que é                                                   |
+|-------|-----------------------------------------------------------|
+| `9007`  | Criar grupo: um canal novo                               |
+| `9002`  | Editar metadados: nome, imagens, acesso, tipo de canal   |
+| `9000`  | Adicionar usuário: incluir um membro, ou torná-lo admin  |
+| `9001`  | Remover usuário: tirar alguém do canal                   |
+| `9003`  | Remover permissão: rebaixar um admin a membro            |
+| `9005`  | Apagar evento: tirar uma mensagem ou uma reação          |
+| `39000` | Metadados do grupo, publicados pelo relay                |
+| `39001` | Lista de admins, publicada pelo relay                    |
+| `39002` | Lista de membros, publicada pelo relay                   |
+
+O relay confere cada pedido com a própria lista de admins antes de aceitar, e depois publica o estado atualizado em `39000`/`39001`/`39002`. Cargos, categorias e identidade visual são eventos substituíveis do próprio operador (NIP-78, kind `30078`), e o Obelisk só os lê da chave do operador.
+
+## E as remoções entre relays?
+
+Remoções no NIP-29 valem por relay. Se alguém é removido do seu grupo no relay A, nada impede essa pessoa de criar um grupo com o mesmo ID no relay B e postar lá. Isso é proposital: relays são soberanos. Se você quer uma moderação portável, rode seu próprio relay (ou um conjunto de relays que você controla) e replique o estado dos grupos entre eles.
 
 ## Para onde foi a CLI de administração
 
-Versões antigas do Obelisk traziam uma CLI em Node (`scripts/admin-cli`) que deixava agentes operarem a API HTTP de administração com a própria nsec. Com o fim da API, a CLI também acabou. O mesmo resultado (agentes gerenciando grupos de ponta a ponta) agora é alcançável direto com `nostr-tools` ou qualquer SDK Nostr: carregue uma nsec, monte os eventos NIP-29, publique no relay. Talvez a gente publique um auxiliar enxuto para isso; acompanhe o rastreador de issues.
+Versões anteriores do Obelisk traziam uma CLI em Node (`scripts/admin-cli`) que comandava uma API HTTP de administração com um nsec. A API não existe mais, então a CLI também não, e tudo o que ela fazia agora está nas configurações do canal e do servidor dentro do app. Um script ainda pode fazer o mesmo trabalho sem o Obelisk: carregue uma chave com `nostr-tools` ou qualquer SDK Nostr, monte os eventos NIP-29 acima e publique no relay. O relay julga esses eventos do mesmo jeito que julga um clique no app.
 
 <RelatedGuides items={[
   { slug: "how-obelisk-works", note: "a arquitetura sem backend" },
   { slug: "web-of-trust", note: "relays como comunidades soberanas" },
   { slug: "future-nostr-relays" },
-  { slug: "run-your-own-relay", note: "o relay onde esses bans vivem" }
+  { slug: "run-your-own-relay", note: "o relay que faz tudo isso valer" }
 ]} />

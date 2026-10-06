@@ -19,8 +19,8 @@
       "badge": "Voz • SFU",
       "title": "Voz e vídeo que crescem além da malha P2P",
       "alt": "Canal de voz do Obelisk no celular em modo SFU, com um participante de teste transmitindo barras de cores SMPTE.",
-      "desc": "Salas pequenas rodam como malha P2P; assim que um relay anuncia um SFU, o mesmo canal muda sozinho e a sala escala para dezenas de participantes, tudo sinalizado por Nostr (kind 25050), sem revelar a sua identidade para um servidor de mídia.",
-      "features": "Malha de até ~6 participantes, SFU acima disso|Silenciar, ensurdecer, compartilhar tela e conversar numa barra só|A navegação de baixo continua no lugar enquanto você fala"
+      "desc": "Salas pequenas rodam como malha P2P sinalizada pelo Nostr (kind 25050). Canais de voz para salas grandes passam por um SFU mediasoup escolhido pelo admin do canal, então a sala escala para dezenas de participantes com os mesmos controles.",
+      "features": "Malha de até 4 pessoas, canais SFU para salas grandes|Silenciar, ensurdecer, compartilhar tela e conversar numa barra só|A navegação de baixo continua no lugar enquanto você fala"
     },
     "shot3": {
       "badge": "Entrar com Nostr",
@@ -34,7 +34,7 @@
       "title": "O seu perfil Nostr, as suas configurações",
       "alt": "Tela de perfil do Obelisk no celular: banner, avatar, npub e chave pública em hex, botão Editar perfil Nostr, botão Desconectar e uma aba de Preferências.",
       "desc": "O mesmo perfil kind 0 que todo cliente Nostr usa: nome de exibição, banner, bio, NIP-05, endereço Lightning. Edite uma vez e todos os apps Nostr veem a mudança.",
-      "features": "Copie a npub ou a chave em hex com um toque|Abra o seu perfil em qualquer outro cliente Nostr|Preferências por aparelho guardadas no localStorage"
+      "features": "Copie a npub ou a chave em hex com um toque|Compartilhe um link público do seu perfil|Preferências por aparelho guardadas no localStorage"
     },
     "cta": {
       "heading": "Leve o Obelisk com você",
@@ -63,18 +63,18 @@
       "title": "Publicações para conversas mais longas e profundas",
       "alt": "Visão de publicações do Obelisk no computador em plaza-publica: quatro publicações (Politica y Economia, But why?, Only-Claws, Finanzas-Trading v2) com autor, número de mensagens e horário da última resposta.",
       "desc": "Canais do tipo publicação viram um feed organizado: uma lista de posts, quem abriu e quando foi a última resposta, cada um com o seu próprio chat e a mesma moderação NIP-29 dos outros canais.",
-      "features": "Um clique em 'Nova conversa' para abrir um assunto|Os horários da última mensagem continuam certos graças aos cursores|Mesmo modelo de administração: expulsões e banimentos vivem no relay"
+      "features": "Um clique em 'Nova publicação' para abrir um assunto|Cada cartão mostra quantas mensagens tem e a última resposta|Mesmo modelo de administração: as expulsões vivem no relay"
     },
     "shot3": {
       "badge": "Voz • SFU",
       "title": "Salas de voz grandes com mediasoup e compartilhamento de tela",
       "alt": "Canal de voz do Obelisk no computador em modo SFU, com um participante de teste transmitindo barras de cores SMPTE, a barra lateral de chat e os controles de voz.",
-      "desc": "Canais de voz começam como malha P2P e mudam para um SFU mediasoup quando o relay anuncia um. Mesma interface, mesma sinalização kind 25050, só que com mais gente e compartilhamento de tela sem derreter a CPU.",
-      "features": "Operadores de SFU liberados por relay|Compartilhamento de tela com codificação acelerada por hardware|Toda a sinalização viaja pelo Nostr, sem backend com sessões fixas"
+      "desc": "Canais de voz pequenos são uma malha P2P; canais de voz para salas grandes passam por um SFU mediasoup escolhido pelo admin do canal. Mesma interface, só que com mais gente e compartilhamento de tela sem derreter a CPU.",
+      "features": "Escolha o SFU por canal ou hospede o seu|Câmera e compartilhamento de tela em toda sala|A sinalização da malha viaja pelo Nostr, sem backend com sessões fixas"
     },
     "cta": {
       "heading": "Abra o Obelisk em qualquer navegador",
-      "subtitle": "É um frontend estático, sem cadastro. Abra localmente, instale o PWA ou hospede o build por conta própria. É o mesmo cliente de qualquer jeito.",
+      "subtitle": "É um frontend sem cadastro e sem backend próprio. Abra localmente, instale o PWA ou hospede o build por conta própria. É o mesmo cliente de qualquer jeito.",
       "button": "Abrir no computador"
     }
   }

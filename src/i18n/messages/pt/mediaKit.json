@@ -43,11 +43,11 @@
   "copied": "Copiado ✓",
   "downloadPng": "Baixar PNG",
   "rendering": "Gerando…",
-  "poweredByBadge": "Selo \"Powered by Obelisk\"",
+  "poweredByBadge": "Selo \"Com tecnologia Obelisk\"",
   "do": "✓ Faça",
   "dont": "✕ Não faça",
   "desc": {
-    "about": "Pitch curto e longo: em inglês e em espanhol, prontos para copiar.",
+    "about": "Pitch curto e longo, prontos para copiar.",
     "logos": "Clique com o botão direito → Salvar imagem como… ou use o botão Baixar.",
     "banners": "Banners feitos em HTML/CSS: copie os snippets, tire uma captura ou use os PNGs linkados.",
     "palette": "Tokens do design system. Toque no HEX para copiá-lo.",
@@ -80,13 +80,13 @@
     "mono": "para impressão / merch"
   },
   "pitch": {
-    "short": "{lang} - Pitch curto",
-    "long": "{lang} - Pitch longo"
+    "short": "Pitch curto",
+    "long": "Pitch longo"
   },
   "shortCopyLabel": {
     "name": "Nome",
-    "tagline": "Slogan ({lang})",
-    "oneLiner": "Frase curta ({lang})",
+    "tagline": "Slogan",
+    "oneLiner": "Frase curta",
     "url": "URL",
     "github": "GitHub"
   },
@@ -129,5 +129,14 @@
     "wotLogoPng": "Logo do Nostr WoT (PNG)",
     "wotLogoSvg": "Logo do Nostr WoT (SVG)",
     "wotLogoClean": "Logo do Nostr WoT - Limpo (PNG)"
+  },
+  "brand": {
+    "tagline": "Chat em grupo com identidade Nostr",
+    "oneLiner": "Sem e-mails. Sem senhas. Identidade criptográfica.",
+    "shortPitch": "Obelisk é um chat em grupo no estilo Discord em que a identidade vem do seu par de chaves Nostr. Sem e-mails, sem senhas: só identidade criptográfica.",
+    "longPitch": "Obelisk é um aplicativo de chat em grupo que funciona inteiramente sobre relays Nostr. Implementa o NIP-29 para grupos, NIP-04/NIP-17 para mensagens diretas, voz P2P via WebRTC sinalizado pelo Nostr mais voz por SFU para salas grandes, e pagamentos Lightning via NIP-47 (Nostr Wallet Connect). Sem backend, sem banco de dados: o cliente fala direto com os relays.",
+    "monoTagline": "Chat em grupo nativo do Nostr",
+    "poweredBy": "Com tecnologia Obelisk",
+    "ogComment": "Adicione estas tags ao head da sua página para as prévias de compartilhamento"
   }
 }

@@ -15,7 +15,7 @@
     },
     "community": {
       "title": "Run a community",
-      "description": "Moderate a group with NIP-29 roles, kicks and bans."
+      "description": "Moderate a group with NIP-29 admins, roles and removals."
     },
     "payments": {
       "title": "Payments and zaps",

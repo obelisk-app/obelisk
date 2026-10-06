@@ -3,7 +3,7 @@ title: Zaps de bitcoin no chat
 description: 'O Obelisk permite enviar bitcoin pela Lightning direto de uma mensagem de chat, usando zaps NIP-57 e Nostr Wallet Connect (NIP-47). Sem custodiante, sem taxa de plataforma, sem intermediário: só a sua carteira, a carteira de quem recebe e um evento Nostr assinado.'
 heroComponent: bitcoin-zaps
 publishedAt: '2026-04-18'
-updatedAt: '2026-04-28'
+updatedAt: '2026-10-06'
 tags: [bitcoin, lightning, nwc, nip-47, nip-57, zaps]
 ---
 
@@ -27,8 +27,10 @@ Juntas, elas deixam o Obelisk enviar sats da sua carteira para qualquer pessoa q
 1. **Conecte uma carteira.** Abra as preferências e cole um URI de Nostr Wallet Connect de qualquer carteira compatível com NWC (Alby Hub, Mutiny, Phoenix etc.). O URI fica guardado no seu navegador, criptografado para a sua chave Nostr.
 2. **Escolha uma mensagem.** Clique no botão de zap da mensagem.
 3. **Escolha um valor.** Os valores padrão são configuráveis; você também pode digitar um número qualquer.
-4. **Assine e pague.** O Obelisk monta um pedido de zap `kind 9734`, envia ao endpoint LNURL de quem recebe para obter uma fatura Lightning, e pede à sua carteira (via NWC) que pague a fatura.
+4. **Assine e pague.** O Obelisk monta um pedido de zap `kind 9734`, envia ao endpoint LNURL de quem recebe para obter uma fatura Lightning, e pede à sua carteira que pague a fatura: via NWC, ou por uma extensão de carteira no navegador (WebLN).
 5. **O recibo aparece.** O endpoint LNURL de quem recebe publica um recibo de zap `kind 9735` no relay. O chat mostra o zap.
+
+<Diagram name="zap-flow" caption="O zap inteiro, de ponta a ponta. Nenhum servidor do Obelisk participa: a fatura vem do endereço Lightning de quem recebe, sua carteira paga, e o recibo chega ao chat pelos relays." />
 
 ## O que é privado e o que não é
 

@@ -1,11 +1,11 @@
 /**
- * The media kit's data: brand colours, copy, links, downloadable assets and
- * the embed snippets. Kept out of the components so the page reads as layout.
+ * The media kit's data: brand colours, links, downloadable assets and the
+ * embed snippets. Kept out of the components so the page reads as layout.
  *
- * The page's own labels are `mediaKit.*` keys. What stays as literal text
- * here is the brand material itself: `COPY` (the pitches and taglines, offered
- * in English and Spanish and labelled by language), the embed snippets and
- * the banner lettering, which a journalist copies or downloads as they are.
+ * Every word on the page, the brand copy included, comes from `mediaKit.*`
+ * in the visitor's language: the pitches, taglines and one-liners are
+ * `mediaKit.brand.*`, and the embed snippets are built from them here. What
+ * stays literal is the name itself, the links and the markup around the copy.
  */
 
 import type { MessageKey } from '@/i18n/keys';
@@ -21,22 +21,8 @@ export const COLORS: Color[] = [
   { nameKey: 'mediaKit.color.green.name', token: 'lc-green', hex: '#b4f953', usageKey: 'mediaKit.color.green.usage' },
 ];
 
-/** Brand copy, offered as is: each language's version is its own deliverable. */
-export const COPY = {
-  name: 'Obelisk',
-  tagline: 'Group chat powered by Nostr identity',
-  taglineEs: 'Chat grupal con identidad Nostr',
-  shortPitch:
-    'Obelisk is a Discord-style group chat where identity comes from your Nostr keypair. No emails, no passwords: cryptographic identity only.',
-  shortPitchEs:
-    'Obelisk es un chat grupal estilo Discord donde la identidad viene de tu llave Nostr. Sin emails, sin contraseñas: solo identidad criptográfica.',
-  oneLiner: 'No emails. No passwords. Cryptographic identity.',
-  oneLinerEs: 'Sin emails. Sin contraseñas. Identidad criptográfica.',
-  longPitch:
-    'Obelisk is a fully relay-only group chat application built on Nostr. It implements NIP-29 for groups, NIP-04/NIP-17 for direct messages, P2P and SFU voice via WebRTC signaled over Nostr, and Lightning payments via NIP-47 (Nostr Wallet Connect). No backend, no database: the client talks directly to relays.',
-  longPitchEs:
-    'Obelisk es una aplicación de chat grupal completamente sobre relays Nostr. Implementa NIP-29 para grupos, NIP-04/NIP-17 para mensajes directos, voz P2P y SFU vía WebRTC señalizado por Nostr, y pagos Lightning vía NIP-47 (Nostr Wallet Connect). Sin backend, sin base de datos: el cliente habla directamente con los relays.',
-};
+/** The product's name, the same in every language. */
+export const BRAND_NAME = 'Obelisk'; // i18n-exempt: the product's name
 
 export const LINKS = {
   site: 'https://obelisk.ar',
@@ -127,25 +113,43 @@ export const ASSETS: ReadonlyArray<Asset> = [
 
 export const OG_IMAGE_URL = '/og/obelisk.png';
 
-export const EMBED_HTML_BANNER = `<a href="https://obelisk.ar" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;font-family:Inter,system-ui,sans-serif;background:#0a0a0a;border:1px solid #262626;border-radius:12px;padding:14px 20px;color:#fafafa;">
+/** Escapes text for HTML element content and double-quoted attributes. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** The banner pill snippet, lettered with the page language's tagline. */
+export function embedHtmlBanner(tagline: string): string {
+  return `<a href="https://obelisk.ar" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;font-family:Inter,system-ui,sans-serif;background:#0a0a0a;border:1px solid #262626;border-radius:12px;padding:14px 20px;color:#fafafa;">
   <span style="display:flex;align-items:center;gap:12px;">
     <span style="display:inline-block;width:10px;height:10px;border-radius:9999px;background:#b4f953;box-shadow:0 0 12px #b4f953;"></span>
-    <span style="font-weight:700;letter-spacing:-0.01em;">Obelisk</span>
-    <span style="color:#a3a3a3;">- Group chat powered by Nostr identity</span>
+    <span style="font-weight:700;letter-spacing:-0.01em;">${BRAND_NAME}</span>
+    <span style="color:#a3a3a3;">- ${escapeHtml(tagline)}</span>
   </span>
 </a>`;
+}
 
-export const EMBED_BADGE = `<a href="https://obelisk.ar" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#b4f953;color:#0a0a0a;font-family:Inter,system-ui,sans-serif;font-weight:700;font-size:13px;border-radius:9999px;text-decoration:none;">
+/** The "powered by" badge snippet; `label` is its text in the page language. */
+export function embedBadge(label: string): string {
+  return `<a href="https://obelisk.ar" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#b4f953;color:#0a0a0a;font-family:Inter,system-ui,sans-serif;font-weight:700;font-size:13px;border-radius:9999px;text-decoration:none;">
   <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2 L8 8 L7 22 H17 L16 8 Z"/></svg>
-  Powered by Obelisk
+  ${escapeHtml(label)}
 </a>`;
+}
 
-export const EMBED_OG = `<!-- Add to <head> for sharing previews -->
-<meta property="og:title" content="Obelisk - Group chat powered by Nostr identity" />
-<meta property="og:description" content="No emails. No passwords. Cryptographic identity." />
+/** The Open Graph meta tags, with the tagline and one-liner in the page language. */
+export function embedOg({ comment, tagline, oneLiner }: { comment: string; tagline: string; oneLiner: string }): string {
+  return `<!-- ${escapeHtml(comment)} -->
+<meta property="og:title" content="${BRAND_NAME} - ${escapeHtml(tagline)}" />
+<meta property="og:description" content="${escapeHtml(oneLiner)}" />
 <meta property="og:image" content="https://obelisk.ar/og/obelisk.png" />
 <meta property="og:url" content="https://obelisk.ar" />
 <meta name="twitter:card" content="summary_large_image" />`;
+}
 
 export const GRID_OVERLAY: React.CSSProperties = {
   backgroundImage:
@@ -156,15 +160,10 @@ export const GRID_OVERLAY: React.CSSProperties = {
 export const GLOW_GRADIENT =
   'radial-gradient(circle, rgba(180,249,83,0.35) 0%, rgba(180,249,83,0.1) 40%, transparent 70%)';
 
-/**
- * The about section's four pitches. `lang` is the pitch's own language, shown
- * as a code in its label (`mediaKit.pitch.short`), not the page's.
- */
-export const PITCHES: ReadonlyArray<{ lang: string; labelKey: MessageKey; text: string }> = [
-  { lang: 'EN', labelKey: 'mediaKit.pitch.short', text: COPY.shortPitch },
-  { lang: 'ES', labelKey: 'mediaKit.pitch.short', text: COPY.shortPitchEs },
-  { lang: 'EN', labelKey: 'mediaKit.pitch.long', text: COPY.longPitch },
-  { lang: 'ES', labelKey: 'mediaKit.pitch.long', text: COPY.longPitchEs },
+/** The about section's two pitches, both in the page language. */
+export const PITCHES: ReadonlyArray<{ labelKey: MessageKey; textKey: MessageKey }> = [
+  { labelKey: 'mediaKit.pitch.short', textKey: 'mediaKit.brand.shortPitch' },
+  { labelKey: 'mediaKit.pitch.long', textKey: 'mediaKit.brand.longPitch' },
 ];
 
 /** The in-page table of contents under the hero. */
@@ -181,17 +180,20 @@ export const NAV_LINKS: ReadonlyArray<readonly [href: string, labelKey: MessageK
   ['#guidelines', 'mediaKit.nav.guidelines'],
 ];
 
-/** Quick-use phrases, each with its copy button; `lang` fills the label's `{lang}`. */
-export const SHORT_COPY: ReadonlyArray<{ labelKey: MessageKey; lang?: string; value: string }> = [
-  { labelKey: 'mediaKit.shortCopyLabel.name', value: COPY.name },
-  { labelKey: 'mediaKit.shortCopyLabel.tagline', lang: 'EN', value: COPY.tagline },
-  { labelKey: 'mediaKit.shortCopyLabel.tagline', lang: 'ES', value: COPY.taglineEs },
-  { labelKey: 'mediaKit.shortCopyLabel.oneLiner', lang: 'EN', value: COPY.oneLiner },
-  { labelKey: 'mediaKit.shortCopyLabel.oneLiner', lang: 'ES', value: COPY.oneLinerEs },
+/**
+ * Quick-use phrases, each with its copy button. A phrase is either literal
+ * (`value`: the name, the links) or copy in the page language (`valueKey`).
+ */
+export type ShortCopyItem = { labelKey: MessageKey } & ({ value: string } | { valueKey: MessageKey });
+
+export const SHORT_COPY: ReadonlyArray<ShortCopyItem> = [
+  { labelKey: 'mediaKit.shortCopyLabel.name', value: BRAND_NAME },
+  { labelKey: 'mediaKit.shortCopyLabel.tagline', valueKey: 'mediaKit.brand.tagline' },
+  { labelKey: 'mediaKit.shortCopyLabel.oneLiner', valueKey: 'mediaKit.brand.oneLiner' },
   { labelKey: 'mediaKit.shortCopyLabel.url', value: LINKS.site },
   { labelKey: 'mediaKit.defaultRelay', value: LINKS.defaultRelay },
   { labelKey: 'mediaKit.shortCopyLabel.github', value: LINKS.github },
 ];
 
-/** The print / merch banner's lettering: the wordmark itself, set in capitals. */
-export const MONO_BANNER = { wordmark: 'OBELISK', tagline: 'Nostr-native group chat' };
+/** The print / merch banner's wordmark, set in capitals; its tagline is `mediaKit.brand.monoTagline`. */
+export const MONO_WORDMARK = 'OBELISK'; // i18n-exempt: the product's name, set in capitals

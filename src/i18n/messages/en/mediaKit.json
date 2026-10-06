@@ -47,7 +47,7 @@
   "do": "✓ Do",
   "dont": "✕ Don’t",
   "desc": {
-    "about": "Short and long pitch: English and Spanish, ready to copy.",
+    "about": "Short and long pitch, ready to copy.",
     "logos": "Right-click → Save image as… or use the Download button.",
     "banners": "Banners rendered in HTML/CSS: copy the snippets, screenshot them, or use the linked PNGs.",
     "palette": "Design-system tokens. Tap the HEX to copy it.",
@@ -80,13 +80,13 @@
     "mono": "for print / merch"
   },
   "pitch": {
-    "short": "{lang} - Short pitch",
-    "long": "{lang} - Long pitch"
+    "short": "Short pitch",
+    "long": "Long pitch"
   },
   "shortCopyLabel": {
     "name": "Name",
-    "tagline": "Tagline ({lang})",
-    "oneLiner": "One-liner ({lang})",
+    "tagline": "Tagline",
+    "oneLiner": "One-liner",
     "url": "URL",
     "github": "GitHub"
   },
@@ -129,5 +129,14 @@
     "wotLogoPng": "Nostr WoT Logo (PNG)",
     "wotLogoSvg": "Nostr WoT Logo (SVG)",
     "wotLogoClean": "Nostr WoT Logo - Clean (PNG)"
+  },
+  "brand": {
+    "tagline": "Group chat powered by Nostr identity",
+    "oneLiner": "No emails. No passwords. Cryptographic identity.",
+    "shortPitch": "Obelisk is a Discord-style group chat where identity comes from your Nostr keypair. No emails, no passwords: cryptographic identity only.",
+    "longPitch": "Obelisk is a fully relay-only group chat application built on Nostr. It implements NIP-29 for groups, NIP-04/NIP-17 for direct messages, P2P voice via WebRTC signaled over Nostr plus SFU voice for big rooms, and Lightning payments via NIP-47 (Nostr Wallet Connect). No backend, no database: the client talks directly to relays.",
+    "monoTagline": "Nostr-native group chat",
+    "poweredBy": "Powered by Obelisk",
+    "ogComment": "Add these tags to your page head for sharing previews"
   }
 }

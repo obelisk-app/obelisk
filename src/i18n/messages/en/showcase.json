@@ -19,8 +19,8 @@
       "badge": "Voice • SFU",
       "title": "Voice and video that scales past mesh",
       "alt": "Obelisk mobile voice channel running in SFU mode with a test peer transmitting an SMPTE color-bar video stream.",
-      "desc": "Small rooms run as a P2P mesh; once a relay advertises an SFU, the same channel switches automatically and rooms scale to dozens of participants, all signaled over Nostr (kind 25050) without revealing identity to a media server.",
-      "features": "Mesh up to ~6 peers, SFU beyond|Mute, deafen, screen-share and chat from one bar|Bottom nav stays put while you talk"
+      "desc": "Small rooms run as a P2P mesh signaled over Nostr (kind 25050). Big-room voice channels route through a mediasoup SFU the channel admin picks, so a room scales to dozens of participants with the same controls.",
+      "features": "Mesh for up to 4 people, SFU channels for big rooms|Mute, deafen, screen-share and chat from one bar|Bottom nav stays put while you talk"
     },
     "shot3": {
       "badge": "Sign in with Nostr",
@@ -34,7 +34,7 @@
       "title": "Your Nostr profile, your settings",
       "alt": "Obelisk mobile profile screen: banner, avatar, npub and hex pubkey, Edit Nostr Profile button, Disconnect button and a Preferences tab.",
       "desc": "The same kind 0 profile every Nostr client uses: display name, banner, bio, NIP-05, Lightning address. Edit it once and every Nostr app sees the change.",
-      "features": "Copy npub or hex pubkey with one tap|Open your profile in any other Nostr client|Per-device preferences kept in localStorage"
+      "features": "Copy npub or hex pubkey with one tap|Share a public link to your profile|Per-device preferences kept in localStorage"
     },
     "cta": {
       "heading": "Take Obelisk with you",
@@ -63,18 +63,18 @@
       "title": "Publications for slower, deeper conversations",
       "alt": "Obelisk desktop publications view of plaza-publica: four publications (Politica y Economia, But why?, Only-Claws, Finanzas-Trading v2) with OP, message count and last reply time.",
       "desc": "Publication-kind channels turn into a tidy feed: a list of posts, OP and last-reply metadata, each with its own chat, and the same NIP-29 moderation as every other channel.",
-      "features": "One-click 'New thread' to start a topic|Last-message timestamps stay accurate via cursors|Same admin model: kicks and bans live on the relay"
+      "features": "One-click 'New publication' to start a topic|Each card shows its message count and last reply|Same admin model: removals live on the relay"
     },
     "shot3": {
       "badge": "Voice • SFU",
       "title": "Big voice rooms with mediasoup and screen share",
       "alt": "Obelisk desktop voice channel in SFU mode showing a test peer streaming an SMPTE color-bar test pattern with the chat sidebar and voice controls.",
-      "desc": "Voice channels start as a P2P mesh and switch to a mediasoup SFU when the relay advertises one. Same UI, same kind-25050 signaling, just more peers and screen-share without melting CPUs.",
-      "features": "Allow-listed SFU operators per relay|Screen share with hardware-accelerated encode|All signaling rides on Nostr, no sticky-session backend"
+      "desc": "Small voice channels are a P2P mesh; big-room voice channels route through a mediasoup SFU the channel admin picks. Same UI, just more people and screen share without melting CPUs.",
+      "features": "Pick the SFU per channel, or host your own|Camera and screen share in every room|Mesh signaling rides on Nostr, no sticky-session backend"
     },
     "cta": {
       "heading": "Open Obelisk in any browser",
-      "subtitle": "It's a static frontend with no signup. Open it locally, install the PWA, or self-host the build. Same client either way.",
+      "subtitle": "It's a frontend with no signup and no backend of its own. Open it locally, install the PWA, or self-host the build. Same client either way.",
       "button": "Launch on desktop"
     }
   }

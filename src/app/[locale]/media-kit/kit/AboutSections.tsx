@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ASSETS, PITCHES } from '@/utils/media-kit/content';
 import { CopyButton, Section } from './kit-ui';
 
-/** The pitches (EN/ES, short and long) and the downloadable logos and icons. */
+/** The pitches (short and long, in the page language) and the downloadable logos and icons. */
 export function AboutSections() {
   const t = useTranslations();
   return (
@@ -17,15 +17,15 @@ export function AboutSections() {
         description={t('mediaKit.desc.about')}
       >
         <div className="grid gap-4 md:grid-cols-2">
-          {PITCHES.map(({ lang, labelKey, text }) => (
-            <div key={`${lang}-${labelKey}`} className="lc-card p-5 space-y-3">
+          {PITCHES.map(({ labelKey, textKey }) => (
+            <div key={labelKey} className="lc-card p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-lc-green">
-                  {t(labelKey, { lang })}
+                  {t(labelKey)}
                 </span>
-                <CopyButton text={text} />
+                <CopyButton text={t(textKey)} />
               </div>
-              <p className="text-sm text-lc-white">{text}</p>
+              <p className="text-sm text-lc-white">{t(textKey)}</p>
             </div>
           ))}
         </div>

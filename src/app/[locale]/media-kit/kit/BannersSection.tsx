@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { COPY, LINKS, MONO_BANNER, OG_IMAGE_URL } from '@/utils/media-kit/content';
+import { BRAND_NAME, LINKS, MONO_WORDMARK, OG_IMAGE_URL } from '@/utils/media-kit/content';
 import { Section } from './kit-ui';
 import { BannerCard } from './BannerCard';
 import { GitHubSocialBanner, HeroBanner, LinkedInBanner, SquareBanner, XHeaderBanner } from './banners';
@@ -84,10 +84,10 @@ export function BannersSection() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-lc-white font-bold text-lg">
-                {COPY.name}
+                {BRAND_NAME}
               </div>
               <div className="text-lc-muted text-sm truncate">
-                {COPY.tagline}
+                {t('mediaKit.brand.tagline')}
               </div>
             </div>
             <a
@@ -108,10 +108,10 @@ export function BannersSection() {
         >
           <div className="p-10 sm:p-14 bg-lc-white text-lc-black text-center">
             <div className="text-3xl sm:text-5xl font-extrabold tracking-tight">
-              {MONO_BANNER.wordmark}
+              {MONO_WORDMARK}
             </div>
             <div className="mt-2 text-xs sm:text-sm uppercase tracking-[0.4em] text-neutral-600">
-              {MONO_BANNER.tagline}
+              {t('mediaKit.brand.monoTagline')}
             </div>
           </div>
         </BannerCard>

@@ -1,67 +1,79 @@
 ---
 title: NIP-29 admins, members, and moderation
-description: There is no Obelisk admin panel anymore; moderation lives on the relay. Admins, members, kicks and bans are all standard NIP-29 events that any Nostr client can read. Here's how the role model works, what you can do, and what stays auditable.
+description: How admins run a relay community in Obelisk today. Channel admins edit their channel and its members from channel settings; the relay operator manages roles, members, emoji and layout from server settings. Every action is a standard NIP-29 event that any Nostr client can read.
 heroComponent: admin-cli
 publishedAt: '2026-04-18'
-updatedAt: '2026-04-28'
+updatedAt: '2026-10-06'
 tags: [moderation, nip-29, admins, roles]
 ---
 
 ## Where moderation lives
 
-In the old hybrid Obelisk, admins lived in a Postgres table and an admin web panel called an HTTP API to issue bans. In the new Obelisk, **all of that is on the relay**. Moderation isn't a feature of the app; it's a feature of NIP-29.
+In the old hybrid Obelisk, admins lived in a Postgres table and an admin web panel called an HTTP API to remove people. In the new Obelisk, **the permissions live on the relay**. The admin tools are in the app, but every click publishes a signed NIP-29 event, and the relay is the one that enforces it.
 
 That means:
 
-- Any NIP-29 client can show the same admin list, member list, kicks, and bans.
+- Any NIP-29 client can show the same admin list and member list.
 - Switching clients doesn't change permissions.
 - Switching relays *does*: moderation is per-relay-per-group, because the relay is the enforcer.
 
-## The events that matter
+## Two kinds of admin
 
-NIP-29 defines a small set of event kinds. The ones that affect moderation:
+Obelisk has two levels of authority, and they never mix:
 
-| Kind  | What it is                                |
-|-------|-------------------------------------------|
-| `9007`  | Group create: first signer becomes admin |
-| `9000`  | Put user (add member)                     |
-| `9001`  | Remove user (kick)                        |
-| `9005`  | Delete event (mod-side message removal)   |
-| `9002`  | Edit metadata                             |
-| `39000` | Group metadata (replaceable)              |
-| `39001` | Admin list (replaceable)                  |
-| `39002` | Member list (replaceable)                 |
+- **Channel admins.** A channel is a NIP-29 group. Its admins are the people listed in the relay's latest `39001` event for that group. They manage that one channel.
+- **The relay operator.** The pubkey the relay names as its operator (the `contact` npub in its NIP-11 document, else its `pubkey`). Only the operator sees the server settings, and only the operator's events change relay-wide things like roles, categories and branding.
 
-Every action a moderator takes is one of these events, signed by them, timestamped by the relay. There's no hidden moderation log; the events *are* the log.
+## Channel settings (channel admins)
 
-## The roles
+Open a channel and click its settings in the channel header (on a phone, the channel's settings sheet). From there an admin can:
 
-- **Admin**: listed in the latest `39001` event. Can edit metadata, add or remove members, promote or demote other admins, kick, and delete messages.
-- **Member**: listed in the latest `39002` event. Can post messages.
-- **Everyone else**: read-only at most, depending on the group's metadata flags (`public` vs `private`).
+- **Edit the channel**: name, description, icon and banner.
+- **Set who gets in**: *public* (everyone reads and posts), *read-only* (everyone reads, members post) or *private* (hidden, members only).
+- **Pick the channel type**: text, voice and video (a peer-to-peer mesh for small rooms), big-room voice (routed through an SFU you choose and verify), or publications (a feed of posts, each with its own chat, with curated tags).
+- **Manage members**: add someone by npub or hex key (optionally as an admin), demote an admin to member, or remove someone from the channel.
 
-In Obelisk's UI you see these roles surface as badges next to names, "kick" and "ban" buttons in the right-click menu, and an admin section in the group settings. Under the hood, every click publishes one of the events above.
+In the chat itself, an admin can **delete any message** in the channel ("Delete for everyone") and clear its reactions.
 
-## What an admin actually does
+## Server settings (relay operator)
 
-- **Promote a member to admin**: publish a new `39001` adding their pubkey.
-- **Kick someone**: publish a `9001` event with their pubkey. The relay then refuses their messages.
-- **Delete a bad message**: publish a `9005` event referencing the offending event ID.
-- **Rename or rebrand the group**: publish a `9002` (edit metadata).
+The relay operator gets a server settings button at the top of the channel list. It opens five tools:
 
-All of these go through Obelisk's UI today. There is no separate admin panel because there's nothing to "panel over": the events go straight to the relay.
+- **Server profile & banner**: the name, icon, banner and description everyone sees for the relay.
+- **Emoji, GIFs & stickers**: the server's own favorites and packs, shown to every member.
+- **Channels & categories**: category names and the order of the channels in them.
+- **Roles & ranks**: tiered badges (name, color, emoji) shown next to member names. Members can hold several; the most senior one is the badge they wear. Roles are labels, not permissions: the relay still only knows admins and members.
+- **Members & moderation**: one table of every admin and member across every channel on the relay, filterable by name, role and channel, to demote or remove people in bulk.
 
-## What about banning across relays?
+## The events behind the buttons
 
-NIP-29 bans are per-relay. If someone is banned from your group on relay A, nothing stops them from creating the same group ID on relay B and posting there. This is by design: relays are sovereign. If you care about portable bans, run your own relay (or a relay set you control) and replicate group state across them.
+Every action above is one of these events, signed by the admin and timestamped by the relay. There's no hidden moderation log; the events *are* the log.
+
+| Kind  | What it is                                         |
+|-------|----------------------------------------------------|
+| `9007`  | Create group: a new channel                       |
+| `9002`  | Edit metadata: name, images, access, channel type |
+| `9000`  | Put user: add a member, or make them an admin     |
+| `9001`  | Remove user: take someone out of the channel      |
+| `9003`  | Remove permission: demote an admin to member      |
+| `9005`  | Delete event: remove a message or reaction        |
+| `39000` | Group metadata, published by the relay            |
+| `39001` | Admin list, published by the relay                |
+| `39002` | Member list, published by the relay               |
+
+The relay checks each request against its own admin list before it accepts it, and then publishes the updated `39000`/`39001`/`39002` state. Roles, categories and branding are the operator's own replaceable events (NIP-78, kind `30078`), and Obelisk only reads them from the operator's key.
+
+## What about removals across relays?
+
+NIP-29 removals are per-relay. If someone is removed from your group on relay A, nothing stops them from creating a group with the same ID on relay B and posting there. This is by design: relays are sovereign. If you care about portable moderation, run your own relay (or a relay set you control) and replicate group state across them.
 
 ## Where the admin CLI went
 
-Earlier versions of Obelisk shipped a Node CLI (`scripts/admin-cli`) that let agents drive the HTTP admin API with their own nsec. With the API gone, the CLI is gone too. The same outcome (agents managing groups end-to-end) is now achievable directly with `nostr-tools` or any Nostr SDK: load an nsec, build the NIP-29 events, publish to the relay. We may publish a thin helper for this; track the issue tracker.
+Earlier versions of Obelisk shipped a Node CLI (`scripts/admin-cli`) that drove an HTTP admin API with an nsec. The API is gone, so the CLI is gone too, and everything it did is now in the app's channel and server settings. A script can still do the same work without Obelisk: load a key with `nostr-tools` or any Nostr SDK, build the NIP-29 events above and publish them to the relay. The relay judges them exactly as it judges a click in the app.
 
 <RelatedGuides items={[
   { slug: "how-obelisk-works", note: "the no-backend architecture" },
   { slug: "web-of-trust", note: "relays as sovereign communities" },
   { slug: "future-nostr-relays" },
-  { slug: "run-your-own-relay", note: "the relay those bans live on" }
+  { slug: "run-your-own-relay", note: "the relay that enforces all of this" }
 ]} />

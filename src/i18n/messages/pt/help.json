@@ -15,7 +15,7 @@
     },
     "community": {
       "title": "Administrar uma comunidade",
-      "description": "Modere um grupo com os papéis, expulsões e bans do NIP-29."
+      "description": "Modere um grupo com os admins, cargos e expulsões do NIP-29."
     },
     "payments": {
       "title": "Pagamentos e zaps",
