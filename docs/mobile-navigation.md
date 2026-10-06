@@ -344,4 +344,5 @@ When you add a new screen or transition, the order of operations is:
 3. Add it to the screen catalog table in this doc.
 4. Add its navigation row to the trigger table in Section 4.
 5. Render it in the `body` switch in `PhoneShell.tsx`.
-6. Add a test case to `navigation.test.tsx` covering the new trigger.
+6. Add a test case covering the new trigger (`tests/utils/shell/mobile/url-state.test.ts` for the URL
+   state, a test under `tests/app/[locale]/app/mobile/` for the screen).

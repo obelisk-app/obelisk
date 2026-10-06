@@ -30,19 +30,17 @@ Canonical list of open bugs and tech debt in Obelisk. Fixes are tracked here unt
   is relay-operator housekeeping, not a client change. Note that filtering
   `isHidden` groups out of the **live** stream client-side would be wrong:
   it is how members reach legitimately private channels; the cache-seed skip
-  in `client.ts` exists only so hidden metadata is never painted from a
+  in `src/services/nostr-bridge/seed.ts` exists only so hidden metadata is never painted from a
   previous identity's snapshot.
 
 ## Realtime & presence
 
 - **Online users not updating**: all users appear online regardless of actual status. Presence state is not driven by socket connect/disconnect events.
-- **Nuevo miembro no aparece en tiempo real en la member list**: when Bob joins a group where Alice is already connected, Alice does not see Bob in the sidebar until she reloads (or sends/receives a message that embeds his profile). Audit the bridge's kind 39002 (members) subscription path against `MemberList.tsx`: the global `subscribeAdminMember` call is fired from `ingestGroupMetadata`, but updates may not be triggering a re-render of the member list when the joiner has no kind:0 cached yet.
+- **Nuevo miembro no aparece en tiempo real en la member list**: when Bob joins a group where Alice is already connected, Alice does not see Bob in the sidebar until she reloads (or sends/receives a message that embeds his profile). Audit the bridge's kind 39002 (members) subscription path against `MemberList.tsx`: members arrive through the relay-wide admin/member REQ the session opens (`src/services/nostr-bridge/groups/membership.ts`; group metadata ingest no longer opens a per-group one), but updates may not be triggering a re-render of the member list when the joiner has no kind:0 cached yet.
 - **Lateral member list does not update per server**: switching servers must reload members, roles and online state for the server the user is now viewing.
 
 ## Rendering & UI
 
-- **`MessageBubble` ignores the embedded `message.author`**: `src/components/chat/MessageArea.tsx:213-214` resolves avatar/name only via `profileCache.get(authorPubkey)`, discarding the profile the server already attaches on each `new-message` emit (see `getAuthorProfile` in `src/lib/profile-sync.ts:255`). The first message from a never-seen user renders with the fallback letter until the seed in `chat/page.tsx:426-445` reaches the cache and re-renders. Fix: priority chain `message.author?.picture ?? profileCache.get(pk)?.picture` (same for `displayName`).
-- **Channel load restores `lastSeen` even when not needed**: `src/app/chat/page.tsx:403-418` always queues a pending highlight from `localStorage['chat:lastSeen:<channelId>']` on initial mount. If that message isn't in the latest page, `fetchMessages` refetches with `?around=<id>` (line 1192) and the user lands in old history instead of at the bottom. Restore only when the URL has `?m=`, or fall back to latest page when the stored id is outside it.
 - **`UserPanel` ↔ `MessageInput` altura/alineación visual**: the profile bar at the bottom of `ChannelSidebar` does not line up in height with the message input bar (`px-2 md:px-4 pb-3 md:pb-4 pt-2` in both, avatar `h-8` vs textarea `rows=1`). Attempts (`leading-tight`, moving `UserPanel` in/out of the aside, `bg-lc-dark` on wrapper) leave a black strip between the channel list and the profile card. Likely fix: force explicit shared height (e.g. `h-12`) on both inner containers and ensure the `UserPanel` wrapper inherits `bg-lc-dark` from the aside without painting under the `ServerBar`.
 - **Publications channels look like the opened tab even after clicking outside**: navigating from a publications channel to a regular channel does not clear its selected state in the sidebar. Does not happen between regular channels.
 - **Bienvenida channel renders badly on refresh**: initial load in the welcome channel loads elements in the wrong order.
@@ -61,22 +59,16 @@ Canonical list of open bugs and tech debt in Obelisk. Fixes are tracked here unt
 
 The read-state foundation (server-side `lastReadAt`, in-app toasts via `ToastStack`, unread bullets, "new messages" separator, favicon badge, title counter, bech32 + reply mention detection via `extractMentionPubkeys`) is built but buggy in practice. Known issues:
 
-- **`/api/unread` returns a binary count for DMs**: today it returns `1` or `0` per thread instead of the real unread message count.
 - **General notification reliability**: notifications do not fire consistently. Needs an audit of the full path (socket emit → store → toast + favicon + title) against the actual triggers (new message in subscribed channel, @mention, reply to own message, DM). Specific reproduction steps to be added as they are observed.
-- **Welcome message does not fire for existing users joining a new server**: the welcome bot only triggers via the join endpoint; auto-join flows (e.g. WoT auto-registration) bypass it. Verify that auto-join creates a Member record and then invokes the same welcome-message hook as the explicit join route.
 
 ## Ergonomics / small UX
 
 - **Scroll to last message button** is missing when a channel has many unread messages.
 - **Navigate between mentions**: when a user has several mentions in a long chat, provide a floating `N mentions ↑↓` control (Discord-style) that jumps to prev/next without marking all as read. Keyboard shortcuts `F7` / `Shift+F7` and clicking the unread-mention badge should drive the same navigation.
 
-## Admin
-
-- **No way to delete servers from /admin**: once a server is created there is no UI path to remove it. Schema-wise, `Server` already cascades deletes to its children, so the API/UI is the only missing piece.
-
 ## Apps (games moving to obelisk-apps, in progress 2026-09-27)
 
-Games are moving out of this repo into [obelisk-apps](https://github.com/obelisk-app/obelisk-apps). They are becoming sandboxed apps that users publish as kind 32390 manifests, with the bundle on Blossom. Nothing below is built yet. These are the host-side risks the switch brings, recorded now so the dex PR lands with them tracked. The full model is in obelisk-apps `docs/security.md` and `docs/known-issues.md`, and the cross-project policy in obelisk-design `security-workflows/app-sandbox.md`.
+Games are moving out of this repo into [obelisk-apps](https://github.com/obelisk-app/obelisk-apps). They are becoming sandboxed apps that users publish as kind 32390 manifests, with the bundle on Blossom. Nothing below is built yet. These are the host-side risks the switch brings, recorded now so the dex PR lands with them tracked. The full model is in the obelisk-apps repo's security and known-issues docs, and the cross-project policy in obelisk-design's app-sandbox security workflow.
 
 - **Stranger code next to the signer.** An app is written by anyone who can publish to the active relay.
   - The dex host must mount it as `sandbox="allow-scripts"` (never `allow-same-origin`) with `allow=""`, from `https://frame.obelisk.ar`.
@@ -95,7 +87,14 @@ Games are moving out of this repo into [obelisk-apps](https://github.com/obelisk
 - **Chat cards stop being live boards.** An `AppCard` shows the manifest, participants and the app's `status` line. The board is only in the modal, because mounting an iframe per card is too heavy.
 - **App moderation** is only what the relay operator already has: deleting events and banning authors. There's no per-app hide, no review and no trust signal in the catalog.
 
-## Schema / tech debt
+## From the classic stack
 
+These were filed against the retired Postgres + Socket.io client ([obelisk-app/obelisk-classic](https://github.com/obelisk-app/obelisk-classic)). The files, endpoints and database tables they name are not in this repo; re-check each one against the relay-only app before working on it.
+
+- **`MessageBubble` ignores the embedded `message.author`**: classic's MessageArea.tsx (lines 213-214) resolves avatar/name only via `profileCache.get(authorPubkey)`, discarding the profile the server already attaches on each `new-message` emit (see `getAuthorProfile` in classic's lib/profile-sync.ts, line 255). The first message from a never-seen user renders with the fallback letter until the seed in classic's chat/page.tsx (lines 426-445) reaches the cache and re-renders. Fix: priority chain `message.author?.picture ?? profileCache.get(pk)?.picture` (same for `displayName`).
+- **Channel load restores `lastSeen` even when not needed**: classic's app/chat/page.tsx (lines 403-418) always queues a pending highlight from `localStorage['chat:lastSeen:<channelId>']` on initial mount. If that message isn't in the latest page, `fetchMessages` refetches with `?around=<id>` (line 1192) and the user lands in old history instead of at the bottom. Restore only when the URL has `?m=`, or fall back to latest page when the stored id is outside it.
+- **`/api/unread` returns a binary count for DMs**: today it returns `1` or `0` per thread instead of the real unread message count.
+- **Welcome message does not fire for existing users joining a new server**: the welcome bot only triggers via the join endpoint; auto-join flows (e.g. WoT auto-registration) bypass it. Verify that auto-join creates a Member record and then invokes the same welcome-message hook as the explicit join route.
+- **No way to delete servers from /admin**: once a server is created there is no UI path to remove it. Schema-wise, `Server` already cascades deletes to its children, so the API/UI is the only missing piece.
 - **`Channel.emoji` should be folded into `Channel.name`**: emoji and name are stored as separate columns in admin, forcing every renderer to stitch them (`<ChannelEmoji value={channel.emoji} /> {channel.name}`) and complicating slugs, share-links and mentions. Migrate admin UX so the emoji is typed inline in the single name input (e.g. `💬 chat-general`), store it inline in `name`, and drop the `emoji` column in a follow-up migration.
-- **Deployed La Crypta server is behind `prisma/seed.ts`**: welcome message in `empezá-acá`, posts of `indice` (reglas/actividades/proyectos/redes), posts of `méritos` (plantillas de reclamo), channel descriptions, emojis, tags, etc. are hardcoded in the seeder and only applied at initial creation. There is no way to edit them from the UI, and re-running the seeder does not update existing rows. Fix tracked in [content-migration-plan.md](content-migration-plan.md).
+- **Deployed La Crypta server is behind the classic `prisma` seeder**: welcome message in `empezá-acá`, posts of `indice` (reglas/actividades/proyectos/redes), posts of `méritos` (plantillas de reclamo), channel descriptions, emojis, tags, etc. are hardcoded in the seeder and only applied at initial creation. There is no way to edit them from the UI, and re-running the seeder does not update existing rows. Fix tracked in [content-migration-plan.md](content-migration-plan.md).

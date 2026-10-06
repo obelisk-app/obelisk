@@ -1,5 +1,7 @@
 # Obelisk mesh voice - audit & fix plan
 
+_Line numbers (`client.ts:NNNN`, `transport.ts:NNN`) point into the tree of 2026-09-26; the voice client and the bridge have since been split into modules, so search by name instead._
+
 _Audit date: 2026-09-26. Scope: mesh (P2P WebRTC) voice channels across obelisk-dex (client),
 obelisk-relay (public.obelisk.ar + lacrypta-relay.obelisk.ar), coturn, and obelisk-sfu's mesh test peer.
 SFU (mediasoup) channels are out of scope except where they share plumbing._
@@ -56,7 +58,7 @@ every beacon and signal in a live probe (both `e`-tagged and `h`-tagged, `#p`-fi
 - nostr-tools only runs AUTH-and-retry for `auth-required:` prefixes.
 - Same bug caused the **SFU restart loop** (1 243 PM2 restarts): every 5-min advertisement refresh hit a
   fresh socket, got `restricted`, the watchdog saw "all write relays silent" and killed the process every
-  10 min. **Fixed client-side in obelisk-sfu `src/relay.ts` on 2026-09-26** (explicit AUTH + retry);
+  10 min. **Fixed client-side in obelisk-sfu's `relay.ts` on 2026-09-26** (explicit AUTH + retry);
   verified: refreshes at 04:33/04:38 acked, no restart since.
 - Live probe (this audit): subscriptions opened before AUTH finished were CLOSED `auth-required` and are
   only reopened if the subscription carries an `onauth` handler.
@@ -141,7 +143,7 @@ Ordered by *impact ÷ effort*. Phase 0 alone should make most mesh calls work ag
 ### Phase 3 - SFU mesh test peer (obelisk-sfu): ✅ DONE 2026-09-26 (`obelisk-sfu` main `f8a4007..5a791ed`)
 1. ✅ Mesh test peers now sign as the **SFU identity** by default (admitted on both relays once
    authenticated); `identityMode: 'ephemeral'` still available.
-2. ✅ `scripts/test-peers/relay-auth.mjs`: AUTH + one retry on `restricted`/`auth-required` publish
+2. ✅ obelisk-sfu's `test-peers/relay-auth.mjs`: AUTH + one retry on `restricted`/`auth-required` publish
    rejections; per-relay subscriptions with `onauth`, logged close reasons and backoff reopen. Used by
    both the mesh and SFU test peers. Filters are indexed (`#p:[self]`, `#e:[channel]`).
 3. ✅ Glare: the current script already resets instead of rolling back (the `rollback threw` errors were
@@ -172,6 +174,6 @@ independent subscriber (before: rejected, `peers=0` for its whole life).
 5. Phase 2.4–2.8 (robustness).
 
 ## Already done
-- obelisk-sfu `src/relay.ts`: explicit NIP-42 AUTH + single retry when a publish is rejected before AUTH
+- obelisk-sfu's `relay.ts`: explicit NIP-42 AUTH + single retry when a publish is rejected before AUTH
   (deployed 2026-09-26 04:28 UTC; SFU no longer restarts every 10 minutes).
 - Phase 3 (test peers): see above. All obelisk-sfu work is on `main`.

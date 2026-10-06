@@ -1,5 +1,7 @@
 # Web of Trust integration + mute-system revision
 
+> **Historical plan.** The engine it describes is in `src/services/wot/`. The bridge has since been split into modules (`client.ts` is a small facade now), so the line numbers and method locations below are as they were when this was written. The local DM subsystem it names (`services/dm/dm.ts`, `dm-cache.ts`) was deleted on 2026-05-10, and the bridge's old `stores.ts` hooks now live in `src/services/nostr-bridge/hooks/`. For the current code read [direct-messages.md](direct-messages.md) and AGENTS.md.
+
 ## Context
 
 Today, Obelisk renders every event the relay sends, regardless of who authored it. The mute system (`src/store/moderation.ts` zustand + bridge NIP-51 kind 10000) only filters at React **render time**, so muted/unwanted authors' events still hit `messagesByGroup`, the localStorage cache (`cacheSet` calls in `ingestGroupMetadata`, `ingestAdminMember`, etc.), and trigger amplifying `ensureUserMetadata()` REQs for kind:0 lookups. That's spam-attack surface and a privacy leak (the user's relay history records exposure to authors they never wanted to see).
@@ -41,9 +43,9 @@ Single new module `src/services/wot/`. One sync predicate `isAllowed(pubkey, kin
 | `src/services/nostr-bridge/client.ts` `ensureUserMetadata(pk)` (~line 1959) | Skip the kind:0 REQ if `isAllowed(pk, 0) === false` AND verdict is resolved (not unknown). Prevents profile-fetch amplification for confirmed-out-of-WoT pubkeys. Unknown pubkeys still REQ; they may be allowed once verdict resolves. |
 | `src/services/nostr-bridge/client.ts` `ingestGroupMetadata`, `ingestAdminMember`, `ingestMessage`, `ingestReaction`, `ingestDM`, `ingestUserMetadata` | No code changes (the choke-point above gates them). Add a defensive `if (!isAllowed(...)) return;` only in `ingestDM` because it can also be called from the dm.ts path (belt-and-suspenders). |
 | `src/services/nostr-bridge/client.ts` `subscribeMyMuteList` (~line 2085) | When the mute list updates, call `wot.notifyMutesChanged()` so the engine can re-evaluate cached verdicts and the prune event fires for newly-muted pubkeys. |
-| `src/services/dm/dm.ts` `verifyAndIngest` (line 28) | After signature check, before `putEvent`, gate with `isAllowed(event.pubkey, event.kind)` AND check the consensual-DM exemption (does `dm-cache` have an outgoing event to this pubkey?). Prevents NIP-04 history loads, gift-wraps, and inbox-walker hits from caching untrusted authors. |
+| the former `services/dm/dm.ts` `verifyAndIngest` (line 28; deleted) | After signature check, before `putEvent`, gate with `isAllowed(event.pubkey, event.kind)` AND check the consensual-DM exemption (does `dm-cache` have an outgoing event to this pubkey?). Prevents NIP-04 history loads, gift-wraps, and inbox-walker hits from caching untrusted authors. |
 | `src/services/voice/client.ts` lines 408–417 | Augment the existing `isMember(from)` gate: `if (!isMember(from) || !isAllowed(from, KIND_VOICE_SIGNAL)) return;`. Voice signaling from an untrusted author should never be routed even if they're nominally a "member". |
-| `src/services/nostr-bridge/stores.ts` `useMessages` (line 165) and `useDirectMessages` (line 201) | DELETE the render-time mute filter. Filtering happens at ingest now; if it didn't pass the predicate, it's not in the store at all. (Keep the `useMyMutes` hook itself: UI still uses it for "is this user muted?" toggles in `ProfilePopover`.) |
+| the bridge's former `stores.ts` `useMessages` (line 165) and `useDirectMessages` (line 201); now `hooks/messages.ts` | DELETE the render-time mute filter. Filtering happens at ingest now; if it didn't pass the predicate, it's not in the store at all. (Keep the `useMyMutes` hook itself: UI still uses it for "is this user muted?" toggles in `ProfilePopover`.) |
 | `src/store/moderation.ts` | KEEP, but actually use it. Subscribe to its `mutedPubkeys` and `blockedPubkeys` from inside `wot/engine.ts` so they participate in the predicate. Add a comment marking it as "device-local quick mutes, NOT synced; for cross-device use the bridge mute toggle." Remove unused `isMuted`/`isBlocked` selectors if nothing reads them. |
 | `src/components/chat/ProfilePopover.tsx` | Show WoT badge + distance, and surface the `moderation.toggleMute` / `moderation.toggleBlock` actions next to the existing NIP-51 mute toggle so the user can pick local-vs-synced. |
 | `src/components/chat/MessageContent.tsx` | Render `<WotBadge pubkey={...} />` next to author name. |
@@ -96,7 +98,7 @@ Manual smoke (foreground):
 Automated:
 
 - `tests/services/wot/engine.test.ts`: full predicate matrix: combinations of {extension absent / unknown / allow / deny} × {own / exempt-kind / mute / block / generic} × {maxHops 1/2/3}.
-- `src/services/dm/dm.test.ts`: extend with one case per branch (fail-open, untrusted denied, consensual exemption).
+- the former `services/dm/dm.test.ts` (deleted with the module): extend with one case per branch (fail-open, untrusted denied, consensual exemption).
 - `npm run test` must pass green before this is considered done (per CLAUDE.md "tests are part of the implementation").
 
 ## Alternatives considered

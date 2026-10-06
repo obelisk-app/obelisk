@@ -1,6 +1,6 @@
 # App-wide i18n + Per-user Language
 
-**Status:** active priority, not started. Referenced from [ROADMAP.md](../ROADMAP.md).
+**Status:** superseded. App-wide translation shipped differently: next-intl, URL locales (English unprefixed, `/es`, `/pt`), per-module message files under `src/i18n/messages/<locale>/`. The current design is [i18n.md](i18n.md); this plan (one provider with `es.json` / `en.json`, a server-side `User.language`) is kept for history only.
 
 Today only the landing page is translated (ES/EN). The rest of the app (chat, admin, moderation, forums, settings, modals, toasts, API errors) is a mix of hardcoded Spanish and English. Each user should also have their own persisted language, independent of any per-server default.
 

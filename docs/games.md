@@ -1,6 +1,6 @@
 # Games on the relay
 
-> **Moving out (2026-09-27).** These games are moving to [obelisk-apps](https://github.com/obelisk-app/obelisk-apps) as sandboxed apps that users publish on a relay (kind 32390 manifest plus a Blossom bundle). This repo will keep only the host, and this doc will become `docs/apps.md`. The spec, security model and known issues are in obelisk-apps `docs/`. The host-side risks are in [known-bugs.md § Apps](known-bugs.md#apps-games-moving-to-obelisk-apps-in-progress-2026-09-27).
+> **Moving out (2026-09-27).** These games are moving to [obelisk-apps](https://github.com/obelisk-app/obelisk-apps) as sandboxed apps that users publish on a relay (kind 32390 manifest plus a Blossom bundle). This repo will keep only the host, and this doc will be replaced by an apps doc. The spec, security model and known issues are in obelisk-apps `docs/`. The host-side risks are in [known-bugs.md § Apps](known-bugs.md#apps-games-moving-to-obelisk-apps-in-progress-2026-09-27).
 
 Two games share one runtime: **Chain Reaction**, ported from the classic
 centralized stack, and **Vesta**, consumed as a tracked upstream package. The
@@ -191,7 +191,7 @@ dependency**, not a fork:
 `npm update vesta` pulls upstream's rule changes. Nothing in
 `src/lib/games/vesta/` encodes a rule; it only translates vocabularies
 (player index ↔ seat id, `move.player` ↔ who signed the event). Because the
-package's `main` is `src/vesta.ts`, it is listed in `transpilePackages`
+package's `main` is its TypeScript source, it is listed in `transpilePackages`
 (next.config.ts) and inlined for Vitest.
 
 Three things the relay forces that upstream's hot-seat client never needed:
@@ -365,7 +365,7 @@ The music is the `ncc`-prefixed set from
 [TETRA](https://github.com/soyezequiel/tetris-para-luna-negra) by
 **soyezequiel**, a La Crypta hackathon project. That repo marks its
 royalty-free tracks with that prefix (see `ROYALTY_FREE_PREFIX` in its
-`src/audio/music.ts`), and they were generated with Suno. All three ship under
+audio module), and they were generated with Suno. All three ship under
 `public/games/stacker/` and are credited in the game UI, linking back to the
 source.
 
@@ -411,10 +411,10 @@ with no file on disk fails `Shot.test.tsx`.
 
 ## Adding another game
 
-The runtime is game-agnostic. Port the engine from classic (`chess.ts`,
-`tic-tac-toe.ts` are both already pure), make sure it obeys the contract in
+The runtime is game-agnostic. Port the engine from classic (its chess and
+tic-tac-toe engines are both already pure), make sure it obeys the contract in
 `src/lib/games/types.ts` (no wall clock, no randomness, no mutation), give it
 an entry in `src/lib/games/game-meta.ts` (which the definition spreads) and a
 loader in `src/lib/games/registry.ts`. Never import the engine from anything the
-chat shell loads: `tests/app/app/lazy-mounts.test.tsx` fails if you do. Everything in `session.ts`, `transport.ts`,
+chat shell loads: `tests/app/[locale]/app/lazy-mounts.test.tsx` fails if you do. Everything in `session.ts`, `transport.ts`,
 and the store works unchanged; only the board component is new.

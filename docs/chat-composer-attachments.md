@@ -2,15 +2,15 @@
 
 ## Flow
 
-The chat composer in `src/app/[locale]/app/AppShell.tsx` accepts media three ways:
+The channel composer (`src/app/[locale]/app/panes/ChatComposer.tsx` on desktop, `mobile/screens/ChannelComposer.tsx` on the phone, both driven by `src/hooks/chat/useChannelComposer.ts`) accepts media three ways:
 
 1. **Attach button**: opens the OS file picker (`<input type="file" multiple accept="image/*,video/*">`).
 2. **Paste**: `onPaste` on the message input scans `clipboardData.items` for files with an `image/*` or `video/*` MIME type.
 3. **Inline URLs**: pasting a bare image URL into the text still works; the renderer detects it on the receiving side.
 
-All three paths funnel through `onPickFiles(files: File[])`, which:
+The attach button and paste funnel through `onPickFiles(files: File[])` (`src/hooks/chat/composer/useComposerUploads.ts`), which:
 
-- Caps each batch at **4 files** (matches the gallery's 2x2 matrix renderer).
+- Caps each batch at **4 files** (`MAX_COMPOSER_ATTACHMENTS`, matching the gallery's 2x2 matrix renderer).
 - Uploads in parallel via `uploadToBlossom` from `src/services/blossom.ts`.
 - Appends each returned URL on its own line at the end of the draft (NIP-92-style: bare image URLs in message content are auto-rendered as media on receive).
 

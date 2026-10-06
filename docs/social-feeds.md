@@ -60,7 +60,9 @@ still read once on migration.
 | `kinds.ts` | which kinds a feed requests and how each renders |
 
 **One pool.** Everything reads through `sharedCoalescer` on the SDK's
-`getPool()`. Before this, `NostrProfile` did `new SimplePool()` in a mount
+`getPool()`, and that pool is the RelayHub's `SimplePool`-shaped facade
+(`src/services/social/pool.ts`), so social reads share the hub's sockets,
+registry and lease-gated AUTH with the bridge. Before this, `NostrProfile` did `new SimplePool()` in a mount
 effect, so two open profiles meant two independent socket sets and closing
 the component destroyed any warm connection.
 

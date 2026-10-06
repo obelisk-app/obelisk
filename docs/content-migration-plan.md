@@ -1,6 +1,6 @@
 # Content Migration Plan - Seeder → DB-editable
 
-**Status:** active priority, partial. `Message.pinnedAt` / `pinnedByPubkey` columns and a pins panel exist; the admin editor, migration script and `Channel.purpose` work are still pending. Referenced from [ROADMAP.md](../ROADMAP.md).
+**Status:** written for the classic Postgres stack ([obelisk-app/obelisk-classic](https://github.com/obelisk-app/obelisk-classic)). The schema, seeder, API routes and pins panel it names are not in this relay-only repo; the content problem it describes would need a NIP-29 / NIP-78 design here. Referenced from [ROADMAP.md](../ROADMAP.md).
 
 ## Why this matters
 

@@ -178,6 +178,13 @@ client's tile mapping breaks (audio attaches to the wrong participant).
 
 ## Cross-cutting: voice signaling does not survive a bridge relay switch
 
+> Status (2026-10): the bridge no longer tears down a pool on a relay
+> switch; the RelayHub owns the sockets, and a mesh call's roster and signal
+> REQs are pinned to the call's relay across switches
+> (`src/services/nostr-bridge/subscriptions/pinned.ts`, covered in
+> `tests/services/nostr-bridge/bridge-voice.test.ts`). The text below is the
+> original report; re-check the SFU RPC path before working on it.
+
 Not strictly server-side, but worth tracking here because the SFU is the
 side that benefits from the fix: voice transport (`src/services/voice/transport.ts`)
 goes through the bridge's `SimplePool`. When the user switches relays in

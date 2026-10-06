@@ -1,6 +1,6 @@
 # Screenshots
 
-Drop PNGs here with the exact filenames referenced by the root `README.md`:
+Marketing screenshots. The root `README.md` no longer embeds these (it uses `public/pictures-for-posts/`); nothing in the app reads this folder. What each file shows:
 
 | File | What |
 |------|------|

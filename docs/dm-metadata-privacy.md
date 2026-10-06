@@ -113,9 +113,10 @@ is applied inside the envelope, but a relay seeing two same-sized events land
 together can still guess they are a pair.
 
 **The self-copy still tells our own relay that we sent *a* DM.** Not to whom
-(that part is fixed), but the event rides our authenticated socket, and
-`SimplePool` offers no per-publish unauthenticated connection. Closing this
-needs a second, anonymous pool, which is a larger change than this branch.
+(that part is fixed), but the event rides the session's socket, which
+answers AUTH as the user. Closing this needs the
+publish to go out under a separate, never-authenticating identity on the
+relay hub (the mechanism DM calls already use, `src/services/dm-call/call-pool.ts`).
 
 These are worth stating plainly rather than implying the fix is total.
 

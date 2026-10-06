@@ -4,23 +4,23 @@ Two layers:
 
 | Layer | Tool | Where | Run with |
 |---|---|---|---|
-| Unit + integration | Vitest + jsdom | `src/services/voice/*.test.ts` | `npm run test` |
+| Unit + integration | Vitest + jsdom | `tests/services/voice/*.test.ts` | `npm run test` |
 | End-to-end | Playwright + real Chromium WebRTC | `scripts/e2e/voice/*.spec.ts` | `npm run test:e2e:voice` |
 
 ## Unit / integration (Vitest)
 
-Each `.ts` file in `src/services/voice/` has a sibling `.test.ts`. Mocks
-live in:
+The tests mirror `src/services/voice/` under `tests/services/voice/`.
+Mocks live in:
 
 - `bridgeFake.impl` - fake `NostrBridge` (look at
   `tests/services/voice/transport.test.ts` for the canonical setup).
-- `FakePc` / `FakeDataChannel` in `control-channel.test.ts` - for the
-  data-channel layer.
+- `FakeRTCPeerConnection`, `FakeDataChannel` and `installWebRtcMocks()` in `tests/support/mocks/webrtc.ts` - the
+  WebRTC slice jsdom lacks, down to the data-channel layer.
 - A real-ish PC pair via `peer-pair.integration.test.ts` exercising
   the SDP exchange end to end with mocked transport.
 
-`npm run test` runs the full ~1000-test suite in <20s. Add new tests
-beside the file you're changing.
+`npm run test` runs the full suite. Add new tests
+under `tests/`, mirroring the file you're changing.
 
 ## End-to-end (Playwright)
 

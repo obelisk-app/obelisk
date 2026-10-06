@@ -7,7 +7,7 @@ sync ships on by default for logged-in users.
 
 This doc supersedes the legacy `notifications.md`. Read this together
 with [`data-system.md`](./data-system.md) which covers the parallel
-data-loading orchestrator.
+data-loading tiers (P0 / P2).
 
 ## 1. Architecture in one paragraph
 
@@ -352,7 +352,7 @@ builds one for the active session via `getNipSigner()`:
 The wrap layer uses a fresh ephemeral keypair, so the user's real
 pubkey never appears on the kind 1059 envelope.
 
-## 8. Priority orchestrator alignment
+## 8. Priority tier alignment
 
 The two scopes have different priorities now:
 
@@ -399,7 +399,7 @@ src/app/[locale]/app/AppGate.tsx
 |---|---|---|
 | Per-user cursors | `obelisk-read-state:{myPubkey}` | Zustand `persist` + `ensureReadStateStoreForAccount` |
 | Notification cards + mention cursors | `obelisk-notifications:{myPubkey}` | Zustand `persist` + `ensureNotificationsStoreForAccount` |
-| Relay-derived metadata + state-event cache | `obelisk-cache-v3/{relay}/1059/{dTag}` | `bridgeCache` |
+| Relay-derived metadata + state-event cache | `obelisk-cache-v4/{relay}/1059/{dTag}` | `bridgeCache` |
 | UI-only flags | `obelisk-dex/{namespace}/{id}` | direct `localStorage` |
 
 ## 11. Cross-tab sync
@@ -455,16 +455,16 @@ in-page and the browser owns the OS handoff.
 
 | File | Covers |
 |---|---|
-| `src/store/read-state.test.ts` | cursor monotonicity, account-swap persist key, `applyRemoteState` merge semantics |
-| `src/store/notifications.test.ts` | stream independence, per-relay bucketing, first-connect floor, backfill drop, caps/dedup, remote cursor merge |
-| `tests/services/nostr-bridge/bridge.test.ts` (`mention notifications`) | mentions-only ingest, relay stamping, self-mention and reply suppression, cursor-gated backfill |
+| `tests/store/read-state.test.ts` | cursor monotonicity, account-swap persist key, `applyRemoteState` merge semantics |
+| `tests/store/notifications.test.ts` | stream independence, per-relay bucketing, first-connect floor, backfill drop, caps/dedup, remote cursor merge |
+| `tests/services/nostr-bridge/bridge-mentions.test.ts` (`mention notifications`) | mentions-only ingest, relay stamping, self-mention and reply suppression, cursor-gated backfill |
 | `tests/services/read-state/selectors.test.ts` | unread counts, own-message exclusion, `computeChannelHighlights` ordering, mention + reply union |
 | `tests/services/read-state/replies.test.ts` | NIP-10 strict reply detection, parent lookup, edge cases |
 | `tests/services/read-state/relay-sync.test.ts` | sub/ingest with merged cursors, debounced publish, d-tag filtering, cache-first paint |
 | `tests/hooks/read-state/useReadyToSync.test.tsx` | `useReadyToSync` gate: false before connect, flips on EOSE, flips after 1000ms grace, no flip if connection drops mid-grace |
 | `tests/lib/nip-59.test.ts` | wrap/unwrap roundtrip, null-on-junk, recipient mismatch, ephemeral pubkey privacy |
 | `tests/utils/message-text/mentions.test.ts` | content-only and `#p`-tag mention extraction |
-| `src/components/chat/MentionNavigator.test.tsx` | ↑↓ clamping, F7 / Shift+F7 keys, scrollIntoView, hidden when no highlights |
+| `tests/components/chat/MentionNavigator.test.tsx` | ↑↓ clamping, F7 / Shift+F7 keys, scrollIntoView, hidden when no highlights |
 | `tests/hooks/useAutoMarkRead.test.tsx` | cursor advances on watching, halts on hidden, monotonic on backfill |
 | `tests/hooks/useFaviconBadge.test.tsx` | tab title + favicon count DMs + active-relay mentions only, ignore ordinary traffic and other relays' mentions |
 

@@ -27,13 +27,13 @@
 
 ## What it is
 
-A static Next.js app that talks **directly to Nostr relays**. Channels, members, admins, messages, DMs, voice, zaps, all reconstructed from NIP-29 / NIP-04 / NIP-17 events. There is no Postgres, no API server, no Socket.io: just the browser, a relay, and your keys.
+A Next.js app whose browser side talks **directly to Nostr relays**. Channels, members, admins, messages, DMs, voice, zaps, all reconstructed from NIP-29 / NIP-17 / NIP-04 events. There is no Postgres, no session server, no Socket.io: just the browser, a relay, and your keys.
 
 ## Why
 
 - 🔑 **No personal data.** Identity is a Nostr keypair. No email, phone, name, or device fingerprint.
 - 🛰️ **No backend to trust.** Group state lives on relays you choose. Anyone can run one.
-- 🌐 **Trivially self-hostable.** Static export: deploys to any CDN.
+- 🌐 **Self-hostable.** `npm run build` + `npm start`, behind any reverse proxy.
 
 ## Demo
 https://github.com/user-attachments/assets/4b6e31a9-a30d-43b3-b18a-dd21c1cf9c15
@@ -76,7 +76,7 @@ Full guided tours: [obelisk.ar/desktop](https://obelisk.ar/desktop) · [obelisk.
 |---|---|
 | **Live** | [obelisk.ar](https://obelisk.ar): the client, pointed at a public relay I operate |
 | **La Crypta** | A community of 20+ migrated from Discord |
-| **Self-host** | `git clone` + `npm run build` + serve. Bring your own relay. |
+| **Self-host** | `git clone` + `npm run build` + `npm start`. Bring your own relay. |
 
 ## Run locally
 
@@ -101,8 +101,9 @@ For HTTPS dev (needed for NIP-07 / mobile testing): `npm run dev:raise` (require
 
 <p align="center"><sub>The relay hosts the group. Members, admins, and messages are signed Nostr events; the client just subscribes.</sub></p>
 
-- **Frontend:** Next.js 16 + Tailwind v4, purely client-rendered. No `/api/*` routes.
-- **Bridge** (`src/services/nostr-bridge/`): the canonical pool, identity, subscriptions, and React hooks. Read this first if you're contributing.
+- **Frontend:** Next.js 16 + Tailwind v4, in English, Spanish and Portuguese (next-intl). The pages render on the client over the bridge; the one API route, `/api/link-preview`, unfurls OpenGraph cards so a link you only view never reaches a third-party service.
+- **Relay hub** (`src/lib/relay-hub/`): the one owner of every relay socket: one socket per relay per identity, NIP-42 AUTH once per relay and key, shared subscriptions, bounded caches.
+- **Bridge** (`src/services/nostr-bridge/`): identity, the session, group and DM state, subscriptions, and the React hooks, reached through `@/services/nostr-bridge` and `<BridgeProvider>`. Read this first if you're contributing.
 - **Voice:** P2P mesh by default; switches to mediasoup SFU automatically when one is advertised on the channel ([obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)).
 - **Cache:** localStorage stale-while-revalidate for instant first paint on reload.
 - **Identity:** comes from the bridge: `useIsLoggedIn`, `useMyPubkey`, `useSignerReady`. **Don't introduce a backend session.**
@@ -135,36 +136,39 @@ Three methods, all client-side:
 | nsec | Paste `nsec1...` |
 | NIP-46 bunker | Paste a `bunker://` URL or scan a Nostr Connect QR |
 
-Login persists in `localStorage`. NIP-42 AUTH is renegotiated on every relay reconnect via the bridge's `automaticallyAuth` callback.
+The session record lives in `localStorage`, but its secrets (an nsec, a bunker URL) are sealed first with a non-extractable AES-GCM key kept in IndexedDB, so nothing secret is stored in the clear. NIP-42 AUTH is answered once per relay and key by the relay hub.
 
 ## Features
 
 - Real-time chat (groups, channels, reactions, mentions, NIP-50 search)
 - Voice channels (P2P mesh, optional SFU for larger rooms)
-- Encrypted DMs (NIP-04, NIP-65 relay routing)
-- Bitcoin zaps in chat (NIP-47 NWC, wallet stays client-side)
+- Encrypted DMs (NIP-17 gift wraps by default, NIP-04 per thread on request; NIP-65 / kind 10050 relay routing) and 1:1 voice and video calls
+- Bitcoin zaps in chat and paying invoices posted in chat (NIP-57 zaps through a WebLN browser wallet; no wallet credentials reach Obelisk)
 - Operator-controlled branding & layout (NIP-78, kind 30078)
-- Image uploads (Blossom BUD-01 + NIP-98 auth)
+- Image uploads (Blossom, BUD-01 auth)
 
 ## NIPs used
 
-NIP-01 · NIP-04 · NIP-05 · NIP-07 · NIP-29 · NIP-42 · NIP-46 · NIP-47 · NIP-50 · NIP-65 · NIP-78 · NIP-98
+NIP-01 · NIP-04 · NIP-05 · NIP-07 · NIP-11 · NIP-17 · NIP-29 · NIP-42 · NIP-44 · NIP-46 · NIP-50 · NIP-57 · NIP-59 · NIP-65 · NIP-78
 
 ## Scripts
 
 ```bash
 npm run dev               # dev server
 npm run dev:raise         # dev + Cloudflare tunnel
-npm run raise             # production deploy
-npm run build             # next build
+npm run lint              # eslint
+npm run typecheck         # tsc --noEmit
 npm run test              # vitest
+npm run build             # next build
+npm run raise             # production server + Cloudflare tunnel
+npm run deploy            # production deploy (tests, build, pm2 restart)
 ```
 
 ## Contributing
 
 Issues and PRs welcome.
 
-1. `npm run test` must pass.
+1. `npm run lint`, `npm run typecheck` and `npm run test` must pass.
 2. Follow the La Crypta design system (`lc-*` CSS classes, `lc-green` accent).
 3. Identity comes from the bridge; don't introduce a new auth store or backend session.
 4. New relay-derived data goes through the bridge (StateStore + ingest method + subscribeXxx + useXxx hook).

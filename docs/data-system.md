@@ -11,7 +11,10 @@ This doc supersedes the legacy `auth-and-data-loading.md` and
 ## 1. Architecture in one paragraph
 
 Obelisk is fully Nostr-relay-only. The whole client is a thin shell over
-`src/services/nostr-bridge/client.ts`, which wraps `nostr-tools`' `SimplePool`.
+the bridge (`src/services/nostr-bridge/`, facade `client.ts`), whose every
+REQ, query and publish goes through the page's RelayHub
+(`src/lib/relay-hub/`): one socket per relay per identity, NIP-42 AUTH once
+per relay and pubkey, a shared refcounted subscription registry.
 Identity is one of three signer kinds (nsec, NIP-07, NIP-46 bunker). Group
 state, members, admins, messages, DMs, and reactions all arrive as NIP-29
 / NIP-04 / NIP-17 events that fan out into a set of `StateStore`s the React
@@ -48,7 +51,7 @@ write synchronously from the cached box, open on reload) and `./vault.ts`.
   `sessionNotice` (`vault-unavailable`, `key-missing`, `unlock-failed`) is
   explained above the login methods.
 - **The SDK login widget** gets memory-only signer storage
-  (`src/app/[locale]/app/login/signer-storage.ts`), so its NIP-46 pairing record and
+  (`src/services/login/signer-storage.ts`), so its NIP-46 pairing record and
   "remembered" nsec never reach localStorage; the bridge erases the two
   `@nostr-wot/ui:*` keys older builds left behind on every load and logout.
 
@@ -66,39 +69,46 @@ secret so the connection survives reload.
 ## 3. The login → connect contract
 
 All four login entrypoints (`loginWithNsec`, `loginWithNip07`,
-`loginWithBunker`, `createNostrConnectSession.waitForConnection`) plus the
-page-reload rehydration path in `initialize()` route through the private
-`finalizeLogin()`:
+`loginWithBunker`, `createNostrConnectSession().waitForConnection`) route
+through `finalizeLogin()` (`src/services/nostr-bridge/session/login.ts`).
+The page-reload rehydration (`session/restore.ts`) repeats the same steps
+rather than calling it, so a step added to one belongs in the other:
 
 ```
-1. seal() + persist()            // seal the secrets, write the session record
-2. resetPoolForSessionChange()   // close + rebuild SimplePool with the new session
-3. await connect()               // ensureRelay handshake + run the orchestrator
-4. isLoggedIn.set(true)          // flip the gate AppShell observes
+1. seal() + persist()     // seal the secrets in the session vault, write the session record
+2. reset session state    // the hub gets the session identity; subscription bookkeeping restarts
+3. await connect()        // handshake on the active relay + the session fan-out (session/fanout.ts)
+4. isLoggedIn.set(true)   // flip the gate the shell observes
 ```
 
 Step 4 is last so `useIsLoggedIn() === true` always implies "the relay
-handshake completed and the orchestrator's tier-1 REQs are open." If
+handshake completed and the P0 REQs are open." If
 `connect()` throws, the gate stays closed and the login modal surfaces
 the error.
 
-Inside `connect()`, the handshake itself is a first-response-wins race:
+Inside `connect()` (`session/connection.ts`), the handshake itself is a
+first-response-wins race:
 
-- Per-relay `ensureRelay` timeout: `PER_RELAY_TIMEOUT_MS = 10_000` (3s tore
-  healthy relays down behind Cloudflare after a resume).
+- Per-socket handshake timeout: `CONNECT_HANDSHAKE_TIMEOUT_MS = 10_000`
+  (`page-hub.ts`; 3s tore healthy relays down behind Cloudflare after a
+  resume).
 - `Promise.any` over the handshakes: the first relay to connect flips the
   gate, and slower relays handshake in the background.
 
-The first successful handshake triggers the fan-out. Subscriptions registered after that
-queue on the pool and bind as each socket comes online.
+The first successful handshake triggers the fan-out. The hub owns the
+sockets, their reconnects and the REQs on them: subscriptions registered
+later bind as each socket comes online, and every live REQ is re-issued on
+the next socket generation.
 
-## 4. Priority tiers (the orchestrator)
+## 4. Priority tiers
 
-> `orchestrator.ts` was folded into `client.ts` (b3d77af, "simplify nostr
-> bridge"). `connect()` now calls `preflightRelayAccess()`,
-> `subscribeGroupMetadata()` and the rest directly after the first
-> handshake, in the order below. The table still describes the ordering
-> and the watchdog/cache behaviour of each REQ.
+> There is no orchestrator module any more. After the first handshake
+> `connect()` calls `openSessionSubscriptions` (`session/fanout.ts`): the
+> P0 tier at once, the P2 tier on the next microtask, then the per-group
+> REQs a reset released, the channel in view first. The hub's registry
+> orders the wire the same way (`voice > active > dm > background`). The
+> table describes the ordering and the watchdog/cache behaviour of each
+> REQ; some names below are the older method names.
 
 The plan:
 
@@ -179,7 +189,7 @@ directly instead of going through `setRelayAccessDeferred` (the default 4s
 soak that absorbs transient AUTH races for the rest of the fan-out).
 
 **How a refusal is told apart from an AUTH problem** (`classifyAccessClose`
-in `client.ts`). Every watched sub passes `onauth`, and nostr-tools
+in `src/services/nostr-bridge/relay-rejection.ts`). Every watched sub passes `onauth`, and nostr-tools
 (`abstract-pool.js` `subscribeMap`) handles a CLOSED whose reason starts
 with `auth-required: ` itself: it swallows the CLOSED, runs NIP-42 AUTH, and
 resubscribes. What the bridge then sees is one of:
@@ -195,19 +205,18 @@ A post-AUTH refusal skips the soak on **every** access-affecting sub, not
 just the preflight (non-preflight subs still respect sticky-OK).
 
 **Timing.** The probe goes out right after the first handshake. The relay
-challenges on connect, so `automaticallyAuth` is usually already signing.
-The 1.5s watchdog pauses while *any* NIP-42 signature is pending
-(`pendingAuthSigns`), not only one started by this sub's own `onauth`:
-nostr-tools dedupes AUTH per socket, so the probe's `onauth` often never
-runs, and a slow extension or bunker approval used to kill the probe with no
-verdict. The banner now appears one round-trip after the user approves AUTH
+challenges on connect, so the hub is usually already signing (§7). The 1.5s
+watchdog waits while the socket's AUTH prompt is in flight (the hub's
+registry holds a sub's watchdog for that), not only a prompt this sub
+started: AUTH is one record per relay and pubkey, so the probe rarely starts
+one itself, and a slow extension or bunker approval used to kill the probe
+with no verdict. The banner now appears one round-trip after the user approves AUTH
 (or at once for nsec).
 
-**Verdicts are sticky.** nostr-tools calls `automaticallyAuth` on *every*
-`ensureRelay` (every REQ, retry and publish), not only when a challenge
-arrives. It only enters `'authenticating'` from `unknown` / `unreachable` /
-`error` (or no state), so later traffic can't flip a refusal back to
-"Authenticating…". `'restricted'` also ignores a later `'auth-required'`.
+**Verdicts are sticky** (`relay-access.ts`). Once a relay has answered
+`'ok'`, only an explicit rejection (`override`) can downgrade it, so a
+mid-session AUTH refresh never flips the banner back to "Authenticating…".
+`'restricted'` ignores a later `'auth-required'` or `'authenticating'`.
 Only `'ok'` (an EVENT or EOSE, e.g. after the operator whitelists the key)
 or a relay/session change clears it.
 
@@ -298,27 +307,30 @@ channel list.
 
 ## 7. NIP-42 AUTH
 
-`BridgeImpl.createPool()` registers `automaticallyAuth(relayUrl)` with
-SimplePool. nostr-tools calls it on **every** `ensureRelay` (each REQ,
-retry and publish), not only when a challenge arrives. It returns a signer
-only for the active relay (or a pinned voice relay) and moves access to
-`'authenticating'` only when no verdict is held (see §5). When the relay
-sends a challenge:
+AUTH belongs to the RelayHub (`src/lib/relay-hub/auth.ts`, policy in
+`auth-policy.ts` and `auth-leases.ts`). It keeps one record per
+`(relayUrl, pubkey)`, never per challenge, and installs exactly one signer
+per socket, so a reconnect or a `created_at` rollover does not prompt the
+signer again. The hub answers a challenge only where the identity holds an
+AUTH lease: the session's `'active'` lease on the relay being browsed
+(`session/connection.ts`), and `'dm'`, `'voice'`, `'watch'` (the
+background watch) and `'publish'` leases held only while that work runs. A
+DM call's identity is `never-auth` and answers none.
+When the relay sends a challenge:
 
-1. nostr-tools calls the returned signer with the challenge event template
-   (deduped per socket through its cached `authPromise`).
-2. `signAuthEvent` dispatches by `loginMethod`:
+1. The hub signs the challenge template through the session signer
+   (`session/signer.ts`), which dispatches by login method:
    - **nsec**: `finalizeEvent(template, sk)`, synchronous local crypto.
    - **nip07**: `window.nostr.signEvent(template)`, extension RPC.
-   - **bunker**: `await ensureBunkerSigner()` then `signer.signEvent(template)`.
-3. SimplePool sends the signed event back as an AUTH frame. A REQ that
-   was CLOSED with `auth-required: ` is resubscribed once AUTH gets
-   `OK true`. If AUTH fails, the sub closes with `auth was required and
-   attempted, but failed with: …`.
+   - **bunker**: the NIP-46 `BunkerSigner` (`session/bunker.ts`).
+2. The signed event goes back as an AUTH frame. A REQ that was CLOSED with
+   `auth-required: ` is re-issued by the registry once AUTH gets
+   `OK true`; `restricted:` is terminal. If AUTH fails the record moves to
+   `failed` and the next challenge retries.
 
 The bunker path is special: cold `BunkerSigner.connect()` takes 1-3s, so
-`initialize()` pre-warms the bunker signer fire-and-forget before
-`connect()` runs. `bunkerSignerReady` (a `StateStore<boolean>`) tracks the
+the page-reload restore (`session/restore.ts`) pre-warms the bunker signer
+fire-and-forget before `connect()` runs. `bunkerSignerReady` (a `StateStore<boolean>`) tracks the
 warm state; `useSignerReady()` derives `loggedIn && (loginMethod !== 'bunker' || bunkerSignerReady)`.
 
 ## 8. Watchdog tunables
@@ -350,22 +362,22 @@ this one" CLOSED doesn't flip the relay-wide banner.
 ## 9. bridgeCache (stale-while-revalidate)
 
 `src/services/nostr-bridge/cache.ts` is a small `localStorage`-backed cache. Startup indexes all required kinds in one storage scan and batches StateStore hydration by data type.
-Keyed by `obelisk-cache-v3/<relay>/<kind>/<id>` with a `{ v, t }` payload.
+Keyed by `obelisk-cache-v4/<relay>/<kind>/<id>` (`cache-keys.ts`) with a `{ v, t }` payload; older prefixes are evicted on load.
 No TTL: relays are the source of truth and `created_at`-newest-wins
 replaces entries through `cacheSet`.
 
 | Wired through cache | Writer | Seed reader |
 |---|---|---|
-| 39000 (group metadata) | `client.ts:ingestGroupMetadata` | `seedCacheForRelay` |
-| 39001 (admin lists) | `client.ts:ingestAdminMember` | `seedCacheForRelay` |
-| 39002 (member lists) | `client.ts:ingestAdminMember` | `seedCacheForRelay` |
-| 9007 (group creators) | `client.ts:ingestGroupCreator` | `seedCacheForRelay` |
-| 0 (user metadata) | `client.ts:ingestUserMetadata` | `seedCacheForRelay` (≤500 pubkeys) |
+| 39000 (group metadata) | `groups/metadata.ts` (`ingest`) | `seedCacheForRelay` (`seed.ts`) |
+| 39001 (admin lists) | `groups/membership.ts` (`ingestAdminMember`) | `seedCacheForRelay` |
+| 39002 (member lists) | `groups/membership.ts` (`ingestAdminMember`) | `seedCacheForRelay` |
+| 9007 (group creators) | `groups/membership.ts` (`ingestGroupCreator`) | `seedCacheForRelay` |
+| 0 (user metadata) | `profiles.ts` (`ingest`) | `seedCacheForRelay` (≤500 pubkeys) |
 | 30078 layout | `channel-layout.ts:subscribeLayout` | self-seeds via `cacheGet` |
 | 30078 branding | `relay-branding.ts:subscribeBranding` | self-seeds via `cacheGet` |
 
 Invalidation is explicit only:
-- `cacheClearAll()` runs on logout: wipes every `obelisk-cache-v3/*` key.
+- `cacheClearAll()` runs on logout: wipes every `obelisk-cache-v4/*` key.
 - `cacheDelete(relay, kind?, id?)` for surgical removal.
 - The Preferences-panel "Clear cache" button calls
   `clearAllClientCacheExceptSession()` (see §11).
@@ -397,10 +409,10 @@ paint order; see [`testing-strategy`](#13-test-coverage).
 ## 11. "Clear local cache" semantics
 
 The Preferences panel exposes a "Clear local cache" button backed by
-`clearAllClientCacheExceptSession()` (`src/services/nostr-bridge/cache-clear.ts`).
+`clearAllClientCacheExceptSession()` (`src/services/cache-clear.ts`).
 
 **Wiped** (prefix scans):
-- `obelisk-cache-v3/*`, `obelisk-cache-v2/*`, `obelisk-cache/*`
+- `obelisk-cache-v4/*` and the older `obelisk-cache-v3/*`, `obelisk-cache-v2/*`, `obelisk-cache/*`
 - `obelisk:relay-info-v3` and legacy `v2` (NIP-11 cache singleton)
 - `obelisk-read-state:*`, `obelisk-dm-store:*`, `obelisk-forum-follow:*`
 - `obelisk-dex/forum-collapsed/*`, `obelisk-dex/mobile-setup-seen/*`,
@@ -414,7 +426,7 @@ The Preferences panel exposes a "Clear local cache" button backed by
 - `obelisk:preferences`: settings the user just chose.
 
 After the wipe, the page reloads via `window.location.reload()`. The next
-paint re-fetches every store from the relay through the orchestrator's
+paint re-fetches every store from the relay through the session's
 P0/P2 fan-out.
 
 ## 12. Manual verification
@@ -452,10 +464,10 @@ For each login method, clear localStorage then:
 | File | Covers |
 |---|---|
 | `tests/services/nostr-bridge/cache.test.ts` | round-trip, isolation by relay/kind, prefix-wipe deletion, JSON corruption resilience, kind 0 shape |
-| `tests/services/nostr-bridge/cache-clear.test.ts` | every prefix is wiped, session + preferences preserved, idempotent |
-| `tests/services/nostr-bridge/orchestrator.test.ts` | P0 actions sync, P2 deferred to next microtask, custom plan honored, default plan locked-in |
+| `tests/services/cache-clear.test.ts` | every prefix is wiped, session + preferences preserved, idempotent |
+| `tests/services/nostr-bridge/session/connection.test.ts` (`session/fanout`) | P0 opens at once, P2 on the next microtask, then the per-group REQs, active channel first |
 | `tests/services/nostr-bridge/preflight.test.ts` | preflight REQ fires, CLOSED restricted/auth-required flips access within ~50ms, EOSE flips to 'ok', no retry on maxAttempts=1 |
-| `tests/services/nostr-bridge/bridge.test.ts` | end-to-end ingest/subscribe behavior; deferred soak still holds for non-preflight subs |
+| `tests/services/nostr-bridge/bridge.test.ts` and the `bridge-*.test.ts` suites (groups, messages, message cache, mentions, lists, profiles, relay access, voice) | end-to-end ingest/subscribe behavior on the pool-level fake; deferred soak still holds for non-preflight subs |
 | `tests/services/nostr-bridge/login-race.test.ts` | Fix A (`isLoggedIn` flips after `connect`), Fix B (eager admin/member sub on group discovery), Fix C (bunker pre-warm), Fix D (admin list persisted through `cacheSet`) |
 | `tests/services/nostr-bridge/optimistic-send.test.ts` | local echo + relay-confirmed reconciliation |
 | `tests/services/nostr-bridge/relay-auth-state.test.ts` | relay-access state transitions, sticky-OK, deferred soak |

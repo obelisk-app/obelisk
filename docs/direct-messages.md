@@ -2,7 +2,7 @@
 
 Private 1:1 chat between Nostr identities. Like everything else in Obelisk, DMs are entirely client-driven over relays: there is no server in the data path.
 
-> **This document was rewritten on 2026-08-17.** The version before it described a local `src/services/dm/` subsystem that commit `5cbcec0` deleted on 2026-05-10, listing modules (`dm.ts`, `dm-cache.ts`, `cache-key.ts`, `coalescer.ts`, `pool.ts`, `src/components/dm/*`, `feature-flags.ts`) that no longer exist. That staleness cost a full spec-and-plan cycle on the post-quantum work, which was written against a system that was not there. If you change how DMs work, change this file in the same commit.
+> **This document was rewritten on 2026-08-17.** The version before it described a local `src/services/dm/` subsystem that commit `5cbcec0` deleted on 2026-05-10, listing modules (`dm.ts`, `dm-cache.ts`, `cache-key.ts`, `coalescer.ts`, `pool.ts`, a `components/dm/` folder, `feature-flags.ts`) that no longer exist. That staleness cost a full spec-and-plan cycle on the post-quantum work, which was written against a system that was not there. If you change how DMs work, change this file in the same commit.
 
 ## Where the code actually is
 
@@ -10,17 +10,18 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 
 | Path | Responsibility |
 |---|---|
-| `src/services/nostr-bridge/client.ts` | Everything: subscriptions, ingest, send, relay routing, the signer adapter. Search `sendDirectMessage`, `publishDirectMessage`, `ingestIncomingDM`, `ingestIncomingGiftWrap`, `ingestDM`, `getDmSigner`, `subscribeIncomingDMs`, `ensureDmInboxRelaysPublished`, `fetchPartnerInboxRelays`, `resolveDmProtocol`. |
-| `src/services/nostr-bridge/types.ts` | `JsDirectMessage`: the only DM shape the UI ever sees. |
-| `src/services/nostr-bridge/stores.ts` | `useDirectMessages()` over the bridge's `dmsByPeer` store. |
-| `src/services/dm/opt-in.ts` | The `directMessagesEnabled` preference gate. The only surviving file under `src/services/dm/`. |
+| `src/services/nostr-bridge/dm/` | The DM modules, wired by `compose-dm.ts`: `send.ts` (optimistic placeholder, per-thread protocol choice, retry), `nip17.ts` (seal and gift-wrap to the recipient's inbox and to ourselves), `nip04.ts` (the opt-out path), `inbox.ts` (the kind 4 and kind 1059 REQs, the `'dm'` AUTH lease), `thread.ts` (dedupe and placeholder replacement into a thread), `relays.ts` and `relay-cache.ts` (NIP-65 and kind-10050 lookups, the gift-wrap ladder), `inbox-list.ts` (publishing our own kind 10050), `calls.ts` (DM call control messages) |
+| `src/services/nostr-bridge/session/dm-signer.ts` | The signer the DM transport uses, adapted from the session's login method. |
+| `src/services/nostr-bridge/dm/types.ts` | `JsDirectMessage`: the only DM shape the UI ever sees (re-exported from `types.ts`). |
+| `src/services/nostr-bridge/hooks/messages.ts` | `useDirectMessages()` over the bridge's `dmsByPeer` store, exported from the front door. |
+| `src/services/dm/opt-in.ts` | The `directMessagesEnabled` preference gate. The only file under `src/services/dm/`. |
 | `src/store/dm.ts` | Zustand UI state: `activeDMPubkey`, `isDMMode`, and the persisted per-peer `protocolOverrides`. |
 | `src/services/pq/` | Post-quantum: attestation lookup, own-capability detection, status computation, send-plan resolution. |
 | `src/app/[locale]/app/DMList.tsx`, `DMComposer.tsx`, `DMOptInGate.tsx` | Shared DM UI. |
-| `src/app/[locale]/app/DesktopShell.tsx` (`DMPanel`) | Desktop thread view. |
-| `src/app/[locale]/app/mobile/PhoneShell.tsx` (`DmThreadScreen`) | Mobile thread view. |
-| `src/components/chat/PqConversationNotice.tsx`, `PqMessageMark.tsx` | Post-quantum indicators. |
-| `src/components/chat/DmComposer.tsx` | The thread's message bar: the channel bar's widgets (attach, voice note, emoji / GIF / sticker picker, drop, paste) with encrypted uploads. Both shells mount it with `key={peer}`. |
+| `src/app/[locale]/app/panes/DMPanel.tsx` | Desktop thread view. |
+| `src/app/[locale]/app/mobile/screens/DmThreadScreen.tsx` | Mobile thread view. |
+| `src/components/chat/PqMessageMark.tsx`, `src/hooks/pq/usePqConversationStatus.ts` | Post-quantum indicator and the thread's PQ status. |
+| `src/components/chat/DmComposer.tsx` (parts in `dm-composer/`, logic in `src/hooks/chat/dm-composer/`) | The thread's message bar: the channel bar's widgets (attach, voice note, emoji / GIF / sticker picker, drop, paste) with encrypted uploads. Both shells mount it with `key={peer}`. |
 | `src/components/chat/DmMessageBody.tsx`, `EncryptedDmAttachment.tsx` | What goes inside a bubble; the fetch → verify → decrypt path for file messages. |
 | `src/utils/attachments/dm-file.ts`, `src/services/dm-attachments.ts`, `src/lib/crypto/file-cipher.ts` | Kind-15 tag layout, encrypt + anonymous upload, AES-256-GCM. |
 
@@ -65,13 +66,13 @@ DMs are off by default (`directMessagesEnabled`, `src/services/preferences.ts`).
 
 DMs are the **one** thing in Obelisk that runs cross-relay. Everything group-related binds to the active relay (see AGENTS.md's single-relay rule).
 
-`subscribeIncomingDMs` opens three filters on the active relay:
+`subscribe()` in `dm/inbox.ts` (once DMs are opted in) opens three filters on the active relay, and the same on our own DM relays:
 
 | Filter | Handler |
 |---|---|
-| `{ kinds: [4], '#p': [me] }` | `ingestIncomingDM` |
-| `{ kinds: [4], authors: [me] }` | `ingestIncomingDM` (our own sends, echoed) |
-| `{ kinds: [1059], '#p': [me] }` | `ingestIncomingGiftWrap` |
+| `{ kinds: [4], '#p': [me] }` | `ingestNip04` |
+| `{ kinds: [4], authors: [me] }` | `ingestNip04` (our own sends, echoed) |
+| `{ kinds: [1059], '#p': [me] }` | `ingestGiftWrap` (`dm/inbox.ts`) |
 
 Then `fetchMyDmRelays()` resolves our own kind-10050 (NIP-17 inbox) and kind-10002 (NIP-65 read/write) sets and duplicates all three filters onto any relay not already covered. Without this, DMs sent by clients that respect our published inbox would never arrive.
 
@@ -217,7 +218,7 @@ Three things sit at the top right, and they are not interchangeable:
 
 The bridge treats `senderPubkey` (recovered from the seal) as the author and never trusts the rumor's own `pubkey` field.
 
-An outgoing wrap that arrives from another device carries the real recipient in the rumor's `p` tag; an inbound one is from the sender directly. `ingestIncomingGiftWrap` distinguishes them the same way `@nostr-wot/dm`'s own `handleGiftWrap` does.
+An outgoing wrap that arrives from another device carries the real recipient in the rumor's `p` tag; an inbound one is from the sender directly. `ingestGiftWrap` (`dm/inbox.ts`) distinguishes them the same way `@nostr-wot/dm`'s own `handleGiftWrap` does.
 
 ## Storage
 
@@ -240,7 +241,7 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 ## Troubleshooting
 
 - **"Sent a message but they never got it."** Check whether the recipient has published a kind-10050. Without one the wrap falls to their NIP-65 read set, and without that to our own active relay, neither of which is guaranteed to overlap with what they actually read. They can fix it once, for everyone, with any modern client.
-- **"Older NIP-17 messages vanish after a reload, only new ones show."** That was the wrap ledger recording chat wraps as seen (fixed 2026-09-26, see Protocols). If it comes back, check what `hasSeenWrap` is being asked in `ingestIncomingGiftWrap`.
+- **"Older NIP-17 messages vanish after a reload, only new ones show."** That was the wrap ledger recording chat wraps as seen (fixed 2026-09-26, see Protocols). If it comes back, check what `hasSeenWrap` is being asked in `ingestGiftWrap` (`dm/inbox.ts`).
 - **"My own DMs are missing after a reload."** Nothing is cached, so the whole thread rebuilds from relays on every load and takes a moment. If an outgoing NIP-17 message never comes back, its self-copy did not land: check whether we have a published kind-10050 (`ensureDmInboxRelaysPublished`) and whether the relay accepted the second wrap. Messages sent before the self-copy shipped are gone from the sender's side for good; the recipient still has them.
 - **"The post-quantum toggle is on but nothing is post-quantum."** Almost certainly `capabilityUnknown`: the extension does not advertise `nip44.schemes`. The settings status row says so explicitly.
 - **"Every old message shows a mark."** It should not: marks aggregate to transitions. If you see one per bubble, `threadMarks` is not being used.
@@ -258,8 +259,8 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - `tests/services/nostr-bridge/optimistic-send.test.ts`: placeholder lifecycle.
 - `dm-nip17.test.ts` also covers kind-15 send and receive, the NIP-04 refusal, and the 1059 REQ reopening after `switchRelay`.
 - `tests/lib/crypto/file-cipher.test.ts`, `tests/utils/attachments/dm-file.test.ts`, `tests/services/dm-attachments.test.ts`, `tests/services/blossom.test.ts`: the file path end to end, without a relay.
-- `src/components/chat/DmComposer.test.tsx`, `DmMessageBody.test.tsx`, `EncryptedDmAttachment.test.tsx`: the bar, the bubble body, decrypt / integrity failure / revoke.
-- `src/services/pq/*.test.ts`: attestations, capability, status lattice, send-plan resolution.
-- `src/app/[locale]/app/DMPanel.pq.test.tsx`: indicator mounting, mark aggregation, on-accent contrast.
-- `src/app/[locale]/app/DMList.identity.test.tsx`: the peer resolves through the social tier, and one batched lookup per list.
-- `src/components/chat/DMThreadMenu.test.tsx`: the ⋯ actions, and that they close after acting.
+- `tests/components/chat/DmComposer.test.tsx`, `DmMessageBody.test.tsx`, `EncryptedDmAttachment.test.tsx`: the bar, the bubble body, decrypt / integrity failure / revoke.
+- `tests/services/pq/` (`attestations`, `capability`, `status`, `send`): attestations, capability, status lattice, send-plan resolution.
+- `tests/app/[locale]/app/DMPanel.pq.test.tsx`: indicator mounting, mark aggregation, on-accent contrast.
+- `tests/app/[locale]/app/DMList.identity.test.tsx`: the peer resolves through the social tier, and one batched lookup per list.
+- `tests/components/chat/DMThreadMenu.test.tsx`: the ⋯ actions, and that they close after acting.

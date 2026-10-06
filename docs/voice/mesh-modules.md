@@ -1,13 +1,16 @@
 # Mesh - Code Map
 
-`src/services/voice/` (top-level files; tests sit alongside their sources).
+`src/services/voice/` (a flat folder; its tests are under `tests/services/voice/`). This map names the main modules, not every file: most of the larger ones are split into smaller siblings with the same prefix (`mesh-*`, `peer-*`, `sfu-*`, `transport-*`, `client-*`).
 
 ## Public surface
 
-- **`client.ts` → `VoiceClient`** - the orchestrator. Holds the
-  Map of Peers, owns the SimplePool subscriptions, manages topology
-  (mesh ↔ SFU), exposes events to React. **Everything outside the
-  voice/ folder imports through here.**
+- **`client.ts` → `VoiceClient`** - the one surface the app sees of a
+  call. Owns join/leave and the topology choice (mesh ↔ SFU,
+  `topology.ts`), and delegates the rest: `MeshSession` (beacons,
+  discovery, one `Peer` per remote, signal routing), `SfuSession`,
+  `LocalMedia`, `RoomState` (what the UI is told), `RoomMembership` and
+  `ActiveCallWatcher`. Its REQs go through the bridge, and so through the
+  relay hub. **Everything outside the voice/ folder imports through here.**
 - **`active-client.ts`** - module-singleton holder so the chat UI's
   `getActiveVoiceClient()` returns the same instance the VoiceRoom
   mounted, even across route changes that re-mount React.
@@ -21,7 +24,8 @@
   Nostr signaling, local media/quality policy, and the ordered control data
   channel. Lexicographic pubkey roles select exactly one initiator per pair;
   terminal failures return to `VoiceClient` for discovery-driven redial.
-- **`transport.ts`** - thin Nostr layer on top of the bridge.
+- **`transport.ts`** (with `transport-beacons.ts`, `transport-roster.ts`,
+  `transport-signals.ts`) - thin Nostr layer on top of the bridge.
   - `publishPresenceBeacon(channelId, connectedTo, videoTracks)`
   - `subscribeRoster(channelId, onChange)`
   - `sendSignal(channelId, toPubkey, payload)`
@@ -92,6 +96,6 @@
 
 The plan called for a `mesh/` + `sfu/` + `shared/` subdirectory split.
 That's a purely mechanical reorganization that adds churn without
-changing behavior; it can be done as a separate commit. The current
-flat layout is small enough (≤ 20 files) that the cognitive load of
-finding any given thing is low.
+changing behavior; it can be done as a separate commit. The 300-line
+rule has since split the folder into many more, smaller files, which
+makes that split more worthwhile than it was.

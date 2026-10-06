@@ -15,11 +15,12 @@ Nothing here needs a server. The only infrastructure a call touches is:
 | Path | What |
 |---|---|
 | `src/services/dm-call/protocol.ts` | Control messages (invite / accept / decline / cancel / hangup / busy), parsing, freshness |
-| `src/services/dm-call/signaling.ts` | `CallSignalChannel`: kind 25050 on throwaway keys, NIP-44 content, its own `SimplePool` |
-| `src/services/dm-call/session.ts` | `DmCallSession`: local media, one mesh `Peer`, rebuild / reconnect |
+| `src/services/dm-call/signaling.ts`, `signal-outbox.ts` | `CallSignalChannel`: kind 25050 on throwaway keys, NIP-44 content; the outbox numbers, batches and re-sends until acked |
+| `src/services/dm-call/call-pool.ts` | The call's transport: the page's relay hub under the call's own identity (`ephemeral:<callId>`, `authPolicy: 'never-auth'`) |
+| `src/services/dm-call/session.ts` | `DmCallSession`: one mesh `Peer`, rebuild / reconnect; capture in `local-media.ts`, the other side's streams in `remote-media.ts`, give-up timers in `call-liveness.ts`, shapes and limits in `session-config.ts` |
 | `src/services/dm-call/load-session.ts` | Fetches `session.ts` (and with it simple-peer) on demand: when a call starts, when an invite rings, when the pointer reaches the call buttons. Nothing in the shell imports the session statically |
-| `src/store/dm-call.ts` | The state machine, "who can ring me", IP policy, ringing (none of which needs the session) |
-| `src/hooks/useDmCallListener.ts` | Listens for call messages while logged in; mounted by `LazyDmCallLayer`, which ships with the shell, so an invite never waits on a download |
+| `src/store/dm-call.ts` | The state machine and the inbound router; the store and its actions are `dm-call-store.ts`, "who can ring me" and the IP policy `dm-call-policy.ts`, timers and the live session `dm-call-runtime.ts` (none of which imports the session statically) |
+| `src/hooks/useDmCallListener.ts` | Listens for call messages while logged in; mounted by `LazyDmCallLayer` (`src/app/[locale]/app/lazy-mounts.tsx`), which ships with the shell, so an invite never waits on a download |
 | `src/services/nostr-bridge/dm/calls.ts` | `sendDmCallMessage`, `subscribeDmCallMessages`, `sealAndWrapExpiring`; holds a fresh message that arrives before anyone listens and hands it to the first listener |
 | `src/services/notifications/sound.ts`, `alert.ts` | `ring` / `ringback` phrases per ringtone; `ringIncomingCall`, `startRingback` |
 | `src/components/call/` | `DmCallButtons`, `DmCallLayer` (banner + call view + remote audio) |
@@ -86,16 +87,24 @@ the message was gone and the call sat out a 12 s connect timeout: the
   newest offer that belongs to another session, so a late re-send can never
   drag a rebuilt connection back.
 
-`CallSignalChannel` uses its **own** `SimplePool` (with reconnect, so a
-socket that drops mid-call re-issues the REQ and a later renegotiation still
-gets through). The bridge's pool answers NIP-42 AUTH with the user's real
-key; this one answers only with the throwaway key. So the call relay sees
-two random keys trading opaque blobs (not who is calling whom, not the call
-id, not the SDP, and so not the IP addresses in it), and a relay that
-whitelists real npubs (the group relays, `public.obelisk.ar`) cannot carry a
-call. That is why call relays are a separate list, `preferences.callRelays`
-(default `relay.damus.io`, `nos.lol`; Settings → Privacy → Calls). The
-caller's list travels in the invite, so both sides use the same ones.
+`CallSignalChannel` runs on the page's relay hub, but under the call's
+**own** identity (`call-pool.ts`): `ephemeral:<callId>` with
+`authPolicy: 'never-auth'`. The hub keys sockets on `(relay, identity)`, so
+the call's REQs and EVENTs never ride a socket the user's session uses,
+even on a relay the user is browsing, and those sockets never answer a
+NIP-42 challenge with any key. A socket that drops mid-call is re-opened by
+the hub and the REQ re-issued, so a later renegotiation still gets through;
+`destroy()` removes the identity, and with it the call's sockets, when the
+call ends. So the call relay sees two random keys trading opaque blobs (not
+who is calling whom, not the call id, not the SDP, and so not the IP
+addresses in it). It still sees one IP for both the session's connection
+and the call's, if the user is on that relay: this removes the
+cryptographic link AUTH would create, not network-level correlation. And a
+relay that whitelists real npubs (the group relays, `public.obelisk.ar`)
+cannot carry a call, since the call never authenticates. That is why call
+relays are a separate list, `preferences.callRelays` (default
+`relay.damus.io`, `nos.lol`; Settings → Privacy → Calls). The caller's list
+travels in the invite, so both sides use the same ones.
 
 No presence beacon (kind 20078) is published for a DM call.
 
@@ -163,8 +172,9 @@ and stays down 30 s ends `connection-lost`.
 
 - `tests/services/dm-call/protocol.test.ts`: parse, validation, freshness.
 - `tests/services/dm-call/signaling.test.ts`: learning the peer from its hello, delivery to a REQ that went live late, re-send until acked / exactly-once, batching, give-up, stale-session purge, strangers ignored, size cap.
-- `tests/services/dm-call/session.test.ts`: two real sessions over `fake-ephemeral-relay.ts` (a relay that keeps nothing and forwards only to live REQs): connect via hello alone, via the accept alone, and without a rebuild under slow REQs and 30–50 % seeded random loss; bye, give-up, reconnect timeout, caller rebuild followed by the callee, hangup.
-- `src/store/dm-call.test.ts`: the state machine, contacts-only, busy, answered elsewhere, IP policy.
+- `tests/services/dm-call/call-pool.test.ts`: on the real hub, the call's REQs and EVENTs use a socket of their own and never answer AUTH, even on a relay the session is authenticated to.
+- `tests/services/dm-call/session.test.ts`: two real sessions over `src/services/dm-call/fake-ephemeral-relay.ts` (a relay that keeps nothing and forwards only to live REQs): connect via hello alone, via the accept alone, and without a rebuild under slow REQs and 30-50 % seeded random loss; bye, give-up, reconnect timeout, caller rebuild followed by the callee, hangup. `call-liveness.test.ts`, `remote-media.test.ts`, `session-config.test.ts` and `load-session.test.ts` cover the parts.
+- `tests/store/dm-call.test.ts`, `dm-call-store.test.ts`, `dm-call-policy.test.ts`, `dm-call-runtime.test.ts`, `dm-call-lazy.test.ts`: the state machine, contacts-only, busy, answered elsewhere, IP policy, and (`dm-call-lazy`) an invite that rings and no call lost or doubled while the session download is slow or fails.
 - `tests/services/nostr-bridge/dm-nip17.test.ts` (`DM call control messages`): expiring wrap, listener delivery, stale drop, self notice.
 - `tests/services/notifications/sound.test.ts`: the ring loop.
-- `src/components/call/DmCallLayer.test.tsx`, `src/components/settings/CallSettings.test.tsx`.
+- `tests/components/call/DmCallLayer.test.tsx`, `tests/components/settings/CallSettings.test.tsx`, `tests/app/[locale]/app/lazy-dm-call.test.tsx`.

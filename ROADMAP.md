@@ -100,8 +100,8 @@ mirror the pieces each repo owns.
 - Access Control tab unifying join-mode + WoT + invitations.
 
 ### Lightning
-- NWC wallet connection, encrypted client-side before persistence.
-- Zap users from profile + zap messages with custom amounts or presets.
+- Zaps (NIP-57) from a message or with `/zap`, with custom amounts or presets and an optional comment, paid through a WebLN browser wallet; per-message totals from zap receipts.
+- Pay a Lightning invoice posted in chat, through the same wallet path, with a confirm step and a double-pay guard.
 - See [docs/bitcoin-zaps-nwc.md](docs/bitcoin-zaps-nwc.md).
 
 ### Testing & ops
@@ -159,10 +159,11 @@ mirror the pieces each repo owns.
 - [ ] Semantic search over the indexed knowledge base + auto-tagging.
 
 ### Fase 6 - Lightning zaps (remaining)
+- [ ] Connect a Nostr Wallet Connect (NIP-47) wallet directly. Today the app pays only through WebLN; an NWC connection would plug in behind `src/services/wallet/wallet.ts`.
 - [ ] Balance in UI + transaction history.
-- [ ] Zap with attached message + receive animation.
+- [ ] Receive animation for zaps.
 - [ ] Emoji zaps (⚡=21, 🔥=100, 🚀=500, 💎=1000 sats) + per-channel / per-server leaderboards.
-- [ ] NIP-57 zap receipts + zap splits.
+- [ ] Zap splits.
 
 ### Fase 7 - Obelisk Lite
 A zero-learning-curve mobile / web client, intercompatible with Obelisk full (same backend, same API, same DB).
