@@ -40,8 +40,8 @@ export function ManageMemberRowMobile({
       <div style={rowStyle} data-testid={`mobile-member-confirm-${pubkey}`}>
         <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--app-text)' }}>
           {demoting
-            ? `Demote ${name}? They keep channel access but lose admin rights.`
-            : `Kick ${name} from this channel?`}
+            ? t('mobile.members.confirmDemote', { name })
+            : t('mobile.members.confirmKick', { name })}
         </span>
         <button
           type="button"
@@ -65,7 +65,7 @@ export function ManageMemberRowMobile({
           }}
           data-testid={`mobile-member-confirm-ok-${pubkey}`}
         >
-          {demoting ? 'Demote' : 'Kick'}
+          {demoting ? t('mobile.members.demote') : t('mobile.members.kick')}
         </button>
       </div>
     );
@@ -91,7 +91,7 @@ export function ManageMemberRowMobile({
               padding: '1px 6px',
               textTransform: 'uppercase',
               letterSpacing: '0.12em',
-            }}>admin</span>
+            }}>{t('mobile.members.admin')}</span>
           )}
         </div>
         <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'var(--app-text-mute)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -111,7 +111,7 @@ export function ManageMemberRowMobile({
               color: 'var(--app-text-dim)',
               fontSize: 11,
             }}
-            aria-label={`Demote ${name}`}
+            aria-label={t('mobile.members.demoteName', { name })}
           >
             {t('mobile.members.demote')}
           </button>
@@ -127,7 +127,7 @@ export function ManageMemberRowMobile({
             color: 'var(--presence-dnd, #ef4444)',
             fontSize: 11,
           }}
-          aria-label={`Kick ${name}`}
+          aria-label={t('mobile.members.kickName', { name })}
         >
           {t('mobile.members.kick')}
         </button>

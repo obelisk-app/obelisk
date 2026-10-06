@@ -26,7 +26,8 @@ import { useScreenScrollMemo } from '@/hooks/app/mobile/useScreenScrollMemo';
 import { useRelayOperatorData } from '@/hooks/app/useRelayOperatorData';
 import { useForumCollapsed } from '@/hooks/app/mobile/screens/server/useForumCollapsed';
 import { useRelayHeaderInfo } from '@/hooks/app/useRelayHeaderInfo';
-import { ChannelListEmptyState, ChannelRow, ForumThreadChildRow } from './ChannelRow';
+import { ChannelRow, ForumThreadChildRow } from './ChannelRow';
+import { ChannelListEmptyState } from './ChannelListEmptyState';
 
 export function ServerScreen({
   go,
@@ -124,7 +125,7 @@ export function ServerScreen({
   // Active "space" label - prefer the operator-published kind-30078 branding
   // name (matches desktop banner), fall back to NIP-11 doc, then to the URL
   // host while everything resolves.
-  const activeSpaceLabel = branding.name || activeRelayInfo.name || (relay ? shortHost(relay) : 'Obelisk');
+  const activeSpaceLabel = branding.name || activeRelayInfo.name || (relay ? shortHost(relay) : 'Obelisk'); // i18n-exempt: brand name
   const activeSpaceIcon = branding.icon || activeRelayInfo.icon || null;
   const activeSpaceBanner = branding.banner || null;
   const openActiveRelayMenu = () => {
@@ -187,7 +188,7 @@ export function ServerScreen({
                 className="channel-section-label collapsible"
                 onClick={() => setCollapsedCats((c) => ({ ...c, __other: !c.__other }))}
               >
-                <span>Uncategorized · {laidOut.uncategorized.length}</span>
+                <span>{t('mobile.layout.uncategorizedCount', { count: laidOut.uncategorized.length })}</span>
                 <span className={`cat-caret ${collapsedCats.__other ? '' : 'expanded'}`} aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
                 </span>

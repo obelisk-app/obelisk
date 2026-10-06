@@ -26,7 +26,8 @@
     "packsHint": "Create packs and manage favorites."
   },
   "nav": {
-    "servers": "Servers"
+    "servers": "Servers",
+    "dms": "DMs"
   },
   "inbox": {
     "mentions": "@mentions",
@@ -51,7 +52,14 @@
     "promote": "Make admin",
     "emptyHelp": "No members listed yet. Public channels do not require a member list.",
     "demote": "Demote",
-    "kick": "Kick"
+    "kick": "Kick",
+    "count": "Members · {count}",
+    "adding": "Adding…",
+    "add": "Add",
+    "confirmDemote": "Demote {name}? They keep channel access but lose admin rights.",
+    "confirmKick": "Kick {name} from this channel?",
+    "demoteName": "Demote {name}",
+    "kickName": "Kick {name}"
   },
   "channel": {
     "loadingMessages": "Loading messages...",
@@ -70,7 +78,21 @@
     "readOnlyHint": "members post",
     "private": "Private",
     "privateHint": "hidden; members only",
-    "type": "Channel type"
+    "type": "Channel type",
+    "settingsTitle": "Channel settings · #{name}",
+    "save": "Save channel",
+    "kind": {
+      "text": "Text",
+      "voice": "Voice / Video",
+      "voiceSfu": "Big-room voice",
+      "forum": "Publications"
+    },
+    "mentionsOrReplies": "{count, plural, one {# mention or reply} other {# mentions or replies}}",
+    "expandPublications": "Expand publications",
+    "collapsePublications": "Collapse publications",
+    "muted": "Muted",
+    "live": "live",
+    "replyingToMessage": "replying to a message"
   },
   "profile": {
     "more": "More",
@@ -116,7 +138,8 @@
     "help": "Shown to everyone on this relay · NIP-78 kind 30078.",
     "hint": "name · icon · banner",
     "iconHint": "Square logo shown next to the relay name.",
-    "bannerHint": "Wide image shown above the relay name."
+    "bannerHint": "Wide image shown above the relay name.",
+    "save": "Save branding"
   },
   "layout": {
     "categoryPlaceholder": "e.g. General, Trading, Voice",
@@ -128,12 +151,21 @@
     "newCategory": "New category",
     "categories": "Categories",
     "empty": "No categories yet. Channels render under “Uncategorized” until you add one.",
-    "delete": "Delete"
+    "delete": "Delete",
+    "publish": "Publish layout",
+    "uncategorized": "Uncategorized",
+    "uncategorizedCount": "Uncategorized · {count}",
+    "channelsCount": "Channels · {count}",
+    "moveChannelUp": "Move {name} up",
+    "moveChannelDown": "Move {name} down"
   },
   "rail": {
     "addRelay": "Add relay",
     "addTitle": "Add a relay",
-    "addHelp": "Paste a NIP-29 group relay URL. Each relay is a separate “server” in the rail."
+    "addHelp": "Paste a NIP-29 group relay URL. Each relay is a separate “server” in the rail.",
+    "adding": "Adding…",
+    "add": "Add",
+    "added": "Added"
   },
   "header": {
     "search": "Search this server",
@@ -148,18 +180,36 @@
     "actions": "Message actions",
     "dismissFailed": "Dismiss failed message",
     "failed": "Couldn’t send",
-    "zap": "Send zap"
+    "zap": "Send zap",
+    "deleteEveryone": "Delete for everyone",
+    "deleteMessage": "Delete message"
   },
   "voice": {
     "sfuTitle": "Routed through an SFU",
-    "minimize": "Minimize call"
+    "minimize": "Minimize call",
+    "fallbackName": "Voice channel",
+    "live": "Live",
+    "connected": "Live · connected",
+    "starting": "Starting…"
   },
   "forum": {
     "clearSearch": "Clear search",
     "bodyPlaceholder": "What's the publication about?",
     "empty": "No publications yet",
     "emptyHint": "Tap + to start one.",
-    "firstMessage": "First message"
+    "firstMessage": "First message",
+    "searchPlaceholder": "Search or create a publication…",
+    "tapToCreate": "Tap + to create…",
+    "creating": "Creating…",
+    "create": "Create",
+    "createNamed": "Create “{title}”",
+    "tagsCount": "Tags ({count}/{max})",
+    "label": "publications",
+    "noMatchesQuery": "No publications match “{query}”.",
+    "noMatchesTags": "No publications match the selected tags.",
+    "op": "OP",
+    "messages": "{count, plural, one {# msg} other {# msgs}}",
+    "lastBy": "last {name}"
   },
   "space": {
     "newChannel": "New channel",
@@ -172,7 +222,12 @@
     "rolesHint": "tiered badges",
     "people": "Admins & members",
     "peopleHint": "bulk cleanup",
-    "leave": "Leave this space"
+    "leave": "Leave this space",
+    "inviteText": "Join {name} on Obelisk: {url}",
+    "inviteCopied": "Invite copied",
+    "copiedClipboard": "Copied to clipboard",
+    "urlCopied": "Relay URL copied",
+    "copyLinkHint": "copy link"
   },
   "field": {
     "description": "Description",
@@ -183,9 +238,27 @@
   },
   "zap": {
     "title": "Send a zap",
-    "walletHint": "Wallet · NWC · check on settings"
+    "walletHint": "Wallet · NWC · check on settings",
+    "custom": "custom"
   },
   "relay": {
     "confirmLeave": "Leave {name}?"
+  },
+  "reactions": {
+    "removeEveryone": "Remove reactions for everyone",
+    "removeOwn": "Remove your reaction",
+    "react": "React"
+  },
+  "channelList": {
+    "loading": "Channels loading…",
+    "offline": "You’re offline",
+    "whitelist": "Whitelisting required",
+    "network": "Network issue",
+    "none": "No channels found"
+  },
+  "sfu": {
+    "verify": "Verify",
+    "checking": "Checking…",
+    "cap": "up to {cap} participants"
   }
 }

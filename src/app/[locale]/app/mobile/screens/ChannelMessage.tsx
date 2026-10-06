@@ -116,7 +116,7 @@ export const ChannelMessage = memo(function ChannelMessage({
       <div className="msg-body">
         {parent && <MobileReplyPreviewRow parent={parent} onJump={onJumpToParent} />}
         {msg.replyToId && !parent && (
-          <div className="msg-reply-row msg-reply-row-missing">↩ replying to a message</div>
+          <div className="msg-reply-row msg-reply-row-missing">↩ {t('mobile.channel.replyingToMessage')}</div>
         )}
         <div className="msg-head">
           <span className="msg-name" onClick={() => onAvatar(msg.pubkey)} role="button">{name}</span>
@@ -185,7 +185,7 @@ export const ChannelMessage = memo(function ChannelMessage({
                 <button
                   key={r.emoji}
                   className={`reaction ${r.mine ? 'mine' : ''}`}
-                  title={isAdmin ? 'Remove reactions for everyone' : r.mine ? 'Remove your reaction' : 'React'}
+                  title={t(isAdmin ? 'mobile.reactions.removeEveryone' : r.mine ? 'mobile.reactions.removeOwn' : 'mobile.reactions.react')}
                   onClick={() => void toggleReaction(r.emoji, r.customEmojis, r.myReactionId, isAdmin ? r.reactionIds : undefined)}
                 >
                   {resolved.kind === 'custom' ? (

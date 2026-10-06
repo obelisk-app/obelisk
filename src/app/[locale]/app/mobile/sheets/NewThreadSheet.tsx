@@ -70,7 +70,7 @@ export function NewThreadSheet({
         {forumTags.length > 0 && (
           <>
             <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 6 }}>
-              Tags ({selectedTagIds.length}/{MAX_TAGS})
+              {t('mobile.forum.tagsCount', { count: selectedTagIds.length, max: MAX_TAGS })}
             </label>
             <div className="forum-filter-row" style={{ flexWrap: 'wrap', overflow: 'visible', margin: 0, padding: 0 }} data-testid="mobile-new-thread-tag-picker">
               {forumTags.map((tag) => {
@@ -122,7 +122,7 @@ export function NewThreadSheet({
           style={{ flex: 1, justifyContent: 'center', padding: '12px' }}
           data-testid="mobile-new-thread-submit"
         >
-          {submitting ? 'Creating…' : 'Create'}
+          {submitting ? t('mobile.forum.creating') : t('mobile.forum.create')}
         </button>
       </div>
     </Sheet>

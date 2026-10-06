@@ -77,7 +77,7 @@ export function BottomNav({
   const tabs: NavTab[] = [
     { id: 'server', icon: NAV_ICONS.servers, label: t('mobile.nav.servers') },
     { id: 'feed', icon: NAV_ICONS.feed, label: t('social.feed') },
-    { id: 'dms-list', icon: NAV_ICONS.dms, label: 'DMs', badge: dmBadge },
+    { id: 'dms-list', icon: NAV_ICONS.dms, label: t('mobile.nav.dms'), badge: dmBadge },
     { id: 'inbox', icon: NAV_ICONS.inbox, label: t('shell.inbox.title'), badge: inboxBadge },
     { id: 'settings-profile', icon: NAV_ICONS.you, label: t('settings.you') },
   ];

@@ -17,7 +17,7 @@ import RemoteImage from '@/components/ui/RemoteImage';
 
 export function MobileDmOptInScreen({
   onSecondary,
-  secondaryLabel = 'Not now',
+  secondaryLabel,
 }: {
   onSecondary: () => void;
   secondaryLabel?: string;

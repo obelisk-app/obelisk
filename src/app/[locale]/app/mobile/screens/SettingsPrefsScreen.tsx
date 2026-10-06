@@ -114,7 +114,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
           </button>
           <div className="settings-row">
             <span>{t("settings.preferences.mobile.version")}</span>
-            <span className="settings-row-meta muted">obelisk · mobile</span>
+            <span className="settings-row-meta muted">obelisk · mobile</span>{/* i18n-exempt: product build name */}
           </div>
         </div>
         <div className="settings-section">

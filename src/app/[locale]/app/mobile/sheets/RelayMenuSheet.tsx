@@ -100,16 +100,16 @@ export function RelayMenuSheet({
 
   const flash = (msg: string) => {
     setToast(msg);
-    window.setTimeout(() => setToast((t) => (t === msg ? null : t)), 1600);
+    window.setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), 1600);
   };
 
-  const inviteText = `Join ${label} on Obelisk: ${relayUrl}`;
+  const inviteText = t('mobile.space.inviteText', { name: label, url: relayUrl });
 
   const invite = async () => {
     setBusy('invite');
     try {
       await navigator.clipboard?.writeText(inviteText);
-      flash('Invite copied');
+      flash(t('mobile.space.inviteCopied'));
     } catch { /* ignore */ }
     finally { setBusy(null); }
   };
@@ -122,7 +122,7 @@ export function RelayMenuSheet({
         await nav.share({ title: label, text: inviteText, url: relayUrl });
       } else {
         await navigator.clipboard?.writeText(inviteText);
-        flash('Copied to clipboard');
+        flash(t('mobile.space.copiedClipboard'));
       }
     } catch { /* user cancelled or unsupported */ }
     finally { setBusy(null); }
@@ -131,7 +131,7 @@ export function RelayMenuSheet({
   const copyUrl = async () => {
     try {
       await navigator.clipboard?.writeText(relayUrl);
-      flash('Relay URL copied');
+      flash(t('mobile.space.urlCopied'));
     } catch { /* ignore */ }
   };
 
@@ -207,7 +207,7 @@ export function RelayMenuSheet({
         <Row
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></svg>}
           rowLabel={t('mobile.space.invite')}
-          hint={busy === 'invite' ? '…' : 'copy link'}
+          hint={busy === 'invite' ? '…' : t('mobile.space.copyLinkHint')}
           onClick={() => void invite()}
         />
         <Row

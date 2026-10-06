@@ -93,9 +93,9 @@ export function MobileForumCard({
             </div>
           )}
           <div className="forum-card-meta">
-            <span><strong>OP</strong> {opName}</span>
-            <span>{messages.length} {messages.length === 1 ? 'msg' : 'msgs'}</span>
-            <span>last {lastName}</span>
+            <span><strong>{t('mobile.forum.op')}</strong> {opName}</span>
+            <span>{t('mobile.forum.messages', { count: messages.length })}</span>
+            <span>{t('mobile.forum.lastBy', { name: lastName })}</span>
           </div>
         </div>
       </div>

@@ -7,12 +7,13 @@ import Select from '@/components/ui/Select';
 /** The value the category picker uses for "no category". */
 export const NO_CATEGORY = '__none__';
 
-/** The picker's options: "Uncategorized" first, then the draft's categories in order. */
+/** The picker's options: "no category" (labelled by the caller) first, then the draft's categories in order. */
 export function categoryOptions(
   categories: ReadonlyArray<{ id: string; name: string }>,
+  uncategorizedLabel: string,
 ): Array<{ id: string; name: string }> {
   return [
-    { id: NO_CATEGORY, name: 'Uncategorized' },
+    { id: NO_CATEGORY, name: uncategorizedLabel },
     ...categories.map((c) => ({ id: c.id, name: c.name })),
   ];
 }
@@ -114,7 +115,7 @@ export function CategoryChannelsBlock({
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
-                  aria-label={`Move ${g.name ?? g.id.slice(0, 8)} up`}
+                  aria-label={t('mobile.layout.moveChannelUp', { name: g.name ?? g.id.slice(0, 8) })}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
                 </button>
@@ -133,7 +134,7 @@ export function CategoryChannelsBlock({
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
-                  aria-label={`Move ${g.name ?? g.id.slice(0, 8)} down`}
+                  aria-label={t('mobile.layout.moveChannelDown', { name: g.name ?? g.id.slice(0, 8) })}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                 </button>

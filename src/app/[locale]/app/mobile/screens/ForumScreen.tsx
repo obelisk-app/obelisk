@@ -41,12 +41,12 @@ export function ForumScreen({
           <BackButton onClick={back} style={{ marginLeft: -6 }} />
           <span className="space-name-bc">{shortHost(relay)}</span>
           <span className="sep">/</span>
-          <span>{group?.name ?? 'publications'}</span>
+          <span>{group?.name ?? t('mobile.forum.label')}</span>
         </div>
         <div className="chat-row">
           <div className="chat-title-block">
-            <div className="chat-channel"><span className="hash">#</span>{group?.name ?? 'publications'}</div>
-            <span className="role-badge" style={{ marginLeft: 6 }}>publications</span>
+            <div className="chat-channel"><span className="hash">#</span>{group?.name ?? t('mobile.forum.label')}</div>
+            <span className="role-badge" style={{ marginLeft: 6 }}>{t('mobile.forum.label')}</span>
           </div>
         </div>
       </div>
@@ -66,7 +66,9 @@ export function ForumScreen({
         ) : visibleThreads.length === 0 ? (
           <div className="empty-state" data-testid="mobile-forum-no-matches">
             <div className="empty-state-title">
-              No publications match {searchQuery.trim() ? `"${searchQuery.trim()}"` : 'the selected tags'}.
+              {searchQuery.trim()
+                ? t('mobile.forum.noMatchesQuery', { query: searchQuery.trim() })
+                : t('mobile.forum.noMatchesTags')}
             </div>
             {searchQuery.trim() && (
               <button
@@ -75,7 +77,7 @@ export function ForumScreen({
                 onClick={() => forum.openNewThread(searchQuery.trim())}
                 style={{ marginTop: 10 }}
               >
-                Create &ldquo;{searchQuery.trim()}&rdquo;
+                {t('mobile.forum.createNamed', { title: searchQuery.trim() })}
               </button>
             )}
           </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useMessages, useMyPubkey, useCurrentRelayUrl, type JsGroup } from '@/services/nostr-bridge';
 import { ChannelActionSheet } from '@/components/chat/ChannelContextMenu';
 import { isChannelMuted, useChannelPref } from '@/store/channel-prefs';
@@ -85,6 +86,7 @@ function ChannelRowBody({
   onToggleExpand,
   indent,
 }: ChannelRowProps) {
+  const t = useTranslations();
   const myPubkey = useMyPubkey();
   const relay = useCurrentRelayUrl();
   const highlights = useCachedChannelHighlights(group.id, myPubkey);
@@ -97,7 +99,7 @@ function ChannelRowBody({
   const mentionsOrReplies = Math.max(highlights.mentions + highlights.replies, mentionCards);
   const name = group.name ?? group.id.slice(0, 8);
   const quietStyle = pref.unfollowed || muted ? { opacity: 0.55 } : undefined;
-  const mutedIcon = muted ? <span aria-label="muted" title="muted" style={{ fontSize: 11 }}>🔕</span> : null;
+  const mutedIcon = muted ? <span aria-label={t('mobile.channel.muted')} title={t('mobile.channel.muted')} style={{ fontSize: 11 }}>🔕</span> : null;
   if (group.kind === 'voice' || group.kind === 'voice-sfu') {
     return (
       <button className={`ch-row voice ${active ? 'active' : ''}`} onClick={onClick}>
@@ -108,7 +110,7 @@ function ChannelRowBody({
           <div className="ch-row-top">
             <span className="ch-name">{name}</span>
             {live && <span className="voice-live-dot" />}
-            {live && <span className="ch-meta" style={{ marginLeft: 'auto', color: 'var(--accent)' }}>live</span>}
+            {live && <span className="ch-meta" style={{ marginLeft: 'auto', color: 'var(--accent)' }}>{t('mobile.channel.live')}</span>}
           </div>
         </div>
       </button>
@@ -136,7 +138,7 @@ function ChannelRowBody({
             {mutedIcon}
             {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
             {mentionsOrReplies > 0 && (
-              <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
+              <span className="mention-pill" aria-label={t('mobile.channel.mentionsOrReplies', { count: mentionsOrReplies })}>
                 {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
               </span>
             )}
@@ -144,7 +146,7 @@ function ChannelRowBody({
           <button
             className="ch-chevron-btn"
             onClick={onToggleExpand}
-            aria-label={expanded ? 'Collapse publications' : 'Expand publications'}
+            aria-label={t(expanded ? 'mobile.channel.collapsePublications' : 'mobile.channel.expandPublications')}
             aria-expanded={!!expanded}
           >
             <span className={`ch-chevron ${expanded ? 'expanded' : ''}`} aria-hidden="true">
@@ -163,7 +165,7 @@ function ChannelRowBody({
         {mutedIcon}
         {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
         {mentionsOrReplies > 0 && (
-          <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
+          <span className="mention-pill" aria-label={t('mobile.channel.mentionsOrReplies', { count: mentionsOrReplies })}>
             {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
           </span>
         )}
@@ -180,7 +182,7 @@ function ChannelRowBody({
       {mutedIcon}
       {unread > 0 && <span className="ch-meta">{unread > 99 ? '99+' : unread}</span>}
       {mentionsOrReplies > 0 && (
-        <span className="mention-pill" aria-label={`${mentionsOrReplies} mentions or replies`}>
+        <span className="mention-pill" aria-label={t('mobile.channel.mentionsOrReplies', { count: mentionsOrReplies })}>
           {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
         </span>
       )}
@@ -210,87 +212,5 @@ export function ForumThreadChildRow({
       onClick={onClick}
       indent
     />
-  );
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// 03 - server (groups + channels)
-
-/**
- * Differentiated empty state for the channel list. Without this the user
- * can't tell whether the relay is still loading, blocked them, or genuinely
- * has no channels - all three previously rendered as "No channels yet".
- *
- * Precedence (highest first):
- *   - Whitelisting required - relay is rejecting reads with auth-required
- *     or restricted. Even if we're "connected", the user won't see channels
- *     until they're whitelisted.
- *   - Network issue       - connection failed / dropped, or relay is
- *     unreachable.
- *   - Channels loading    - connecting, authenticating, or connected but
- *     the kind 39000 EOSE hasn't had time to land. We give it ~4s before
- *     declaring "No channels found".
- *   - No channels found   - we've waited long enough and the relay
- *     genuinely returned zero groups.
- */
-export function ChannelListEmptyState({
-  relayAccess,
-  connectionState,
-  metadataEose,
-}: {
-  relayAccess: import('@/services/nostr-bridge').RelayAccessState;
-  connectionState: string;
-  metadataEose: boolean;
-}) {
-  // Stamped with the (connection, access) pair it was measured for, so a
-  // change in either starts a fresh wait with no reset step.
-  const waitKey = `${connectionState}|${relayAccess}`;
-  const [waitedFor, setWaitedFor] = useState<string | null>(null);
-  const waited = waitedFor === waitKey;
-  useEffect(() => {
-    const t = setTimeout(() => setWaitedFor(waitKey), 6000);
-    return () => clearTimeout(t);
-  }, [waitKey]);
-
-  let label = 'Channels loading…';
-  if (connectionState === 'Offline') {
-    label = 'You’re offline';
-  } else if (relayAccess === 'auth-required' || relayAccess === 'restricted') {
-    label = 'Whitelisting required';
-  } else if (
-    relayAccess === 'unreachable'
-    || relayAccess === 'error'
-    || connectionState === 'Disconnected'
-    || connectionState.startsWith('Error')
-  ) {
-    label = 'Network issue';
-  } else if (
-    connectionState !== 'Connected'
-    || relayAccess === 'unknown'
-    || relayAccess === 'authenticating'
-    || (!metadataEose && !waited)
-  ) {
-    label = 'Channels loading…';
-  } else if (metadataEose) {
-    // Relay finished its kind 39000 stream and returned zero events.
-    label = 'No channels found';
-  } else {
-    // Connected for >6s, ok access, but no EOSE for kind 39000. Most
-    // relays that silently filter unauthorized reads behave this way -
-    // they accept the REQ but never close it. Treat as a whitelist
-    // symptom rather than mislabeling as "No channels found".
-    label = 'Whitelisting required';
-  }
-
-  const isLoading = label === 'Channels loading…';
-  return (
-    <div
-      style={{ padding: '10px 12px', color: 'var(--app-text-mute)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}
-      data-testid={isLoading ? 'channels-loading' : 'channels-empty'}
-      data-state={label}
-    >
-      {isLoading && <div className="lc-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} aria-hidden="true" />}
-      <span>{label}</span>
-    </div>
   );
 }

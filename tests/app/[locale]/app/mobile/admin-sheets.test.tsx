@@ -249,7 +249,7 @@ describe('ChannelSettingsSheet SFU guard', () => {
     const close = vi.fn();
     renderLocalized(<ChannelSettingsSheet close={close} group={TEXT_GROUP} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Voice (SFU)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Big-room voice' }));
     const url = await screen.findByTestId('mobile-sfu-url') as HTMLInputElement;
     await vi.waitFor(() => expect(url.value).not.toBe(''));
     fireEvent.click(screen.getByTestId('mobile-channel-settings-save'));
@@ -271,7 +271,7 @@ describe('ChannelSettingsSheet SFU guard', () => {
     const close = vi.fn();
     renderLocalized(<ChannelSettingsSheet close={close} group={TEXT_GROUP} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Voice (SFU)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Big-room voice' }));
     const url = await screen.findByTestId('mobile-sfu-url') as HTMLInputElement;
     await vi.waitFor(() => expect(url.value).not.toBe(''));
     fireEvent.change(url, { target: { value: 'https://sfu.example' } });

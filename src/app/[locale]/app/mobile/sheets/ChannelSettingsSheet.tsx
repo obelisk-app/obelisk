@@ -2,11 +2,11 @@
 
 import { useId } from 'react';
 import { type JsGroup } from '@/services/nostr-bridge';
+import type { MessageKey } from '@/i18n/keys';
 import { useChannelSettingsForm } from '@/hooks/chat/useChannelSettingsForm';
 import ForumTagsEditor from '@/components/chat/ForumTagsEditor';
 import { ChannelAppearanceInput } from '@/components/media/BlossomImageInput';
 import { useTranslations } from 'next-intl';
-import { CHANNEL_KIND_LABEL } from '@/utils/shell/mobile/labels';
 import { ManageMemberRowMobile } from './ManageMemberRowMobile';
 import Sheet from '@/components/ui/Sheet';
 import Input from '@/components/ui/Input';
@@ -19,6 +19,15 @@ import SheetActions from './SheetActions';
 // ChannelSettingsModal but trimmed to fit a phone - SFU pin + advanced fields
 // stay desktop-only for now; admins can still toggle the channel kind to
 // voice-sfu which falls through to the env-var defaults.
+
+/** What a person reads for each channel kind; the kind ids are wire values. */
+const KIND_LABEL = {
+  text: 'mobile.channel.kind.text',
+  voice: 'mobile.channel.kind.voice',
+  'voice-sfu': 'mobile.channel.kind.voiceSfu',
+  forum: 'mobile.channel.kind.forum',
+} as const satisfies Record<JsGroup['kind'], MessageKey>;
+
 export function ChannelSettingsSheet({
   group,
   close,
@@ -54,10 +63,10 @@ export function ChannelSettingsSheet({
   });
 
   return (
-    <Sheet onClose={close} screen="channel-settings" label={`Channel settings · #${group.name ?? group.id.slice(0, 8)}`} maxHeight="94%">
+    <Sheet onClose={close} screen="channel-settings" label={t('mobile.channel.settingsTitle', { name: group.name ?? group.id.slice(0, 8) })} maxHeight="94%">
       <div className="zap-title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
-        Channel settings · #{group.name ?? group.id.slice(0, 8)}
+        {t('mobile.channel.settingsTitle', { name: group.name ?? group.id.slice(0, 8) })}
       </div>
 
       {/* Appearance */}
@@ -138,7 +147,7 @@ export function ChannelSettingsSheet({
                 fontWeight: 600,
               }}
             >
-              {CHANNEL_KIND_LABEL[k]}
+              {t(KIND_LABEL[k])}
             </button>
           ))}
         </div>
@@ -170,14 +179,14 @@ export function ChannelSettingsSheet({
                 style={{ width: 'auto', padding: '0 14px', flexShrink: 0 }}
                 data-testid="mobile-sfu-verify"
               >
-                {sfuChecking ? 'Checking…' : 'Verify'}
+                {sfuChecking ? t('mobile.sfu.checking') : t('mobile.sfu.verify')}
               </button>
             </div>
             {sfuVerified && (
               <div style={{ fontSize: 11, color: 'var(--app-text-dim)' }} data-testid="mobile-sfu-verified">
                 <span style={{ color: 'var(--accent)' }}>{t('shell.desktop.sfu.verified')}</span>
                 {sfuVerified.region ? ` · ${sfuVerified.region}` : ''}
-                {sfuVerified.cap ? ` · up to ${sfuVerified.cap} participants` : ''}
+                {sfuVerified.cap ? ` · ${t('mobile.sfu.cap', { cap: sfuVerified.cap })}` : ''}
                 <div style={{ marginTop: 4, fontFamily: "'JetBrains Mono', monospace", wordBreak: 'break-all' }}>{sfuVerified.pubkey}</div>
               </div>
             )}
@@ -200,7 +209,7 @@ export function ChannelSettingsSheet({
         className="btn-primary"
         data-testid="mobile-channel-settings-save"
       >
-        {savingMeta ? 'Saving…' : 'Save channel'}
+        {savingMeta ? t('common.saving') : t('mobile.channel.save')}
       </button>
 
       {/* Members */}
@@ -235,14 +244,14 @@ export function ChannelSettingsSheet({
             className="btn-primary"
             style={{ width: 'auto', alignSelf: 'flex-start', padding: '0 18px', boxShadow: 'none' }}
           >
-            {memberBusy ? 'Adding…' : 'Add'}
+            {memberBusy ? t('mobile.members.adding') : t('mobile.members.add')}
           </button>
         </form>
       </section>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-          Members · {allPubkeys.length}
+          {t('mobile.members.count', { count: allPubkeys.length })}
         </label>
         {allPubkeys.length === 0 ? (
           <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>

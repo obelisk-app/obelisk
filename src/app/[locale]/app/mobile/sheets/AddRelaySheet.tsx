@@ -60,6 +60,7 @@ function SuggestedRelayItem({
   alreadyAdded: boolean;
   onAdded: () => void;
 }) {
+  const t = useTranslations();
   const [iconUrl, setIconUrl] = useState<string | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
   const [name, setName] = useState<string>(shortHost(url));
@@ -119,7 +120,7 @@ function SuggestedRelayItem({
           opacity: busy ? 0.5 : 1,
         }}
       >
-        {alreadyAdded ? 'Added' : busy ? '…' : 'Add'}
+        {alreadyAdded ? t('mobile.rail.added') : busy ? '…' : t('mobile.rail.add')}
       </button>
     </div>
   );
@@ -156,7 +157,7 @@ function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
         className="btn-primary"
         style={{ marginTop: 4 }}
       >
-        {busy ? 'Adding…' : 'Add relay'}
+        {busy ? t('mobile.rail.adding') : t('mobile.rail.addRelay')}
       </button>
     </form>
   );

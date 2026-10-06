@@ -16,10 +16,10 @@ export function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; 
   // expressed by the inline tag next to the title, so the subtitle stays
   // empty on the idle "no one's here" view instead of repeating "SFU room".
   const sub =
-    call?.status === 'connected' ? 'Live · connected' :
-    call?.status === 'starting' ? 'Starting…' :
-    call?.status ? call.status :
-    null;
+    call?.status === 'connected' ? t('mobile.voice.connected') :
+    call?.status === 'starting' ? t('mobile.voice.starting') :
+    call?.status === 'active' ? t('mobile.voice.live') :
+    call?.status ?? null; // an unknown status is a wire value, shown as it came
 
   return (
     <div className="screen voice-room-screen active" data-screen="voice-room">
@@ -31,7 +31,7 @@ export function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; 
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
               <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
             </svg>
-            <span className="voice-room-name">{group?.name ?? 'Voice channel'}</span>
+            <span className="voice-room-name">{group?.name ?? t('mobile.voice.fallbackName')}</span>
             {isSfu && <span className="voice-sfu-pill" title={t('mobile.voice.sfuTitle')}>SFU</span>}
           </div>
           {sub && <div className="voice-room-sub">{sub}</div>}

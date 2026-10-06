@@ -26,7 +26,8 @@
     "packsHint": "Creá packs y gestioná favoritos."
   },
   "nav": {
-    "servers": "Servidores"
+    "servers": "Servidores",
+    "dms": "MDs"
   },
   "inbox": {
     "mentions": "@menciones",
@@ -51,7 +52,14 @@
     "promote": "Hacer admin",
     "emptyHelp": "Todavía no hay miembros listados. Los canales públicos no necesitan lista de miembros.",
     "demote": "Quitar admin",
-    "kick": "Expulsar"
+    "kick": "Expulsar",
+    "count": "Miembros · {count}",
+    "adding": "Agregando…",
+    "add": "Agregar",
+    "confirmDemote": "¿Quitarle el admin a {name}? Sigue teniendo acceso al canal, pero pierde los permisos de admin.",
+    "confirmKick": "¿Expulsar a {name} de este canal?",
+    "demoteName": "Quitarle el admin a {name}",
+    "kickName": "Expulsar a {name}"
   },
   "channel": {
     "loadingMessages": "Cargando mensajes...",
@@ -70,7 +78,21 @@
     "readOnlyHint": "escriben los miembros",
     "private": "Privado",
     "privateHint": "oculto; solo miembros",
-    "type": "Tipo de canal"
+    "type": "Tipo de canal",
+    "settingsTitle": "Ajustes del canal · #{name}",
+    "save": "Guardar canal",
+    "kind": {
+      "text": "Texto",
+      "voice": "Voz / Video",
+      "voiceSfu": "Voz para salas grandes",
+      "forum": "Publicaciones"
+    },
+    "mentionsOrReplies": "{count, plural, one {# mención o respuesta} other {# menciones o respuestas}}",
+    "expandPublications": "Mostrar publicaciones",
+    "collapsePublications": "Ocultar publicaciones",
+    "muted": "Silenciado",
+    "live": "en vivo",
+    "replyingToMessage": "respondiendo a un mensaje"
   },
   "profile": {
     "more": "Más",
@@ -116,7 +138,8 @@
     "help": "Visible para todos en este relay · NIP-78 kind 30078.",
     "hint": "nombre · ícono · portada",
     "iconHint": "Logo cuadrado que se muestra junto al nombre del relay.",
-    "bannerHint": "Imagen ancha que se muestra sobre el nombre del relay."
+    "bannerHint": "Imagen ancha que se muestra sobre el nombre del relay.",
+    "save": "Guardar identidad"
   },
   "layout": {
     "categoryPlaceholder": "p. ej. General, Trading, Voz",
@@ -128,12 +151,21 @@
     "newCategory": "Nueva categoría",
     "categories": "Categorías",
     "empty": "Todavía no hay categorías. Los canales aparecen en “Sin categoría” hasta que agregues una.",
-    "delete": "Eliminar"
+    "delete": "Eliminar",
+    "publish": "Publicar diseño",
+    "uncategorized": "Sin categoría",
+    "uncategorizedCount": "Sin categoría · {count}",
+    "channelsCount": "Canales · {count}",
+    "moveChannelUp": "Subir {name}",
+    "moveChannelDown": "Bajar {name}"
   },
   "rail": {
     "addRelay": "Agregar relay",
     "addTitle": "Agregar un relay",
-    "addHelp": "Pegá la URL de un relay de grupos NIP-29. Cada relay es un “servidor” distinto en la barra."
+    "addHelp": "Pegá la URL de un relay de grupos NIP-29. Cada relay es un “servidor” distinto en la barra.",
+    "adding": "Agregando…",
+    "add": "Agregar",
+    "added": "Agregado"
   },
   "header": {
     "search": "Buscar en este servidor",
@@ -148,18 +180,36 @@
     "actions": "Acciones del mensaje",
     "dismissFailed": "Descartar mensaje fallido",
     "failed": "No se pudo enviar",
-    "zap": "Enviar zap"
+    "zap": "Enviar zap",
+    "deleteEveryone": "Eliminar para todos",
+    "deleteMessage": "Eliminar mensaje"
   },
   "voice": {
     "sfuTitle": "Enrutado por un SFU",
-    "minimize": "Minimizar llamada"
+    "minimize": "Minimizar llamada",
+    "fallbackName": "Canal de voz",
+    "live": "En vivo",
+    "connected": "En vivo · conectado",
+    "starting": "Iniciando…"
   },
   "forum": {
     "clearSearch": "Limpiar búsqueda",
     "bodyPlaceholder": "¿De qué trata la publicación?",
     "empty": "Todavía no hay publicaciones",
     "emptyHint": "Tocá + para crear una.",
-    "firstMessage": "Primer mensaje"
+    "firstMessage": "Primer mensaje",
+    "searchPlaceholder": "Buscar o crear una publicación…",
+    "tapToCreate": "Tocá + para crear…",
+    "creating": "Creando…",
+    "create": "Crear",
+    "createNamed": "Crear “{title}”",
+    "tagsCount": "Etiquetas ({count}/{max})",
+    "label": "publicaciones",
+    "noMatchesQuery": "Ninguna publicación coincide con “{query}”.",
+    "noMatchesTags": "Ninguna publicación coincide con las etiquetas elegidas.",
+    "op": "OP",
+    "messages": "{count, plural, one {# mensaje} other {# mensajes}}",
+    "lastBy": "último: {name}"
   },
   "space": {
     "newChannel": "Nuevo canal",
@@ -172,7 +222,12 @@
     "rolesHint": "insignias por nivel",
     "people": "Admins y miembros",
     "peopleHint": "limpieza masiva",
-    "leave": "Salir de este espacio"
+    "leave": "Salir de este espacio",
+    "inviteText": "Sumate a {name} en Obelisk: {url}",
+    "inviteCopied": "Invitación copiada",
+    "copiedClipboard": "Copiado al portapapeles",
+    "urlCopied": "URL del relay copiada",
+    "copyLinkHint": "copiar enlace"
   },
   "field": {
     "description": "Descripción",
@@ -183,9 +238,27 @@
   },
   "zap": {
     "title": "Enviar un zap",
-    "walletHint": "Billetera · NWC · revisá en preferencias"
+    "walletHint": "Billetera · NWC · revisá en preferencias",
+    "custom": "otro"
   },
   "relay": {
     "confirmLeave": "¿Salir de {name}?"
+  },
+  "reactions": {
+    "removeEveryone": "Quitar reacciones para todos",
+    "removeOwn": "Quitar tu reacción",
+    "react": "Reaccionar"
+  },
+  "channelList": {
+    "loading": "Cargando canales…",
+    "offline": "Estás sin conexión",
+    "whitelist": "Tenés que estar en la whitelist",
+    "network": "Problema de red",
+    "none": "No se encontraron canales"
+  },
+  "sfu": {
+    "verify": "Verificar",
+    "checking": "Verificando…",
+    "cap": "hasta {cap} participantes"
   }
 }

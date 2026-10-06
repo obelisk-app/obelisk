@@ -27,7 +27,7 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={canCreateFromSearch ? 'Tap + to create…' : 'Search or create a publication…'}
+            placeholder={t(canCreateFromSearch ? 'mobile.forum.tapToCreate' : 'mobile.forum.searchPlaceholder')}
             aria-label={t('chat.forum.searchPlaceholder')}
             data-testid="mobile-forum-search-input"
           />

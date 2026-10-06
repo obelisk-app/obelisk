@@ -116,8 +116,8 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
             composer.onSelect(el.value, el.selectionStart ?? el.value.length);
           }}
           onPaste={composer.onPaste}
-          placeholder={t('mobile.channel.messagePlaceholder', { name: group?.name ?? 'channel' })}
-          aria-label={t('mobile.channel.messagePlaceholder', { name: group?.name ?? 'channel' })}
+          placeholder={t('mobile.channel.messagePlaceholder', { name: group?.name ?? t('common.channel') })}
+          aria-label={t('mobile.channel.messagePlaceholder', { name: group?.name ?? t('common.channel') })}
           onKeyDown={(e) => composer.onKeyDown(e, true)}
         />
         <div className="composer-btns">

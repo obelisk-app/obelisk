@@ -48,7 +48,7 @@ export function ManageCategoriesSheet({
     [channels],
   );
 
-  const catOptions = categoryOptions(draft.categories);
+  const catOptions = categoryOptions(draft.categories, t('mobile.layout.uncategorized'));
 
   return (
     <Sheet onClose={close} screen="manage-categories" label={t('mobile.layout.title')} zIndex={20} maxHeight="94%">
@@ -101,7 +101,7 @@ export function ManageCategoriesSheet({
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-          Channels · {channels.length}
+          {t('mobile.layout.channelsCount', { count: channels.length })}
         </label>
         {channels.length === 0 ? (
           <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>
@@ -123,7 +123,7 @@ export function ManageCategoriesSheet({
             ))}
             {laidOut.uncategorized.length > 0 && (
               <CategoryChannelsBlock
-                catName="Uncategorized"
+                catName={t('mobile.layout.uncategorized')}
                 channelIds={laidOut.uncategorized}
                 channelsById={channelsById}
                 catOptions={catOptions}
@@ -138,7 +138,7 @@ export function ManageCategoriesSheet({
 
       {err && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{err}</div>}
       <SheetActions
-        primary={{ label: 'Publish layout', busyLabel: 'Saving…', busy: saving, onClick: () => void save(), testId: 'mobile-categories-save' }}
+        primary={{ label: t('mobile.layout.publish'), busyLabel: t('common.saving'), busy: saving, onClick: () => void save(), testId: 'mobile-categories-save' }}
         onCancel={close}
       />
     </Sheet>

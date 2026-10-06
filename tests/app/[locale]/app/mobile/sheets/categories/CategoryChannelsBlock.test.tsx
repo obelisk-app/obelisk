@@ -5,9 +5,10 @@ import { LocaleProvider } from '@tests/support/intl';
 import { CategoryChannelsBlock, NO_CATEGORY, categoryOptions } from '@/app/[locale]/app/mobile/sheets/categories/CategoryChannelsBlock';
 
 describe('categoryOptions', () => {
-  it('offers "Uncategorized" first, then the categories in order', () => {
-    expect(categoryOptions([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]).map((o) => o.id))
-      .toEqual([NO_CATEGORY, 'a', 'b']);
+  it('offers "no category" first, under the label it is given, then the categories in order', () => {
+    const options = categoryOptions([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 'Uncategorized');
+    expect(options.map((o) => o.id)).toEqual([NO_CATEGORY, 'a', 'b']);
+    expect(options[0].name).toBe('Uncategorized');
   });
 });
 
@@ -24,7 +25,7 @@ describe('CategoryChannelsBlock', () => {
           catName="Cat"
           channelIds={['c1', 'c2']}
           channelsById={channelsById}
-          catOptions={categoryOptions([{ id: 'cat', name: 'Cat' }])}
+          catOptions={categoryOptions([{ id: 'cat', name: 'Cat' }], 'Uncategorized')}
           currentCatId="cat"
           onAssign={onAssign}
           onMove={onMove}

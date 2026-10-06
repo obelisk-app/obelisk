@@ -83,7 +83,7 @@ export function DmThreadScreen({
               key={it.key}
               className={
                 'dm-bubble '
-                + (it.msg.outgoing ? 'outgoing delivered' : 'incoming')
+                + (it.msg.outgoing ? 'outgoing delivered' : 'incoming') // i18n-exempt: CSS class names
                 + (it.msg.pending ? ' pending' : '')
                 + (it.msg.failed ? ' failed' : '')
               }

@@ -87,7 +87,7 @@ export function EditBrandingSheet({
       </div>
       {err && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{err}</div>}
       <SheetActions
-        primary={{ label: 'Save branding', busyLabel: 'Saving…', busy: saving, onClick: () => void save(), testId: 'mobile-branding-save' }}
+        primary={{ label: t('mobile.branding.save'), busyLabel: t('common.saving'), busy: saving, onClick: () => void save(), testId: 'mobile-branding-save' }}
         onCancel={close}
       />
     </Sheet>

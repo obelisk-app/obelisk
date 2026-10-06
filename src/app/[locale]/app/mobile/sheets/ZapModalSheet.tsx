@@ -53,7 +53,7 @@ export function ZapModalSheet({
             <span className="zap-amount-sub">sats</span>
           </button>
         ))}
-        <button className="zap-amount">···<span className="zap-amount-sub">custom</span></button>
+        <button className="zap-amount">···<span className="zap-amount-sub">{t('mobile.zap.custom')}</span></button>
       </div>
       <div className="zap-memo">&quot;{msg.content.slice(0, 80)}{msg.content.length > 80 ? '…' : ''}&quot;</div>
       <div className="zap-wallet">
