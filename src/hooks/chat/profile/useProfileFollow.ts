@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { getBridge, useMyContactList, useMyContactListReady, useMyPubkey } from '@/services/nostr-bridge';
+import { useBridge, useMyContactList, useMyContactListReady, useMyPubkey } from '@/services/nostr-bridge';
 import { toggledFollowTags } from '@/services/social/profile-feed';
 
 /**
@@ -10,6 +10,7 @@ import { toggledFollowTags } from '@/services/social/profile-feed';
  * has loaded, so a click can never publish an empty list over a real one.
  */
 export function useProfileFollow(pubkey: string, relays: readonly string[]) {
+  const bridge = useBridge();
   const myPubkey = useMyPubkey();
   const contactEvent = useMyContactList();
   const contactsReady = useMyContactListReady() || !myPubkey;
@@ -20,11 +21,10 @@ export function useProfileFollow(pubkey: string, relays: readonly string[]) {
   const following = !!contactEvent?.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey);
 
   const toggleFollow = async () => {
-    if (!myPubkey || !contactsReady || followBusy) return;
+    if (!bridge || !myPubkey || !contactsReady || followBusy) return;
     setFollowBusy(true);
     setFollowError(false);
     try {
-      const bridge = await getBridge();
       await bridge.publishEvent({
         kind: 3,
         content: contactEvent?.content ?? '',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { getBridgeImpl, nostrActions } from '@/services/nostr-bridge';
+import { nostrActions, useBridge } from '@/services/nostr-bridge';
 import { initializeWot } from '@/services/wot';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { subscribeVoiceJump } from '@/services/voice/jump-to-voice';
@@ -39,12 +39,13 @@ export function useDesktopNavigation(
   // the sub and flips status to 'loading', the user sees a one-frame
   // flash of "No messages yet" → spinner. useLayoutEffect schedules the
   // state change before paint so only the final state ('loading') hits
-  // the screen. Using `getBridgeImpl` keeps the call truly synchronous,
+  // the screen. Calling the bridge directly keeps the call truly synchronous,
   // the async `nostrActions.setActiveGroup` indirection would defer the
   // status flip to a microtask, after the first paint had already
-  // landed.
+  // landed. The bridge comes from the provider and is null until it has
+  // started, so the effect also runs again when it arrives.
+  const bridge = useBridge();
   useLayoutEffect(() => {
-    const bridge = getBridgeImpl();
     if (view.kind === 'group') {
       bridge?.setActiveGroup(view.groupId);
       // Mirror into the chat store so `isUserWatchingChannel` returns true
@@ -57,7 +58,7 @@ export function useDesktopNavigation(
       bridge?.setActiveGroup(null);
       useChatStore.setState({ activeChannelId: null });
     }
-  }, [view]);
+  }, [view, bridge]);
 
   // Probe the nostr-wot extension on mount (and on visibility change). Without
   // this the engine stays disabled until the user opens the Preferences tab,

@@ -4,9 +4,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePreferences } from '@/hooks/usePreferences';
-import { getBridge } from '../client';
 import type { JsDirectMessage, JsMessage, JsReaction, JsUserMetadata, LoadMoreMessagesResult, MessagesStatus } from '../types';
-import { useBridgeContext } from './provider';
+import { useBridge } from './provider';
 import { useSubscription } from './subscription';
 
 export function useMessages(groupId: string | null): ReadonlyArray<JsMessage> {
@@ -51,9 +50,9 @@ export function useLoadEarlier(groupId: string | null): {
   const [lastResult, setLastResult] = useState<LoadMoreMessagesResult | null>(null);
   const inFlightRef = useRef(false);
   const retryBlockedUntilRef = useRef(0);
-  // The provider's bridge when there is one; `getBridge()` otherwise (and
-  // in the moment before the provider has adopted the page bridge).
-  const { bridge: provided } = useBridgeContext();
+  // The provider's bridge. Paging needs a channel on screen, which needs
+  // the bridge, so a call before it has arrived just answers `null`.
+  const bridge = useBridge();
 
   useEffect(() => {
     setReachedStart(false);
@@ -62,12 +61,11 @@ export function useLoadEarlier(groupId: string | null): {
   }, [groupId]);
 
   const loadEarlier = useCallback(async () => {
-    if (!groupId || inFlightRef.current || reachedStart) return null;
+    if (!bridge || !groupId || inFlightRef.current || reachedStart) return null;
     if (Date.now() < retryBlockedUntilRef.current) return null;
     inFlightRef.current = true;
     setLoading(true);
     try {
-      const bridge = provided ?? (await getBridge());
       const result = await bridge.loadMoreMessages(groupId);
       setLastResult(result);
       if (result === 'end') {
@@ -87,7 +85,7 @@ export function useLoadEarlier(groupId: string | null): {
       inFlightRef.current = false;
       setLoading(false);
     }
-  }, [groupId, reachedStart, provided]);
+  }, [groupId, reachedStart, bridge]);
 
   return { loadEarlier, loading, reachedStart, lastResult };
 }
@@ -118,26 +116,17 @@ export function useReactions(
   );
 }
 
+const NO_DMS: Readonly<Record<string, ReadonlyArray<JsDirectMessage>>> = Object.freeze({});
+
 export function useDirectMessages(): Readonly<Record<string, ReadonlyArray<JsDirectMessage>>> {
   // Non-destructive store: muted/WoT-denied peers may be hidden by UI policy,
-  // but the bridge does not delete DM history automatically.
+  // but the bridge does not delete DM history automatically. Until the
+  // person opts in to DMs the hook does not subscribe at all, so the relay
+  // DM REQs stay closed.
   const dmEnabled = usePreferences().directMessagesEnabled;
-  const [value, setValue] = useState<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>({});
-  useEffect(() => {
-    let unsub: (() => void) | null = null;
-    let cancelled = false;
-    if (!dmEnabled) {
-      setValue({});
-      return () => {};
-    }
-    getBridge().then((bridge) => {
-      if (cancelled) return;
-      unsub = bridge.subscribeDirectMessages(setValue);
-    });
-    return () => {
-      cancelled = true;
-      unsub?.();
-    };
-  }, [dmEnabled]);
-  return value;
+  return useSubscription<Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>>(
+    (b, cb) => (dmEnabled ? b.subscribeDirectMessages(cb) : () => {}),
+    NO_DMS,
+    [dmEnabled],
+  );
 }

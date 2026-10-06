@@ -3,8 +3,10 @@
  * The gate and the client are stubbed; this file is only about that panel.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { LocaleProvider } from '@tests/support/intl';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { groupFixture } from '@tests/support/mocks/nostr-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
 const push = vi.fn();
 
@@ -28,13 +30,6 @@ vi.mock('@/hooks/voice/room/useVoiceRoomClient', () => ({
     sfuStatus: null,
   }),
 }));
-vi.mock('@/services/nostr-bridge', () => ({
-  useGroups: () => [{ id: 'room', name: 'Room', kind: 'voice', isOpen: false }],
-  useCurrentRelayUrl: () => 'wss://relay.test',
-  useMyLoginMethod: () => 'nsec',
-  useUserMetadata: () => null,
-  useActiveCall: () => null,
-}));
 
 import VoiceRoom from '@/components/voice/VoiceRoom';
 
@@ -45,7 +40,8 @@ afterEach(() => {
 
 describe('VoiceRoom, not a member', () => {
   it('offers Back as the secondary pill Button, which returns to the app', () => {
-    render(<LocaleProvider initialLocale="en"><VoiceRoom channelId="room" channelName="Room" /></LocaleProvider>);
+    const bridge = fakeBridge({ groups: [groupFixture({ id: 'room', name: 'Room', kind: 'voice', isOpen: false })] });
+    renderWithBridge(<VoiceRoom channelId="room" channelName="Room" />, bridge);
     const back = screen.getByRole('button', { name: 'Back' });
     expect(back).toHaveClass('lc-pill-secondary', 'text-sm', 'mt-6');
     expect(back).toHaveAttribute('type', 'button');

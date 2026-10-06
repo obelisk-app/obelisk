@@ -1,16 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import MemberList from '@/components/chat/MemberList';
 import { useChatStore } from '@/store/chat';
-import { LocaleProvider } from '@tests/support/intl';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
-/** The component reads its copy from the dictionary, so it needs a provider. */
-const renderLocalized = (ui: React.ReactElement) => render(
-  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
-);
+/**
+ * The real member hooks over a fake bridge built from `bridge.members` at
+ * render time: the admins and members of `group-1`, each with a profile.
+ */
+const renderLocalized = (ui: React.ReactElement) => {
+  const pubkeysWith = (role: 'admin' | 'member') => bridge.members.filter((m) => m.role === role).map((m) => m.pubkey);
+  return renderWithBridge(ui, fakeBridge({
+    currentRelayUrl: 'wss://group.relay',
+    adminsByGroup: { 'group-1': pubkeysWith('admin') },
+    membersByGroup: { 'group-1': pubkeysWith('member') },
+    userMetadata: Object.fromEntries(bridge.members.map((m) => [
+      m.pubkey,
+      userMetadataFixture({ pubkey: m.pubkey, displayName: m.displayName, picture: m.picture ?? null, nip05: m.nip05 ?? null }),
+    ])),
+  }, { ensureUserMetadata: vi.fn().mockResolvedValue(undefined) }));
+};
 
-
-const bridge = vi.hoisted(() => ({
+const bridge = {
   members: [] as Array<{
     pubkey: string;
     displayName: string;
@@ -18,15 +31,7 @@ const bridge = vi.hoisted(() => ({
     nip05?: string;
     role: 'admin' | 'member';
   }>,
-}));
-
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({
-    useGroupMemberInfo: () => bridge.members,
-    useCurrentRelayUrl: () => 'wss://group.relay',
-  });
-});
+};
 
 vi.mock('@/hooks/chat/useNostrPresence', () => ({
   useNostrPresence: () => undefined,

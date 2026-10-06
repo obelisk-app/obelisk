@@ -5,7 +5,17 @@
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { useEffect, type ReactNode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { BridgeProvider, useBridge, useBridgeReady } from '@/services/nostr-bridge';
+import {
+  BridgeProvider,
+  useAwaitBridge,
+  useBridge,
+  useBridgeReady,
+  useGroups,
+  useIsLoggedIn,
+  useMyPubkey,
+} from '@/services/nostr-bridge';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { groupFixture } from '@tests/support/mocks/nostr-bridge';
 import { getBridgeImpl, registerBridge, unregisterBridge, type BridgeImpl } from '@/services/nostr-bridge/client';
 
 const fake = (name: string) => ({ name }) as unknown as BridgeImpl;
@@ -78,11 +88,66 @@ describe('BridgeProvider in the app (no bridge prop)', () => {
   });
 });
 
+describe('useAwaitBridge', () => {
+  it('resolves at once with an injected bridge', async () => {
+    const a = fake('a');
+    const { result } = renderHook(() => useAwaitBridge(), { wrapper: wrapperFor(a) });
+    await expect(result.current()).resolves.toBe(a);
+  });
+
+  it('waits for the page bridge the provider adopts later, and stays the same function', async () => {
+    const page = fake('page');
+    registerBridge(page);
+    const { result } = renderHook(() => ({ awaitBridge: useAwaitBridge(), now: useBridge() }), {
+      wrapper: wrapperFor(),
+    });
+    // Mounted, not adopted yet: adoption waits for getBridge() to settle.
+    expect(result.current.now).toBeNull();
+    const first = result.current.awaitBridge;
+    const pending = first();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await expect(pending).resolves.toBe(page);
+    expect(result.current.now).toBe(page);
+    expect(result.current.awaitBridge).toBe(first);
+  });
+});
+
 describe('outside any provider', () => {
-  it('useBridge() falls back to getBridgeImpl() until migration step 7', () => {
-    expect(renderHook(() => useBridge()).result.current).toBeNull();
+  it('useBridge() is null and useBridgeReady() false, even with a page bridge registered', () => {
     const a = fake('a');
     registerBridge(a);
-    expect(renderHook(() => useBridge()).result.current).toBe(a);
+    expect(renderHook(() => useBridge()).result.current).toBeNull();
+    expect(renderHook(() => useBridgeReady()).result.current).toBe(false);
+  });
+
+  it('a bridge hook returns its initial value and never creates a bridge', async () => {
+    const { result } = renderHook(() => ({ groups: useGroups(), me: useMyPubkey(), in: useIsLoggedIn() }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current).toEqual({ groups: [], me: null, in: false });
+    expect(getBridgeImpl()).toBeNull();
+  });
+
+  it('a bridge hook ignores a registered page bridge too: only a provider hands it out', async () => {
+    registerBridge(fakeBridge({ groups: [groupFixture({ id: 'g' })] }));
+    const { result } = renderHook(() => useGroups());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current).toEqual([]);
+  });
+
+  it('useAwaitBridge() never settles', async () => {
+    registerBridge(fake('a'));
+    const { result } = renderHook(() => useAwaitBridge());
+    let settled = false;
+    void result.current().then(() => { settled = true; });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(settled).toBe(false);
   });
 });

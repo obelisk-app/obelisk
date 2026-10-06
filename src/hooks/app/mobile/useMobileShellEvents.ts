@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect } from 'react';
-import { getBridgeImpl, nostrActions } from '@/services/nostr-bridge';
+import { nostrActions, useBridge } from '@/services/nostr-bridge';
 import { subscribeVoiceJump } from '@/services/voice/jump-to-voice';
 import { emojiTagsForContent, mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
 import { onOpenSettings, revealSettingsSection } from '@/utils/open-settings';
@@ -74,17 +74,19 @@ export function useActiveConversationMirror(nav: NavState, dmOptInEnabled: boole
   // status to 'loading' synchronously when it restarts a stale empty
   // channel. Running before paint means the chat panel's first paint
   // already reflects 'loading' instead of the stale 'empty-confirmed'.
-  // Sync `getBridgeImpl` is used over async `nostrActions.setActiveGroup`
-  // so the status flip lands in this commit, not a later microtask.
+  // The bridge is called directly rather than through the async
+  // `nostrActions.setActiveGroup` so the status flip lands in this commit,
+  // not a later microtask. It comes from the provider and is null until it
+  // has started, so the effect runs again when it arrives.
+  const bridge = useBridge();
   useLayoutEffect(() => {
-    const bridge = getBridgeImpl();
     if (!bridge) return;
     if (nav.screen === 'channel' && nav.groupId) {
       bridge.setActiveGroup(nav.groupId);
     } else {
       bridge.setActiveGroup(null);
     }
-  }, [nav.screen, nav.groupId]);
+  }, [nav.screen, nav.groupId, bridge]);
 
   useEffect(() => {
     useDMStore.setState({

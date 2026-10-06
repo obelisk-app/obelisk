@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import { useVoiceStore } from '@/store/voice';
-import { LocaleProvider } from '@tests/support/intl';
-import type { ActiveCallInfo } from '@/services/nostr-bridge';
+import type { ActiveCallInfo, JsUserMetadata } from '@/services/nostr-bridge';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { groupFixture, userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
 /** The slice of VoiceClient the room reaches; `join` only exists on a client the room built. */
 type FakeClient = {
@@ -20,10 +22,18 @@ type FakeClient = {
   getLocalTracks: () => { mic: null; camera: null; screen: null };
 };
 
-/** The component reads its copy from the dictionary, so it needs a provider. */
-const renderLocalized = (ui: React.ReactElement) => render(
-  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
-);
+/**
+ * The real hooks over a fake bridge seeded from `bridgeHarness` at render
+ * time (each test adjusts the harness first), in English.
+ */
+const renderLocalized = (ui: React.ReactElement) => renderWithBridge(ui, fakeBridge({
+  myPubkey: 'me-pubkey',
+  groups: bridgeHarness.groups.map((g) => groupFixture(g)),
+  membershipReadyByGroup: Object.fromEntries(bridgeHarness.groups.map((g) => [g.id, true])),
+  activeCallByChannel: bridgeHarness.activeCalls,
+  userMetadata: Object.fromEntries(Object.entries(bridgeHarness.profiles)
+    .map(([pubkey, meta]) => [pubkey, userMetadataFixture({ pubkey, ...meta })])),
+}));
 
 
 const voiceHarness = vi.hoisted(() => ({
@@ -36,8 +46,7 @@ const voiceHarness = vi.hoisted(() => ({
 const bridgeHarness = vi.hoisted(() => ({
   groups: [] as Array<{ id: string; name?: string; kind: 'voice' | 'voice-sfu'; isOpen?: boolean }>,
   activeCalls: {} as Record<string, ActiveCallInfo>,
-  profiles: {} as Record<string, { name?: string; displayName?: string; picture?: string }>,
-  bridge: null as unknown,
+  profiles: {} as Record<string, Partial<JsUserMetadata>>,
 }));
 
 vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({
@@ -87,14 +96,7 @@ vi.mock('@/services/voice/client', () => ({
   }),
 }));
 
-vi.mock('@/services/nostr-bridge', () => ({
-  getBridge: async () => bridgeHarness.bridge,
-  useGroups: () => bridgeHarness.groups,
-  useCurrentRelayUrl: () => 'wss://relay.test',
-  useMyLoginMethod: () => 'nsec',
-  useUserMetadata: (pubkey: string) => bridgeHarness.profiles[pubkey] ?? null,
-  useActiveCall: (channelId: string | null) => (channelId ? bridgeHarness.activeCalls[channelId] ?? null : null),
-}));
+
 
 function makeActiveClient(channelId: string) {
   return {
@@ -118,13 +120,6 @@ beforeEach(() => {
   ];
   bridgeHarness.activeCalls = {};
   bridgeHarness.profiles = {};
-  bridgeHarness.bridge = {
-    getPublicKey: () => 'me-pubkey',
-    subscribeGroups: (cb: (groups: typeof bridgeHarness.groups) => void) => { cb(bridgeHarness.groups); return vi.fn(); },
-    subscribeMembers: (_channelId: string, cb: (members: readonly string[]) => void) => { cb([]); return vi.fn(); },
-    subscribeAdmins: (_channelId: string, cb: (admins: readonly string[]) => void) => { cb([]); return vi.fn(); },
-    subscribeMembershipReady: (_channelId: string, cb: (ready: boolean) => void) => { cb(true); return vi.fn(); },
-  };
   voiceHarness.activeClient = null;
   voiceHarness.joinError = null;
   voiceHarness.setActiveVoiceClient.mockClear();
@@ -157,7 +152,7 @@ describe('VoiceRoom join page', () => {
     const { rerender } = renderLocalized(<VoiceRoom channelId="old-voice" channelName="Old Voice" />);
     expect(await screen.findByTestId('voice-controls')).toBeInTheDocument();
 
-    rerender(<LocaleProvider initialLocale="en">{<><VoiceRoom channelId="new-voice" channelName="New Voice" /></>}</LocaleProvider>);
+    rerender(<VoiceRoom channelId="new-voice" channelName="New Voice" />);
     const join = await screen.findByTestId('join-voice-btn');
     expect(join).toHaveClass('lc-pill-primary', 'text-sm', 'shadow-lg');
     expect(join).toHaveAttribute('type', 'button');

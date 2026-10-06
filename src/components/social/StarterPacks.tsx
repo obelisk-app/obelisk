@@ -15,7 +15,7 @@
 
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useCallback, useEffect, useState } from 'react';
-import { getBridge, useMyContactList, useMyFollows } from '@/services/nostr-bridge';
+import { useBridge, useMyContactList, useMyFollows } from '@/services/nostr-bridge';
 import { usePreferences } from '@/hooks/usePreferences';
 import { ensureSocialProfiles } from '@/services/social/profiles';
 import {
@@ -50,6 +50,7 @@ export default function StarterPacks({
   const relays = usePreferences().socialRelays;
   const follows = useMyFollows();
   const contactEvent = useMyContactList();
+  const bridge = useBridge();
   const [packs, setPacks] = useState<StarterPack[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -67,9 +68,9 @@ export default function StarterPacks({
   }, [relays]);
 
   const followPack = useCallback(async (pack: StarterPack) => {
+    if (!bridge) return;
     setBusy(pack.id);
     try {
-      const bridge = await getBridge();
       await bridge.publishEvent({
         kind: 3,
         content: contactEvent?.content ?? '',
@@ -88,7 +89,7 @@ export default function StarterPacks({
     } finally {
       setBusy(null);
     }
-  }, [contactEvent, relays, t]);
+  }, [bridge, contactEvent, relays, t]);
 
   /*
     The heading paints immediately, in every state.

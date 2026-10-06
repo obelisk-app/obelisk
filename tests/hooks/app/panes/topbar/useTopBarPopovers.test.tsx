@@ -1,7 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { useDismissOnOutside } from '@/hooks/app/panes/topbar/useTopBarPopovers';
+import { useDismissOnOutside, useInboxStreams } from '@/hooks/app/panes/topbar/useTopBarPopovers';
+import { useReadStateStore } from '@/store/read-state';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { messageFixture } from '@tests/support/mocks/nostr-bridge';
+import { bridgeWrapper } from '@tests/support/render-with-bridge';
 
 describe('useDismissOnOutside', () => {
   function mount(open: boolean) {
@@ -31,5 +35,27 @@ describe('useDismissOnOutside', () => {
     const closed = mount(false);
     act(() => { press('outside'); });
     expect(closed).not.toHaveBeenCalled();
+  });
+});
+
+describe('useInboxStreams, mark read', () => {
+  const realMarkAll = useReadStateStore.getState().markAllAsRead;
+  afterEach(() => useReadStateStore.setState({ markAllAsRead: realMarkAll }));
+
+  it('advances every channel and DM thread the provider\'s bridge holds, one stream at a time', () => {
+    const markAllAsRead = vi.fn();
+    useReadStateStore.setState({ markAllAsRead });
+    const bridge = fakeBridge({
+      messagesByGroup: { g1: [messageFixture({ id: 'm1' })], g2: [] },
+      dmsByPeer: { ['p'.repeat(64)]: [] },
+    });
+    const { result } = renderHook(() => useInboxStreams('wss://relay.test'), { wrapper: bridgeWrapper(bridge) });
+
+    act(() => result.current.handleMarkRead());
+    expect(markAllAsRead).toHaveBeenLastCalledWith([], ['g1', 'g2']);
+
+    act(() => result.current.setNotifTab('dms'));
+    act(() => result.current.handleMarkRead());
+    expect(markAllAsRead).toHaveBeenLastCalledWith(['p'.repeat(64)], []);
   });
 });

@@ -7,7 +7,7 @@ import {
   useGroups,
   useUserMetadata,
   useCurrentRelayUrl,
-  getBridgeImpl,
+  useBridge,
   type JsGroup,
 } from '@/services/nostr-bridge';
 import { MentionText } from '@/components/chat/MentionText';
@@ -50,6 +50,7 @@ export function InboxScreen({
   const markMentionsRead = useNotificationsStore((s) => s.markMentionsRead);
   const markAllAsRead = useReadStateStore((s) => s.markAllAsRead);
   const groups = useGroups();
+  const bridge = useBridge();
 
   const [tab, setTab] = useState<InboxFilter>('mentions');
 
@@ -57,12 +58,11 @@ export function InboxScreen({
   // must not silence unread DMs. Bridge stores are read imperatively at
   // click time so this screen doesn't re-render on every message arrival.
   const handleMarkAll = () => {
-    const impl = getBridgeImpl();
     if (tab === 'mentions') {
       if (relay) markMentionsRead(relay);
-      markAllAsRead([], impl ? Object.keys(impl.messagesByGroup.get()) : []);
+      markAllAsRead([], bridge ? Object.keys(bridge.messagesByGroup.get()) : []);
     } else {
-      markAllAsRead(impl ? Object.keys(impl.dmsByPeer.get()) : [], []);
+      markAllAsRead(bridge ? Object.keys(bridge.dmsByPeer.get()) : [], []);
     }
   };
 

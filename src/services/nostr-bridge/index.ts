@@ -7,7 +7,7 @@ export { hasSeenWrap, markWrapSeen, type WrapLedgerScope } from './wrap-ledger';
 export { nostrActions } from './actions';
 // The React provider and the two hooks that hand out the instance itself.
 export { BridgeProvider, type BridgeProviderProps } from './provider';
-export { useBridge, useBridgeReady } from './hooks/provider';
+export { useAwaitBridge, useBridge, useBridgeReady } from './hooks/provider';
 // The React hooks, one file per concern under `./hooks/`.
 export {
   useIsLoggedIn,

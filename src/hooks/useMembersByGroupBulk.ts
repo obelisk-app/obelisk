@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getBridgeImpl } from '@/services/nostr-bridge';
+import { useBridge } from '@/services/nostr-bridge';
 
 export type MembersByGroup = Readonly<Record<string, ReadonlyArray<string>>>;
 
@@ -8,15 +8,14 @@ export type MembersByGroup = Readonly<Record<string, ReadonlyArray<string>>>;
  * `membersByGroup` store. The bridge exposes per-group `subscribeMembers`
  * but no bulk subscriber for the whole relay; reading the store directly
  * keeps a relay-wide panel from spawning N hooks just to enumerate state
- * that is already in memory. Returns `{}` until the bridge exists.
+ * that is already in memory. Returns `{}` until the provider has the bridge.
  */
 export function useMembersByGroupBulk(): MembersByGroup {
+  const bridge = useBridge();
   const [snapshot, setSnapshot] = useState<MembersByGroup>({});
   useEffect(() => {
-    const impl = getBridgeImpl();
-    if (!impl) return;
-    const unsub = impl.membersByGroup.subscribe((m) => setSnapshot(m));
-    return () => unsub();
-  }, []);
+    if (!bridge) return;
+    return bridge.membersByGroup.subscribe((m) => setSnapshot(m));
+  }, [bridge]);
   return snapshot;
 }

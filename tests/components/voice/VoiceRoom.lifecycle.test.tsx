@@ -3,14 +3,22 @@
  * leave. Both cases were red before their fix (round 7 audit, F8 and F9).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import { useVoiceStore } from '@/store/voice';
-import { LocaleProvider } from '@tests/support/intl';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { groupFixture } from '@tests/support/mocks/nostr-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
-const renderLocalized = (ui: React.ReactElement) => render(
-  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
-);
+/** The real hooks over a fake bridge: two open voice rooms, membership loaded. */
+const renderLocalized = (ui: React.ReactElement) => renderWithBridge(ui, fakeBridge({
+  myPubkey: 'me-pubkey',
+  groups: [
+    groupFixture({ id: 'old-voice', name: 'Old Voice', kind: 'voice', isOpen: true }),
+    groupFixture({ id: 'new-voice', name: 'New Voice', kind: 'voice', isOpen: true }),
+  ],
+  membershipReadyByGroup: { 'old-voice': true, 'new-voice': true },
+}));
 
 type FakeClient = {
   channelId: string;
@@ -71,23 +79,7 @@ vi.mock('@/services/voice/client', () => ({
     return client;
   }),
 }));
-vi.mock('@/services/nostr-bridge', () => ({
-  getBridge: async () => ({
-    getPublicKey: () => 'me-pubkey',
-    subscribeGroups: (cb: (g: unknown[]) => void) => { cb([{ id: 'old-voice', kind: 'voice', isOpen: true }, { id: 'new-voice', kind: 'voice', isOpen: true }]); return vi.fn(); },
-    subscribeMembers: (_c: string, cb: (m: readonly string[]) => void) => { cb([]); return vi.fn(); },
-    subscribeAdmins: (_c: string, cb: (a: readonly string[]) => void) => { cb([]); return vi.fn(); },
-    subscribeMembershipReady: (_c: string, cb: (r: boolean) => void) => { cb(true); return vi.fn(); },
-  }),
-  useGroups: () => [
-    { id: 'old-voice', name: 'Old Voice', kind: 'voice', isOpen: true },
-    { id: 'new-voice', name: 'New Voice', kind: 'voice', isOpen: true },
-  ],
-  useCurrentRelayUrl: () => 'wss://relay.test',
-  useMyLoginMethod: () => 'nsec',
-  useUserMetadata: () => null,
-  useActiveCall: () => null,
-}));
+
 
 beforeEach(() => {
   harness.activeClient = null;
@@ -111,7 +103,7 @@ describe('VoiceRoom call ownership', () => {
     expect(useVoiceStore.getState().isConnecting).toBe(true);
 
     // The relay has not answered yet; the user opens another channel.
-    rerender(<LocaleProvider initialLocale="en"><VoiceRoom channelId="new-voice" channelName="New Voice" /></LocaleProvider>);
+    rerender(<VoiceRoom channelId="new-voice" channelName="New Voice" />);
     expect(await screen.findByTestId('join-voice-btn')).toBeInTheDocument();
 
     // Now the join lands. The call is live and registered as the active

@@ -1,24 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import { LocaleProvider } from '@tests/support/intl';
+import { screen, within } from '@testing-library/react';
 import { useChatStore } from '@/store/chat';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { groupFixture, userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
-// PhoneShell pulls in the whole bridge at module scope; this screen only needs
-// the membership hooks, so the rest are stubbed to satisfy the named imports.
-const roster = vi.hoisted(() => ({ admins: [] as string[], members: [] as string[] }));
-
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock, groupFixture, userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({
-    nostrActions: {},
-    useConfiguredRelays: () => ['wss://relay.test'],
-    useGroups: () => [groupFixture({ id: 'group-1', name: 'general' })],
-    useAdmins: () => roster.admins,
-    useMembers: () => roster.members,
-    useUserMetadata: (pubkey) => (pubkey ? userMetadataFixture({ pubkey, displayName: pubkey }) : null),
-    useCurrentRelayUrl: () => 'wss://relay.test',
-  });
-});
+const roster = { admins: [] as string[], members: [] as string[] };
 
 vi.mock('@/hooks/chat/useNostrPresence', () => ({
   useNostrPresence: () => undefined,
@@ -72,11 +59,20 @@ import { MemberListScreen } from '@/app/[locale]/app/mobile/screens/MemberListSc
 const MOD = { id: 'mod', name: 'Moderator', tier: 5, color: '#ff0000', emoji: '🛡️' };
 const OG = { id: 'og', name: 'OG', tier: 2, color: '#00ff00', emoji: '' };
 
+/** The real hooks over a fake bridge: `roster` in `group-1`, everyone named by their key. */
 function renderScreen() {
-  return render(
-    <LocaleProvider>
-      <MemberListScreen groupId="group-1" back={() => {}} openProfile={() => {}} />
-    </LocaleProvider>,
+  const everyone = [...new Set([...roster.admins, ...roster.members])];
+  const bridge = fakeBridge({
+    configuredRelays: ['wss://relay.test'],
+    currentRelayUrl: 'wss://relay.test',
+    groups: [groupFixture({ id: 'group-1', name: 'general' })],
+    adminsByGroup: { 'group-1': roster.admins },
+    membersByGroup: { 'group-1': roster.members },
+    userMetadata: Object.fromEntries(everyone.map((pubkey) => [pubkey, userMetadataFixture({ pubkey, displayName: pubkey })])),
+  }, { ensureUserMetadata: vi.fn().mockResolvedValue(undefined) });
+  return renderWithBridge(
+    <MemberListScreen groupId="group-1" back={() => {}} openProfile={() => {}} />,
+    bridge,
   );
 }
 

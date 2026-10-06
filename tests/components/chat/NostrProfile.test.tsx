@@ -1,8 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { LocaleProvider } from '@tests/support/intl';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
 /**
  * These used to mock `SimplePool` directly, because the component opened its
@@ -78,27 +80,6 @@ vi.mock('@/services/social/feed', async (importOriginal) => {
   };
 });
 
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock, userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({
-    getBridge: async () => ({ publishEvent: bridgeMocks.publishEvent }),
-    nostrActions: { ensureUserMetadata: bridgeMocks.ensureUserMetadata },
-    useCurrentRelayUrl: () => 'wss://relay.example',
-    useMyPubkey: () => bridgeMocks.myPubkey,
-    useMyContactList: () => bridgeMocks.contactEvent,
-    useMyContactListReady: () => bridgeMocks.contactsReady,
-    useMyFollows: () => [],
-    useUserMetadata: () => userMetadataFixture(bridgeMocks.metadata ?? {
-      displayName: 'Alice',
-      name: 'alice',
-      picture: 'https://example.com/avatar.jpg',
-      banner: 'https://example.com/banner.jpg',
-      nip05: 'alice@example.com',
-      about: 'hello from nostr',
-    }),
-  });
-});
-
 /**
  * `NoteThread` (opened by the reply-count test below) reads through the SDK's
  * own fetchers rather than `@/services/social/pool`, so the pool mock above never
@@ -138,11 +119,29 @@ const note = (id: string, content: string, tags: string[][] = [], createdAt = 10
   sig: '',
 });
 
+/**
+ * The real hooks over a fake bridge seeded from `bridgeMocks` at render
+ * time; the profile shown (and the reader's own) carries `metadata`.
+ */
 function renderProfile(props: Partial<React.ComponentProps<typeof NostrProfile>> = {}) {
-  return render(
-    <LocaleProvider>
-      <NostrProfile pubkey={AUTHOR} onClose={props.onClose ?? vi.fn()} {...props} />
-    </LocaleProvider>,
+  const meta = (pubkey: string) => userMetadataFixture({ pubkey, ...(bridgeMocks.metadata ?? {
+    displayName: 'Alice',
+    name: 'alice',
+    picture: 'https://example.com/avatar.jpg',
+    banner: 'https://example.com/banner.jpg',
+    nip05: 'alice@example.com',
+    about: 'hello from nostr',
+  }) });
+  const bridge = fakeBridge({
+    currentRelayUrl: 'wss://relay.example',
+    myPubkey: bridgeMocks.myPubkey,
+    myContactList: bridgeMocks.contactEvent,
+    myContactListReady: bridgeMocks.contactsReady,
+    userMetadata: { [AUTHOR]: meta(AUTHOR), [bridgeMocks.myPubkey]: meta(bridgeMocks.myPubkey) },
+  }, { publishEvent: bridgeMocks.publishEvent, ensureUserMetadata: bridgeMocks.ensureUserMetadata });
+  return renderWithBridge(
+    <NostrProfile pubkey={AUTHOR} onClose={props.onClose ?? vi.fn()} {...props} />,
+    bridge,
   );
 }
 

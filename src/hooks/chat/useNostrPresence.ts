@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
+import { isImportableRelayUrl, useBridge } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
 
 /** A user counts as recently active if they published on this group relay in this window. */
@@ -35,11 +35,10 @@ export function useNostrPresence(pubkeys: string[], relayUrl: string): void {
 
   const authors = pubkeys.filter((pk) => /^[0-9a-f]{64}$/i.test(pk)).sort();
   const key = relayUrl + ':' + authors.join(',');
+  const bridge = useBridge();
 
   useEffect(() => {
-    if (!authors.length || !isImportableRelayUrl(relayUrl)) return;
-    const bridge = getBridgeImpl();
-    if (!bridge) return;
+    if (!bridge || !authors.length || !isImportableRelayUrl(relayUrl)) return;
 
     const since = Math.floor((Date.now() - PRESENCE_WINDOW_MS) / 1000);
     return bridge.subscribeFilterWatched(
@@ -51,7 +50,7 @@ export function useNostrPresence(pubkeys: string[], relayUrl: string): void {
       { relays: [relayUrl], relayMode: 'replace', affectsRelayAccess: false },
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, bridge]);
 
   useEffect(() => {
     const id = window.setInterval(() => bumpPresenceTick(), TICK_INTERVAL_MS);

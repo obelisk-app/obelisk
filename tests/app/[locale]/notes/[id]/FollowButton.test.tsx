@@ -1,41 +1,36 @@
 import type { ReactElement } from 'react';
-import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 
 const mocks = vi.hoisted(() => ({
   publishEvent: vi.fn(),
-  myPubkey: 'me'.repeat(32),
+  myPubkey: 'me'.repeat(32) as string | null,
   contactEvent: null as NostrEvent | null,
   ready: true,
 }));
-
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({
-    getBridge: async () => ({ publishEvent: mocks.publishEvent }),
-    useMyPubkey: () => mocks.myPubkey,
-    useMyContactList: () => mocks.contactEvent,
-    useMyContactListReady: () => mocks.ready,
-  });
-});
 
 vi.mock('@/hooks/usePreferences', () => ({
   usePreferences: () => ({ socialRelays: ['wss://a.example'] }),
 }));
 
 import FollowButton from '@/app/[locale]/notes/[id]/FollowButton';
-import { LocaleProvider } from '@tests/support/intl';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
-/** The button reads its labels through next-intl, in English here. */
-const render = (ui: ReactElement) => rtlRender(ui, {
-  wrapper: ({ children }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>,
-});
+/**
+ * The real hooks over a fake bridge (the note page mounts the provider), in
+ * English; the click publishes through the provider's bridge.
+ */
+const render = (ui: ReactElement) => renderWithBridge(ui, fakeBridge(
+  { myPubkey: mocks.myPubkey, myContactList: mocks.contactEvent, myContactListReady: mocks.ready },
+  { publishEvent: mocks.publishEvent },
+));
 
 const TARGET = 'a'.repeat(64);
 
 const contacts = (tags: string[][]): NostrEvent => ({
-  id: 'c', pubkey: mocks.myPubkey, kind: 3, created_at: 10, content: '{"x":1}', tags, sig: '',
+  id: 'c', pubkey: mocks.myPubkey ?? '', kind: 3, created_at: 10, content: '{"x":1}', tags, sig: '',
 });
 
 beforeEach(() => {
@@ -85,7 +80,7 @@ describe('FollowButton', () => {
   });
 
   it('renders nothing when there is nobody to publish as', () => {
-    mocks.myPubkey = '';
+    mocks.myPubkey = null;
     const { container } = render(<FollowButton pubkey={TARGET} />);
     expect(container).toBeEmptyDOMElement();
   });

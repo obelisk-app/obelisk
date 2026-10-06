@@ -8,7 +8,7 @@
  * and openness changes into it.
  */
 import { useEffect, useState, type MutableRefObject } from 'react';
-import { getBridge, type BridgeImpl } from '@/services/nostr-bridge';
+import { useBridge } from '@/services/nostr-bridge';
 import type { VoiceClient } from '@/services/voice/client';
 import { voiceErrorCode, type VoiceErrorCode } from '@/services/voice/errors';
 
@@ -32,10 +32,13 @@ export function useVoiceRoomGate(
   const [decided, setDecided] = useState<{ channelId: string; gate: AuthGate } | null>(null);
   const gate: AuthGate = decided?.channelId === channelId ? decided.gate : LOADING;
   const [selfPubkey, setSelfPubkey] = useState<string>('');
+  // The provider's bridge: null until it has restored the session, and the
+  // gate stays loading until then.
+  const bridge = useBridge();
 
   useEffect(() => {
+    if (!bridge) return;
     let cancelled = false;
-    let bridgeRef: BridgeImpl | null = null;
     let unsubMembers: (() => void) | null = null;
     let unsubAdmins: (() => void) | null = null;
     let unsubReady: (() => void) | null = null;
@@ -50,9 +53,6 @@ export function useVoiceRoomGate(
 
     (async () => {
       try {
-        const bridge = await getBridge();
-        if (cancelled) return;
-        bridgeRef = bridge;
         const pk = bridge.getPublicKey();
         if (!pk) {
           setError('notLoggedIn');
@@ -136,9 +136,8 @@ export function useVoiceRoomGate(
       unsubMembers?.();
       unsubAdmins?.();
       unsubReady?.();
-      void bridgeRef;
     };
-  }, [channelId, clientRef, setError]);
+  }, [bridge, channelId, clientRef, setError]);
 
   return { gate, selfPubkey };
 }

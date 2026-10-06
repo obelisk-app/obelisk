@@ -16,7 +16,7 @@
 
 import { useState } from 'react';
 import {
-  getBridge,
+  useBridge,
   useMyContactList,
   useMyContactListReady,
   useMyPubkey,
@@ -33,6 +33,7 @@ export default function FollowButton({
   className?: string;
 }) {
   const t = useTranslations();
+  const bridge = useBridge();
   const myPubkey = useMyPubkey();
   const contactEvent = useMyContactList();
   const ready = useMyContactListReady();
@@ -47,11 +48,10 @@ export default function FollowButton({
   const toggle = async () => {
     // Without the contact list loaded, publishing would replace it with a
     // one-entry list - i.e. silently unfollow everyone.
-    if (busy || !ready) return;
+    if (!bridge || busy || !ready) return;
     setBusy(true);
     setFailed(false);
     try {
-      const bridge = await getBridge();
       await bridge.publishEvent({
         kind: 3,
         content: contactEvent?.content ?? '',

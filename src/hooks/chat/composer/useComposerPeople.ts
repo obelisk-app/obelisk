@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  getBridge,
-  getBridgeImpl,
   useAdminsByGroup,
   useGroupCreators,
   useGroups,
+  useBridge,
   useMembersByGroup,
   type JsUserMetadata,
 } from '@/services/nostr-bridge';
@@ -13,16 +12,12 @@ import { filterMembers, relayMentionCandidates, type MemberInfo } from '@/utils/
 
 /** Every kind 0 the bridge holds, live. The mention picker and the bot rail both read names from it. */
 export function useComposerMetadata(): Record<string, JsUserMetadata> {
+  const bridge = useBridge();
   const [metaMap, setMetaMap] = useState<Record<string, JsUserMetadata>>({});
   useEffect(() => {
-    let unsub: (() => void) | undefined;
-    void getBridge().then(() => {
-      const impl = getBridgeImpl();
-      if (!impl) return;
-      unsub = impl.userMetadata.subscribe((m) => setMetaMap(m));
-    });
-    return () => { unsub?.(); };
-  }, []);
+    if (!bridge) return;
+    return bridge.userMetadata.subscribe((m) => setMetaMap(m));
+  }, [bridge]);
   return metaMap;
 }
 

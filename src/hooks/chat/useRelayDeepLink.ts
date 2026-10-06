@@ -16,7 +16,7 @@
  * yes. A relay already in the list switches as it always did.
  */
 import { useCallback, useEffect, useRef } from 'react';
-import { getBridge, nostrActions } from '@/services/nostr-bridge';
+import { nostrActions, useAwaitBridge, type BridgeImpl } from '@/services/nostr-bridge';
 import { confirmDialog } from '@/services/confirm-dialog';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { useTranslations } from 'next-intl';
@@ -106,8 +106,8 @@ function firstValue<T>(subscribe: (cb: (value: T) => void) => () => void): T {
   return value as T;
 }
 
-async function readBridgeRelayState(): Promise<RelayState> {
-  const bridge = await getBridge();
+async function readBridgeRelayState(awaitBridge: () => Promise<BridgeImpl>): Promise<RelayState> {
+  const bridge = await awaitBridge();
   return {
     current: firstValue<string>((cb) => bridge.subscribeCurrentRelayUrl(cb)),
     configured: firstValue<ReadonlyArray<string>>((cb) => bridge.subscribeConfiguredRelays(cb)),
@@ -125,9 +125,12 @@ export function useRelayDeepLink(): (requested: string) => Promise<DeepLinkRelay
   // Read through a ref so the callback can stay stable across locale changes.
   const translate = useRef(t);
   useEffect(() => { translate.current = t; }, [t]);
+  // The shells call this from a mount effect, before the provider has the
+  // bridge; the read waits for it. Stable, like the callback.
+  const awaitBridge = useAwaitBridge();
   return useCallback((requested: string) => switchToDeepLinkedRelay({
     requested,
-    readRelayState: readBridgeRelayState,
+    readRelayState: () => readBridgeRelayState(awaitBridge),
     confirm: (host) => confirmDialog({
       title: translate.current('common.deeplink.relay.title', { host }),
       message: translate.current('common.deeplink.relay.body'),
@@ -136,5 +139,5 @@ export function useRelayDeepLink(): (requested: string) => Promise<DeepLinkRelay
       icon: 'none',
     }),
     switchRelay: (url) => nostrActions.switchRelay(url),
-  }), []);
+  }), [awaitBridge]);
 }

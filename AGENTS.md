@@ -15,7 +15,7 @@ The rules in this file are the intended design. The tree does not fully obey the
 - **"SVG icons, not glyphs" is violated by the glyph the rule cites.** The muted-channel marker is still `🔕` in both shells, and `✕` / `×` / `★` remain in `MediaLibraryModal.tsx`, `RelayRolesAdminModal.tsx`, `MobileSigningIndicator.tsx` and the PhoneShell search clear. New chrome goes through `src/components/ui/icons.tsx`.
 - **`ingestGroupMetadata` does not fan out the way older docs said.** It calls only `queueGroupMessages(groupId)`. `subscribeGroupCreator` (`client.ts:6374`) has no caller at all, yet its two containers (`creatorSubscribedGroups`, the sub list) are still declared, cleared on session change and iterated when voice trims subscriptions. Creator lookup actually happens through the relay-wide kind 9007 sub (`subscribeMyAuthoredGroups` / `ingestGroupCreator`). Delete or re-wire; do not document it as live.
 - **`src/services/voice/client.ts` wraps 16 production store calls in `catch { /* test envs */ }`.** It is a test seam leaking into production; any real store error is swallowed. Do not add a seventeenth. The fix is an injected store sink, not another catch.
-- **Utilities are duplicated with diverging semantics.** `shortHost` is down to one copy (`src/utils/relay-url/url-host.ts`; the last private one, in the mobile URL state, went in round 18); `normalizeRelayUrl` three times with three signatures (`nostr-bridge/relay-url.ts` is the bridge's canonical one, `social/relays.ts` the social tier's, `PhoneShell.tsx:310` a stray). `getBridgeSync` and `getBridgeImpl` (`client.ts:8534-8541`) are byte-identical.
+- **Utilities are duplicated with diverging semantics.** `shortHost` is down to one copy (`src/utils/relay-url/url-host.ts`; the last private one, in the mobile URL state, went in round 18); `normalizeRelayUrl` three times with three signatures (`nostr-bridge/relay-url.ts` is the bridge's canonical one, `social/relays.ts` the social tier's, `PhoneShell.tsx:310` a stray). (`getBridgeSync` is gone; `getBridgeImpl` is the one synchronous getter.)
 - **`useLocalWallet` (`src/hooks/wallet/useLocalWallet.ts`) is a stub** that always returns no client (its own header says the original module was never committed), so `InvoiceCard.tsx`'s Pay does nothing. Live zap flows use `@nostr-wot/wallet` (`MessageZapModal.tsx`, `useMessageZaps.ts`).
 - **A few hooks still sit outside the hooks layer.** `src/services/remote-media-gate.ts` (`useRemoteMediaGate`) waits on the bridge front-door allow-list (`tests/services/nostr-bridge/front-door.test.ts`), which names it by path. The bridge's own hooks are in `src/services/nostr-bridge/hooks/`, the Web-of-Trust Zustand store in `src/services/wot/store.ts`, and `ReadStateRoot` (`src/services/read-state/root.tsx`) is a render-nothing component in services. `tests/hooks/hooks-layer.test.ts` exempts nothing.
 - **Leftovers from the removed NDK stack:** `tests/support/mocks/ndk.ts` mocks a dependency that is no longer in `package.json`. `docs/README.md` still describes `direct-messages.md` as "NIP-04 DMs"; `docs/known-bugs.md` says `subscribeAdminMember` is fired from `ingestGroupMetadata` (it is not, see Data subscriptions).
@@ -76,6 +76,7 @@ src/
 │   └── manifest.ts, robots.ts, sitemap.ts, global-error.tsx
 ├── components/
 │   ├── Navbar.tsx, Footer.tsx, LandingPage.tsx, Showcase.tsx
+│   ├── BridgeRoute.tsx              # <BridgeProvider> for the public routes that use the bridge (notes, p, t, r, voice/<id>)
 │   ├── ProfileAppearanceEditor.tsx # kind:0 editor in use (`bridge.editUserMetadata`), mounted by UserPanel
 │   ├── ActivityIndicator, ToastStack, ModalShell, ErrorPanel, MobileSigningIndicator
 │   ├── BlossomImageInput, UserAvatar, ObeliskIcon, ShootingStars, LanguageToggle, FAQItem
@@ -127,14 +128,14 @@ src/
 ├── services/                      # Business logic and integrations: relays, bridge, stores, fetch, storage
 │   ├── nostr-bridge/              # THE bridge. Read this first.
 │   │   ├── client.ts                # SimplePool wrapper, sessions, subscriptions (8541 lines)
-│   │   ├── stores.ts                # React hooks: useIsLoggedIn, useGroups, useAdmins, ... (39 hooks)
+│   │   ├── hooks/                   # React hooks by concern (session, groups, members, messages, lists, calls; 46), re-exported by index.ts; provider.ts holds the context
 │   │   ├── actions.ts               # Imperative login / publish actions (`nostrActions`)
 │   │   ├── cache.ts, cache-clear.ts # Stale-while-revalidate localStorage cache + "Clear cache" sweep
 │   │   ├── background-watch.ts      # MRU-relay mention watch on its own pool
 │   │   ├── relay-url.ts             # normalizeRelayUrl + validation (the canonical one)
 │   │   ├── signer-queue.ts, wrap-ledger.ts, decrypt-cache.ts, quota-resubscribe.ts, relay-debug.ts
 │   │   ├── types.ts                 # NostrBridge interface, JsGroup/JsMessage/...
-│   │   ├── provider.tsx             # <BridgeProvider> (mounted by src/app/[locale]/app/AppProviders.tsx), useBridge/useBridgeReady in hooks/provider.ts
+│   │   ├── provider.tsx             # <BridgeProvider> (mounted by AppProviders.tsx on /app, BridgeRoute.tsx elsewhere); useBridge/useBridgeReady/useAwaitBridge in hooks/provider.ts
 │   │   ├── bridge-slot.ts           # The page bridge's globalThis slot: registerBridge / unregisterBridge
 │   │   └── index.ts                 # Public re-exports
 │   ├── channel-layout.ts          # NIP-78 (kind 30078) channel layout + operator authors
@@ -438,7 +439,8 @@ truth for every kind the app publishes; the bridge and the social module still k
 
 ### When coding:
 - Identity comes from the bridge (`useIsLoggedIn`, `useMyPubkey`, `useSignerReady`, `useUserMetadata`). **Do NOT introduce a new auth store** or a backend session.
-- For new relay-derived data, follow the existing pattern: add a `StateStore` on `BridgeImpl`, an ingest method that respects `created_at`-newest-wins, a `subscribeXxx` method on the bridge interface, and a `useXxx` hook in `stores.ts`.
+- For new relay-derived data, follow the existing pattern: add a `StateStore` on `BridgeImpl`, an ingest method that respects `created_at`-newest-wins, a `subscribeXxx` method on the bridge interface, and a `useXxx` hook (on `useSubscription`) in the matching file under `src/services/nostr-bridge/hooks/`, exported from `index.ts`.
+- **React code gets the bridge from `<BridgeProvider>`, never from `getBridge()` / `getBridgeImpl()`.** Use the hooks for state, `useBridge()` for imperative calls (null until the bridge is ready, so an effect lists it in its deps and a handler checks it), `useAwaitBridge()` for a callback that can run before the bridge has started (a deep link parsed on mount), and `nostrActions` for commands. Outside a provider there is no bridge: the hooks answer their initial value forever and nothing creates one. A route whose components use the bridge mounts the provider in its own layout or page (`AppProviders` on `/app`, `BridgeRoute` on the others), never in a layout that also wraps the landing or marketing pages, which ship without the bridge. `getBridge()` stays for code without a render tree (voice, zustand stores, relay services). Two guards hold this: `tests/bridge-in-react-files.test.ts` (no getter under `src/components`, `src/app`, `src/hooks`; one reasoned exception, the marketing navbar's lazy logout) and `tests/app/bridge-provider-routes.test.ts` (every page that ships the bridge has a provider; none is handed to the marketing pages).
 - Use the `bridgeCache` module for any data that benefits from instant first paint on reload (small, infrequently-changing). Wire `cacheGet` for seed and `cacheSet` for write-through.
 - Event kinds come from `@/utils/nip-kinds`; add the kind there if it is missing rather than declaring a local constant.
 - Follow La Crypta design system: use `lc-*` CSS classes and color tokens.
@@ -452,18 +454,28 @@ import {
   useIsLoggedIn, useMyPubkey, useSignerReady,
   useGroups, useMessages, useAdmins, useMembers,
   useUserMetadata,
+  useBridge, useAwaitBridge,
   nostrActions,
 } from '@/services/nostr-bridge';
 
-// In a component:
+// In a component (under a provider; outside one these stay at their initial value):
 const myPubkey = useMyPubkey();
 const groups = useGroups();
 const admins = useAdmins(activeGroupId);
 
-// Imperative use in a React file, inside <BridgeProvider> (the /app layout):
-const live = useBridge(); // null until the bridge is ready; useBridge comes from the same front door
+// Imperative use in a React file: the provider's instance, null until it is ready.
+const live = useBridge();
+useEffect(() => {
+  if (!live) return;
+  return live.subscribeFilterWatched(filter, onEvent);
+}, [live]);
+// A callback that may run before the bridge has started waits for it:
+const awaitBridge = useAwaitBridge();
+const relay = (await awaitBridge()).subscribeCurrentRelayUrl(cb);
+// Commands from a component:
+await nostrActions.sendMessage(groupId, 'hello');
 
-// Imperative publishing (non-React code keeps getBridge()):
+// Non-React code (voice, stores, relay services) keeps getBridge():
 const bridge = await getBridge();
 await bridge.sendMessage(groupId, 'hello');
 await bridge.editUserMetadata({ name: 'Alice', displayName: 'Alice' });
@@ -502,7 +514,7 @@ for where this sits relative to the bridgeCache.
 - Tests live in `tests/`, mirroring `src/`: `src/components/chat/Foo.tsx` is tested by `tests/components/chat/Foo.test.tsx`, which imports it as `@/components/chat/Foo`. `src/` holds no test files (`vitest.config.ts` only collects `tests/**` and `scripts/**`). Repo-wide invariant tests (`csp`, `service-worker-cache`, `hooks-after-early-return`, `no-em-dash`, `eslint-config`) sit at the top of `tests/`. The hooks-layer guard sits with the hooks it guards, `tests/hooks/hooks-layer.test.ts`, and the components-only guard with the components, `tests/components/components-only.test.ts`; a hook's test lives under `tests/hooks/` like the hook (`src/hooks/chat/gallery/useZoomPan.ts` -> `tests/hooks/chat/gallery/`).
 - Two house rules are enforced, not just written down: `eslint.config.mjs` makes `max-lines` (300, blank and comment-only lines not counted) an error for `src/**`, and `tests/no-em-dash.test.ts` fails on a literal em dash (U+2014) anywhere in `src/`, `tests/`, `scripts/`, `docs/`, `content/` (the guides), `.github/`, `.claude/`, the text assets under `public/` (SVG, JSON, TXT, JS, manifest) or any file at the repo root (only the generated `package-lock.json` is left out). Neither has any exemption left. `tests/eslint-config.test.ts` also fails if a path-scoped glob in the lint config matches no file.
 - Shared setup, mocks and fixtures in `tests/support/` (`setup.ts`, `warm-bridge-modules.ts`, `mocks/webrtc.ts`, `mocks/nostr-bridge.ts`, `mocks/i18n-navigation.ts`, `fake-bridge.ts`, `render-with-bridge.tsx`, `intl.tsx` (the `LocaleProvider` a component test wraps itself in), `next-intl-server.ts`, `fixtures/`), imported as `@tests/support/...`; `mocks/ndk.ts` is a leftover
-- A new component or hook test fakes the bridge *instance*, not the module: `renderWithBridge(<X />, fakeBridge({ groups }))` (or `bridgeWrapper` for `renderHook`) runs the real hooks over seeded stores, and `fake.stores.groups.set(...)` inside `act` drives a change. `tests/bridge-mock-count.test.ts` only lets the number of `vi.mock('@/services/nostr-bridge', ...)` files go down.
+- A new component or hook test fakes the bridge *instance*, not the module: `renderWithBridge(<X />, fakeBridge({ groups }, { publishEvent }))` (or `bridgeWrapper` for `renderHook`) runs the real hooks over seeded stores, `useBridge()` returns the fake, and `nostrActions` reaches it through the page slot the provider fills; `fake.stores.groups.set(...)` inside `act` drives a change. A hook rendered with no wrapper sees no bridge at all (initial values), which is how to test the "not started yet" path. `tests/bridge-mock-count.test.ts` only lets the number of `vi.mock('@/services/nostr-bridge', ...)` files go down (98 on 2026-10-06).
 - The page bridge lives on `globalThis` (`bridge-slot.ts`), so `vi.resetModules()` does not forget it: a suite that wants a fresh bridge calls `unregisterBridge()` (the bridge harnesses do), and a non-React suite can `registerBridge(fake)` instead of mocking the client module.
 - Use `data-testid` attributes for reliable test selectors
 - Bridge integration tests use a `FakePool` that mocks `SimplePool` (see `bridge.test.ts`, 4806 lines / 144 cases, and `login-race.test.ts`). The fake must implement `subscribe`, `publish`, `close`, AND `ensureRelay` because `connect()` awaits the handshake.

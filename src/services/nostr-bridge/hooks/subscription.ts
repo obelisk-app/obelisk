@@ -2,12 +2,11 @@
  * The one shape every bridge hook has: subscribe on mount (once the bridge
  * is there), replay the latest value, unsubscribe on unmount.
  *
- * Where the bridge comes from: inside `<BridgeProvider>` (the app's `/app`
- * layout, or a test's `renderWithBridge`), the provider's instance, so the
- * hook subscribes as soon as the provider has it. Outside a provider, the
- * old path: `getBridge()` in the effect, which also creates the page bridge
- * on first use. Routes without a provider and the suites that mock the
- * client rely on that path until migration step 7 removes it.
+ * Where the bridge comes from: `<BridgeProvider>` (the layouts of `/app` and
+ * of the public routes that use the bridge, or a test's `renderWithBridge`),
+ * so the hook subscribes as soon as the provider has it. Outside a provider
+ * there is no bridge and the hook answers `initial` for as long as it is
+ * mounted; it never creates one.
  *
  * A value belongs to the bridge and the inputs (`deps`) it was delivered
  * for. When the inputs change (channel A to channel B), the hook answers
@@ -17,7 +16,7 @@
  * and until the bridge is there it answers `initial`.
  */
 import { useEffect, useState } from 'react';
-import { getBridge, type BridgeImpl } from '../client';
+import type { BridgeImpl } from '../client';
 import { useBridgeContext } from './provider';
 
 interface Delivered<T> {
@@ -34,8 +33,8 @@ export function useSubscription<T>(
   initial: NoInfer<T>,
   deps: ReadonlyArray<unknown> = [],
 ): T {
-  const { bridge, provided } = useBridgeContext();
-  const key = [provided, bridge, ...deps];
+  const { bridge } = useBridgeContext();
+  const key = [bridge, ...deps];
   const [delivered, setDelivered] = useState<Delivered<T>>(() => ({ key, value: initial }));
   useEffect(() => {
     let unsub: (() => void) | null = null;
@@ -48,8 +47,7 @@ export function useSubscription<T>(
         setDelivered((prev) => (prev.value === value && sameKey(prev.key, key) ? prev : { key, value }));
       });
     };
-    if (!provided) void getBridge().then(attach);
-    else if (bridge) attach(bridge);
+    if (bridge) attach(bridge);
     return () => {
       cancelled = true;
       unsub?.();

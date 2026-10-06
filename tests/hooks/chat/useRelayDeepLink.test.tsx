@@ -2,6 +2,8 @@ import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { bridgeWrapper } from '@tests/support/render-with-bridge';
 
 /**
  * The bridge is the only thing that opens a socket, answers NIP-42 AUTH or
@@ -9,24 +11,11 @@ import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
  * only call the deep link makes into it. So "no AUTH and no persistence"
  * reduces to one observable: `switchRelay` must not have been called.
  */
-const bridgeState = vi.hoisted(() => ({
+const bridgeState = {
   current: 'wss://home.relay',
   configured: ['wss://home.relay', 'wss://known.relay'] as ReadonlyArray<string>,
-}));
-const switchRelay = vi.hoisted(() => vi.fn());
-
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({
-    getBridge: () => Promise.resolve({
-      subscribeCurrentRelayUrl: (cb: (url: string) => void) => { cb(bridgeState.current); return () => {}; },
-      subscribeConfiguredRelays: (cb: (urls: ReadonlyArray<string>) => void) => { cb(bridgeState.configured); return () => {}; },
-    }),
-    nostrActions: {
-      switchRelay: (...a: unknown[]) => switchRelay(...a),
-    },
-  });
-});
+};
+const switchRelay = vi.fn();
 
 import {
   classifyDeepLinkRelay,
@@ -37,9 +26,13 @@ import {
 
 function mountShell() {
   render(<LocaleProvider initialLocale="en"><ConfirmDialogHost /></LocaleProvider>);
-  const { result } = renderHook(() => useRelayDeepLink(), {
-    wrapper: ({ children }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>,
-  });
+  // The real hook under a provider holding a fake bridge; `nostrActions`
+  // reaches the same fake through the page slot the provider fills.
+  const bridge = fakeBridge(
+    { currentRelayUrl: bridgeState.current, configuredRelays: [...bridgeState.configured] },
+    { switchRelay: (url: string) => switchRelay(url) },
+  );
+  const { result } = renderHook(() => useRelayDeepLink(), { wrapper: bridgeWrapper(bridge) });
   return result.current;
 }
 

@@ -5,20 +5,32 @@
  * must leave every assertion untouched.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import VoiceRoom from '@/components/voice/VoiceRoom';
 import { useVoiceStore } from '@/store/voice';
-import { LocaleProvider } from '@tests/support/intl';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { groupFixture, userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { FakeMediaStream, FakeMediaStreamTrack } from '@tests/support/mocks/webrtc';
 import type { RemoteTrack } from '@/services/voice/client';
-
-const renderLocalized = (ui: React.ReactElement) => render(
-  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
-);
 
 const ME = 'me-pubkey';
 const A = 'peer-a';
 const B = 'peer-b';
+
+/**
+ * The real hooks over a fake bridge: an open voice room whose membership
+ * has loaded, with Ada and Ben's profiles.
+ */
+const renderLocalized = (ui: React.ReactElement) => renderWithBridge(ui, fakeBridge({
+  myPubkey: ME,
+  groups: [groupFixture({ id: 'room', name: 'Room', kind: 'voice', isOpen: true })],
+  membershipReadyByGroup: { room: true },
+  userMetadata: {
+    [A]: userMetadataFixture({ pubkey: A, displayName: 'Ada' }),
+    [B]: userMetadataFixture({ pubkey: B, name: 'Ben' }),
+  },
+}));
 
 const harness = vi.hoisted(() => ({
   activeClient: null as unknown,
@@ -64,20 +76,7 @@ vi.mock('@/services/voice/active-client', () => ({
   setActiveVoiceClient: harness.setActiveVoiceClient,
 }));
 vi.mock('@/services/voice/client', () => ({ VoiceClient: vi.fn() }));
-vi.mock('@/services/nostr-bridge', () => ({
-  getBridge: async () => ({
-    getPublicKey: () => ME,
-    subscribeGroups: (cb: (g: unknown[]) => void) => { cb([{ id: 'room', kind: 'voice', isOpen: true }]); return vi.fn(); },
-    subscribeMembers: (_c: string, cb: (m: readonly string[]) => void) => { cb([]); return vi.fn(); },
-    subscribeAdmins: (_c: string, cb: (a: readonly string[]) => void) => { cb([]); return vi.fn(); },
-    subscribeMembershipReady: (_c: string, cb: (r: boolean) => void) => { cb(true); return vi.fn(); },
-  }),
-  useGroups: () => [{ id: 'room', name: 'Room', kind: 'voice', isOpen: true }],
-  useCurrentRelayUrl: () => 'wss://relay.test',
-  useMyLoginMethod: () => 'nsec',
-  useUserMetadata: (pk: string) => (pk === A ? { displayName: 'Ada' } : pk === B ? { name: 'Ben' } : null),
-  useActiveCall: () => null,
-}));
+
 
 beforeEach(() => {
   // jsdom's HTMLMediaElement.play() is unimplemented and returns undefined;

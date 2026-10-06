@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getBridgeImpl } from '@/services/nostr-bridge';
+import { useBridge } from '@/services/nostr-bridge';
 import { useReadStateStore } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
 import {
@@ -61,6 +61,7 @@ export function useInboxStreams(relay: string) {
   const clearMentions = useNotificationsStore((s) => s.clearMentions);
   const clearDmNotifications = useNotificationsStore((s) => s.clearDmNotifications);
   const markAllAsRead = useReadStateStore((s) => s.markAllAsRead);
+  const bridge = useBridge();
 
   // Marking read is per-stream: dismissing mentions must not silence DMs.
   // The mentions side also advances the channel cursors for this relay so
@@ -69,12 +70,11 @@ export function useInboxStreams(relay: string) {
   // imperatively at click time to keep this top bar from re-rendering on
   // every message arrival.
   const handleMarkRead = () => {
-    const impl = getBridgeImpl();
     if (notifTab === 'mentions') {
       markMentionsRead(relay);
-      markAllAsRead([], impl ? Object.keys(impl.messagesByGroup.get()) : []);
+      markAllAsRead([], bridge ? Object.keys(bridge.messagesByGroup.get()) : []);
     } else {
-      markAllAsRead(impl ? Object.keys(impl.dmsByPeer.get()) : [], []);
+      markAllAsRead(bridge ? Object.keys(bridge.dmsByPeer.get()) : [], []);
     }
   };
   const handleClear = () => {

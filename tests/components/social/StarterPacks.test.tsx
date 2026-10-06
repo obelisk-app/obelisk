@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { LocaleProvider } from '@tests/support/intl';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
 const mocks = vi.hoisted(() => ({
   fetchStarterPacks: vi.fn(),
@@ -22,17 +23,6 @@ vi.mock('@/hooks/social/useSocialProfile', () => ({
   useSocialProfile: () => null,
 }));
 
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({
-    getBridge: async () => ({ publishEvent: mocks.publishEvent }),
-    nostrActions: { ensureUserMetadata: vi.fn().mockResolvedValue(undefined) },
-    useMyFollows: () => mocks.follows,
-    useMyContactList: () => mocks.contactEvent,
-    useUserMetadata: () => null,
-  });
-});
-
 import StarterPacks from '@/components/social/StarterPacks';
 
 const pk = (n: number) => String(n).repeat(64).slice(0, 64);
@@ -48,9 +38,20 @@ const pack = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-const renderPacks = (props: Record<string, unknown> = {}) => render(
-  <LocaleProvider initialLocale="en"><StarterPacks {...props} /></LocaleProvider>,
-);
+/**
+ * The real hooks over a fake bridge: `useMyFollows` reads the `p` tags of
+ * the seeded contact list, and Follow publishes through the provider's bridge.
+ */
+const renderPacks = (props: Record<string, unknown> = {}) => {
+  const contacts = mocks.contactEvent ?? (mocks.follows.length
+    ? { id: 'c', pubkey: pk(5), kind: 3, created_at: 1, sig: '', content: '', tags: mocks.follows.map((f) => ['p', f]) }
+    : null);
+  const bridge = fakeBridge(
+    { myContactList: contacts },
+    { publishEvent: mocks.publishEvent, ensureUserMetadata: vi.fn().mockResolvedValue(undefined) },
+  );
+  return renderWithBridge(<StarterPacks {...props} />, bridge);
+};
 
 beforeEach(() => {
   vi.clearAllMocks();

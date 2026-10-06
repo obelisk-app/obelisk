@@ -147,6 +147,9 @@ const hookDefaults = {
   BridgeProvider: ({ children }) => createElement(Fragment, null, children),
   useBridge: () => null,
   useBridgeReady: () => true,
+  // Like the real hook under a provider whose bridge never arrives; follows
+  // the suite's `getBridge` override when it has one (see `bridgeMock`).
+  useAwaitBridge: () => () => new Promise<BridgeImpl>(() => {}),
 } satisfies Partial<Bridge> satisfies Required<Omit<Bridge, 'nostrActions' | 'getBridge' | 'getBridgeImpl'>>;
 
 /**
@@ -158,10 +161,12 @@ const hookDefaults = {
  */
 export function bridgeMock(overrides: BridgeMock = {}): BridgeMock {
   const getBridgeImpl = overrides.getBridgeImpl;
+  const getBridge = overrides.getBridge;
   return {
     ...hookDefaults,
     getBridgeImpl: () => null,
     ...(getBridgeImpl ? { useBridge: () => (getBridgeImpl() as BridgeImpl | null) } : {}),
+    ...(getBridge ? { useAwaitBridge: () => getBridge as () => Promise<BridgeImpl> } : {}),
     ...overrides,
     nostrActions: { ...overrides.nostrActions },
   };

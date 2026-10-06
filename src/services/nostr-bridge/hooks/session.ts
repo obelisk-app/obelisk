@@ -7,7 +7,7 @@ import type { NipSigner } from '@/lib/nip-59';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { SessionNotice } from '../session/vault';
 import type { RelayAccessState } from '../types';
-import { bridgeFrom, useBridgeContext } from './provider';
+import { useBridge } from './provider';
 import { useSubscription } from './subscription';
 
 export function useIsLoggedIn(): boolean {
@@ -125,12 +125,12 @@ export function useSignerReady(): boolean {
   return method !== null;
 }
 
-/** The session's NIP-59 signer, from the provider's bridge (or `getBridgeImpl()` outside one). */
+/** The session's NIP-59 signer, from the provider's bridge. */
 export function useNipSigner(): NipSigner | null {
   const pubkey = useMyPubkey();
   const ready = useSignerReady();
-  const ctx = useBridgeContext();
-  return pubkey && ready ? bridgeFrom(ctx)?.getNipSigner() ?? null : null;
+  const bridge = useBridge();
+  return pubkey && ready ? bridge?.getNipSigner() ?? null : null;
 }
 
 /**

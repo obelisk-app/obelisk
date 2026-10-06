@@ -19,11 +19,13 @@ import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Files mocking `@/services/nostr-bridge` on 2026-10-06: 110 after the four
- * pilot conversions, plus `tests/app/[locale]/app/lazy-dm-call.test.tsx`, added the
- * same day on the base branch.
+ * Files mocking `@/services/nostr-bridge`: 111 on 2026-10-06 (round 17);
+ * 98 after round 20 converted the thirteen suites of the components and
+ * hooks that moved to `useBridge()` (the voice room's four, the follow
+ * buttons, the profile, the member lists, the deep link, presence, the
+ * slash catalog).
  */
-const BUDGET = 111;
+const BUDGET = 98;
 
 const TESTS = join(process.cwd(), 'tests');
 /** The front door itself, not a path inside it (`/client` and friends are counted elsewhere, if at all). */

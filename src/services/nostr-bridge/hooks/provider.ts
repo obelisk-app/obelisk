@@ -8,7 +8,7 @@
  * fake a test hands it), so React code and the non-React callers of
  * `getBridge()` / `getBridgeImpl()` always see the same object.
  */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { getBridge, getBridgeImpl, registerBridge, unregisterBridge, type BridgeImpl } from '../client';
 
 export interface BridgeContextValue {
@@ -20,16 +20,15 @@ export interface BridgeContextValue {
   readonly bridge: BridgeImpl | null;
   /** `initialize()` has settled: the stored session was restored, or there was none. */
   readonly ready: boolean;
-  /**
-   * `false` only for the default value, i.e. no provider above the caller.
-   * The hooks then keep their old path (`getBridge()` in an effect), which
-   * the routes without a provider and the suites that mock the client still
-   * rely on, until migration step 7 removes it.
-   */
-  readonly provided: boolean;
 }
 
-const NO_PROVIDER: BridgeContextValue = { bridge: null, ready: false, provided: false };
+/**
+ * Outside any provider there is no bridge, ever: the hooks answer their
+ * initial value and `useBridge()` answers `null`. Nothing creates a bridge
+ * on behalf of a component; a route whose components use the bridge mounts
+ * `<BridgeProvider>` (see `tests/bridge-in-react-files.test.ts`).
+ */
+const NO_PROVIDER: BridgeContextValue = { bridge: null, ready: false };
 
 export const BridgeContext = createContext<BridgeContextValue>(NO_PROVIDER);
 
@@ -40,27 +39,41 @@ export function useBridgeContext(): BridgeContextValue {
 
 /**
  * The bridge for imperative use in handlers and effects: the provider's
- * instance, or, outside a provider, whatever `getBridgeImpl()` holds (the
- * old behaviour, kept until step 7). Null until the bridge is ready.
+ * instance. `null` until the bridge is ready, and always outside a provider.
+ * An effect that needs it lists it in its dependencies, so it runs again
+ * when the bridge arrives.
  */
 export function useBridge(): BridgeImpl | null {
-  return bridgeFrom(useBridgeContext());
+  return useBridgeContext().bridge;
+}
+
+/** `true` once the page bridge has finished `initialize()`. Always `false` outside a provider. */
+export function useBridgeReady(): boolean {
+  return useBridgeContext().ready;
 }
 
 /**
- * `useBridge()`'s answer for a context already read. For hooks that need the
- * instance only on some renders: outside a provider it reads
- * `getBridgeImpl()`, which a suite mocking the client may not define, so
- * they call this only when they use the result.
+ * A stable `() => Promise<BridgeImpl>` that resolves with the provider's
+ * bridge, at once when it is there and otherwise when it arrives. For a
+ * callback that may run before the bridge has started (a deep link parsed
+ * in a mount effect) and would otherwise have reached for `getBridge()`.
+ * Outside a provider the promise never settles, the same answer the hooks
+ * give there.
  */
-export function bridgeFrom(ctx: BridgeContextValue): BridgeImpl | null {
-  return ctx.provided ? ctx.bridge : getBridgeImpl();
-}
-
-/** `true` once the page bridge has finished `initialize()`. Outside a provider: once a bridge exists. */
-export function useBridgeReady(): boolean {
-  const ctx = useBridgeContext();
-  return ctx.provided ? ctx.ready : getBridgeImpl() !== null;
+export function useAwaitBridge(): () => Promise<BridgeImpl> {
+  const { bridge } = useBridgeContext();
+  const latest = useRef<{ bridge: BridgeImpl | null; waiting: Array<(b: BridgeImpl) => void> }>({
+    bridge,
+    waiting: [],
+  });
+  useEffect(() => {
+    latest.current.bridge = bridge;
+    if (bridge) for (const resolve of latest.current.waiting.splice(0)) resolve(bridge);
+  }, [bridge]);
+  return useCallback(() => {
+    const now = latest.current.bridge;
+    return now ? Promise.resolve(now) : new Promise<BridgeImpl>((resolve) => latest.current.waiting.push(resolve));
+  }, []);
 }
 
 /**
@@ -101,5 +114,5 @@ export function useProvidedBridge(injected: BridgeImpl | undefined, injectedRead
 
   const bridge = injected ?? adopted;
   const ready = injected ? injectedReady : adopted !== null;
-  return useMemo(() => ({ bridge, ready, provided: true }), [bridge, ready]);
+  return useMemo(() => ({ bridge, ready }), [bridge, ready]);
 }

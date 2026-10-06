@@ -49,7 +49,10 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // The bridge loads only when someone actually disconnects from here.
+  // The bridge loads only when someone actually disconnects from here. This
+  // is the one React file allowed to call `getBridge()`
+  // (`tests/bridge-in-react-files.test.ts`): the marketing pages have no
+  // provider, so that their first load ships without the bridge.
   const handleLogout = async () => {
     const { getBridge } = await import('@/services/nostr-bridge');
     const bridge = await getBridge();

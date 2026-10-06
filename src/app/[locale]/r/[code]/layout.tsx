@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import IntlScope from '@/i18n/IntlScope';
+import BridgeRoute from '@/components/BridgeRoute';
 import { pageLocale } from '@/i18n/page-locale';
 import type { MessageKey } from '@/i18n/keys';
 import { decodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
@@ -32,7 +33,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-/** The share link joins a relay in the app, so it ships the app's modules. */
+/** The share link joins a relay in the app, so it ships the app's modules and the bridge. */
 export default function RelayShareLayout({ children }: { children: ReactNode }) {
-  return <IntlScope scope="app">{children}</IntlScope>;
+  return (
+    <IntlScope scope="app">
+      <BridgeRoute>{children}</BridgeRoute>
+    </IntlScope>
+  );
 }
