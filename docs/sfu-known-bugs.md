@@ -11,7 +11,7 @@ The dex client was tightened in this same change to:
 - Prune remote tracks on `peerLeft` and on every `participantList` snapshot,
   not just on `producerClosed`. This works around (1) below.
 
-So a few of the symptoms below are now **client-masked but server-rooted** —
+So a few of the symptoms below are now **client-masked but server-rooted**:
 fix them server-side and the client workaround can come out.
 
 ---
@@ -28,10 +28,10 @@ because the client only acted on `producerClosed`.
 **Server fix:** when the SFU detects a peer is gone (transport timeout,
 explicit `leave`, eviction), iterate that peer's producer set and fire one
 `producerClosed` per producer **before** firing `peerLeft`. Notification
-order matters — the client should be able to clean tracks on
+order matters: the client should be able to clean tracks on
 `producerClosed` and only use `peerLeft` for roster updates.
 
-**Client workaround in place:** `src/lib/voice/sfu-client.ts` now also drops
+**Client workaround in place:** `src/services/voice/sfu-client.ts` now also drops
 tracks on `peerLeft` and on every `participantList` snapshot.
 
 ## 2. Allow-list enforcement is implicit (relay write ACL only)
@@ -52,7 +52,7 @@ from pubkeys not in the list, even on trusted relays.
 `services/sfu` (and the obelisk-sfu repo) accepts a list of relays but
 the subscription strategy treats them all as equally authoritative. In
 practice a `start` event published to relay A may not reach the SFU
-subscribed primarily to relay B, even though both are listed — depending on
+subscribed primarily to relay B, even though both are listed, depending on
 which relay the SFU's `subscribeMany` selected first.
 
 **Server fix:** ensure the SFU subscribes to **every** trusted relay it
@@ -64,7 +64,7 @@ Some kind 25050 RPC notifications arrive on the dex through the generic
 voice-signal subscription (because the relay doesn't index `#p` for ephemeral
 kinds, so the dex subscribes by `#e` only and filters in-handler). The
 filter in `client.ts` `routeSignal` correctly drops these, but they still
-hit the wire — multiplied by every dex peer in the room.
+hit the wire, multiplied by every dex peer in the room.
 
 **Server fix:** SFU should publish RPC envelopes (`type: 'response'` /
 `type: 'notification'`) with a distinguishing tag (e.g. `["t","sfu-rpc"]`)
@@ -73,7 +73,7 @@ so dex clients that want to ignore them can filter at subscription time.
 ## 5. Recovery after SFU restart
 
 When the SFU process restarts, it loses all in-memory peer state. The dex
-clients keep their WebRTC transports open — but the SFU has no record of
+clients keep their WebRTC transports open, but the SFU has no record of
 them, so it silently drops their RTP. Today the dex's only signal is the
 absence of the SFU's `["sfu","1"]` beacon; the supervisor in
 `VoiceRoom.tsx` republishes `start` after a watchdog window, but the SFU
@@ -85,11 +85,11 @@ producers/consumers in the dex's `remoteByProducerId` map.
 the new id to their cached one can detect "the SFU restarted, drop all
 state and rejoin" without waiting for the watchdog.
 
-## 6. Stale peer state on abrupt close — server has no `leave` method
+## 6. Stale peer state on abrupt close - server has no `leave` method
 
 **Symptom (user-reported):** "The SFU is not detecting that people end the
 call on their side and still thinks they are in the voice channel, so they
-cannot enter new ones — neither on the same channel, other channel, or
+cannot enter new ones, neither on the same channel, other channel, or
 other server."
 
 The dex never sent an explicit `leave` to the SFU; teardown relied entirely
@@ -99,17 +99,17 @@ the user rejoins faster than DTLS times out (often 30 s+). During that
 window the SFU still has the peer's pubkey "in the room" and rejects new
 joins as "already present", so the user gets stuck.
 
-**Client mitigation in place:** `src/lib/voice/sfu-client.ts` `close()` now
+**Client mitigation in place:** `src/services/voice/sfu-client.ts` `close()` now
 fire-and-forgets a kind 25050 RPC `{ method: 'leave' }` to the server
-before tearing down its own transports. `src/lib/voice/active-client.ts`
+before tearing down its own transports. `src/services/voice/active-client.ts`
 also wires `pagehide` / `beforeunload` so abrupt tab closures still
 attempt the same RPC.
 
-**Server fix:** the SFU **must** implement two things —
+**Server fix:** the SFU **must** implement two things:
 
 1. **A `leave` RPC method.** On receipt: drop the peer's transports +
    producers + consumers, fire `peerLeft` to remaining participants,
-   reply with `{ ok: true }`. Idempotent — a `leave` for an already-gone
+   reply with `{ ok: true }`. Idempotent: a `leave` for an already-gone
    peer just returns ok.
 
 2. **An ICE/DTLS-timeout-driven sweep.** Even with the explicit RPC, some
@@ -120,13 +120,13 @@ attempt the same RPC.
    "stuck in the room" until the operator restarts the SFU.
 
 Until the server lands these, users who close the tab abruptly may
-still see "you're already in this call" errors on their next join — the
+still see "you're already in this call" errors on their next join; the
 client's best-effort RPC reduces but doesn't eliminate the window.
 
 ## 7. Inactive-but-still-connected peers are never reaped
 
 Distinct from #6: even when ICE / DTLS report the transport as healthy,
-the peer can be effectively gone — laptop closed but radio on, OS
+the peer can be effectively gone: laptop closed but radio on, OS
 suspended the tab, mobile background-throttled, "soft" network failure
 where TCP keepalives hold but no real RTP arrives. The transport-state
 sweep proposed in #6 wouldn't catch this because the transport never
@@ -145,11 +145,11 @@ flow:
    (audio + video + screen). Update on every packet observed by the
    SFU's RTP layer.
 2. Every N seconds, walk peers and drop any whose `lastInboundPacketAt`
-   is older than `INACTIVITY_TIMEOUT` (suggested: 20–30 s — long enough
+   is older than `INACTIVITY_TIMEOUT` (suggested: 20–30 s, long enough
    to ride out a normal mute + brief network jitter, short enough that
    a frozen tab clears within a song's length).
 3. Treat a "no producers at all + no RPC traffic" peer the same way after
-   the same window — a peer joined but never published is also stale.
+   the same window; a peer joined but never published is also stale.
 4. On reap: same teardown path as `leave` (close transports / producers /
    consumers, fire `peerLeft`, free the slot).
 
@@ -167,7 +167,7 @@ full picture.
 ## 8. No `screen-audio` slot in `appData`
 
 The dex publishes screen-audio tracks with `appData: { kind: 'screen-audio' }`.
-The SFU passes `appData` through unchanged on consumers, which is good —
+The SFU passes `appData` through unchanged on consumers, which is good,
 but if a future SFU release strips unknown app-data fields for safety, the
 client's tile mapping breaks (audio attaches to the wrong participant).
 
@@ -179,10 +179,10 @@ client's tile mapping breaks (audio attaches to the wrong participant).
 ## Cross-cutting: voice signaling does not survive a bridge relay switch
 
 Not strictly server-side, but worth tracking here because the SFU is the
-side that benefits from the fix: voice transport (`src/lib/voice/transport.ts`)
+side that benefits from the fix: voice transport (`src/services/voice/transport.ts`)
 goes through the bridge's `SimplePool`. When the user switches relays in
 the dex (sidebar relay rail), the bridge tears down its pool and re-creates
-on the new relay — so voice's `subscribeRoster` / `subscribeSignals` /
+on the new relay, so voice's `subscribeRoster` / `subscribeSignals` /
 SFU RPC are all severed. Audio + video keep flowing over WebRTC because
 the peer connections are direct, but SDP renegotiation and new joiners
 silently fail until the user navigates back to the call's origin relay

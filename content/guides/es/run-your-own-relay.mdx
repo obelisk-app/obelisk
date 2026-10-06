@@ -1,6 +1,6 @@
 ---
 title: 'Corré tu propio relay: la admisión es una escalera, no un interruptor'
-description: Obelisk Relay es un relay NIP-29 que decide por sí mismo quién puede conectarse — una lista escrita a mano, las cuentas que siguen tus referencias, y el grafo de follows más allá, cada una con una porción menor del presupuesto. Dos comandos para levantarlo.
+description: "Obelisk Relay es un relay NIP-29 que decide por sí mismo quién puede conectarse: una lista escrita a mano, las cuentas que siguen tus referencias, y el grafo de follows más allá, cada una con una porción menor del presupuesto. Dos comandos para levantarlo."
 heroComponent: run-your-own-relay
 publishedAt: '2026-09-23'
 updatedAt: '2026-09-23'
@@ -15,7 +15,7 @@ parte de Nostr es el correcto.
 Eso sí: un relay así no tiene opinión sobre la membresía. Cualquiera que tenga
 el id de un grupo puede escribir ahí, y "quién está en este grupo" es lo que
 cada cliente decida creer. Un grupo privado es privado exactamente mientras
-todos los clientes acuerden fingir que lo es — y eso no es una propiedad de
+todos los clientes acuerden fingir que lo es. Y eso no es una propiedad de
 seguridad, es una cuestión de modales.
 
 ## Un relay NIP-29 decide
@@ -51,7 +51,7 @@ Si parás después del primero, tenés un relay en tu notebook. Es un lugar
 perfectamente válido donde parar.
 
 <Callout type="warn" title="Fijá el tag de la imagen">
-`setup.sh` baja `:latest`, que hoy está atrás de los builds fechados —
+`setup.sh` baja `:latest`, que hoy está atrás de los builds fechados:
 `:latest` es multi-arquitectura y los builds actuales son solo arm64, así que
 moverlo rompería toda instalación amd64. Hasta que ambas arquitecturas estén
 publicadas y unidas, pasá el tag explícitamente:
@@ -70,7 +70,7 @@ arranque invalidaría ese estado cada vez.
 Sin pubkeys de admin configuradas arranca en modo setup, y `/admin` muestra un
 asistente en vez de una pantalla de login. Tres pasos, todos en el navegador.
 
-<Shot name="relay/sign-in" caption="Demostrás propiedad firmando — no hay ningún campo de npub para completar." maxWidth={420} />
+<Shot name="relay/sign-in" caption="Demostrás propiedad firmando: no hay ningún campo de npub para completar." maxWidth={420} />
 
 La clave que firma acá es la que queda como primer admin. Vale leerlo dos veces:
 no nominás un npub, demostrás que controlás uno. Extensión del navegador, firmante
@@ -79,7 +79,7 @@ restringido, y escribe su configuración y reinicia hacia la consola.
 
 <Callout type="note" title="Las capturas de abajo son violetas">
 Son del relay público en `wss://public.obelisk.ar`, que corre el build violeta.
-El lima de Obelisk es el cliente de chat. Mismo software, otro acento — tu
+El lima de Obelisk es el cliente de chat. Mismo software, otro acento: tu
 propio relay se marca desde la pantalla de Settings.
 </Callout>
 
@@ -104,7 +104,7 @@ enunciarla antes de mirar cualquier pantalla.
 
 Alguien que agregaste a mano. Alguien que siguen tus cuentas de referencia. O
 alguien lo bastante cerca en el grafo de follows como para merecer el beneficio
-de la duda. Decidido en ese orden — y una lista de bloqueo que anula las tres,
+de la duda. Decidido en ese orden. Y una lista de bloqueo que anula las tres,
 consultada primero.
 
 <Shot name="relay/access-tabs" caption="Una pantalla, cinco solapas, cada una con su conteo en vivo." />
@@ -113,7 +113,7 @@ Las **cuentas de referencia** arriba de esa pantalla son la raíz de toda la
 estructura. Son las cuentas desde las que se mide cada tier: todos los que ellas
 siguen caen en Tier 1, y el grafo de follows se recorre hacia afuera desde ahí
 para llenar Tier 2 y Tier 3. Agregar una cuenta de referencia ensancha los tres
-tiers a la vez, y es el control de mayor apalancamiento del relay — el que más
+tiers a la vez, y es el control de mayor apalancamiento del relay, el que más
 vale pensar.
 
 <Clip name="relay/numbers" caption="Dos cuentas de referencia, medidas en public.obelisk.ar el 22 de septiembre de 2026." />
@@ -125,8 +125,8 @@ completo cuando no lo es es peor que un piso sobre el que podés razonar.
 
 <Callout type="note" title="Esos conteos son una medición, no una especificación">
 1.062 / 45.966 / ≥119.708 es lo que alcanzaron dos cuentas de referencia en un
-relay un día. Te dicen la *forma* de la cosa — que una sola cuenta admite
-decenas de miles de personas a dos saltos — no un número que tu relay vaya a
+relay un día. Te dicen la *forma* de la cosa (que una sola cuenta admite
+decenas de miles de personas a dos saltos), no un número que tu relay vaya a
 reproducir. El tuyo depende enteramente de en qué grafo de follows lo enraizaste.
 </Callout>
 
@@ -144,7 +144,7 @@ disco.
 
 Hay otros dos límites por encima del de pubkey, y los dos importan más de lo que
 parecen. El de **por conexión** debería estar por encima del presupuesto por
-pubkey — limita un socket, y ponerlo más bajo vuelve inalcanzable el número por
+pubkey: limita un socket, y ponerlo más bajo vuelve inalcanzable el número por
 pubkey. El de **relay entero** es el respaldo contra una avalancha de todos a la
 vez, y es el que te salva cuando los dos primeros quedaron optimistas.
 
@@ -155,7 +155,7 @@ vez, y es el que te salva cuando los dos primeros quedaron optimistas.
 La mayoría de las preguntas de acceso llegan como "¿por qué esta persona no
 puede conectarse?", y esta es la caja que las responde. Acepta un npub, una
 clave hex o una dirección NIP-05, y contesta con el tier que lo admite y a qué
-distancia está — o por qué fue rechazado. El botón de Block está al lado del
+distancia está, o por qué fue rechazado. El botón de Block está al lado del
 veredicto, porque la respuesta y la acción van en el mismo lugar.
 
 ## Moderación que sobrevive al contacto con la realidad
@@ -168,7 +168,7 @@ de volumen.
 
 La parte que más importa es la menos visible: **el relay saca una copia del
 mensaje reportado cuando llega el reporte.** Sin eso, una cuenta reportada borra
-su propio mensaje y la denuncia se vuelve irrevisable — el borrado como defensa
+su propio mensaje y la denuncia se vuelve irrevisable: el borrado como defensa
 en vez de como remedio.
 
 <Shot name="relay/reports" caption="Una fila por cosa reportada, con la decisión que tomaste." />
@@ -191,7 +191,7 @@ una que te explica por qué no tiene nada.
 El pruning automático está apagado hasta que lo prendas, y la retención se
 configura **por kind de evento**, así que el tráfico efímero puede expirar sin
 tocar las conversaciones. Los kinds de gestión y estado de grupo nunca se
-borran, y tampoco nada reemplazable o direccionable — el relay guarda uno solo
+borran, y tampoco nada reemplazable o direccionable: el relay guarda uno solo
 de esos por usuario, así que borrarlos destruiría estado vivo sin liberar
 espacio que valga la pena.
 
@@ -223,7 +223,7 @@ Settings → Relay identity una vez que tengas dominio.
 
 <Shot name="relay/landing" caption="Tu relay sirve su propia portada, con la dirección lista para copiar." />
 
-Nada de tu relay es específico de Obelisk — habla NIP-29, y cualquier cliente
+Nada de tu relay es específico de Obelisk: habla NIP-29, y cualquier cliente
 que también lo hable va a funcionar. Pero si querés el cliente de chat:
 
 ```
@@ -233,7 +233,7 @@ https://obelisk.ar/app?relay=relay.ejemplo.com
 Para algo que puedas pasarle a una persona en vez de pegarlo en una
 configuración, Obelisk codifica un relay en un link corto en
 `obelisk.ar/r/<código>`. Visitarlo agrega el relay a la lista del lector y
-cambia a él, y volver a visitarlo no hace nada — así que es seguro ponerlo en un
+cambia a él, y volver a visitarlo no hace nada, así que es seguro ponerlo en un
 mensaje fijado o en una bio.
 
 El relay es [AGPL-3.0 en GitHub](https://github.com/obelisk-app/obelisk-relay), y

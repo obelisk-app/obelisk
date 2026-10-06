@@ -13,9 +13,10 @@
  * than the profile above it.
  */
 
-import { bioSegments, normalizeWebsite, prettyUrl } from '@/lib/profile-links';
+import { bioSegments, normalizeWebsite, prettyUrl } from '@/utils/profile-links';
 import { useToastStore } from '@/store/toast';
 import { useTranslation } from '@/i18n/context';
+import TextButton from '@/components/ui/TextButton';
 
 export default function ProfileLinks({
   about,
@@ -80,10 +81,8 @@ export default function ProfileLinks({
             </a>
           )}
           {lud16 && (
-            <button
-              type="button"
-              onClick={copyAddress}
-              className="inline-flex items-center gap-1.5 text-lc-muted hover:text-lc-white"
+            <TextButton tone="plain"
+              onClick={copyAddress} className="inline-flex items-center gap-1.5 text-lc-muted hover:text-lc-white"
               data-testid="profile-lud16"
               title={lud16}
             >
@@ -91,7 +90,7 @@ export default function ProfileLinks({
                 <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />
               </svg>
               {lud16}
-            </button>
+            </TextButton>
           )}
         </div>
       )}

@@ -1,4 +1,4 @@
-# NIP-17 DMs in Obelisk — adopt `@nostr-wot/dm`, and give it post-quantum
+# NIP-17 DMs in Obelisk: adopt `@nostr-wot/dm`, and give it post-quantum
 
 ## The finding that shapes this
 
@@ -25,7 +25,7 @@ So this work is not "build NIP-17". It is **finish the SDK migration**.
 
 `@nostr-wot/pq` implements gift wrap a second time. `packages/pq/src/dm.ts` declares its own `KIND_GIFT_WRAP = 1059`, builds its own seal with `finalizeEvent`, and wraps with its own `nip44.encrypt`. It does **not** depend on `@nostr-wot/dm`.
 
-Two implementations of NIP-17 in one monorepo, and a consumer who wants post-quantum DMs must import both packages and compose them by hand — while `@nostr-wot/dm`'s hooks and cache, the things an app actually consumes, know nothing about post-quantum at all.
+Two implementations of NIP-17 in one monorepo, and a consumer who wants post-quantum DMs must import both packages and compose them by hand, while `@nostr-wot/dm`'s hooks and cache, the things an app actually consumes, know nothing about post-quantum at all.
 
 The layering that makes sense:
 
@@ -47,7 +47,7 @@ An application should not have to know whether a message is post-quantum in orde
 ## Goals
 
 1. `@nostr-wot/dm` gains optional post-quantum sealing, depending on `@nostr-wot/pq` for the envelope rather than reimplementing it.
-2. `unwrapGiftWrap` transparently opens post-quantum envelopes — the payload is self-describing, so a receiver needs no flag.
+2. `unwrapGiftWrap` transparently opens post-quantum envelopes: the payload is self-describing, so a receiver needs no flag.
 3. Obelisk adopts `@nostr-wot/dm` for DMs, replacing the bridge's kind-4-only path.
 4. `docs/direct-messages.md` is corrected to describe what actually exists.
 5. The two parked post-quantum tasks are unblocked as a consequence, not as separate work.
@@ -61,21 +61,21 @@ An application should not have to know whether a message is post-quantum in orde
 
 ## Design
 
-### Part A — post-quantum in `@nostr-wot/dm`
+### Part A - post-quantum in `@nostr-wot/dm`
 
 `sealAndGiftWrap` gains an optional post-quantum mode. When enabled, the seal's `content` is the post-quantum envelope from `@nostr-wot/pq` instead of NIP-44 ciphertext; everything outside the seal is unchanged, so relays and non-supporting clients see an ordinary kind-1059.
 
-`unwrapGiftWrap` calls `isPqEnvelope()` on the seal content and routes accordingly. No flag from the caller — the payload describes itself. This is the property that lets a mixed conversation work.
+`unwrapGiftWrap` calls `isPqEnvelope()` on the seal content and routes accordingly. No flag from the caller: the payload describes itself. This is the property that lets a mixed conversation work.
 
 `sendDM` grows a `pq` option carrying the recipient's ML-KEM key, and `SendDMOptions` documents that the caller supplies the key from the recipient's `kind:10203` attestation. The transport does not fetch attestations; that stays with the application, which already has to decide whether the peer supports post-quantum.
 
 `packages/dm` takes a dependency on `packages/pq`. That direction is correct: transport depends on primitives, never the reverse.
 
-### Part B — deprecate the duplicate
+### Part B - deprecate the duplicate
 
-`@nostr-wot/pq`'s `createPqDirectMessage` / `openPqDirectMessage` keep working, gain a deprecation notice pointing at `@nostr-wot/dm`, and their tests stay. The cross-implementation vector test that pins the wire format against the Rust NDK port must keep passing — it is the guarantee that both paths produce identical bytes.
+`@nostr-wot/pq`'s `createPqDirectMessage` / `openPqDirectMessage` keep working, gain a deprecation notice pointing at `@nostr-wot/dm`, and their tests stay. The cross-implementation vector test that pins the wire format against the Rust NDK port must keep passing: it is the guarantee that both paths produce identical bytes.
 
-### Part C — Obelisk adopts the SDK
+### Part C - Obelisk adopts the SDK
 
 The bridge stops implementing DMs and starts consuming `@nostr-wot/dm`. Concretely:
 
@@ -101,7 +101,7 @@ Mitigation: adopt the SDK **behind the existing bridge interface** rather than e
 
 Two hazards remain:
 
-1. **The returned `message.pubkey` is attacker-controlled and unvalidated.** A sender can set the rumor's author field to any pubkey while the seal is honestly their own. Any consumer that reads `message.pubkey` — the natural author field on a Nostr event — gets a forged identity. `cache/inbox.ts` avoids it; a future consumer easily would not.
+1. **The returned `message.pubkey` is attacker-controlled and unvalidated.** A sender can set the rumor's author field to any pubkey while the seal is honestly their own. Any consumer that reads `message.pubkey` (the natural author field on a Nostr event) gets a forged identity. `cache/inbox.ts` avoids it; a future consumer easily would not.
 
 2. **The seal's signature is decorative.** Authentication currently rests entirely on the conversation-key binding, not on the signature. That is fragile: any change to how the seal's content is encrypted silently removes the only authentication in the scheme.
 
@@ -111,12 +111,12 @@ Hazard 2 is why this must be fixed *before* post-quantum sealing lands here. `@n
 - Fresh ephemeral key per wrap. Reuse links messages and defeats the metadata protection.
 - Timestamp fuzzing on seal and wrap.
 - One generic failure on decrypt. Distinguishing causes is an oracle.
-- Post-quantum party pubkeys are validated as 64 lowercase hex — the fix already shipped in `@nostr-wot/pq@0.2.1`.
+- Post-quantum party pubkeys are validated as 64 lowercase hex: the fix already shipped in `@nostr-wot/pq@0.2.1`.
 
 ## Testing
 
 - Round trip through `@nostr-wot/dm` in both modes, classic and post-quantum, between two keypairs.
-- A post-quantum message sent by `@nostr-wot/dm` opens with `@nostr-wot/pq`'s `openPqDirectMessage` and vice versa — the two paths must be byte-compatible or the deprecation is a break.
+- A post-quantum message sent by `@nostr-wot/dm` opens with `@nostr-wot/pq`'s `openPqDirectMessage` and vice versa: the two paths must be byte-compatible or the deprecation is a break.
 - The existing cross-implementation vector against the Rust NDK port still passes.
 - Forged rumor authorship rejected.
 - Obelisk: all three login methods send and receive; NIP-04 threads still work.

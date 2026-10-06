@@ -38,7 +38,7 @@ body {
   /* Block accidental horizontal scroll on mobile. Decorative absolutely-
      positioned elements (orbiting keys, glows, blurred backdrops) can
      poke a few pixels past the viewport on narrow widths, which makes
-     the document scroll sideways while the fixed navbar stays put — the
+     the document scroll sideways while the fixed navbar stays put - the
      navbar then visually drifts away from the content as you swipe.
      `clip` prevents the scroll without creating a new scroll container,
      so `position: sticky` on descendants keeps working. */
@@ -122,7 +122,7 @@ button:not(:disabled),
  * Feed segmented switcher (Following / Global).
  *
  * These were underlined tabs, which read as two labels rather than one
- * control — you couldn't tell at a glance which feed you were looking at.
+ * control - you couldn't tell at a glance which feed you were looking at.
  * A segmented pill is the same vocabulary as the rest of the app's buttons
  * and makes the selected state unmistakable.
  */
@@ -162,7 +162,7 @@ button:not(:disabled),
  * Composer toolbar chips.
  *
  * The compose card's controls were bare text buttons at three different
- * sizes — bold B, italic I, then two differently-padded word buttons — which
+ * sizes - bold B, italic I, then two differently-padded word buttons - which
  * read as loose debris above the field rather than one toolbar. These give
  * them a single shape, borrowed from `.lc-segment` so the composer speaks the
  * same vocabulary as the feed switcher above it.
@@ -201,7 +201,7 @@ button:not(:disabled),
   opacity: 0.45;
 }
 
-/* A toggle that is on — same treatment as a selected segment. */
+/* A toggle that is on - same treatment as a selected segment. */
 .lc-tool[aria-pressed='true'] {
   background: color-mix(in oklab, var(--obelisk-accent, #b4f953) 16%, transparent);
   color: var(--obelisk-accent, #b4f953);
@@ -210,7 +210,7 @@ button:not(:disabled),
 /*
  * The compose card.
  *
- * It used to be an opaque panel holding a pure-black textarea — a hole cut
+ * It used to be an opaque panel holding a pure-black textarea - a hole cut
  * into a box, on a feed whose own cards are hairline rows over the app's
  * gradient. The field is the card now: one translucent surface, the accent
  * arriving only on focus, so the composer reads as part of the column
@@ -229,7 +229,7 @@ button:not(:disabled),
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--obelisk-accent, #b4f953) 10%, transparent);
 }
 
-/* Dragging a file over it — the whole card is the drop target. */
+/* Dragging a file over it - the whole card is the drop target. */
 .lc-composer[data-dragging='true'] {
   border-color: var(--obelisk-accent, #b4f953);
   background: color-mix(in oklab, var(--obelisk-accent, #b4f953) 7%, transparent);
@@ -253,12 +253,12 @@ button:not(:disabled),
 }
 
 /*
- * A side pane — thread, article, profile, feed — over the app's background.
+ * A side pane - thread, article, profile, feed - over the app's background.
  *
  * These were an opaque `bg-lc-dark` slab. The shell paints a drifting
  * gradient that the chat body, the relay bar and the feed header all let
  * through, and the fullscreen version of each of these panes uses
- * `.obelisk-desktop-bg` directly — so opening a thread half-screen and then
+ * `.obelisk-desktop-bg` directly - so opening a thread half-screen and then
  * expanding it changed the background under the same content. Same surface
  * treatment as the headers: enough panel to separate it from the column
  * beside it, translucent enough that the gradient carries straight through.
@@ -272,7 +272,7 @@ button:not(:disabled),
 /*
  * The icon buttons in a header: back, fullscreen, close, search.
  *
- * They were 32px of `text-lc-muted` with no border — the same grey as the
+ * They were 32px of `text-lc-muted` with no border - the same grey as the
  * body text around them, and small enough on a phone to miss. A control you
  * navigate with should look like a control.
  */
@@ -442,7 +442,7 @@ button:not(:disabled),
  * and scroll performance falls off a cliff a few pages in.
  *
  * `contain-intrinsic-size` gives an estimated height so the scrollbar doesn't
- * jump as cards are skipped and restored — without it, scrolling fast makes
+ * jump as cards are skipped and restored - without it, scrolling fast makes
  * the thumb jitter. The value is a rough average card height; being wrong
  * costs a little scroll drift, being absent costs a lot.
  */
@@ -459,7 +459,7 @@ button:not(:disabled),
   /*
    * Containment is what actually stops the lag. Without `contain`, a note
    * whose content overflows (an unbroken URL, a wide code block, an image
-   * that ignores max-width) forces the whole feed column to re-measure —
+   * that ignores max-width) forces the whole feed column to re-measure -
    * and with hundreds of cards that reflow is O(n) on every scroll tick.
    * Clipping here keeps one bad note from costing anything beyond itself.
    */
@@ -470,7 +470,7 @@ button:not(:disabled),
 /*
  * A note you can open reads as its own container under the cursor.
  *
- * The feed is hairline-separated rows, which is right at rest — a grid of
+ * The feed is hairline-separated rows, which is right at rest - a grid of
  * boxes is heavier to scan. But once the whole row is a click target it has
  * to say so, or the only feedback for "this does something" is the cursor.
  */
@@ -600,7 +600,7 @@ button:not(:disabled),
   display: none;
 }
 
-/* Banner placeholder — used by the sidebar header while branding (kind
+/* Banner placeholder - used by the sidebar header while branding (kind
  * 30078 obelisk:branding) is still arriving. Transparent feel that
  * occupies the banner slot so swapping in the real image doesn't shift
  * the layout. Matches lc-card with a very subtle radial highlight. */
@@ -724,7 +724,7 @@ button:not(:disabled),
   opacity: calc(var(--bubble-opacity, 0.12) * 0.78);
 }
 
-/* Orbiting keys — uses CSS custom property for radius */
+/* Orbiting keys - uses CSS custom property for radius */
 @keyframes orbit {
   from { transform: rotate(0deg) translateX(var(--orbit-radius, 110px)) rotate(0deg); }
   to   { transform: rotate(360deg) translateX(var(--orbit-radius, 110px)) rotate(-360deg); }
@@ -924,7 +924,7 @@ button:not(:disabled),
   box-shadow: 0 0 4px currentColor;
   animation: cr-pop-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-/* Explosion overlay — sits on top of the exploding cell and overflows into
+/* Explosion overlay - sits on top of the exploding cell and overflows into
    neighbours so shards visibly travel to adjacent tiles. */
 .cr-burst {
   position: absolute;
@@ -962,7 +962,7 @@ button:not(:disabled),
   border-radius: 9999px;
   animation: cr-shard-fly 520ms cubic-bezier(0.25, 0.7, 0.35, 1) forwards;
 }
-/* Matrix: no gaps between cells — the grid lines come from cell borders so
+/* Matrix: no gaps between cells - the grid lines come from cell borders so
    adjacent borders collapse into a single hairline tinted with the active
    player's color. */
 .cr-matrix {
@@ -986,7 +986,7 @@ button:not(:disabled),
  * rail (::before, full row height) and L-corner (::after, top half + curve).
  * The last row drops its ::before so the rail terminates inside the corner
  * instead of trailing past it as a stub. The legacy `↳` marker is hidden
- * in-place (visibility: hidden) so it keeps reserving its column width —
+ * in-place (visibility: hidden) so it keeps reserving its column width -
  * leaving room for the rail without shifting the channel name. */
 .lc-forum-threads {
   position: relative;
@@ -1023,7 +1023,7 @@ button:not(:disabled),
 }
 
 /* ─────────────────────────────────────────────────────────────────────
- * Desktop ambient background — mirrors the mobile shell's corner radials,
+ * Desktop ambient background - mirrors the mobile shell's corner radials,
  * drifting green blob, and film-grain overlay. Applied at the DesktopShell
  * root so the chat surfaces (which sit on transparent panels) read against
  * the same lively backdrop the mobile UI uses.
@@ -1062,7 +1062,7 @@ button:not(:disabled),
 /* Elevate children above the ::before/::after background layers without
  * clobbering Tailwind positioning utilities like `fixed`. Wrapped in
  * `@layer base` so Tailwind's `@layer utilities` (where `.fixed` lives)
- * wins — un-layered rules always beat layered ones regardless of
+ * wins - un-layered rules always beat layered ones regardless of
  * specificity, which previously dropped `fixed` toasts into normal flow. */
 @layer base {
   :where(.obelisk-desktop-bg) > * {
@@ -1089,7 +1089,7 @@ button:not(:disabled),
 }
 
 /* ─────────────────────────────────────────────────────────────────────
- * SDK login modal — La Crypta re-skin
+ * SDK login modal - La Crypta re-skin
  *
  * The @nostr-wot/ui modal portals to <body>, so we can't scope these
  * inside `.obelisk-mobile`. Style the SDK's `.nui-*` classes directly
@@ -1209,7 +1209,7 @@ button:not(:disabled),
   box-shadow: 0 0 24px color-mix(in oklab, var(--color-lc-green) 30%, transparent);
 }
 
-/* Native checkboxes inside the modal — give them the la-crypta accent so
+/* Native checkboxes inside the modal - give them the la-crypta accent so
  * they don't render as the OS default grey square. */
 .nui-modal input[type="checkbox"] {
   accent-color: var(--color-lc-green);
@@ -1265,7 +1265,7 @@ button:not(:disabled),
   border-color: color-mix(in oklab, var(--color-lc-green) 30%, transparent);
   background: #0f0f0f;
 }
-/* Copy (the address) and Share (the link) sit side by side — they're the
+/* Copy (the address) and Share (the link) sit side by side - they're the
  * same kind of action, and stacking two full-width pills above "Enter
  * Obelisk" made the primary button look like the third option. */
 .obelisk-npub-share .obelisk-share-actions {
@@ -1299,7 +1299,7 @@ button:not(:disabled),
 }
 
 .nui-profile-fields:has(.obelisk-name-input) { position: relative; }
-/* Only reserve room for the reroll control while it is actually on screen — it
+/* Only reserve room for the reroll control while it is actually on screen - it
  * hides itself once the user types their own name. */
 .nui-profile-fields:has(.obelisk-random-name:not([hidden])) .obelisk-name-input {
   padding-right: 48px !important;
@@ -1321,7 +1321,7 @@ button:not(:disabled),
   font-size: 18px;
 }
 /*
- * The suggested name is carried on `placeholder`, not `value` — the SDK's
+ * The suggested name is carried on `placeholder`, not `value` - the SDK's
  * input is React-controlled, and writing to `value` from outside desyncs
  * React's value tracker and makes the field untypeable (see
  * GeneratedProfileEnhancements). But a grey placeholder reads as "empty,
@@ -1422,14 +1422,14 @@ button:not(:disabled),
 
 /* Keep the SDK's default 32px bottom padding but extend further on devices
  * that have a home-indicator inset. Using `max()` instead of plain `env()`
- * means browsers without safe-area support never *lose* padding — they fall
+ * means browsers without safe-area support never *lose* padding - they fall
  * back to the original 32px. */
 .nui-modal {
   padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
 }
 
 /* "Open in signer app" deep-link injected by Nip46SignerDeepLink (a local
- * patch over the npm SDK; the fork already has this natively — see the
+ * patch over the npm SDK; the fork already has this natively - see the
  * TSDoc comment in LoginModal.tsx). Mobile-only: a desktop user scans the
  * QR with their phone signer, but on mobile the QR is unscannable so
  * handing off to Amber / Nsec.app / Keychat via the `nostrconnect://`
@@ -1452,7 +1452,7 @@ button:not(:disabled),
  * Back is an arrow, at every width.
  *
  * The step-back control was a "← Back" pill sitting in the flow, indented
- * with the form, which reads as another action rather than as navigation —
+ * with the form, which reads as another action rather than as navigation -
  * on phones it was already promoted to a ‹ in the corner, and there was no
  * reason for a desktop to be the odd one out. Top-left, mirroring the close
  * ✕ top-right, so the two ways out of a step are where you look for them.
@@ -1473,7 +1473,7 @@ button:not(:disabled),
   padding: 0;
   justify-content: center;
   border-radius: 50%;
-  /* The label stays in the DOM — an icon button with no accessible name is
+  /* The label stays in the DOM - an icon button with no accessible name is
      worse than a text one. `font-size: 0` hides it visually only. */
   font-size: 0;
 }
@@ -1612,7 +1612,7 @@ button:not(:disabled),
   box-shadow: 0 0 4px currentColor;
   animation: cr-pop-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-/* Explosion overlay — sits on top of the exploding cell and overflows into
+/* Explosion overlay - sits on top of the exploding cell and overflows into
    neighbours so shards visibly travel to adjacent tiles. */
 .cr-burst {
   position: absolute;
@@ -1650,7 +1650,7 @@ button:not(:disabled),
   border-radius: 9999px;
   animation: cr-shard-fly 520ms cubic-bezier(0.25, 0.7, 0.35, 1) forwards;
 }
-/* Matrix: no gaps between cells — the grid lines come from cell borders so
+/* Matrix: no gaps between cells - the grid lines come from cell borders so
    adjacent borders collapse into a single hairline tinted with the active
    player's color. */
 .cr-matrix {
@@ -1669,7 +1669,7 @@ button:not(:disabled),
   background: color-mix(in srgb, var(--cr-turn, #3f3f46) 18%, #0a0a0a 82%);
 }
 
-/* Chain Reaction result splash — the big "you won" over the final board. */
+/* Chain Reaction result splash - the big "you won" over the final board. */
 @keyframes cr-win-in {
   from { opacity: 0; }
   to   { opacity: 1; }

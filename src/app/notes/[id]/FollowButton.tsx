@@ -4,8 +4,8 @@
  * Follow someone from the note page.
  *
  * The author-context lists were read-only: "here are ten people this author
- * reads" with no way to act on it, so the most useful thing on the page —
- * discovery — ended at a link. This is a client island inside the
+ * reads" with no way to act on it, so the most useful thing on the page -
+ * discovery - ended at a link. This is a client island inside the
  * server-rendered context, because following needs a signer and the rest of
  * that page is static HTML a crawler can read.
  *
@@ -20,9 +20,9 @@ import {
   useMyContactList,
   useMyContactListReady,
   useMyPubkey,
-} from '@/lib/nostr-bridge';
-import { toggledFollowTags } from '@/lib/profile-feed';
-import { usePreferences } from '@/lib/preferences';
+} from '@/services/nostr-bridge';
+import { toggledFollowTags } from '@/services/social/profile-feed';
+import { usePreferences } from '@/services/preferences';
 
 export default function FollowButton({
   pubkey,
@@ -44,7 +44,7 @@ export default function FollowButton({
 
   const toggle = async () => {
     // Without the contact list loaded, publishing would replace it with a
-    // one-entry list — i.e. silently unfollow everyone.
+    // one-entry list - i.e. silently unfollow everyone.
     if (busy || !ready) return;
     setBusy(true);
     setFailed(false);

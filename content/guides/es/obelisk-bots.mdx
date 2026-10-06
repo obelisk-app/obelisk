@@ -19,10 +19,10 @@ La mayoría de los bots de chat son plugins privilegiados pegados a un servidor 
 
 Eso le da a los operadores un modelo claro:
 
-- **La identidad es visible** — el bot tiene `npub`, metadata de perfil y mensajes firmados.
-- **Los permisos son nativos del relay** — membresía y admin son eventos NIP-29.
-- **El deploy es simple** — cada bot es un archivo `.mjs` supervisado por PM2.
-- **Los clientes siguen siendo intercambiables** — el bot publica eventos Nostr normales que cualquier cliente compatible puede leer.
+- **La identidad es visible**: el bot tiene `npub`, metadata de perfil y mensajes firmados.
+- **Los permisos son nativos del relay**: membresía y admin son eventos NIP-29.
+- **El deploy es simple**: cada bot es un archivo `.mjs` supervisado por PM2.
+- **Los clientes siguen siendo intercambiables**: el bot publica eventos Nostr normales que cualquier cliente compatible puede leer.
 
 El repo ya incluye bots de precio de BTC, un bot de sat/ARS, utilidades de gestión y el zap bot en desarrollo.
 
@@ -32,8 +32,8 @@ El zap bot es el ejemplo más social: mira la actividad Lightning de un grupo y 
 
 Escucha dos formas de evento:
 
-- **Recibos NIP-57** — `kind 9735`, normalmente emitidos por proveedores LNURL.
-- **Reacciones de zap dentro del grupo** — reacciones `kind 7` que traen metadata de monto o factura en un grupo NIP-29.
+- **Recibos NIP-57**: `kind 9735`, normalmente emitidos por proveedores LNURL.
+- **Reacciones de zap dentro del grupo**: reacciones `kind 7` que traen metadata de monto o factura en un grupo NIP-29.
 
 Cuando el evento tiene un monto parseable, el bot resuelve los perfiles del remitente y del receptor, deduplica el evento en memoria y publica un anuncio `kind 9` en el grupo:
 
@@ -57,10 +57,10 @@ Cada bot debería tener su propia clave. No reutilices la clave admin de una per
 
 La escalera práctica es:
 
-1. **Bot de perfil** — puede publicar su propia metadata `kind 0`.
-2. **Bot miembro** — admitido con `kind 9000`, puede publicar mensajes.
-3. **Bot admin** — listado en `kind 39001`, puede ejecutar acciones de moderación.
-4. **Bot operador de relay** — además está confiado por la allow-list del relay.
+1. **Bot de perfil**: puede publicar su propia metadata `kind 0`.
+2. **Bot miembro**: admitido con `kind 9000`, puede publicar mensajes.
+3. **Bot admin**: listado en `kind 39001`, puede ejecutar acciones de moderación.
+4. **Bot operador de relay**: además está confiado por la allow-list del relay.
 
 La mayoría de los bots solo necesita ser miembro. Un anunciador de zaps, ticker, welcome bot o bot de juegos normalmente puede publicar sin permisos de admin. Reservá el poder admin para bots que realmente tengan que expulsar miembros, borrar mensajes o cambiar metadata del grupo.
 

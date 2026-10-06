@@ -2,11 +2,11 @@ import type { Metadata } from 'next';
 import GuideArticlePage, {
   buildGuideArticleMetadata,
 } from '@/components/guides/GuideArticlePage';
-import { listSlugs } from '@/lib/guides';
+import { listSlugs } from '@/services/guides';
 
 export async function generateStaticParams() {
   // `listSlugs` unions this locale's articles with the English set, so an
-  // untranslated article is still routable — it renders the original
+  // untranslated article is still routable - it renders the original
   // rather than 404ing.
   const slugs = await listSlugs('pt');
   return slugs.map((slug) => ({ slug }));

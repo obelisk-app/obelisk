@@ -1,7 +1,7 @@
 /**
  * Display metadata for the games in the registry.
  *
- * The registry knows the RULES; this knows what a game looks like in the UI —
+ * The registry knows the RULES; this knows what a game looks like in the UI:
  * its name, its one-line pitch, its thumbnail. Everything user-facing reads
  * from here and is keyed by `session.game`, so a table can never be labelled
  * as a different game than the one it is running. (It could, once: the card
@@ -17,7 +17,7 @@ export interface GameInfo {
   minPlayers: number;
   maxPlayers: number;
   defaultTurnTimeoutS: number;
-  /** Compact glyph for tight spots — chat cards, modal headers. */
+  /** Compact glyph for tight spots: chat cards, modal headers. */
   icon: string;
   /**
    * Real-time games run every board at once. That rules out hot-seat: you
@@ -63,7 +63,7 @@ export function gameIcon(type: string): string {
   return gameInfo(type)?.icon ?? '🎲';
 }
 
-/** "2–8 players · 45s turns" — the line under a game's name in the picker. */
+/** "2–8 players · 45s turns": the line under a game's name in the picker. */
 export function gameSummary(info: GameInfo): string {
   const players = info.minPlayers === info.maxPlayers
     ? `${info.minPlayers} players`

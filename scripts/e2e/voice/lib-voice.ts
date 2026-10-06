@@ -2,7 +2,7 @@
  * Voice-specific helpers for the Playwright harness. Builds on
  * `scripts/e2e/lib.ts` (session seeding + relay-access helpers) with
  * primitives for driving the `VoiceClient` directly via the
- * window-exposed `__obeliskVoiceClient` constructor — bypassing the
+ * window-exposed `__obeliskVoiceClient` constructor, bypassing the
  * VoiceRoom UI's NIP-29 membership gate so a fresh ephemeral nsec can
  * exercise the mesh transport against any relay.
  *
@@ -29,7 +29,7 @@ export function makeProbeChannelId(): string {
  * (Web Audio destination → MediaStreamTrack) so the test is deterministic
  * across CI environments.
  *
- * The synthetic mic emits a 220 Hz sine at low gain — quiet but real
+ * The synthetic mic emits a 220 Hz sine at low gain: quiet but real
  * audio frames hit the encoder, which is enough for `bytesReceived > 0`
  * inbound assertions.
  */
@@ -186,13 +186,13 @@ export async function joinMeshChannel(
         | undefined;
       if (typeof Ctor !== 'function') throw new Error('VoiceClient not exposed on window');
       const client = new Ctor(channelId, {
-        // Open room — bypass the NIP-29 membership gate. The mesh transport
+        // Open room: bypass the NIP-29 membership gate. The mesh transport
         // we're testing here doesn't depend on membership; the WoT/member
         // filter in client.ts:489–490 is what we instrumented to observe
         // silent drops.
         open: true,
         // Pre-populate members so the receive-side `isMember` filter passes
-        // even when WoT is enabled. The list is just a safety net — `open:true`
+        // even when WoT is enabled. The list is just a safety net; `open:true`
         // already short-circuits the check via openRoom.
         members: otherMembers,
         events: {

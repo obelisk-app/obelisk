@@ -9,7 +9,7 @@ import { stacker } from './stacker/definition';
  * Chain Reaction was ported from the classic Obelisk stack; Vesta is consumed
  * as a tracked upstream package (see `./vesta/definition.ts`). Chess and
  * tic-tac-toe still live in obelisk-classic and would each need the same
- * treatment — a pure engine is enough, everything in `session.ts` is
+ * treatment: a pure engine is enough, everything in `session.ts` is
  * game-agnostic.
  */
 export const GAMES: Record<string, GameDefinition> = {

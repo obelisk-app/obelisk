@@ -4,20 +4,21 @@
  * The profile's Media tab, as an explore grid.
  *
  * It was a plain 3-column grid of square crops with a hairline gap and no
- * indication of what anything was — a video looked exactly like a photo
+ * indication of what anything was: a video looked exactly like a photo
  * until you tapped it, and a note with four images contributed four
  * identical-looking tiles.
  *
  * Instagram's explore layout solves both: an edge-to-edge grid so the images
  * carry the page, a badge on anything that isn't a single still, and a
  * larger cell every so often so a wall of thumbnails has some rhythm. The
- * feature tile is index-based (not engagement-based) on purpose — it's
+ * feature tile is index-based (not engagement-based) on purpose: it's
  * layout, not a ranking, and a grid that reshuffles as counts arrive is
  * worse than one that doesn't.
  */
 
-import { isVideoUrl } from '@/lib/attachments';
+import { isVideoUrl } from '@/utils/attachments/attachments';
 import { useTranslation } from '@/i18n/context';
+import RemoteImage from '@/components/ui/RemoteImage';
 
 export type MediaItem = {
   key: string;
@@ -68,11 +69,9 @@ export default function MediaGrid({
                 className="h-full w-full object-cover"
               />
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <RemoteImage
                 src={item.url}
                 alt=""
-                loading="lazy"
                 decoding="async"
                 // The zoom is the only hover affordance: a grid with no
                 // borders gives no other hint that a tile is clickable.

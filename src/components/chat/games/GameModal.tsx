@@ -1,40 +1,33 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import ModalShell from '@/components/ModalShell';
-import UserAvatar from '@/components/UserAvatar';
-import { useGroupMemberInfo, useMyPubkey } from '@/lib/nostr-bridge';
+import { useState } from 'react';
+import Modal from '@/components/ui/Modal';
+import { useMyPubkey } from '@/services/nostr-bridge';
 import { useGamesStore } from '@/store/games';
-import { canJoin, canStart, turnSecondsLeft } from '@/lib/games/session';
-import {
-  publishAttack,
-  publishCancel,
-  publishCheckpoint,
-  publishJoin,
-  publishMove,
-  publishResign,
-  publishStart,
-  publishTopOut,
-} from '@/lib/games/transport';
+import { turnSecondsLeft, seatsControlledBy } from '@/lib/games/session';
+import { publishAttack, publishCheckpoint, publishStart, publishTopOut } from '@/services/games/transport';
 import { useGameSession, useNowSeconds, useTurnClockEnforcer } from '@/hooks/chat/useChannelGames';
-import ChainReactionBoard, { SEAT_COLORS } from './ChainReactionBoard';
+import ChainReactionBoard from './ChainReactionBoard';
 import GameOverOverlay from './GameOverOverlay';
 import VestaTable from './vesta/VestaTable';
 import StackerTable from './stacker/StackerTable';
 import StartTableModal from './StartTableModal';
 import GameResults from './GameResults';
+import GameModalHeader from './modal/GameModalHeader';
+import GameRoster from './modal/GameRoster';
+import GameActionsBar from './modal/GameActionsBar';
+import { useGameLoad } from './modal/useGameLoad';
+import { useFullscreenBoardBox } from './modal/useFullscreenBoardBox';
+import { useResultSplash } from './modal/useResultSplash';
+import { useTableNames } from './modal/useTableNames';
+import { useGameActions } from './modal/useGameActions';
 import type { GameState } from 'vesta';
-import type { VestaAction } from '@/lib/games/vesta/definition';
-import { seatsControlledBy } from '@/lib/games/session';
-import { gameIcon, gameName } from '@/lib/games/catalog';
-import { seatDisplayLabel } from '@/lib/games/seat-label';
-import { seedGameFromCache } from '@/lib/games/cache';
-import { requestGameLoad } from '@/lib/games/resolve';
 import { useTranslation } from '@/i18n/context';
+import ErrorState from '@/components/ui/ErrorState';
 
 /**
  * The table itself: roster while waiting, board while playing, result when
- * done. Every button here publishes one event and then does nothing — the UI
+ * done. Every button here publishes one event and then does nothing: the UI
  * updates when that event comes back off the relay, exactly like a chat
  * message. There is no optimistic local board, because a board the relay
  * hasn't accepted is a board the other players cannot see.
@@ -43,10 +36,7 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
   const { t } = useTranslation();
   const session = useGameSession(gameId);
   const myPubkey = useMyPubkey();
-  const memberList = useGroupMemberInfo(session?.channelId ?? null);
   const now = useNowSeconds();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [seatPickerOpen, setSeatPickerOpen] = useState(false);
   // Phones get fullscreen by default: a 20-row well plus rails does not fit
   // in a dialog on a handset, and the board was being cut off top and bottom.
@@ -54,167 +44,30 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
     () => typeof window !== 'undefined' && window.innerWidth < 768,
   );
 
-  // Same two fallbacks the card has, minus the grace period: the user is
-  // looking at this table, so the bytes are justified immediately.
-  useLayoutEffect(() => {
-    if (!session) seedGameFromCache(gameId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId]);
-
-  useEffect(() => {
-    if (!session) requestGameLoad(gameId);
-  }, [gameId, session]);
-
-  /**
-   * The room a fullscreen board actually gets.
-   *
-   * Turn-based boards used to take a width cap and nothing else, so fullscreen
-   * on Chain Reaction was a 264px board adrift in a 1440px window — the cell
-   * size was capped and there was no height to fill. Measuring here keeps the
-   * board component free of window queries, the same way StackerTable already
-   * sizes its own cells.
-   *
-   * The subtraction is the chrome above and below: title row, turn clock,
-   * seat legend, and the action buttons.
-   */
-  const FULLSCREEN_CHROME_PX = 210;
-  /**
-   * How long the result splash waits before covering the board.
-   *
-   * The deciding move is the biggest cascade in the game and it arrives in the
-   * same event that ends the match, so a splash that renders immediately hides
-   * the only explosion anybody wanted to watch. The board reports when it is
-   * animating (`onRevealChange`); this short delay covers the gap between the
-   * finished session landing and the board starting to play it back.
-   */
-  const RESULT_SPLASH_DELAY_MS = 300;
-  /** …and a ceiling, so a board that never reports "done" cannot eat the splash. */
-  const RESULT_SPLASH_MAX_WAIT_MS = 6000;
-  const [boardRevealing, setBoardRevealing] = useState(false);
-
-  // The window, read through a subscription rather than copied into state on
-  // every resize — the size is external, and mirroring it would re-render the
-  // whole table for a value only the board reads.
-  const viewport = useSyncExternalStore(
-    (notify) => {
-      if (typeof window === 'undefined') return () => {};
-      window.addEventListener('resize', notify);
-      return () => window.removeEventListener('resize', notify);
-    },
-    () => `${window.innerWidth}x${window.innerHeight}`,
-    () => '',
-  );
-  const boardBox = useMemo(() => {
-    if (!fullscreen || !viewport) return null;
-    const [w, h] = viewport.split('x').map(Number);
-    return {
-      width: Math.max(240, w - 32),
-      height: Math.max(240, h - FULLSCREEN_CHROME_PX),
-    };
-  }, [fullscreen, viewport]);
-
-  // Arm the splash a beat after the table finishes. Keyed by the result it is
-  // armed for, so it is derived rather than reset — a rematch on the same
-  // table id re-arms on its own, with no second effect to turn it back off.
-  const finished = session?.status === 'finished';
-  const resultKey = `${gameId}:${session?.finishedAt ?? ''}`;
-  const [splashArmedFor, setSplashArmedFor] = useState<string | null>(null);
-  const splashReady = finished && splashArmedFor === resultKey;
-  useEffect(() => {
-    if (!finished) return;
-    const t = setTimeout(() => setSplashArmedFor(resultKey), RESULT_SPLASH_DELAY_MS);
-    return () => clearTimeout(t);
-  }, [finished, resultKey]);
-
-  // The ceiling: however long the board claims to be animating, the result
-  // gets shown. A splash nobody can dismiss is worse than one that lands early.
-  useEffect(() => {
-    if (!finished || !boardRevealing) return;
-    const t = setTimeout(() => setBoardRevealing(false), RESULT_SPLASH_MAX_WAIT_MS);
-    return () => clearTimeout(t);
-  }, [finished, boardRevealing]);
+  useGameLoad(gameId, session);
+  const boardBox = useFullscreenBoardBox(fullscreen);
+  const { showSplash, setBoardRevealing } = useResultSplash(gameId, session?.status === 'finished', session?.finishedAt);
 
   // Every client watching a table helps enforce its clock.
   useTurnClockEnforcer(session, myPubkey, true);
 
-  /**
-   * A person's name — the same string for everybody looking.
-   *
-   * Deliberately NOT "you" for the current user: this feeds the seat labels
-   * that get published in the `start` event, and a viewer-relative word there
-   * is written into shared state. It was, and every other player at the table
-   * saw a player called "Vos".
-   *
-   * Marking which seat is yours is a rendering job, done per viewer below.
-   */
-  const nameOf = useCallback(
-    (pubkey: string) => memberList.find((m) => m.pubkey === pubkey)?.displayName ?? pubkey.slice(0, 8),
-    [memberList],
-  );
-
-  // A seat can carry its own name — that is how two people sharing one
-  // account show up as two players rather than twice as the same person.
-  const seatLabelFor = useCallback((seatId: string) => {
-    const seat = session?.seats.find((s2) => s2.id === seatId);
-    // Tables created before this was fixed carry a literal "Vos" as somebody's
-    // name. `seatDisplayLabel` treats those as absent and falls back to the
-    // profile, so nobody is shown a name that means "you" about someone else.
-    return seatDisplayLabel(seat?.label, nameOf(seat?.by ?? seatId));
-  }, [session, nameOf]);
-
-  const pictureOf = useCallback(
-    (pubkey: string) => memberList.find((m) => m.pubkey === pubkey)?.picture ?? null,
-    [memberList],
-  );
-
-  const run = useCallback(async (fn: () => Promise<unknown>) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await fn();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Relay rejected that');
-    } finally {
-      setBusy(false);
-    }
-  }, []);
-
-  const onAction = useCallback(async (action: { cell: number }, seat: string) => {
-    if (!session) return;
-    await run(() => publishMove(session.channelId, session.id, session.turnIndex, action, seat));
-  }, [session, run]);
-
-  // Vesta moves name their seat: one account can hold several of them.
-  const onSeatAction = useCallback(async (action: VestaAction, seat: string) => {
-    if (!session) return;
-    await run(() => publishMove(session.channelId, session.id, session.turnIndex, action, seat));
-  }, [session, run]);
+  const { nameOf, seatLabelFor, pictureOf } = useTableNames(session);
+  const { busy, error, run, onAction, onSeatAction } = useGameActions(session);
 
   const secondsLeft = session ? turnSecondsLeft(session, now) : null;
   const mySeats = session ? seatsControlledBy(session, myPubkey) : [];
 
-  const roster = useMemo(
-    () => (session ? (session.status === 'waiting' ? session.joined : session.participants) : []),
-    [session],
-  );
-
   if (!session) {
     return (
-      <ModalShell onClose={onClose} testId="game-modal" panelClassName="w-full max-w-md mx-4 rounded-xl bg-lc-dark border border-lc-border p-6">
+      <Modal onClose={onClose} testId="game-modal" panelClassName="w-full max-w-md mx-4 rounded-xl bg-lc-dark border border-lc-border p-6">
         <div className="lc-skeleton h-40 w-full rounded-lg" />
         <p className="mt-3 text-center text-xs text-lc-muted">{t('games.loadingTable')}</p>
-      </ModalShell>
+      </Modal>
     );
   }
 
-  // Resigning names a seat, because one account can hold several: the seat on
-  // move if it is ours, else our only one.
-  const resignSeat = session.currentTurn && mySeats.includes(session.currentTurn)
-    ? session.currentTurn
-    : mySeats.length === 1 ? mySeats[0] : null;
-
   return (
-    <ModalShell
+    <Modal
       onClose={onClose}
       testId="game-modal"
       panelClassName={
@@ -235,7 +88,7 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
         />
       )}
 
-      {splashReady && !boardRevealing && (
+      {showSplash && (
         <GameOverOverlay
           session={session}
           myPubkey={myPubkey}
@@ -245,65 +98,20 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
         />
       )}
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-lc-white" data-testid="game-modal-title">
-            {gameIcon(session.game)} {gameName(session.game)}
-          </h2>
-          <p className="text-[11px] text-lc-muted">
-            {session.status === 'waiting' && `Waiting for players · ${session.joined.length}/${session.maxPlayers}`}
-            {session.status === 'in_progress' && (
-              session.match
-                ? `${session.match.alive.length} still standing`
-                : session.currentTurn && mySeats.includes(session.currentTurn)
-                  ? 'Your turn'
-                  : `${seatLabelFor(session.currentTurn ?? '')}'s turn`
-            )}
-            {session.status === 'finished' && (
-              session.draw ? 'Draw' : session.winner ? `${nameOf(session.winner)} won` : 'Game over'
-            )}
-            {session.status === 'cancelled' && 'Table cancelled'}
-            {session.status === 'in_progress' && secondsLeft !== null && ` · ${secondsLeft}s`}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setFullscreen((v) => !v)}
-            className="text-lc-muted hover:text-lc-white text-sm leading-none"
-            aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-            data-testid="game-fullscreen"
-          >
-            {fullscreen ? '🗗' : '⛶'}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-lc-muted hover:text-lc-white text-lg leading-none"
-            aria-label={t('common.close')}
-          >
-            ×
-          </button>
-        </div>
-      </div>
+      <GameModalHeader
+        session={session}
+        mySeats={mySeats}
+        secondsLeft={secondsLeft}
+        nameOf={nameOf}
+        seatLabelFor={seatLabelFor}
+        fullscreen={fullscreen}
+        onToggleFullscreen={() => setFullscreen((v) => !v)}
+        onClose={onClose}
+      />
 
       <div className={fullscreen ? 'mt-3 flex flex-1 flex-col justify-center' : 'mt-4'}>
         {session.status === 'waiting' || session.status === 'cancelled' ? (
-          <ul className="space-y-2" data-testid="game-roster">
-            {roster.map((pk, i) => (
-              <li key={pk} className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: SEAT_COLORS[i]?.hex }} />
-                <UserAvatar pubkey={pk} picture={pictureOf(pk)} size={6} name={nameOf(pk)} />
-                <span className="text-xs text-lc-white">{nameOf(pk)}</span>
-                {pk === myPubkey && (
-                  <span className="text-[10px] text-lc-muted">(you)</span>
-                )}
-                {pk === session.createdBy && (
-                  <span className="rounded-full border border-lc-border px-1.5 text-[10px] text-lc-muted">host</span>
-                )}
-              </li>
-            ))}
-          </ul>
+          <GameRoster session={session} myPubkey={myPubkey} nameOf={nameOf} pictureOf={pictureOf} />
         ) : session.match ? (
           <StackerTable
             session={session}
@@ -337,8 +145,8 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
         ) : (
           // Deliberately the same element in the same place whether the table
           // is running or finished: swapping it for a results panel unmounted
-          // the board mid-animation, so the winning explosion — the one worth
-          // watching — was the one nobody ever saw.
+          // the board mid-animation, so the winning explosion (the one worth
+          // watching) was the one nobody ever saw.
           <ChainReactionBoard
             game={session}
             mySeats={mySeats}
@@ -357,59 +165,16 @@ export default function GameModal({ gameId, onClose }: { gameId: string; onClose
         </div>
       )}
 
-      {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {canJoin(session, myPubkey) && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => run(() => publishJoin(session.channelId, session.id))}
-            className="lc-pill-primary px-4 py-1.5 text-xs"
-            data-testid="game-join"
-          >
-            {t('games.join')}
-          </button>
-        )}
-        {canStart(session, myPubkey) && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setSeatPickerOpen(true)}
-            className="lc-pill-primary px-4 py-1.5 text-xs"
-            data-testid="game-start"
-          >
-            Start ({session.joined.length})
-          </button>
-        )}
-        {session.status === 'waiting' && myPubkey === session.createdBy && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => run(() => publishCancel(session.channelId, session.id))}
-            className="lc-pill-secondary px-4 py-1.5 text-xs"
-          >
-            {t('games.cancelTable')}
-          </button>
-        )}
-        {session.status === 'in_progress' && resignSeat && !session.eliminated.includes(resignSeat) && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => run(() => publishResign(session.channelId, session.id, resignSeat))}
-            className="lc-pill-secondary px-4 py-1.5 text-xs"
-            data-testid="game-resign"
-          >
-            {t('games.resign')}
-          </button>
-        )}
-        {session.status === 'waiting' && session.joined.length < session.minPlayers && (
-          <span className="text-[11px] text-lc-muted">
-            Needs {session.minPlayers} players to start.
-          </span>
-        )}
-      </div>
-    </ModalShell>
+      {error && <ErrorState className="mt-3">{error}</ErrorState>}
+      <GameActionsBar
+        session={session}
+        myPubkey={myPubkey}
+        mySeats={mySeats}
+        busy={busy}
+        run={run}
+        onOpenSeatPicker={() => setSeatPickerOpen(true)}
+      />
+    </Modal>
   );
 }
 

@@ -27,19 +27,19 @@ cd /root/obelisk-dex-final-architecture
 Target the bounded fanout and quota cleanup behavior:
 
 ```bash
-npm test -- --run src/lib/nostr-bridge/bridge.test.ts -t "frees the group slot|preflight relay-access|reserveVoiceRelayCapacity closes non-active lazy admin/member|caps background message streams"
+npm test -- --run tests/services/nostr-bridge/bridge.test.ts -t "frees the group slot|preflight relay-access|reserveVoiceRelayCapacity closes non-active lazy admin/member|caps background message streams"
 ```
 
 Target appearance preferences:
 
 ```bash
-npm test -- --run src/lib/preferences.test.ts src/components/AppearancePreferenceControls.test.tsx src/app/app/UserPanel.preferences.test.tsx
+npm test -- --run tests/services/preferences.test.ts src/components/AppearancePreferenceControls.test.tsx src/app/app/UserPanel.preferences.test.tsx
 ```
 
 Run bridge and voice transport together:
 
 ```bash
-npm test -- --run src/lib/nostr-bridge/bridge.test.ts src/lib/voice/transport.test.ts
+npm test -- --run tests/services/nostr-bridge/bridge.test.ts tests/services/voice/transport.test.ts
 ```
 
 Run the full unit suite:

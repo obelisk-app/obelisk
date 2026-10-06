@@ -1,5 +1,5 @@
 /**
- * Menu building blocks — one look for every popover menu in the app.
+ * Menu building blocks: one look for every popover menu in the app.
  *
  * Panel: rounded-lg, `lc-dark` fill, `lc-border`, inner padding so each row
  * hovers as its own rounded pill. Rows: icon + label (+ optional hint line),
@@ -7,7 +7,7 @@
  * set the pattern; the profile ⋯ menu follows it.
  *
  * Contrast rule (CLAUDE.md, "Design System"): row labels are `lc-white`, not
- * `lc-muted` — a muted label reads as disabled. Only the optional hint line
+ * `lc-muted`: a muted label reads as disabled. Only the optional hint line
  * and genuinely disabled rows are muted.
  */
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
@@ -53,9 +53,11 @@ export function MenuItem({
   danger?: boolean;
   disabled?: boolean;
   testId?: string;
-  role?: 'menuitem' | 'menuitemradio';
-  /** ARIA state for submenu triggers and radio rows (`aria-expanded`, `aria-checked`, …). */
-  buttonProps?: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'className' | 'disabled' | 'type' | 'role'>;
+  /** `menuitemcheckbox` for an on/off row; pass its `aria-checked` in `buttonProps`. */
+  role?: 'menuitem' | 'menuitemradio' | 'menuitemcheckbox';
+  /** ARIA state for submenu triggers, radio and checkbox rows (`aria-expanded`, `aria-checked`, …) and `data-*` hooks. */
+  buttonProps?: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'className' | 'disabled' | 'type' | 'role'>
+    & { [dataAttribute: `data-${string}`]: string | boolean | undefined };
 }) {
   return (
     <button {...buttonProps} type="button" role={role} className={rowClass(danger)} onClick={onClick} disabled={disabled} data-testid={testId}>
@@ -70,15 +72,19 @@ export function MenuLink({
   hint,
   href,
   testId,
+  newTab = true,
 }: {
   icon?: ReactNode;
   label: ReactNode;
   hint?: ReactNode;
   href: string;
   testId?: string;
+  /** Default true (an outside page). False for a link into the app itself. */
+  newTab?: boolean;
 }) {
+  const external = newTab ? { target: '_blank', rel: 'noreferrer noopener' } : {};
   return (
-    <a role="menuitem" href={href} target="_blank" rel="noreferrer noopener" className={rowClass()} data-testid={testId}>
+    <a role="menuitem" href={href} {...external} className={rowClass()} data-testid={testId}>
       <Body icon={icon} label={label} hint={hint} />
     </a>
   );

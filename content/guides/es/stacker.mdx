@@ -1,6 +1,6 @@
 ---
-title: Stacker — bloques que caen, en tiempo real, sobre Nostr
-description: Seis jugadores, un mismo orden de piezas, y cada línea que hacés entierra a otro. Stacker corre su tablero localmente a sesenta cuadros por segundo y publica sólo las consecuencias — ataques, eliminaciones y checkpoints que cualquiera puede reproducir.
+title: "Stacker: bloques que caen, en tiempo real, sobre Nostr"
+description: "Seis jugadores, un mismo orden de piezas, y cada línea que hacés entierra a otro. Stacker corre su tablero localmente a sesenta cuadros por segundo y publica sólo las consecuencias: ataques, eliminaciones y checkpoints que cualquiera puede reproducir."
 heroComponent: stacker
 publishedAt: '2026-09-04'
 updatedAt: '2026-09-04'
@@ -9,7 +9,7 @@ tags: [juegos, stacker, tiempo-real, nostr, kind-2390]
 
 ## El juego
 
-Caen bloques. Los encajás en filas. Una fila completa se limpia — y en vez de darte puntos, le tira **líneas de basura** al pozo de un rival, con un solo agujero para que se abra paso. Gana el último que queda en pie. De uno a seis jugadores; la mesa solitaria es una forma perfectamente válida de practicar.
+Caen bloques. Los encajás en filas. Una fila completa se limpia y, en vez de darte puntos, le tira **líneas de basura** al pozo de un rival, con un solo agujero para que se abra paso. Gana el último que queda en pie. De uno a seis jugadores; la mesa solitaria es una forma perfectamente válida de practicar.
 
 <Shot name="games/stacker-well" caption="Un pozo a mitad de partida, con el fantasma de la pieza que cae marcando dónde va a aterrizar." maxWidth={340} />
 
@@ -17,7 +17,7 @@ Todos en la partida arrancan del **mismo seed**, así que a todos les tocan las 
 
 ## Por qué no puede funcionar como los otros juegos
 
-Chain Reaction y Vesta son por turnos: uno juega, todos reproducen la jugada, el tablero avanza. Stacker no tiene un asiento "en turno" — hay seis tableros corriendo a la vez — y una ida y vuelta al relay por cada tecla se sentiría como jugar dentro del barro.
+Chain Reaction y Vesta son por turnos: uno juega, todos reproducen la jugada, el tablero avanza. Stacker no tiene un asiento "en turno" (hay seis tableros corriendo a la vez), y una ida y vuelta al relay por cada tecla se sentiría como jugar dentro del barro.
 
 Así que se parte al medio:
 
@@ -40,7 +40,7 @@ Los rivales se dibujan groseros a propósito. Sus tableros reales corren en sus 
 | `topout` | `{seat}` | ese jugador quedó afuera |
 | `checkpoint` | `{seat, frame, attacksSent, linesCleared, stackHeight, inputs, board}` | progreso, más el log de inputs que lo produjo |
 
-Los ataques se agrupan antes de salir: tres limpiezas rápidas se vuelven un evento con las líneas sumadas. Firmar un evento tarda milisegundos con una clave local y bastante más con una extensión del navegador, así que nunca se firma nada entre dos cuadros — lo saliente se va por su propio timer, unas cuatro veces por segundo.
+Los ataques se agrupan antes de salir: tres limpiezas rápidas se vuelven un evento con las líneas sumadas. Firmar un evento tarda milisegundos con una clave local y bastante más con una extensión del navegador, así que nunca se firma nada entre dos cuadros: lo saliente se va por su propio timer, unas cuatro veces por segundo.
 
 ## Cómo se mantiene honesto
 
@@ -49,8 +49,8 @@ El motor es una función pura de `(seed, inputs)`. Eso es lo que vuelve interesa
 <Callout type="warn" title="Esto detecta trampa, no la previene">
 La basura aterriza antes de que llegue el checkpoint que la justifica, así que un
 cliente modificado puede meter una ronda de ataques inventados antes de quedar
-marcado. Prevenir eso del todo significa lockstep — una ida y vuelta al relay por
-cuadro — que destruiría justo aquello para lo que existe el juego. El trato es
+marcado. Prevenir eso del todo significa lockstep (una ida y vuelta al relay por
+cuadro), que destruiría justo aquello para lo que existe el juego. El trato es
 deliberado. Además atrapa ataques inventados, no a una persona ayudada por un bot
 que juega legítimamente bien.
 </Callout>
@@ -61,18 +61,18 @@ La basura entrante pasa por el mismo log de inputs que todo lo demás, así que 
 
 Los números que deciden si un juego así se siente bien:
 
-- **DAS 10 cuadros, ARR 2** — cuánto espera una tecla sostenida antes de repetir, y cuán rápido repite después.
+- **DAS 10 cuadros, ARR 2**: cuánto espera una tecla sostenida antes de repetir, y cuán rápido repite después.
 - **Gravedad de 48 cuadros por paso hasta 4**, en la curva clásica: suave al principio, mucho más rápida pasando los niveles diez, y con un piso duro para que siga siendo jugable por un humano. Diez líneas es un nivel.
-- **Lock delay de 30 cuadros con 15 reinicios por deslizamiento** — ese instante después de que la pieza toca donde todavía la podés correr.
+- **Lock delay de 30 cuadros con 15 reinicios por deslizamiento**: ese instante después de que la pieza toca donde todavía la podés correr.
 - El tablero se dibuja directo a un canvas desde el loop del juego. React nunca ve un cuadro; sólo re-renderiza para los números que lee una persona, unas ocho veces por segundo.
 
-Los controles se reasignan desde la mesa (⌨ **controls**), y la asignación se guarda por navegador — es una preferencia del dispositivo, no estado de la cuenta, así que nunca se acerca al relay.
+Los controles se reasignan desde la mesa (⌨ **controls**), y la asignación se guarda por navegador: es una preferencia del dispositivo, no estado de la cuenta, así que nunca se acerca al relay.
 
 ## Sonido
 
 Los efectos se sintetizan en tiempo de ejecución: limpiezas afinadas según cuántas líneas fueron, un tono distinto para los spins, un retumbe para la basura, una caída para la eliminación. Sin archivos de audio, y disparados directo desde los eventos del motor.
 
-La música es el set libre de regalías de [TETRA](https://github.com/soyezequiel/tetris-para-luna-negra), de **soyezequiel**, un proyecto de hackathon de La Crypta, acreditado en la interfaz con link a la fuente. Se baraja una vez por sesión y avanza sola — no hay selector. Si un track no carga, o el navegador se niega a reproducirlo automáticamente, suena una base sintetizada generativa, así el juego nunca queda mudo por un archivo que falta.
+La música es el set libre de regalías de [TETRA](https://github.com/soyezequiel/tetris-para-luna-negra), de **soyezequiel**, un proyecto de hackathon de La Crypta, acreditado en la interfaz con link a la fuente. Se baraja una vez por sesión y avanza sola: no hay selector. Si un track no carga, o el navegador se niega a reproducirlo automáticamente, suena una base sintetizada generativa, así el juego nunca queda mudo por un archivo que falta.
 
 ## Cómo se juega
 

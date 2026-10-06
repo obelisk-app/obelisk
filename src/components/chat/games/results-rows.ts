@@ -1,0 +1,22 @@
+import type { GameSession } from '@/lib/games/session';
+import { standingsFor } from '@/lib/games/standings';
+import { SEAT_COLORS } from './chain-reaction/seat-colors';
+import { VESTA_PLAYER_COLORS } from './vesta/palette';
+
+export interface Row {
+  seat: string;
+  score: string;
+  color: string;
+  detail?: string;
+}
+
+/** Standings from the shared scorer, painted in each game's seat colours. */
+export function rowsFor(session: GameSession): Row[] {
+  const palette = session.game === 'vesta' ? VESTA_PLAYER_COLORS : SEAT_COLORS.map((c) => c.hex);
+  return standingsFor(session).map((row) => ({
+    seat: row.seat,
+    score: row.score,
+    detail: row.detail,
+    color: palette[session.participants.indexOf(row.seat)] ?? '#a3a3a3',
+  }));
+}

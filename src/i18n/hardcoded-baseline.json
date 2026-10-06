@@ -1,10 +1,10 @@
 {
   "app/app/GeneratedProfileEnhancements.tsx": 1,
-  "app/app/mobile/PhoneShell.tsx": 2,
-  "app/app/UserPanel.tsx": 1,
+  "app/app/mobile/screens/EditProfileScreen.tsx": 1,
+  "app/app/mobile/screens/SettingsPrefsScreen.tsx": 1,
   "app/media-kit/MediaKit.tsx": 19,
   "components/chat/MessageContent.tsx": 1,
-  "components/Footer.tsx": 1,
+  "components/marketing/Footer.tsx": 1,
   "components/guides/guide-og-image.tsx": 1,
   "components/guides/svg/AdminCliHero.tsx": 7,
   "components/guides/svg/BitcoinZapsHero.tsx": 4,
@@ -27,7 +27,7 @@
   "components/guides/svg/VestaHero.tsx": 5,
   "components/guides/svg/WhatIsObeliskHero.tsx": 2,
   "components/guides/svg/WotHero.tsx": 3,
-  "components/LandingPage.tsx": 2,
-  "components/Navbar.tsx": 1,
+  "components/marketing/LandingPage.tsx": 2,
+  "components/marketing/Navbar.tsx": 1,
   "components/social/ViewerHeader.tsx": 2
 }

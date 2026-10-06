@@ -4,10 +4,10 @@
  * The engine behind every composer: draft text, uploads, and publishing.
  *
  * There are two composers, because writing a note on a desktop and writing
- * one on a phone are different jobs. Desktop composes *in place* — a card
+ * one on a phone are different jobs. Desktop composes *in place*: a card
  * that expands where the compose row was, next to the feed you're replying
  * to, with a live preview and a mouse-sized toolbar. Mobile composes
- * *full-screen* — the keyboard takes half the viewport, so a card floating in
+ * *full-screen*: the keyboard takes half the viewport, so a card floating in
  * a modal leaves a ~120px writing slot, and the toolbar has to be thumb-sized
  * and above the keyboard rather than a row of 24px text buttons.
  *
@@ -19,8 +19,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslation } from '@/i18n/context';
-import { uploadToBlossom } from '@/lib/blossom';
-import { publishNote, publishQuote, publishReply, type Attachment } from '@/lib/social/publish';
+import { uploadToBlossom } from '@/services/blossom';
+import { publishNote, publishQuote, publishReply, type Attachment } from '@/services/social/publish';
 
 export type ComposerMode =
   | { kind: 'note' }
@@ -32,7 +32,7 @@ const MAX_FILES = 4;
 
 /**
  * Measure an image before upload so `imeta` can carry `dim`. Reading it from
- * the local File costs nothing and is the only chance we get — once it's a
+ * the local File costs nothing and is the only chance we get: once it's a
  * URL we'd have to download it again to find out.
  */
 function measure(file: File): Promise<{ width: number; height: number } | null> {
@@ -140,7 +140,7 @@ export function useNoteDraft({
         } satisfies Attachment;
       }));
       setAttachments((current) => [...current, ...uploaded]);
-      // The bare URL stays in content — that's the universal read path for
+      // The bare URL stays in content: that's the universal read path for
       // every client that doesn't parse imeta.
       setDraft((current) => [current.trim(), ...uploaded.map((a) => a.url)].filter(Boolean).join('\n'));
     } catch (uploadError) {
@@ -154,7 +154,7 @@ export function useNoteDraft({
   const onPaste = (event: React.ClipboardEvent) => {
     const files = filesFromDataTransfer(event.clipboardData);
     if (files.length === 0) return;
-    // Only swallow the event when we actually took an image — pasting text
+    // Only swallow the event when we actually took an image: pasting text
     // alongside an image must still land in the textarea.
     event.preventDefault();
     void uploadFiles(files);

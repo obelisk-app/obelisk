@@ -1,5 +1,5 @@
 /**
- * Five-peer capacity rejection — proves that with `MAX_PARTICIPANTS = 4`,
+ * Five-peer capacity rejection: proves that with `MAX_PARTICIPANTS = 4`,
  * the 5th joiner is actively denied by the existing room (each existing
  * peer sends `bye { byeReason: 'room-full' }`) and the rejected peer
  * surfaces a clean error + leaves on its own without looping the
@@ -46,7 +46,7 @@ test('5th peer is rejected with room-full and leaves cleanly; first 4 stay stabl
 
     // Generate 5 identities; force a stable lex order so we know which
     // peer should end up the rejected one. The 6th identity in our own
-    // sort will be the lex-trailing one — that's the deterministic loser.
+    // sort will be the lex-trailing one; that's the deterministic loser.
     const NUM_PEERS = 5;
     const ctxs = await Promise.all(
       Array.from({ length: NUM_PEERS }, () =>
@@ -110,8 +110,8 @@ test('5th peer is rejected with room-full and leaves cleanly; first 4 stay stabl
       if (i < 3) await pages[i].waitForTimeout(STAGGER_MS);
     }
 
-    // Wait until at least the lex-leading peer reports >=1 connection
-    // — that's enough to ensure SOMEONE will be present to reject peer4.
+    // Wait until at least the lex-leading peer reports >=1 connection:
+    // that's enough to ensure SOMEONE will be present to reject peer4.
     await Promise.all(pages.slice(0, 4).map((p, i) => waitFor(
       () => readMetrics(p),
       (m) => m !== null && m.peers.connected >= 1,
@@ -127,7 +127,7 @@ test('5th peer is rejected with room-full and leaves cleanly; first 4 stay stabl
 
     // Now peer4 (lex-trailing) tries to join. Should be rejected.
     await joinMeshChannel(pages[4], channelId, { otherMembers: pks });
-    logObserved('peer4 attempted to join — expecting room-full');
+    logObserved('peer4 attempted to join; expecting room-full');
 
     // peer4 should receive a room-full error within 20s. The error
     // surfaces as soon as ANY existing peer's bye reaches them.
@@ -156,7 +156,7 @@ test('5th peer is rejected with room-full and leaves cleanly; first 4 stay stabl
       expect(m.signalsDropped.membershipFinal, `peer${i} memb drops`).toBe(0);
     });
     // Each in-cap peer's connected count must be at least as high as
-    // before the rejection — the 5th joiner did not destabilize them.
+    // before the rejection: the 5th joiner did not destabilize them.
     inCapAfter.forEach((m, i) => {
       const before = inCapBefore[i]?.peers.connected ?? 0;
       expect(m!.peers.connected, `peer${i} connected stable after rejection`).toBeGreaterThanOrEqual(before);

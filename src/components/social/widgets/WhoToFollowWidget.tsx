@@ -2,12 +2,12 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMemo } from 'react';
-import { shortNpub } from '@nostr-wot/data';
-import { useMyFollows, useMyPubkey } from '@/lib/nostr-bridge';
-import { suggestedAuthors } from '@/lib/social/feed-people';
-import { useAuthor } from '@/lib/social/useAuthor';
+import { shortNpubLabel } from '@/utils/identity/short-npub';
+import { useMyFollows, useMyPubkey } from '@/services/nostr-bridge';
+import { suggestedAuthors } from '@/services/social/feed-people';
+import { useAuthor } from '@/services/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
-import UserAvatar from '@/components/UserAvatar';
+import UserAvatar from '@/components/ui/UserAvatar';
 import FollowButton from '@/app/notes/[id]/FollowButton';
 import WidgetCard, { WidgetEmpty } from './WidgetCard';
 
@@ -60,7 +60,7 @@ function PersonRow({
   onOpenProfile?: (pubkey: string) => void;
 }) {
   const meta = useAuthor(pubkey);
-  const name = meta?.displayName || meta?.name || shortNpub(pubkey);
+  const name = meta?.displayName || meta?.name || shortNpubLabel(pubkey);
 
   return (
     <li className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5" data-testid="who-to-follow-row">

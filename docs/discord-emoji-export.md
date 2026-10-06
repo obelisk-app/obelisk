@@ -4,7 +4,7 @@ How to bulk-download the custom emojis of a Discord server you're a member
 of, preserving their original names. Useful for creating reusable Obelisk
 media packs.
 
-> **ToS note:** scraping via your user token is self-botting and violates Discord's ToS. The DOM/Network method below avoids the API entirely — you're only saving images your browser already fetched to render the emoji picker. Low risk, but not zero.
+> **ToS note:** scraping via your user token is self-botting and violates Discord's ToS. The DOM/Network method below avoids the API entirely: you're only saving images your browser already fetched to render the emoji picker. Low risk, but not zero.
 
 ## Requirements
 
@@ -60,7 +60,7 @@ copy([...document.querySelectorAll('img')]
   .join('\n'))
 ```
 
-Console will print `undefined` — that means the list is on your clipboard.
+Console will print `undefined`; that means the list is on your clipboard.
 
 ### 5. Rename files to their emoji names
 
@@ -86,10 +86,10 @@ You should see files like `nostrgr.webp`, `pepe.png`, `warhammerthrust.gif`.
 
 ## Troubleshooting
 
-- **`head -3 urls.txt` shows shell commands instead of URLs** — your clipboard was overwritten. Redo step 2, and don't copy anything else before running `pbpaste`.
-- **Empty array in Console** — emojis weren't in the DOM when the snippet ran. Reopen picker, scroll through all emojis, then rerun the Console snippet.
-- **Some files not renamed** — those emojis weren't visible when step 4 ran. Reopen picker, scroll slowly over the missing ones, redo steps 4 & 5 (existing renamed files won't be touched).
-- **Resolution too low** — URLs from the picker default to `size=44`. Before running `curl`, bump resolution:
+- **`head -3 urls.txt` shows shell commands instead of URLs**: your clipboard was overwritten. Redo step 2, and don't copy anything else before running `pbpaste`.
+- **Empty array in Console**: emojis weren't in the DOM when the snippet ran. Reopen picker, scroll through all emojis, then rerun the Console snippet.
+- **Some files not renamed**: those emojis weren't visible when step 4 ran. Reopen picker, scroll slowly over the missing ones, redo steps 4 & 5 (existing renamed files won't be touched).
+- **Resolution too low**: URLs from the picker default to `size=44`. Before running `curl`, bump resolution:
   ```bash
   sed -i '' 's/size=[0-9]*/size=128/' urls.txt
   ```

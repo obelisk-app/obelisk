@@ -1,11 +1,11 @@
 'use client';
 
 import { useTranslation } from '@/i18n/context';
-import type { PqMessageMark as Mark } from '@/lib/pq/status';
+import type { PqMessageMark as Mark } from '@/services/pq/status';
 
 /**
  * Per-message pill flagging what a single DM lacked (no gift wrap, or no
- * post-quantum envelope). Renders nothing for a healthy message — see
+ * post-quantum envelope). Renders nothing for a healthy message; see
  * `messageMark()` (Task 1), which only returns a non-null mark for
  * deficient messages.
  */

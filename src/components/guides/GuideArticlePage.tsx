@@ -7,8 +7,8 @@ import {
   readGuide,
   estimateReadMinutes,
   type GuideFrontmatter,
-} from '@/lib/guides';
-import { guideAlternates, guidesHref, OG_LOCALE } from '@/lib/guide-urls';
+} from '@/services/guides';
+import { guideAlternates, guidesHref, OG_LOCALE } from '@/utils/guides/guide-urls';
 import ArticleShell from '@/components/guides/ArticleShell';
 import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
 import { mdxComponents } from '@/components/guides/mdx-components';
@@ -20,12 +20,12 @@ import {
   type GuideAssetMeta,
 } from '@/components/guides/svg/asset-meta';
 import { SHOT_META, shotPath } from '@/components/guides/Shot';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import Navbar from '@/components/marketing/Navbar';
+import Footer from '@/components/marketing/Footer';
 
 const ASSET_REF_RE = /<(?:Diagram|SvgHero)\s+[^>]*name=["']([^"']+)["']/g;
 /** Screenshots are PNGs on disk rather than rendered SVGs, so they resolve
- *  through their own map — but they belong in the article's image list all
+ *  through their own map - but they belong in the article's image list all
  *  the same, which is the whole point of shipping them with alt text. */
 const SHOT_REF_RE = /<Shot\s+[^>]*name=["']([^"']+)["']/g;
 

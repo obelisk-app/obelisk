@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import RemoteImage from '@/components/ui/RemoteImage';
 
 interface AttachmentCardProps {
   url: string;
@@ -28,8 +29,8 @@ export default function AttachmentCard({ url, name, thumbnailUrl }: AttachmentCa
       data-testid="attachment-card"
     >
       <div className="shrink-0 w-10 h-10 rounded bg-lc-border/60 flex items-center justify-center overflow-hidden">
-        {showThumb ? (
-          <img
+        {showThumb && thumbnailUrl ? (
+          <RemoteImage
             src={thumbnailUrl}
             alt=""
             className="w-10 h-10 object-cover"

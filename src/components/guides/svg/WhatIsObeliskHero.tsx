@@ -51,7 +51,7 @@ export default function WhatIsObeliskHero() {
         <circle cx="400" cy="220" r="140" fill="url(#glow-what)" className="animate-glow-pulse" />
       </g>
 
-      {/* Real Obelisk silhouette — Buenos Aires Obelisco, two-face shading.
+      {/* Real Obelisk silhouette - Buenos Aires Obelisco, two-face shading.
           Source paths match src/components/ObeliskIcon.tsx; transform scales
           the 512-viewBox logo so its tip sits at (400, 50) and its base
           at (400, 300). */}
@@ -70,7 +70,7 @@ export default function WhatIsObeliskHero() {
       <rect x="370" y="300" width="60" height="10" fill="#8bc34a" />
       <rect x="358" y="310" width="84" height="8" fill="#2d3a1a" />
 
-      {/* orbiting group — wrap for CSS animation */}
+      {/* orbiting group - wrap for CSS animation */}
       <g style={{ transformOrigin: '400px 220px', transformBox: 'fill-box' } as React.CSSProperties}>
         <g className="animate-orbit" style={{ ['--orbit-radius' as string]: '160px', ['--orbit-duration' as string]: '22s' } as React.CSSProperties}>
           <circle cx="400" cy="220" r="10" fill="#b4f953" />

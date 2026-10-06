@@ -1,26 +1,27 @@
 /**
- * Per-channel notification preferences — the channel right-click menu.
+ * Per-channel notification preferences: the channel right-click menu.
  *
  * Keyed by `relay|channelId`: NIP-29 group ids are only unique per relay.
  *
  *   • **following** (default true). Unfollowing a channel stops it from
  *     asking for attention: no unread count, a dimmed row, no "all
- *     messages" pings. `@mentions` and replies STILL ping — being addressed
+ *     messages" pings. `@mentions` and replies STILL ping: being addressed
  *     directly is not "channel activity".
- *   • **mutedUntil** — silence sounds and system popups until a time
+ *   • **mutedUntil**: silence sounds and system popups until a time
  *     (unix ms), or forever ({@link MUTED_FOREVER}). Cards and the mention
  *     badge are still recorded, so nothing is lost; it's just quiet.
- *   • **notify** — `'all'` pings on every new message (active relay only:
+ *   • **notify**: `'all'` pings on every new message (active relay only:
  *     background relays only listen for events that tag you), `'mentions'`
- *     (default) on @mentions/replies, `'nothing'` never — not even a card.
+ *     (default) on @mentions/replies, `'nothing'` never, not even a card.
  *
  * Persisted per account (`obelisk-channel-prefs:{pubkey}`), wired into
- * `PER_ACCOUNT_STORES` in `src/lib/read-state/root.tsx`.
+ * `PER_ACCOUNT_STORES` in `src/services/read-state/root.tsx`.
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { quotaSafeLocalStorage } from '@/lib/quota-safe-storage';
+import { quotaSafeLocalStorage } from '@/services/quota-safe-storage';
 import { createEnsureForAccount } from './multi-account';
+import { asRecord, finiteOrUndefined, oneOf, recordOf, versionedPersist } from './persist-version';
 
 export type ChannelNotifyLevel = 'all' | 'mentions' | 'nothing';
 
@@ -63,6 +64,33 @@ function patch(
   return out;
 }
 
+type ChannelPrefsPersisted = Pick<ChannelPrefsState, 'prefs'>;
+
+/** Saved-shape version. 0: before versioning, same fields. */
+export const CHANNEL_PREFS_STORE_VERSION = 1;
+
+const STORED_NOTIFY_LEVELS: readonly ChannelNotifyLevel[] = ['all', 'nothing'];
+
+/**
+ * One saved pref, in the same sparse form `patch` writes: a field is kept
+ * only when it holds a non-default value of the right type, and a pref with
+ * nothing left is dropped.
+ */
+function sanitizePref(value: unknown): ChannelPref | undefined {
+  const raw = asRecord(value);
+  const pref: { unfollowed?: true; mutedUntil?: number; notify?: ChannelNotifyLevel } = {};
+  if (raw.unfollowed === true) pref.unfollowed = true;
+  const mutedUntil = finiteOrUndefined(raw.mutedUntil);
+  if (mutedUntil !== undefined) pref.mutedUntil = mutedUntil;
+  const notify = oneOf(raw.notify, STORED_NOTIFY_LEVELS);
+  if (notify) pref.notify = notify;
+  return Object.keys(pref).length > 0 ? pref : undefined;
+}
+
+export function sanitizeChannelPrefsPersisted(raw: Record<string, unknown>): ChannelPrefsPersisted {
+  return { prefs: recordOf(raw.prefs, sanitizePref) };
+}
+
 export const useChannelPrefsStore = create<ChannelPrefsState>()(
   persist(
     (set) => ({
@@ -81,7 +109,11 @@ export const useChannelPrefsStore = create<ChannelPrefsState>()(
     {
       name: 'obelisk-channel-prefs',
       storage: createJSONStorage(() => quotaSafeLocalStorage),
-      partialize: (s) => ({ prefs: s.prefs }) as ChannelPrefsState,
+      partialize: (s): ChannelPrefsPersisted => ({ prefs: s.prefs }),
+      ...versionedPersist<ChannelPrefsState, ChannelPrefsPersisted>({
+        version: CHANNEL_PREFS_STORE_VERSION,
+        sanitize: sanitizeChannelPrefsPersisted,
+      }),
     },
   ),
 );

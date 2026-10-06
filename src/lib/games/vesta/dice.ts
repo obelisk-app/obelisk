@@ -1,7 +1,7 @@
 /**
  * Dice for a game with no referee.
  *
- * Vesta's `roll-dice` move carries its own values — upstream's hot-seat client
+ * Vesta's `roll-dice` move carries its own values - upstream's hot-seat client
  * rolls locally and records the result. That cannot survive contact with a
  * relay: a player who picks their own numbers picks their own resources.
  *
@@ -14,7 +14,7 @@
  * What this does NOT solve: the player who published the *previous* accepted
  * event can grind that event to steer the next roll. In practice the previous
  * event is usually another player's end-turn, so the grinder is steering
- * someone else's roll — but it is a real weakness, and it is exactly what
+ * someone else's roll - but it is a real weakness, and it is exactly what
  * upstream's URD dependency (verifiable randomness) is meant to close. When
  * Vesta ships URD-backed rolls, this module is the one thing that changes.
  *

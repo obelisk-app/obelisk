@@ -4,84 +4,21 @@
  * Renders a NIP-17 kind-15 file message: fetch the ciphertext from Blossom,
  * check it against `x`, decrypt it in memory and show it from an object URL.
  *
- * Nothing decrypted touches disk — the object URL lives only as long as this
+ * Nothing decrypted touches disk: the object URL lives only as long as this
  * component and is revoked on unmount (docs/direct-messages.md: no DM
  * plaintext on disk). Images, video and audio decrypt as soon as they mount;
  * any other file type waits for a click, because it can only be downloaded
  * and there is no reason to pull a 25 MB zip the reader may never want.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { decryptFile, FileIntegrityError } from '@/lib/crypto/file-cipher';
-import { dmFileCategory, type JsDmFile } from '@/lib/dm-file';
+import { dmFileCategory, type JsDmFile } from '@/utils/attachments/dm-file';
+import { useDecryptedDmFile } from '@/hooks/chat/useDecryptedDmFile';
+import { formatBytes } from '@/utils/format/format-bytes';
 import { useTranslation } from '@/i18n/context';
 import { DownloadIcon, FileIcon, LockIcon } from '@/components/ui/icons';
-import { VoiceMessage } from '@/components/chat/MessageContent';
-
-type State =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'ready'; url: string }
-  | { status: 'error'; integrity: boolean };
-
-function formatBytes(n: number | undefined): string {
-  if (!n) return '';
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/** Fetch, verify and decrypt; resolves to a fresh object URL the caller owns. */
-async function fetchDecrypted(file: JsDmFile, signal: AbortSignal): Promise<string> {
-  const res = await fetch(file.url, { signal, referrerPolicy: 'no-referrer' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const cipher = new Uint8Array(await res.arrayBuffer());
-  const plain = await decryptFile(cipher, file.key, file.nonce, file.x || undefined);
-  if (signal.aborted) throw new DOMException('aborted', 'AbortError');
-  return URL.createObjectURL(new Blob([plain as Uint8Array<ArrayBuffer>], { type: file.mimeType }));
-}
-
-export function useDecryptedDmFile(file: JsDmFile, auto: boolean) {
-  const [state, setState] = useState<State>({ status: auto ? 'loading' : 'idle' });
-  const urlRef = useRef<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  const start = useCallback(() => {
-    abortRef.current?.abort();
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
-    fetchDecrypted(file, ctrl.signal).then(
-      (url) => {
-        if (ctrl.signal.aborted) { URL.revokeObjectURL(url); return; }
-        if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-        urlRef.current = url;
-        setState({ status: 'ready', url });
-      },
-      (err) => {
-        if (ctrl.signal.aborted) return;
-        setState({ status: 'error', integrity: err instanceof FileIntegrityError });
-      },
-    );
-  }, [file]);
-
-  const load = useCallback(() => {
-    setState({ status: 'loading' });
-    start();
-  }, [start]);
-
-  useEffect(() => {
-    if (auto) start();
-    return () => {
-      abortRef.current?.abort();
-      if (urlRef.current) {
-        URL.revokeObjectURL(urlRef.current);
-        urlRef.current = null;
-      }
-    };
-  }, [auto, start]);
-
-  return { state, load };
-}
+import RemoteImage from '@/components/ui/RemoteImage';
+import { VoiceMessage } from '@/components/chat/message/VoiceMessage';
+import TextButton from '@/components/ui/TextButton';
 
 export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFile; onAccent?: boolean }) {
   const { t } = useTranslation();
@@ -96,9 +33,9 @@ export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFi
         <LockIcon size={14} />
         <span>{state.integrity ? t('dm.file.integrity') : t('dm.file.failed')}</span>
         {!state.integrity && (
-          <button type="button" onClick={load} className="font-semibold underline">
+          <TextButton tone="plain" onClick={load} className="font-semibold underline">
             {t('common.retry')}
-          </button>
+          </TextButton>
         )}
       </div>
     );
@@ -122,8 +59,7 @@ export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFi
     if (category === 'image') {
       return (
         <a href={state.url} target="_blank" rel="noopener noreferrer" data-testid="dm-file-image">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={state.url} alt={file.name ?? t('dm.file.attachment')} className="max-h-80 max-w-full rounded-lg" />
+          <RemoteImage src={state.url} alt={file.name ?? t('dm.file.attachment')} className="max-h-80 max-w-full rounded-lg" />
         </a>
       );
     }

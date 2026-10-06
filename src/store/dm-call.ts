@@ -12,283 +12,26 @@
  * Control messages (invite / accept / decline / cancel / hangup / busy) are
  * gift-wrapped DMs (`bridge.sendDmCallMessage`); the media negotiation runs on
  * per-call throwaway keys (`DmCallSession`). Ringing goes through the same
- * notification stack as messages (`ringIncomingCall` — the user's ringtone,
+ * notification stack as messages (`ringIncomingCall` - the user's ringtone,
  * the OS notification when backgrounded).
  *
  * Not persisted: a call does not survive a reload, and nothing about calls is
  * written to disk.
+ *
+ * This file is the entry point. The store and its actions live in
+ * `dm-call-store.ts`, the policy helpers in `dm-call-policy.ts`, and the
+ * shared runtime (session, timers) in `dm-call-runtime.ts`.
  */
 
-import { create } from 'zustand';
-import { generateSecretKey } from 'nostr-tools';
-import { getBridge, getBridgeImpl } from '@/lib/nostr-bridge/client';
-import { getPreferences } from '@/lib/preferences';
-import { useModerationStore } from '@/store/moderation';
-import { useVoiceStore } from '@/store/voice';
-import { getActiveVoiceClient, setActiveVoiceClient } from '@/lib/voice/active-client';
-import { HAS_TURN } from '@/lib/voice/ice-config';
-import { ringIncomingCall, startRingback } from '@/lib/notifications/alert';
-import { CALL_RING_TIMEOUT_MS, newCallId, type DmCallMessage, type IncomingDmCallMessage } from '@/lib/dm-call/protocol';
-import { DmCallSession, type DmCallMediaState, type DmCallPhase } from '@/lib/dm-call/session';
-import { getTranslation, isLocale } from '@/i18n';
+import { getBridge, getBridgeImpl } from '@/services/nostr-bridge';
+import { ringIncomingCall } from '@/services/notifications/alert';
+import { CALL_RING_TIMEOUT_MS, type IncomingDmCallMessage } from '@/services/dm-call/protocol';
+import { lost, mayRing, send, tr } from './dm-call-policy';
+import { clearRinging, rt } from './dm-call-runtime';
+import { EMPTY_MEDIA, finishCall, useDmCallStore } from './dm-call-store';
 
-function tr(key: string): string {
-  const lang = typeof document !== 'undefined' ? document.documentElement.lang : '';
-  return getTranslation(isLocale(lang) ? lang : 'en')(key);
-}
-
-export type DmCallStatus = 'idle' | 'outgoing' | 'incoming' | 'connecting' | 'active' | 'reconnecting' | 'ended';
-
-export type DmCallEndReason =
-  | 'local-hangup' | 'remote-hangup' | 'declined' | 'busy' | 'no-answer' | 'missed'
-  | 'cancelled' | 'answered-elsewhere' | 'connect-failed' | 'connection-lost' | 'error';
-
-const EMPTY_MEDIA: DmCallMediaState = {
-  micOn: true,
-  cameraOn: false,
-  screenOn: false,
-  localVideo: null,
-  localScreen: null,
-  remoteAudio: null,
-  remoteVideo: null,
-  remoteScreen: null,
-};
-
-/** How long the "call ended" card lingers before the overlay closes. */
-const ENDED_LINGER_MS = 2500;
-
-interface DmCallState {
-  status: DmCallStatus;
-  peer: string | null;
-  callId: string | null;
-  /** The call started as a video call. */
-  video: boolean;
-  /** Traffic is forced through TURN (the other side can't see our IP). */
-  relayOnly: boolean;
-  relays: readonly string[];
-  media: DmCallMediaState;
-  /** ms epoch the media connected — for the call timer. */
-  connectedAt: number | null;
-  endReason: DmCallEndReason | null;
-  error: string | null;
-
-  startCall: (peer: string, video: boolean) => Promise<void>;
-  acceptCall: (video: boolean) => Promise<void>;
-  declineCall: () => void;
-  hangup: () => void;
-  setMic: (on: boolean) => void;
-  setCamera: (on: boolean) => Promise<void>;
-  flipCamera: () => Promise<void>;
-  setScreenShare: (on: boolean) => Promise<void>;
-  dismiss: () => void;
-}
-
-// Module-private runtime — not state anyone renders.
-let session: DmCallSession | null = null;
-let pendingInvite: IncomingDmCallMessage | null = null;
-let ringTimer: ReturnType<typeof setTimeout> | null = null;
-let lingerTimer: ReturnType<typeof setTimeout> | null = null;
-let stopRing: (() => void) | null = null;
-
-function clearRinging(): void {
-  if (ringTimer) clearTimeout(ringTimer);
-  ringTimer = null;
-  stopRing?.();
-  stopRing = null;
-}
-
-function send(peer: string, msg: DmCallMessage, selfNotice = false): Promise<void> {
-  return getBridge().then((b) => b.sendDmCallMessage(peer, msg, { selfNotice }));
-}
-
-function isContact(pubkey: string): boolean {
-  const list = getBridgeImpl()?.myContactList.get();
-  return Boolean(list?.tags.some((t) => t[0] === 'p' && t[1] === pubkey));
-}
-
-/** Resolve the ICE policy for a call with `peer` — see `CallIpProtection`. */
-export function iceTransportPolicyFor(peer: string): RTCIceTransportPolicy {
-  const mode = getPreferences().callIpProtection;
-  if (mode === 'always') return 'relay';
-  if (mode === 'never') return 'all';
-  return !isContact(peer) && HAS_TURN ? 'relay' : 'all';
-}
-
-/** Whether `from` may ring us at all. */
-export function mayRing(from: string): boolean {
-  const mod = useModerationStore.getState();
-  if (mod.isBlocked(from) || mod.isMuted(from)) return false;
-  return getPreferences().callsFrom === 'anyone' || isContact(from);
-}
-
-/** A group voice call holds the mic; leave it before a DM call takes over. */
-async function leaveGroupVoice(): Promise<void> {
-  const c = getActiveVoiceClient();
-  if (!c) return;
-  try { await c.leave(); } catch { /* swallow */ }
-  setActiveVoiceClient(null);
-  useVoiceStore.getState().leaveVoice();
-}
-
-export const useDmCallStore = create<DmCallState>((set, get) => {
-  function makeSession(role: 'caller' | 'callee', callId: string, relays: readonly string[], video: boolean, peer: string): DmCallSession {
-    const relayOnly = iceTransportPolicyFor(peer) === 'relay';
-    set({ relayOnly });
-    const s = new DmCallSession({
-      role,
-      callId,
-      selfSk: generateSecretKey(),
-      relays,
-      video,
-      iceTransportPolicy: relayOnly ? 'relay' : 'all',
-      onMedia: (media) => { if (session === s) set({ media }); },
-      // The callee's hello reached us on the call relay — usually before the
-      // gift-wrapped accept does. Stop ringing; the session is connecting.
-      onPeerJoined: () => {
-        if (session !== s || get().status !== 'outgoing') return;
-        clearRinging();
-        set({ status: 'connecting' });
-      },
-      onPhase: (phase: DmCallPhase, reason?: string) => {
-        if (session !== s) return;
-        if (phase === 'connected') {
-          set({ status: 'active', connectedAt: get().connectedAt ?? Date.now() });
-        } else if (phase === 'reconnecting') {
-          set({ status: 'reconnecting' });
-        } else if (phase === 'ended') {
-          const known: DmCallEndReason[] = ['local-hangup', 'remote-hangup', 'connect-failed', 'connection-lost'];
-          const r = (known as string[]).includes(reason ?? '') ? reason as DmCallEndReason : 'error';
-          // Tell the other side over the gift-wrap path too; its relay may be
-          // the one that failed.
-          if (r === 'connect-failed' || r === 'connection-lost') void send(peer, { type: 'hangup', callId }).catch(() => {});
-          finishCall(r);
-        }
-      },
-    });
-    return s;
-  }
-
-  return {
-    status: 'idle',
-    peer: null,
-    callId: null,
-    video: false,
-    relayOnly: false,
-    relays: [],
-    media: EMPTY_MEDIA,
-    connectedAt: null,
-    endReason: null,
-    error: null,
-
-    async startCall(peer, video) {
-      const st = get().status;
-      if (st !== 'idle' && st !== 'ended') return;
-      if (lingerTimer) clearTimeout(lingerTimer);
-      await leaveGroupVoice();
-      const callId = newCallId();
-      const relays = getPreferences().callRelays;
-      const s = makeSession('caller', callId, relays, video, peer);
-      session = s;
-      set({ status: 'outgoing', peer, callId, video, relays, endReason: null, error: null, connectedAt: null });
-      try {
-        await s.acquireMedia();
-      } catch (e) {
-        set({ error: (e as Error).message || 'microphone unavailable' });
-        finishCall('error');
-        return;
-      }
-      if (session !== s) return;
-      // Subscribe on the call relays now, while it rings: by the time the
-      // callee answers, our REQ is long live.
-      s.listen();
-      stopRing = startRingback().stop;
-      ringTimer = setTimeout(() => {
-        if (session !== s || get().status !== 'outgoing') return;
-        void send(peer, { type: 'cancel', callId }).catch(() => {});
-        finishCall('no-answer');
-      }, CALL_RING_TIMEOUT_MS);
-      try {
-        await send(peer, { type: 'invite', callId, eph: s.selfEph, relays, video });
-      } catch (e) {
-        set({ error: (e as Error).message || 'could not send the call' });
-        finishCall('error');
-      }
-    },
-
-    async acceptCall(video) {
-      const invite = pendingInvite;
-      if (!invite || get().status !== 'incoming' || !invite.eph || !invite.relays) return;
-      clearRinging();
-      await leaveGroupVoice();
-      const s = makeSession('callee', invite.callId, invite.relays, video, invite.from);
-      session = s;
-      set({ status: 'connecting', video });
-      try {
-        await s.acquireMedia();
-      } catch (e) {
-        set({ error: (e as Error).message || 'microphone unavailable' });
-        void send(invite.from, { type: 'decline', callId: invite.callId }, true).catch(() => {});
-        finishCall('error');
-        return;
-      }
-      if (session !== s) return;
-      // Two paths to the caller, raced: the hello on the call relay (fast —
-      // no signer, no inbox lookup) and the gift-wrapped accept (the one that
-      // also tells our other devices to stop ringing). Either is enough.
-      void s.answer(invite.eph);
-      void send(invite.from, { type: 'accept', callId: invite.callId, eph: s.selfEph }, true).catch((e) => {
-        // The hello may already have connected us; only a call still waiting
-        // on the other side is lost without this.
-        console.warn('[dm-call] accept gift wrap failed', e);
-      });
-    },
-
-    declineCall() {
-      const invite = pendingInvite;
-      if (!invite || get().status !== 'incoming') return;
-      void send(invite.from, { type: 'decline', callId: invite.callId }, true).catch(() => {});
-      finishCall('declined');
-    },
-
-    hangup() {
-      const { status, peer, callId } = get();
-      if (!peer || !callId) return;
-      if (status === 'incoming') { get().declineCall(); return; }
-      if (status === 'outgoing') {
-        void send(peer, { type: 'cancel', callId }).catch(() => {});
-        finishCall('cancelled');
-        return;
-      }
-      if (status === 'connecting' || status === 'active' || status === 'reconnecting') {
-        // Bye over the call relay (fast) and over the gift-wrap path (sure).
-        session?.hangup();
-        void send(peer, { type: 'hangup', callId }).catch(() => {});
-        finishCall('local-hangup');
-      }
-    },
-
-    setMic(on) { session?.setMic(on); },
-    async setCamera(on) {
-      try { await session?.setCamera(on); } catch (e) { set({ error: (e as Error).message }); }
-    },
-    async flipCamera() {
-      try { await session?.flipCamera(); } catch (e) { set({ error: (e as Error).message }); }
-    },
-    async setScreenShare(on) {
-      try { await session?.setScreenShare(on); } catch (e) {
-        // Cancelling the browser's picker is not an error worth showing.
-        if ((e as Error).name !== 'NotAllowedError') set({ error: (e as Error).message });
-      }
-    },
-
-    dismiss() {
-      if (lingerTimer) clearTimeout(lingerTimer);
-      lingerTimer = null;
-      if (get().status !== 'ended' && get().status !== 'idle') return;
-      set({ status: 'idle', peer: null, callId: null, video: false, relayOnly: false, relays: [], media: EMPTY_MEDIA, endReason: null, error: null, connectedAt: null });
-    },
-  };
-});
+export { iceTransportPolicyFor, mayRing } from './dm-call-policy';
+export { useDmCallStore, type DmCallEndReason, type DmCallStatus } from './dm-call-store';
 
 /**
  * Route one control message. Exported for tests; `initDmCalls` wires it to
@@ -300,15 +43,15 @@ export function handleDmCallMessage(msg: IncomingDmCallMessage & { peer: string 
   const fromMe = msg.from === me;
 
   if (msg.type === 'invite') {
-    if (fromMe) return; // our own invite from another device — nothing to do
+    if (fromMe) return; // our own invite from another device - nothing to do
     if (!mayRing(msg.from)) return;
     if (callId === msg.callId) return; // duplicate delivery
     if (status !== 'idle' && status !== 'ended') {
-      void send(msg.from, { type: 'busy', callId: msg.callId }).catch(() => {});
+      void send(msg.from, { type: 'busy', callId: msg.callId }).catch(lost('busy'));
       return;
     }
-    if (lingerTimer) clearTimeout(lingerTimer);
-    pendingInvite = msg;
+    if (rt.lingerTimer) clearTimeout(rt.lingerTimer);
+    rt.pendingInvite = msg;
     useDmCallStore.setState({
       status: 'incoming', peer: msg.from, callId: msg.callId, video: msg.video === true,
       relays: msg.relays ?? [], endReason: null, error: null, connectedAt: null, media: EMPTY_MEDIA,
@@ -316,8 +59,8 @@ export function handleDmCallMessage(msg: IncomingDmCallMessage & { peer: string 
     const title = getBridgeImpl()?.displayNameFor(msg.from) ?? 'Obelisk';
     // The name is in the title, as for a DM; the body never says more than
     // that a call is coming in.
-    stopRing = ringIncomingCall({ id: msg.callId, title, body: tr(msg.video ? 'call.incomingVideo' : 'call.incomingVoice') }).stop;
-    ringTimer = setTimeout(() => {
+    rt.stopRing = ringIncomingCall({ id: msg.callId, title, body: tr(msg.video ? 'call.incomingVideo' : 'call.incomingVoice') }).stop;
+    rt.ringTimer = setTimeout(() => {
       if (useDmCallStore.getState().callId !== msg.callId || useDmCallStore.getState().status !== 'incoming') return;
       finishCall('missed');
     }, CALL_RING_TIMEOUT_MS);
@@ -333,10 +76,10 @@ export function handleDmCallMessage(msg: IncomingDmCallMessage & { peer: string 
         if (status === 'incoming') finishCall('answered-elsewhere');
         return;
       }
-      if ((status !== 'outgoing' && status !== 'connecting') || !session || !msg.eph) return;
+      if ((status !== 'outgoing' && status !== 'connecting') || !rt.session || !msg.eph) return;
       clearRinging();
       if (status === 'outgoing') useDmCallStore.setState({ status: 'connecting' });
-      session.peerAccepted(msg.eph);
+      rt.session.peerAccepted(msg.eph);
       return;
     case 'decline':
       if (fromMe) {
@@ -357,19 +100,6 @@ export function handleDmCallMessage(msg: IncomingDmCallMessage & { peer: string 
       }
       return;
   }
-}
-
-function finishCall(reason: DmCallEndReason): void {
-  clearRinging();
-  const s = session;
-  session = null;
-  pendingInvite = null;
-  s?.end(reason);
-  useDmCallStore.setState({ status: 'ended', endReason: reason, connectedAt: null, media: EMPTY_MEDIA });
-  if (lingerTimer) clearTimeout(lingerTimer);
-  lingerTimer = setTimeout(() => {
-    if (useDmCallStore.getState().status === 'ended') useDmCallStore.getState().dismiss();
-  }, ENDED_LINGER_MS);
 }
 
 let unsubscribe: (() => void) | null = null;
@@ -400,11 +130,11 @@ export async function initDmCalls(): Promise<() => void> {
 /** Test seam. */
 export function __resetDmCallsForTests(): void {
   clearRinging();
-  if (lingerTimer) clearTimeout(lingerTimer);
-  lingerTimer = null;
-  session?.end('local-hangup');
-  session = null;
-  pendingInvite = null;
+  if (rt.lingerTimer) clearTimeout(rt.lingerTimer);
+  rt.lingerTimer = null;
+  rt.session?.end('local-hangup');
+  rt.session = null;
+  rt.pendingInvite = null;
   unsubscribe?.();
   useDmCallStore.setState({
     status: 'idle', peer: null, callId: null, video: false, relayOnly: false, relays: [],

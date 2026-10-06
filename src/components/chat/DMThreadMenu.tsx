@@ -10,8 +10,8 @@
  * you could see (the protection indicator) and none you could take.
  *
  * Deliberately sits *beside* the protection indicator rather than absorbing
- * it. That indicator reports what the conversation rests on — it is state,
- * not a menu — and burying it one click deep would make the one thing the
+ * it. That indicator reports what the conversation rests on (it is state,
+ * not a menu) and burying it one click deep would make the one thing the
  * header says about safety invisible.
  *
  * Mute and block are per-device and local (`useModerationStore`), matching
@@ -23,9 +23,10 @@ import AnchoredMenu from '@/components/social/AnchoredMenu';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useModerationStore } from '@/store/moderation';
 import { useTranslation } from '@/i18n/context';
-import { hexToNpub } from '@nostr-wot/data';
-import { ICON_BUTTON_CLASS, MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
+import { safeNpub } from './dm-message/dm-message-utils';
+import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
 import { BanIcon, BellIcon, BellOffIcon, CheckBadgeIcon, KeyIcon, MoreIcon, UserIcon } from '@/components/ui/icons';
+import IconButton from '@/components/ui/IconButton';
 
 export default function DMThreadMenu({
   peer,
@@ -40,7 +41,7 @@ export default function DMThreadMenu({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  // Flash "Copied!", then close — the menu staying open after a copy reads
+  // Flash "Copied!", then close: the menu staying open after a copy reads
   // as the click not having registered.
   const { copied, copy } = useCopyToClipboard({ onReset: () => setOpen(false) });
 
@@ -49,23 +50,19 @@ export default function DMThreadMenu({
   const toggleMute = useModerationStore((s) => s.toggleMute);
   const toggleBlock = useModerationStore((s) => s.toggleBlock);
 
-  const npub = (() => {
-    try {
-      return hexToNpub(peer);
-    } catch {
-      return peer;
-    }
-  })();
+  const npub = safeNpub(peer);
 
   return (
     <>
-      <button
+      <IconButton
         ref={triggerRef}
-        type="button"
+        shape="square"
+        size="8"
+        tone={open ? 'accent' : 'outline'}
         onClick={() => setOpen((value) => !value)}
         // Same square as the call buttons beside it, so the header's actions
         // read as one set.
-        className={`${ICON_BUTTON_CLASS} h-8 w-8 ${open ? 'border-lc-green/50 bg-lc-green/10' : ''} ${className}`}
+        className={`active:scale-95 ${className}`}
         aria-label={t('dm.conversationOptions')}
         title={t('dm.conversationOptions')}
         aria-expanded={open}
@@ -73,7 +70,7 @@ export default function DMThreadMenu({
         data-testid="dm-thread-menu"
       >
         <MoreIcon size={16} />
-      </button>
+      </IconButton>
 
       <AnchoredMenu
         open={open}

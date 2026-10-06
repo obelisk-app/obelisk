@@ -1,13 +1,13 @@
 /**
- * Line icons for UI chrome — menus, buttons, help cards.
+ * Line icons for UI chrome: menus, buttons, help cards.
  *
  * Design rule (CLAUDE.md, "Design System"): UI chrome uses these SVGs, not
  * emoji or text glyphs (`⋯`, `★`, `↪`). A glyph renders in whatever font the
- * OS picks — different size, weight and baseline on every platform, and
+ * OS picks: different size, weight and baseline on every platform, and
  * emoji ignore `currentColor`, so hover/active/danger colours can't reach
  * them. These inherit colour and size from the surrounding text.
  *
- * 24×24 viewBox, 1.8 stroke, round caps — the same family as the inline
+ * 24×24 viewBox, 1.8 stroke, round caps, the same family as the inline
  * SVGs already used across the shells.
  */
 import type { SVGProps } from 'react';
@@ -59,9 +59,17 @@ export const HashIcon = (p: IconProps) => (
 export const CopyIcon = (p: IconProps) => (
   <Svg {...p}><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></Svg>
 );
-export const ZapIcon = (p: IconProps) => (
-  <Svg {...p}><path d="M13 2 3 14h8l-1 8 10-12h-8l1-8z" /></Svg>
-);
+/**
+ * Zap. Outline by default like every icon here; `filled` is the solid bolt the
+ * zap modal and the zap total pill used to paste inline. It draws its own path
+ * with the stroke switched off, so it matches those copies exactly.
+ */
+export const ZapIcon = ({ filled = false, ...p }: IconProps & { filled?: boolean }) =>
+  filled ? (
+    <Svg {...p} fill="currentColor" stroke="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" /></Svg>
+  ) : (
+    <Svg {...p}><path d="M13 2 3 14h8l-1 8 10-12h-8l1-8z" /></Svg>
+  );
 export const BellOffIcon = (p: IconProps) => (
   <Svg {...p}><path d="M8.7 3.3A6 6 0 0 1 18 8c0 3.1.7 5.1 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0M2 2l20 20" /></Svg>
 );
@@ -143,8 +151,28 @@ export const StarIcon = ({ filled = false, ...p }: IconProps & { filled?: boolea
     <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
   </Svg>
 );
+/**
+ * Back. The path eleven files pasted inline (`m15 18-6-6 6-6`); the mobile
+ * back buttons size it from CSS, so pass `width`/`height` (or `strokeWidth={2}`)
+ * to match a stylesheet that expects them.
+ */
+export const ChevronLeftIcon = (p: IconProps) => (
+  <Svg {...p}><path d="m15 18-6-6 6-6" /></Svg>
+);
+/** A plain tick, for "copied" and "done" confirmations. */
+export const CheckIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M20 6 9 17l-5-5" /></Svg>
+);
 export const ChevronRightIcon = (p: IconProps) => (
   <Svg {...p}><path d="m9 6 6 6-6 6" /></Svg>
+);
+/** Move up / expand upward; the `↑` glyph's replacement in reorder controls. */
+export const ChevronUpIcon = (p: IconProps) => (
+  <Svg {...p}><path d="m18 15-6-6-6 6" /></Svg>
+);
+/** Move down / expand downward; the `↓` glyph's replacement in reorder controls. */
+export const ChevronDownIcon = (p: IconProps) => (
+  <Svg {...p}><path d="m6 9 6 6 6-6" /></Svg>
 );
 export const CheckCircleIcon = (p: IconProps) => (
   <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="m8 12.5 2.7 2.7L16.5 9.5" /></Svg>
@@ -197,9 +225,17 @@ export const MinimizeIcon = (p: IconProps) => (
 export const VideoIcon = (p: IconProps) => (
   <Svg {...p}><rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10.5 5-3v9l-5-3" /></Svg>
 );
+/** Show a masked secret (password, nsec). */
+export const EyeIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></Svg>
+);
+/** Hide a revealed secret again. */
+export const EyeOffIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.7 3.6M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a10.4 10.4 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" /></Svg>
+);
 
 /**
- * "Add a reaction" — the Obelisk mark as a face, in accent green, with a
+ * "Add a reaction": the Obelisk mark as a face, in accent green, with a
  * small plus badge. Replaces a bare `+`, which read as "add" of anything.
  * Filled, not stroked: at 18px a line face is unreadable.
  */

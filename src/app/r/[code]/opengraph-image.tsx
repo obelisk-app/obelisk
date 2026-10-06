@@ -1,8 +1,8 @@
 import { ImageResponse } from 'next/og';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { decodeRelayShareCode } from '@/lib/relay-share-link';
-import { serverLocale } from '@/lib/server/locale';
+import { decodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
+import { serverLocale } from '@/services/server/locale';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
@@ -18,7 +18,7 @@ type RelayOg = {
 const RELAY_OG: Record<string, RelayOg> = {
   'wss://lacrypta-relay.obelisk.ar': {
     title: 'La Crypta',
-    subtitle: 'on Obelisk — Nostr group chat',
+    subtitle: 'on Obelisk - Nostr group chat',
     logoFile: 'lacrypta-logo.png',
   },
 };
@@ -41,7 +41,7 @@ export default async function OgImage({
       );
       logoDataUri = `data:image/png;base64,${buf.toString('base64')}`;
     } catch {
-      // fall through — render text-only card
+      // fall through - render text-only card
     }
   }
 
@@ -75,7 +75,6 @@ export default async function OgImage({
         />
 
         {logoDataUri ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={logoDataUri}
             alt={brand?.title ?? ''}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { downloadAccountBackup } from '@/lib/account-backup';
+import { downloadAccountBackup } from '@/services/account-backup';
 import { useTranslation } from '@/i18n/context';
 
 export default function AccountBackupExport({ mobile = false }: { mobile?: boolean }) {

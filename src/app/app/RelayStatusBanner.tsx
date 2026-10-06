@@ -8,7 +8,8 @@ import {
   useMyLoginMethod,
   useRelayAccess,
   useCurrentRelayUrl,
-} from '@/lib/nostr-bridge';
+} from '@/services/nostr-bridge';
+import { shortHost } from '@/utils/relay-url/url-host';
 
 type Severity = 'info' | 'warn' | 'error';
 
@@ -18,14 +19,6 @@ interface Status {
   label: string;
   detail?: string;
   spinner?: boolean;
-}
-
-function shortHost(url: string): string {
-  try {
-    return new URL(url).host;
-  } catch {
-    return url;
-  }
 }
 
 function computeStatus(
@@ -121,7 +114,7 @@ function computeStatus(
       detail: 'The relay rejected the request. Try reloading or switching relays.',
     };
   }
-  // 'ok' or 'unknown' — nothing to surface.
+  // 'ok' or 'unknown' - nothing to surface.
   return null;
 }
 

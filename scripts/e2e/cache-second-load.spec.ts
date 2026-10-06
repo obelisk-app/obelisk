@@ -1,11 +1,11 @@
 /**
  * Phase 1 contract: with bridgeCache wired through all relay-derived
- * state, a warm second load paints the sidebar instantly from disk —
+ * state, a warm second load paints the sidebar instantly from disk,
  * well before the live REQ confirms.
  *
  * Method: warm the cache by loading the app once (waiting through
  * everything). Reload. Measure the time from `navigationStart` to the
- * first channel row being visible. Assert it stays under 1500ms — much
+ * first channel row being visible. Assert it stays under 1500ms, much
  * faster than a cold-load round-trip through `ensureRelay` + AUTH +
  * kind 39000.
  *
@@ -33,7 +33,7 @@ const RELAY_URL = process.env.OBELISK_E2E_RELAY ?? DEFAULT_RELAY;
 test('second load paints sidebar from cache within 1500ms', async ({ page, context }) => {
   test.setTimeout(90_000);
 
-  logStep('Warm pass — seed identity, fully connect, populate caches', `relay=${RELAY_URL}`);
+  logStep('Warm pass: seed identity, fully connect, populate caches', `relay=${RELAY_URL}`);
   const id = generateIdentity();
   await seedSession(context, nsecSession(id, RELAY_URL));
   attachClientCapture(page);
@@ -44,9 +44,9 @@ test('second load paints sidebar from cache within 1500ms', async ({ page, conte
   await firstChannelRow(page).waitFor({ state: 'visible', timeout: 30_000 });
   // Give the cache writes a moment to settle.
   await page.waitForTimeout(500);
-  logOk('warm pass complete — cache populated');
+  logOk('warm pass complete, cache populated');
 
-  // ── Cold reload — measure time to first channel row ──────────────
+  // ── Cold reload: measure time to first channel row ──────────────
   logStep('Reload', 'Measure from navigation start to first channel row visible');
   const t0 = await page.evaluate(() => performance.now());
   void t0;

@@ -5,7 +5,7 @@
  * person from live results.
  *
  * It used to be a bare text box with Cancel / Start buttons that only
- * understood a pasted npub, hex key or exact NIP-05 — no names, no results, no
+ * understood a pasted npub, hex key or exact NIP-05 - no names, no results, no
  * way to see who you were about to message. It now runs the same people
  * search the rest of the app uses (`useNostrUserSearch`: NIP-19 decode, NIP-05
  * resolution and NIP-50 name search on the index relays), and picking a
@@ -14,12 +14,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/context';
-import { useNostrUserSearch, type UserHit } from '@/lib/hooks/useNostrUserSearch';
-import { useAuthor } from '@/lib/social/useAuthor';
-import { displayNameFor } from '@/lib/display-name';
-import { shortNpubLabel } from '@/lib/short-npub';
-import UserAvatar from '@/components/UserAvatar';
-import { CloseIcon } from '@/components/ui/icons';
+import { useNostrUserSearch, type UserHit } from '@/hooks/useNostrUserSearch';
+import { useAuthor } from '@/services/social/useAuthor';
+import { displayNameFor } from '@/utils/identity/display-name';
+import { shortNpubLabel } from '@/utils/identity/short-npub';
+import { recordNip05Resolution, useNip05Status } from '@/services/nip05-verify';
+import UserAvatar from '@/components/ui/UserAvatar';
+import { CheckBadgeIcon } from '@/components/ui/icons';
+import Input from '@/components/ui/Input';
+import CloseButton from '@/components/ui/CloseButton';
 
 function ResultRow({ hit, active, onPick, onHover }: { hit: UserHit; active: boolean; onPick: () => void; onHover: () => void }) {
   // A pasted npub comes back with no profile; resolve it the way the rest of
@@ -27,7 +30,14 @@ function ResultRow({ hit, active, onPick, onHover }: { hit: UserHit; active: boo
   const author = useAuthor(hit.pubkey);
   const name = hit.displayName || displayNameFor(hit.pubkey, author);
   const picture = hit.picture ?? author.picture;
-  const sub = hit.nip05 ?? author.nip05 ?? shortNpubLabel(hit.pubkey);
+  const nip05 = hit.nip05 ?? author.nip05;
+  const sub = nip05 ?? shortNpubLabel(hit.pubkey);
+  // A kind-0 `nip05` is a free-text claim. `peek` never fetches (a row
+  // should not leak the reader's IP to a domain the profile author picked);
+  // it turns green only when a lookup elsewhere, such as the NIP-05 search
+  // above or an opened popover, already confirmed the pair.
+  const nip05State = useNip05Status(hit.pubkey, nip05, 'peek');
+  const verified = nip05State === 'verified';
   return (
     <button
       type="button"
@@ -41,7 +51,14 @@ function ResultRow({ hit, active, onPick, onHover }: { hit: UserHit; active: boo
       <UserAvatar pubkey={hit.pubkey} picture={picture} name={name} size={8} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold text-lc-white">{name}</span>
-        <span className="block truncate text-[11px] text-lc-muted">{sub}</span>
+        <span
+          className={`flex items-center gap-1 text-[11px] ${verified ? 'text-lc-green' : 'text-lc-muted'}`}
+          data-testid="dm-compose-result-sub"
+          data-nip05-state={nip05 ? nip05State : undefined}
+        >
+          {verified && <CheckBadgeIcon size={11} />}
+          <span className="truncate">{sub}</span>
+        </span>
       </span>
     </button>
   );
@@ -59,6 +76,14 @@ export default function DMComposer({
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const { directHit, nip05Hit, nostrResults, loading } = useNostrUserSearch(query);
+
+  // The NIP-05 hit came from the `.well-known` document itself (the reader
+  // typed the handle and it resolved to this pubkey), so the pair is
+  // established; record it so the row can show the badge without a second
+  // request.
+  useEffect(() => {
+    if (nip05Hit?.nip05) recordNip05Resolution(nip05Hit.pubkey, nip05Hit.nip05);
+  }, [nip05Hit]);
 
   const results = useMemo(() => {
     const seen = new Set<string>();
@@ -95,7 +120,8 @@ export default function DMComposer({
           <circle cx="11" cy="11" r="7" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <input
+        <Input
+          variant="bare"
           ref={inputRef}
           value={query}
           onChange={(e) => { setQuery(e.target.value); setActive(0); }}
@@ -111,15 +137,13 @@ export default function DMComposer({
           data-testid="dm-compose-input"
         />
         {loading && <span className="lc-spinner h-3.5 w-3.5 shrink-0" role="status" aria-label={t('search.searching')} />}
-        <button
-          type="button"
+        <CloseButton
+          size="sm"
           onClick={onClose}
-          className="shrink-0 rounded p-1 text-lc-white/70 hover:bg-white/5 hover:text-lc-white"
-          aria-label={t('search.close')}
+          label={t('search.close')}
           title={t('search.close')}
-        >
-          <CloseIcon size={14} />
-        </button>
+          className="text-lc-white/70 hover:bg-white/5"
+        />
       </div>
       {searching && (
         <div id="dm-compose-results" role="listbox" className="mt-2 max-h-72 space-y-0.5 overflow-y-auto">

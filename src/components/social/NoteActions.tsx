@@ -3,7 +3,7 @@
 /**
  * The reply / repost / like / zap row under a note.
  *
- * The first version of this used raw unicode glyphs — `↩ ⇄ ♡ ⚡`. That looks
+ * The first version of this used raw unicode glyphs: `↩ ⇄ ♡ ⚡`. That looks
  * bad for reasons worth writing down, because the fix is not "pick nicer
  * characters":
  *
@@ -14,7 +14,7 @@
  *    fixed it, because it's the font deciding.
  *  - All four shared one hover colour, so nothing distinguished a destructive
  *    -ish action (zap spends money) from a free one.
- *  - The hit target was the glyph itself — a handful of pixels on a phone.
+ *  - The hit target was the glyph itself: a handful of pixels on a phone.
  *
  * So: inline SVG at a fixed 24-unit viewBox (the same icon language as
  * `NAV_ICONS` and the server rail), one accent colour per action, and a
@@ -27,7 +27,9 @@
 
 import { useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/context';
+import { MENU_PANEL_CLASS, MenuItem } from '@/components/ui/menu';
 import AnchoredMenu from './AnchoredMenu';
+import { formatCount } from './format-count';
 
 /** Per-action accent. Keyed by action so the mapping is legible at a glance. */
 const ACCENT = {
@@ -96,7 +98,7 @@ export function RepostIcon() {
   );
 }
 
-/** Filled when the user has reacted — the state change should be obvious. */
+/** Filled when the user has reacted: the state change should be obvious. */
 export function LikeIcon({ filled }: { filled?: boolean }) {
   return (
     <svg {...svgProps} fill={filled ? 'currentColor' : 'none'}>
@@ -133,11 +135,7 @@ export function MoreIcon() {
   );
 }
 
-export function formatCount(value: number): string {
-  if (value < 1000) return String(value);
-  if (value < 1_000_000) return `${(value / 1000).toFixed(value < 10_000 ? 1 : 0)}k`;
-  return `${(value / 1_000_000).toFixed(1)}M`;
-}
+export { formatCount } from './format-count';
 
 export function ActionButton({
   kind,
@@ -251,29 +249,20 @@ export function RepostButton({
         width={150}
         align="start"
         testId="note-repost-menu"
+        panelClassName={MENU_PANEL_CLASS}
       >
-        <>
-          <button
-            type="button"
-            role="menuitem"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-lc-white hover:bg-white/5"
-            onClick={() => { setOpen(false); onRepost(); }}
-            data-testid="note-repost-confirm"
-          >
-            <RepostIcon />
-            {t('social.repost')}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-lc-white hover:bg-white/5"
-            onClick={() => { setOpen(false); onQuote(); }}
-            data-testid="note-quote"
-          >
-            <QuoteIcon />
-            {t('social.quote')}
-          </button>
-        </>
+        <MenuItem
+          icon={<RepostIcon />}
+          label={t('social.repost')}
+          onClick={() => { setOpen(false); onRepost(); }}
+          testId="note-repost-confirm"
+        />
+        <MenuItem
+          icon={<QuoteIcon />}
+          label={t('social.quote')}
+          onClick={() => { setOpen(false); onQuote(); }}
+          testId="note-quote"
+        />
       </AnchoredMenu>
     </div>
   );

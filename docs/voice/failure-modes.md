@@ -1,4 +1,4 @@
-# Mesh — Failure Modes
+# Mesh - Failure Modes
 
 Every previously-silent failure in the mesh has been wired into a
 counter on `VoiceClient.metrics`. The `?debug=voice` overlay reads
@@ -10,7 +10,7 @@ expected)**.
 
 | Failure | Handler | Counter |
 |---|---|---|
-| Signal arrives before `updateRoles()` admits the sender | Defer up to 5 s; replay on admit | `signalsDropped.membershipDeferred` (transient — ok), `signalsDropped.membershipFinal` **(zero expected)** |
+| Signal arrives before `updateRoles()` admits the sender | Defer up to 5 s; replay on admit | `signalsDropped.membershipDeferred` (transient, ok), `signalsDropped.membershipFinal` **(zero expected)** |
 | Deferred queue overflows (8 per peer / 64 total) | Drop oldest | `signalsDropped.deferredOverflow` **(zero expected)** |
 | WoT engine denies a kind 25050 from a non-member | `KIND_VOICE_PRESENCE` + `KIND_VOICE_SIGNAL` are in `ALWAYS_ALLOW_KINDS` so this path is unreachable in normal operation. Defense-in-depth check stays in client.ts:490 | `signalsDropped.wot` **(zero expected)** |
 | Self-echo (relay broadcasts our own beacon back to us) | Drop at receiver | `signalsDropped.self` (non-zero baseline; not a failure) |
@@ -22,10 +22,10 @@ expected)**.
 |---|---|---|
 | Rate-limit response (`OK ... false "rate-limit:..."` or "slow down") | Exponential backoff: 1s, 2s, 4s, 8s with ±25% jitter, max 4 retries | `rateLimit.hit`, `rateLimit.backoffMs` |
 | Publish fails for any non-rate-limit reason (signing error, network down, relay reject) | Re-thrown to caller; counter incremented | `relay.publishFail` **(zero expected)**, `relay.lastError` |
-| NIP-42 AUTH not yet complete when first beacon publishes | Best-effort: wait up to 5 s for auth (fire-and-forget — beacon goes out anyway, bring-up burst covers retry) | `relay.authWaited`, `relay.authTimedOut` (occasional non-zero on slow relays — ok) |
+| NIP-42 AUTH not yet complete when first beacon publishes | Best-effort: wait up to 5 s for auth (fire-and-forget: beacon goes out anyway, bring-up burst covers retry) | `relay.authWaited`, `relay.authTimedOut` (occasional non-zero on slow relays, ok) |
 | Relay refuses a pre-AUTH EVENT with `restricted:` instead of `auth-required:` | `authRetryOnRestricted`: AUTH that socket, republish once; not repeated on the same challenge | relay-debug `publish-retry` |
 | Voice REQ CLOSEd for quota / rate limit (e.g. obelisk-relay's unindexed-query budget) | Filters are tag-indexed so this should not happen; if it does, reopen on 5 → 60 s backoff and show "Reconnecting to voice…" | voice-debug `relay-error` with `rateLimited: true` |
-| Pinned voice relay is not the one being browsed | Bridge answers its AUTH while the call's subs are open (`answerAuth`) | — |
+| Pinned voice relay is not the one being browsed | Bridge answers its AUTH while the call's subs are open (`answerAuth`) | - |
 
 ## Peer
 
@@ -35,7 +35,7 @@ expected)**.
 | Peer crashed / network blackout (no traffic for 20 s) | Silent local teardown + discovery-driven redial; no reciprocal leave signal | `peers.tornDown` |
 | Peer cleanly leaves | Control-channel `bye` (sub-100 ms) → `tearDownPeer` | `peers.tornDown`, `signals.byeViaControl` |
 | Peer never opens (9 s local key / 20 s NIP-07 / 45 s bunker) | Silent local teardown, one relay `requestReset` so the remote rebuilds too, then discovery-driven redial while the beacon remains live | `peers.tornDown` |
-| Late answer / ICE / bye from a connection that was already replaced | Per-`Peer` `sessionId`: dropped at the receiving `Peer` | — |
+| Late answer / ICE / bye from a connection that was already replaced | Per-`Peer` `sessionId`: dropped at the receiving `Peer` | - |
 | Remote rebuilt and sends an offer under a new session | Replace the local `Peer` and hand it the offer | voice-debug `remote-session-changed` |
 | Departed peer kept alive by `peer`-tag gossip (ghost) | `peer` tags no longer count as presence, and clients only advertise first-hand observations | Verified by `client.test.ts` (ghost peers) |
 | Local tab close / refresh | `beforeunload` / `pagehide` → control-channel `bye` to all peers, then `pc.close()` | `peers.tornDownByUnload` (on the leaver), `signals.byeViaControl` (on the receivers) |
@@ -48,7 +48,7 @@ expected)**.
 | Capacity overflow (>4 mesh participants) | Lex-deterministic eviction plus active `bye { byeReason: 'room-full' }` rejection keeps every client on the same four-person set | Verified by `client.test.ts` and `scripts/e2e/voice/five-peer-rejection.spec.ts` |
 | Camera overflow (>4) | Per-kind `(createdAt, pubkey)` winners; a losing local camera is stopped | Verified by `video-slot-cap.test.ts` |
 | Screen-share overflow (>1) | Same deterministic winner rule, independent of camera slots | Verified by `video-slot-cap.test.ts` |
-| SFU advertised on the channel but transport fails | `SfuClient.start` rejects → `enterMeshMode()` (mesh fallback) — except for `voice-sfu` channels which surface the error instead | `signalsDropped.sfuRouted` |
+| SFU advertised on the channel but transport fails | `SfuClient.start` rejects → `enterMeshMode()` (mesh fallback), except for `voice-sfu` channels which surface the error instead | `signalsDropped.sfuRouted` |
 
 ## What the `?debug=voice` overlay shows
 
@@ -66,5 +66,5 @@ Live, polling every 500 ms:
 - rate-limit: total hits, cumulative backoff ms
 - last 50 events from the ring buffer (kind, reason, peer, payload)
 
-Open with `?debug=voice` on any voice URL. Production-safe — no PII
+Open with `?debug=voice` on any voice URL. Production-safe: no PII
 beyond pubkey prefixes.

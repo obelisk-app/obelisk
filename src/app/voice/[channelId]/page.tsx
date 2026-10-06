@@ -1,4 +1,4 @@
-import VoiceRoom from '@/components/voice/VoiceRoom';
+import { LazyVoiceRoom } from '@/app/app/lazy-mounts';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,5 +8,5 @@ export default async function VoiceChannelPage({
   params: Promise<{ channelId: string }>;
 }) {
   const { channelId } = await params;
-  return <VoiceRoom channelId={decodeURIComponent(channelId)} />;
+  return <LazyVoiceRoom channelId={decodeURIComponent(channelId)} />;
 }

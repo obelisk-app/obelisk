@@ -4,14 +4,14 @@ Canonical list of open bugs and tech debt in Obelisk. Fixes are tracked here unt
 
 ## Open questions from the 2026-09-25 UI pass
 
-- ~~`wss://relay.nostr.band` never completes TLS~~ — **resolved 2026-09-25.**
+- ~~`wss://relay.nostr.band` never completes TLS~~: **resolved 2026-09-25.**
   Re-measured at an 8s hard timeout while every other relay in the file
   answered under a second (and `useNostrUserSearch` had already recorded it
   erroring after ~10s back on 2026-09-17), so it was swapped out of
   `DEFAULT_SOCIAL_RELAYS` for `relay.snort.social`. It is **not** gone: it
   remains a one-click preset and a `NIP50_RELAYS` search target, where it is
   the best index available and its failures are already tolerated.
-  `relay.nostr.bg` was dropped from `WIDER_SOCIAL_RELAYS` in the same pass —
+  `relay.nostr.bg` was dropped from `WIDER_SOCIAL_RELAYS` in the same pass;
   it refused the connection outright. Existing feed caches were keyed under
   the old relay set and re-fetch once; that is expected.
   *Caveat worth keeping:* this was measured from the app host, and social
@@ -25,54 +25,54 @@ Canonical list of open bugs and tech debt in Obelisk. Fixes are tracked here unt
   `auth-required: this relay only accepts whitelisted pubkeys` and serves
   zero events, so only admitted pubkeys ever see those channels. (The client
   reads that same string, arriving after a successful AUTH, as "not
-  whitelisted"; the relay should send `restricted:` instead — see
+  whitelisted"; the relay should send `restricted:` instead; see
   [data-system.md §5a](./data-system.md#5a-relay-side-contract-for-access-rejection).) Tidying them
   is relay-operator housekeeping, not a client change. Note that filtering
-  `isHidden` groups out of the **live** stream client-side would be wrong —
+  `isHidden` groups out of the **live** stream client-side would be wrong:
   it is how members reach legitimately private channels; the cache-seed skip
   in `client.ts` exists only so hidden metadata is never painted from a
   previous identity's snapshot.
 
 ## Realtime & presence
 
-- **Online users not updating** — all users appear online regardless of actual status. Presence state is not driven by socket connect/disconnect events.
-- **Nuevo miembro no aparece en tiempo real en la member list** — when Bob joins a group where Alice is already connected, Alice does not see Bob in the sidebar until she reloads (or sends/receives a message that embeds his profile). Audit the bridge's kind 39002 (members) subscription path against `MemberList.tsx` — the global `subscribeAdminMember` call is fired from `ingestGroupMetadata`, but updates may not be triggering a re-render of the member list when the joiner has no kind:0 cached yet.
-- **Lateral member list does not update per server** — switching servers must reload members, roles and online state for the server the user is now viewing.
+- **Online users not updating**: all users appear online regardless of actual status. Presence state is not driven by socket connect/disconnect events.
+- **Nuevo miembro no aparece en tiempo real en la member list**: when Bob joins a group where Alice is already connected, Alice does not see Bob in the sidebar until she reloads (or sends/receives a message that embeds his profile). Audit the bridge's kind 39002 (members) subscription path against `MemberList.tsx`: the global `subscribeAdminMember` call is fired from `ingestGroupMetadata`, but updates may not be triggering a re-render of the member list when the joiner has no kind:0 cached yet.
+- **Lateral member list does not update per server**: switching servers must reload members, roles and online state for the server the user is now viewing.
 
 ## Rendering & UI
 
-- **`MessageBubble` ignores the embedded `message.author`** — `src/components/chat/MessageArea.tsx:213-214` resolves avatar/name only via `profileCache.get(authorPubkey)`, discarding the profile the server already attaches on each `new-message` emit (see `getAuthorProfile` in `src/lib/profile-sync.ts:255`). The first message from a never-seen user renders with the fallback letter until the seed in `chat/page.tsx:426-445` reaches the cache and re-renders. Fix: priority chain `message.author?.picture ?? profileCache.get(pk)?.picture` (same for `displayName`).
-- **Channel load restores `lastSeen` even when not needed** — `src/app/chat/page.tsx:403-418` always queues a pending highlight from `localStorage['chat:lastSeen:<channelId>']` on initial mount. If that message isn't in the latest page, `fetchMessages` refetches with `?around=<id>` (line 1192) and the user lands in old history instead of at the bottom. Restore only when the URL has `?m=`, or fall back to latest page when the stored id is outside it.
-- **`UserPanel` ↔ `MessageInput` altura/alineación visual** — the profile bar at the bottom of `ChannelSidebar` does not line up in height with the message input bar (`px-2 md:px-4 pb-3 md:pb-4 pt-2` in both, avatar `h-8` vs textarea `rows=1`). Attempts (`leading-tight`, moving `UserPanel` in/out of the aside, `bg-lc-dark` on wrapper) leave a black strip between the channel list and the profile card. Likely fix: force explicit shared height (e.g. `h-12`) on both inner containers and ensure the `UserPanel` wrapper inherits `bg-lc-dark` from the aside without painting under the `ServerBar`.
-- **Publications channels look like the opened tab even after clicking outside** — navigating from a publications channel to a regular channel does not clear its selected state in the sidebar. Does not happen between regular channels.
-- **Bienvenida channel renders badly on refresh** — initial load in the welcome channel loads elements in the wrong order.
-- **Replies don't link back to the replied message, and show raw npubs for mentions** — inline reply previews render mentions as `npub:kjasd...` instead of the Nostr display name, and clicking the preview does nothing. The target message is not focused/scrolled-to.
-- **Bot role priority in the member list cannot be reordered** — bot sidebar position depends on role order, but /admin → Roles does not expose drag-and-drop or up/down reordering for bot roles. Fix: expose role `position` reordering (including bot-assigned roles) and have the member list respect it.
-- **Anonymous name for users without server membership** — a user who logs in without joining any server shows as "Anonymous" on their own client even when their Nostr metadata has a name and picture. The /admin panel also skips their profile picture when they are not already a server member. Likely cause: profile fetch is gated on membership.
-- **Mentions autocomplete leaks private/hidden channel membership** — `@user` autocomplete must filter results to users who can read the current channel. In private/hidden channels, only members with read access should appear; otherwise membership of hidden channels is inferred and mentions can be created that the target cannot see.
+- **`MessageBubble` ignores the embedded `message.author`**: `src/components/chat/MessageArea.tsx:213-214` resolves avatar/name only via `profileCache.get(authorPubkey)`, discarding the profile the server already attaches on each `new-message` emit (see `getAuthorProfile` in `src/lib/profile-sync.ts:255`). The first message from a never-seen user renders with the fallback letter until the seed in `chat/page.tsx:426-445` reaches the cache and re-renders. Fix: priority chain `message.author?.picture ?? profileCache.get(pk)?.picture` (same for `displayName`).
+- **Channel load restores `lastSeen` even when not needed**: `src/app/chat/page.tsx:403-418` always queues a pending highlight from `localStorage['chat:lastSeen:<channelId>']` on initial mount. If that message isn't in the latest page, `fetchMessages` refetches with `?around=<id>` (line 1192) and the user lands in old history instead of at the bottom. Restore only when the URL has `?m=`, or fall back to latest page when the stored id is outside it.
+- **`UserPanel` ↔ `MessageInput` altura/alineación visual**: the profile bar at the bottom of `ChannelSidebar` does not line up in height with the message input bar (`px-2 md:px-4 pb-3 md:pb-4 pt-2` in both, avatar `h-8` vs textarea `rows=1`). Attempts (`leading-tight`, moving `UserPanel` in/out of the aside, `bg-lc-dark` on wrapper) leave a black strip between the channel list and the profile card. Likely fix: force explicit shared height (e.g. `h-12`) on both inner containers and ensure the `UserPanel` wrapper inherits `bg-lc-dark` from the aside without painting under the `ServerBar`.
+- **Publications channels look like the opened tab even after clicking outside**: navigating from a publications channel to a regular channel does not clear its selected state in the sidebar. Does not happen between regular channels.
+- **Bienvenida channel renders badly on refresh**: initial load in the welcome channel loads elements in the wrong order.
+- **Replies don't link back to the replied message, and show raw npubs for mentions**: inline reply previews render mentions as `npub:kjasd...` instead of the Nostr display name, and clicking the preview does nothing. The target message is not focused/scrolled-to.
+- **Bot role priority in the member list cannot be reordered**: bot sidebar position depends on role order, but /admin → Roles does not expose drag-and-drop or up/down reordering for bot roles. Fix: expose role `position` reordering (including bot-assigned roles) and have the member list respect it.
+- **Anonymous name for users without server membership**: a user who logs in without joining any server shows as "Anonymous" on their own client even when their Nostr metadata has a name and picture. The /admin panel also skips their profile picture when they are not already a server member. Likely cause: profile fetch is gated on membership.
+- **Mentions autocomplete leaks private/hidden channel membership**: `@user` autocomplete must filter results to users who can read the current channel. In private/hidden channels, only members with read access should appear; otherwise membership of hidden channels is inferred and mentions can be created that the target cannot see.
 
 ## Voice
 
-- **Voice presence beacons and signaling are plaintext on the relay** — `src/lib/voice/transport.ts` publishes presence beacons (kind 20078) and WebRTC signaling (kind 25050) as signed but unencrypted ephemeral events. Beacons leak `{pubkey, channelId, timestamp}` every ~15s while a user is in voice — any relay subscriber can build a real-time roster of who is in which voice channel and reconstruct session timing. Signaling events are worse: `content` is plaintext JSON containing SDP + ICE candidates, so the relay (or any subscriber filtering `kinds:[25050], #e:[channelId]`) sees codec fingerprints and harvested local/public IPs; the `#p` target is only enforced client-side (`transport.ts:144`). Media itself is fine (DTLS-SRTP peer-to-peer in mesh). Fix: wrap both kinds in NIP-59 gift-wrap (or NIP-44 to the addressed peer for signals); the transport file already flags this as a v1 shortcut. Until then, treat voice channel membership and participant IPs as public to anyone watching the relay.
-- **No speaking detector** — voice tiles in `VoiceRoom.tsx` don't react to voice activity because there's no per-peer `AnalyserNode` sampling RMS off incoming audio. Local mute state is reflected; actual speaking is not. Port the `SpeakingDetector` (FFT 512, 20 Hz sampling, threshold ~0.02, 400 ms hangover) and feed `setSpeaking(pubkey, speaking)` into `useVoiceStore`.
+- **Voice presence beacons and signaling are plaintext on the relay**: `src/services/voice/transport.ts` publishes presence beacons (kind 20078) and WebRTC signaling (kind 25050) as signed but unencrypted ephemeral events. Beacons leak `{pubkey, channelId, timestamp}` every ~15s while a user is in voice; any relay subscriber can build a real-time roster of who is in which voice channel and reconstruct session timing. Signaling events are worse: `content` is plaintext JSON containing SDP + ICE candidates, so the relay (or any subscriber filtering `kinds:[25050], #e:[channelId]`) sees codec fingerprints and harvested local/public IPs; the `#p` target is only enforced client-side (`transport.ts:144`). Media itself is fine (DTLS-SRTP peer-to-peer in mesh). Fix: wrap both kinds in NIP-59 gift-wrap (or NIP-44 to the addressed peer for signals); the transport file already flags this as a v1 shortcut. Until then, treat voice channel membership and participant IPs as public to anyone watching the relay.
+- **No speaking detector**: voice tiles in `VoiceRoom.tsx` don't react to voice activity because there's no per-peer `AnalyserNode` sampling RMS off incoming audio. Local mute state is reflected; actual speaking is not. Port the `SpeakingDetector` (FFT 512, 20 Hz sampling, threshold ~0.02, 400 ms hangover) and feed `setSpeaking(pubkey, speaking)` into `useVoiceStore`.
 
 
 ## Notifications
 
 The read-state foundation (server-side `lastReadAt`, in-app toasts via `ToastStack`, unread bullets, "new messages" separator, favicon badge, title counter, bech32 + reply mention detection via `extractMentionPubkeys`) is built but buggy in practice. Known issues:
 
-- **`/api/unread` returns a binary count for DMs** — today it returns `1` or `0` per thread instead of the real unread message count.
-- **General notification reliability** — notifications do not fire consistently. Needs an audit of the full path (socket emit → store → toast + favicon + title) against the actual triggers (new message in subscribed channel, @mention, reply to own message, DM). Specific reproduction steps to be added as they are observed.
-- **Welcome message does not fire for existing users joining a new server** — the welcome bot only triggers via the join endpoint; auto-join flows (e.g. WoT auto-registration) bypass it. Verify that auto-join creates a Member record and then invokes the same welcome-message hook as the explicit join route.
+- **`/api/unread` returns a binary count for DMs**: today it returns `1` or `0` per thread instead of the real unread message count.
+- **General notification reliability**: notifications do not fire consistently. Needs an audit of the full path (socket emit → store → toast + favicon + title) against the actual triggers (new message in subscribed channel, @mention, reply to own message, DM). Specific reproduction steps to be added as they are observed.
+- **Welcome message does not fire for existing users joining a new server**: the welcome bot only triggers via the join endpoint; auto-join flows (e.g. WoT auto-registration) bypass it. Verify that auto-join creates a Member record and then invokes the same welcome-message hook as the explicit join route.
 
 ## Ergonomics / small UX
 
 - **Scroll to last message button** is missing when a channel has many unread messages.
-- **Navigate between mentions** — when a user has several mentions in a long chat, provide a floating `N mentions ↑↓` control (Discord-style) that jumps to prev/next without marking all as read. Keyboard shortcuts `F7` / `Shift+F7` and clicking the unread-mention badge should drive the same navigation.
+- **Navigate between mentions**: when a user has several mentions in a long chat, provide a floating `N mentions ↑↓` control (Discord-style) that jumps to prev/next without marking all as read. Keyboard shortcuts `F7` / `Shift+F7` and clicking the unread-mention badge should drive the same navigation.
 
 ## Admin
 
-- **No way to delete servers from /admin** — once a server is created there is no UI path to remove it. Schema-wise, `Server` already cascades deletes to its children, so the API/UI is the only missing piece.
+- **No way to delete servers from /admin**: once a server is created there is no UI path to remove it. Schema-wise, `Server` already cascades deletes to its children, so the API/UI is the only missing piece.
 
 ## Apps (games moving to obelisk-apps, in progress 2026-09-27)
 
@@ -89,7 +89,7 @@ Games are moving out of this repo into [obelisk-apps](https://github.com/obelisk
 - **Phishing inside the frame** (a fake "paste your nsec"). The only mitigations are host-drawn chrome ("by <name> · third-party app") and app-prefixed toasts.
 - **CPU and battery abuse** lasts until the modal is closed. Frames must never run in the background.
 - **`src/proxy.ts` and obelisk-tauri must agree.** `frame-src` needs `https://frame.obelisk.ar` in both, kept in step by hand. Tauri's embed list has already drifted from dex's.
-- **The Blossom servers in `src/lib/blossom.ts` reject JS bundles.** They sniff uploads and 415 anything that isn't media, so app bundles live on the Obelisk-run `https://blossom.obelisk.ar` (hzrd149 blossom-server via the `obelisk-app/blossom-server` fork; WoT-gated uploads written by obelisk-apps `packages/blossom-wot` using the obelisk-relay ladder), with `nostr.download` as a secondary hint. Bundle fetches must use the manifest's `server` hints, never the attachment list. That server is a single host with no mirror yet.
+- **The Blossom servers in `src/services/blossom.ts` reject JS bundles.** They sniff uploads and 415 anything that isn't media, so app bundles live on the Obelisk-run `https://blossom.obelisk.ar` (hzrd149 blossom-server via the `obelisk-app/blossom-server` fork; WoT-gated uploads written by obelisk-apps `packages/blossom-wot` using the obelisk-relay ladder), with `nostr.download` as a secondary hint. Bundle fetches must use the manifest's `server` hints, never the attachment list. That server is a single host with no mirror yet.
 - **The first open of an app is slow** (the bundle is fetched from Blossom, then cached by hash). An app whose blobs are gone can't be opened at all.
 - **Legacy `[[game:<id>]]` tables** are mapped to the official apps and run their *current* bundle, with no version pin. Remove the mapping one week after the switch, once kind 2390 retention has pruned every pre-switch `create`.
 - **Chat cards stop being live boards.** An `AppCard` shows the manifest, participants and the app's `status` line. The board is only in the modal, because mounting an iframe per card is too heavy.
@@ -97,5 +97,5 @@ Games are moving out of this repo into [obelisk-apps](https://github.com/obelisk
 
 ## Schema / tech debt
 
-- **`Channel.emoji` should be folded into `Channel.name`** — emoji and name are stored as separate columns in admin, forcing every renderer to stitch them (`<ChannelEmoji value={channel.emoji} /> {channel.name}`) and complicating slugs, share-links and mentions. Migrate admin UX so the emoji is typed inline in the single name input (e.g. `💬 chat-general`), store it inline in `name`, and drop the `emoji` column in a follow-up migration.
-- **Deployed La Crypta server is behind `prisma/seed.ts`** — welcome message in `empezá-acá`, posts of `indice` (reglas/actividades/proyectos/redes), posts of `méritos` (plantillas de reclamo), channel descriptions, emojis, tags, etc. are hardcoded in the seeder and only applied at initial creation. There is no way to edit them from the UI, and re-running the seeder does not update existing rows. Fix tracked in [content-migration-plan.md](content-migration-plan.md).
+- **`Channel.emoji` should be folded into `Channel.name`**: emoji and name are stored as separate columns in admin, forcing every renderer to stitch them (`<ChannelEmoji value={channel.emoji} /> {channel.name}`) and complicating slugs, share-links and mentions. Migrate admin UX so the emoji is typed inline in the single name input (e.g. `💬 chat-general`), store it inline in `name`, and drop the `emoji` column in a follow-up migration.
+- **Deployed La Crypta server is behind `prisma/seed.ts`**: welcome message in `empezá-acá`, posts of `indice` (reglas/actividades/proyectos/redes), posts of `méritos` (plantillas de reclamo), channel descriptions, emojis, tags, etc. are hardcoded in the seeder and only applied at initial creation. There is no way to edit them from the UI, and re-running the seeder does not update existing rows. Fix tracked in [content-migration-plan.md](content-migration-plan.md).

@@ -19,34 +19,34 @@
 ## File map
 
 **New (`src/lib/dm/`):**
-- `pool.ts` — SimplePool singleton + `verifyEvent` wrapper.
-- `cache-key.ts` — KEK pattern: generate, NIP-44-wrap, unwrap, import as non-extractable WebCrypto AES-GCM key.
-- `dm-cache.ts` — Per-pubkey storage. Wire-encrypted events + AES-GCM secrets + cursors. Follow-aware LRU eviction.
-- `coalescer.ts` — `RequestCoalescer` class: 50ms debounce window, per-relay multi-filter REQ, dedup, 5s timeout.
-- `profile-cache.ts` — Kind-0 SWR (24h TTL), purplepag.es included.
-- `relay-list-cache.ts` — Kind-10002 + 10050 SWR (6h TTL), content-diff before notify.
-- `follows.ts` — Kind-3 cold-load seed + live-sub follow set.
-- `dm.ts` — Public API: `loadHistory`, `subscribeLive`, `sendDM`, `verifyAndIngest`.
-- `dm-inbox.ts` — Moved from `src/lib/dm-inbox.ts` (publishing kind 10050).
+- `pool.ts` - SimplePool singleton + `verifyEvent` wrapper.
+- `cache-key.ts` - KEK pattern: generate, NIP-44-wrap, unwrap, import as non-extractable WebCrypto AES-GCM key.
+- `dm-cache.ts` - Per-pubkey storage. Wire-encrypted events + AES-GCM secrets + cursors. Follow-aware LRU eviction.
+- `coalescer.ts` - `RequestCoalescer` class: 50ms debounce window, per-relay multi-filter REQ, dedup, 5s timeout.
+- `profile-cache.ts` - Kind-0 SWR (24h TTL), purplepag.es included.
+- `relay-list-cache.ts` - Kind-10002 + 10050 SWR (6h TTL), content-diff before notify.
+- `follows.ts` - Kind-3 cold-load seed + live-sub follow set.
+- `dm.ts` - Public API: `loadHistory`, `subscribeLive`, `sendDM`, `verifyAndIngest`.
+- `dm-inbox.ts` - Moved from `src/lib/dm-inbox.ts` (publishing kind 10050).
 
 **New (other):**
-- `src/components/dm/DMSessionProvider.tsx` — owns the live subscription + coalescer for the DM view.
-- `src/__tests__/csp.test.ts` — CSP header smoke test.
-- `docs/direct-messages.md` — user/dev-facing DM documentation.
+- `src/components/dm/DMSessionProvider.tsx` - owns the live subscription + coalescer for the DM view.
+- `src/__tests__/csp.test.ts` - CSP header smoke test.
+- `docs/direct-messages.md` - user/dev-facing DM documentation.
 
 **Modified:**
-- `src/store/dm.ts` — per-account namespacing; `messages` RAM-only; `decryptInRange`.
-- `src/components/dm/DMList.tsx` — `useDMSession`; signer-gate.
-- `src/components/dm/DMChat.tsx` — `useDMSession`; viewport decryption.
-- `src/components/dm/NewDMModal.tsx` — `ProfileCache` for npub preview.
-- `src/lib/feature-flags.ts` — `DM_FEATURE_ENABLED = true`.
-- `src/lib/nostr.ts` — remove `addDMInboxRelays` and `NIP17_INBOX_FALLBACK_RELAYS`.
-- `next.config.ts` — CSP headers.
+- `src/store/dm.ts` - per-account namespacing; `messages` RAM-only; `decryptInRange`.
+- `src/components/dm/DMList.tsx` - `useDMSession`; signer-gate.
+- `src/components/dm/DMChat.tsx` - `useDMSession`; viewport decryption.
+- `src/components/dm/NewDMModal.tsx` - `ProfileCache` for npub preview.
+- `src/lib/feature-flags.ts` - `DM_FEATURE_ENABLED = true`.
+- `src/lib/nostr.ts` - remove `addDMInboxRelays` and `NIP17_INBOX_FALLBACK_RELAYS`.
+- `next.config.ts` - CSP headers.
 
 **Deleted (after migration):**
-- `src/lib/dm.ts` (top-level — replaced by `src/lib/dm/dm.ts`)
-- `src/lib/dm-cache.ts` (top-level — replaced by `src/lib/dm/dm-cache.ts`)
-- `src/lib/dm-inbox.ts` (top-level — moved into `src/lib/dm/`)
+- `src/lib/dm.ts` (top-level, replaced by `src/lib/dm/dm.ts`)
+- `src/lib/dm-cache.ts` (top-level, replaced by `src/lib/dm/dm-cache.ts`)
+- `src/lib/dm-inbox.ts` (top-level, moved into `src/lib/dm/`)
 - Their `.test.ts` siblings.
 
 ---
@@ -133,15 +133,15 @@ describe('verifyDMEvent', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- src/lib/dm/pool.test.ts`
-Expected: FAIL — `Failed to resolve import "./pool"`.
+Expected: FAIL - `Failed to resolve import "./pool"`.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`nostr-tools/pure` caches verification results directly on the event object via a symbol-keyed property (`verifiedSymbol`). Because JavaScript object spread copies own symbol properties, an attacker (or buggy caller) can take a previously-verified event and produce `{ ...verifiedEv, sig: badSig }` — the spread carries the cached `true`, and `verifyEvent` will short-circuit and return `true` for the tampered copy. To stay sound on any input we strip the cached flag onto a shallow copy before delegating to `verifyEvent`. Working on a copy also means we never mutate the caller's event, which matters since the same event objects flow through the SimplePool subscription pipeline. There is a regression test for this exact path in `pool.test.ts` ("rejects a tampered event even after the original was previously verified").
+`nostr-tools/pure` caches verification results directly on the event object via a symbol-keyed property (`verifiedSymbol`). Because JavaScript object spread copies own symbol properties, an attacker (or buggy caller) can take a previously-verified event and produce `{ ...verifiedEv, sig: badSig }`: the spread carries the cached `true`, and `verifyEvent` will short-circuit and return `true` for the tampered copy. To stay sound on any input we strip the cached flag onto a shallow copy before delegating to `verifyEvent`. Working on a copy also means we never mutate the caller's event, which matters since the same event objects flow through the SimplePool subscription pipeline. There is a regression test for this exact path in `pool.test.ts` ("rejects a tampered event even after the original was previously verified").
 
 ```ts
 // src/lib/dm/pool.ts
-// Browser-only — uses the global WebSocket. Server-side relay reads live
+// Browser-only: uses the global WebSocket. Server-side relay reads live
 // in src/lib/profile-sync.ts which wires nostr-tools to `ws`.
 import { SimplePool } from 'nostr-tools/pool';
 import { verifyEvent, verifiedSymbol, type Event as NostrEvent } from 'nostr-tools/pure';
@@ -164,7 +164,7 @@ export function verifyDMEvent(event: NostrEvent): boolean {
     // nostr-tools/pure caches verification results on `event[verifiedSymbol]`.
     // JS object spread copies own symbol properties, so a tampered event
     // produced by `{ ...verifiedEv, sig: badSig }` would short-circuit to
-    // `true`. Strip the cached flag onto a shallow copy before delegating —
+    // `true`. Strip the cached flag onto a shallow copy before delegating;
     // this also avoids mutating the caller's event.
     const { [verifiedSymbol]: _ignored, ...rest } =
       event as NostrEvent & { [verifiedSymbol]?: boolean };
@@ -272,7 +272,7 @@ describe('cache-key', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- src/lib/dm/cache-key.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL - module not found.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -282,7 +282,7 @@ Expected: FAIL — module not found.
  * Per-account symmetric cache key. The 32-byte raw key is generated locally,
  * NIP-44-self-encrypted by the user's signer (so only their nsec/extension/
  * bunker can recover it), and persisted in that wrapped form. On unwrap we
- * import as a non-extractable WebCrypto AES-GCM key — XSS can call our
+ * import as a non-extractable WebCrypto AES-GCM key; XSS can call our
  * encrypt/decrypt helpers but cannot exfiltrate the raw bytes.
  */
 
@@ -515,7 +515,7 @@ describe('dm-cache clearAccount', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- src/lib/dm/dm-cache.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL - module not found.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -777,7 +777,7 @@ describe('RequestCoalescer', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- src/lib/dm/coalescer.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL - module not found.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -952,7 +952,7 @@ describe('profile-cache', () => {
     const onEvent = enqueueMock.mock.calls[0][0].onEvent;
     const ev = { id: 'e1', pubkey: partner, kind: 0, created_at: 1000, tags: [], content: '{"name":"alice"}', sig: 'x' } as any;
     onEvent(ev);
-    onEvent(ev); // same created_at — should not re-notify
+    onEvent(ev); // same created_at, should not re-notify
     expect(sub).toHaveBeenCalledTimes(1);
   });
 });
@@ -961,7 +961,7 @@ describe('profile-cache', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- src/lib/dm/profile-cache.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL - module not found.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -1050,7 +1050,7 @@ export function getProfile(
         if (event.kind !== 0 || event.pubkey !== partner) return;
         const current = read(me)[partner];
         if (current && current.event.created_at >= event.created_at) {
-          // Same or older — bump lastCheckedAt without notifying.
+          // Same or older: bump lastCheckedAt without notifying.
           const fresh = { ...current, lastCheckedAt: Date.now() };
           const all = read(me);
           all[partner] = fresh;
@@ -1184,11 +1184,11 @@ describe('relay-list-cache', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm run test -- src/lib/dm/relay-list-cache.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL - module not found.
 
 - [ ] **Step 3: Write the implementation**
 
-Staleness rule: an entry is stale when neither slot has been populated yet (forces an initial fetch), OR any *populated* slot is older than 6h. Unpopulated slots after the first populated one do not force re-fetch — partners legitimately may not publish kind-10050, and treating an absent slot's `lastCheckedAt` as `0` would make `now - 0 > TTL_MS` always true, causing endless re-fetches.
+Staleness rule: an entry is stale when neither slot has been populated yet (forces an initial fetch), OR any *populated* slot is older than 6h. Unpopulated slots after the first populated one do not force re-fetch: partners legitimately may not publish kind-10050, and treating an absent slot's `lastCheckedAt` as `0` would make `now - 0 > TTL_MS` always true, causing endless re-fetches.
 
 ```ts
 // src/lib/dm/relay-list-cache.ts
@@ -1270,7 +1270,7 @@ function isStale(entry: CacheEntry): boolean {
   if (!entry.outbox && !entry.inbox) return true;
   // Otherwise, only consider populated slots: stale if any *checked* slot is older than TTL.
   // This avoids endlessly re-fetching when a partner has never published one of the kinds
-  // (e.g. no kind-10050) — once we've heard back from at least one, we honor the TTL.
+  // (e.g. no kind-10050); once we've heard back from at least one, we honor the TTL.
   if (entry.outbox && now - entry.outbox.lastCheckedAt > TTL_MS) return true;
   if (entry.inbox && now - entry.inbox.lastCheckedAt > TTL_MS) return true;
   return false;
@@ -1477,7 +1477,7 @@ git commit -m "feat(dm): follows cache (cold-load seed + live kind-3 ingest)"
 
 ---
 
-## Task 8: Public DM API — `dm/dm.ts`
+## Task 8: Public DM API - `dm/dm.ts`
 
 **Files:**
 - Create: `src/lib/dm/dm.ts`
@@ -1734,7 +1734,7 @@ Expected: PASS.
 
 ```bash
 git add src/lib/dm/dm.ts src/lib/dm/dm.test.ts
-git commit -m "feat(dm): public DM API — loadHistory, subscribeLive, sendDM, verifyAndIngest"
+git commit -m "feat(dm): public DM API - loadHistory, subscribeLive, sendDM, verifyAndIngest"
 ```
 
 ---
@@ -1755,7 +1755,7 @@ cp src/lib/dm-inbox.test.ts src/lib/dm/dm-inbox.test.ts
 
 - [ ] **Step 2: Update imports inside the new file**
 
-Edit `src/lib/dm/dm-inbox.ts` — change:
+Edit `src/lib/dm/dm-inbox.ts` - change:
 ```ts
 import { getSyncState, setSyncState } from './dm-cache';
 ```
@@ -1789,7 +1789,7 @@ export async function publishInboxRelays(myPubkey: string): Promise<boolean> {
 - [ ] **Step 3: Run the moved tests**
 
 Run: `npm run test -- src/lib/dm/dm-inbox.test.ts`
-Expected: PASS (any tests asserting on the cooldown should be removed/loosened — adjust the test in place).
+Expected: PASS (any tests asserting on the cooldown should be removed/loosened; adjust the test in place).
 
 - [ ] **Step 4: Commit**
 
@@ -1832,7 +1832,7 @@ describe('per-account DM store', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `npm run test -- src/store/dm.test.ts`
-Expected: FAIL — `ensureDMStoreForAccount` not exported.
+Expected: FAIL - `ensureDMStoreForAccount` not exported.
 
 - [ ] **Step 3: Modify the store**
 
@@ -1863,7 +1863,7 @@ Update the existing `persist(...)` block to use `activeStorageName`:
 }
 ```
 
-(Drop `messages` from any persistence; the existing partialize already excludes it — confirm and tighten if needed.)
+(Drop `messages` from any persistence; the existing partialize already excludes it; confirm and tighten if needed.)
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -2036,7 +2036,7 @@ Expected: PASS.
 
 ```bash
 git add src/components/dm/DMSessionProvider.tsx src/components/dm/DMSessionProvider.test.tsx
-git commit -m "feat(dm): DMSessionProvider — owns live sub + cache-key bootstrap"
+git commit -m "feat(dm): DMSessionProvider - owns live sub + cache-key bootstrap"
 ```
 
 ---
@@ -2108,7 +2108,7 @@ git commit -m "feat(dm/list): signer-gated New DM CTA + wire to DMSessionProvide
 
 ---
 
-## Task 13: Wire `DMChat` — viewport decryption + `useDMSession`
+## Task 13: Wire `DMChat` - viewport decryption + `useDMSession`
 
 **Files:**
 - Modify: `src/components/dm/DMChat.tsx`
@@ -2232,7 +2232,7 @@ git rm src/lib/dm.ts src/lib/dm.test.ts src/lib/dm-cache.ts src/lib/dm-cache.tes
 - [ ] **Step 5: Run the full test suite**
 
 Run: `npm run test`
-Expected: PASS — all suites green.
+Expected: PASS - all suites green.
 
 - [ ] **Step 6: Commit**
 
@@ -2356,7 +2356,7 @@ git commit -m "feat(security): baseline CSP headers (script-src 'self', no unsaf
 export const DM_FEATURE_ENABLED = true;
 ```
 
-(Remove the comment block explaining why it's disabled — the design doc supersedes it.)
+(Remove the comment block explaining why it's disabled; the design doc supersedes it.)
 
 - [ ] **Step 2: Run the full suite**
 
@@ -2392,9 +2392,9 @@ vi.mock('./pool', () => ({
   getDMPool: () => ({
     subscribeMany: (_relays: string[], _filters: any, h: any) => {
       onevent = h.onevent;
-      // Fast relay — emit immediately.
+      // Fast relay: emit immediately.
       queueMicrotask(() => fastEvents.forEach((e) => onevent!(e)));
-      // Slow relay — emit after a delay.
+      // Slow relay: emit after a delay.
       setTimeout(() => slowEvents.forEach((e) => onevent!(e)), 200);
       return { close: () => {} };
     },
@@ -2452,7 +2452,7 @@ Expected: PASS.
 
 ```bash
 git add src/lib/dm/integration.test.ts
-git commit -m "test(dm): integration — fast-relay-first + no-plaintext-on-disk"
+git commit -m "test(dm): integration - fast-relay-first + no-plaintext-on-disk"
 ```
 
 ---
@@ -2474,17 +2474,17 @@ Obelisk supports private 1:1 chat between Nostr identities, with strict privacy 
 ## What you get
 
 - **NIP-17 by default** (modern, gift-wrapped, metadata-leak-resistant).
-- **NIP-04 fallback**, selectable per-thread via the protocol-override picker — for chatting with clients that don't yet support NIP-17.
-- **Live updates** — new DMs appear without polling while the DM view is open.
-- **Outbox routing** — sends are addressed to the recipient's published kind-10050 (NIP-17 inbox) or kind-10002 (NIP-04 read relays). No "lost in the void" sends because the recipient happened to use different relays.
+- **NIP-04 fallback**, selectable per-thread via the protocol-override picker, for chatting with clients that don't yet support NIP-17.
+- **Live updates**: new DMs appear without polling while the DM view is open.
+- **Outbox routing**: sends are addressed to the recipient's published kind-10050 (NIP-17 inbox) or kind-10002 (NIP-04 read relays). No "lost in the void" sends because the recipient happened to use different relays.
 - **Profile previews** in the recipient picker, sourced from the recipient's own write relays (always including `purplepag.es` as a profile aggregator).
-- **Multi-account isolation** — log into a different identity and your DM history is unreachable from the previous account's view, by design.
+- **Multi-account isolation**: log into a different identity and your DM history is unreachable from the previous account's view, by design.
 
 ## Privacy and storage model
 
 - **Plaintext is never persisted.** Every DM byte on disk is encrypted: NIP-04 ciphertext from the wire, NIP-17 gift wraps from the wire, plus a per-event AES-GCM blob holding the decrypted body for fast preview rendering.
 - The AES-GCM blob is encrypted with a **per-account symmetric key** that is generated locally, NIP-44-self-encrypted by your signer, and stored in localStorage in that wrapped form. To recover the raw key you need either your nsec or your signer (extension/bunker). On reload the signer is consulted **once** to unwrap; from then on, every preview decrypts via WebCrypto without further signer prompts.
-- The AES key is imported as a **non-extractable** WebCrypto key — even an XSS attacker cannot exfiltrate the raw bytes.
+- The AES key is imported as a **non-extractable** WebCrypto key: even an XSS attacker cannot exfiltrate the raw bytes.
 - **Read-mode (no signer):** if the signer is unavailable (e.g. extension locked, bunker not connected), the DM UI is disabled. Re-enable by reconnecting your signer.
 
 ## What's stored, where
@@ -2504,11 +2504,11 @@ Keys are scoped by `myPubkey` so multiple identities on the same browser do not 
 
 The DM event store is capped at **2000 evictable events**. Events from/to users you follow (kind 3) are **protected** and never evicted by the cap. The cap applies only to messages with users you do not follow. Unfollowing someone makes their messages eligible for eviction on the next overflow.
 
-If your follow list is not yet hydrated (cold start), all events are treated as protected for that session — better to keep too much than to evict before we know who's important.
+If your follow list is not yet hydrated (cold start), all events are treated as protected for that session: better to keep too much than to evict before we know who's important.
 
 ## Sync semantics
 
-- Opening the DM view fires **one multi-filter REQ per relay** (50ms request coalescer) — no per-thread one-off calls.
+- Opening the DM view fires **one multi-filter REQ per relay** (50ms request coalescer): no per-thread one-off calls.
 - Each DM filter uses a `since` cursor derived from `max(created_at)` over your cached events for that filter, so we never re-download what we already have.
 - Live subscription stays open while the DM view is mounted; closing the tab or navigating away closes it.
 - Profile and relay-list refreshes use stale-while-revalidate: the cached value is returned instantly; a background fetch updates the cache only if content changed.
@@ -2522,7 +2522,7 @@ If your follow list is not yet hydrated (cold start), all events are treated as 
 
 ## Operational notes
 
-- **Self-hosted instances**: no server-side configuration is required for DMs — they are entirely client-driven via Nostr. The server is not involved in DM transport.
+- **Self-hosted instances**: no server-side configuration is required for DMs; they are entirely client-driven via Nostr. The server is not involved in DM transport.
 - **Bunker users**: expect one signer prompt per session for the AES-key unwrap, plus per-encrypt prompts when sending. Per-event preview decryption does **not** prompt the bunker.
 - **Logout**: clears the in-RAM AES key handle. The wrapped key remains on disk (and is re-unwrapped on the next login). Use the per-account "Clear cache" affordance (forthcoming) if you need to wipe a specific identity's DM history from disk.
 

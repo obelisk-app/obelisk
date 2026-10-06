@@ -5,13 +5,13 @@
  *
  * Mounted once per shell with the surface the user is currently on. It picks
  * the first unseen hint for that surface whose anchor is actually mounted
- * and laid out, shows it, and moves to the next one when that is dismissed —
+ * and laid out, shows it, and moves to the next one when that is dismissed,
  * so a screen with three things to say walks through them at the reader's
  * pace and then goes quiet forever.
  *
  * The "anchor must be visible" rule is what keeps this honest. A hint can
  * never point at nothing, which is also how one registry serves both shells
- * and how conditional UI — voice off, no relays yet, DMs not opted into —
+ * and how conditional UI (voice off, no relays yet, DMs not opted into)
  * drops its own steps without anyone maintaining a condition for it.
  *
  * Using a control counts as learning it: a delegated `pointerdown` marks the
@@ -25,13 +25,13 @@ import {
   hintsForSurface,
   type Shell,
   type SurfaceId,
-} from '@/lib/hints/registry';
+} from '@/utils/hints/registry';
 import { useHintsStore } from '@/store/hints';
 import { useTranslation } from '@/i18n/context';
 import HintCallout from './HintCallout';
 
 /**
- * Anchors mount asynchronously — a channel list paints after its relay
+ * Anchors mount asynchronously: a channel list paints after its relay
  * answers, a pane after its width is read. Re-look on a short interval
  * rather than once, and give up quietly if it never appears.
  */

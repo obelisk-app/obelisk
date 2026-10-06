@@ -7,7 +7,7 @@ I can and cannot do about content you've encountered, and how to reach me.
 
 ## What Obelisk is
 
-Obelisk is a client — a program that reads and writes Nostr events. It has no backend, no accounts,
+Obelisk is a client, a program that reads and writes Nostr events. It has no backend, no accounts,
 no database, and no server that holds your messages. Messages live on **relays**: independent
 servers, each run by whoever runs it.
 
@@ -41,7 +41,7 @@ contact (published in its NIP-11 document), but I cannot act.
 
 Email **abuse@obelisk.ar** with:
 
-1. The **relay URL** the content is on (e.g. `wss://public.obelisk.ar`) — without this I usually
+1. The **relay URL** the content is on (e.g. `wss://public.obelisk.ar`); without this I usually
    cannot find it.
 2. The **event ID** (`nevent1…` or hex) and/or the **public key** (`npub1…` or hex).
 3. What is wrong with it.
@@ -54,7 +54,7 @@ jurisdiction.
 - **Acknowledgement within 72 hours.**
 - **Substantive response within 7 days.**
 
-If you have not heard back in that window, resend — mail does get lost.
+If you have not heard back in that window, resend: mail does get lost.
 
 ## Legal process
 

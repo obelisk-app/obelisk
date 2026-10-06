@@ -30,7 +30,7 @@ export default function SwapAnythingHero() {
     >
       <title id="hero-swap-title">Swap anything, trust nothing</title>
       <desc id="hero-swap-desc">
-        The Obelisk ecosystem — one self-hostable relay at the top connected to a chat
+        The Obelisk ecosystem: one self-hostable relay at the top connected to a chat
         client, a voice SFU, and a bot runtime, every piece independently replaceable.
       </desc>
 

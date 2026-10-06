@@ -1,5 +1,5 @@
 /**
- * "Open in" — the other Nostr clients that can display this event.
+ * "Open in" - the other Nostr clients that can display this event.
  *
  * This belongs on the viewer page, not in the ⋯ menu of every note card.
  * Inside the app the reader is already in a client and the menu is for
@@ -10,8 +10,8 @@
  * whatever they actually use, which beats any guess we could make.
  */
 
-import { NOSTR_CLIENTS } from '@/lib/social/clients';
-import { serverLocale } from '@/lib/server/locale';
+import { NOSTR_CLIENTS } from '@/services/social/clients';
+import { serverLocale } from '@/services/server/locale';
 
 export default async function OpenInClients({ identifier }: { identifier: string }) {
   const { t } = await serverLocale();

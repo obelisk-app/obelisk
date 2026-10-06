@@ -1,4 +1,4 @@
-# Wallet — Quick Setup, Client-Side Migration, and nostr-wot Branding
+# Wallet - Quick Setup, Client-Side Migration, and nostr-wot Branding
 
 **Date:** 2026-04-26
 **Status:** Approved (user said "go ahead, do not wait for approval")
@@ -12,25 +12,25 @@ Three intertwined changes ship together because they touch the same code:
 2. **Full client-side wallet.** Move every wallet credential and every NWC operation off the server and into the user's browser. The server can no longer pay from any user's wallet, even if compromised. Existing manually-pasted-NWC users get a one-time auto-migration.
 3. **"Powered by nostr-wot" attribution.** Small inline legend with the nostr-wot logo on every wallet surface (connect screen, connected view, send/receive confirmations, zap toast).
 
-The security improvement is the load-bearing motivation — today's server holds an `NWC_ENCRYPTION_KEY` that can decrypt every user's NWC URI, meaning a compromised server (or a malicious operator) could drain wallets. After this change, the server has nothing to decrypt: each user's NWC URI is encrypted in their own browser with their own NIP-44-derived key.
+The security improvement is the load-bearing motivation: today's server holds an `NWC_ENCRYPTION_KEY` that can decrypt every user's NWC URI, meaning a compromised server (or a malicious operator) could drain wallets. After this change, the server has nothing to decrypt: each user's NWC URI is encrypted in their own browser with their own NIP-44-derived key.
 
 ## 2. Decisions locked in
 
 | # | Topic | Choice |
 |---|---|---|
-| Q1 | Who signs the NIP-98 provisioning challenge | **Client-side** — uses the user's existing Nostr signer (NIP-07 / nsec / NIP-46) |
-| Q2 | Lightning Address claim flow | **Two-step manual** — provision wallet first, then a separate "Claim a Lightning Address" card with a free-form username |
-| Q3 | "Powered by nostr-wot" placement | **Wallet UI + payment receipts** — inline on the wallet card, send/receive confirmations, and zap toast |
-| Q4 | Provisioning instance URL | **Hardcoded constant** `https://zaps.nostr-wot.com` — no env var, no advanced toggle |
-| Q5 | Connect screen layout | **Three tabs**: Quick Setup / NWC / LNbits — one wallet at a time, switching = disconnect + reconnect |
-| Q6 | Encryption key for local credential storage | **DM cache key** (`src/lib/dm/cache-key.ts`) — random 32 bytes wrapped via NIP-44 self-encrypt, kept non-extractable in WebCrypto |
-| Q7 | Scope: Quick Setup only OR full migration | **Full migration** — all credentials and ops move client-side, including manual NWC paste and existing users |
+| Q1 | Who signs the NIP-98 provisioning challenge | **Client-side**: uses the user's existing Nostr signer (NIP-07 / nsec / NIP-46) |
+| Q2 | Lightning Address claim flow | **Two-step manual**: provision wallet first, then a separate "Claim a Lightning Address" card with a free-form username |
+| Q3 | "Powered by nostr-wot" placement | **Wallet UI + payment receipts**: inline on the wallet card, send/receive confirmations, and zap toast |
+| Q4 | Provisioning instance URL | **Hardcoded constant** `https://zaps.nostr-wot.com`, no env var, no advanced toggle |
+| Q5 | Connect screen layout | **Three tabs**: Quick Setup / NWC / LNbits; one wallet at a time, switching = disconnect + reconnect |
+| Q6 | Encryption key for local credential storage | **DM cache key** (`src/lib/dm/cache-key.ts`): random 32 bytes wrapped via NIP-44 self-encrypt, kept non-extractable in WebCrypto |
+| Q7 | Scope: Quick Setup only OR full migration | **Full migration**: all credentials and ops move client-side, including manual NWC paste and existing users |
 
 ## 3. Architecture overview
 
 ### 3.1 Storage
 
-Every wallet — Quick Setup, manual NWC paste, manual LNbits — converges on a single `LocalWallet` shape stored in `localStorage['obelisk:wallet:<pubkey>']` as IV+ciphertext. Encryption uses the existing DM cache key.
+Every wallet (Quick Setup, manual NWC paste, manual LNbits) converges on a single `LocalWallet` shape stored in `localStorage['obelisk:wallet:<pubkey>']` as IV+ciphertext. Encryption uses the existing DM cache key.
 
 ```ts
 type LocalWallet = {
@@ -49,7 +49,7 @@ A React hook `useLocalWallet()` exposes a memoized `NWCClient` (from `@getalby/s
 
 Today server-side: `POST /api/wallet/zap` uses **both** parties' server-side credentials.
 
-After: the sender resolves the recipient's Lightning Address via standard LNURL-pay, requests an invoice from the recipient's wallet provider (which works even when the recipient is offline — that's the whole point of LN addresses), and pays from the sender's local wallet. The server's only role is recording the zap as an audit-log event for the sidebar and analytics.
+After: the sender resolves the recipient's Lightning Address via standard LNURL-pay, requests an invoice from the recipient's wallet provider (which works even when the recipient is offline; that's the whole point of LN addresses), and pays from the sender's local wallet. The server's only role is recording the zap as an audit-log event for the sidebar and analytics.
 
 ### 3.4 Public-invoice payment in chat
 
@@ -105,8 +105,8 @@ A `<PoweredByNostrWot />` component renders a small footer link `⚡ Powered by 
 - `POST /api/wallet/zap`
 
 **Added:**
-- `GET /api/wallet/legacy-export` — one-shot per user; returns `{ nwcUri, label }` and deletes the row atomically. Returns 404 once already-migrated.
-- `POST /api/wallet/zap-receipt` — write-only audit log: `{ targetPubkey, amountMsat, channelId?, messageId?, paymentHash }`. Server records and emits the existing `InvoicePaid` socket event (or a new `ZapReceived` event if needed for sidebar). No NWC calls, no credentials.
+- `GET /api/wallet/legacy-export` - one-shot per user; returns `{ nwcUri, label }` and deletes the row atomically. Returns 404 once already-migrated.
+- `POST /api/wallet/zap-receipt` - write-only audit log: `{ targetPubkey, amountMsat, channelId?, messageId?, paymentHash }`. Server records and emits the existing `InvoicePaid` socket event (or a new `ZapReceived` event if needed for sidebar). No NWC calls, no credentials.
 
 **Refactored:**
 - `POST /api/invoices/pay` → split into `POST /api/invoices/pay/claim` and `POST /api/invoices/pay/confirm`. The original endpoint path is removed.
@@ -229,15 +229,15 @@ Mount points: `WalletPanel.tsx` (connect screen, connected view, LN-address card
 
 **Before this change.** Server holds `NWC_ENCRYPTION_KEY` env var. `Wallet` table has every user's NWC URI, encrypted with that key. Server can decrypt any user's URI at any time and call `payInvoice` on the underlying wallet. Compromise of the server (DB breach + env var leak) drains every wallet.
 
-**After this change.** Server has no wallet credentials. Each user's NWC URI is encrypted in their own browser with a key wrapped via NIP-44 self-encrypt — only their own Nostr signer can unwrap it. The server cannot decrypt, cannot pay, cannot drain.
+**After this change.** Server has no wallet credentials. Each user's NWC URI is encrypted in their own browser with a key wrapped via NIP-44 self-encrypt; only their own Nostr signer can unwrap it. The server cannot decrypt, cannot pay, cannot drain.
 
 **Residual surfaces:**
-1. **The user's signer.** XSS in the chat page can call our `encrypt`/`decrypt` helpers via the non-extractable WebCrypto key — but cannot exfiltrate the raw key bytes. Same model as the DM cache. Limits damage but does not eliminate it.
-2. **Public invoice payment.** Server still gates the race lock — it knows who is paying which invoice and the resulting paymentHash. No fund-moving capability, but a metadata leak.
+1. **The user's signer.** XSS in the chat page can call our `encrypt`/`decrypt` helpers via the non-extractable WebCrypto key, but cannot exfiltrate the raw key bytes. Same model as the DM cache. Limits damage but does not eliminate it.
+2. **Public invoice payment.** Server still gates the race lock: it knows who is paying which invoice and the resulting paymentHash. No fund-moving capability, but a metadata leak.
 3. **Zap receipt.** Server logs `{ payer, recipient, amount, time }`. Same metadata leak as today.
 4. **Legacy-export endpoint.** During migration, plaintext NWC URI is in transit over HTTPS for one round-trip. After migration completes for a user, the row is gone. After all users migrate, the endpoint can be removed.
 
-**What this is not.** This does not encrypt at rest with the user's nsec directly (which would require signing on every load). It uses a per-account symmetric key wrapped by the nsec — same pattern as the DM cache. That trade-off (one signer interaction at first wrap, then non-extractable AES-GCM thereafter) is what the DM cache already chose, and we inherit it.
+**What this is not.** This does not encrypt at rest with the user's nsec directly (which would require signing on every load). It uses a per-account symmetric key wrapped by the nsec, same pattern as the DM cache. That trade-off (one signer interaction at first wrap, then non-extractable AES-GCM thereafter) is what the DM cache already chose, and we inherit it.
 
 ## 7. Testing strategy
 
@@ -263,7 +263,7 @@ Mount points: `WalletPanel.tsx` (connect screen, connected view, LN-address card
 |---|---|
 | `WalletPanel.tsx` | Three-tab connect; LN-address card states (no address / has address / cambiar flow); legacy migration auto-fires once on mount; `<PoweredByNostrWot />` rendered |
 | `MessageInput.tsx` zap path | Uses `lnurl-pay` + `local-client`, never calls `/api/wallet/zap` |
-| `ZapPickerModal.tsx` | Same — local-only payment flow |
+| `ZapPickerModal.tsx` | Same: local-only payment flow |
 
 ### 7.4 API integration (Vitest)
 
@@ -277,12 +277,12 @@ Mount points: `WalletPanel.tsx` (connect screen, connected view, LN-address card
 
 ### 7.5 Removed tests
 
-- `src/app/api/wallet/route.test.ts` (POST/DELETE/GET — endpoints gone)
+- `src/app/api/wallet/route.test.ts` (POST/DELETE/GET: endpoints gone)
 - `src/app/api/wallet/balance/route.test.ts`
 - `src/app/api/wallet/pay/route.test.ts`
 - `src/app/api/wallet/invoice/route.test.ts`
 - `src/app/api/wallet/zap/route.test.ts`
-- `src/lib/nwc.test.ts` (if exists — file gone)
+- `src/lib/nwc.test.ts` (if exists, file gone)
 - `src/lib/crypto.test.ts` (file gone)
 
 ## 8. Risks & mitigations
@@ -293,8 +293,8 @@ Mount points: `WalletPanel.tsx` (connect screen, connected view, LN-address card
 | LNURL-pay resolution fails for a recipient (they have no LN address set) | Fall back to NIP-57 zap request via NDK; if that also fails, surface "Bob has no Lightning Address" with a help link |
 | Public invoice payment leaves `pending` rows if client crashes | 30s sweep on next claim attempt; documented user-facing copy "If your tab closed, retry in 30 seconds" |
 | Migration round-trip exposes plaintext URI | HTTPS-only; deleted in same DB transaction; legacy endpoint removable in a follow-up commit |
-| User loses their browser localStorage (cache cleared, new device) | They re-run Quick Setup — idempotent (same npub → same wallet on the LNbits backend → same NWC URI). One extra click documented as expected behavior. |
-| nostr-wot logo SVG missing from extension | Fall back to text wordmark `nostr-wot` styled with `font-mono` — no scope blow-up |
+| User loses their browser localStorage (cache cleared, new device) | They re-run Quick Setup: idempotent (same npub → same wallet on the LNbits backend → same NWC URI). One extra click documented as expected behavior. |
+| nostr-wot logo SVG missing from extension | Fall back to text wordmark `nostr-wot` styled with `font-mono`, no scope blow-up |
 | Existing users with no `Wallet` row hit `legacy-export` | Endpoint returns 404 cleanly; no error |
 
 ## 9. Out of scope (deferred)
@@ -303,7 +303,7 @@ Mount points: `WalletPanel.tsx` (connect screen, connected view, LN-address card
 - NIP-78 / cross-app wallet portability (nice-to-have for future spec)
 - Multiple wallets per user (data model is one-per-pubkey by design)
 - Server-driven scheduled zaps or background payments (no current feature requires this)
-- Custom mute durations beyond presets — not relevant here, mentioned for completeness
+- Custom mute durations beyond presets, not relevant here, mentioned for completeness
 - Migration to drop the `Wallet` table (deferred one release for rollback safety)
 
 ## 10. File-by-file change summary
@@ -393,10 +393,10 @@ Engineering:
 
 The plan that follows breaks this into 5 phases:
 
-- **Phase A — Pure libraries.** `nip98`, `provisioning`, `local-store`, `lnurl-pay`, `lnbits-to-nwc`, `powered-by`. Highly parallelizable.
-- **Phase B — `useLocalWallet` hook + WalletPanel rewrite.** Three-tab connect screen, LN-address card, all wallet ops via local-client.
-- **Phase C — Server-side new endpoints.** `legacy-export`, `zap-receipt`, `invoices/pay/claim`, `invoices/pay/confirm`. Plus the 30s pending sweep.
-- **Phase D — Chat integration.** `MessageInput`, `ZapPickerModal`, zap toast.
-- **Phase E — Server teardown.** Delete removed endpoints, `nwc.ts`, `crypto.ts`. Update env var docs.
+- **Phase A - Pure libraries.** `nip98`, `provisioning`, `local-store`, `lnurl-pay`, `lnbits-to-nwc`, `powered-by`. Highly parallelizable.
+- **Phase B - `useLocalWallet` hook + WalletPanel rewrite.** Three-tab connect screen, LN-address card, all wallet ops via local-client.
+- **Phase C - Server-side new endpoints.** `legacy-export`, `zap-receipt`, `invoices/pay/claim`, `invoices/pay/confirm`. Plus the 30s pending sweep.
+- **Phase D - Chat integration.** `MessageInput`, `ZapPickerModal`, zap toast.
+- **Phase E - Server teardown.** Delete removed endpoints, `nwc.ts`, `crypto.ts`. Update env var docs.
 
 Phases A is fully parallel. B depends on A. C is mostly parallel internally. D depends on B + parts of C. E depends on D being green.

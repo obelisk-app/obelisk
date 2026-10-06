@@ -31,7 +31,7 @@ when no data channel exists.
 - Preserve the main Nostr identity as the admission boundary.
 - Keep Phase 1 compatible with existing clients and relays.
 
-## Phase 1 — reduce account-key signatures
+## Phase 1 - reduce account-key signatures
 
 ### 1. Coalesce beacon updates
 
@@ -98,7 +98,7 @@ leave signal. Do not depend on a remote-signed leave beacon during
 `beforeunload`; browsers cannot reliably finish that RPC. Use relay expiration
 as the fallback.
 
-## Phase 2 — scoped local voice-session key
+## Phase 2 - scoped local voice-session key
 
 For the lowest latency, generate an in-memory keypair when joining and ask the
 account signer for one short-lived authorization containing:
@@ -144,17 +144,17 @@ credential's channel and lifetime. Do not ship the client half alone.
 
 ## Relevant code
 
-- `src/lib/voice/client.ts` — cadence, bring-up timers, coalescing, control
+- `src/services/voice/client.ts` - cadence, bring-up timers, coalescing, control
   channel lifecycle.
-- `src/lib/voice/transport.ts` — kind `20078` templates and publish boundary.
-- `src/lib/voice/failure-handlers.ts` — relay retry behavior.
-- `src/lib/nostr-bridge/client.ts` — account signing and NIP-46 session setup.
+- `src/services/voice/transport.ts` - kind `20078` templates and publish boundary.
+- `src/services/voice/failure-handlers.ts` - relay retry behavior.
+- `src/services/nostr-bridge/client.ts` - account signing and NIP-46 session setup.
 
 ## Protocol references
 
-- [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md) — kinds
+- [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md) - kinds
   `20000–29999` are ephemeral and are not expected to be stored.
-- [NIP-46](https://github.com/nostr-protocol/nips/blob/master/46.md) — remote
+- [NIP-46](https://github.com/nostr-protocol/nips/blob/master/46.md) - remote
   signing and scoped `sign_event:<kind>` permissions.
-- [NIP-26](https://github.com/nostr-protocol/nips/blob/master/26.md) — delegated
+- [NIP-26](https://github.com/nostr-protocol/nips/blob/master/26.md) - delegated
   event signing, currently marked unrecommended.

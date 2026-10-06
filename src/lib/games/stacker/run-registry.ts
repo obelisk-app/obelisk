@@ -4,13 +4,13 @@ import { StackerRunner, type StackerRunnerOptions, type StackerSoundEvent } from
  * Keeps a Stacker run alive while nobody is looking at it.
  *
  * The board is a live simulation held on a `StackerRunner` instance, not
- * something replayed from the relay log — checkpoints are published for the
+ * something replayed from the relay log: checkpoints are published for the
  * *other* players to watch, and are far too coarse to rebuild your own well
  * from. So the runner's identity is the game: lose it and the match restarts.
  *
  * `GameModalHost` unmounts the whole modal when the table is closed, which used
  * to take the runner with it. Reopening built a fresh one from the seed, so the
- * player came back to an empty well on frame 0 — and every piece of garbage
+ * player came back to an empty well on frame 0, and every piece of garbage
  * that had ever been sent landed again, because the dedupe set died too.
  *
  * Runs therefore live here, keyed per player per match, and the hook borrows
@@ -36,7 +36,7 @@ export interface StackerRun {
 /**
  * How many suspended runs to keep. A player can only look at one table at a
  * time, so this is really a bound on abandoned ones; each is a board and an
- * input log, not a timer — a stopped runner costs nothing but memory.
+ * input log, not a timer: a stopped runner costs nothing but memory.
  */
 export const MAX_SUSPENDED_RUNS = 4;
 
@@ -110,7 +110,7 @@ export function setRunCallbacks(key: string, cb: Partial<StackerRunCallbacks>): 
   Object.assign(run.cb, cb);
 }
 
-/** Drop a run for good — the match is over, or the table was cancelled. */
+/** Drop a run for good: the match is over, or the table was cancelled. */
 export function releaseRun(key: string): void {
   const run = runs.get(key);
   if (!run) return;

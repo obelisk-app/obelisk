@@ -3,9 +3,9 @@
 Two NIP-78 (kind 30078) replaceable parameterized events let admins control
 what every user sees for a given relay:
 
-- **Layout** — categories + channel ordering. `src/lib/channel-layout.ts`
-- **Branding** — relay icon, banner, display name, description.
-  `src/lib/relay-branding.ts`
+- **Layout**: categories + channel ordering. `src/services/channel-layout.ts`
+- **Branding**: relay icon, banner, display name, description.
+  `src/services/relay-branding.ts`
 
 Both accept one authoritative author: the validated NIP-11 operator identity.
 
@@ -50,13 +50,13 @@ relay; a modified client can always attempt to publish them.
 ## Code map
 
 ```
-src/lib/channel-layout.ts         subscribeLayout(relay, authors[], cb)
+src/services/channel-layout.ts         subscribeLayout(relay, authors[], cb)
                                   useChannelLayout(relay, authors[])
                                   publishLayout, applyLayout, relayOperatorAuthors
-src/lib/relay-branding.ts         subscribeBranding(relay, authors[], cb)
+src/services/relay-branding.ts         subscribeBranding(relay, authors[], cb)
                                   useRelayBranding(relay, authors[])
                                   publishBranding
-src/app/app/DesktopShell.tsx      Sidebar — gates the server settings gear
+src/app/app/DesktopShell.tsx      Sidebar - gates the server settings gear
                                   and relay-wide modals
 ```
 

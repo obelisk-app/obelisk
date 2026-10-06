@@ -1,6 +1,6 @@
 /**
  * Vesta: an island of resource tiles, and the one thing that is different
- * about playing it on a relay — the dice are not rolled by the roller. The
+ * about playing it on a relay - the dice are not rolled by the roller. The
  * hero pairs the board with the line of the log those numbers come from.
  */
 const RESOURCES = [
@@ -33,7 +33,7 @@ function center(q: number, r: number): [number, number] {
   return [CX + R * 1.5 * q, CY + R * Math.sqrt(3) * (r + q / 2)];
 }
 
-/** Corner `i` of a hex — settlements sit on vertices, not on tiles. */
+/** Corner `i` of a hex - settlements sit on vertices, not on tiles. */
 function corner(cx: number, cy: number, i: number): [number, number] {
   const angle = (Math.PI / 180) * (60 * i - 30);
   return [cx + R * Math.cos(angle), cy + R * Math.sin(angle)];
@@ -52,7 +52,7 @@ export default function VestaHero() {
       <desc id="hero-vesta-desc">
         A hexagonal island of forest, brick, wool, grain and ore tiles with numbered
         dice tokens and player settlements, beside the line of the Nostr event log the
-        dice roll is derived from — nobody at the table rolls their own numbers.
+        dice roll is derived from: nobody at the table rolls their own numbers.
       </desc>
 
       <defs>

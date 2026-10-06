@@ -1,10 +1,10 @@
 /**
- * Three-peer transitive WebRTC discovery — Phase 3 of the mesh
+ * Three-peer transitive WebRTC discovery: Phase 3 of the mesh
  * hardening plan.
  *
  * Scenario:
  *   Three BrowserContexts (A, B, C). All three join the same probe
- *   channel. Once the full mesh forms — A↔B, B↔C, A↔C — at least one
+ *   channel. Once the full mesh forms (A↔B, B↔C, A↔C), at least one
  *   of A or C should report `metrics.transitive.discoveredViaControl >=
  *   1` because B's data-channel `hello` carries its connected peer set
  *   to both. (In a perfectly-symmetric-relay world the relay roster
@@ -84,7 +84,7 @@ test('three peers form full mesh and report control-channel discovery', async ()
     pks.forEach((pk, i) => expect(pk).toBe(ids[i].pkHex));
 
     const allMembers = pks;
-    // Staggered joins (1.5 s apart) — a 3-way simultaneous join saturates
+    // Staggered joins (1.5 s apart): a 3-way simultaneous join saturates
     // public.obelisk.ar's 50-sub-per-WS quota when the AppShell + voice
     // subscriptions all hit at once. The mesh still converges to the
     // same final state via control-channel discovery.
@@ -133,11 +133,11 @@ test('three peers form full mesh and report control-channel discovery', async ()
     });
     logOk('control-channel heartbeat alive on all three peers');
 
-    // ── Transitive discovery counter — THE HEADLINE ───────────────────
+    // ── Transitive discovery counter: THE HEADLINE ───────────────────
     // At least one peer must have discovered another via the control
     // channel (B's hello carries its connected list to A and C). This
     // is the Phase-3 capability that makes mesh robust against partial
-    // relay-side delivery — even if A's beacon never reached C, A learns
+    // relay-side delivery: even if A's beacon never reached C, A learns
     // about C through B's data channel.
     const totalControlDiscovered = finals.reduce(
       (sum, m) => sum + (m?.transitive.discoveredViaControl ?? 0),
@@ -152,8 +152,8 @@ test('three peers form full mesh and report control-channel discovery', async ()
     // ── Fast-hangup of one peer ───────────────────────────────────────
     // Peer 1 leaves. Any remaining peer that had a PC to peer1 must
     // detect within 15 s via control-channel bye. (Some pairs may not
-    // have formed under public.obelisk.ar's sub quota — see the mesh
-    // formation comment above — so we assert at least ONE detector
+    // have formed under public.obelisk.ar's sub quota, see the mesh
+    // formation comment above, so we assert at least ONE detector
     // rather than ALL.)
     await leaveMeshChannel(pages[1]);
     await ctxs[1].close();

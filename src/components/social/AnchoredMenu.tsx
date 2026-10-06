@@ -13,18 +13,21 @@
  *
  * Raising the z-index cannot fix that, and dropping the containment would
  * bring back the scroll lag. So the menu renders in a portal on `document.body`
- * with fixed coordinates measured from its trigger — outside every card's
+ * with fixed coordinates measured from its trigger, outside every card's
  * containment, ranked against the page.
  *
  * Because the coordinates are a snapshot, the menu closes on scroll and
  * resize rather than drifting away from the button it belongs to.
+ *
+ * It is `ui/PopoverPanel` with `follow="close"`, preferring the side above
+ * the trigger (the action row sits at the bottom of a card, so below is
+ * usually off-screen or over the next note). Kept under this name and API
+ * for its importers.
  */
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-
-/** Keeps the panel off the viewport edges. */
-const MARGIN = 8;
+import type { ReactNode, RefObject } from 'react';
+import { cn } from '@/components/ui/cn';
+import PopoverPanel from '@/components/ui/PopoverPanel';
 
 export default function AnchoredMenu({
   open,
@@ -38,8 +41,8 @@ export default function AnchoredMenu({
 }: {
   open: boolean;
   onClose: () => void;
-  anchorRef: React.RefObject<HTMLElement | null>;
-  children: React.ReactNode;
+  anchorRef: RefObject<HTMLElement | null>;
+  children: ReactNode;
   width?: number;
   testId?: string;
   /** Which edge of the trigger the panel lines up with. */
@@ -47,78 +50,21 @@ export default function AnchoredMenu({
   /** Replaces the panel's default look (e.g. `MENU_PANEL_CLASS`). */
   panelClassName?: string;
 }) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-
-  useLayoutEffect(() => {
-    if (!open) {
-      setPos(null);
-      return;
-    }
-    const anchor = anchorRef.current;
-    if (!anchor) return;
-    const rect = anchor.getBoundingClientRect();
-    const panelHeight = panelRef.current?.offsetHeight ?? 0;
-
-    // Prefer above the trigger — the action row sits at the bottom of a card,
-    // so below is usually off-screen or over the next note.
-    const fitsAbove = rect.top - panelHeight - MARGIN > 0;
-    const top = fitsAbove
-      ? rect.top - panelHeight - 4
-      : Math.min(rect.bottom + 4, window.innerHeight - panelHeight - MARGIN);
-
-    const rawLeft = align === 'end' ? rect.right - width : rect.left;
-    const left = Math.max(MARGIN, Math.min(rawLeft, window.innerWidth - width - MARGIN));
-
-    setPos({ top: Math.max(MARGIN, top), left });
-  }, [open, anchorRef, width, align, children]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (panelRef.current?.contains(target)) return;
-      if (anchorRef.current?.contains(target)) return;
-      onClose();
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    // Fixed coordinates are a snapshot: close rather than let the panel
-    // drift away from the button it belongs to.
-    const onReflow = () => onClose();
-
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    window.addEventListener('resize', onReflow);
-    window.addEventListener('scroll', onReflow, true);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-      window.removeEventListener('resize', onReflow);
-      window.removeEventListener('scroll', onReflow, true);
-    };
-  }, [open, onClose, anchorRef]);
-
-  if (!open || typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div
-      ref={panelRef}
+  return (
+    <PopoverPanel
+      open={open}
+      onClose={onClose}
+      anchorRef={anchorRef}
+      follow="close"
+      prefer="above"
+      align={align}
+      width={width}
       role="menu"
-      data-testid={testId}
-      style={{
-        position: 'fixed',
-        top: pos?.top ?? -9999,
-        left: pos?.left ?? -9999,
-        width,
-        // Hidden until measured, so it never flashes at the wrong place.
-        visibility: pos ? 'visible' : 'hidden',
-      }}
-      className={`z-[200] overflow-hidden ${panelClassName ?? 'rounded-xl border border-lc-border bg-lc-dark py-1 shadow-2xl'}`}
+      testId={testId}
+      surface={panelClassName === undefined ? 'popover' : 'none'}
+      className={panelClassName === undefined ? undefined : cn('overflow-hidden', panelClassName)}
     >
       {children}
-    </div>,
-    document.body,
+    </PopoverPanel>
   );
 }

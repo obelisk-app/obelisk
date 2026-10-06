@@ -10,7 +10,7 @@ export default function RelayGroupsDiagram() {
       <rect width="800" height="360" fill="#0a0a0a" />
 
       <text x="400" y="34" textAnchor="middle" fontSize="16" fontWeight="700" fill="#fafafa">
-        NIP-29 — the relay hosts the group
+        NIP-29: the relay hosts the group
       </text>
 
       {/* relay in the center */}

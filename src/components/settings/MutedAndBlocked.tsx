@@ -5,7 +5,7 @@
  *
  * `useModerationStore` has held `mutedPubkeys` / `blockedPubkeys` since it was
  * added, but the only way to reach them was the ⋯ menu on a note or profile
- * from the person you muted — which is exactly the content you no longer see.
+ * from the person you muted, which is exactly the content you no longer see.
  * Muting was effectively irreversible unless you could find them again.
  *
  * Note this is deliberately LOCAL-only and not published as a NIP-51 kind
@@ -18,11 +18,14 @@
  */
 
 import { useMemo } from 'react';
-import { hexToNpub } from '@nostr-wot/data';
-import { useUserMetadata } from '@/lib/nostr-bridge';
+import { useUserMetadata } from '@/services/nostr-bridge';
 import { useModerationStore } from '@/store/moderation';
 import { useTranslation } from '@/i18n/context';
-import UserAvatar from '@/components/UserAvatar';
+import UserAvatar from '@/components/ui/UserAvatar';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Text from '@/components/ui/Text';
+import { shortNpubLabel } from '@/utils/identity/short-npub';
 
 export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }) {
   const { t } = useTranslation();
@@ -53,9 +56,9 @@ export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }
     </div>
   ) : (
     <div className="space-y-2 border-t border-lc-border pt-4" data-testid="muted-and-blocked">
-      <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">
+      <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">
         {t('moderation.title')}
-      </div>
+      </Text>
       {body}
     </div>
   );
@@ -67,33 +70,26 @@ function ModerationRow({ pubkey, kind }: { pubkey: string; kind: 'mute' | 'block
   const toggleMute = useModerationStore((state) => state.toggleMute);
   const toggleBlock = useModerationStore((state) => state.toggleBlock);
 
-  const name = meta?.displayName || meta?.name || shortNpub(pubkey);
+  const name = meta?.displayName || meta?.name || shortNpubLabel(pubkey);
 
   return (
-    <li className="flex items-center gap-2 rounded-lg border border-lc-border bg-lc-black px-2 py-1.5">
+    <Card as="li" surface="black" radius="lg" padding="row" className="flex items-center gap-2">
       <UserAvatar pubkey={pubkey} picture={meta?.picture} size={6} name={name} alt={name} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs text-lc-white">{name}</div>
-        <div className="text-[10px] text-lc-muted">
+        <Text as="div" size="10" tone="muted">
           {t(kind === 'mute' ? 'moderation.muted' : 'moderation.blocked')}
-        </div>
+        </Text>
       </div>
-      <button
-        type="button"
-        className="shrink-0 rounded-lg border border-lc-border px-2 py-1 text-[10px] text-lc-muted hover:text-lc-white"
+      <Button
+        variant="outline"
+        size="xs"
+        className="shrink-0"
         onClick={() => (kind === 'mute' ? toggleMute(pubkey) : toggleBlock(pubkey))}
         data-testid={`moderation-undo-${kind}`}
       >
         {t(kind === 'mute' ? 'profileFeed.unmute' : 'profileFeed.unblock')}
-      </button>
-    </li>
+      </Button>
+    </Card>
   );
-}
-
-function shortNpub(pubkey: string): string {
-  try {
-    return `${hexToNpub(pubkey).slice(0, 14)}…`;
-  } catch {
-    return `${pubkey.slice(0, 10)}…`;
-  }
 }

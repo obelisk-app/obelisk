@@ -26,7 +26,7 @@ export default function SwapMatrixDiagram() {
       viewBox={`0 0 ${COL_X[2] + COL_W + 24} ${height}`}
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="Swap matrix — every layer of the Obelisk stack is replaceable"
+      aria-label="Swap matrix: every layer of the Obelisk stack is replaceable"
       className="w-full h-auto"
     >
       <rect width="100%" height="100%" fill="#0a0a0a" />

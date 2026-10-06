@@ -4,7 +4,7 @@
  * Vesta keeps its vertex/edge caches module-private, but every ingredient is
  * exported: `BOARD_HEXES`, `hexCornerPixel`, `vertexKey`, `edgeKey`. Deriving
  * our map from those means the keys we draw are the same strings upstream's
- * rules produce — the renderer cannot drift from the engine, because it is
+ * rules produce - the renderer cannot drift from the engine, because it is
  * asking the engine where things are.
  */
 import {
@@ -20,7 +20,7 @@ export interface VertexNode {
   key: string;
   x: number;
   y: number;
-  /** Every (hex, corner) that lands on this point — any one identifies it. */
+  /** Every (hex, corner) that lands on this point - any one identifies it. */
   hexes: Array<{ q: number; r: number; corner: number }>;
 }
 
@@ -124,7 +124,7 @@ export function nearestEdge(x: number, y: number, maxDistance: number): EdgeNode
   return best;
 }
 
-/** Hex whose center is nearest a point — used for placing the robber. */
+/** Hex whose center is nearest a point - used for placing the robber. */
 export function nearestHex(x: number, y: number, maxDistance: number): HexCoord | null {
   let best: HexCoord | null = null;
   let bestD = maxDistance * maxDistance;

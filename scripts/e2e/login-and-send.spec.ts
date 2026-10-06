@@ -66,7 +66,7 @@ test('fresh nsec identity logs in, finds a channel, posts a message', async ({ p
   );
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('rehydrating-screen')).toBeHidden({ timeout: 20_000 });
-  logOk('rehydrate gate cleared — AppShell mounted');
+  logOk('rehydrate gate cleared, AppShell mounted');
 
   // ── 2. Watch relay-access ─────────────────────────────────────────
   logStep(
@@ -99,7 +99,7 @@ test('fresh nsec identity logs in, finds a channel, posts a message', async ({ p
     const label = (await target.textContent())?.trim() ?? '(unknown)';
     logObserved(`resolved channel button → "${label}"`);
   } catch {
-    logWarn(`#${CHANNEL_NAME} not found in sidebar — falling back to first visible channel`);
+    logWarn(`#${CHANNEL_NAME} not found in sidebar; falling back to first visible channel`);
     target = anyChannel;
   }
   await target.click();
@@ -118,7 +118,7 @@ test('fresh nsec identity logs in, finds a channel, posts a message', async ({ p
   );
   try {
     await sendMessageInActiveChannel(page, probe);
-    logOk('probe message visible in the scroll — round-trip confirmed');
+    logOk('probe message visible in the scroll, round-trip confirmed');
   } catch (err) {
     logFail(`probe message did not appear: ${(err as Error).message}`);
     // Surface relay-access *now* so the failure log explains why.

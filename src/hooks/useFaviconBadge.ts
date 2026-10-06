@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useReducer, useRef } from 'react';
-import { useCurrentRelayUrl } from '@/lib/nostr-bridge';
-import { useTotalDMUnread } from '@/lib/read-state/selectors';
-import { useUnreadMentionCount } from '@/lib/notifications/selectors';
-import { setBadgeCount, clearBadge } from '@/lib/favicon-badge';
+import { useCurrentRelayUrl } from '@/services/nostr-bridge';
+import { useTotalDMUnread } from '@/services/read-state/selectors';
+import { useUnreadMentionCount } from '@/services/notifications/selectors';
+import { setBadgeCount, clearBadge } from '@/utils/favicon-badge';
 
 const BASE_TITLE = 'Obelisk';
 
@@ -13,7 +13,7 @@ const BASE_TITLE = 'Obelisk';
  * favicon + `(N) Obelisk` in the title. Should be mounted exactly once at
  * the chat root (currently from `ReadStateRoot`).
  *
- * **The badge counts things addressed to you — nothing else.** That is
+ * **The badge counts things addressed to you - nothing else.** That is
  * unread DMs plus unread @-mentions on the relay you're connected to.
  * Ordinary channel traffic deliberately does NOT badge the tab: a busy
  * relay would otherwise pin the title at `(99+)` permanently and the
@@ -35,7 +35,7 @@ export function useFaviconBadge(): void {
   const totalDM = useTotalDMUnread();
   const mentions = useUnreadMentionCount(activeRelay);
 
-  // Re-evaluate on tab focus/visibility transitions — the store
+  // Re-evaluate on tab focus/visibility transitions - the store
   // subscriptions above don't observe those, and the ingest-time gates
   // that decide what becomes a notification do read them.
   const [, force] = useReducer((x: number) => x + 1, 0);

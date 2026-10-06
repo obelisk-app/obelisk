@@ -2,20 +2,20 @@
  * NIP-59 gift wrap (rumor → seal → wrap) addressed to self.
  *
  * Used for app-private state events (per-relay read state, future: settings)
- * where we want the relay to see only `kind:1059 from random pubkey #p=me` —
+ * where we want the relay to see only `kind:1059 from random pubkey #p=me`:
  * the same shape as a NIP-17 DM. The inner rumor's kind, tags, and content
  * are all opaque to the relay.
  *
  * We don't reuse `nostr-tools/nip59` directly because its helpers require a
- * `Uint8Array` private key for the seal layer — fine for nsec logins, but
+ * `Uint8Array` private key for the seal layer: fine for nsec logins, but
  * NIP-07/bunker sessions never expose one. Our wrap accepts a `NipSigner`
  * abstraction (the same interface DM cache and wallet adapters use) so all
  * three login methods work transparently.
  */
 import { type Event as NostrEvent, getEventHash, finalizeEvent } from 'nostr-tools';
-import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
+import { generateSecretKey } from 'nostr-tools/pure';
 import { v2 as nip44 } from 'nostr-tools/nip44';
-import { KIND_SEAL, KIND_GIFT_WRAP } from './nip-kinds';
+import { KIND_SEAL, KIND_GIFT_WRAP } from '@/utils/nip-kinds';
 
 export interface NipSigner {
   readonly pubkey: string;
@@ -107,8 +107,8 @@ export async function wrapForSelf(
 }
 
 /**
- * Reverse of {@link wrapForSelf}. Returns `null` on any failure — decrypt
- * error, malformed JSON, mismatched seal pubkey — so callers can iterate
+ * Reverse of {@link wrapForSelf}. Returns `null` on any failure (decrypt
+ * error, malformed JSON, mismatched seal pubkey) so callers can iterate
  * over a mixed stream of kind:1059 events (which will eventually include
  * NIP-17 DMs alongside our state events) without throwing.
  */

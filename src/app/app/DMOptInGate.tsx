@@ -1,8 +1,9 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { setDmOptInEnabled, useDmOptInEnabled } from '@/lib/dm/opt-in';
+import { setDmOptInEnabled, useDmOptInEnabled } from '@/services/dm/opt-in';
 import { useTranslation } from '@/i18n/context';
+import Button from '@/components/ui/Button';
 
 type Surface = 'desktop' | 'sidebar' | 'mobile';
 
@@ -104,22 +105,13 @@ export default function DMOptInGate({
         </ul>
 
         <div className={compact ? 'mt-5 space-y-2' : 'mt-6 flex flex-col gap-2 sm:flex-row'}>
-          <button
-            type="button"
-            onClick={enable}
-            className="inline-flex min-h-11 items-center justify-center rounded-full bg-lc-green px-4 py-2 text-sm font-bold text-lc-black transition hover:bg-lc-green/90"
-            data-testid="enable-dms-button"
-          >
+          <Button variant="pill" size="sm" onClick={enable} className="min-h-11" data-testid="enable-dms-button">
             {t('dm.optIn.enable')}
-          </button>
+          </Button>
           {onSecondary && (
-            <button
-              type="button"
-              onClick={onSecondary}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-lc-border px-4 py-2 text-sm font-semibold text-lc-white transition hover:bg-lc-border/40"
-            >
+            <Button variant="pillSecondary" size="sm" onClick={onSecondary} className="min-h-11">
               {resolvedSecondaryLabel}
-            </button>
+            </Button>
           )}
         </div>
       </section>

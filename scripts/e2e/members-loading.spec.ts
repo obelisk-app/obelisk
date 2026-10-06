@@ -47,7 +47,7 @@ test('member list shows "Loading members…" until ready', async ({ page, contex
   if ((await toggle.count()) === 0) {
     // On smaller viewports the chat header might be cropped; fall back
     // to clicking by aria-pressed=false.
-    logOk('Members toggle not directly findable — skipping toggle click (may already be open)');
+    logOk('Members toggle not directly findable; skipping toggle click (may already be open)');
   } else {
     await toggle.first().click();
   }
@@ -56,7 +56,7 @@ test('member list shows "Loading members…" until ready', async ({ page, contex
   // ready from cache. Both branches are acceptable.
   const loading = page.getByTestId('members-loading');
   const isLoadingNow = await loading.isVisible().catch(() => false);
-  logOk(`members panel — initially loading=${isLoadingNow}`);
+  logOk(`members panel: initially loading=${isLoadingNow}`);
 
   // Whichever, the loader must not be visible after 15s on a healthy relay.
   await expect(loading).toBeHidden({ timeout: 15_000 });

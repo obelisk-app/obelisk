@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import ShootingStars from '@/components/ShootingStars';
-import { ShowcaseRow, type ShowcaseItem } from '@/components/Showcase';
+import Navbar from '@/components/marketing/Navbar';
+import Footer from '@/components/marketing/Footer';
+import ShootingStars from '@/components/marketing/ShootingStars';
+import { ShowcaseRow, type ShowcaseItem } from '@/components/marketing/Showcase';
 import { useTranslation } from '@/i18n/context';
+import Button, { buttonClass } from '@/components/ui/Button';
 
 export default function MobileShowcase() {
   const { t } = useTranslation();
@@ -81,15 +82,16 @@ export default function MobileShowcase() {
               {t('mobile.hero.subtitle')}
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
-              <button
+              <Button
+                variant="pill"
+                size="lg"
                 onClick={() => router.push('/app')}
-                className="lc-pill lc-pill-primary text-base px-8 py-3"
               >
                 {t('mobile.hero.cta')}
-              </button>
+              </Button>
               <Link
                 href="/desktop"
-                className="lc-pill lc-pill-secondary text-base px-8 py-3"
+                className={buttonClass({ variant: 'pillSecondary', size: 'lg' })}
               >
                 {t('mobile.hero.ctaSecondary')}
               </Link>
@@ -114,12 +116,13 @@ export default function MobileShowcase() {
               <p className="text-lc-muted text-lg mb-8 max-w-lg mx-auto">
                 {t('mobile.cta.subtitle')}
               </p>
-              <button
+              <Button
+                variant="pill"
+                size="lg"
                 onClick={() => router.push('/app')}
-                className="lc-pill lc-pill-primary text-base px-10 py-3.5"
               >
                 {t('mobile.cta.button')}
-              </button>
+              </Button>
             </div>
           </div>
         </section>

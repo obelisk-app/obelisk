@@ -19,7 +19,7 @@
 import type { Page, BrowserContext, ConsoleMessage } from '@playwright/test';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 
-// Mirror of `src/lib/nostr-bridge/client.ts` constants. Duplicated rather
+// Mirror of `src/services/nostr-bridge/client.ts` constants. Duplicated rather
 // than imported because the harness runs under Node and the bridge module
 // pulls a chain of browser-only deps.
 export const STORAGE_KEY = 'obelisk-dex/session';
@@ -86,7 +86,7 @@ export async function seedSession(
         window.localStorage.setItem(key, sessionJson);
         window.localStorage.setItem(relaysKey, relaysJson);
       } catch {
-        // Private mode etc. — let the test fail with a clearer message
+        // Private mode etc.; let the test fail with a clearer message
         // when the bridge can't rehydrate.
       }
     },
@@ -111,27 +111,22 @@ function ts(): string {
 }
 
 export function logStep(name: string, expectation: string): void {
-  // eslint-disable-next-line no-console
-  console.log(`\n${cyan}▸ ${name}${reset} ${dim}— expected:${reset} ${expectation}`);
+  console.log(`\n${cyan}▸ ${name}${reset} ${dim}- expected:${reset} ${expectation}`);
 }
 
 export function logObserved(line: string): void {
-  // eslint-disable-next-line no-console
   console.log(`  ${dim}${ts()}${reset} ${line}`);
 }
 
 export function logOk(line: string): void {
-  // eslint-disable-next-line no-console
   console.log(`  ${green}✓${reset} ${line}`);
 }
 
 export function logWarn(line: string): void {
-  // eslint-disable-next-line no-console
   console.log(`  ${yellow}!${reset} ${line}`);
 }
 
 export function logFail(line: string): void {
-  // eslint-disable-next-line no-console
   console.log(`  ${red}✗${reset} ${line}`);
 }
 
@@ -149,7 +144,7 @@ export interface ClientCapture {
 /**
  * Attach console + websocket capture to a Page. Console messages are
  * mirrored to the host process's stdout (so they interleave with test
- * output), and every Nostr-shaped frame is also dumped — so a relay's
+ * output), and every Nostr-shaped frame is also dumped, so a relay's
  * AUTH challenge or NOTICE shows up live.
  */
 export function attachClientCapture(page: Page, opts?: { mirror?: boolean }): ClientCapture {
@@ -166,7 +161,6 @@ export function attachClientCapture(page: Page, opts?: { mirror?: boolean }): Cl
     if (mirror) {
       const color =
         entry.type === 'error' ? red : entry.type === 'warning' ? yellow : dim;
-      // eslint-disable-next-line no-console
       console.log(`    ${color}console.${entry.type}${reset} ${entry.text}`);
     }
   };
@@ -175,7 +169,6 @@ export function attachClientCapture(page: Page, opts?: { mirror?: boolean }): Cl
   const onPageError = (err: Error) => {
     cap.console.push({ type: 'pageerror', text: err.message, at: ts() });
     if (mirror) {
-      // eslint-disable-next-line no-console
       console.log(`    ${red}pageerror${reset} ${err.message}`);
     }
   };
@@ -227,12 +220,11 @@ function maybeLogNostrFrame(direction: 'send' | 'recv', url: string, text: strin
   const tail = (() => {
     try { return JSON.stringify(parsed.slice(1)).slice(0, 200); } catch { return ''; }
   })();
-  // eslint-disable-next-line no-console
   console.log(`    ${magenta}${arrow} ${verb}${reset} ${dim}${host}${reset} ${tail}`);
 }
 
 // ---------------------------------------------------------------------------
-// DOM helpers — tied to the data-testids and labels in AppShell
+// DOM helpers: tied to the data-testids and labels in AppShell
 // ---------------------------------------------------------------------------
 
 export type RelayAccessUiState =
@@ -247,7 +239,7 @@ export type RelayAccessUiState =
 /**
  * Read the current relay-access banner state from the DOM. Returns
  * `'ok'` when the banner is absent (the banner only renders for non-ok
- * access — see RelayAccessBanner).
+ * access; see RelayAccessBanner).
  */
 export async function getRelayAccessState(page: Page): Promise<RelayAccessUiState> {
   const banner = page.locator('[data-testid="relay-access-banner"]').first();
@@ -285,7 +277,7 @@ function stateChip(s: RelayAccessUiState): string {
 /**
  * Locate a channel-row button in the sidebar by visible name. Channel
  * rows render as `# <name>`; category headers render as `▶/▼ NAME` and
- * are also buttons (collapse/expand) — matching them by name would
+ * are also buttons (collapse/expand); matching them by name would
  * silently click a category, which is why we require the `#␣` prefix.
  *
  * Resolution order:

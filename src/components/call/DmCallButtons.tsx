@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Voice / video call buttons for a DM thread header — one joined control,
+ * Voice / video call buttons for a DM thread header - one joined control,
  * the same height and border as the ⋯ beside it, so the header's actions
  * read as a set rather than three loose icons. Calls ride the NIP-17 inbox,
  * so they need DMs switched on; while any call is in progress the buttons
@@ -9,7 +9,7 @@
  */
 
 import { useTranslation } from '@/i18n/context';
-import { usePreferences } from '@/lib/preferences';
+import { usePreferences } from '@/services/preferences';
 import { useDmCallStore } from '@/store/dm-call';
 import { PhoneIcon, VideoIcon } from '@/components/ui/icons';
 

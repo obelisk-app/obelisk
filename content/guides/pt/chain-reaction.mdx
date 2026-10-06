@@ -1,6 +1,6 @@
 ---
 title: Chain Reaction, jogado num relay
-description: Solte um orbe, tome uma casa e, quando uma casa fica com um orbe a mais do que aguenta, ela estoura nas vizinhas — e nas vizinhas delas. O Chain Reaction roda num canal do Obelisk sem servidor de jogo — cada cliente reproduz o mesmo log de eventos e chega ao mesmo tabuleiro.
+description: Solte um orbe, tome uma casa e, quando uma casa fica com um orbe a mais do que aguenta, ela estoura nas vizinhas, e nas vizinhas delas. O Chain Reaction roda num canal do Obelisk sem servidor de jogo. Cada cliente reproduz o mesmo log de eventos e chega ao mesmo tabuleiro.
 heroComponent: chain-reaction
 publishedAt: '2026-09-04'
 updatedAt: '2026-09-04'
@@ -10,7 +10,7 @@ tags: [games, chain-reaction, nostr, nip-29, kind-2390]
 ## As regras, em quatro linhas
 
 - Clique numa casa vazia ou que já seja sua. Ela ganha um orbe.
-- Uma casa estoura quando tem tantos orbes quanto vizinhas — **2 num canto, 3 numa borda, 4 no meio**.
+- Uma casa estoura quando tem tantos orbes quanto vizinhas: **2 num canto, 3 numa borda, 4 no meio**.
 - Ao estourar, um orbe vai para cada vizinha, e todas essas casas passam a ser suas.
 - Estourar pode deixar uma vizinha crítica também, então um clique pode rolar pelo tabuleiro inteiro. Perdeu todos os seus orbes depois da primeira jogada, você está fora; vence quem sobrar por último.
 
@@ -20,15 +20,15 @@ tags: [games, chain-reaction, nostr, nip-29, kind-2390]
 
 ## Abrindo uma mesa
 
-Digite `/play` num canal, escolha Chain Reaction e selecione um tamanho de tabuleiro — pequeno (5×7), médio (6×9) ou grande (8×12) — e um relógio de turno. Criar a mesa publica um evento e posta um card no canal. Qualquer pessoa do canal pode clicar em **Entrar** nesse card; quando a lista estiver boa, quem criou clica em **Começar**.
+Digite `/play` num canal, escolha Chain Reaction e selecione um tamanho de tabuleiro, pequeno (5×7), médio (6×9) ou grande (8×12), e um relógio de turno. Criar a mesa publica um evento e posta um card no canal. Qualquer pessoa do canal pode clicar em **Entrar** nesse card; quando a lista estiver boa, quem criou clica em **Começar**.
 
-<Shot name="games/game-picker" caption="/play no compositor. Tudo nesta lista — nomes, faixas de jogadores, relógios — vem do registro de jogos, não da tela." maxWidth={448} />
+<Shot name="games/game-picker" caption="/play no compositor. Tudo nesta lista (nomes, faixas de jogadores, relógios) vem do registro de jogos, não da tela." maxWidth={448} />
 
 O Chain Reaction acomoda de **2 a 8 pessoas** e usa um relógio de **45 segundos** por padrão. Se vários assentos forem atribuídos à mesma conta, essas pessoas estão dividindo um teclado: o tabuleiro segue quem está na vez, e as jogadas são assinadas pela mesma chave. Todo o resto joga do próprio cliente.
 
 ## O que de fato passa pelo fio
 
-Uma jogada é um evento. Não um tabuleiro, não uma cascata — um número de casa:
+Uma jogada é um evento. Não um tabuleiro, não uma cascata. Um número de casa:
 
 ```json
 {
@@ -44,12 +44,12 @@ Uma jogada é um evento. Não um tabuleiro, não uma cascata — um número de c
 }
 ```
 
-Seu cliente publica isso no relay do canal, o relay entrega a todo mundo que está assinando, e cada cliente — o seu inclusive — roda o mesmo redutor sobre o mesmo log. A explosão que você vê é a sua própria máquina reproduzindo a cascata que as regras implicam. Ninguém te envia um tabuleiro, porque ninguém tem um mais autoritativo que o seu.
+Seu cliente publica isso no relay do canal, o relay entrega a todo mundo que está assinando, e cada cliente (o seu inclusive) roda o mesmo redutor sobre o mesmo log. A explosão que você vê é a sua própria máquina reproduzindo a cascata que as regras implicam. Ninguém te envia um tabuleiro, porque ninguém tem um mais autoritativo que o seu.
 
 <Callout type="info" title="Por que não existe servidor de jogo">
 O relay guarda e encaminha eventos; é só isso que ele faz. As regras vivem em
 cada cliente, idênticas. Isso significa que a mesa sobrevive a tudo, menos ao
-próprio relay sumir — e significa que quem chega para assistir na jogada 40
+próprio relay sumir, e significa que quem chega para assistir na jogada 40
 pode reproduzir as jogadas de 1 a 39 e ver exatamente o que todo mundo vê.
 </Callout>
 
@@ -58,7 +58,7 @@ pode reproduzir as jogadas de 1 a 39 e ver exatamente o que todo mundo vê.
 Cada cliente valida cada jogada antes de aplicá-la, então um evento que quebra uma regra é descartado em todo lugar ao mesmo tempo. Na prática, uma jogada só é aplicada quando:
 
 1. está assinada pela conta que controla o assento da vez;
-2. carrega o número de turno `n` atual — uma jogada publicada contra um tabuleiro velho falha aqui;
+2. carrega o número de turno `n` atual (uma jogada publicada contra um tabuleiro velho falha aqui);
 3. o motor diz que a casa é válida (vazia ou já sua).
 
 Publicar uma jogada ilegal não é uma exploração; é publicar ruído. A ordem é decidida por `(created_at, id)`, e o id é um hash, então dois eventos que caem no mesmo segundo desempatam igual em todas as máquinas. O relógio desajustado de ninguém reordena a sua partida.
@@ -67,7 +67,7 @@ Publicar uma jogada ilegal não é uma exploração; é publicar ruído. A ordem
 
 Não existe processo de temporizador em lugar nenhum. O prazo é derivado do log: o turno começou quando o último evento aceito chegou, e expira `turnTimeoutS` depois. Passado esse momento, **qualquer** jogador pode publicar uma reivindicação de `timeout` para aquele turno. Todo mundo confere a reivindicação contra o mesmo log e chega ao mesmo veredito, então a primeira válida é aceita e as demais são duplicatas inofensivas.
 
-Escolha **Sem relógio** e nada é imposto — uma mesa entre amigos em que alguém se distrai simplesmente espera. É uma troca justa num jogo com amigos e péssima com estranhos.
+Escolha **Sem relógio** e nada é imposto: uma mesa entre amigos em que alguém se distrai simplesmente espera. É uma troca justa num jogo com amigos e péssima com estranhos.
 
 ## Quando termina
 
@@ -75,7 +75,7 @@ Quem já jogou pelo menos uma vez e depois perde todos os orbes é eliminado. Qu
 
 <Shot name="games/chain-reaction-result" caption="A mesa encerrada, como aparece de volta no canal." maxWidth={380} />
 
-O resultado não é um anúncio separado que alguém poderia forjar — é o que o log diz quando você o reproduz.
+O resultado não é um anúncio separado que alguém poderia forjar; é o que o log diz quando você o reproduz.
 
 ## Do que isso não te protege
 
@@ -86,7 +86,7 @@ O resultado não é um anúncio separado que alguém poderia forjar — é o que
 
 ## Para quem quiser se aprofundar
 
-A coisa toda são eventos kind `2390` no grupo do canal, reproduzidos por `src/lib/games/session.ts`. O motor — `chain-reaction.ts` — é uma função pura: sem relógio, sem aleatoriedade, sem mutação. É exatamente por isso que dá para confiá-lo a um cliente. Se você quiser o formato do fio operação por operação, ele está em [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+A coisa toda são eventos kind `2390` no grupo do canal, reproduzidos por `src/lib/games/session.ts`. O motor, `chain-reaction.ts`, é uma função pura: sem relógio, sem aleatoriedade, sem mutação. É exatamente por isso que dá para confiá-lo a um cliente. Se você quiser o formato do fio operação por operação, ele está em [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
 
 <RelatedGuides items={[
   { slug: "stacker", note: "o de tempo real, em que limpar linhas soterra outra pessoa" },

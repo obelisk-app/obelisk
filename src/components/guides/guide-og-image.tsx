@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { readGuide } from '@/lib/guides';
+import { readGuide } from '@/services/guides';
 import type { Locale } from '@/i18n';
 
 export const ogImageSize = { width: 1200, height: 630 };

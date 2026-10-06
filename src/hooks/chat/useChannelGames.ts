@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { useConnectionState } from '@/lib/nostr-bridge';
+import { useConnectionState } from '@/services/nostr-bridge';
 import { useGamesStore, selectChannelSessions, selectSession } from '@/store/games';
-import { subscribeChannelGames, publishTimeout } from '@/lib/games/transport';
-import { ingestGameEvent } from '@/lib/games/ingest';
+import { subscribeChannelGames, publishTimeout } from '@/services/games/transport';
+import { ingestGameEvent } from '@/services/games/ingest';
 import { useNowSeconds } from '@/lib/games/clock';
 import { controllerOf, isTurnExpired, seatsControlledBy, type GameSession } from '@/lib/games/session';
 
@@ -12,7 +12,7 @@ export { useNowSeconds };
 
 /**
  * Subscribe to the active channel's game log. One sub per channel, on the
- * active relay only (the transport enforces that) — a table belongs to the
+ * active relay only (the transport enforces that) - a table belongs to the
  * channel it was created in, and following a user across relays would open
  * sockets to relays they haven't authenticated against.
  */
@@ -24,7 +24,7 @@ export function useChannelGamesSubscription(channelId: string | null): void {
 
     // Batched, not per-event: the backfill for a channel that plays a lot is
     // hundreds of events arriving across a socket drain, and one store update
-    // each meant one replay per event per visible card. See lib/games/ingest.
+    // each meant one replay per event per visible card. See services/games/ingest.
     void subscribeChannelGames(channelId, ingestGameEvent).then((fn) => {
       if (cancelled) { fn(); return; }
       unsub = fn;
@@ -41,7 +41,7 @@ export function useChannelGamesSubscription(channelId: string | null): void {
 
 /**
  * How often session derivation re-runs against the wall clock. See
- * `useGameSession` — this is not the turn clock, which ticks every second.
+ * `useGameSession` - this is not the turn clock, which ticks every second.
  */
 export const SESSION_CLOCK_MS = 30_000;
 
@@ -54,8 +54,8 @@ export const SESSION_CLOCK_MS = 30_000;
  * table. A channel with a dozen cards and a live match in it spent its frame
  * budget replaying tables nobody was looking at.
  *
- * The clock stays coarse for the same reason. `now` decides exactly one thing —
- * whether a table nobody started has gone stale after an hour — and
+ * The clock stays coarse for the same reason. `now` decides exactly one thing -
+ * whether a table nobody started has gone stale after an hour - and
  * `selectSession` caches the replay by log identity, so a tick now costs a
  * `WeakMap` lookup and an integer compare rather than a full replay.
  */
@@ -82,8 +82,8 @@ export function useChannelSessions(channelId: string | null): GameSession[] {
 /**
  * Grace between a deadline passing and this client being willing to say so.
  *
- * Two things it absorbs. A move already in flight — signed, published, not yet
- * echoed back — should land before anybody reports its author. And our clock
+ * Two things it absorbs. A move already in flight - signed, published, not yet
+ * echoed back - should land before anybody reports its author. And our clock
  * is not their clock: the reducer accepts a claim whose `created_at` is past
  * the deadline, and `created_at` comes from whoever claims, so a browser
  * running a few seconds fast would otherwise cut turns short for everyone
@@ -96,7 +96,7 @@ export const TIMEOUT_CLAIM_GRACE_S = 3;
  *
  * A turn clock derived from the log keeps running while the relay is
  * unreachable, so the moment a table comes back everyone's deadline has
- * already passed — through nobody's fault. Claiming then would hand the win
+ * already passed - through nobody's fault. Claiming then would hand the win
  * to whoever reconnected first. Instead we give the player on move the same
  * window on a healthy relay that the clock was supposed to give them.
  */
@@ -105,7 +105,7 @@ export const RECONNECT_CLAIM_GRACE_S = 20;
 /**
  * Publish the timeout claim when the clock runs out on someone else's turn.
  *
- * Somebody has to say it out loud — the deadline is derivable from the log,
+ * Somebody has to say it out loud - the deadline is derivable from the log,
  * but a state transition only exists once it is an event. Every client at the
  * table races to publish; the reducer accepts exactly one (first by
  * `created_at`, then by id), so the duplicates are harmless noise.
@@ -113,7 +113,7 @@ export const RECONNECT_CLAIM_GRACE_S = 20;
  * Only clients watching the table claim, and never against their own turn:
  * losing on time should cost you a move you didn't make, not a move your own
  * browser reported you for. And never on a connection that only just came
- * back — see `RECONNECT_CLAIM_GRACE_S`.
+ * back - see `RECONNECT_CLAIM_GRACE_S`.
  */
 export function useTurnClockEnforcer(
   session: GameSession | null,

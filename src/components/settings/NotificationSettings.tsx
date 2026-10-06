@@ -1,19 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { setPreference, usePreferences, type Preferences } from '@/lib/preferences';
+import { setPreference, usePreferences, type Preferences } from '@/services/preferences';
 import {
   desktopNotificationPermission,
   requestDesktopNotificationPermission,
-} from '@/lib/notifications/alert';
-import { previewRingtone, RINGTONES } from '@/lib/notifications/sound';
+} from '@/services/notifications/alert';
+import { previewRingtone, RINGTONES } from '@/services/notifications/sound';
 import { useTranslation } from '@/i18n/context';
+import SettingRow from '@/components/ui/SettingRow';
+import Toggle from '@/components/ui/Toggle';
+import Button from '@/components/ui/Button';
+import Text from '@/components/ui/Text';
 
 type BoolPref = 'notificationSounds' | 'browserNotifications' | 'backgroundRelayWatch';
 
 /**
  * Sounds, OS popups, and the background relay watch. One component for both
- * shells — `mobile` switches to the phone's `settings-*` classes, same as
+ * shells: `mobile` switches to the phone's `settings-*` classes, same as
  * `SocialRelaySettings`.
  */
 export default function NotificationSettings({ mobile = false }: { mobile?: boolean }) {
@@ -87,7 +91,7 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
 
   const isOn = (key: BoolPref) => (key === 'browserNotifications' ? browserOn : (prefs as Preferences)[key]);
 
-  // Picking a ringtone previews it — hearing is the only way to choose one.
+  // Picking a ringtone previews it: hearing is the only way to choose one.
   const pickRingtone = (id: Preferences['notificationRingtone']) => {
     setPreference('notificationRingtone', id);
     previewRingtone(id, 'mention');
@@ -168,40 +172,34 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
   return (
     <section className="space-y-3 rounded-lg border border-lc-border bg-lc-dark/30 p-3" data-testid="notification-settings">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-lc-muted">
+        <Text as="h3" variant="label" size="xs" weight="semibold" tone="muted">
           {t('preferences.notifications.title')}
-        </h3>
-        <button
-          type="button"
+        </Text>
+        <Button
+          variant="outlinePill"
+          size="xs"
           onClick={() => previewRingtone(prefs.notificationRingtone, 'dm')}
-          className="rounded-full border border-lc-border bg-lc-card/60 px-3 py-1 text-xs font-semibold text-lc-white hover:border-lc-green/50 hover:bg-lc-green/10"
           data-testid="notif-test-sound"
         >
           {t('preferences.notifications.test')}
-        </button>
+        </Button>
       </div>
       {rows.map((row) => (
         <div key={row.key}>
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-sm text-lc-white">{row.label}</div>
-            <div className="mt-0.5 text-xs text-lc-muted">{row.description}</div>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isOn(row.key)}
-            aria-label={row.label}
-            disabled={row.disabled}
-            onClick={row.onToggle}
-            data-testid={`notif-toggle-${row.key}`}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 ${isOn(row.key) ? 'bg-lc-green' : 'bg-lc-border'}`}
-          >
-            <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-lc-black transition-transform ${isOn(row.key) ? 'translate-x-5' : 'translate-x-0.5'}`}
+        <SettingRow
+          label={row.label}
+          description={row.description}
+          control={({ descriptionId }) => (
+            <Toggle
+              checked={isOn(row.key)}
+              onChange={() => row.onToggle()}
+              aria-label={row.label}
+              aria-describedby={descriptionId}
+              disabled={row.disabled}
+              data-testid={`notif-toggle-${row.key}`}
             />
-          </button>
-        </div>
+          )}
+        />
         {row.key === 'notificationSounds' && prefs.notificationSounds && (
           <div className="mt-3">{ringtonePicker}</div>
         )}

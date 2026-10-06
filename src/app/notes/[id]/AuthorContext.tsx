@@ -3,38 +3,32 @@
  *
  * A standalone note is a fragment: it arrives with no sense of who wrote it
  * or what else they say, which is why a bare note page feels like a dead end.
- * This is the context that makes it a destination — more from the author,
+ * This is the context that makes it a destination - more from the author,
  * what they write about, who they read, and where they publish.
  *
  * Server-rendered along with the note, so it's in the HTML a crawler sees.
  */
 
 import Link from 'next/link';
-import { serverLocale } from '@/lib/server/locale';
-import { formatDate } from '@/lib/format';
+import { serverLocale } from '@/services/server/locale';
+import { formatDate } from '@/utils/format/format';
 import { nip19 } from 'nostr-tools';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
   displayNameFor,
   type AuthorRelays,
   type ViewerProfile,
-} from '@/lib/server/nostr-fetch';
-import { plainTextForPreview } from '@/lib/server/note-preview';
+} from '@/services/server/nostr-fetch';
+import { plainTextForPreview } from '@/services/server/note-preview';
 import FollowButton from './FollowButton';
+import RemoteImage from '@/components/ui/RemoteImage';
+import { NOTE_VIEWER_PATH, noteIdentifier } from '@/services/social/note-links';
 
 function npubOf(pubkey: string): string {
   try {
     return nip19.npubEncode(pubkey);
   } catch {
     return pubkey;
-  }
-}
-
-function eventPath(note: Pick<NostrEvent, 'id' | 'pubkey'>): string {
-  try {
-    return `/notes/${nip19.neventEncode({ id: note.id, author: note.pubkey, kind: 1 })}`;
-  } catch {
-    return `/notes/${note.id}`;
   }
 }
 
@@ -78,7 +72,7 @@ export default async function AuthorContext({
               return (
                 <li key={note.id}>
                   <Link
-                    href={eventPath(note)}
+                    href={`${NOTE_VIEWER_PATH}/${noteIdentifier(note)}`}
                     className="block min-w-0 rounded-xl border border-lc-border bg-lc-dark p-3 transition-colors hover:border-lc-green/40"
                   >
                     <p className="line-clamp-2 break-words text-sm text-lc-white">
@@ -124,11 +118,9 @@ export default async function AuthorContext({
                   className="flex min-w-0 items-center gap-2 rounded-xl border border-lc-border bg-lc-dark p-2 transition-colors hover:border-lc-green/40"
                 >
                   {profile.picture ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <RemoteImage
                       src={profile.picture}
                       alt=""
-                      loading="lazy"
                       decoding="async"
                       className="h-7 w-7 shrink-0 rounded-full object-cover"
                     />

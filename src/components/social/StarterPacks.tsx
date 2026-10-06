@@ -4,7 +4,7 @@
  * What an account with no follows sees instead of "try the Global tab".
  *
  * A fresh key follows nobody, so the Following feed is empty on the first
- * run — the one moment where the app has to prove it's worth using. The old
+ * run: the one moment where the app has to prove it's worth using. The old
  * copy pointed at Global, which is a firehose of strangers in languages you
  * may not read, and left the actual job (find people worth following) to the
  * person who just arrived.
@@ -13,27 +13,30 @@
  * Follow one and the feed fills.
  */
 
-import { displayNameFor } from '@/lib/display-name';
+import { displayNameFor } from '@/utils/identity/display-name';
 import { useCallback, useEffect, useState } from 'react';
-import { getBridge, useMyContactList, useMyFollows } from '@/lib/nostr-bridge';
-import { usePreferences } from '@/lib/preferences';
-import { ensureSocialProfiles } from '@/lib/social/profiles';
+import { getBridge, useMyContactList, useMyFollows } from '@/services/nostr-bridge';
+import { usePreferences } from '@/services/preferences';
+import { ensureSocialProfiles } from '@/services/social/profiles';
 import {
   fetchStarterPacks,
   followedCount,
   mergedFollowTags,
   type StarterPack,
-} from '@/lib/social/starter-packs';
-import { useAuthor } from '@/lib/social/useAuthor';
+} from '@/services/social/starter-packs';
+import { useAuthor } from '@/services/social/useAuthor';
 import { useToastStore } from '@/store/toast';
 import { useTranslation } from '@/i18n/context';
-import UserAvatar from '@/components/UserAvatar';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import UserAvatar from '@/components/ui/UserAvatar';
+import EmptyState from '@/components/ui/EmptyState';
 
 /**
  * How many members to name per pack.
  *
  * Six was too few to tell packs apart at a glance, but this also bounds a
- * profile fan-out on a discovery surface — every face is a kind-0 lookup
+ * profile fan-out on a discovery surface: every face is a kind-0 lookup
  * across the social relays, for every pack on screen.
  */
 const FACES = 12;
@@ -72,7 +75,7 @@ export default function StarterPacks({
         content: contactEvent?.content ?? '',
         // One merged kind 3, not one per member: follows are a single
         // replaceable event, so a per-person loop would race itself and
-        // end with whichever write landed last — i.e. one follow.
+        // end with whichever write landed last: i.e. one follow.
         tags: mergedFollowTags(contactEvent?.tags ?? [], pack.members),
         created_at: Math.max(Math.floor(Date.now() / 1000), (contactEvent?.created_at ?? 0) + 1),
       }, { extraRelays: relays, mode: 'replace' });
@@ -91,7 +94,7 @@ export default function StarterPacks({
     The heading paints immediately, in every state.
 
     A brand-new account's whole first impression was two anonymous grey
-    rectangles for several seconds while this fetch ran — the screen didn't
+    rectangles for several seconds while this fetch ran: the screen didn't
     even say what was coming. Saying "Find people to follow" costs nothing
     and turns the wait into a labelled one.
   */
@@ -115,9 +118,9 @@ export default function StarterPacks({
     return (
       <div className="space-y-3 p-4" data-testid="starter-packs-empty">
         {heading}
-        <p className="px-1 py-6 text-center text-sm text-lc-muted">
+        <EmptyState as="p" padding="md" className="px-1">
           {t('social.packsEmpty')}
-        </p>
+        </EmptyState>
       </div>
     );
   }
@@ -130,9 +133,9 @@ export default function StarterPacks({
         const already = followedCount(pack, follows);
         const remaining = pack.members.length - already;
         return (
-          <section
+          <Card
+            as="section"
             key={pack.id}
-            className="rounded-xl border border-lc-border bg-lc-dark p-3"
             data-testid="starter-pack"
           >
             <div className="flex items-start gap-3">
@@ -146,9 +149,10 @@ export default function StarterPacks({
                   {already > 0 && ` · ${already} ${t('social.packAlreadyFollowing')}`}
                 </p>
               </div>
-              <button
-                type="button"
-                className="lc-pill-primary shrink-0 px-4 py-2 text-xs disabled:opacity-50"
+              <Button
+                variant="pill"
+                size="xs"
+                className="shrink-0"
                 onClick={() => void followPack(pack)}
                 disabled={busy !== null || remaining === 0}
                 data-testid="starter-pack-follow"
@@ -158,7 +162,7 @@ export default function StarterPacks({
                   : remaining === 0
                     ? t('social.packAllFollowed')
                     : `${t('mobile.profile.follow')} ${remaining}`}
-              </button>
+              </Button>
             </div>
 
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -171,7 +175,7 @@ export default function StarterPacks({
                 </span>
               )}
             </div>
-          </section>
+          </Card>
         );
       })}
     </div>

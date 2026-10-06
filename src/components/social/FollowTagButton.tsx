@@ -1,17 +1,18 @@
 'use client';
 
 /**
- * Follow a hashtag — a NIP-51 interests entry, not a local bookmark.
+ * Follow a hashtag: a NIP-51 interests entry, not a local bookmark.
  *
  * The write goes to kind 10015, so a tag followed here is followed in
- * Amethyst, Primal and Coracle too. See `lib/social/interests.ts`.
+ * Amethyst, Primal and Coracle too. See `services/social/interests.ts`.
  */
 
 import { useState } from 'react';
-import { useMyPubkey } from '@/lib/nostr-bridge';
-import { useInterests } from '@/lib/social/useInterests';
+import { useMyPubkey } from '@/services/nostr-bridge';
+import { useInterests } from '@/services/social/useInterests';
 import { useToastStore } from '@/store/toast';
 import { useTranslation } from '@/i18n/context';
+import Chip from '@/components/ui/Chip';
 
 export default function FollowTagButton({
   tag,
@@ -47,22 +48,17 @@ export default function FollowTagButton({
   };
 
   return (
-    <button
-      type="button"
+    <Chip
+      size={size === 'sm' ? '10' : 'xs'}
+      state={following ? 'selected' : 'idle'}
       onClick={onClick}
       disabled={busy || !ready}
-      aria-pressed={following}
-      className={`shrink-0 rounded-full border font-semibold transition-colors disabled:opacity-50 ${
-        size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'
-      } ${
-        following
-          ? 'border-lc-green/40 bg-lc-green/10 text-lc-green hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400'
-          : 'border-lc-border text-lc-muted hover:border-lc-green/50 hover:text-lc-white'
-      }`}
+      // Hovering a followed tag previews the unfollow.
+      className={`shrink-0 font-semibold ${following ? 'hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400' : ''}`}
       data-testid="follow-tag-button"
       data-following={following || undefined}
     >
       {following ? t('social.unfollowTag') : t('social.followTag')}
-    </button>
+    </Chip>
   );
 }

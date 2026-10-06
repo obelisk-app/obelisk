@@ -9,7 +9,7 @@ export function isAdjacentTabSwitch(from: ScreenName, to: ScreenName): boolean {
 }
 
 // Sub-screens map back to the top-level tab they belong to. This lets us treat
-// a horizontal swipe on a sub-screen as if the user were on its parent — both
+// a horizontal swipe on a sub-screen as if the user were on its parent - both
 // directions skip the parent and switch tabs (swipe-left → next top-level,
 // swipe-right → previous top-level), so a horizontal gesture is always a tab
 // switch and never a within-tab pop. To go back inside a tab the user uses the
@@ -35,7 +35,7 @@ export type SwipeNavAction =
 
 // Snap decision after a drag ends. Either commit (slide to the neighbor we
 // were partway towards) or revert (snap back to the current screen). Distance
-// threshold = 1/3 of viewport width — close to the iOS standard. The velocity
+// threshold = 1/3 of viewport width - close to the iOS standard. The velocity
 // fallback lets fast flicks commit even if they didn't pass the distance bar,
 // as long as the flick direction agrees with the displacement (otherwise a
 // flick reversing direction would weirdly commit).
@@ -55,7 +55,7 @@ export function decideSnap(
 // Resolve the top-level tab a nav state belongs to. Returns null for
 // top-level tabs themselves (they have no parent). Sub-screens prefer the
 // dynamic `parentScreen` recorded at navigation time and fall back to the
-// static SUB_TO_NAV map only when that's null — e.g. a cold deep-link reload
+// static SUB_TO_NAV map only when that's null - e.g. a cold deep-link reload
 // without the `pr` URL param. See docs/mobile-navigation.md §3.
 export function resolveParent(nav: NavState): ScreenName | null {
   if (NAV_ORDER.includes(nav.screen)) return null;
@@ -81,12 +81,12 @@ export function resolveParent(nav: NavState): ScreenName | null {
 // On a top-level tab, neighbors are the previous/next entries in NAV_ORDER.
 // On a sub-screen the parent tab is treated as the screen's anchor in
 // NAV_ORDER, so the neighbors are the tabs immediately before and after the
-// parent — matching the swipe behavior, which skips the parent in both
+// parent - matching the swipe behavior, which skips the parent in both
 // directions. The parent itself sits at the active position behind the
 // sub-screen overlay; the renderer in PhoneShell handles that placement
 // directly rather than going through this function.
 //
-// Accepts either a NavState (preferred — respects dynamic parentScreen) or a
+// Accepts either a NavState (preferred - respects dynamic parentScreen) or a
 // bare ScreenName (falls back to the static SUB_TO_NAV map). The bare-name
 // form is kept for tests and pre-NavState callers.
 export function neighborsFor(arg: NavState | ScreenName): { left: ScreenName | null; right: ScreenName | null } {
@@ -115,14 +115,14 @@ export function neighborsFor(arg: NavState | ScreenName): { left: ScreenName | n
 // cycles through NAV_ORDER. On a sub-screen we anchor at the parent's index
 // in NAV_ORDER and step past it: swipe-left → parentIdx + 1, swipe-right →
 // parentIdx - 1, no-op at the ends. So a horizontal gesture is always a
-// tab switch — popping back inside a tab (channel → channels list, prefs →
+// tab switch - popping back inside a tab (channel → channels list, prefs →
 // you) goes through the header back-button, not a swipe.
 // Initial history seed entries: the first one is replaced over the current
 // browser entry, the rest are pushed in order. The guard sentinel sits behind
 // everything so that a back-press past the user's screen stack arms the
 // "press again to exit" toast. When a deep link drops the user straight onto
 // a sub-screen (e.g. /app?c=…) we also seed the parent tab between the guard
-// and the sub-screen — otherwise the very first back-press would land on the
+// and the sub-screen - otherwise the very first back-press would land on the
 // guard and show the exit toast, which reads as broken.
 export interface SeedHistoryEntry {
   state: { nav?: NavState; guard?: boolean };
@@ -155,12 +155,12 @@ export function buildSeedHistory(parsed: NavState, relay: string | null): SeedHi
 // Decide what a tap on a bottom-nav tab means given the user's current nav.
 //
 // Three branches:
-//   • noop   — user is already on that exact screen (e.g. bare Servers + tap
+//   • noop   - user is already on that exact screen (e.g. bare Servers + tap
 //              Servers). Prevents the phantom history entry that produced
 //              the historic "press back twice" feel.
-//   • pop    — user is on a sub-screen whose top-level tab equals the target.
+//   • pop    - user is on a sub-screen whose top-level tab equals the target.
 //              The sub-screen is collapsed back to the bare tab.
-//   • switch — different top-level tab. Direction follows NAV_ORDER spatial
+//   • switch - different top-level tab. Direction follows NAV_ORDER spatial
 //              position so tap and swipe agree on what "left/right" means.
 //
 // See docs/mobile-navigation.md §4 for the full transition matrix.

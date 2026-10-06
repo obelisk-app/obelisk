@@ -1,20 +1,20 @@
-# Mesh — Testing
+# Mesh - Testing
 
 Two layers:
 
 | Layer | Tool | Where | Run with |
 |---|---|---|---|
-| Unit + integration | Vitest + jsdom | `src/lib/voice/*.test.ts` | `npm run test` |
+| Unit + integration | Vitest + jsdom | `src/services/voice/*.test.ts` | `npm run test` |
 | End-to-end | Playwright + real Chromium WebRTC | `scripts/e2e/voice/*.spec.ts` | `npm run test:e2e:voice` |
 
 ## Unit / integration (Vitest)
 
-Each `.ts` file in `src/lib/voice/` has a sibling `.test.ts`. Mocks
+Each `.ts` file in `src/services/voice/` has a sibling `.test.ts`. Mocks
 live in:
 
-- `bridgeFake.impl` — fake `NostrBridge` (look at
-  `src/lib/voice/transport.test.ts` for the canonical setup).
-- `FakePc` / `FakeDataChannel` in `control-channel.test.ts` — for the
+- `bridgeFake.impl` - fake `NostrBridge` (look at
+  `tests/services/voice/transport.test.ts` for the canonical setup).
+- `FakePc` / `FakeDataChannel` in `control-channel.test.ts` - for the
   data-channel layer.
 - A real-ish PC pair via `peer-pair.integration.test.ts` exercising
   the SDP exchange end to end with mocked transport.
@@ -58,7 +58,7 @@ The specs run against `wss://public.obelisk.ar` by default. Override with `OBELI
 The "Media syncing" failure mode can happen after peers are already visible and WebRTC reaches `connected`. The focused regression is:
 
 1. Confirm the loaded client build with `window.__obeliskVoiceBuild`.
-2. Run `npx vitest run src/lib/voice/client.test.ts src/lib/voice/peer.test.ts src/lib/voice/peer-pair.integration.test.ts`.
+2. Run `npx vitest run tests/services/voice/client.test.ts tests/services/voice/peer.test.ts tests/services/voice/peer-pair.integration.test.ts`.
 3. Build and restart the production server on the E2E port.
 4. Run the focused `two-peer-mesh.spec.ts`; it must pass audio and camera RTP byte assertions plus UI-facing live-stream assertions in both directions.
 
@@ -113,10 +113,10 @@ Pattern:
 5. `waitForRelayOk` + `waitForBridgeReady` on each.
 6. `joinMeshChannel(page, channelId, { otherMembers })`.
 7. Inject the failure (e.g. drop the relay subscription, kill the
-   data channel, throttle a publish — exposed via `__test_voice` for
+   data channel, throttle a publish, exposed via `__test_voice` for
    white-box access).
 8. Assert via `readMetrics(page)` on the post-condition counter.
 
-Keep specs single-purpose — one failure mode per spec, the smallest
+Keep specs single-purpose: one failure mode per spec, the smallest
 peer count that exercises it. Combined-failure scenarios are
 expensive to debug when they fail.

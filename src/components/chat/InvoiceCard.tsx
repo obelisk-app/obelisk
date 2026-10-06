@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { parseBolt11, type ParsedInvoice } from '@/lib/bolt11';
-import { useMyPubkey, useNipSigner, useUserMetadata } from '@/lib/nostr-bridge';
+import { parseBolt11, type ParsedInvoice } from '@/utils/bolt11';
+import { useMyPubkey, useNipSigner, useUserMetadata } from '@/services/nostr-bridge';
 import { formatPubkey } from '@nostr-wot/data';
-import { useLocalWallet } from '@/lib/wallet/local-client';
+import { useLocalWallet } from '@/services/wallet/local-client';
 import { useTranslation } from '@/i18n/context';
 import { useFormat } from '@/i18n/useFormat';
+import { useHasExpired } from '@/hooks/useHasExpired';
+import Button from '@/components/ui/Button';
 
 interface Props {
   invoice: string;
@@ -30,7 +32,7 @@ interface PaidState {
  * to coordinate. The replacement is to publish a kind:9735-style
  * "invoice paid" Nostr event in the channel; other clients listen and
  * flip their own local paid state. Until that lands, paid state is
- * device-local only — refreshing or opening the channel from a different
+ * device-local only: refreshing or opening the channel from a different
  * device will not show "Paid" for invoices another user paid.
  */
 export default function InvoiceCard({ invoice, messageId: _messageId, channelId: _channelId }: Props) {
@@ -47,6 +49,7 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
   const [paid, setPaid] = useState<PaidState | null>(null);
   const [busy, setBusy] = useState(false);
   const payerMeta = useUserMetadata(paid?.payerPubkey ?? null);
+  const hasExpired = useHasExpired(parsed?.expiresAt);
 
   if (!parsed) {
     return (
@@ -56,8 +59,7 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
     );
   }
 
-  const now = Math.floor(Date.now() / 1000);
-  const expired = !paid && parsed.expiresAt && parsed.expiresAt < now;
+  const expired = !paid && hasExpired;
 
   const pay = async () => {
     if (busy || paid || expired) return;
@@ -101,14 +103,16 @@ export default function InvoiceCard({ invoice, messageId: _messageId, channelId:
         ) : expired ? (
           <span className="shrink-0 text-[11px] text-lc-muted">{t('invoice.expired')}</span>
         ) : (
-          <button
+          <Button
+            variant="pill"
+            size="xs"
             onClick={pay}
             disabled={busy}
-            className="lc-pill-primary text-xs shrink-0 disabled:opacity-50"
+            className="shrink-0"
             data-testid="invoice-pay-btn"
           >
             {busy ? 'Pagando…' : 'Pagar'}
-          </button>
+          </Button>
         )}
       </span>
       <span className="mt-2 block text-[10px] text-lc-muted font-mono truncate" title={invoice}>

@@ -3,8 +3,8 @@
  *
  * Most strings are plain, and `t()` returning a string is the right shape for
  * them. But a sentence like "Adds a `["t","voice"]` tag" has an element in
- * the middle of it, and the way that was handled — a JSX text node, a
- * `<code>`, another text node — leaves three fragments no translator can
+ * the middle of it, and the way that was handled (a JSX text node, a
+ * `<code>`, another text node) leaves three fragments no translator can
  * reorder. Spanish and Portuguese both put the tag somewhere English
  * doesn't, so the fragments have to become one string with a slot in it.
  *
@@ -13,7 +13,7 @@
  *
  *   <p>{rich(t('desktop.channel.voiceHelp'), { tag: <code>…</code> })}</p>
  *
- * A placeholder with no matching node is left as written — visible in the
+ * A placeholder with no matching node is left as written, visible in the
  * UI rather than silently dropped, because a missing slot is a bug in the
  * dictionary and should look like one.
  */

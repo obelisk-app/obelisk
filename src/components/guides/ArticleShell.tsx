@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { Locale } from '@/i18n';
-import type { GuideFrontmatter } from '@/lib/guides';
-import { formatDate } from '@/lib/format';
+import type { GuideFrontmatter } from '@/services/guides';
+import { formatDate } from '@/utils/format/format';
 import { getTranslation } from '@/i18n';
 import { HERO_REGISTRY } from './svg';
 

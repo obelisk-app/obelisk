@@ -23,7 +23,7 @@ import {
  * Every surface the game guides show, mounted from fixture logs.
  *
  * One `data-shot` per screenshot. `scripts/snap-game-shots.mjs` finds those
- * attributes, waits for `[data-shots-ready]`, and captures each element — so
+ * attributes, waits for `[data-shots-ready]`, and captures each element - so
  * adding a picture to a guide is adding a `<Shot>` here, not a new script.
  */
 
@@ -110,7 +110,7 @@ export default function Harness() {
         />
       </Frame>
 
-      {/* Not a guide shot — this is here to eyeball the fullscreen board, which
+      {/* Not a guide shot - this is here to eyeball the fullscreen board, which
           sizes itself from the room it is given rather than a fixed cell cap. */}
       <Frame name="chain-reaction-fullscreen" width={1200}>
         <ChainReactionBoard

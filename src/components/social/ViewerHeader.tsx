@@ -5,18 +5,19 @@
  * context that only exists in the browser. The three viewer pages that
  * render this are server components, so without the directive Next resolves
  * `useTranslation` to a client *reference* and calling it during the server
- * render throws — every public /notes, /p and /t URL answered 500.
+ * render throws: every public /notes, /p and /t URL answered 500.
  */
 
 import Link from 'next/link';
-import ObeliskIcon from '@/components/ObeliskIcon';
+import { buttonClass } from '@/components/ui/Button';
+import ObeliskIcon from '@/components/ui/ObeliskIcon';
 import { useTranslation } from '@/i18n/context';
 
 /**
  * Header for the public viewer pages (`/notes`, `/p`, `/t`).
  *
- * These pages are usually someone's first sight of Obelisk — they arrive from
- * a link pasted somewhere else — so the brand has to look like the brand.
+ * These pages are usually someone's first sight of Obelisk (they arrive from
+ * a link pasted somewhere else) so the brand has to look like the brand.
  * The first version used a 24px icon with no colour class, which inherited
  * the body text colour and read as a grey glyph next to small type.
  *
@@ -38,7 +39,7 @@ export default function ViewerHeader({ maxWidth = 'max-w-2xl' }: { maxWidth?: st
           arriving from a shared note wants more of this, not whichever
           channel they happened to leave open.
         */}
-        <Link href="/app?s=feed" className="lc-pill-primary ml-auto px-4 py-2 text-xs">
+        <Link href="/app?s=feed" className={`${buttonClass({ variant: 'pill', size: 'xs' })} ml-auto`}>
           {t('viewer.openInObelisk')}
         </Link>
       </div>

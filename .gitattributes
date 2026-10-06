@@ -1,0 +1,19 @@
+# A raw NUL byte in src/lib/mentions.ts once made the file binary to every
+# grep, hiding its exports from repo-wide search. No attribute here can fix
+# that: grep, ripgrep and editors never read this file. What `diff` does is
+# keep git itself honest (git diff, git log -p, git blame, git grep show the
+# text instead of "Binary files differ") when a control byte slips in. The
+# gate that actually rejects such bytes is scripts/check-source-bytes.sh,
+# which CI runs before lint.
+*.ts   text diff
+*.tsx  text diff
+*.js   text diff
+*.mjs  text diff
+*.json text diff
+*.md   text diff
+*.css  text diff
+*.yml  text diff
+
+# Shell scripts run on the Linux production box; a CRLF checkout would turn
+# the shebang into "bash\r" and every script into "command not found".
+*.sh   text eol=lf diff

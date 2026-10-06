@@ -9,16 +9,16 @@
  * cursor advances to the latest message's `createdAt`.
  *
  * The hook only writes cursors. It does NOT touch `activeDMPubkey` or
- * `activeChannelId` — those stay owned by the shells' click handlers. That
+ * `activeChannelId` - those stay owned by the shells' click handlers. That
  * separation lets one hook serve both mobile and desktop without coupling.
  */
 
 import { useEffect } from 'react';
-import { useDirectMessages, useMessages } from '@/lib/nostr-bridge';
+import { useDirectMessages, useMessages } from '@/services/nostr-bridge';
 import { useDMStore } from '@/store/dm';
 import { useChatStore } from '@/store/chat';
 import { useReadStateStore } from '@/store/read-state';
-import { isUserWatchingChannel, isUserWatchingDM } from '@/lib/read-gates';
+import { isUserWatchingChannel, isUserWatchingDM } from '@/services/read-gates';
 
 export function useAutoMarkRead(): void {
   const activeDm = useDMStore((s) => s.activeDMPubkey);

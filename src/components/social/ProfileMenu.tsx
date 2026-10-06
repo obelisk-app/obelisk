@@ -6,24 +6,25 @@
  * There were two of these and they disagreed. The profile page offered
  * "copy npub" and a share that put the bare npub on the clipboard; the
  * popover in chat offered no ⋯ at all. Neither could hand you the thing
- * people actually paste — `obelisk.ar/p/<npub>`, the page that previews with
+ * people actually paste: `obelisk.ar/p/<npub>`, the page that previews with
  * a name and a picture and opens in a browser for someone who has never
  * heard of Nostr.
  *
  * So: one menu, used by both, with the same items in the same order as
- * `NoteMenu` — share, copy the link, then the identifiers, then moderation.
+ * `NoteMenu`: share, copy the link, then the identifiers, then moderation.
  */
 
 import { useRef, useState } from 'react';
-import { hexToNpub } from '@nostr-wot/data';
+import { safeNpub } from './pubkey-npub';
 import { useTranslation } from '@/i18n/context';
-import { usePreferences } from '@/lib/preferences';
+import { usePreferences } from '@/services/preferences';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
-import { profileUrl } from '@/lib/social/note-links';
+import { profileUrl } from '@/services/social/note-links';
 import AnchoredMenu from './AnchoredMenu';
-import { ICON_BUTTON_CLASS, MENU_PANEL_CLASS, MenuDivider, MenuItem, MenuLink } from '@/components/ui/menu';
+import { MENU_PANEL_CLASS, MenuDivider, MenuItem, MenuLink } from '@/components/ui/menu';
 import { BanIcon, BellOffIcon, ExternalIcon, HashIcon, KeyIcon, LinkIcon, MoreIcon, ShareIcon, ZapIcon } from '@/components/ui/icons';
+import IconButton from '@/components/ui/IconButton';
 
 export default function ProfileMenu({
   pubkey,
@@ -60,7 +61,7 @@ export default function ProfileMenu({
 
   const copy = (value: string, message: string) => {
     // `Promise.resolve` because a clipboard shim can return undefined, and
-    // `.catch` on that throws out of the click handler — losing the toast.
+    // `.catch` on that throws out of the click handler: losing the toast.
     void Promise.resolve(navigator.clipboard?.writeText(value)).catch(() => {});
     toast(message);
     setOpen(false);
@@ -72,19 +73,20 @@ export default function ProfileMenu({
       else await navigator.clipboard?.writeText(url);
       toast(t('profileFeed.profileShared'));
     } catch {
-      // Share sheet dismissed — not an error worth surfacing.
+      // Share sheet dismissed: not an error worth surfacing.
     }
     setOpen(false);
   };
 
-  const box = size === 'sm' ? 'h-8 w-8' : 'h-10 w-10';
 
   return (
     <>
-      <button
+      <IconButton
         ref={triggerRef}
-        type="button"
-        className={`${ICON_BUTTON_CLASS} ${box} ${open ? 'border-lc-green/50 bg-lc-green/10' : ''}`}
+        shape="square"
+        size={size === 'sm' ? '8' : '10'}
+        tone={open ? 'accent' : 'outline'}
+        className="active:scale-95"
         onClick={() => setOpen((value) => !value)}
         aria-label={t('mobile.profile.more')}
         aria-haspopup="menu"
@@ -93,7 +95,7 @@ export default function ProfileMenu({
         data-testid="profile-more-button"
       >
         <MoreIcon size={size === 'sm' ? 18 : 20} />
-      </button>
+      </IconButton>
 
       <AnchoredMenu
         open={open}
@@ -147,12 +149,4 @@ export default function ProfileMenu({
       </AnchoredMenu>
     </>
   );
-}
-
-function safeNpub(pubkey: string): string {
-  try {
-    return hexToNpub(pubkey);
-  } catch {
-    return pubkey;
-  }
 }

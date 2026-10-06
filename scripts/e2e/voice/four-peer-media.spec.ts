@@ -2,15 +2,15 @@
  * Four-peer mesh with audio + camera + screen share.
  *
  * Goals beyond what 3-peer-transitive proves:
- *  - Mesh capacity past 3 nodes — 4 peers means each end maintains 3
+ *  - Mesh capacity past 3 nodes: 4 peers means each end maintains 3
  *    outbound audio streams (12 directed streams room-wide), exactly the
  *    `MAX_PARTICIPANTS = 4` cap.
  *  - Real media flows. We assert non-zero `bytesReceived` on inbound
- *    RTP for both audio AND video (camera + screen) — the first
+ *    RTP for both audio AND video (camera + screen), the first
  *    end-to-end test that proves media actually arrives, not just
  *    that PCs reach `connected`.
  *  - Mid-call media toggles. peer0 enables camera, peer1 enables
- *    screen share — we assert other peers receive the new tracks
+ *    screen share; we assert other peers receive the new tracks
  *    without a re-join.
  *
  * Joins are STAGGERED to avoid a 4-way simultaneous
@@ -135,7 +135,7 @@ test('4 peers with audio + camera + screen-share', async () => {
     await Promise.all(pages.map(async (p, i) => {
       const myMetrics = await readMetrics(p);
       if (!myMetrics) throw new Error(`peer${i} metrics null`);
-      // Pick the first peer we're actually connected to — easy path is
+      // Pick the first peer we're actually connected to; easy path is
       // to walk the other pubkeys and find any with a non-null PC state.
       let probedPeer: string | null = null;
       for (const otherPk of pks) {
@@ -180,7 +180,7 @@ test('4 peers with audio + camera + screen-share', async () => {
       if (audio > 0) { cameraReceiver = i; break; }
     }
     if (cameraReceiver === null) {
-      logWarn('no peer reports a connected PC to peer0 — skipping camera receiver assertion');
+      logWarn('no peer reports a connected PC to peer0; skipping camera receiver assertion');
     } else {
       logObserved(`watching peer${cameraReceiver} for inbound video from peer0`);
       await waitFor(
@@ -203,7 +203,7 @@ test('4 peers with audio + camera + screen-share', async () => {
       if (audio > 0) { screenReceiver = i; break; }
     }
     if (screenReceiver === null) {
-      logWarn('no peer reports a connected PC to peer1 — skipping screen receiver assertion');
+      logWarn('no peer reports a connected PC to peer1; skipping screen receiver assertion');
     } else {
       logObserved(`watching peer${screenReceiver} for inbound video from peer1`);
       // peer1 now sources two videos (camera off, screen on) → at least

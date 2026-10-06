@@ -2,14 +2,18 @@
 
 /**
  * Floating control bar for an active voice channel.
- * Renders as a centered pill with backdrop blur — caller places it
+ * Renders as a centered pill with backdrop blur - caller places it
  * absolutely or in a flex column footer.
  */
 import { useEffect, useState } from 'react';
 import { useVoiceStore } from '@/store/voice';
-import { getActiveVoiceClient } from '@/lib/voice/active-client';
-import { VIDEO_QUALITIES, type VideoQuality } from '@/lib/voice/quality';
+import { getActiveVoiceClient } from '@/services/voice/active-client';
 import { useTranslation } from '@/i18n/context';
+import QualityPopover from './QualityPopover';
+import {
+  CameraOffIcon, CameraOnIcon, ChatIcon, DeafenOffIcon, DeafenOnIcon, GearIcon, LeaveIcon,
+  MicOffIcon, MicOnIcon, ScreenShareIcon, SwitchCameraIcon,
+} from './icons';
 
 interface VoiceControlsProps {
   onLeave: () => void;
@@ -25,10 +29,6 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
   const isScreenSharing = useVoiceStore((s) => s.isScreenSharing);
   const error = useVoiceStore((s) => s.error);
   const setError = useVoiceStore((s) => s.setError);
-  const videoQuality = useVoiceStore((s) => s.videoQuality);
-  const receivedVideoQuality = useVoiceStore((s) => s.receivedVideoQuality);
-  const setVideoQuality = useVoiceStore((s) => s.setVideoQuality);
-  const setReceivedVideoQuality = useVoiceStore((s) => s.setReceivedVideoQuality);
   const [qualityOpen, setQualityOpen] = useState(false);
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
 
@@ -40,7 +40,10 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
         if (cancelled) return;
         const cams = (devices ?? []).filter((d) => d.kind === 'videoinput');
         setHasMultipleCameras(cams.length > 1);
-      } catch { /* ignore */ }
+      } catch (err) {
+        // Only the switch-camera button depends on this; say why it is missing.
+        console.warn('[voice] enumerateDevices failed; the switch-camera button stays hidden', err);
+      }
     };
     void check();
     const onChange = () => { void check(); };
@@ -62,24 +65,6 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
     }
   };
 
-  const handleSetVideoQuality = async (q: VideoQuality) => {
-    setVideoQuality(q);
-    const client = getActiveVoiceClient();
-    if (client) {
-      try { await client.applyVideoQuality(q); }
-      catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-    }
-  };
-
-  const handleSetReceivedQuality = async (q: VideoQuality) => {
-    setReceivedVideoQuality(q);
-    const client = getActiveVoiceClient();
-    if (client) {
-      try { await client.broadcastReceivedQuality(q); }
-      catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-    }
-  };
-
   const handleToggleMute = async () => {
     const client = getActiveVoiceClient();
     if (!client) return;
@@ -97,7 +82,10 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
     client.setDeafenEnabled(next);
     useVoiceStore.getState().setDeafened(next);
     if (next && !isMuted) {
-      try { await client.setMicEnabled(false); } catch { /* ignore */ }
+      // Deafen is already applied; a mic that will not stop is the one
+      // thing here worth hearing about, since it stays live.
+      try { await client.setMicEnabled(false); }
+      catch (e) { console.warn('[voice] mic did not stop on deafen', e); }
     }
   };
 
@@ -209,27 +197,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           >
             <GearIcon />
           </CircleBtn>
-          {qualityOpen && (
-            <div
-              className="absolute bottom-full mb-3 right-0 w-64 max-w-[calc(100vw-1rem)] rounded-2xl bg-black/90 backdrop-blur-xl border border-white/10 shadow-2xl p-3 text-white/90"
-              data-testid="quality-popover"
-            >
-              <QualitySection
-                label={t('voice.myCamera')}
-                value={videoQuality}
-                onChange={(q) => { void handleSetVideoQuality(q); }}
-                testid="quality-out"
-              />
-              <div className="h-px bg-white/10 my-3" />
-              <QualitySection
-                label={t('voice.incoming')}
-                value={receivedVideoQuality}
-                onChange={(q) => { void handleSetReceivedQuality(q); }}
-                testid="quality-in"
-              />
-              <p className="text-[10px] text-white/40 mt-2">{t('voice.audioNote')}</p>
-            </div>
-          )}
+          {qualityOpen && <QualityPopover />}
         </div>
 
         <div className="w-px h-6 bg-white/10 mx-1" aria-hidden />
@@ -281,139 +249,5 @@ function CircleBtn({
     >
       {children}
     </button>
-  );
-}
-
-function QualitySection({
-  label,
-  value,
-  onChange,
-  testid,
-}: {
-  label: string;
-  value: VideoQuality;
-  onChange: (q: VideoQuality) => void;
-  testid: string;
-}) {
-  return (
-    <div data-testid={testid}>
-      <div className="text-xs uppercase tracking-wider text-white/50 mb-1.5">{label}</div>
-      <div className="grid grid-cols-3 gap-1">
-        {VIDEO_QUALITIES.map((q) => (
-          <button
-            key={q}
-            onClick={() => onChange(q)}
-            data-testid={`${testid}-${q}`}
-            className={
-              'min-w-0 px-2 py-1.5 rounded-lg text-xs font-medium transition ' +
-              (value === q
-                ? 'bg-lc-green/25 text-lc-green ring-1 ring-lc-green/40'
-                : 'bg-white/5 text-white/75 hover:bg-white/10')
-            }
-          >
-            {q}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function GearIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  );
-}
-
-function MicOnIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" y1="19" x2="12" y2="23" />
-      <line x1="8" y1="23" x2="16" y2="23" />
-    </svg>
-  );
-}
-function MicOffIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <line x1="1" y1="1" x2="23" y2="23" />
-      <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-      <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .74-.11 1.46-.33 2.13" />
-      <line x1="12" y1="19" x2="12" y2="23" />
-      <line x1="8" y1="23" x2="16" y2="23" />
-    </svg>
-  );
-}
-function DeafenOnIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
-    </svg>
-  );
-}
-function DeafenOffIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <line x1="1" y1="1" x2="23" y2="23" />
-      <path d="M16.5 12.5a5 5 0 0 0-8-4" />
-      <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
-    </svg>
-  );
-}
-function CameraOnIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M23 7l-7 5 7 5V7z" />
-      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-    </svg>
-  );
-}
-function CameraOffIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="1" y1="1" x2="23" y2="23" />
-      <path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34" />
-    </svg>
-  );
-}
-function SwitchCameraIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 4h-3.17L15 2H9L7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
-      <path d="M9 13a3 3 0 0 0 5.5 1.66" />
-      <path d="M15 11a3 3 0 0 0-5.5-1.66" />
-      <polyline points="14.5 8.5 15 11 12.5 11.5" />
-      <polyline points="9.5 15.5 9 13 11.5 12.5" />
-    </svg>
-  );
-}
-function ScreenShareIcon({ sharing }: { sharing: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-      <line x1="8" y1="21" x2="16" y2="21" />
-      <line x1="12" y1="17" x2="12" y2="21" />
-      {sharing && <path d="M8 10l3 3 5-6" />}
-    </svg>
-  );
-}
-function ChatIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-function LeaveIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
-      <line x1="23" y1="1" x2="1" y2="23" />
-    </svg>
   );
 }

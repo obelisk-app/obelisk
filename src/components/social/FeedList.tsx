@@ -4,7 +4,7 @@
  * The scrolling list of notes.
  *
  * Paging used to be a "Load more" button at the bottom, which made the feed
- * feel inert — scrolling did nothing.
+ * feel inert: scrolling did nothing.
  *
  *  - An IntersectionObserver sentinel pages the next batch as it comes into
  *    view, with a manual button left as the fallback for when the observer
@@ -22,7 +22,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslation } from '@/i18n/context';
-import type { FeedState } from '@/lib/social/useFeed';
+import Button from '@/components/ui/Button';
+import type { FeedState } from '@/services/social/useFeed';
 import NoteCard from './NoteCard';
 
 /** How close to the top counts as "still at the top" for auto-merge. */
@@ -61,14 +62,14 @@ export default function FeedList({
   onZap?: (note: NostrEvent) => void;
   /**
    * Long-form cards are real focusable buttons, so omitting this made every
-   * article click a silent no-op — the reason articles "didn't work".
+   * article click a silent no-op: the reason articles "didn't work".
    */
   onOpenArticle?: (note: NostrEvent) => void;
   /** Hashtags open the feed's own search instead of leaving for /t. */
   onOpenTag?: (tag: string) => void;
   /**
    * Scroll position, for hosts that render floating controls outside the
-   * scroller — the back-to-top button can't live in here, because inside
+   * scroller: the back-to-top button can't live in here, because inside
    * the scroll container it would scroll away with the content.
    */
   onAtTopChange?: (atTop: boolean) => void;
@@ -108,7 +109,7 @@ export default function FeedList({
     return typeof window === 'undefined' ? null : window;
   }, [scrollRef]);
 
-  /** Throttles the deliberate pull gesture below — each pull is a round trip. */
+  /** Throttles the deliberate pull gesture below: each pull is a round trip. */
   const lastRefreshRef = useRef(0);
 
   useEffect(() => {
@@ -189,7 +190,7 @@ export default function FeedList({
   // No auto-merge, even at the top.
   //
   // `showPending` runs the buffer through `mergeNotes`, which re-sorts the
-  // whole list — so a note arriving while you were reading row three
+  // whole list, so a note arriving while you were reading row three
   // reshuffled everything under you. The pill is one tap and it is the
   // reader's call.
 
@@ -207,9 +208,9 @@ export default function FeedList({
         <p className="max-w-xs text-sm text-lc-muted">
           {error ? t('social.loadFailed') : emptyLabel ?? t('profileFeed.empty')}
         </p>
-        <button type="button" className="lc-pill-secondary px-4 py-2 text-xs" onClick={state.refresh}>
+        <Button variant="pillSecondary" size="xs" onClick={state.refresh}>
           {t('social.refresh')}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -226,9 +227,10 @@ export default function FeedList({
       */}
       {pendingCount > 0 && (
         <div className="pointer-events-none sticky top-2 z-[3] flex justify-center">
-          <button
-            type="button"
-            className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-lc-green px-4 py-1.5 text-xs font-semibold text-lc-black shadow-lg shadow-black/40 transition hover:brightness-110"
+          <Button
+            variant="pill"
+            size="xs"
+            className="pointer-events-auto shadow-lg shadow-black/40"
             onClick={showPending}
             data-testid="feed-pending"
           >
@@ -236,7 +238,7 @@ export default function FeedList({
               <path d="M12 19V5" /><path d="m5 12 7-7 7 7" />
             </svg>
             {pendingCount} {t('social.newNotes')}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -266,15 +268,15 @@ export default function FeedList({
             {t('social.loadingMore')}
           </span>
         ) : (
-          // Fallback only — the observer normally fires before this is seen.
-          <button
-            type="button"
-            className="lc-pill-secondary px-5 py-2 text-xs"
+          // Fallback only: the observer normally fires before this is seen.
+          <Button
+            variant="pillSecondary"
+            size="xs"
             onClick={loadMore}
             data-testid="feed-load-more"
           >
             {t('social.loadMore')}
-          </button>
+          </Button>
         )}
       </div>
     </div>

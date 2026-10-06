@@ -1,17 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import ModalShell from '@/components/ModalShell';
+import { useMemo, useState } from 'react';
+import Modal from '@/components/ui/Modal';
+import ModalHeader from '@/components/ui/ModalHeader';
 import {
   nostrActions,
   useAdminsByGroup,
   useGroups,
-} from '@/lib/nostr-bridge';
-import { useUserMetadata as useProfile } from '@/lib/nostr-bridge';
-import { getBridgeImpl } from '@/lib/nostr-bridge';
+} from '@/services/nostr-bridge';
+import { useUserMetadata as useProfile } from '@/services/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
-import { shortNpubLabel } from '@/lib/short-npub';
+import { shortNpubLabel } from '@/utils/identity/short-npub';
+import { useMembersByGroupBulk } from '@/hooks/useMembersByGroupBulk';
+import Button from '@/components/ui/Button';
+import Checkbox from '@/components/ui/Checkbox';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Table, { type TableColumn } from '@/components/ui/Table';
 
 interface Row {
   groupId: string;
@@ -26,8 +32,6 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const groups = useGroups();
   const adminsByGroup = useAdminsByGroup();
-  // Members lists are per-group state on the bridge — pull them in bulk via
-  // the impl handle so the panel doesn't have to fan out N useMembers hooks.
   const membersByGroup = useMembersByGroupBulk();
 
   const [filter, setFilter] = useState('');
@@ -78,6 +82,19 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
     [filtered, selected],
   );
 
+  const columns: ReadonlyArray<TableColumn<Row>> = [
+    {
+      key: 'select',
+      header: '',
+      inset: 'md',
+      className: 'w-8',
+      cell: (r) => <SelectCell row={r} selected={selected.has(rowKey(r))} onToggle={() => toggle(rowKey(r))} />,
+    },
+    { key: 'user', header: t('admin.colUser'), cell: (r) => <UserCell pubkey={r.pubkey} /> },
+    { key: 'channel', header: t('admin.colChannel'), cell: (r) => <span className="text-lc-muted">{r.groupName}</span> },
+    { key: 'role', header: t('admin.colRole'), cell: (r) => <RoleCell isAdmin={r.isAdmin} /> },
+  ];
+
   async function bulk(action: 'kick' | 'demote') {
     if (selectedRows.length === 0) return;
     const count = String(selectedRows.length);
@@ -112,43 +129,38 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <ModalShell onClose={onClose} panelClassName="w-full max-w-3xl mx-4 rounded-xl bg-lc-dark border border-lc-border shadow-xl flex flex-col max-h-[85vh]">
-      <header className="flex items-center justify-between border-b border-lc-border px-5 py-3">
-        <div>
-          <h2 className="text-base font-bold text-lc-white">{t('admin.title')}</h2>
-          <p className="text-xs text-lc-muted">
-            Bulk cleanup across every channel on this relay. Kick removes the user (kind 9001); demote strips the admin role only (kind 9003).
-          </p>
-        </div>
-        <button
-          onClick={onClose}
-          className="rounded p-1 text-lc-muted hover:bg-lc-card hover:text-lc-white"
-          aria-label={t('common.close')}
-        >
-          ✕
-        </button>
-      </header>
+    <Modal onClose={onClose} panelClassName="w-full max-w-3xl mx-4 rounded-xl bg-lc-dark border border-lc-border shadow-xl flex flex-col max-h-[85vh]">
+      <ModalHeader
+        title={t('admin.title')}
+        subtitle="Bulk cleanup across every channel on this relay. Kick removes the user (kind 9001); demote strips the admin role only (kind 9003)."
+        onClose={onClose}
+      />
 
       <div className="flex flex-wrap items-center gap-2 border-b border-lc-border px-5 py-3">
-        <input
+        <Input
+          size="sm"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder={t('admin.filterPlaceholder')}
-          className="min-w-[200px] flex-1 rounded border border-lc-border bg-lc-black px-3 py-1.5 text-sm text-lc-white outline-none focus:border-lc-green"
+          aria-label={t('admin.filterPlaceholder')}
+          className="min-w-[200px] flex-1"
         />
-        <select
+        <Select
+          size="xs"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
-          className="rounded border border-lc-border bg-lc-black px-2 py-1.5 text-xs text-lc-white outline-none focus:border-lc-green"
+          aria-label={t('admin.colRole')}
         >
           <option value="all">{t('admin.allRoles')}</option>
           <option value="admin">{t('admin.adminsOnly')}</option>
           <option value="member">{t('admin.membersOnly')}</option>
-        </select>
-        <select
+        </Select>
+        <Select
+          size="xs"
           value={groupFilter}
           onChange={(e) => setGroupFilter(e.target.value)}
-          className="max-w-[180px] rounded border border-lc-border bg-lc-black px-2 py-1.5 text-xs text-lc-white outline-none focus:border-lc-green"
+          aria-label={t('admin.colChannel')}
+          className="max-w-[180px]"
         >
           <option value="all">{t('admin.allChannels')}</option>
           {groups.map((g) => (
@@ -156,38 +168,23 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
               {g.name ?? g.id.slice(0, 12)}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {filtered.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-lc-muted">
-            {rows.length === 0
-              ? 'No admin or member entries on this relay yet.'
-              : 'No entries match the current filters.'}
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-lc-dark/95 backdrop-blur">
-              <tr className="text-left text-xs uppercase text-lc-muted">
-                <th className="px-3 py-2 w-8" />
-                <th className="px-2 py-2">{t('admin.colUser')}</th>
-                <th className="px-2 py-2">{t('admin.colChannel')}</th>
-                <th className="px-2 py-2">{t('admin.colRole')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <RowItem
-                  key={rowKey(r)}
-                  row={r}
-                  selected={selected.has(rowKey(r))}
-                  onToggle={() => toggle(rowKey(r))}
-                />
-              ))}
-            </tbody>
-          </table>
-        )}
+        <Table
+          aria-label={t('admin.title')}
+          columns={columns}
+          rows={filtered}
+          rowKey={rowKey}
+          header="sticky"
+          emptyPlacement="replace"
+          emptyPadding="none"
+          emptyClassName="px-5 py-8"
+          empty={rows.length === 0
+            ? 'No admin or member entries on this relay yet.'
+            : 'No entries match the current filters.'}
+        />
       </div>
 
       <footer className="flex items-center justify-between gap-3 border-t border-lc-border px-5 py-3">
@@ -195,81 +192,62 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
           {selectedRows.length} selected · {filtered.length} shown · {rows.length} total
         </div>
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="pillSecondary"
+            size="xs"
             onClick={() => bulk('demote')}
             disabled={busy || selectedRows.every((r) => !r.isAdmin)}
-            className="lc-pill lc-pill-secondary text-xs disabled:opacity-40"
             title={t('admin.demoteHelp')}
           >
             {t('mobile.members.demote')}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="pillDanger"
+            size="xs"
             onClick={() => bulk('kick')}
             disabled={busy || selectedRows.length === 0}
-            className="lc-pill text-xs bg-red-500/20 text-red-300 hover:bg-red-500/30 disabled:opacity-40"
           >
             {t('mobile.members.kick')}
-          </button>
+          </Button>
         </div>
       </footer>
-    </ModalShell>
+    </Modal>
   );
 }
 
-function RowItem({
-  row,
-  selected,
-  onToggle,
-}: {
-  row: Row;
-  selected: boolean;
-  onToggle: () => void;
-}) {
+function SelectCell({ row, selected, onToggle }: { row: Row; selected: boolean; onToggle: () => void }) {
   const { t } = useTranslation();
   const meta = useProfile(row.pubkey);
+  const user = meta?.displayName || meta?.name || shortNpubLabel(row.pubkey);
   return (
-    <tr className="border-t border-lc-border/40 hover:bg-lc-card">
-      <td className="px-3 py-2">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onToggle}
-          className="cursor-pointer"
-        />
-      </td>
-      <td className="px-2 py-2">
-        <div className="truncate text-lc-white">
-          {meta?.displayName || meta?.name || row.pubkey.slice(0, 12)}
-        </div>
-        <div className="truncate font-mono text-[10px] text-lc-muted">{row.pubkey}</div>
-      </td>
-      <td className="px-2 py-2 text-lc-muted">{row.groupName}</td>
-      <td className="px-2 py-2">
-        {row.isAdmin ? (
-          <span className="rounded-full bg-lc-green/20 px-2 py-0.5 text-[10px] font-bold uppercase text-lc-green">
-            {t('mobile.members.admin')}
-          </span>
-        ) : (
-          <span className="text-xs text-lc-muted">{t('admin.member')}</span>
-        )}
-      </td>
-    </tr>
+    <Checkbox
+      checked={selected}
+      onChange={onToggle}
+      aria-label={t('admin.selectRow').replace('{user}', user)}
+      className="cursor-pointer"
+    />
   );
 }
 
-/**
- * The bridge exposes per-group `subscribeMembers` but no bulk subscriber for
- * the whole relay. Reading the impl's `membersByGroup` StateStore directly
- * keeps this panel from spawning N hooks just to enumerate state we already
- * have in memory.
- */
-function useMembersByGroupBulk(): Readonly<Record<string, ReadonlyArray<string>>> {
-  const [snapshot, setSnapshot] = useState<Record<string, ReadonlyArray<string>>>({});
-  useEffect(() => {
-    const impl = getBridgeImpl();
-    if (!impl) return;
-    const unsub = impl.membersByGroup.subscribe((m) => setSnapshot(m));
-    return () => unsub();
-  }, []);
-  return snapshot;
+function UserCell({ pubkey }: { pubkey: string }) {
+  const meta = useProfile(pubkey);
+  return (
+    <>
+      <div className="truncate text-lc-white">
+        {meta?.displayName || meta?.name || pubkey.slice(0, 12)}
+      </div>
+      <div className="truncate font-mono text-[10px] text-lc-muted">{pubkey}</div>
+    </>
+  );
+}
+
+function RoleCell({ isAdmin }: { isAdmin: boolean }) {
+  const { t } = useTranslation();
+  return isAdmin ? (
+    <span className="rounded-full bg-lc-green/20 px-2 py-0.5 text-[10px] font-bold uppercase text-lc-green">
+      {t('mobile.members.admin')}
+    </span>
+  ) : (
+    <span className="text-xs text-lc-muted">{t('admin.member')}</span>
+  );
 }

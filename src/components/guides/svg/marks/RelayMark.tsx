@@ -10,7 +10,7 @@ export default function RelayMark() {
       <rect width="120" height="120" rx="20" fill="#0a0a0a" />
       <rect x="3" y="3" width="114" height="114" rx="18" fill="#171717" stroke="#262626" strokeWidth="2" />
 
-      {/* broadcast arcs — sit above the tower top, never overlap the tower */}
+      {/* broadcast arcs - sit above the tower top, never overlap the tower */}
       <path
         d="M34 32 Q60 12 86 32"
         fill="none"

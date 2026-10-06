@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { networkInterfaces } from "os";
+import { buildCsp } from "./src/utils/csp";
 
 // Dynamically collect all local IPs so any device on the network can access dev
 const localIPs = Object.values(networkInterfaces())
@@ -7,9 +8,21 @@ const localIPs = Object.values(networkInterfaces())
   .filter((iface) => iface && !iface.internal && iface.family === 'IPv4')
   .map((iface) => iface!.address);
 
-// CSP is now set per-request in src/proxy.ts so it can include a fresh
-// per-request nonce. The static security headers below still apply
-// site-wide (proxy.ts is HTML-only via its matcher).
+// The real, nonce-bearing CSP is set per request in src/proxy.ts. This is
+// the static floor for the responses the proxy does not see: its matcher
+// skips /api, /_next/static, /_next/image and files with an extension, and
+// next@16.2.x shipped several "Middleware / Proxy bypass" advisories that
+// let a page request skip it too. Without this header such a response
+// carried no CSP at all. The floor is built from the same directive list
+// as the proxy's policy with 'unsafe-inline' in place of the nonce, which
+// makes it a strict superset: wherever both headers reach a browser the
+// intersection is exactly the proxy policy, and alone it still pins script
+// and frame hosts, blocks plugins, framing, base-uri and form-action. See
+// src/utils/csp.ts for the reasoning and tests/utils/csp.test.ts for the pin.
+const STATIC_CSP_FLOOR = buildCsp({
+  nonce: null,
+  isDev: process.env.NODE_ENV !== 'production',
+});
 
 /**
  * `*.dev.tsx` routes exist only while `next dev` is running.
@@ -34,18 +47,13 @@ const nextConfig: NextConfig = {
    * The public note/profile viewers (`/notes/[id]`, `/p/[id]`) open real
    * relay sockets on the server so link previews have content. Bundling
    * nostr-tools into the server chunk resolves it through its browser
-   * condition, and `SimplePool` then returns nothing at all — the query
+   * condition, and `SimplePool` then returns nothing at all: the query
    * "succeeds" in a couple of seconds with an empty result, which is
    * indistinguishable from a missing note. Keeping it external makes the
    * server require the Node build from node_modules.
    */
   serverExternalPackages: ['nostr-tools'],
   allowedDevOrigins: [...localIPs, 'obelisk.fabri.lat', 'obelisk.wearebitcoin.org', 'obelisk.nostr-wtf.com', 'dex-test.obelisk.ar', 'obelisk.ar'],
-  // Temporary: skip typecheck during voice mesh-test runs to unblock the
-  // diagnostic harness. The pre-existing LoginModal/relay-sync.test type
-  // errors are unrelated to mesh voice and should be cleaned up separately.
-  // Remove once those errors are resolved upstream.
-  typescript: { ignoreBuildErrors: true },
   async redirects() {
     return [
       {
@@ -73,6 +81,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Content-Security-Policy', value: STATIC_CSP_FLOOR },
         ],
       },
       // Force the browser to revalidate HTML documents on every navigation.

@@ -4,7 +4,7 @@
  * visible while `connectionState !== 'Connected'`. When the socket
  * recovers, the banner unmounts.
  *
- * The drop is simulated via `context.setOffline(true)` — Playwright's
+ * The drop is simulated via `context.setOffline(true)`, Playwright's
  * built-in network kill switch. The browser closes every open WebSocket
  * and queues new connection attempts until offline is cleared.
  */
@@ -40,7 +40,7 @@ test('connection-loss banner appears on socket drop and clears on recovery', asy
   await expect(banner).toBeHidden({ timeout: 5_000 });
   logOk('no banner while connected');
 
-  // Kill the network — every open WebSocket closes, `relay.onclose`
+  // Kill the network: every open WebSocket closes, `relay.onclose`
   // fires, `connectionState` flips to 'Disconnected'.
   logStep('Kill network', 'setOffline(true) closes every open WebSocket');
   await context.setOffline(true);
@@ -49,7 +49,7 @@ test('connection-loss banner appears on socket drop and clears on recovery', asy
   logOk(`banner visible with state=${state}`);
   expect(state).not.toBe('Connected');
 
-  // Restore the network — `reconnectInBackground()` brings the socket
+  // Restore the network: `reconnectInBackground()` brings the socket
   // back up within a few backoff cycles and `connectionState` returns
   // to 'Connected', unmounting the banner.
   logStep('Restore network', 'setOffline(false); reconnect loop heals');

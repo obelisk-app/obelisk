@@ -7,7 +7,7 @@
  * live markdown preview and a mouse-sized toolbar. That works because a
  * desktop viewport has room to show the composer *and* its context at once.
  *
- * A phone doesn't — the keyboard eats half the screen — so it gets its own
+ * A phone doesn't (the keyboard eats half the screen) so it gets its own
  * presentation in `MobileComposer`. Both share `useNoteDraft`, which owns
  * everything that touches Blossom, NIP-92 `imeta` and the relay, so the two
  * can't drift on what actually gets published.
@@ -15,9 +15,13 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslation } from '@/i18n/context';
+import Button from '@/components/ui/Button';
+import Text from '@/components/ui/Text';
 import MessageContent from '@/components/chat/MessageContent';
-import { linkifyHashtags } from '@/lib/profile-feed';
+import { linkifyHashtags } from '@/services/social/profile-feed';
 import { useNoteDraft, type ComposerMode } from './useNoteDraft';
+import ErrorState from '@/components/ui/ErrorState';
+import FileInput from '@/components/ui/FileInput';
 
 export type { ComposerMode };
 
@@ -53,7 +57,7 @@ export default function NoteComposer({
     >
       {/*
         The field carries no frame of its own. The card is already a
-        container, and a bordered well inside it read as a second box —
+        container, and a bordered well inside it read as a second box:
         which is what made the old composer look like a dialog. Focus is
         shown on the card (`.lc-composer:focus-within`) rather than here,
         so the whole thing lights up as one surface.
@@ -72,65 +76,62 @@ export default function NoteComposer({
           className="mt-2 border-t border-lc-border/60 pt-3 text-sm text-lc-white"
           data-testid="composer-preview"
         >
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-lc-muted/70">
+          <Text as="p" size="10" weight="semibold" variant="label" className="mb-1.5 text-lc-muted/70">
             {t('composer.preview')}
-          </p>
+          </Text>
           <MessageContent content={linkifyHashtags(draft)} wideMedia />
         </div>
       )}
 
-      {error && <p className="mt-2 text-xs text-red-400" role="alert">{error}</p>}
+      {error && <ErrorState className="mt-2">{error}</ErrorState>}
 
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-lc-border/60 pt-3">
         <div className="lc-toolgroup">
-          <button type="button" className="lc-tool font-bold" onClick={() => wrapSelection('**')} title={t('composer.bold')} aria-label={t('composer.bold')}>B</button>
-          <button type="button" className="lc-tool italic" onClick={() => wrapSelection('_')} title={t('composer.italic')} aria-label={t('composer.italic')}>I</button>
-          <button type="button" className="lc-tool" onClick={() => wrapSelection('[', '](https://)')}>{t('composer.link')}</button>
+          <Button variant="tool" className="font-bold" onClick={() => wrapSelection('**')} title={t('composer.bold')} aria-label={t('composer.bold')}>B</Button>
+          <Button variant="tool" className="italic" onClick={() => wrapSelection('_')} title={t('composer.italic')} aria-label={t('composer.italic')}>I</Button>
+          <Button variant="tool" onClick={() => wrapSelection('[', '](https://)')}>{t('composer.link')}</Button>
         </div>
 
-        <button
-          type="button"
-          className="lc-tool"
+        <Button
+          variant="tool"
           onClick={() => fileRef.current?.click()}
           disabled={busy}
         >
           <span aria-hidden="true" className="text-sm leading-none">+</span>
           {t('profileFeed.upload')}
-        </button>
-        <button
-          type="button"
-          className="lc-tool"
+        </Button>
+        <Button
+          variant="tool"
           onClick={() => setSensitive((value) => !value)}
           aria-pressed={sensitive}
           data-testid="composer-sensitive"
           title={t('social.markSensitive')}
         >
           {t('social.markSensitive')}
-        </button>
-        <input
+        </Button>
+        <FileInput
           ref={fileRef}
-          type="file"
           accept="image/*,video/*,audio/*"
           multiple
-          className="hidden"
+          aria-label={t('profileFeed.upload')}
           onChange={(event) => void uploadFiles(event.target.files)}
           data-testid="composer-files"
         />
 
-        {/* Guidance, not a control — first thing to go when space is tight. */}
+        {/* Guidance, not a control: first thing to go when space is tight. */}
         <span className="ml-auto hidden text-[10px] text-lc-muted/70 xl:inline">
           {t('profileFeed.markdownHint')}
         </span>
 
         <div className="ml-auto flex gap-2 xl:ml-3">
           {onCancel && (
-            <button type="button" className="lc-pill-secondary px-4 py-1.5 text-xs" onClick={onCancel}>
+            <Button variant="pillSecondary" size="xs" onClick={onCancel}>
               {t('common.cancel')}
-            </button>
+            </Button>
           )}
-          <button type="submit" className="lc-pill-primary px-5 py-1.5 text-xs" disabled={!canPost}>
+          <Button type="submit" variant="pill" size="xs" disabled={!canPost}>
             {busy ? t('common.saving') : t('profileFeed.publish')}
-          </button>
+          </Button>
         </div>
       </div>
     </form>

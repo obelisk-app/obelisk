@@ -5,7 +5,7 @@ running app, capture every signal the client emits, and assert each
 step against the auth/data-loading contract documented in
 `docs/data-system.md`.
 
-The harness skips the LoginModal — it seeds an nsec PersistedSession
+The harness skips the LoginModal: it seeds an nsec PersistedSession
 into `localStorage` before the page loads, so `BridgeImpl.initialize()`
 rehydrates as if the user had already logged in. Identity is generated
 fresh per run; nothing real ever signs anything.
@@ -17,12 +17,12 @@ production config in `ecosystem.config.js` uses). `npm run dev` serves
 on Next's default `3000`, so one of these has to give:
 
 ```bash
-# Option A — align dev with the harness default
+# Option A: align dev with the harness default
 PORT=3001 npm run dev                            # in another shell
 npm run test:e2e                                 # headless
 npm run test:e2e:headed                          # watch the browser
 
-# Option B — point the harness at a 3000 dev server
+# Option B: point the harness at a 3000 dev server
 npm run dev                                      # in another shell, :3000
 OBELISK_E2E_BASE_URL=http://localhost:3000 npm run test:e2e
 ```
@@ -64,7 +64,7 @@ A green run proves the full chain: bridge rehydrates from
 `localStorage`, relay handshake + AUTH succeeds, `channels-loading`
 spinner → first channel row → chat-pane loader unmounts on
 `messagesEose`. If this fails, fix the harness before chasing a new
-spec — every spec inherits the same plumbing.
+spec; every spec inherits the same plumbing.
 
 ## Specs
 
@@ -74,7 +74,7 @@ spec — every spec inherits the same plumbing.
 | `paint-order.spec.ts` | Channel menu spinner / row paints before the chat content. | `OBELISK_E2E_RELAY` |
 | `transparent-banner.spec.ts` | `lc-banner-placeholder` until branding lands; title skeleton until grace+real value. | `OBELISK_E2E_RELAY` |
 | `members-loading.spec.ts` | "Loading members…" until `useMembershipReady` flips. | `OBELISK_E2E_RELAY` |
-| `whitelist-rejection.spec.ts` | Preflight surfaces `relay-access-banner[data-state=restricted\|auth-required]` within ~3.5s — under the 4s soak. | `OBELISK_E2E_RESTRICTED_RELAY` |
+| `whitelist-rejection.spec.ts` | Preflight surfaces `relay-access-banner[data-state=restricted\|auth-required]` within ~3.5s, under the 4s soak. | `OBELISK_E2E_RESTRICTED_RELAY` |
 | `connection-loss.spec.ts` | `connection-loss-banner` appears on `setOffline(true)` and clears on `setOffline(false)`. | `OBELISK_E2E_RELAY` |
 | `cache-second-load.spec.ts` | Reload paints first channel row in <1500ms from cache. | `OBELISK_E2E_RELAY` |
 | `clear-cache.spec.ts` | Preferences → Clear cache wipes relay/UI/read-state keys; preserves session + preferences. | `OBELISK_E2E_RELAY` |
@@ -85,13 +85,13 @@ spec — every spec inherits the same plumbing.
 Every run streams structured progress to stdout:
 
 ```
-▸ Generate ephemeral identity + seed session — expected: …
+▸ Generate ephemeral identity + seed session - expected: …
   10:42:15.881 npub  npub1q5…
   10:42:15.882 nsec  nsec1xy…  (ephemeral, do not reuse)
   10:42:15.882 relay wss://public.obelisk.ar
   ✓ session seeded into localStorage via addInitScript
 
-▸ Wait for NIP-42 AUTH + first EOSE — expected: relay-access banner unmounts.
+▸ Wait for NIP-42 AUTH + first EOSE - expected: relay-access banner unmounts.
   10:42:16.412 relay-access → unknown
   10:42:16.671 relay-access → authenticating
   10:42:16.870 ← AUTH  public.obelisk.ar  ["challenge-string"]
@@ -104,27 +104,27 @@ Every run streams structured progress to stdout:
 
 Captured streams:
 
-- **Browser console** — every `console.log/warn/error` and uncaught
+- **Browser console** - every `console.log/warn/error` and uncaught
   page error, mirrored with the test step it landed under.
-- **WebSocket frames** — every `AUTH`, `CLOSED`, `NOTICE`, `OK`, `EOSE`
+- **WebSocket frames** - every `AUTH`, `CLOSED`, `NOTICE`, `OK`, `EOSE`
   on every relay socket, in either direction. Use this to debug a
   stuck NIP-42 round-trip or a relay sending CLOSED `restricted:` for
   an unrelated channel sub.
-- **Relay-access state transitions** — read straight off
+- **Relay-access state transitions** - read straight off
   `[data-testid="relay-access-banner"][data-state="…"]`, so the trail
   exactly matches what a user would see in the UI.
-- **DOM checkpoints** — sidebar populate, channel selection, message
+- **DOM checkpoints** - sidebar populate, channel selection, message
   paint, post-publish access state.
 
 ## Failure artifacts
 
 On failure the harness retains:
 
-- Full trace zip — replay frame-by-frame with
+- Full trace zip: replay frame-by-frame with
   `npx playwright show-trace scripts/e2e/test-results/<…>/trace.zip`.
 - Video recording.
 - Screenshot.
-- HTML report at `scripts/e2e/playwright-report/` — open with
+- HTML report at `scripts/e2e/playwright-report/`; open with
   `npx playwright show-report scripts/e2e/playwright-report`.
 
 ## Adding a new spec
@@ -138,7 +138,7 @@ On failure the harness retains:
 4. Use `attachClientCapture(page)` to mirror console + websocket
    traffic. Keep a reference to the returned `ClientCapture` if you
    want to assert on console errors at the end.
-5. Use `waitForRelayOk(page)` rather than `waitForTimeout` — that's the
+5. Use `waitForRelayOk(page)` rather than `waitForTimeout`; that's the
    contract every read-side feature depends on.
 
 ### Patterns for catching "needs a refresh" bugs
@@ -149,7 +149,7 @@ load looks complete but avatars / banners are blank or pubkeys are
 still rendered as `npub1…`, two extra assertions are needed:
 
 **1. Image readiness.** An `<img>` with `src` set is not proof it
-loaded — the request could have failed silently and the element is a
+loaded: the request could have failed silently and the element is a
 broken image. Assert `naturalWidth > 0`:
 
 ```ts
@@ -166,13 +166,13 @@ for (let i = 0; i < count; i++) {
 }
 ```
 
-Scope it tightly — sidebar avatars, the user-panel pill, or
+Scope it tightly: sidebar avatars, the user-panel pill, or
 `[data-testid="profile-banner"]` after opening a profile popover. A
 blanket page-wide scan against a public relay is flaky.
 
 **2. Profile-name resolution.** A pubkey with no kind 0 renders as a
 truncated `npub1abcd…`. A regression where kind 0 ingest stops
-updating the UI looks fine on the surface — pubkeys just never resolve
+updating the UI looks fine on the surface: pubkeys just never resolve
 to display names. Assert against the resolved text on a known testid:
 
 ```ts
@@ -205,7 +205,7 @@ expect(errors, JSON.stringify(errors, null, 2)).toHaveLength(0);
   scales linearly in dev-relay time, not in vision tokens.
 - When a spec fails, open the trace before adding logs:
   `npx playwright show-trace scripts/e2e/test-results/<…>/trace.zip`.
-  The trace already has the DOM timeline — new logs usually duplicate
+  The trace already has the DOM timeline; new logs usually duplicate
   it.
 - Public-relay flake is real; lean on `retries: 1` (already set) and
   generous per-assertion timeouts (8–10s) rather than chasing zero

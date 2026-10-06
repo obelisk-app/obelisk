@@ -5,7 +5,7 @@
  *
  * The native dialog can't be styled, reads as a browser warning rather than
  * part of Obelisk, ignores the app's language (its buttons follow the OS),
- * and is suppressed outright in some embedded webviews — where `confirm()`
+ * and is suppressed outright in some embedded webviews, where `confirm()`
  * returns `false` and the action silently does nothing.
  *
  * Usage keeps the one-line shape of the native call:
@@ -13,11 +13,12 @@
  *   if (!(await confirmDialog({ title: t('…'), confirmLabel: t('confirm.delete') }))) return;
  *
  * `<ConfirmDialogHost />` is mounted once in the root layout; `confirmDialog`
- * talks to it through a tiny module-level store, so any code path — a
- * component, a hook, a plain function — can ask without owning modal state.
+ * talks to it through a tiny module-level store, so any code path (a
+ * component, a hook, a plain function) can ask without owning modal state.
  */
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import ModalShell from '@/components/ModalShell';
+import Button from './Button';
+import Modal from './Modal';
 import { useTranslation } from '@/i18n/context';
 import { LogOutIcon, TrashIcon } from './icons';
 
@@ -59,7 +60,7 @@ function settle(ok: boolean): void {
 /**
  * Ask the user to confirm. Resolves `true` on confirm and `false` on cancel,
  * Escape or a backdrop click. A second request while one is open cancels the
- * first — two stacked "are you sure?" dialogs are never what anyone meant.
+ * first: two stacked "are you sure?" dialogs are never what anyone meant.
  * Without a mounted host (a test, a server render) it resolves `false`,
  * which is the safe answer for a destructive action.
  */
@@ -109,12 +110,15 @@ function ConfirmDialogPanel({ pending }: { pending: Pending }) {
   }, []);
 
   return (
-    <ModalShell
+    <Modal
       onClose={() => settle(false)}
       testId="confirm-dialog"
       panelClassName="w-full max-w-sm mx-4 rounded-2xl bg-lc-dark border border-lc-border p-6 shadow-xl"
+      role="alertdialog"
+      aria-labelledby={titleId}
+      aria-describedby={pending.message ? messageId : undefined}
     >
-      <div role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={pending.message ? messageId : undefined}>
+      <div>
         {icon !== 'none' && (
           <div
             className={
@@ -135,30 +139,25 @@ function ConfirmDialogPanel({ pending }: { pending: Pending }) {
           </p>
         )}
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button
+          <Button
             ref={cancelRef}
-            type="button"
+            variant="outlinePill"
+            size="lg"
             onClick={() => settle(false)}
-            className="rounded-full border border-lc-border bg-lc-card/60 px-4 py-2 text-sm font-medium text-lc-white transition hover:bg-lc-border/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-lc-green/60"
             data-testid="confirm-dialog-cancel"
           >
             {pending.cancelLabel ?? t('common.cancel')}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant={tone === 'danger' ? 'danger' : 'pill'}
+            size={tone === 'danger' ? 'lg' : 'sm'}
             onClick={() => settle(true)}
-            className={
-              'rounded-full px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 '
-              + (tone === 'danger'
-                ? 'bg-red-600 text-white hover:bg-red-500 focus-visible:ring-red-400/70'
-                : 'bg-lc-green text-lc-black hover:brightness-110 focus-visible:ring-lc-green/60')
-            }
             data-testid="confirm-dialog-confirm"
           >
             {pending.confirmLabel ?? t('confirm.delete')}
-          </button>
+          </Button>
         </div>
       </div>
-    </ModalShell>
+    </Modal>
   );
 }

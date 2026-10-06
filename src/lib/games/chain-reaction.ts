@@ -107,15 +107,32 @@ function isDominant(state: CRState, seat: number): boolean {
   return state.cells.some((c) => c.owner === seat);
 }
 
+/**
+ * Bounds on an explicit `{rows, cols}`. The `create` event is signed by the
+ * host and the host is any channel member, so the dimensions are peer input:
+ * `rows: 1e5, cols: 1e5` would ask every client that opens the card to
+ * allocate ten billion cells. The largest preset is 8x12.
+ */
+export const CR_MIN_DIMENSION = 3;
+export const CR_MAX_DIMENSION = 20;
+
+function dimension(raw: unknown): number | null {
+  if (typeof raw !== 'number' || !Number.isInteger(raw)) return null;
+  if (raw < CR_MIN_DIMENSION || raw > CR_MAX_DIMENSION) return null;
+  return raw;
+}
+
 function resolveSize(opts?: unknown): { rows: number; cols: number } {
   // Accept either { size: 'small'|'medium'|'large' }, explicit {rows, cols}, or
   // a prior state object carrying rows/cols (so a table can be re-initialized
-  // from its own board when the roster changes before `start`).
+  // from its own board when the roster changes before `start`). An explicit
+  // pair outside the bounds is ignored, not clamped: a clamped board would
+  // not be the one the host's own client built.
   if (opts && typeof opts === 'object') {
     const o = opts as { rows?: unknown; cols?: unknown; size?: unknown };
-    if (typeof o.rows === 'number' && typeof o.cols === 'number') {
-      return { rows: o.rows, cols: o.cols };
-    }
+    const rows = dimension(o.rows);
+    const cols = dimension(o.cols);
+    if (rows !== null && cols !== null) return { rows, cols };
     if (typeof o.size === 'string' && o.size in CR_SIZES) {
       const s = CR_SIZES[o.size as CRSizeKey];
       return { rows: s.rows, cols: s.cols };
@@ -155,7 +172,9 @@ export const chainReaction: GameDefinition<CRState, CRAction> = {
     if (!(actorPubkey in state.seats)) return { ok: false, error: 'Not a participant' };
     if (state.eliminated.includes(actorPubkey)) return { ok: false, error: 'Eliminated' };
     const total = state.rows * state.cols;
-    if (typeof action?.cell !== 'number' || action.cell < 0 || action.cell >= total) {
+    // Integer, not merely a number: `cells[1.5]` is undefined, and reading
+    // `.owner` off it threw out of the replay for every client at the table.
+    if (!Number.isInteger(action?.cell) || action.cell < 0 || action.cell >= total) {
       return { ok: false, error: 'Invalid cell' };
     }
     const seat = state.seats[actorPubkey];

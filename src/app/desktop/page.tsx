@@ -25,9 +25,9 @@ const SCREENSHOTS = [
 ];
 
 export const metadata: Metadata = {
-  title: 'Obelisk Desktop — Discord alternative for the open Nostr stack',
+  title: 'Obelisk Desktop - Discord alternative for the open Nostr stack',
   description:
-    'A guided tour of Obelisk on desktop: a Nostr-powered Discord alternative with NIP-29 group chat, publications, mediasoup SFU voice, encrypted DMs, and Lightning zaps. No email, no password — just your keys.',
+    'A guided tour of Obelisk on desktop: a Nostr-powered Discord alternative with NIP-29 group chat, publications, mediasoup SFU voice, encrypted DMs, and Lightning zaps. No email, no password, just your keys.',
   alternates: { canonical: '/desktop' },
   keywords: [
     'Discord alternative desktop',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     'open source Discord',
   ],
   openGraph: {
-    title: 'Obelisk Desktop — Discord alternative for the open Nostr stack',
+    title: 'Obelisk Desktop - Discord alternative for the open Nostr stack',
     description:
       'A guided tour of Obelisk on desktop: NIP-29 group chat, publications, mediasoup SFU voice, encrypted DMs and Lightning zaps.',
     url: `${SITE_URL}/desktop`,
@@ -52,13 +52,13 @@ export const metadata: Metadata = {
         url: '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png',
         width: 1470,
         height: 799,
-        alt: 'Obelisk desktop — large voice channel with SFU test peer transmission',
+        alt: 'Obelisk desktop: large voice channel with SFU test peer transmission',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Obelisk Desktop — Discord alternative for the open Nostr stack',
+    title: 'Obelisk Desktop - Discord alternative for the open Nostr stack',
     description:
       'A desktop tour of Obelisk: NIP-29 group chat, publications, SFU voice, encrypted DMs and Lightning zaps. No email, no password.',
     images: ['/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png'],
@@ -69,7 +69,7 @@ export default function DesktopPage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ImageGallery',
-    name: 'Obelisk on desktop — screenshot tour',
+    name: 'Obelisk on desktop: screenshot tour',
     description:
       'Screenshots of Obelisk, a Nostr-powered Discord alternative, captured in a desktop browser.',
     url: `${SITE_URL}/desktop`,
@@ -79,7 +79,7 @@ export default function DesktopPage() {
       url: `${SITE_URL}${s.path}`,
       width: s.width,
       height: s.height,
-      name: `Obelisk desktop — ${s.name}`,
+      name: `Obelisk desktop: ${s.name}`,
     })),
   };
 

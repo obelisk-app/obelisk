@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { VoiceMetrics } from '@/lib/voice/metrics';
-import type { VoiceDebugEvent } from '@/lib/voice/debug';
+import type { VoiceMetrics } from '@/services/voice/metrics';
+import type { VoiceDebugEvent } from '@/services/voice/debug';
 import { useTranslation } from '@/i18n/context';
 
 const REFRESH_MS = 500;
@@ -22,18 +22,18 @@ function readBag(): DebugBag | null {
  * Floating diagnostic panel for the mesh voice layer. Mounted by
  * `VoiceRoom` only when the URL carries `?debug=voice`. Reads the
  * window-mounted metrics + ring buffer maintained by `VoiceClient`,
- * polls every 500 ms (cheap — no React state for the metrics object,
+ * polls every 500 ms (cheap - no React state for the metrics object,
  * only a render tick).
  *
  * Displays:
  *  - top counters: connected peers, relay/control bye split, RTT
  *  - dropped-signal counters (the ones that should stay near zero on
- *    a healthy mesh — wot, membershipFinal, deferredOverflow)
+ *    a healthy mesh - wot, membershipFinal, deferredOverflow)
  *  - relay state: publish failures + last error string
  *  - rate-limit total + cumulative backoff
  *  - last 50 events from the ring buffer
  *
- * Not styled with the La Crypta tokens — overlay is fixed-position with
+ * Not styled with the La Crypta tokens - overlay is fixed-position with
  * a high z-index and a dim background; it's a developer surface, not
  * end-user UI.
  */
@@ -85,7 +85,7 @@ export function DebugOverlay() {
           <Section title={t('voiceDebug.controlChannel')}>
             <Row k="opened" v={metrics.controlChannel.opened} />
             <Row k="ping" v={`${metrics.controlChannel.pingSent}/${metrics.controlChannel.pongRcvd}`} />
-            <Row k="lastRtt" v={metrics.controlChannel.lastRttMs ?? '—'} />
+            <Row k="lastRtt" v={metrics.controlChannel.lastRttMs ?? '-'} />
           </Section>
           <Section title="discovery">
             <Row k="viaRelay" v={metrics.transitive.discoveredViaRelay} />
@@ -135,7 +135,7 @@ export function DebugOverlay() {
         </>
       )}
       <div style={{ fontWeight: 600, marginTop: 8, marginBottom: 4 }}>events</div>
-      {events.length === 0 && <div style={{ color: '#a3a3a3' }}>—</div>}
+      {events.length === 0 && <div style={{ color: '#a3a3a3' }}>-</div>}
       {events.map((ev, i) => (
         <div key={i} style={{ color: ev.kind === 'relay-error' || ev.kind === 'signal-dropped' ? '#ef4444' : '#a3a3a3' }}>
           {new Date(ev.ts).toISOString().slice(11, 23)}{' '}

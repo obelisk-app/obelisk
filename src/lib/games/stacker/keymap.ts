@@ -3,7 +3,7 @@
  *
  * Everyone who plays these games has opinions about the controls, and the
  * defaults suit exactly nobody but their author. The map lives in
- * localStorage under the UI-state convention in CLAUDE.md — it is a device
+ * localStorage under the UI-state convention in CLAUDE.md: it is a device
  * preference, not account state, so it does not belong on the relay.
  */
 import type { InputKind } from './engine';
@@ -91,7 +91,7 @@ export function keysFor(map: KeyMap, action: InputKind): string[] {
   return Object.entries(map).filter(([, a]) => a === action).map(([code]) => code);
 }
 
-/** "ArrowLeft" → "←", "KeyX" → "X" — what a person recognises. */
+/** "ArrowLeft" → "←", "KeyX" → "X": what a person recognises. */
 export function keyLabel(code: string): string {
   const named: Record<string, string> = {
     ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',

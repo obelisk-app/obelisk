@@ -1,7 +1,7 @@
-# Direct Messages — Re-enable with outbox model, encrypted-at-rest cache, and request coalescing
+# Direct Messages - Re-enable with outbox model, encrypted-at-rest cache, and request coalescing
 
 **Date:** 2026-04-26
-**Status:** Design — pending review
+**Status:** Design, pending review
 **Scope:** Browser-side DM data layer rewrite. UI components kept; storage, fetch, and live-sync paths replaced.
 
 ---
@@ -11,11 +11,11 @@
 Obelisk has full DM code (NIP-04 + NIP-17 send/receive, components, store) gated behind `DM_FEATURE_ENABLED = false`. The flag was set because the existing implementation has structural problems we want to fix before re-enabling:
 
 1. The cache stores **decrypted plaintext** in localStorage (`dm-cache.ts`'s `decrypted: Record<string, string>`).
-2. There is no **outbox-model** routing — sends and fetches go to whatever relays NDK happens to be connected to, not the recipient's published inbox/outbox.
-3. There is no **request coalescing** — entering the DM view fires many independent `fetchEvents` calls instead of batching them into a few multi-filter REQs per relay.
-4. History fetches use `await ndk.fetchEvents(...)` which blocks until every relay has responded — events from fast relays don't render until the slow ones return.
+2. There is no **outbox-model** routing: sends and fetches go to whatever relays NDK happens to be connected to, not the recipient's published inbox/outbox.
+3. There is no **request coalescing**: entering the DM view fires many independent `fetchEvents` calls instead of batching them into a few multi-filter REQs per relay.
+4. History fetches use `await ndk.fetchEvents(...)` which blocks until every relay has responded: events from fast relays don't render until the slow ones return.
 5. Profile and relay-list lookups are not browser-side cached, so opening DMs hits the relays repeatedly for data that rarely changes.
-6. The Zustand DM store uses a single localStorage key — multi-account state can leak across logins.
+6. The Zustand DM store uses a single localStorage key: multi-account state can leak across logins.
 7. Bunker users get a signer popup for every preview decryption on every cold load.
 
 ## Goals
@@ -26,17 +26,17 @@ Re-enable DMs with the following premises baked in:
 - **Local cache for profiles + relay lists**, per-account, so we never search twice.
 - **DMs disabled when `ndk.signer` is unavailable** (read-only state); enabled when present.
 - **Signature verification** on every DM event before it reaches the cache.
-- **Parallel-relay loading** — events from each relay surface to the UI as they arrive; never block on the slowest relay.
+- **Parallel-relay loading**: events from each relay surface to the UI as they arrive; never block on the slowest relay.
 - **Deduplication** by event id throughout.
 - **localStorage stores only encrypted-at-rest data.** Wire-encrypted Nostr events as-is, plus an AES-GCM-encrypted plaintext cache whose key is itself wrapped by the user's signer.
 - **Decrypt only for display.** Plaintext lives in RAM (Zustand state); never persisted in raw form.
-- **Multi-account isolation** at the cache layer — every storage key suffixed with `:{myPubkey}`.
+- **Multi-account isolation** at the cache layer: every storage key suffixed with `:{myPubkey}`.
 - **Request coalescer** with a small debounce window so opening the DM view fires one multi-filter REQ per relay, not many independent calls.
 - **Stale-while-revalidate with content-diff** for relay lists (kind 10002 / 10050): use cached value first; refresh in the background; only emit a subscriber notification when content actually changed.
 - **Live subscription** while the DM view is open, so incoming DMs arrive without polling.
-- **Incremental sync** — every DM filter uses a `since` cursor derived from the latest persisted event for that filter.
-- **Follow-aware eviction** — DMs from/to followed users are never evicted by the LRU cap; the cap applies only to non-followed partners.
-- **Defense in depth against XSS** — non-extractable WebCrypto key + a baseline CSP header.
+- **Incremental sync**: every DM filter uses a `since` cursor derived from the latest persisted event for that filter.
+- **Follow-aware eviction**: DMs from/to followed users are never evicted by the LRU cap; the cap applies only to non-followed partners.
+- **Defense in depth against XSS**: non-extractable WebCrypto key + a baseline CSP header.
 
 ## Non-goals
 
@@ -44,7 +44,7 @@ Captured as post-merge follow-ups (see end of doc), not part of this PR:
 
 - Performance benchmarks (relay latency, localStorage write throughput).
 - Replacing NDK in non-DM paths.
-- `connect-src` CSP allowlist — Nostr relays are user-configurable.
+- `connect-src` CSP allowlist: Nostr relays are user-configurable.
 - A full XSS pen-test.
 
 ---
@@ -54,7 +54,7 @@ Captured as post-merge follow-ups (see end of doc), not part of this PR:
 ```
 ┌─────────────────────────────── Browser ───────────────────────────────┐
 │                                                                       │
-│  Components (DMList, DMChat, NewDMModal, ProtocolPrompt) — unchanged  │
+│  Components (DMList, DMChat, NewDMModal, ProtocolPrompt) - unchanged  │
 │                                  │                                    │
 │                                  ▼                                    │
 │  Zustand: useDMStore (per-account namespacing)                        │
@@ -80,13 +80,13 @@ Captured as post-merge follow-ups (see end of doc), not part of this PR:
 │              └──────────────┬───┴──────────────────┘                  │
 │                             ▼                                         │
 │   ┌──────────────────────────────────────────────────────────────┐   │
-│   │       SimplePool (nostr-tools) — READ path only              │   │
+│   │       SimplePool (nostr-tools) - READ path only              │   │
 │   │       • subscribeMany() for streaming, per-relay fan-out     │   │
 │   │       • signature verification on every event                │   │
 │   └──────────────────────────────────────────────────────────────┘   │
 │                                                                       │
 │   ┌──────────────────────────────────────────────────────────────┐   │
-│   │  NDK signer — WRITE path: encrypt, sign, publish, decrypt    │   │
+│   │  NDK signer - WRITE path: encrypt, sign, publish, decrypt    │   │
 │   └──────────────────────────────────────────────────────────────┘   │
 │                                                                       │
 │   ┌──────────────────────────────────────────────────────────────┐   │
@@ -131,7 +131,7 @@ Captured as post-merge follow-ups (see end of doc), not part of this PR:
      · kind 0 / 10002 / 10050 → cache; emit subscriber update only if content changed.
      · kind 3 → update in-memory follow set; re-evaluate eviction protection.
      · kind 4 / 1059 → DMSession dispatcher:
-         a. verifyEvent(sig) — drop if invalid.
+         a. verifyEvent(sig): drop if invalid.
          b. dedupe by event.id against the per-account cache.
          c. persist the WIRE-ENCRYPTED event to localStorage.
          d. for messages currently visible (active thread + thread-list previews):
@@ -185,7 +185,7 @@ Captured as post-merge follow-ups (see end of doc), not part of this PR:
 | `src/lib/dm/cache-key.ts` | KEK pattern: `getOrCreateCacheKey(myPubkey, signer)` generates a 32-byte random key on first run, NIP-44-self-encrypts it via the signer, persists wrapped form. Subsequent calls unwrap (one signer call) and import as a non-extractable WebCrypto AES-GCM key. RAM-only after import. |
 | `src/lib/dm/profile-cache.ts` | Browser-side kind-0 cache, 24h SWR. Always queries `purplepag.es` + my read relays + the partner's outbox. Diffs by `created_at` before notifying subscribers. |
 | `src/lib/dm/relay-list-cache.ts` | Browser-side kind-10002 + kind-10050 cache, 6h SWR. Same diff-before-notify rule. Returns `{ inbox, readRelays, writeRelays, stale }`. |
-| `src/lib/dm/follows.ts` | Cold-load seed + live-sub-driven kind-3 follow set. No TTL — the live subscription is the freshness mechanism. |
+| `src/lib/dm/follows.ts` | Cold-load seed + live-sub-driven kind-3 follow set. No TTL: the live subscription is the freshness mechanism. |
 | `src/lib/dm/dm-cache.ts` | **Replaces** the old one. Per-pubkey `obelisk:dm:{me}` key. Stores wire-encrypted events + AES-GCM-encrypted secrets blob per event. Tracks `since` cursors per (kind, direction). Follow-aware LRU eviction. |
 | `src/lib/dm/dm.ts` | **Replaces** the old one. Public API: `loadHistory`, `subscribeLive`, `sendDM`, `verifyAndIngest`. Reads via coalescer; writes/encrypt/decrypt via NDK. |
 | `src/components/dm/DMSessionProvider.tsx` | Mounts when DM view opens. Owns the live subscription. Provides context: `useDMSession()` exposes `loadThread`, `loadMore`, `sendMessage`, `decryptForDisplay`. |
@@ -195,7 +195,7 @@ Captured as post-merge follow-ups (see end of doc), not part of this PR:
 | Module | Change |
 |---|---|
 | `src/lib/dm/dm-inbox.ts` | Kept; minor signature alignment with new module structure. |
-| `src/store/dm.ts` | (1) Per-account namespacing — persist key becomes `obelisk-dm-store:{pubkey}`. (2) `messages` is RAM-only; only `protocolOverrides` and `readCursors` persist. (3) New `decryptInRange(start, end)` action. |
+| `src/store/dm.ts` | (1) Per-account namespacing: persist key becomes `obelisk-dm-store:{pubkey}`. (2) `messages` is RAM-only; only `protocolOverrides` and `readCursors` persist. (3) New `decryptInRange(start, end)` action. |
 | `src/components/dm/DMList.tsx` | Uses `useDMSession`. Disabled state when `!ndk.signer`. |
 | `src/components/dm/DMChat.tsx` | Uses `useDMSession`. Decrypts viewport on mount + on scroll. |
 | `src/components/dm/NewDMModal.tsx` | Uses `ProfileCache` to resolve npub → profile preview. |
@@ -284,20 +284,20 @@ localStorage:
 
 ### Eviction policy
 
-The 2000-event cap applies only to the **evictable pool** — events whose partner is not in the current follow set. Events from/to followed partners are protected and never evicted by the cap. Eviction is re-evaluated each write with the current follow snapshot, so unfollowing a partner makes their messages eligible on the next overflow.
+The 2000-event cap applies only to the **evictable pool**: events whose partner is not in the current follow set. Events from/to followed partners are protected and never evicted by the cap. Eviction is re-evaluated each write with the current follow snapshot, so unfollowing a partner makes their messages eligible on the next overflow.
 
 If we are not yet hydrated with a follow list (cold start, never fetched), treat all events as protected for that session.
 
 ### Why no second at-rest layer for wire events
 
-The DM events themselves (NIP-04 ciphertext, kind-1059 gift wraps) are already encrypted by the sender. Adding another encryption layer on top buys nothing. The AES-GCM layer applies only to the `secrets` blob — the per-event decrypted plaintext that we want fast access to.
+The DM events themselves (NIP-04 ciphertext, kind-1059 gift wraps) are already encrypted by the sender. Adding another encryption layer on top buys nothing. The AES-GCM layer applies only to the `secrets` blob: the per-event decrypted plaintext that we want fast access to.
 
 ### How the three layers compose at read time
 
 Decryption flow when rendering a message:
 
 ```
-1. RAM (Zustand `messages`): if present, render — done.
+1. RAM (Zustand `messages`): if present, render; done.
 2. AES-GCM secrets cache: if present, WebCrypto-decrypt → put in RAM → render.
 3. Wire-encrypted event: NDK signer-decrypt (NIP-04 nip04Decrypt or
    NIP-17 giftUnwrap) → put in secrets cache (AES-GCM) AND in RAM → render.
@@ -350,7 +350,7 @@ upgrade-insecure-requests;
 
 ---
 
-## Audit — every premise, mapped to enforcement and tests
+## Audit - every premise, mapped to enforcement and tests
 
 | # | Requirement | Where in design | Audit test |
 |---|---|---|---|
@@ -359,9 +359,9 @@ upgrade-insecure-requests;
 | 3 | Cache profiles + relays locally, don't search twice | Per-account caches with SWR; `lastCheckedAt` ensures no refetch within TTL | Unit: second `getProfile(pk)` within TTL → zero relay calls |
 | 4 | DMs disabled when `ndk.signer` absent | `DMList`/`DMChat` gate on `!ndk.signer` | Component test: render with no signer → input disabled, banner shown |
 | 5 | Verify DMs via signature | `dm/pool.ts` wraps every event with `verifyEvent`; invalid events dropped with warn | Unit: poisoned-sig event is dropped, never reaches store |
-| 6 | Load from all relays in parallel, show as they come | `SimplePool.subscribeMany` per-relay fan-out; `onevent` dispatches per-relay | Integration: two mocked relays (slow + fast) — fast event reaches store before slow returns |
+| 6 | Load from all relays in parallel, show as they come | `SimplePool.subscribeMany` per-relay fan-out; `onevent` dispatches per-relay | Integration: two mocked relays (slow + fast): fast event reaches store before slow returns |
 | 7 | Deduplicate as we update | Coalescer keeps `Set<eventId>`; `dm-cache.putEvent` keyed by id | Unit: same event from 5 relays → 1 store entry, 1 cache write |
-| 8 | localStorage stores DMs encrypted | Wire-encrypted events + AES-GCM-encrypted secrets only; no plaintext field | Unit: scan persisted blob — no plaintext substring of a known test message |
+| 8 | localStorage stores DMs encrypted | Wire-encrypted events + AES-GCM-encrypted secrets only; no plaintext field | Unit: scan persisted blob: no plaintext substring of a known test message |
 | 9 | Decrypt only when showing on screen, never store decrypted raw | Decryption in `DMSessionProvider.decryptForDisplay`; secrets blob is AES-GCM at rest; Zustand `messages` excluded from `partialize` | Unit: persist hook output never includes `messages`; manual storage flush leaves no plaintext |
 | 10 | Multi-account, all encrypted | Every cache key suffixed with `:{myPubkey}`; Zustand persist name dynamic | Unit: switch accounts in same tab → A's cache is unreachable from B's session |
 | 11 | Coalesce relay requests with debounce | `RequestCoalescer.enqueue` 50ms window | Unit: 4 enqueues within 50ms → 1 multi-filter REQ per relay |
@@ -386,32 +386,32 @@ Tests are non-negotiable per CLAUDE.md. Co-located, Vitest + RTL, run via `npm r
 
 ### Unit / module tests
 
-- `src/lib/dm/pool.test.ts` — `verifyEvent` accepts valid sigs; rejects swapped sig, swapped pubkey, tampered content.
-- `src/lib/dm/cache-key.test.ts` — first-call generates + wraps; in-session RAM cache (zero signer calls); reload calls `nip44Decrypt` exactly once; non-extractable assertion; logout clears the key handle.
-- `src/lib/dm/dm-cache.test.ts` — `putSecret`/`getSecret` round-trip; persisted blob contains no plaintext substring; per-account isolation; eviction with no follows = plain LRU at 2000; eviction with 1500 followed + 2500 non-followed = 1500 + 2000; cursors monotonic; corrupted ciphertext for one event doesn't break others.
-- `src/lib/dm/coalescer.test.ts` — 4 enqueues in window → 1 REQ per relay; out-of-window enqueue starts new REQ; per-relay 5s timeout; dedup; cancellation.
-- `src/lib/dm/profile-cache.test.ts` — first fetch hits `purplepag.es` + my read relays + partner outbox; second within 24h is cache-only; refresh past TTL returns stale immediately, emits update only if `created_at` newer; multiple-relay dedup.
-- `src/lib/dm/relay-list-cache.test.ts` — same SWR shape with 6h TTL; bg refresh with identical content emits no notification; content-hash diff respected.
-- `src/lib/dm/follows.test.ts` — cold load reads cached kind-3 with no relay call; subscription emits newer kind-3 → in-memory set updates; older kind-3 is ignored.
-- `src/lib/dm/dm.test.ts` — `loadHistory` uses `since` cursor from cached max; fresh partner has `since` undefined; `sendDM('nip17')` routes to recipient's kind-10050; `sendDM('nip04')` routes to kind-10002; `sendDM` with no signer rejects; `verifyAndIngest` drops poisoned sigs and dedupes by id.
+- `src/lib/dm/pool.test.ts` - `verifyEvent` accepts valid sigs; rejects swapped sig, swapped pubkey, tampered content.
+- `src/lib/dm/cache-key.test.ts` - first-call generates + wraps; in-session RAM cache (zero signer calls); reload calls `nip44Decrypt` exactly once; non-extractable assertion; logout clears the key handle.
+- `src/lib/dm/dm-cache.test.ts` - `putSecret`/`getSecret` round-trip; persisted blob contains no plaintext substring; per-account isolation; eviction with no follows = plain LRU at 2000; eviction with 1500 followed + 2500 non-followed = 1500 + 2000; cursors monotonic; corrupted ciphertext for one event doesn't break others.
+- `src/lib/dm/coalescer.test.ts` - 4 enqueues in window → 1 REQ per relay; out-of-window enqueue starts new REQ; per-relay 5s timeout; dedup; cancellation.
+- `src/lib/dm/profile-cache.test.ts` - first fetch hits `purplepag.es` + my read relays + partner outbox; second within 24h is cache-only; refresh past TTL returns stale immediately, emits update only if `created_at` newer; multiple-relay dedup.
+- `src/lib/dm/relay-list-cache.test.ts` - same SWR shape with 6h TTL; bg refresh with identical content emits no notification; content-hash diff respected.
+- `src/lib/dm/follows.test.ts` - cold load reads cached kind-3 with no relay call; subscription emits newer kind-3 → in-memory set updates; older kind-3 is ignored.
+- `src/lib/dm/dm.test.ts` - `loadHistory` uses `since` cursor from cached max; fresh partner has `since` undefined; `sendDM('nip17')` routes to recipient's kind-10050; `sendDM('nip04')` routes to kind-10002; `sendDM` with no signer rejects; `verifyAndIngest` drops poisoned sigs and dedupes by id.
 
 ### Component tests
 
-- `src/components/dm/DMSessionProvider.test.tsx` — mounts opens live sub with the expected filter set; unmounts closes it; `useDMSession` context throws outside provider; live event updates re-render.
-- `src/components/dm/DMList.test.tsx` — disabled state with no signer; 50 cached threads render with exactly 1 mock signer call (the KEK unwrap).
-- `src/components/dm/DMChat.test.tsx` — only visible viewport is decrypted; scroll-up triggers `loadHistory` with `until` cursor; optimistic message replaces cleanly on send.
+- `src/components/dm/DMSessionProvider.test.tsx` - mounts opens live sub with the expected filter set; unmounts closes it; `useDMSession` context throws outside provider; live event updates re-render.
+- `src/components/dm/DMList.test.tsx` - disabled state with no signer; 50 cached threads render with exactly 1 mock signer call (the KEK unwrap).
+- `src/components/dm/DMChat.test.tsx` - only visible viewport is decrypted; scroll-up triggers `loadHistory` with `until` cursor; optimistic message replaces cleanly on send.
 
 ### Store tests
 
-- `src/store/dm.test.ts` — `partialize` output never contains `messages`; persist key includes the active pubkey; account switch starts with empty overrides + cursors.
+- `src/store/dm.test.ts` - `partialize` output never contains `messages`; persist key includes the active pubkey; account switch starts with empty overrides + cursors.
 
 ### Integration
 
-- `src/lib/dm/integration.test.ts` — two mocked relays (slow + fast); fast event reaches the store before slow returns. Multi-account: A's cache untouched after switching to B. Disk inspection: 20 sent + 20 received messages, scan all of localStorage, assert no plaintext substring of any message body. Single-bunker-call: 50 thread previews → `nip44Decrypt` called exactly once.
+- `src/lib/dm/integration.test.ts` - two mocked relays (slow + fast); fast event reaches the store before slow returns. Multi-account: A's cache untouched after switching to B. Disk inspection: 20 sent + 20 received messages, scan all of localStorage, assert no plaintext substring of any message body. Single-bunker-call: 50 thread previews → `nip44Decrypt` called exactly once.
 
 ### CSP smoke test
 
-- `src/__tests__/csp.test.ts` — assert `Content-Security-Policy` header on `/` and `/chat` contains `script-src 'self'` without `'unsafe-inline'`.
+- `src/__tests__/csp.test.ts` - assert `Content-Security-Policy` header on `/` and `/chat` contains `script-src 'self'` without `'unsafe-inline'`.
 
 ---
 
@@ -419,7 +419,7 @@ Tests are non-negotiable per CLAUDE.md. Co-located, Vitest + RTL, run via `npm r
 
 These are intentionally out of scope for this PR. Candidates for `/schedule` agents or follow-up issues:
 
-- **Performance benchmarks** — relay latency distributions, localStorage write throughput, end-to-end DM render budget.
-- **Replacing NDK in non-DM paths** — once the SimplePool + coalescer pattern is proven in DMs, consider adopting it for chat/profile reads broadly.
-- **`connect-src` allowlist** — Nostr relays are user-configurable today, so a strict CSP `connect-src` is incompatible with arbitrary relay support. Investigate runtime CSP via response headers per request, or a relay-allowlist UX.
-- **A full XSS pen-test** — defenses are designed in (non-extractable key + CSP), but offensive testing (third-party engagement) is out of scope.
+- **Performance benchmarks**: relay latency distributions, localStorage write throughput, end-to-end DM render budget.
+- **Replacing NDK in non-DM paths**: once the SimplePool + coalescer pattern is proven in DMs, consider adopting it for chat/profile reads broadly.
+- **`connect-src` allowlist**: Nostr relays are user-configurable today, so a strict CSP `connect-src` is incompatible with arbitrary relay support. Investigate runtime CSP via response headers per request, or a relay-allowlist UX.
+- **A full XSS pen-test**: defenses are designed in (non-extractable key + CSP), but offensive testing (third-party engagement) is out of scope.

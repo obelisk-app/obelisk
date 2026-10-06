@@ -15,8 +15,12 @@ import {
   usePreferences,
   type CallIpProtection,
   type CallsFrom,
-} from '@/lib/preferences';
+} from '@/services/preferences';
 import { CloseIcon } from '@/components/ui/icons';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
+import Chip from '@/components/ui/Chip';
+import Text from '@/components/ui/Text';
 
 function isWss(value: string): boolean {
   try {
@@ -35,21 +39,17 @@ function Choice<T extends string>({
   return (
     <div className={mobile ? 'flex flex-wrap gap-2' : 'flex flex-wrap gap-1.5'} role="radiogroup">
       {options.map((o) => (
-        <button
+        <Chip
           key={o.value}
-          type="button"
-          role="radio"
-          aria-checked={value === o.value}
+          behavior="radio"
+          size="touch"
+          state={value === o.value ? 'selected' : 'idle'}
           onClick={() => onChange(o.value)}
-          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-            value === o.value
-              ? 'border-lc-green bg-lc-green/15 text-lc-green'
-              : 'border-lc-border bg-lc-card/60 text-lc-white hover:border-lc-green/50'
-          }`}
+          className="font-semibold"
           data-testid={`${name}-${o.value}`}
         >
           {o.label}
-        </button>
+        </Chip>
       ))}
     </div>
   );
@@ -79,14 +79,13 @@ function CallRelayEditor({
     <>
       {draft.map((relay, i) => (
         <div key={i} className="flex items-center gap-2">
-          <input
+          <Input
             value={relay}
             onChange={(e) => { setDraft((cur) => cur.map((r, j) => (j === i ? e.target.value : r))); onStatus('idle'); }}
             aria-label={`${t('settings.calls.relay')} ${i + 1}`}
-            aria-invalid={relay.trim() !== '' && !isWss(relay)}
-            className={`min-w-0 flex-1 rounded-lg border bg-lc-black px-3 py-2 font-mono text-xs text-lc-white outline-none ${
-              relay.trim() !== '' && !isWss(relay) ? 'border-red-500' : 'border-lc-border focus:border-lc-green'
-            }`}
+            invalid={relay.trim() !== '' && !isWss(relay)}
+            fontSize="xs"
+            className="min-w-0 flex-1 font-mono"
             inputMode="url"
             autoCapitalize="off"
             autoCorrect="off"
@@ -94,36 +93,34 @@ function CallRelayEditor({
             placeholder="wss://relay.example"
             data-testid="call-relay-input"
           />
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            tone="danger"
+            size="icon-md"
+            className="shrink-0"
             onClick={() => { setDraft((cur) => cur.filter((_, j) => j !== i)); onStatus('idle'); }}
             disabled={draft.length <= 1}
-            className="shrink-0 rounded-lg border border-lc-border bg-lc-card/60 p-2 text-lc-white hover:text-red-400 disabled:opacity-40"
             aria-label={`${t('settings.calls.removeRelay')} ${relay || i + 1}`}
           >
             <CloseIcon size={14} />
-          </button>
+          </Button>
         </div>
       ))}
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
+        <Button
+          variant="pillSecondary"
+          size="xs"
           onClick={() => { setDraft((cur) => [...cur, '']); onStatus('idle'); }}
           disabled={draft.length >= CALL_RELAY_MAX}
-          className="lc-pill-secondary px-3 py-1.5 text-xs disabled:opacity-40"
         >
           {t('settings.calls.addRelay')}
-        </button>
-        <button
-          type="button"
-          onClick={() => { setDraft([...DEFAULT_CALL_RELAYS]); onStatus('idle'); }}
-          className="lc-pill-secondary px-3 py-1.5 text-xs"
-        >
+        </Button>
+        <Button variant="pillSecondary" size="xs" onClick={() => { setDraft([...DEFAULT_CALL_RELAYS]); onStatus('idle'); }}>
           {t('settings.calls.reset')}
-        </button>
-        <button type="button" onClick={save} className="lc-pill-primary px-4 py-1.5 text-xs" data-testid="call-relay-save">
+        </Button>
+        <Button variant="pill" size="xs" onClick={save} data-testid="call-relay-save">
           {t('common.save')}
-        </button>
+        </Button>
       </div>
     </>
   );
@@ -185,7 +182,7 @@ export default function CallSettings({ mobile = false }: { mobile?: boolean }) {
     </div>
   ) : (
     <div className="space-y-3 border-t border-lc-border pt-4" data-testid="call-settings">
-      <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">{t('settings.calls.title')}</div>
+      <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">{t('settings.calls.title')}</Text>
       {body}
     </div>
   );

@@ -1,16 +1,16 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import Footer from '@/components/Footer';
-import Navbar from '@/components/Navbar';
-import ShootingStars from '@/components/ShootingStars';
-import { serverLocale } from '@/lib/server/locale';
+import Footer from '@/components/marketing/Footer';
+import Navbar from '@/components/marketing/Navbar';
+import ShootingStars from '@/components/marketing/ShootingStars';
+import { serverLocale } from '@/services/server/locale';
 
 const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
 
 /**
- * The screenshots. Their copy — title, description, and the alt text a
- * screen reader reads — lives in the dictionary under `features.item.<id>`,
+ * The screenshots. Their copy - title, description, and the alt text a
+ * screen reader reads - lives in the dictionary under `features.item.<id>`,
  * because this page is the app's shop window and shipped English to every
  * reader regardless of language.
  */

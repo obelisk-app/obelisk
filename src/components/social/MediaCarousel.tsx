@@ -3,7 +3,7 @@
 /**
  * Several images in one note, as one swipeable frame.
  *
- * Stacked, a four-image post was four full-width images to scroll past —
+ * Stacked, a four-image post was four full-width images to scroll past:
  * the note owned the viewport and everything after it was a scroll away.
  * Every other client renders a set as a carousel, and readers already know
  * the gesture.
@@ -15,6 +15,8 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { Lightbox } from '@/components/chat/ImageGallery';
+import RemoteImage from '@/components/ui/RemoteImage';
+import { isVideo } from './media-type';
 
 export type CarouselItem = {
   url: string;
@@ -24,19 +26,6 @@ export type CarouselItem = {
   /** NIP-71 poster frame, from the `imeta` `image`/`thumb` field. */
   poster?: string | null;
 };
-
-/**
- * Extensions we treat as video when the publisher wrote no `m` field.
- *
- * Without this an `imeta` carrying only a URL rendered through `<img>`, so a
- * video note showed as a broken image rather than a player.
- */
-const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i;
-
-function isVideo(item: CarouselItem): boolean {
-  if (item.mimeType) return item.mimeType.startsWith('video/');
-  return VIDEO_EXTENSIONS.test(item.url);
-}
 
 export default function MediaCarousel({ items }: { items: readonly CarouselItem[] }) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -59,7 +48,7 @@ export default function MediaCarousel({ items }: { items: readonly CarouselItem[
   };
 
   // Zoom, like every other image in the app. A picture note rendered
-  // through this had no way to be opened at all — the markdown path had a
+  // through this had no way to be opened at all: the markdown path had a
   // lightbox and this one silently didn't.
   const stills = items.filter((item) => !item.mimeType?.startsWith('video/')).map((item) => item.url);
   const openAt = (url: string) => {
@@ -159,17 +148,15 @@ function Slide({ item, onOpen }: { item: CarouselItem; onOpen?: (url: string) =>
     );
   }
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <RemoteImage
       src={item.url}
       alt=""
-      loading="lazy"
       decoding="async"
       onClick={onOpen ? () => onOpen(item.url) : undefined}
       className={`w-full rounded-xl object-cover ${onOpen ? 'cursor-zoom-in' : ''}`}
       data-testid="carousel-image"
       // `imeta` dimensions reserve the space before the bytes arrive, which
-      // is the whole point of the tag — without it the feed jumps as images
+      // is the whole point of the tag: without it the feed jumps as images
       // land under the reader.
       style={ratio ? { aspectRatio: ratio } : undefined}
     />

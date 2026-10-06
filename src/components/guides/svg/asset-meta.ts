@@ -4,7 +4,7 @@ export interface GuideAssetMeta {
   height: number;
   /**
    * If set, snap-guide-svgs also writes `<name>-banner.png` rendered at this
-   * width — for reuse as repo logos / social banners outside this project.
+   * width - for reuse as repo logos / social banners outside this project.
    */
   bannerWidth?: number;
 }
@@ -43,7 +43,7 @@ export const HERO_ASSET_META: Record<string, GuideAssetMeta> = {
   'swap-anything': {
     width: 800,
     height: 400,
-    alt: 'The Obelisk ecosystem: one self-hostable Nostr relay connected to a chat client, a voice SFU, and a bot runtime — every component independently replaceable, nothing locked together.',
+    alt: 'The Obelisk ecosystem: one self-hostable Nostr relay connected to a chat client, a voice SFU, and a bot runtime: every component independently replaceable, nothing locked together.',
   },
   'obelisk-bots': {
     width: 800,
@@ -73,7 +73,7 @@ export const HERO_ASSET_META: Record<string, GuideAssetMeta> = {
   'run-your-own-relay': {
     width: 800,
     height: 400,
-    alt: 'Admission to a self-hosted Nostr relay drawn as a ladder: the relay at the left, three widening arcs of admitted keys around it — added by hand, two hops away, three hops away — publishing at 6,000, 3,000 and 1,500 events a minute, and a block list that is checked first and overrides every tier.',
+    alt: 'Admission to a self-hosted Nostr relay drawn as a ladder: the relay at the left, three widening arcs of admitted keys around it, added by hand, two hops away, three hops away, publishing at 6,000, 3,000 and 1,500 events a minute, and a block list that is checked first and overrides every tier.',
   },
 };
 
@@ -96,7 +96,7 @@ export const DIAGRAM_ASSET_META: Record<string, GuideAssetMeta> = {
   'swap-matrix': {
     width: 790,
     height: 352,
-    alt: 'Obelisk swap matrix: every layer of the stack — client, voice, bots, relay — has independent alternatives, so any one component can be replaced without changing the others.',
+    alt: 'Obelisk swap matrix: every layer of the stack - client, voice, bots, relay - has independent alternatives, so any one component can be replaced without changing the others.',
   },
   'mark-dex': {
     width: 120,

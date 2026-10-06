@@ -1,6 +1,6 @@
 ---
 title: Cómo funciona Obelisk
-description: Obelisk es un frontend. No hay backend, no hay base de datos, no hay servidor de API — la app firma eventos Nostr en tu navegador y los publica directo a los relays que elegís. Esto es lo que pasa cuando iniciás sesión, mandás un mensaje o te unís a un grupo.
+description: "Obelisk es un frontend. No hay backend, no hay base de datos, no hay servidor de API: la app firma eventos Nostr en tu navegador y los publica directo a los relays que elegís. Esto es lo que pasa cuando iniciás sesión, mandás un mensaje o te unís a un grupo."
 heroComponent: how-obelisk-works
 publishedAt: '2026-04-16'
 updatedAt: '2026-04-28'
@@ -23,11 +23,11 @@ Esa es toda la arquitectura. No hay servidor de Obelisk, no hay base de datos, n
 ## Qué pasa cuando iniciás sesión
 
 1. La pantalla de login ofrece tres caminos:
-   - **NIP-07** — llama a `window.nostr.signEvent()` desde tu signer instalado (Alby, nos2x, etc.)
-   - **nsec** — pegás una clave privada, se guarda en `localStorage` y se usa directamente
-   - **Generar** — creás un par de claves nuevito ahí mismo
+   - **NIP-07**: llama a `window.nostr.signEvent()` desde tu signer instalado (Alby, nos2x, etc.)
+   - **nsec**: pegás una clave privada, se guarda en `localStorage` y se usa directamente
+   - **Generar**: creás un par de claves nuevito ahí mismo
 
-2. La app deriva tu pubkey, busca tu perfil kind 0 desde los relays que tenés configurados, y ya estás adentro. No hay sesión, no hay token, no hay cookie — la clave criptográfica *es* la sesión.
+2. La app deriva tu pubkey, busca tu perfil kind 0 desde los relays que tenés configurados, y ya estás adentro. No hay sesión, no hay token, no hay cookie: la clave criptográfica *es* la sesión.
 
 ## Qué pasa cuando mandás un mensaje
 
@@ -43,9 +43,9 @@ No hay un paso de "mandar al servidor de Obelisk". El relay es el bus de mensaje
 
 Los grupos son grupos **NIP-29**. El relay los guarda, no nosotros.
 
-- **Crear** — el cliente manda un evento `9007` (group create). El relay te asigna como primer admin vía un evento `39001`.
-- **Unirse / salir** — los admins emiten eventos `9000` (put user) y `9001` (remove user); el relay los hace cumplir.
-- **Canales, metadata, admins, miembros** — todos eventos NIP-29 estándar: `39000` (metadata), `39001` (admins), `39002` (miembros), y así.
+- **Crear**: el cliente manda un evento `9007` (group create). El relay te asigna como primer admin vía un evento `39001`.
+- **Unirse / salir**: los admins emiten eventos `9000` (put user) y `9001` (remove user); el relay los hace cumplir.
+- **Canales, metadata, admins, miembros**: todos eventos NIP-29 estándar: `39000` (metadata), `39001` (admins), `39002` (miembros), y así.
 
 Cambiar de relay es simplemente cambiar qué grupos NIP-29 de qué servidor estás viendo. A la app no le importa qué relay sea, mientras hable NIP-29.
 
@@ -53,10 +53,10 @@ Cambiar de relay es simplemente cambiar qué grupos NIP-29 de qué servidor est�
 
 Los mensajes directos no usan NIP-29. Usan **DMs Nostr encriptados**:
 
-- **NIP-04** — kind de DM encriptado más viejo, todavía ampliamente soportado
-- **NIP-17** — DM "gift-wrapped" más nuevo, con privacidad de metadata; el cliente publica eventos envueltos a los relays inbox NIP-17 del receptor
+- **NIP-04**: kind de DM encriptado más viejo, todavía ampliamente soportado
+- **NIP-17**: DM "gift-wrapped" más nuevo, con privacidad de metadata; el cliente publica eventos envueltos a los relays inbox NIP-17 del receptor
 
-Ambos son end-to-end encriptados — solo el emisor y el receptor tienen las claves para desencriptar.
+Ambos son end-to-end encriptados: solo el emisor y el receptor tienen las claves para desencriptar.
 
 ## ¿Y los zaps Lightning?
 
@@ -73,7 +73,7 @@ Ninguna plataforma cobra fee. Tu wallet, la wallet del receptor, sin intermediar
 - No hosteamos tus mensajes.
 - No tenemos base de datos de usuarios.
 - No emitimos tokens ni cookies.
-- No te podemos deplatformear, y no podemos perder tus datos — porque nunca los tuvimos.
+- No te podemos deplatformear, y no podemos perder tus datos, porque nunca los tuvimos.
 
 <RelatedGuides items={[
   { slug: "what-is-obelisk", note: "el pitch corto" },

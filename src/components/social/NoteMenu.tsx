@@ -3,7 +3,7 @@
 /**
  * The ⋯ menu on a note.
  *
- * It used to hold two items — copy link and mute — which made it look like an
+ * It used to hold two items (copy link and mute) which made it look like an
  * afterthought. A note is a signed event on a public network, and the things
  * people actually want from one are: get a link to it, see what it really
  * says on the wire, check it in another client, and get the ids needed to
@@ -12,12 +12,15 @@
 
 import { useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { hexToNpub } from '@nostr-wot/data';
-import { usePreferences } from '@/lib/preferences';
+import { safeNpub } from './pubkey-npub';
+import { copyRaw } from './copy-raw';
+import { usePreferences } from '@/services/preferences';
 import { useTranslation } from '@/i18n/context';
 import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
-import ModalShell from '@/components/ModalShell';
+import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
+import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
 import AnchoredMenu from './AnchoredMenu';
 import {
   groupNoteUrl,
@@ -25,10 +28,10 @@ import {
   noteShareUrl,
   profileUrl,
   rawEventJson,
-} from '@/lib/social/note-links';
-import { useCurrentRelayUrl } from '@/lib/nostr-bridge';
+} from '@/services/social/note-links';
+import { useCurrentRelayUrl } from '@/services/nostr-bridge';
 import { MoreIcon } from './NoteActions';
-import { publishDelete } from '@/lib/social/publish';
+import { publishDelete } from '@/services/social/publish';
 
 export default function NoteMenu({
   note,
@@ -42,7 +45,7 @@ export default function NoteMenu({
   const { t } = useTranslation();
   const relays = usePreferences().socialRelays;
   const activeRelay = useCurrentRelayUrl();
-  // A note that came from a NIP-29 group is only fully meaningful inside it —
+  // A note that came from a NIP-29 group is only fully meaningful inside it:
   // the replies and the people are there, not on the open network.
   const groupUrl = groupNoteUrl(note, activeRelay);
   const identifier = noteIdentifier(note, relays);
@@ -56,7 +59,7 @@ export default function NoteMenu({
 
   const copy = (value: string, message: string) => {
     // `Promise.resolve` because a clipboard shim can return undefined, and
-    // `.catch` on that throws out of the click handler — losing the toast.
+    // `.catch` on that throws out of the click handler: losing the toast.
     void Promise.resolve(navigator.clipboard?.writeText(value)).catch(() => {});
     toast(message);
     setOpen(false);
@@ -69,7 +72,7 @@ export default function NoteMenu({
       else await navigator.clipboard?.writeText(url);
       toast(t('social.linkCopied'));
     } catch {
-      // Share sheet dismissed — not an error worth surfacing.
+      // Share sheet dismissed: not an error worth surfacing.
     }
     setOpen(false);
   };
@@ -107,56 +110,49 @@ export default function NoteMenu({
         anchorRef={triggerRef}
         width={240}
         testId="note-menu"
+        panelClassName={MENU_PANEL_CLASS}
       >
         <>
-          <Item onClick={() => void share()} testId="note-menu-share">
-            {t('social.shareNote')}
-          </Item>
-          <Item
+          <MenuItem onClick={() => void share()} testId="note-menu-share" label={t('social.shareNote')} />
+          <MenuItem
             onClick={() => copy(noteShareUrl(note, relays), t('social.linkCopied'))}
             testId="note-menu-copy-link"
-          >
-            {t('social.copyLink')}
-          </Item>
+            label={t('social.copyLink')}
+          />
 
-          <Divider />
+          <MenuDivider />
 
-          <Item
+          <MenuItem
             onClick={() => { setRawOpen(true); setOpen(false); }}
             testId="note-menu-raw"
-          >
-            {t('social.viewRaw')}
-          </Item>
-          <Item
+            label={t('social.viewRaw')}
+          />
+          <MenuItem
             onClick={() => copy(identifier, t('social.idCopied'))}
             testId="note-menu-copy-id"
-          >
-            {t('social.copyEventId')}
-          </Item>
-          <Item
+            label={t('social.copyEventId')}
+          />
+          <MenuItem
             onClick={() => copy(safeNpub(note.pubkey), t('social.npubCopied'))}
             testId="note-menu-copy-npub"
-          >
-            {t('social.copyAuthorNpub')}
-          </Item>
+            label={t('social.copyAuthorNpub')}
+          />
           {/*
             The npub is the identifier; this is the thing you can paste
             anywhere and have it open as a page with a name on it.
           */}
-          <Item
+          <MenuItem
             onClick={() => copy(profileUrl(note.pubkey, relays), t('profileFeed.linkCopied'))}
             testId="note-menu-copy-author-link"
-          >
-            {t('social.copyAuthorLink')}
-          </Item>
-          <Item
+            label={t('social.copyAuthorLink')}
+          />
+          <MenuItem
             onClick={() => copy(note.content, t('social.textCopied'))}
             testId="note-menu-copy-text"
-          >
-            {t('social.copyText')}
-          </Item>
+            label={t('social.copyText')}
+          />
 
-          <Divider />
+          <MenuDivider />
 
           {groupUrl && (
             <LinkItem href={groupUrl} testId="note-menu-open-group" newTab={false}>
@@ -167,43 +163,41 @@ export default function NoteMenu({
 
           {!isMine && (
             <>
-              <Divider />
-              <Item
+              <MenuDivider />
+              <MenuItem
                 onClick={() => { toggleMute(note.pubkey); setOpen(false); }}
                 testId="note-menu-mute"
-              >
-                {t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
-              </Item>
+                label={t(muted ? 'profileFeed.unmute' : 'profileFeed.mute')}
+              />
             </>
           )}
 
           {isMine && (
             <>
-              <Divider />
-              <Item onClick={() => void remove()} danger testId="note-menu-delete">
-                {t('social.deleteNote')}
-              </Item>
+              <MenuDivider />
+              <MenuItem onClick={() => void remove()} danger testId="note-menu-delete" label={t('social.deleteNote')} />
             </>
           )}
         </>
       </AnchoredMenu>
 
       {rawOpen && (
-        <ModalShell
+        <Modal
           onClose={() => setRawOpen(false)}
           testId="note-raw-modal"
           panelClassName="w-full max-w-2xl mx-4 rounded-xl bg-lc-dark border border-lc-border p-5 shadow-xl"
         >
           <div className="mb-3 flex items-center gap-2">
             <h2 className="text-sm font-semibold text-lc-white">{t('social.rawEvent')}</h2>
-            <button
-              type="button"
-              className="lc-pill-secondary ml-auto px-3 py-1.5 text-xs"
+            <Button
+              variant="pillSecondary"
+              size="xs"
+              className="ml-auto"
               onClick={() => copyRaw(note, t('social.rawCopied'))}
               data-testid="note-raw-copy"
             >
               {t('social.copyJson')}
-            </button>
+            </Button>
           </div>
           {/*
             `break-all` because an event is full of 64-character hex strings
@@ -221,38 +215,9 @@ export default function NoteMenu({
           >
             {rawEventJson(note)}
           </pre>
-        </ModalShell>
+        </Modal>
       )}
     </div>
-  );
-}
-
-function copyRaw(note: NostrEvent, message: string) {
-  navigator.clipboard?.writeText(rawEventJson(note)).catch(() => {});
-  useToastStore.getState().pushToast({ title: message, body: '' });
-}
-
-function Item({
-  children,
-  onClick,
-  danger,
-  testId,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  danger?: boolean;
-  testId: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      className={`block w-full px-4 py-2 text-left text-xs hover:bg-white/5 ${danger ? 'text-red-400' : 'text-lc-white'}`}
-      onClick={onClick}
-      data-testid={testId}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -272,22 +237,12 @@ function LinkItem({
       role="menuitem"
       href={href}
       {...(newTab ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
-      className="block w-full px-4 py-2 text-left text-xs text-lc-white hover:bg-white/5"
+      // The row look of `menu.tsx`'s `MenuItem`; `MenuLink` always opens a new
+      // tab, and the group link must not.
+      className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-lc-white transition-colors hover:bg-lc-green/15"
       data-testid={testId}
     >
       {children}
     </a>
   );
-}
-
-function Divider() {
-  return <div className="my-1 h-px bg-lc-border" aria-hidden="true" />;
-}
-
-function safeNpub(pubkey: string): string {
-  try {
-    return hexToNpub(pubkey);
-  } catch {
-    return pubkey;
-  }
 }

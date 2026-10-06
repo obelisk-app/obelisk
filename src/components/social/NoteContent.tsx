@@ -5,20 +5,21 @@
  * chat renderer knows nothing about.
  *
  * `MessageContent` handles markdown, media, emoji and link previews, and we
- * keep it for those — but it has no concept of `nostr:npub…`, so a mention
+ * keep it for those, but it has no concept of `nostr:npub…`, so a mention
  * from Primal/Amethyst/Damus used to render as 60 characters of raw bech32
  * mid-sentence. Here we split the content around those references, hand the
  * text runs to `MessageContent`, and render the references as real UI.
  */
 
-import { displayNameFor } from '@/lib/display-name';
+import { displayNameFor } from '@/utils/identity/display-name';
 import { useMemo } from 'react';
-import { useAuthor } from '@/lib/social/useAuthor';
-import { useNotePreview } from '@/lib/social/useNotePreview';
+import { useAuthor } from '@/services/social/useAuthor';
+import { useNotePreview } from '@/services/social/useNotePreview';
 import { useTranslation } from '@/i18n/context';
-import { tokenizeContent, type NostrRef } from '@/lib/social/nip27';
-import { linkifyHashtags } from '@/lib/profile-feed';
+import { tokenizeContent, type NostrRef } from '@/services/social/nip27';
+import { linkifyHashtags } from '@/services/social/profile-feed';
 import MessageContent from '@/components/chat/MessageContent';
+import TextButton from '@/components/ui/TextButton';
 
 export default function NoteContent({
   content,
@@ -35,7 +36,7 @@ export default function NoteContent({
    * Handle a hashtag in-app instead of navigating to `/t/<tag>`.
    *
    * `linkifyHashtags` turns `#bitcoin` into a markdown link so the public
-   * viewer pages have somewhere real to point — but inside the app, leaving
+   * viewer pages have somewhere real to point, but inside the app, leaving
    * for a standalone page throws away the feed you were reading. Hosts that
    * have a tag surface of their own (the feed's search) pass this and the
    * link becomes an in-app action; hosts that don't leave it alone and the
@@ -113,17 +114,17 @@ function NostrRefChip({
 }
 
 /**
- * Addressable content (`naddr`) — a long-form post, a list, a wiki page.
+ * Addressable content (`naddr`): a long-form post, a list, a wiki page.
  *
  * This used to be a bare underlined link labelled with the raw `d`
  * identifier, which for most articles is a slug like
- * `1712000000-why-nostr` — so a reference to an article read as a fragment
+ * `1712000000-why-nostr`, so a reference to an article read as a fragment
  * of a URL. It now names the author the same way a quoted note does, which
  * is the part that tells a reader whether to follow it.
  *
  * The body is deliberately not fetched: resolving an addressable event means
  * a query per reference, and unlike `nevent` there is no id to dedupe on.
- * The author comes free — `naddr` carries the pubkey.
+ * The author comes free: `naddr` carries the pubkey.
  */
 function AddressRefChip({
   refValue,
@@ -156,7 +157,7 @@ function AddressRefChip({
 /**
  * A referenced note, named rather than hashed.
  *
- * This printed `↗ efaa274291b5…` — the id of a thing, which tells a reader
+ * This printed `↗ efaa274291b5…`: the id of a thing, which tells a reader
  * nothing about the thing. It now resolves to the author and the opening
  * words, which is what a quote looks like everywhere else, and falls back to
  * the short id only when no relay still has the note.
@@ -213,14 +214,12 @@ function MentionChip({ pubkey, onOpen }: { pubkey: string; onOpen?: (pubkey: str
   const label = displayNameFor(pubkey, meta);
 
   return (
-    <button
-      type="button"
-      className="rounded px-1 font-medium text-lc-green hover:underline"
+    <TextButton className="px-1 font-medium"
       onClick={() => onOpen?.(pubkey)}
       data-testid="note-mention"
     >
       @{label}
-    </button>
+    </TextButton>
   );
 }
 

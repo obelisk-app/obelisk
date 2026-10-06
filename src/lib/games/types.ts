@@ -1,12 +1,12 @@
 /**
  * Game engine contract. An engine is PURE: same log in, same board out, on
  * every client. That purity is what replaces the classic stack's authoritative
- * server — there is no referee here, only a deterministic reducer every player
+ * server: there is no referee here, only a deterministic reducer every player
  * runs over the same relay-delivered event log (see `session.ts`).
  *
  * Rules an engine must hold to, or clients will disagree about the board:
  *   - no wall-clock reads, no randomness, no I/O;
- *   - never mutate the state it is handed — return a fresh object;
+ *   - never mutate the state it is handed: return a fresh object;
  *   - `applyAction` must be total for any input `validateAction` accepted.
  *
  * Lifecycle: waiting → in_progress → finished, or waiting → cancelled.
@@ -45,7 +45,7 @@ export interface GameDefinition<S = unknown, A = unknown> {
   /**
    * Real-time games run every player's board at once, locally, and publish
    * only consequences (see src/lib/games/stacker/match.ts). The reducer skips
-   * all turn machinery for these — there is no seat "to move".
+   * all turn machinery for these: there is no seat "to move".
    */
   realtime?: boolean;
 
@@ -70,7 +70,7 @@ export interface GameDefinition<S = unknown, A = unknown> {
    * Optional: may this seat act right now, even though it is not on move?
    *
    * Most games answer "only the seat on move", which is the default when an
-   * engine leaves this out. Some genuinely need more — Vesta lets a trade
+   * engine leaves this out. Some genuinely need more: Vesta lets a trade
    * partner accept or reject, and makes every over-full hand discard on a
    * seven, all while somebody else holds the turn.
    *

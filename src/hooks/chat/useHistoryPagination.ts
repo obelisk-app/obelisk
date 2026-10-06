@@ -30,7 +30,7 @@ interface PendingPage {
   readonly key: string | null;
   /** A row that exists on both sides of the prepend, if the list has one. */
   readonly node: Element | null;
-  /** `node`'s offset inside the scrolled content — independent of scrollTop. */
+  /** `node`'s offset inside the scrolled content - independent of scrollTop. */
   readonly contentOffset: number;
   /** Fallback baseline for when the captured row is gone by commit time. */
   readonly scrollHeight: number;
@@ -40,7 +40,7 @@ interface PendingPage {
 
 export interface UseHistoryPaginationOptions {
   readonly scrollRef: RefObject<HTMLElement | null>;
-  /** Rendered message count — drives the post-prepend correction. */
+  /** Rendered message count - drives the post-prepend correction. */
   readonly itemCount: number;
   readonly loadEarlier: () => Promise<HistoryLoadResult>;
   readonly loading: boolean;
@@ -57,7 +57,7 @@ function contentOffsetOf(scroller: HTMLElement, node: Element): number {
 }
 
 /**
- * Top-of-list history pagination with scroll anchoring — the "scroll up for
+ * Top-of-list history pagination with scroll anchoring - the "scroll up for
  * older messages" half of normal chat scrolling.
  *
  * ## Who moves the scroller
@@ -66,7 +66,7 @@ function contentOffsetOf(scroller: HTMLElement, node: Element): number {
  * viewport of a scroll container, the browser silently adds the inserted
  * height to `scrollTop` so the visible content stays put. Verified in
  * Chromium: prepending 1000px at `scrollTop: 400` leaves the container at
- * 1400 with no help from us — *except* at `scrollTop: 0`, where anchoring is
+ * 1400 with no help from us - *except* at `scrollTop: 0`, where anchoring is
  * suppressed and the content visibly jumps. Safari implements no anchoring at
  * all. So neither "always correct" nor "never correct" is right, and a
  * correction that assumes the browser did nothing double-counts on the very
@@ -77,13 +77,13 @@ function contentOffsetOf(scroller: HTMLElement, node: Element): number {
  * duration of a page load, so the browser provably does not touch `scrollTop`,
  * then applies the one correction itself and hands anchoring back. Measuring
  * the anchor row in *content* space (invariant under scrolling) means a user
- * who keeps scrolling while the page is in flight keeps their scrolling —
+ * who keeps scrolling while the page is in flight keeps their scrolling -
  * the correction only ever adds the height that was prepended.
  *
  * ## What triggers a page
  *
  * User intent only: a scroll the hook didn't cause, a wheel, or a touch drag.
- * There is deliberately no "keep loading until the viewport is full" chain —
+ * There is deliberately no "keep loading until the viewport is full" chain -
  * a page that fails to move the scroller out of the prefetch zone would
  * otherwise re-trigger itself, and 50 messages a round trip is a lot of relay
  * traffic and re-rendering to spend on a loop the user never asked for.
@@ -109,7 +109,7 @@ export function useHistoryPagination({
   const maybeLoadRef = useRef<() => void>(() => {});
 
   // Latest-value mirrors. Every decision runs from a DOM event or a settled
-  // promise — i.e. always after a commit — so these refresh in a layout
+  // promise - i.e. always after a commit - so these refresh in a layout
   // effect rather than during render.
   const loadEarlierRef = useRef(loadEarlier);
   const loadingRef = useRef(loading);
@@ -224,7 +224,7 @@ export function useHistoryPagination({
     };
     // Wheel and touch are what keep pagination alive when the scroller is
     // pinned at 0 (or inside a retry window) and no scroll event can fire.
-    // Coalesced to one check per frame — these fire far too often to spend a
+    // Coalesced to one check per frame - these fire far too often to spend a
     // layout read on each one.
     const onIntent = () => {
       if (checkQueuedRef.current) return;

@@ -1,5 +1,5 @@
 /**
- * Two-peer mesh diagnostic — Phase 1 of the mesh hardening plan.
+ * Two-peer mesh diagnostic: Phase 1 of the mesh hardening plan.
  *
  * Spawns two BrowserContexts in one Browser (different storage origins so
  * each peer carries its own nsec). Each peer:
@@ -22,7 +22,7 @@
  *                               the value in client.ts.
  *
  * Phase-3 extension: after 30 s of stable mesh, peer B closes its
- * context — peer A must observe `metrics.peers.tornDown >= 1` within
+ * context; peer A must observe `metrics.peers.tornDown >= 1` within
  * 35 s (current ICE-failure budget; data-channel heartbeat in Phase 3
  * tightens this to <10 s).
  */
@@ -45,6 +45,7 @@ import {
   leaveMeshChannel,
   logObserved,
   logOk,
+  logWarn,
   makeProbeChannelId,
   readMetrics,
   setCameraEnabled,
@@ -80,7 +81,7 @@ test('two real mesh peers connect via the public relay', async () => {
       // Origin must match baseURL so the permission grant applies to our
       // navigations. Without this, navigator.mediaDevices.getUserMedia
       // hangs forever in headless Chromium even with the fake-device
-      // browser flags — the OS-level audio permission gate is what
+      // browser flags; the OS-level audio permission gate is what
       // grantPermissions toggles, distinct from the device-source flag.
     });
     const ctxB = await browser.newContext({
@@ -107,7 +108,7 @@ test('two real mesh peers connect via the public relay', async () => {
     // AppShell mounts the group rail + member/admin/profile/DM
     // subscriptions, which on a fresh nsec adds 50+ relay subs and
     // exhausts public.obelisk.ar's `restricted: Subscription quota
-    // exceeded: 50/50` ceiling — voice's own subs then get rejected.
+    // exceeded: 50/50` ceiling; voice's own subs then get rejected.
     //
     // The /voice route's gate sits at "loading-roles" (no group metadata
     // exists for the ad-hoc probe channel). That's fine: we drive
@@ -270,7 +271,7 @@ test('two real mesh peers connect via the public relay', async () => {
     // ── Phase-3 fast hangup detection ─────────────────────────────────
     // peerB calls leave() (which sends a control-channel bye via the
     // open data channel BEFORE pc.close), then closes its context.
-    // peerA must notice within 15 s — empirically the bye lands in
+    // peerA must notice within 15 s: empirically the bye lands in
     // ~10–50 ms; the budget is generous to accommodate slow CI runners
     // and the relay echo timing. The pre-Phase-3 ICE-failure path took
     // 45 s+; this assertion is the headline win.

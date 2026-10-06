@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useHistoryPill } from './hooks/useHistoryPill';
 
 interface HistoryPaginationStatusProps {
   readonly loading: boolean;
@@ -17,38 +17,8 @@ export default function HistoryPaginationStatus({
   loadingLabel,
   endLabel,
 }: HistoryPaginationStatusProps) {
-  const [showLoading, setShowLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [lastMode, setLastMode] = useState<'loading' | 'end'>('loading');
-
-  useEffect(() => {
-    if (!loading) {
-      setShowLoading(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowLoading(true), 180);
-    return () => clearTimeout(timer);
-  }, [loading]);
-
-  const visibleLoading = loading && showLoading;
-  const active = atTop && (visibleLoading || reachedStart);
-
-  useEffect(() => {
-    if (visibleLoading) setLastMode('loading');
-    else if (atTop && reachedStart) setLastMode('end');
-  }, [atTop, reachedStart, visibleLoading]);
-
-  useEffect(() => {
-    if (active) {
-      setMounted(true);
-      return;
-    }
-    const timer = setTimeout(() => setMounted(false), 180);
-    return () => clearTimeout(timer);
-  }, [active]);
-
+  const { mounted, active, mode } = useHistoryPill(loading, reachedStart, atTop);
   if (!mounted) return null;
-  const mode = active ? (visibleLoading ? 'loading' : 'end') : lastMode;
   return (
     <div
       className={[

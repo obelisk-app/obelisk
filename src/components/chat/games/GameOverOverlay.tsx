@@ -1,15 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import UserAvatar from '@/components/UserAvatar';
+import UserAvatar from '@/components/ui/UserAvatar';
 import type { GameSession } from '@/lib/games/session';
 import { isDraw, scoreFor } from '@/lib/games/standings';
 import { SEAT_COLORS } from './ChainReactionBoard';
 import { useTranslation } from '@/i18n/context';
+import Button from '@/components/ui/Button';
 
 /**
  * The result splash. Covers the table the moment the log says the game is
- * over, at a size you can read from across the room — a match that ended
+ * over, at a size you can read from across the room: a match that ended
  * should not be something you have to squint at a status line to notice.
  *
  * Dismissed by the user, never on a timer: the board underneath is the final
@@ -30,7 +31,7 @@ export default function GameOverOverlay({
 }) {
   const { t } = useTranslation();
   // Dismissal is keyed to the result it dismissed, so a later match on the
-  // same table re-arms the splash on its own — no effect, no reset.
+  // same table re-arms the splash on its own, with no effect and no reset.
   const [dismissedResult, setDismissedResult] = useState<string | null>(null);
   const resultKey = `${session.id}:${session.finishedAt ?? ''}`;
 
@@ -91,22 +92,23 @@ export default function GameOverOverlay({
 
       {draw && <p className="mt-3 text-sm text-lc-muted">{t('games.boardNobody')}</p>}
 
-      {/* What you finished with — the thing you actually want to see. */}
+      {/* What you finished with: the thing you actually want to see. */}
       {myScore && (
         <p className="mt-2 font-mono text-sm text-lc-white" data-testid="game-over-score">
           {myScore}
         </p>
       )}
 
-      <button
-        type="button"
+      <Button
+        variant="pill"
+        size="xs"
         onClick={(e) => { e.stopPropagation(); dismiss(); }}
-        className="lc-pill-primary mt-6 px-6 py-2 text-xs"
+        className="mt-6"
         data-testid="game-over-close"
         autoFocus
       >
         {t('common.close')}
-      </button>
+      </Button>
     </div>
   );
 }

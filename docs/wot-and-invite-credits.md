@@ -12,12 +12,12 @@ with email/phone verification, captchas, or admin-only invites.
 
 Obelisk solves it with **Nostr identity + the social graph**:
 
-1. **Web of Trust (WoT) auto-registration** — each server designates a trusted
+1. **Web of Trust (WoT) auto-registration**: each server designates a trusted
    "referente" Nostr account. Anyone the referente already follows on Nostr
    (their kind 3 contact list) is auto-admitted to the server, no invite
    required. This turns the referente's existing social graph into the
    server's pre-approved member pool.
-2. **Tenure-based invite credits** — members who have been in the server for
+2. **Tenure-based invite credits**: members who have been in the server for
    a minimum number of days (default 7) earn a limited pool of single-use,
    auto-expiring invite links they can share with friends outside the WoT.
    This grows the community organically through vouching, not through admin
@@ -36,7 +36,7 @@ their precious credits.
 ### Concept
 
 Every Nostr account publishes a public **kind 3** event listing the pubkeys
-it follows. Obelisk treats one chosen account — the **referente** — as
+it follows. Obelisk treats one chosen account (the **referente**) as
 authoritative for a given server. The referente's follow list becomes the
 server's allow-list.
 
@@ -52,8 +52,8 @@ log in to the La Crypta Obelisk server and start chatting.
 | In `WotEntry` (referente follows them)      | ✅ Auto-joined |
 | In `WotOverride` (admin whitelisted)        | ✅ Auto-joined |
 | Holds a valid `Invitation` link             | ✅ Allowed via redemption |
-| None of the above                           | ❌ 403 — must redeem an invite |
-| Banned                                      | ❌ 403 — banned |
+| None of the above                           | ❌ 403, must redeem an invite |
+| Banned                                      | ❌ 403, banned |
 
 > **Important:** Enabling WoT **replaces** the legacy `joinMode` field
 > (`open` / `invite-only`). When `wotEnabled = true`, `joinMode` is ignored
@@ -78,7 +78,7 @@ follow list is cached in the `WotEntry` table and refreshed lazily:
 - **On referente change**: setting a new `referentePubkey` clears
   `referenteFetchedAt`, so the next access triggers a fresh fetch.
 
-If relays are unreachable, the previous cache stays valid — login does not
+If relays are unreachable, the previous cache stays valid; login does not
 break.
 
 ### Override list
@@ -126,9 +126,9 @@ Set `invitesPerUser = 0` to disable member invites entirely.
 
 When a regular member mints an invite, the API forces:
 
-- `maxUses = 1` — single-use only.
-- `expiresAt = now + server.inviteExpiryHours` — bounded lifetime (default 7 days).
-- `targetPubkey = null` — member invites are open (no targeting).
+- `maxUses = 1`: single-use only.
+- `expiresAt = now + server.inviteExpiryHours`: bounded lifetime (default 7 days).
+- `targetPubkey = null`: member invites are open (no targeting).
 
 Admins can pass any value for `maxUses` / `expiresInHours` / `targetPubkey`
 and are not counted against any pool.
@@ -284,12 +284,12 @@ lastActivityAt  DateTime?
 **What this defends against:**
 - **Spam accounts.** A new spam npub with no social presence will not be
   followed by the referente, will not be on the override list, and cannot
-  produce activity without first being admitted — so they can never get in.
+  produce activity without first being admitted, so they can never get in.
 - **Sybils.** Even if an attacker creates many npubs, none of them are in
   the WoT, and producing the activity required for credits takes real days
   of real participation.
 - **Admin bottleneck.** Communities don't have to depend on admins manually
-  vetting every signup — trusted members can vouch via invite credits.
+  vetting every signup; trusted members can vouch via invite credits.
 
 **What this does NOT defend against:**
 - **Referente account compromise.** If the referente's Nostr key is stolen
@@ -312,4 +312,4 @@ lastActivityAt  DateTime?
 - **Multiple referentes per server** with quorum logic ("must be followed
   by at least 2 of 3 referentes").
 - **Webhook on WoT change** so external systems can react.
-- **Credit decay** — unused credits expire after N days, freeing the slot.
+- **Credit decay**: unused credits expire after N days, freeing the slot.

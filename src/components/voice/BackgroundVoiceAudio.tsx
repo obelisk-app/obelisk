@@ -5,8 +5,8 @@
  *
  * The voice room's tile components used to render their own `<audio>`
  * elements with `srcObject` pointing at remote MediaStreams. That meant
- * audio output disappeared the moment the room unmounted — i.e. as soon
- * as the user navigated to a text channel or DM during a live call —
+ * audio output disappeared the moment the room unmounted - i.e. as soon
+ * as the user navigated to a text channel or DM during a live call -
  * even though the underlying `VoiceClient` (and its WebRTC PCs) stayed
  * alive. This component plays the audio + screen-audio remote tracks
  * regardless of which screen is on top, so background calls actually
@@ -19,8 +19,8 @@
  * MediaStreamTracks), so no extra wiring is needed here.
  */
 import { useEffect, useRef, useState } from 'react';
-import { subscribeActiveVoiceClient } from '@/lib/voice/active-client';
-import type { VoiceClient, RemoteTrack } from '@/lib/voice/client';
+import { subscribeActiveVoiceClient } from '@/services/voice/active-client';
+import type { VoiceClient, RemoteTrack } from '@/services/voice/client';
 import { useVoiceStore } from '@/store/voice';
 
 export default function BackgroundVoiceAudio() {

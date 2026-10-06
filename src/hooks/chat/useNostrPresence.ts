@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
-import { getBridgeImpl, isImportableRelayUrl } from '@/lib/nostr-bridge';
+import { getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
 
 /** A user counts as recently active if they published on this group relay in this window. */

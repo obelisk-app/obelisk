@@ -1,115 +1,25 @@
 'use client';
 
-import { useMemo, useRef, useState, type ReactNode } from 'react';
-import {
-  EMOJI_CATEGORIES,
-  SEARCHABLE_EMOJI,
-  normalizeEmojiKeyword,
-} from '@/components/chat/emoji-data';
-import { loadRecentEmojis, pushRecentEmoji, type RecentEmoji } from '@/lib/recent-emojis';
-import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/lib/custom-emoji-tags';
-import { useChatStore } from '@/store/chat';
-import { inferMediaKind } from '@/lib/media-kind';
-import MediaThumb from '@/components/media/MediaThumb';
-import type { JsMediaKind } from '@/lib/nostr-bridge';
+/**
+ * The emoji picker: Unicode sections, recents and the relay's custom media,
+ * as a desktop popover or a mobile sheet. The pieces sit in `./picker/`;
+ * this file keeps the public names other folders import.
+ */
+import { EMOJI_CATEGORIES } from '@/lib/emoji';
 import { useTranslation } from '@/i18n/context';
-import { CloseIcon } from '@/components/ui/icons';
+import { EMOJI_SECTIONS } from './picker/emoji-sections';
+import { emojiPickerClasses } from './picker/emoji-picker-classes';
+import { useEmojiPicker } from './picker/useEmojiPicker';
+import { useCategoryJump } from './picker/useCategoryJump';
+import { EmojiCategoryNav, EmojiPickerSearchBar } from './picker/EmojiPickerHeader';
+import { CustomEmojiSection, EmojiCharButton, RecentEmojiSection } from './picker/EmojiGridParts';
+import type { EmojiPickerProps } from './picker/picker-types';
 
-const EMOJI_SECTIONS = [
-  { name: 'Smileys', icon: '😀', label: 'Smileys & people', categories: ['Smileys', 'Gestures'] },
-  { name: 'Nature', icon: '🐝', label: 'Animals & nature', categories: ['Animals', 'Nature'] },
-  { name: 'Food', icon: '☕', label: 'Food & drink', categories: ['Food'] },
-  { name: 'Sports', icon: '🏀', label: 'Sports', categories: ['Activities'] },
-  { name: 'Cars', icon: '🚗', label: 'Cars & travel', categories: ['Transport'] },
-  { name: 'Ideas', icon: '💡', label: 'Ideas & objects', categories: ['Objects'] },
-  { name: 'Symbols', icon: '🎵', label: 'Symbols', categories: ['Symbols'] },
-  { name: 'Flags', icon: '🏳️', label: 'Flags', categories: ['Flags'] },
-] as const;
+export type { EmojiPickerProps, PickedCustomEmoji } from './picker/picker-types';
+export { RecentIcon } from './picker/RecentIcon';
+export { MediaPickerSearch } from './picker/MediaPickerSearch';
 
-const EMOJI_NAV = [
-  { name: 'Recent', icon: '◷', label: 'Recent' },
-  ...EMOJI_SECTIONS,
-];
-
-export interface PickedCustomEmoji {
-  readonly name: string;
-  readonly url: string;
-  readonly packAddress?: string;
-}
-
-interface CustomEmojiEntry extends PickedCustomEmoji {
-  readonly kind: JsMediaKind;
-}
-
-export interface EmojiPickerProps {
-  onPick: (emoji: string, custom?: PickedCustomEmoji) => void;
-  onClose: () => void;
-  /** Emojis disabled (e.g. ones the user already reacted with). */
-  disabledEmojis?: ReadonlySet<string>;
-  /** When true, picking does not record in recents (useful for previews). */
-  skipRecent?: boolean;
-  /**
-   * `popover` (default): small absolute-positioned floating panel for desktop.
-   * `sheet`: fills its parent (used inside the mobile bottom-sheet host).
-   * `floating`: the popover panel without its own positioning — for a host
-   * that places it (`FloatingPanel`, which escapes scroll containers).
-   */
-  variant?: 'popover' | 'sheet' | 'floating';
-  /** Popover direction relative to the trigger. Ignored for sheet variant. */
-  placement?: 'above' | 'below';
-  /**
-   * Which edge of the trigger the popover hangs from. Defaults to `right`
-   * (the composer/reaction buttons sit on the right of their row); triggers on
-   * the left of a panel need `left` or the popover runs off it.
-   */
-  align?: 'left' | 'right';
-  showClose?: boolean;
-  className?: string;
-  customEmojis?: CustomEmojiMap;
-  customMediaKinds?: Readonly<Record<string, JsMediaKind>>;
-  columns?: 7 | 12;
-  customEmojiAction?: ReactNode;
-  children?: ReactNode;
-}
-
-export function RecentIcon({ className = 'h-5 w-5' }: { className?: string }) {
-  return (
-    <svg data-testid="recent-icon" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
-      <path d="M3 3v5h5M12 7v5l3 2" />
-    </svg>
-  );
-}
-
-export function MediaPickerSearch({
-  value,
-  onChange,
-  placeholder,
-  autoFocus = false,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  autoFocus?: boolean;
-}) {
-  return (
-    <label className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border border-lc-border bg-lc-black px-3 text-lc-muted transition-colors focus-within:border-lc-green">
-      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-3.5-3.5" />
-      </svg>
-      <input
-        type="search"
-        autoFocus={autoFocus}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        className="min-w-0 flex-1 bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted"
-      />
-    </label>
-  );
-}
+const NO_DISABLED: ReadonlySet<string> = new Set<string>();
 
 export default function EmojiPicker({
   onPick,
@@ -121,291 +31,87 @@ export default function EmojiPicker({
   align = 'right',
   showClose = true,
   className,
-  customEmojis: customEmojisProp,
-  customMediaKinds: customMediaKindsProp,
+  customEmojis,
+  customMediaKinds,
   columns,
   customEmojiAction,
   children,
 }: EmojiPickerProps) {
   const { t } = useTranslation();
-  const [query, setQuery] = useState('');
-  const [recents, setRecents] = useState<RecentEmoji[]>(() => loadRecentEmojis());
-  const [activeCategory, setActiveCategory] = useState('Recent');
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const storeCustomEmojis = useChatStore((s) => s.serverEmojis);
-  const storeMediaKinds = useChatStore((s) => s.serverMediaKinds);
-  const customEmojis = customEmojisProp ?? storeCustomEmojis;
-  const customMediaKinds = customMediaKindsProp ?? storeMediaKinds;
-
-  const q = normalizeEmojiKeyword(query.trim());
-  const filtered = useMemo(() => {
-    if (!q) return null;
-    return SEARCHABLE_EMOJI.filter((e) => e.haystack.includes(q)).slice(0, 80);
-  }, [q]);
-  const customEntries = useMemo<CustomEmojiEntry[]>(
-    () => Object.entries(customEmojis)
-      .map(([name, url]) => {
-        const normalized = normalizeCustomEmojiName(name);
-        return { name: normalized, url, kind: customMediaKinds[normalized] ?? inferMediaKind(url) };
-      })
-      .filter((entry) => entry.name && entry.url)
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    [customEmojis, customMediaKinds],
+  const picker = useEmojiPicker({ customEmojis, customMediaKinds, skipRecent, onPick });
+  const { activeCategory, scrollRef, jumpToCategory } = useCategoryJump();
+  const classes = emojiPickerClasses({ variant, placement, align, columns });
+  const disabled = disabledEmojis ?? NO_DISABLED;
+  const { filtered } = picker;
+  const section = (title: string, entries: Parameters<typeof CustomEmojiSection>[0]['entries'], action?: React.ReactNode) => (
+    <CustomEmojiSection
+      title={title}
+      entries={entries}
+      action={action}
+      disabled={disabled}
+      classes={classes}
+      onPickCustom={picker.handlePickCustom}
+    />
   );
-  const customGifEntries = useMemo(
-    () => customEntries.filter((entry) => entry.kind === "gif"),
-    [customEntries],
+  const charButton = (e: { char: string; keywords: string[] }) => (
+    <EmojiCharButton
+      key={e.char}
+      char={e.char}
+      keyword={e.keywords[0]}
+      disabled={disabled.has(e.char)}
+      className={classes.emojiBtnClass}
+      onPick={picker.handlePick}
+    />
   );
-  const customStickerEntries = useMemo(
-    () => customEntries.filter((entry) => entry.kind === "sticker"),
-    [customEntries],
-  );
-  const customEmojiEntries = useMemo(
-    () => customEntries.filter((entry) => entry.kind === "emoji"),
-    [customEntries],
-  );
-  const filteredCustomGifEntries = useMemo(() => {
-    const list = q ? customGifEntries.filter((entry) => entry.name.includes(q)) : customGifEntries;
-    return list.slice(0, 80);
-  }, [customGifEntries, q]);
-  const filteredCustomStickerEntries = useMemo(() => {
-    const list = q ? customStickerEntries.filter((entry) => entry.name.includes(q)) : customStickerEntries;
-    return list.slice(0, 80);
-  }, [customStickerEntries, q]);
-  const filteredCustomEmojiEntries = useMemo(() => {
-    const list = q ? customEmojiEntries.filter((entry) => entry.name.includes(q)) : customEmojiEntries;
-    return list.slice(0, 80);
-  }, [customEmojiEntries, q]);
-  const filteredCustomCount = filteredCustomGifEntries.length + filteredCustomStickerEntries.length + filteredCustomEmojiEntries.length;
-  // A recent shortcode is only renderable if we can resolve it back to media —
-  // either from the URL stored with the pick or from the current custom set.
-  // Anything left unresolved is dropped: printing `:name:` as text in a media
-  // grid reads as a broken tile, not as an emoji.
-  const recentEntries = useMemo<Array<{ char: string; custom: PickedCustomEmoji | null }>>(
-    () => recents.flatMap<{ char: string; custom: PickedCustomEmoji | null }>((recent) => {
-      const match = /^:([a-z0-9_]{1,64}):$/i.exec(recent.char);
-      if (!match) return [{ char: recent.char, custom: null }];
-      const name = normalizeCustomEmojiName(match[1]);
-      const known = customEntries.find((entry) => entry.name === name);
-      const url = recent.url ?? known?.url;
-      if (!url) return [];
-      const packAddress = recent.packAddress ?? known?.packAddress;
-      return [{ char: recent.char, custom: { name, url, ...(packAddress ? { packAddress } : {}) } }];
-    }),
-    [customEntries, recents],
-  );
-
-  const disabled = disabledEmojis ?? new Set<string>();
-
-  const handlePick = (emoji: string) => {
-    if (!skipRecent) setRecents(pushRecentEmoji(emoji));
-    onPick(emoji);
-  };
-  const handlePickCustom = (emoji: PickedCustomEmoji) => {
-    const shortcode = `:${emoji.name}:`;
-    if (!skipRecent) {
-      setRecents(pushRecentEmoji(shortcode, { url: emoji.url, ...(emoji.packAddress ? { packAddress: emoji.packAddress } : {}) }));
-    }
-    onPick(shortcode, emoji);
-  };
-
-  const jumpToCategory = (category: string) => {
-    setActiveCategory(category);
-    const scroller = scrollRef.current;
-    const target = scroller?.querySelector<HTMLElement>(`[data-emoji-category="${category}"]`);
-    if (scroller && target) scroller.scrollTo({ top: target.offsetTop, behavior: "smooth" });
-  };
-
-  const isSheet = variant === 'sheet';
-  const popoverPlacementClass = placement === 'below' ? 'top-full mt-1' : 'bottom-full mb-1';
-  // Surfaces follow the rest of the app: a raised `lc-dark` panel on desktop
-  // (menus, modals), the `lc-card` sheet surface on mobile — never the page's
-  // own `lc-black`, which made the picker read as a hole in the chat. The
-  // colour lives in `--picker-surface` so the sticky section headers can
-  // match it exactly, including when MessageMediaPicker hosts this one.
-  const panelClass = 'flex h-[430px] w-[360px] flex-col overflow-hidden rounded-xl border border-lc-border [--picker-surface:var(--color-lc-dark)] bg-[var(--picker-surface)] text-lc-white shadow-2xl ';
-  const containerClass = isSheet
-    ? 'flex h-full w-full flex-col bg-[var(--picker-surface,var(--color-lc-card))] p-2 text-lc-white '
-    : variant === 'floating'
-      ? panelClass
-      : `absolute ${align === 'left' ? 'left-0' : 'right-0'} ${popoverPlacementClass} z-30 ${panelClass}`;
-  const gridClass = columns === 12
-    ? 'grid grid-cols-12 gap-0.5'
-    : isSheet
-      ? 'grid grid-cols-7 gap-1.5'
-      : 'grid grid-cols-8 gap-1 px-3';
-  const emojiBtnClass = isSheet
-    ? 'flex aspect-square items-center justify-center rounded-md text-2xl active:bg-lc-border disabled:cursor-default disabled:opacity-40'
-    : 'flex aspect-square items-center justify-center rounded-md text-2xl hover:bg-lc-border disabled:cursor-default disabled:opacity-40';
-  const scrollClass = isSheet
-    ? 'relative min-h-0 flex-1 overflow-y-auto'
-    : 'relative min-h-0 flex-1 overflow-y-auto pb-3';
-  const sectionTitleClass = isSheet
-    ? 'sticky top-0 z-10 mb-2 border-b border-lc-border bg-[var(--picker-surface,var(--color-lc-card))] px-1 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted'
-    : 'sticky top-0 z-10 mb-2 bg-[var(--picker-surface,var(--color-lc-dark))] px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted';
-  const customImageClass = isSheet
-    ? 'h-[1.45em] w-[1.45em] object-contain'
-    : 'h-8 w-8 object-contain';
-
-  const renderCustomSection = (title: string, entries: ReadonlyArray<CustomEmojiEntry>, action?: ReactNode) => {
-    if (!action && entries.length === 0) return null;
-    return (
-      <div className="mb-2">
-        <div className={sectionTitleClass}>{title}</div>
-        <div className={gridClass}>
-          {action}
-          {entries.map((e) => {
-            const shortcode = `:${e.name}:`;
-            const mine = disabled.has(shortcode);
-            return (
-              <button
-                key={`custom-${e.name}`}
-                onClick={() => handlePickCustom(e)}
-                disabled={mine}
-                className={emojiBtnClass}
-                title={mine ? 'Already reacted' : shortcode}
-              >
-                <MediaThumb src={e.url} alt={shortcode} className={customImageClass} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div
       role="dialog"
       aria-label={t('emoji.picker')}
-      className={containerClass + (className ?? '')}
+      className={classes.containerClass + (className ?? '')}
       onClick={(e) => e.stopPropagation()}
     >
-      {!filtered && (
-        <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label={t('emoji.categories')}>
-          {EMOJI_NAV.map((meta) => {
-            const category = meta.name;
-            return (
-              <button
-                type="button"
-                key={category}
-                onClick={() => jumpToCategory(category)}
-                aria-label={meta.label}
-                aria-pressed={activeCategory === category}
-                title={meta.label}
-                className={['flex h-10 min-w-0 items-center justify-center rounded-lg border-b-2 text-xl', activeCategory === category ? 'border-lc-green bg-lc-green/10' : 'border-transparent hover:bg-lc-border/60'].join(' ')}
-              >
-                {category === 'Recent' ? <RecentIcon /> : <span aria-hidden="true">{meta.icon}</span>}
-              </button>
-            );
-          })}
-        </nav>
-      )}
-      <div className={isSheet ? 'my-2 flex items-center gap-2' : 'border-b border-lc-border p-3'}>
-        {!isSheet && (
-          <div className="mb-2 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-bold text-lc-white">{t('emoji.title')}</div>
-              <div className="text-[11px] text-lc-muted">{t('emoji.subtitle')}</div>
-            </div>
-            <button
-              onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-lc-border bg-lc-card/60 text-lc-white transition-colors hover:border-lc-green/50 hover:bg-lc-border"
-              aria-label={t('emoji.close')}
-              title={t('common.close')}
-            >
-              <CloseIcon size={16} />
-            </button>
-          </div>
-        )}
-        <MediaPickerSearch
-          autoFocus={!isSheet}
-          value={query}
-          onChange={setQuery}
-          placeholder={t('emoji.search')}
-        />
-        {isSheet && showClose && (
-          <button
-            onClick={onClose}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-lc-border bg-lc-card/60 text-lc-white transition-colors hover:border-lc-green/50 hover:bg-lc-border"
-            aria-label={t('emoji.close')}
-            title={t('common.close')}
-          >
-            <CloseIcon size={18} />
-          </button>
-        )}
-      </div>
-      <div ref={scrollRef} className={scrollClass}>
+      {!filtered && <EmojiCategoryNav activeCategory={activeCategory} onJump={jumpToCategory} />}
+      <EmojiPickerSearchBar
+        isSheet={classes.isSheet}
+        showClose={showClose}
+        query={picker.query}
+        onQuery={picker.setQuery}
+        onClose={onClose}
+      />
+      <div ref={scrollRef} className={classes.scrollClass}>
         {filtered ? (
           <>
-            {renderCustomSection('Server GIFs', filteredCustomGifEntries)}
-            {renderCustomSection('Server stickers', filteredCustomStickerEntries)}
-            {renderCustomSection('Server emojis', filteredCustomEmojiEntries)}
-            <div className={gridClass}>
-              {filtered.length === 0 && filteredCustomCount === 0 && (
+            {section('Server GIFs', picker.filteredCustomGifEntries)}
+            {section('Server stickers', picker.filteredCustomStickerEntries)}
+            {section('Server emojis', picker.filteredCustomEmojiEntries)}
+            <div className={classes.gridClass}>
+              {filtered.length === 0 && picker.filteredCustomCount === 0 && (
                 <div className="col-span-8 py-4 text-center text-xs text-lc-muted">{t('emoji.noMatches')}</div>
               )}
-              {filtered.map((e) => {
-                const mine = disabled.has(e.char);
-                return (
-                  <button
-                    key={e.char}
-                    onClick={() => handlePick(e.char)}
-                    disabled={mine}
-                    className={emojiBtnClass}
-                    title={mine ? 'Already reacted' : e.keywords[0]}
-                  >
-                    {e.char}
-                  </button>
-                );
-              })}
+              {filtered.map(charButton)}
             </div>
           </>
         ) : (
           <>
-            {renderCustomSection("My emojis", [], customEmojiAction)}
-            <div className="mb-2 scroll-mt-1" data-emoji-category="Recent">
-                <div className={sectionTitleClass}>{t('emoji.recent')}</div>
-                <div className={gridClass}>
-                  {recentEntries.map(({ char, custom }) => {
-                    const mine = disabled.has(char);
-                    return (
-                      <button
-                        key={`recent-${char}`}
-                        onClick={() => custom ? handlePickCustom(custom) : handlePick(char)}
-                        disabled={mine}
-                        className={emojiBtnClass}
-                      >
-                        {custom ? (
-                          <MediaThumb src={custom.url} alt={char} className={customImageClass} />
-                        ) : char}
-                      </button>
-                    );
-                  })}
-                </div>
-                {recentEntries.length === 0 && <div className="px-1 py-3 text-xs text-lc-muted">{t('emoji.noRecent')}</div>}
-              </div>
-            {renderCustomSection('Server GIFs', customGifEntries)}
-            {renderCustomSection('Server stickers', customStickerEntries)}
-            {renderCustomSection('Server emojis', customEmojiEntries)}
-            {EMOJI_SECTIONS.map((section) => (
-              <div key={section.name} className="mb-2 scroll-mt-1" data-emoji-category={section.name}>
-                <div className={sectionTitleClass}>{section.label}</div>
-                <div className={gridClass}>
-                  {section.categories.flatMap((category) => EMOJI_CATEGORIES[category] ?? []).map((e) => {
-                    const mine = disabled.has(e.char);
-                    return (
-                      <button
-                        key={e.char}
-                        onClick={() => handlePick(e.char)}
-                        disabled={mine}
-                        className={emojiBtnClass}
-                        title={mine ? 'Already reacted' : e.keywords[0]}
-                      >
-                        {e.char}
-                      </button>
-                    );
-                  })}
+            {section("My emojis", [], customEmojiAction)}
+            <RecentEmojiSection
+              title={t('emoji.recent')}
+              emptyLabel={t('emoji.noRecent')}
+              entries={picker.recentEntries}
+              disabled={disabled}
+              classes={classes}
+              onPick={picker.handlePick}
+              onPickCustom={picker.handlePickCustom}
+            />
+            {section('Server GIFs', picker.customGifEntries)}
+            {section('Server stickers', picker.customStickerEntries)}
+            {section('Server emojis', picker.customEmojiEntries)}
+            {EMOJI_SECTIONS.map((s) => (
+              <div key={s.name} className="mb-2 scroll-mt-1" data-emoji-category={s.name}>
+                <div className={classes.sectionTitleClass}>{s.label}</div>
+                <div className={classes.gridClass}>
+                  {s.categories.flatMap((category) => EMOJI_CATEGORIES[category] ?? []).map(charButton)}
                 </div>
               </div>
             ))}

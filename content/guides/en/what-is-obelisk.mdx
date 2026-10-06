@@ -1,6 +1,6 @@
 ---
 title: What is Obelisk?
-description: Obelisk is a Discord-style group chat client with no backend. There's no database, no Obelisk server — your account is a Nostr keypair, your groups live on Nostr relays, and the app is just a frontend that signs and reads events.
+description: Obelisk is a Discord-style group chat client with no backend. There's no database, no Obelisk server. Your account is a Nostr keypair, your groups live on Nostr relays, and the app is just a frontend that signs and reads events.
 heroComponent: what-is-obelisk
 publishedAt: '2026-04-16'
 updatedAt: '2026-08-17'
@@ -9,13 +9,13 @@ tags: [intro, nostr, identity, nip-29]
 
 ## The short version
 
-Obelisk is a chat client that looks and feels like Discord — servers in a left rail, channels, threads, reactions, DMs — but everything underneath is **Nostr**. There is no Obelisk backend, no database, no account system. Your identity is a Nostr keypair. Your groups are NIP-29 groups stored on Nostr relays. Every message you send is a signed Nostr event published straight to the relay.
+Obelisk is a chat client that looks and feels like Discord (servers in a left rail, channels, threads, reactions, DMs), but everything underneath is **Nostr**. There is no Obelisk backend, no database, no account system. Your identity is a Nostr keypair. Your groups are NIP-29 groups stored on Nostr relays. Every message you send is a signed Nostr event published straight to the relay.
 
 ## What that actually means
 
 - **No signup.** You log in with a Nostr key (NIP-07 extension or nsec). There is no email, no password, no Obelisk account to create or recover.
 - **No application server.** The client talks directly to NIP-29 relays. New installs include two public relays operated by Obelisk, and you can remove or replace either one.
-- **No database.** Channels, members, admins, kicks and bans aren't rows in our database — they're standard NIP-29 events the relay enforces.
+- **No database.** Channels, members, admins, kicks and bans aren't rows in our database; they're standard NIP-29 events the relay enforces.
 - **Your data is portable.** Switch relays, run your own, mirror your group across many. The app doesn't own anything.
 
 ## Who is this for?
@@ -29,8 +29,8 @@ The client has no account backend or message database. Relay operators can moder
 ## What's working today
 
 - **Login** with NIP-07 or nsec
-- **NIP-29 groups** — create, join, channel hierarchy, replies, reactions, admins, members
-- **Multi-relay UX** — each relay you add appears as its own server in the rail
+- **NIP-29 groups**: create, join, channel hierarchy, replies, reactions, admins, members
+- **Multi-relay UX**: each relay you add appears as its own server in the rail
 - **Encrypted DMs** via NIP-04 and NIP-17 (gift-wrapped)
 - **Lightning zaps** from any message via NIP-57 + Nostr Wallet Connect (NIP-47)
 - **Profile editor** that publishes a kind 0 event
@@ -47,6 +47,6 @@ The client has no account backend or message database. Relay operators can moder
 
 If you're new, the best next reads are:
 
-- [How Obelisk works](/guides/how-obelisk-works) — the architecture of a no-backend Nostr client
-- [Bring your own relay](/guides/web-of-trust) — how the relay rail works and why it matters
-- [What's on the roadmap](/guides/future-nostr-relays) — what's still being built
+- [How Obelisk works](/guides/how-obelisk-works): the architecture of a no-backend Nostr client
+- [Bring your own relay](/guides/web-of-trust): how the relay rail works and why it matters
+- [What's on the roadmap](/guides/future-nostr-relays): what's still being built

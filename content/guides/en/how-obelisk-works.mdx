@@ -1,6 +1,6 @@
 ---
 title: How Obelisk works
-description: Obelisk is a frontend. There is no backend, no database, no API server — the app signs Nostr events in your browser and publishes them straight to the relays you choose. Here's what happens when you log in, send a message, or join a group.
+description: Obelisk is a frontend. There is no backend, no database, no API server. The app signs Nostr events in your browser and publishes them straight to the relays you choose. Here's what happens when you log in, send a message, or join a group.
 heroComponent: how-obelisk-works
 publishedAt: '2026-04-16'
 updatedAt: '2026-04-28'
@@ -23,11 +23,11 @@ That's the entire architecture. There is no Obelisk server, no database, no auth
 ## What happens when you log in
 
 1. The login screen offers three paths:
-   - **NIP-07** — call `window.nostr.signEvent()` from your installed signer (Alby, nos2x, etc.)
-   - **nsec** — paste a private key, kept in `localStorage` and used directly
-   - **Generate** — create a brand-new keypair right there
+   - **NIP-07**: call `window.nostr.signEvent()` from your installed signer (Alby, nos2x, etc.)
+   - **nsec**: paste a private key, kept in `localStorage` and used directly
+   - **Generate**: create a brand-new keypair right there
 
-2. The app derives your pubkey, fetches your kind 0 profile from the relays you have configured, and you're in. There is no session, no token, no cookie — the cryptographic key *is* the session.
+2. The app derives your pubkey, fetches your kind 0 profile from the relays you have configured, and you're in. There is no session, no token, no cookie: the cryptographic key *is* the session.
 
 ## What happens when you send a message
 
@@ -43,9 +43,9 @@ There is no "send to Obelisk's server" step. The relay is the message bus.
 
 Groups are **NIP-29** groups. The relay holds them, not us.
 
-- **Create** — the client sends a `9007` (group create) event. The relay assigns you as the first admin via a `39001` event.
-- **Join / leave** — admins issue `9000` (put user) and `9001` (remove user) events; the relay enforces them.
-- **Channels, metadata, admins, members** — all standard NIP-29 events: `39000` (metadata), `39001` (admins), `39002` (members), and so on.
+- **Create**: the client sends a `9007` (group create) event. The relay assigns you as the first admin via a `39001` event.
+- **Join / leave**: admins issue `9000` (put user) and `9001` (remove user) events; the relay enforces them.
+- **Channels, metadata, admins, members**: all standard NIP-29 events: `39000` (metadata), `39001` (admins), `39002` (members), and so on.
 
 Switching relays is just switching which server's NIP-29 groups you're seeing. The app doesn't care which relay it is, as long as it speaks NIP-29.
 
@@ -53,10 +53,10 @@ Switching relays is just switching which server's NIP-29 groups you're seeing. T
 
 Direct messages don't use NIP-29. They use **encrypted Nostr DMs**:
 
-- **NIP-04** — older encrypted DM kind, still widely supported
-- **NIP-17** — newer "gift-wrapped" DM with metadata privacy; the client publishes wrapped events to the recipient's NIP-17 inbox relays
+- **NIP-04**: older encrypted DM kind, still widely supported
+- **NIP-17**: newer "gift-wrapped" DM with metadata privacy; the client publishes wrapped events to the recipient's NIP-17 inbox relays
 
-Both are end-to-end encrypted — only sender and recipient hold the keys to decrypt.
+Both are end-to-end encrypted: only sender and recipient hold the keys to decrypt.
 
 ## What about Lightning zaps?
 
@@ -73,7 +73,7 @@ No platform takes a fee. Your wallet, recipient's wallet, no middleman.
 - We don't host your messages.
 - We don't have a user database.
 - We don't issue tokens or cookies.
-- We can't deplatform you, and we can't lose your data — because we never had it.
+- We can't deplatform you, and we can't lose your data, because we never had it.
 
 <RelatedGuides items={[
   { slug: "what-is-obelisk", note: "the elevator pitch" },

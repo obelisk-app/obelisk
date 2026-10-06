@@ -7,23 +7,26 @@
  * kind 9 on the active NIP-29 relay and answers "what was said in this
  * room". This searches Nostr: people, posts and hashtags.
  *
- * One input, three result sections, because people don't think in tabs —
+ * One input, three result sections, because people don't think in tabs:
  * they type a word and want whatever matches. The query is classified
  * (`parseQuery`) so a pasted `npub` resolves directly instead of being sent
  * to a full-text index that will never match it.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useNostrUserSearch, type UserHit } from '@/lib/hooks/useNostrUserSearch';
-import { parseQuery, searchHashtag, searchNotes, relatedHashtags } from '@/lib/social/search';
-import { ensureSocialProfiles } from '@/lib/social/profiles';
-import { useAuthor } from '@/lib/social/useAuthor';
+import type { UserHit } from '@/hooks/useNostrUserSearch';
+import { useAuthor } from '@/services/social/useAuthor';
 import { useTranslation } from '@/i18n/context';
-import UserAvatar from '@/components/UserAvatar';
+import { shortNpubLabel } from '@/utils/identity/short-npub';
+import Button from '@/components/ui/Button';
+import Text from '@/components/ui/Text';
+import UserAvatar from '@/components/ui/UserAvatar';
 import NoteCard from './NoteCard';
-
-const DEBOUNCE_MS = 300;
+import Spinner from '@/components/ui/Spinner';
+import Input from '@/components/ui/Input';
+import EmptyState from '@/components/ui/EmptyState';
+import { useFeedSearch } from './useFeedSearch';
 
 export default function FeedSearch({
   initialQuery = '',
@@ -40,66 +43,8 @@ export default function FeedSearch({
   onClose?: () => void;
 }) {
   const { t } = useTranslation();
-  const [raw, setRaw] = useState(initialQuery);
-  // Seeded, not debounced-from-empty: arriving with a query already chosen
-  // shouldn't cost a 300ms wait before anything happens.
-  const [debounced, setDebounced] = useState(initialQuery);
-  const [notes, setNotes] = useState<NostrEvent[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(raw.trim()), DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [raw]);
-
-  const parsed = useMemo(() => parseQuery(debounced), [debounced]);
-
-  // People search is already solved — NIP-19 decode, NIP-05 and NIP-50
-  // kind-0 lookup — so reuse it rather than writing a second one.
-  const people = useNostrUserSearch(
-    parsed.kind === 'text' || parsed.kind === 'identifier' ? debounced : '',
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    if (parsed.kind === 'empty' || parsed.kind === 'identifier') {
-      setNotes([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const run = parsed.kind === 'hashtag'
-      ? searchHashtag(parsed.tag)
-      : searchNotes(parsed.text);
-
-    run
-      .then((results) => {
-        if (cancelled) return;
-        setNotes(results);
-        // Names for the result authors, in one query.
-        void ensureSocialProfiles(results.map((note) => note.pubkey));
-      })
-      .catch(() => { if (!cancelled) setNotes([]); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-
-    return () => { cancelled = true; };
-  }, [parsed]);
-
-  const userHits = useMemo(() => {
-    const seen = new Set<string>();
-    const out: UserHit[] = [];
-    for (const hit of [people.directHit, people.nip05Hit, ...people.nostrResults]) {
-      if (!hit || seen.has(hit.pubkey)) continue;
-      seen.add(hit.pubkey);
-      out.push(hit);
-    }
-    return out.slice(0, 8);
-  }, [people.directHit, people.nip05Hit, people.nostrResults]);
-
-  const tags = useMemo(() => relatedHashtags(notes), [notes]);
+  const { raw, setRaw, debounced, notes, userHits, tags, busy, empty } = useFeedSearch(initialQuery);
   const openProfile = useCallback((pubkey: string) => onOpenProfile?.(pubkey), [onOpenProfile]);
-  const busy = loading || people.loading;
-  const empty = debounced.length > 0 && !busy && notes.length === 0 && userHits.length === 0;
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="feed-search">
@@ -130,7 +75,8 @@ export default function FeedSearch({
         </span>
         <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-lc-border bg-lc-black/40 px-3 py-2 focus-within:border-lc-green/60">
           <SearchIcon />
-          <input
+          <Input
+            variant="bare"
             autoFocus
             value={raw}
             onChange={(event) => setRaw(event.target.value)}
@@ -139,17 +85,18 @@ export default function FeedSearch({
             className="min-w-0 flex-1 bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted"
             data-testid="feed-search-input"
           />
-          {busy && <span className="lc-spinner h-4 w-4 shrink-0" aria-hidden="true" />}
+          {busy && <Spinner size="sm" />}
         </div>
         {onClose && (
-          <button
-            type="button"
+          <Button
+            variant="pillSecondary"
+            size="xs"
             onClick={onClose}
-            className="lc-pill-secondary shrink-0 px-4 py-1.5 text-xs"
+            className="shrink-0"
             data-testid="feed-search-close"
           >
             {t('common.close')}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -161,9 +108,9 @@ export default function FeedSearch({
         )}
 
         {empty && (
-          <p className="px-5 py-10 text-center text-sm text-lc-muted" data-testid="feed-search-empty">
+          <EmptyState as="p" className="px-5" data-testid="feed-search-empty">
             {t('social.searchEmpty')}
-          </p>
+          </EmptyState>
         )}
 
         {userHits.length > 0 && (
@@ -178,14 +125,14 @@ export default function FeedSearch({
           <Section title={t('social.searchTags')} testId="search-tags">
             <div className="flex flex-wrap gap-1.5 px-5 pb-3">
               {tags.map((tag) => (
-                <button
+                <Button
+                  variant="outlinePill"
+                  size="xs"
                   key={tag}
-                  type="button"
                   onClick={() => setRaw(`#${tag}`)}
-                  className="rounded-full bg-lc-dark px-2.5 py-1 text-[11px] text-lc-muted transition-colors hover:text-lc-green"
                 >
                   #{tag}
-                </button>
+                </Button>
               ))}
             </div>
           </Section>
@@ -222,9 +169,9 @@ function Section({
 }) {
   return (
     <section data-testid={testId}>
-      <h3 className="px-5 pb-2 pt-4 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
+      <Text as="h3" size="10" weight="semibold" variant="label" tone="muted" className="px-5 pb-2 pt-4">
         {title}
-      </h3>
+      </Text>
       {children}
     </section>
   );
@@ -234,7 +181,7 @@ function PersonRow({ hit, onOpen }: { hit: UserHit; onOpen: (pubkey: string) => 
   // Merge with our own resolver: NIP-50 hits often carry no picture, and the
   // cached profile usually does.
   const author = useAuthor(hit.pubkey);
-  const name = author.displayName || author.name || hit.displayName || hit.pubkey.slice(0, 12);
+  const name = author.displayName || author.name || hit.displayName || shortNpubLabel(hit.pubkey);
   const nip05 = author.nip05 || hit.nip05;
 
   return (

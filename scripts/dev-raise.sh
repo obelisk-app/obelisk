@@ -19,8 +19,13 @@
 #   ./scripts/dev-raise.sh           start (default)
 #   ./scripts/dev-raise.sh status    show what's running for this project
 #   ./scripts/dev-raise.sh stop      stop this project's dev server + tunnel
+#
+# Failure model: `set -euo pipefail`. Probes that may find nothing and kills
+# of processes that may already be gone say so with `|| true`; any other
+# failing command stops the script, and the EXIT trap then tears down what
+# this run spawned.
 
-set -u
+set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
 
@@ -47,7 +52,8 @@ USE_TURBOPACK="${USE_TURBOPACK:-0}"
 # Wipe .next before starting (cheap insurance against corrupted cache).
 CLEAN_NEXT_CACHE="${CLEAN_NEXT_CACHE:-1}"
 
-cd "$(dirname "$0")/.."
+# The `rm -rf .next` below is relative; it must never run anywhere but here.
+cd "$REPO_ROOT" || exit 1
 
 red()   { printf "\033[0;31m%s\033[0m\n" "$*"; }
 green() { printf "\033[0;32m%s\033[0m\n" "$*"; }
@@ -57,7 +63,9 @@ step()  { printf "\n\033[1;36m▸ %s\033[0m\n" "$*"; }
 
 # Return the cwd of a pid (resolves symlinks). Empty on failure.
 pid_cwd() {
-  lsof -a -p "$1" -d cwd -Fn 2>/dev/null | awk '/^n/{print substr($0,2); exit}'
+  # awk exits on the first match, so lsof can take SIGPIPE: allowed. It is
+  # called outside `if` conditions, where set -e would otherwise bite.
+  lsof -a -p "$1" -d cwd -Fn 2>/dev/null | awk '/^n/{print substr($0,2); exit}' || true
 }
 
 # Is this pid a `next dev` rooted in THIS repo?
@@ -81,8 +89,9 @@ case "$SUB" in
     found_dev=""
     for pid in $pids; do
       if is_our_next_dev "$pid"; then
-        port=$(lsof -p "$pid" -iTCP -sTCP:LISTEN -P -n 2>/dev/null | awk 'NR>1{split($9,a,":"); print a[length(a)]; exit}')
-        green "next dev: pid $pid on :$port  (cwd $REPO_ROOT)"
+        # awk exits on the first row, so lsof can take SIGPIPE: allowed.
+        port=$(lsof -p "$pid" -iTCP -sTCP:LISTEN -P -n 2>/dev/null | awk 'NR>1{split($9,a,":"); print a[length(a)]; exit}' || true)
+        green "next dev: pid $pid on :${port:-?}  (cwd $REPO_ROOT)"
         found_dev=1
         break
       fi
@@ -101,8 +110,9 @@ case "$SUB" in
     for pid in $pids; do
       if is_our_next_dev "$pid"; then
         blue "killing next dev pid $pid"
-        kill -TERM "$pid" 2>/dev/null
-        pkill -TERM -P "$pid" 2>/dev/null
+        # Either may find nothing left to signal; that is not an error.
+        kill -TERM "$pid" 2>/dev/null || true
+        pkill -TERM -P "$pid" 2>/dev/null || true
       fi
     done
     if pgrep -f "cloudflared .* tunnel" >/dev/null 2>&1; then
@@ -140,7 +150,9 @@ TUNNEL_UUID=""
 CRED_FILE=""
 if [ "$SKIP_TUNNEL" != "1" ]; then
   step "Tunnel lookup"
-  TUNNEL_UUID=$(cloudflared --origincert "$ORIGIN_CERT" tunnel list 2>/dev/null | awk -v n="$TUNNEL_NAME" '$2==n {print $1}')
+  # A failing `cloudflared tunnel list` must reach the message below, not
+  # trip set -e silently, so the pipeline is allowed to fail.
+  TUNNEL_UUID=$(cloudflared --origincert "$ORIGIN_CERT" tunnel list 2>/dev/null | awk -v n="$TUNNEL_NAME" '$2==n {print $1}' || true)
   if [ -z "$TUNNEL_UUID" ]; then
     red "Tunnel '$TUNNEL_NAME' not found."
     echo "Create it with:"
@@ -164,17 +176,21 @@ if [ -n "$pids" ]; then
   cmd=$(ps -p "$pid1" -o command= 2>/dev/null || true)
   cwd=$(pid_cwd "$pid1")
   if is_our_next_dev "$pid1"; then
-    green "Dev server already on $PORT — reusing this repo's next dev (pid $pid1)."
+    green "Dev server already on $PORT; reusing this repo's next dev (pid $pid1)."
     DEV_ALREADY_RUNNING=1
   else
     blue "Port $PORT held by another process:"
     dim "  pid $pid1  cmd: $cmd"
     [ -n "$cwd" ] && dim "  cwd: $cwd"
     if [ "$FORCE_KILL" = "1" ]; then
-      blue "FORCE_KILL=1 — killing."
+      blue "FORCE_KILL=1: killing."
+      # shellcheck disable=SC2086  # one pid per word is the point
       kill $pids 2>/dev/null || true; sleep 1
       still=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
-      [ -n "$still" ] && { kill -9 $still 2>/dev/null || true; sleep 1; }
+      if [ -n "$still" ]; then
+        # shellcheck disable=SC2086
+        kill -9 $still 2>/dev/null || true; sleep 1
+      fi
     else
       blue "Probing fallback ports $((PORT+1))..$((PORT+PORT_FALLBACK_MAX))"
       found=""
@@ -187,7 +203,7 @@ if [ -n "$pids" ]; then
         cpid1=$(echo "$cpids" | head -1)
         if is_our_next_dev "$cpid1"; then
           PORT="$cand"; DEV_ALREADY_RUNNING=1; found="$cand"
-          green "Our next dev already on $cand — reusing (pid $cpid1)."
+          green "Our next dev already on $cand; reusing (pid $cpid1)."
           break
         fi
       done
@@ -207,7 +223,6 @@ export PORT
 # ── Launch ───────────────────────────────────────────────────────
 DEV_PID=""
 TUNNEL_PID=""
-TUNNEL_REUSED=0
 
 # Attached mode: children spawned by THIS run are killed when the script
 # exits (Ctrl-C, terminal close, SIGHUP). Reused processes are left alone.
@@ -233,15 +248,15 @@ if [ "$DEV_ALREADY_RUNNING" = "0" ]; then
   DEV_FLAGS="-p $PORT"
   if [ "$USE_TURBOPACK" != "1" ]; then
     DEV_FLAGS="$DEV_FLAGS --webpack"
-    blue "Starting next dev on :$PORT (webpack — set USE_TURBOPACK=1 to opt in to Turbopack) (logs → ./dev.log)…"
+    blue "Starting next dev on :$PORT (webpack; set USE_TURBOPACK=1 to opt in to Turbopack) (logs → ./dev.log)…"
   else
     blue "Starting next dev on :$PORT (turbopack) (logs → ./dev.log)…"
   fi
   # shellcheck disable=SC2086
   PORT="$PORT" npx next dev $DEV_FLAGS > dev.log 2>&1 &
   DEV_PID=$!
-  for i in $(seq 1 60); do
-    lsof -iTCP:"$PORT" -sTCP:LISTEN -n -P >/dev/null 2>&1 && { green "Dev server up."; break; }
+  for _ in $(seq 1 60); do
+    if lsof -iTCP:"$PORT" -sTCP:LISTEN -n -P >/dev/null 2>&1; then green "Dev server up."; break; fi
     if ! kill -0 "$DEV_PID" 2>/dev/null; then
       red "next dev died. Last 20 log lines:"; tail -20 dev.log; exit 1
     fi
@@ -254,7 +269,7 @@ if [ "$SKIP_TUNNEL" = "1" ]; then
   step "Ready"
   green "Dev: http://127.0.0.1:$PORT  (SKIP_TUNNEL=1)"
   if [ -n "$DEV_PID" ]; then
-    dim "Dev PID $DEV_PID — Ctrl-C or close terminal to stop."
+    dim "Dev PID $DEV_PID. Ctrl-C or close terminal to stop."
     wait "$DEV_PID"
   fi
   exit 0
@@ -263,8 +278,7 @@ fi
 step "Cloudflare tunnel"
 if pgrep -f "cloudflared .* ${TUNNEL_UUID}" >/dev/null 2>&1 \
    || pgrep -f "cloudflared .* ${TUNNEL_NAME}\b" >/dev/null 2>&1; then
-  green "Tunnel '$TUNNEL_NAME' already running — reusing."
-  TUNNEL_REUSED=1
+  green "Tunnel '$TUNNEL_NAME' already running; reusing."
 else
   blue "Starting cloudflared '$TUNNEL_NAME' → $ORIGIN_URL (logs → ./tunnel.log)"
   cloudflared --origincert "$ORIGIN_CERT" tunnel \
@@ -285,10 +299,10 @@ fi
 # is actually carrying traffic, not just a process that's alive).
 step "Tunnel handshake"
 ready=0
-for i in $(seq 1 30); do
+for _ in $(seq 1 30); do
   if grep -q "Registered tunnel connection" tunnel.log 2>/dev/null; then
     n=$(grep -c "Registered tunnel connection" tunnel.log 2>/dev/null || echo 0)
-    [ "$n" -ge 1 ] && { green "cloudflared registered $n edge connection(s)."; ready=1; break; }
+    if [ "$n" -ge 1 ]; then green "cloudflared registered $n edge connection(s)."; ready=1; break; fi
   fi
   if grep -qiE "error|failed|unauthorized|ingress" tunnel.log 2>/dev/null \
      && ! grep -q "Registered tunnel connection" tunnel.log 2>/dev/null; then
@@ -312,7 +326,8 @@ probe_public() {
   # for newly-created CNAMEs. curl's -w always prints %{http_code}
   # (000 on failure); don't append a fallback or we get "000000".
   local ip
-  ip=$(dig +short +time=2 +tries=1 "$TUNNEL_HOST" @1.1.1.1 | grep -m1 -E '^[0-9.]+$')
+  # dig may be missing and grep may match nothing; both just mean "no ip".
+  ip=$(dig +short +time=2 +tries=1 "$TUNNEL_HOST" @1.1.1.1 2>/dev/null | grep -m1 -E '^[0-9.]+$' || true)
   if [ -n "$ip" ]; then
     curl -sk -o /dev/null -w "%{http_code}" --max-time 5 \
       --resolve "${TUNNEL_HOST}:443:${ip}" "https://$TUNNEL_HOST"
@@ -327,9 +342,9 @@ wait_public() {
     code=$(probe_public)
     case "$code" in
       2*|3*|401|403) echo "$code"; return 0 ;;
-      530|521|522|523|525) dim "edge $code (origin not reachable yet) — retrying…" ;;
-      000) dim "no response — retrying…" ;;
-      *)   dim "got $code — retrying…" ;;
+      530|521|522|523|525) dim "edge $code (origin not reachable yet); retrying…" ;;
+      000) dim "no response; retrying…" ;;
+      *)   dim "got $code; retrying…" ;;
     esac
     sleep 2
   done
@@ -340,7 +355,7 @@ wait_public() {
 if code=$(wait_public 20); then
   green "https://$TUNNEL_HOST responding ($code)."
 else
-  blue "Public hostname not responding (last code: $code) — attempting DNS route fix…"
+  blue "Public hostname not responding (last code: $code); attempting DNS route fix…"
   if cloudflared --origincert "$ORIGIN_CERT" tunnel route dns --overwrite-dns "$TUNNEL_UUID" "$TUNNEL_HOST" >>tunnel.log 2>&1; then
     green "Re-routed $TUNNEL_HOST → $TUNNEL_NAME. Re-checking…"
     if code=$(wait_public 20); then
@@ -349,7 +364,7 @@ else
       red "Still no response after DNS route (last code: $code)."
     fi
   else
-    red "DNS route command failed — see tunnel.log."
+    red "DNS route command failed; see tunnel.log."
   fi
 
   case "$code" in
@@ -372,12 +387,12 @@ green "Local:  http://127.0.0.1:$PORT"
 green "Public: https://$TUNNEL_HOST"
 dim   "Logs:   ./dev.log  ./tunnel.log"
 dim   "PIDs:   ${DEV_PID:+dev=$DEV_PID  }${TUNNEL_PID:+tunnel=$TUNNEL_PID}"
-dim   "Stop:   Ctrl-C (or close terminal) — children spawned by this run will be killed."
+dim   "Stop:   Ctrl-C (or close terminal); children spawned by this run will be killed."
 dim   "        Reused processes (if any) survive; use ./scripts/dev-raise.sh stop for those."
 echo
 
 # Stay attached so SIGHUP / Ctrl-C tears down what we started.
-# For reused processes we don't own, fall back to a poll loop — `wait`
+# For reused processes we don't own, fall back to a poll loop: `wait`
 # only works on direct children of this shell. Reused PIDs are NOT added
 # to the cleanup trap, so Ctrl-C leaves them running (matches the
 # "Reused processes survive" contract above).
@@ -396,7 +411,7 @@ wait_pids=""
 [ -n "$TUNNEL_PID" ] && wait_pids="$wait_pids $TUNNEL_PID"
 
 if [ -n "$wait_pids" ] && [ -z "$REUSED_DEV_PID" ] && [ -z "$REUSED_TUNNEL_PID" ]; then
-  # Pure spawned case — `wait` blocks until a child exits and is
+  # Pure spawned case: `wait` blocks until a child exits and is
   # interruptible by signals, so the cleanup trap fires on Ctrl-C.
   # shellcheck disable=SC2086
   wait $wait_pids
@@ -408,9 +423,9 @@ else
   while :; do
     alive=0
     for pid in $DEV_PID $TUNNEL_PID $REUSED_DEV_PID $REUSED_TUNNEL_PID; do
-      [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && { alive=1; break; }
+      if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then alive=1; break; fi
     done
-    [ "$alive" = "0" ] && break
+    if [ "$alive" = "0" ]; then break; fi
     sleep 2
   done
 fi

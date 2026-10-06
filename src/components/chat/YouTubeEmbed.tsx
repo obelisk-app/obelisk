@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import RemoteImage from '@/components/ui/RemoteImage';
 
 /**
- * Click-to-play YouTube facade. The iframe — and every Google cookie and
- * tracker that rides with it — is only created once the user actually
+ * Click-to-play YouTube facade. The iframe (and every Google cookie and
+ * tracker that rides with it) is only created once the user actually
  * asks for the video. Until then this is one static thumbnail, which is
  * both the privacy-preserving choice and the reason the landing page
  * doesn't pay for a third-party player it may never show.
@@ -14,7 +15,7 @@ interface YouTubeEmbedProps {
   /**
    * Wrapper sizing. Defaults to chat-bubble scale; the landing page
    * passes its own so the same facade can run full-width. Owns sizing
-   * only — the frame, radius and border are constant across surfaces.
+   * only: the frame, radius and border are constant across surfaces.
    */
   className?: string;
   /** Accessible title for the player and thumbnail. */
@@ -44,17 +45,16 @@ export default function YouTubeEmbed({
   if (!loaded) {
     return (
       <button
+        type="button"
         onClick={() => setLoaded(true)}
         className={`relative block rounded-lg overflow-hidden border border-lc-border hover:border-lc-green/40 transition-colors group/yt ${className}`}
         aria-label={title}
         data-testid="youtube-thumbnail"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <RemoteImage
           src={thumbnailUrl}
           alt=""
           className="w-full aspect-video object-cover"
-          loading="lazy"
           onError={() => setFellBack(true)}
         />
         {/* Play button overlay */}

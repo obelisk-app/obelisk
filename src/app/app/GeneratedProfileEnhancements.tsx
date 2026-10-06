@@ -58,7 +58,7 @@ export default function GeneratedProfileEnhancements({
       // both tell someone who is *already filling the form in* that they
       // needn't have bothered. A profile with no name shows up as a truncated
       // npub everywhere in the app, and the name field is pre-filled with a
-      // suggestion anyway — there is nothing to skip.
+      // suggestion anyway - there is nothing to skip.
       //
       // Hidden rather than removed: the SDK owns this subtree and re-renders
       // it, and removing a node React still holds a reference to is how you
@@ -82,7 +82,7 @@ export default function GeneratedProfileEnhancements({
       // its value is owned by React state we cannot reach from out here. Writing
       // to it via the native setter desyncs React's value tracker: the text shows
       // up, but React's own state never advances, and the first keystroke gets
-      // slammed back by `restoreControlledState` — the field becomes untypeable.
+      // slammed back by `restoreControlledState` - the field becomes untypeable.
       // So we never touch `value`. The suggested name rides on `placeholder` and
       // is carried to publish through the draft, which `publishGeneratedProfile`
       // already falls back to when the user leaves the field empty.
@@ -145,7 +145,7 @@ export default function GeneratedProfileEnhancements({
         if (input) input.disabled = true;
         error.textContent = '';
         try {
-          const { uploadToBlossom } = await import('@/lib/blossom');
+          const { uploadToBlossom } = await import('@/services/blossom');
           const url = await uploadToBlossom(file, secretKey ?? undefined);
           let image = picker.querySelector('img');
           if (!image) {

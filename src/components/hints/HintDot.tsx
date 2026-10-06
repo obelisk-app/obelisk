@@ -5,7 +5,7 @@
  *
  * Deliberately the same shape and colour as the unread badges the rail and
  * the bottom nav already use, so it reads as existing vocabulary rather than
- * as tour chrome — a nudge you can ignore, not an instruction.
+ * as tour chrome: a nudge you can ignore, not an instruction.
  *
  * It disappears when the hint is seen, which includes simply *using* the
  * control: someone who has already clicked the feed button does not need to

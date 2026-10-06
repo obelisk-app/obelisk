@@ -2,7 +2,7 @@
 
 The mobile shell (`src/app/app/mobile/PhoneShell.tsx`) is a state
 machine driven by `window.history`. Every visible transition between
-screens corresponds to one history entry — there is no React Router,
+screens corresponds to one history entry; there is no React Router,
 no NavController object, just `pushState` + `popstate`. This doc is the
 canonical spec for which transitions exist, which animation each one
 plays, and what the history stack should look like at every step.
@@ -40,7 +40,7 @@ subs + connection lifecycle) and [`read-state.md`](./read-state.md)
 └──────────────────────────────────────────────────────────┘
 ```
 
-Layer 1 never remounts during a session — the five `<ServerScreen />`
+Layer 1 never remounts during a session: the five `<ServerScreen />`
 / `<FeedScreen />` / `<DmsListScreen />` / `<InboxScreen />` /
 `<SettingsProfileScreen />` instances live in `.drag-slot` divs that flip
 CSS roles. Layer 2
@@ -55,7 +55,7 @@ mounts on `nav.screen === 'msg-actions' | 'zap-modal'`.
 | Screen | Purpose | Bottom-nav label |
 |---|---|---|
 | `server` | Active-relay group list + channel browser | Servers |
-| `feed` | Nostr feed (Following + Global) over the social relays — NOT the active NIP-29 relay | Feed |
+| `feed` | Nostr feed (Following + Global) over the social relays, NOT the active NIP-29 relay | Feed |
 | `dms-list` | DM thread list with follows + recents | DMs |
 | `inbox` | Mentions, replies, reactions, zaps | Inbox |
 | `settings-profile` | Profile editor entry + settings home | You |
@@ -97,7 +97,7 @@ cold deep-link reload of `/app?u=<pubkey>`).
 Sheets keep the underlying screen mounted (the sub-screen
 overlay's `key` is derived from `nav.baseScreen`, so opening a sheet
 doesn't remount the screen below). Both sheets push a history entry
-but are **not** encoded in the URL — opening a sheet doesn't change
+but are **not** encoded in the URL; opening a sheet doesn't change
 the address bar.
 
 ### Guest screens
@@ -108,7 +108,7 @@ the address bar.
 | `profile-setup` | First-run after login; not part of nav state |
 
 These exist in the `ScreenName` union but are not reachable through
-the carousel — they're rendered by the logged-out branch of
+the carousel; they're rendered by the logged-out branch of
 `PhoneShell` (`PhoneShell.tsx:~5634`).
 
 ## 3. Hierarchy and parent resolution
@@ -116,11 +116,11 @@ the carousel — they're rendered by the logged-out branch of
 The "parent" of any sub-screen is the screen the user came from. We
 track it in two places:
 
-1. **Dynamic** — `nav.parentScreen`, set at `pushNav` time by every
+1. **Dynamic**: `nav.parentScreen`, set at `pushNav` time by every
    opener (`selectGroup`, `selectPeer`, `openProfile`, `openMembers`,
    `openMsgActions`, `openZap`). This is the truthful answer for the
    current session.
-2. **Static** — `SUB_TO_NAV` in `swipe-nav.ts:13-26`, a fallback for
+2. **Static**: `SUB_TO_NAV` in `swipe-nav.ts:13-26`, a fallback for
    the cold-deep-link case where the user lands on `/app?u=<pubkey>`
    directly. `urlFor` does encode the parent under `pr`, but a
    bookmark from an old build won't have it.
@@ -171,7 +171,7 @@ history pop).
   `setSlideDir('forward' | 'back')`.
 - **Carousel tab switches** translate `.drag-layer` imperatively via
   `dragLayerRef.current.style.transform`. This avoids re-mounting any
-  of the four top-level screens — only their CSS role-class flips.
+  of the four top-level screens; only their CSS role-class flips.
   Used for both swipe-commit *and* bottom-nav tap-switch so the two
   feel identical.
 - **Sheets** use their own `.sheet-host` markup with a separate
@@ -195,14 +195,14 @@ history pop).
 - The guard entry sits behind everything and is **never** popped past.
   First back-press lands on it, the listener re-pushes the user's
   current nav and arms a 2-second exit window.
-- The relay-switch effect mutates the URL only —
-  `replaceState(currentState, '', newUrl)` — and never adds entries.
+- The relay-switch effect mutates the URL only
+  (`replaceState(currentState, '', newUrl)`) and never adds entries.
 - The seed-history function (`buildSeedHistory` in `swipe-nav.ts:99`)
   produces exactly `[guard, parentTab?, currentScreen]` based on the
   parsed URL.
 - Same-tab-from-sub-screen taps replace the current entry rather
   than pushing a new one. This is what fixes the "press back twice"
-  bug — the back stack from the bare tab leads where it would have
+  bug: the back stack from the bare tab leads where it would have
   led before the user entered the sub-screen.
 - Sheets push entries but are not URL-encoded. Closing a sheet pops
   one entry and returns to the underlying screen without re-rendering
@@ -215,12 +215,12 @@ sub-screen the user was on for each top-level tab. When the user
 switches to a different tab (via bottom-nav tap or swipe-commit),
 the system:
 
-1. Snapshots the current nav under the *leaving* tab's slot — unless
+1. Snapshots the current nav under the *leaving* tab's slot, unless
    the user is currently on the bare tab (then it clears the slot).
 2. If the *target* tab has a remembered sub-screen, restores it as
    the new nav. Otherwise pushes the bare tab.
 
-So: open channel-A on Servers, swipe to DMs, swipe back to Servers —
+So: open channel-A on Servers, swipe to DMs, swipe back to Servers,
 you're back on channel-A, not the channel list. Tap "Servers" while
 already inside channel-A and you collapse to the bare channel list
 (see Section 4 row 4).
@@ -235,24 +235,24 @@ top-level: there's nothing to remember.
 sub-screen. They have to, because the two cases have opposite
 visual contracts:
 
-**Path A — no remembered (plain tab swap).** Animate the drag-layer
+**Path A - no remembered (plain tab swap).** Animate the drag-layer
 first, push the new nav after the 240 ms transition completes. The
 leaving overlay (if the user was on a sub-screen) stays mounted
 throughout the slide and rides inside the layer to the off-screen
 side. The destination bare tab is already pre-rendered in the
 neighbor slot (`drag-prev` / `drag-next`) and slides into view as
 the layer translates. Crucially the channel does NOT unmount mid-
-slide — without this, the leaving overlay disappears the instant
+slide; without this, the leaving overlay disappears the instant
 the layer starts moving and the user sees a "fade-away" glitch
 instead of a clean slide.
 
-**Path B — has remembered (restore previous sub-screen).** Push the
+**Path B - has remembered (restore previous sub-screen).** Push the
 new nav FIRST via `flushSync`, then position the layer at the
 offset that keeps the leaving screen visually at viewport center,
 then transition to `translateX(0)`. The destination overlay is
 mounted from the first paint and rides inside the layer along with
 everything else, so the user sees their remembered channel sliding
-in — never the bare destination tab flashing first.
+in, never the bare destination tab flashing first.
 
 In both paths the post-animation cleanup is identical: a 240 ms
 timer flips `setIsDragging(false)`, the layout effect clears the
@@ -329,7 +329,7 @@ src/app/app/mobile/
 When you add a new screen or transition, the order of operations is:
 
 1. Add the `ScreenName` to `url-state.ts`.
-2. Decide its parent context — static (add to `SUB_TO_NAV`) or
+2. Decide its parent context: static (add to `SUB_TO_NAV`) or
    dynamic (thread `parentScreen` through the opener).
 3. Add it to the screen catalog table in this doc.
 4. Add its navigation row to the trigger table in Section 4.

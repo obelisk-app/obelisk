@@ -6,75 +6,51 @@
  * - A kind-15 file renders through `EncryptedDmAttachment` (fetch, verify,
  *   decrypt in memory).
  * - A sticker renders as the sticker, a bare image / GIF URL as the image, and
- *   `:shortcode:` as the emoji — the same things the channel composer can send.
+ *   `:shortcode:` as the emoji: the same things the channel composer can send.
  * - No link unfurls. `MessageContent` asks our own `/api/link-preview` to fetch
  *   every link it shows, which is fine for a channel and wrong for a private
  *   conversation: it would hand the server the URLs people send each other.
  * - Text keeps the bubble's own colour. `MessageContent` hard-codes
  *   `text-lc-white` on bold, headings and lists, which is unreadable on the
  *   green outgoing bubble.
+ * - Incoming media does not load until the reader asks. Every image, sticker,
+ *   custom emoji and encrypted attachment is a URL the sender chose, and
+ *   fetching it hands the sender this reader's IP address and the moment they
+ *   read the message. The DM default is `ask` for everyone
+ *   (`src/services/remote-media.ts`); outgoing messages always render, since the
+ *   reader picked those URLs themselves.
  */
 
-import { Fragment, useMemo } from 'react';
+import RemoteImage from '@/components/ui/RemoteImage';
 import { EncryptedDmAttachment } from '@/components/chat/EncryptedDmAttachment';
-import { extractUrls, isImageUrl } from '@/lib/markdown';
-import { useChatStore } from '@/store/chat';
-import { mergeCustomEmojiMaps } from '@/lib/custom-emoji-tags';
-import { CUSTOM_EMOJI_PLACEHOLDER_REGEX, replaceShortcodes } from '@/lib/emoji-shortcodes';
-import type { JsDirectMessage } from '@/lib/nostr-bridge/types';
-
-const URL_SPLIT = /(https?:\/\/[^\s<>)"'\]]+)/g;
-
-function TextWithEmoji({ text, emojis, linkClass }: { text: string; emojis: Record<string, string>; linkClass: string }) {
-  const resolved = replaceShortcodes(text, emojis);
-  const out: React.ReactNode[] = [];
-  resolved.split(URL_SPLIT).forEach((chunk, i) => {
-    if (i % 2 === 1) {
-      out.push(
-        <a key={`u${i}`} href={chunk} target="_blank" rel="noopener noreferrer nofollow" className={linkClass}>
-          {chunk}
-        </a>,
-      );
-      return;
-    }
-    let last = 0;
-    for (const m of chunk.matchAll(CUSTOM_EMOJI_PLACEHOLDER_REGEX)) {
-      const at = m.index ?? 0;
-      if (at > last) out.push(<Fragment key={`t${i}-${last}`}>{chunk.slice(last, at)}</Fragment>);
-      const url = emojis[m[1]];
-      out.push(url
-        // eslint-disable-next-line @next/next/no-img-element
-        ? <img key={`e${i}-${at}`} src={url} alt={`:${m[1]}:`} title={`:${m[1]}:`} className="inline-block h-5 w-5 align-text-bottom object-contain" />
-        : <Fragment key={`e${i}-${at}`}>{`:${m[1]}:`}</Fragment>);
-      last = at + m[0].length;
-    }
-    if (last < chunk.length) out.push(<Fragment key={`t${i}-${last}`}>{chunk.slice(last)}</Fragment>);
-  });
-  return <>{out}</>;
-}
+import { RemoteMediaPlaceholder } from '@/components/chat/RemoteMediaPlaceholder';
+import { dmFileCategory } from '@/utils/attachments/dm-file';
+import { useRemoteMediaGate } from '@/services/remote-media-gate';
+import type { JsDirectMessage } from '@/services/nostr-bridge/types';
+import { TextWithEmoji } from './dm-message/TextWithEmoji';
+import { useDmEmojis } from './dm-message/useDmEmojis';
+import { splitDmImages } from './dm-message/dm-message-utils';
 
 export function DmMessageBody({ message }: { message: JsDirectMessage }) {
-  const serverEmojis = useChatStore((s) => s.serverEmojis);
-  const emojis = useMemo(
-    () => mergeCustomEmojiMaps(serverEmojis, message.customEmojis ?? {}),
-    [serverEmojis, message.customEmojis],
-  );
+  const media = useRemoteMediaGate('dm', message.counterparty, message.outgoing);
+  const emojis = useDmEmojis(message.customEmojis, media.show);
   const onAccent = message.outgoing;
   const linkClass = onAccent ? 'underline' : 'text-sky-400 hover:underline';
 
   if (message.file) {
+    // A media attachment is fetched on mount; a plain file waits for a
+    // click already, so only the former needs the gate.
+    const fetchesOnMount = dmFileCategory(message.file.mimeType) !== 'file';
+    if (fetchesOnMount && !media.show) return <RemoteMediaPlaceholder onReveal={media.reveal} />;
     return <EncryptedDmAttachment file={message.file} onAccent={onAccent} />;
   }
   if (message.sticker) {
+    if (!media.show) return <RemoteMediaPlaceholder onReveal={media.reveal} />;
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={message.sticker.url} alt={`:${message.sticker.name}:`} className="h-36 w-36 object-contain" data-testid="dm-sticker" />
+      <RemoteImage src={message.sticker.url} alt={`:${message.sticker.name}:`} className="h-36 w-36 object-contain" data-testid="dm-sticker" />
     );
   }
-  const images = extractUrls(message.content).filter(isImageUrl).slice(0, 4);
-  let text = message.content;
-  for (const url of images) text = text.split(url).join('');
-  text = text.replace(/\n{3,}/g, '\n\n').trim();
+  const { images, text } = splitDmImages(message.content);
   return (
     <>
       {text && (
@@ -82,12 +58,16 @@ export function DmMessageBody({ message }: { message: JsDirectMessage }) {
           <TextWithEmoji text={text} emojis={emojis} linkClass={linkClass} />
         </div>
       )}
-      {images.length > 0 && (
+      {images.length > 0 && !media.show && (
+        <div className={text ? 'mt-1.5' : ''}>
+          <RemoteMediaPlaceholder onReveal={media.reveal} />
+        </div>
+      )}
+      {images.length > 0 && media.show && (
         <div className={'flex flex-wrap gap-1' + (text ? ' mt-1.5' : '')} data-testid="dm-images">
           {images.map((url) => (
             <a key={url} href={url} target="_blank" rel="noopener noreferrer nofollow">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="" loading="lazy" className="max-h-60 max-w-full rounded-lg object-contain" />
+              <RemoteImage src={url} alt="" className="max-h-60 max-w-full rounded-lg object-contain" />
             </a>
           ))}
         </div>

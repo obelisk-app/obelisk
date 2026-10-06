@@ -2,7 +2,7 @@
 
 Obelisk uses mediasoup for `voice-sfu` channels. The selected SFU is stored
 as a channel-admin NIP-78 pin, but mediasoup RPC normally travels directly to
-the SFU's authenticated WebSocket—not through Nostr relays.
+the SFU's authenticated WebSocket, not through Nostr relays.
 
 The server implementation and operator runbook live at
 [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu).
@@ -47,11 +47,11 @@ authentication/whitelist failures never fall back.
 
 | File | Responsibility |
 |---|---|
-| `src/lib/voice/client.ts` | Topology selection and shared UI-facing API. |
-| `src/lib/voice/sfu-pin.ts` | URL verification plus kind 30078 pin storage. |
-| `src/lib/voice/sfu-control.ts` | Pin/build/discovery resolution and legacy start control. |
-| `src/lib/voice/sfu-rpc.ts` | Direct signed WebSocket RPC with kind 25050 fallback. |
-| `src/lib/voice/sfu-client.ts` | mediasoup-client Device, transports, producers, and consumers. |
+| `src/services/voice/client.ts` | Topology selection and shared UI-facing API. |
+| `src/services/voice/sfu-pin.ts` | URL verification plus kind 30078 pin storage. |
+| `src/services/voice/sfu-control.ts` | Pin/build/discovery resolution and legacy start control. |
+| `src/services/voice/sfu-rpc.ts` | Direct signed WebSocket RPC with kind 25050 fallback. |
+| `src/services/voice/sfu-client.ts` | mediasoup-client Device, transports, producers, and consumers. |
 
 ## Build fallback
 
@@ -72,7 +72,7 @@ needed for discovery/compatibility, not normal direct mediasoup RPC.
 Run the focused client checks:
 
 ```bash
-npx vitest run src/lib/voice/sfu-pin.test.ts src/lib/voice/sfu-rpc.test.ts src/lib/voice/sfu-control.test.ts src/lib/voice/sfu-client-reliability.test.ts
+npx vitest run tests/services/voice/sfu-pin.test.ts tests/services/voice/sfu-rpc.test.ts tests/services/voice/sfu-control.test.ts tests/services/voice/sfu-client-reliability.test.ts
 ```
 
 The server release gate is `npm audit --omit=dev`, typecheck, full tests, and

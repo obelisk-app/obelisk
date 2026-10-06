@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from 'next';
-import { serverLocale } from '@/lib/server/locale';
+import { serverLocale } from '@/services/server/locale';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import { cookies, headers } from 'next/headers';
 import { LocaleProvider } from '@/i18n/context';
 import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALE_HEADER, LOCALES, isLocale, type Locale } from '@/i18n/index';
-import { HREFLANG, OG_LOCALE } from '@/lib/guide-urls';
-import ToastStack from '@/components/ToastStack';
+import { HREFLANG, OG_LOCALE } from '@/utils/guides/guide-urls';
+import ToastStack from '@/components/feedback/ToastStack';
 import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
-import AppearancePreferencesRoot from '@/components/AppearancePreferencesRoot';
+import AppearancePreferencesRoot from '@/components/settings/AppearancePreferencesRoot';
 // SDK styles first so our globals.css overrides win at equal specificity
 // (e.g. the la-crypta `--nui-overlay-bg` override that lets the login
 // backdrop animation bleed through the modal overlay).
@@ -25,7 +25,7 @@ const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
 /**
  * Root metadata, in the reader's language.
  *
- * It was `export const metadata = {…}` — evaluated once at module load, so
+ * It was `export const metadata = {…}`, evaluated once at module load, so
  * the title, description and both social cards were literal English for
  * everyone. The keyword list stays English on purpose: those are search
  * terms people type, not copy they read.
@@ -69,7 +69,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       // Browser tab + legacy shortcut keep the small detail-rich favicon
-      // (dark circle with green obelisk) — works well at 16/32px.
+      // (dark circle with green obelisk), works well at 16/32px.
       icon: '/obelisk-favicon.png',
       shortcut: '/obelisk-favicon.png',
       // iOS home screen ("Add to Home Screen") uses the same vibrant icon
@@ -157,7 +157,7 @@ export default async function RootLayout({
         url: SITE_URL,
         name: 'Obelisk',
         description:
-          'Discord alternative with Nostr login — no email, no password. Group chat for crypto and privacy communities.',
+          'Discord alternative with Nostr login: no email, no password. Group chat for crypto and privacy communities.',
         inLanguage: HREFLANG[locale],
         publisher: { '@id': `${SITE_URL}/#organization` },
       },
@@ -174,7 +174,7 @@ export default async function RootLayout({
         applicationCategory: 'CommunicationApplication',
         operatingSystem: 'Web',
         description:
-          'Discord alternative powered by Nostr identity. Log in with your keys — no email, no password. Includes servers, channels, voice, encrypted DMs and Web of Trust spam resistance.',
+          'Discord alternative powered by Nostr identity. Log in with your keys: no email, no password. Includes servers, channels, voice, encrypted DMs and Web of Trust spam resistance.',
         url: SITE_URL,
         image: `${SITE_URL}/icon-512.png`,
         author: { '@id': `${SITE_URL}/#organization` },
@@ -211,7 +211,7 @@ export default async function RootLayout({
             landing page, jump straight to /app so the marketing hero
             doesn't flash before the chat shell mounts. Rendered as a
             native <script> in <head> (not next/script) so it runs as the
-            HTML is parsed — earlier than `beforeInteractive` — and
+            HTML is parsed (earlier than `beforeInteractive`) and
             sidesteps React 19's nonce-stripping hydration warning, same
             pattern as the JSON-LD block above. */}
         <script
@@ -232,7 +232,7 @@ export default async function RootLayout({
         </Script>
         {/* Register the minimal service worker so Chrome / Edge / Brave
             offer the "Install app" prompt. The worker itself is
-            pass-through (see /public/sw.js) — registering it is the
+            pass-through (see /public/sw.js); registering it is the
             installability gate, not a behavior change. */}
         <Script id="obelisk-pwa-register" strategy="afterInteractive" nonce={nonce}>
           {`
@@ -251,7 +251,7 @@ export default async function RootLayout({
                 navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).then(function (registration) {
                   registration.update().catch(function () {});
                 }).catch(function () {
-                  /* swallow — installability is a UX bonus, not a hard requirement */
+                  /* swallow: installability is a UX bonus, not a hard requirement */
                 });
               });
             }

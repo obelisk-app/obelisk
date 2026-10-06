@@ -18,8 +18,8 @@ interface Props {
  * viewer has no read access, renders greyed + locked (click suppressed) per
  * the "name visible, content locked" decision from FORUM_PLAN.md.
  *
- * Click navigates via `pushState` + `popstate` to keep the chat page mounted
- * — `src/app/chat/page.tsx` listens for `popstate` and re-applies URL state.
+ * Click navigates via `pushState` + `popstate` to keep the chat page mounted:
+ * `src/app/chat/page.tsx` listens for `popstate` and re-applies URL state.
  */
 export default function ChannelLinkPill({ slug, messageId, postId, href }: Props) {
   const channelName = slug;

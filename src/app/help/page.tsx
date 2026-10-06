@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import Footer from '@/components/Footer';
-import Navbar from '@/components/Navbar';
-import { guidesHref } from '@/lib/guide-urls';
-import { HELP_TOPICS } from '@/lib/help-topics';
+import Footer from '@/components/marketing/Footer';
+import Navbar from '@/components/marketing/Navbar';
+import { guidesHref } from '@/utils/guides/guide-urls';
+import { HELP_TOPICS } from '@/utils/guides/help-topics';
 import { useTranslation } from '@/i18n/context';
 import type { Locale } from '@/i18n';
 

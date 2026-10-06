@@ -1,5 +1,5 @@
 /**
- * Public note viewer — Obelisk's own njump.
+ * Public note viewer - Obelisk's own njump.
  *
  * This is a **server component on purpose**, which is a deliberate exception
  * to the app's client-only architecture. The reason is link previews: a
@@ -9,13 +9,12 @@
  * before the HTML goes out.
  *
  * The interactive rendering still happens on the client (`NoteViewerClient`),
- * which also re-fetches if the server's bounded query came up empty — a slow
+ * which also re-fetches if the server's bounded query came up empty - a slow
  * relay shouldn't turn into a permanent 404.
  */
 
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { parseIdentifier } from '@/lib/social/identifier';
+import { parseIdentifier } from '@/services/social/identifier';
 import {
   displayNameFor,
   fetchAuthorFollows,
@@ -25,8 +24,8 @@ import {
   fetchEventForViewer,
   fetchProfilesForViewer,
   topHashtags,
-} from '@/lib/server/nostr-fetch';
-import { buildNotePreview } from '@/lib/server/note-preview';
+} from '@/services/server/nostr-fetch';
+import { buildNotePreview } from '@/services/server/note-preview';
 import ViewerHeader from '@/components/social/ViewerHeader';
 import NoteViewerClient from './NoteViewerClient';
 import AuthorContext from './AuthorContext';
@@ -51,7 +50,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   const note = await fetchEventForViewer(target);
   if (!note) {
-    // Don't index a page we couldn't resolve — it may resolve later, but a
+    // Don't index a page we couldn't resolve - it may resolve later, but a
     // crawler shouldn't cache the empty version as canonical.
     return { title: 'Note not found', robots: { index: false } };
   }
@@ -84,7 +83,7 @@ export default async function NoteViewerPage({ params }: Params) {
   const target = parseIdentifier(id);
   const note = target ? await fetchEventForViewer(target) : null;
 
-  // Author context, in parallel — a bare note is a fragment, and four
+  // Author context, in parallel - a bare note is a fragment, and four
   // sequential relay round-trips would be slower than the note itself.
   const [author, authorNotes, followPubkeys, relays] = note
     ? await Promise.all([
@@ -106,7 +105,7 @@ export default async function NoteViewerPage({ params }: Params) {
 
       {/*
         The server-rendered fallback is what a crawler and a no-JS reader see.
-        Plain on purpose — its job is to carry the text, not to look like the
+        Plain on purpose - its job is to carry the text, not to look like the
         app.
       */}
       <noscript>
@@ -140,8 +139,8 @@ export default async function NoteViewerPage({ params }: Params) {
             */}
             {/*
               `min-w-0` plus `overflow-x-hidden`: making this a scroll
-              container means anything wider than the rail — an npub, a relay
-              host, a long display name — spills out to the right instead of
+              container means anything wider than the rail - an npub, a relay
+              host, a long display name - spills out to the right instead of
               being clipped, and the vertical scrollbar eats width the layout
               hasn't accounted for. `scrollbar-gutter: stable` reserves that
               width up front so the content doesn't shift when it appears,

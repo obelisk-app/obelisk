@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { LinkPreview as Preview } from '@/lib/link-preview';
+import { useState } from 'react';
+import RemoteImage from '@/components/ui/RemoteImage';
+import { previewHost, useLinkPreview } from './hooks/useLinkPreview';
 
 /**
  * Unfurled card for a plain link in a message.
@@ -14,36 +15,23 @@ import type { LinkPreview as Preview } from '@/lib/link-preview';
  * The text shown here comes from a third party, so it is rendered as text.
  * Nothing from the remote page is interpreted as markup.
  */
-export default function LinkPreview({ url }: { url: string }) {
-  const [preview, setPreview] = useState<Preview | null>(null);
+export default function LinkPreview({ url, showImage = true }: {
+  url: string;
+  /**
+   * Whether to render the page's `og:image`. The unfurl itself goes through
+   * our own `/api/link-preview`, so the reader's IP never reaches the linked
+   * page; the image URL that comes back, however, points at whatever host
+   * the page named, and loading it undoes that protection. Callers pass the
+   * remote-media gate's verdict (`src/services/remote-media.ts`).
+   */
+  showImage?: boolean;
+}) {
+  const preview = useLinkPreview(url);
   const [imageBroken, setImageBroken] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
-
-    fetch(`/api/link-preview?url=${encodeURIComponent(url)}`, { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: Preview | null) => {
-        if (!cancelled && data && !('error' in data)) setPreview(data);
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [url]);
 
   if (!preview) return null;
 
-  const host = (() => {
-    try {
-      return new URL(preview.url).hostname.replace(/^www\./, '');
-    } catch {
-      return preview.siteName ?? '';
-    }
-  })();
+  const host = previewHost(preview);
 
   return (
     <a
@@ -53,14 +41,10 @@ export default function LinkPreview({ url }: { url: string }) {
       className="obelisk-link-preview"
       data-kind={preview.kind}
     >
-      {preview.image && !imageBroken && (
-        // eslint-disable-next-line @next/next/no-img-element -- arbitrary remote
-        // host; next/image would need every domain allowlisted up front.
-        <img
+      {showImage && preview.image && !imageBroken && (
+        <RemoteImage
           src={preview.image}
           alt=""
-          loading="lazy"
-          referrerPolicy="no-referrer"
           className="obelisk-link-preview-image"
           onError={() => setImageBroken(true)}
         />

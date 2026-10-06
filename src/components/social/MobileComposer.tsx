@@ -3,7 +3,7 @@
 /**
  * The mobile composer: a full-screen sheet.
  *
- * Why not the desktop card in a modal — which is what it used to be: on a
+ * Why not the desktop card in a modal, which is what it used to be: on a
  * phone the software keyboard takes roughly half the viewport, so a centred
  * card with a toolbar, a textarea, a live preview and a button row leaves a
  * writing slot a couple of lines tall, and every control is a 24px text
@@ -18,16 +18,22 @@
  * Back closes it (`useHistoryDismiss`), so the OS swipe-back gesture does
  * what it does everywhere else on a phone rather than leaving the app.
  *
- * Publishing is `useNoteDraft`, shared with the desktop composer — the two
+ * Publishing is `useNoteDraft`, shared with the desktop composer: the two
  * differ in presentation only.
  */
 
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useMyPubkey, useUserMetadata } from '@/lib/nostr-bridge';
+import { useMyPubkey, useUserMetadata } from '@/services/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
 import { useHistoryDismiss } from '@/app/app/useHistoryDismiss';
-import UserAvatar from '@/components/UserAvatar';
+import Button from '@/components/ui/Button';
+import RemoteImage from '@/components/ui/RemoteImage';
+import UserAvatar from '@/components/ui/UserAvatar';
 import { useNoteDraft, type ComposerMode } from './useNoteDraft';
+import Spinner from '@/components/ui/Spinner';
+import ErrorState from '@/components/ui/ErrorState';
+import FileInput from '@/components/ui/FileInput';
+import IconButton from '@/components/ui/IconButton';
 
 /** Twitter-ish soft limit: past this, a note is an article. */
 const SOFT_LIMIT = 1000;
@@ -69,14 +75,14 @@ export default function MobileComposer({
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-lc-border px-3">
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={dismiss}
-          className="rounded-full px-2 py-1 text-sm text-lc-muted"
           data-testid="mobile-composer-cancel"
         >
           {t('common.cancel')}
-        </button>
+        </Button>
         <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold text-lc-white">
           {title}
         </span>
@@ -85,15 +91,16 @@ export default function MobileComposer({
           bottom of a phone, and a submit button that the keyboard covers is
           a button that doesn't exist.
         */}
-        <button
-          type="button"
+        <Button
+          variant="pill"
+          size="xs"
           onClick={() => void submit()}
           disabled={!canPost}
-          className="lc-pill-primary shrink-0 px-5 py-2 text-xs disabled:opacity-40"
+          className="shrink-0"
           data-testid="mobile-composer-post"
         >
           {busy ? t('common.saving') : t('profileFeed.publish')}
-        </button>
+        </Button>
       </header>
 
       {parent && (
@@ -108,7 +115,7 @@ export default function MobileComposer({
             pubkey={myPubkey}
             picture={meta?.picture ?? null}
             size={9}
-            name={meta?.displayName || meta?.name || myPubkey.slice(0, 8)}
+            name={meta?.displayName || meta?.name || undefined}
             alt=""
             className="shrink-0"
           />
@@ -132,8 +139,7 @@ export default function MobileComposer({
           {attachments.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2" data-testid="mobile-composer-attachments">
               {attachments.map((attachment) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <RemoteImage
                   key={attachment.url}
                   src={attachment.url}
                   alt=""
@@ -143,14 +149,14 @@ export default function MobileComposer({
             </div>
           )}
 
-          {error && <p className="mt-2 text-xs text-red-400" role="alert">{error}</p>}
+          {error && <ErrorState className="mt-2">{error}</ErrorState>}
         </div>
       </div>
 
       {/*
         The tool row is pinned above the keyboard rather than living in the
         scroll area, because the one moment you want the image button is
-        while you're typing — which is exactly when a scrolled toolbar is
+        while you're typing, which is exactly when a scrolled toolbar is
         off-screen.
       */}
       <div
@@ -169,12 +175,11 @@ export default function MobileComposer({
             <path d="m21 15-5-5L5 21" />
           </svg>
         </ToolButton>
-        <input
+        <FileInput
           ref={fileRef}
-          type="file"
           accept="image/*,video/*,audio/*"
           multiple
-          className="hidden"
+          aria-label={t('profileFeed.upload')}
           onChange={(event) => void uploadFiles(event.target.files)}
           data-testid="composer-files"
         />
@@ -200,7 +205,7 @@ export default function MobileComposer({
           </svg>
         </ToolButton>
 
-        {busy && <span className="lc-spinner ml-1 h-4 w-4" aria-hidden="true" />}
+        {busy && <Spinner size="sm" className="ml-1" />}
 
         <span
           className={`ml-auto pr-2 text-[11px] tabular-nums ${
@@ -231,20 +236,18 @@ function ToolButton({
   testId: string;
 }) {
   return (
-    <button
-      type="button"
+    <IconButton
+      // 40px square: the smallest thing a thumb hits reliably.
+      size="10"
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
       aria-pressed={pressed}
       title={label}
-      // 40px square: the smallest thing a thumb hits reliably.
-      className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors active:bg-white/10 disabled:opacity-40 ${
-        pressed ? 'text-lc-green' : 'text-lc-muted'
-      }`}
+      className="active:bg-white/10"
       data-testid={testId}
     >
       {children}
-    </button>
+    </IconButton>
   );
 }

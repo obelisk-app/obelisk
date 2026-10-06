@@ -20,12 +20,12 @@ Report privately to **security@obelisk.ar**.
 **Out of scope**
 
 - Relays, signers, wallets, and media servers operated by other people
-- Vulnerabilities in Nostr itself — report those to the NIPs repository
+- Vulnerabilities in Nostr itself: report those to the NIPs repository
 - Findings that require a user to paste their own `nsec` into a hostile page
 
 ## Please do not test against the live public relay
 
-`wss://public.obelisk.ar` is used by real people. Run a local relay instead — see the relay repo for
+`wss://public.obelisk.ar` is used by real people. Run a local relay instead. See the relay repo for
 a working `compose.yml`.
 
 ## What to include
@@ -39,7 +39,7 @@ a working `compose.yml`.
 ## Response times
 
 - **Acknowledgement within 48 hours.**
-- **Fix within 90 days** for high and critical severity — faster where key material or DM
+- **Fix within 90 days** for high and critical severity, faster where key material or DM
   confidentiality is at risk.
 
 I will credit you in the advisory unless you'd rather I didn't. There is no bug bounty; this is an

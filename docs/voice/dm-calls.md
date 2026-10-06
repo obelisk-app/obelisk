@@ -1,4 +1,4 @@
-# DM calls — 1:1 voice and video, end to end encrypted
+# DM calls - 1:1 voice and video, end to end encrypted
 
 A person you DM can be called from the thread header (phone / camera
 buttons). If their Obelisk tab is open and DMs are on, it rings with their
@@ -14,12 +14,12 @@ Nothing here needs a server. The only infrastructure a call touches is:
 
 | Path | What |
 |---|---|
-| `src/lib/dm-call/protocol.ts` | Control messages (invite / accept / decline / cancel / hangup / busy), parsing, freshness |
-| `src/lib/dm-call/signaling.ts` | `CallSignalChannel`: kind 25050 on throwaway keys, NIP-44 content, its own `SimplePool` |
-| `src/lib/dm-call/session.ts` | `DmCallSession`: local media, one mesh `Peer`, rebuild / reconnect |
+| `src/services/dm-call/protocol.ts` | Control messages (invite / accept / decline / cancel / hangup / busy), parsing, freshness |
+| `src/services/dm-call/signaling.ts` | `CallSignalChannel`: kind 25050 on throwaway keys, NIP-44 content, its own `SimplePool` |
+| `src/services/dm-call/session.ts` | `DmCallSession`: local media, one mesh `Peer`, rebuild / reconnect |
 | `src/store/dm-call.ts` | The state machine, "who can ring me", IP policy, ringing |
-| `src/lib/nostr-bridge/client.ts` | `sendDmCallMessage`, `subscribeDmCallMessages`, `sealAndWrapExpiring` |
-| `src/lib/notifications/sound.ts`, `alert.ts` | `ring` / `ringback` phrases per ringtone; `ringIncomingCall`, `startRingback` |
+| `src/services/nostr-bridge/client.ts` | `sendDmCallMessage`, `subscribeDmCallMessages`, `sealAndWrapExpiring` |
+| `src/services/notifications/sound.ts`, `alert.ts` | `ring` / `ringback` phrases per ringtone; `ringIncomingCall`, `startRingback` |
 | `src/components/call/` | `DmCallButtons`, `DmCallLayer` (banner + call view + remote audio) |
 | `src/components/settings/CallSettings.tsx` | Who can call, IP protection, call relays |
 
@@ -69,27 +69,27 @@ between the two throwaway keys:
 instant and stores nothing. The first version sent the offer the moment the
 accept arrived, and the answer the moment the offer did. Whenever the other
 side's REQ wasn't live yet, or a relay dropped an event under rate limiting,
-the message was gone and the call sat out a 12 s connect timeout — the
+the message was gone and the call sat out a 12 s connect timeout: the
 "sometimes instant, sometimes never" behaviour. `CallSignalChannel` now:
 
 - **numbers every message** (`i`), **acks** what it received (`a`), and
   **re-sends** anything unacked every ~1.2 s (jittered ±25 %, so the two
   sides never re-send in lockstep), up to 10 times; each number is delivered
   once;
-- **batches** — an offer and its trickle of ICE candidates, plus acks, ride
+- **batches**: an offer and its trickle of ICE candidates, plus acks, ride
   in one event (40 ms window, capped well under NIP-44's 64 KiB);
 - exposes **`ready`**, resolved on EOSE: the REQ is live from then on;
 - lets a side **drop the re-sends of a torn-down negotiation**
   (`dropSession`), and the receiver ignores any message numbered before the
-  newest offer that belongs to another session — so a late re-send can never
+  newest offer that belongs to another session, so a late re-send can never
   drag a rebuilt connection back.
 
 `CallSignalChannel` uses its **own** `SimplePool` (with reconnect, so a
 socket that drops mid-call re-issues the REQ and a later renegotiation still
 gets through). The bridge's pool answers NIP-42 AUTH with the user's real
 key; this one answers only with the throwaway key. So the call relay sees
-two random keys trading opaque blobs — not who is calling whom, not the call
-id, not the SDP (and so not the IP addresses in it) — and a relay that
+two random keys trading opaque blobs (not who is calling whom, not the call
+id, not the SDP, and so not the IP addresses in it), and a relay that
 whitelists real npubs (the group relays, `public.obelisk.ar`) cannot carry a
 call. That is why call relays are a separate list, `preferences.callRelays`
 (default `relay.damus.io`, `nos.lol`; Settings → Privacy → Calls). The
@@ -118,10 +118,10 @@ The caller offers only once it has heard the callee's hello (or the accept)
 matters is sent. The hello usually beats the gift-wrapped accept, which
 needs a signer round trip and an inbox relay.
 
-Recovery reuses the mesh semantics — the caller is the impolite side; on an
+Recovery reuses the mesh semantics (the caller is the impolite side; on an
 open timeout or lost heartbeat it rebuilds with a fresh `sessionId` and
 `requestReset`, and the callee follows the new offer
-(`onRemoteSessionChanged`) — but with reliable delivery a rebuild is now the
+(`onRemoteSessionChanged`)), but with reliable delivery a rebuild is now the
 exception rather than the normal cost of a lost event. A call that hasn't
 connected 40 s after the rendezvous ends `connect-failed`; one that connected
 and stays down 30 s ends `connection-lost`.
@@ -159,10 +159,10 @@ and stays down 30 s ends `connection-lost`.
 
 ## Tests
 
-- `src/lib/dm-call/protocol.test.ts`: parse, validation, freshness.
-- `src/lib/dm-call/signaling.test.ts` — learning the peer from its hello, delivery to a REQ that went live late, re-send until acked / exactly-once, batching, give-up, stale-session purge, strangers ignored, size cap.
-- `src/lib/dm-call/session.test.ts` — two real sessions over `fake-ephemeral-relay.ts` (a relay that keeps nothing and forwards only to live REQs): connect via hello alone, via the accept alone, and without a rebuild under slow REQs and 30–50 % seeded random loss; bye, give-up, reconnect timeout, caller rebuild followed by the callee, hangup.
+- `tests/services/dm-call/protocol.test.ts`: parse, validation, freshness.
+- `tests/services/dm-call/signaling.test.ts`: learning the peer from its hello, delivery to a REQ that went live late, re-send until acked / exactly-once, batching, give-up, stale-session purge, strangers ignored, size cap.
+- `tests/services/dm-call/session.test.ts`: two real sessions over `fake-ephemeral-relay.ts` (a relay that keeps nothing and forwards only to live REQs): connect via hello alone, via the accept alone, and without a rebuild under slow REQs and 30–50 % seeded random loss; bye, give-up, reconnect timeout, caller rebuild followed by the callee, hangup.
 - `src/store/dm-call.test.ts`: the state machine, contacts-only, busy, answered elsewhere, IP policy.
-- `src/lib/nostr-bridge/dm-nip17.test.ts` (`DM call control messages`): expiring wrap, listener delivery, stale drop, self notice.
-- `src/lib/notifications/sound.test.ts`: the ring loop.
+- `tests/services/nostr-bridge/dm-nip17.test.ts` (`DM call control messages`): expiring wrap, listener delivery, stale drop, self notice.
+- `tests/services/notifications/sound.test.ts`: the ring loop.
 - `src/components/call/DmCallLayer.test.tsx`, `src/components/settings/CallSettings.test.tsx`.

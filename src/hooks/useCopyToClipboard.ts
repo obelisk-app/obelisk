@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 interface CopyOptions {
   /** How long the `copied` / `error` flag stays set before auto-clearing. */
   resetMs?: number;
-  /** Runs after the flag clears — useful for "flash feedback, then close menu". */
+  /** Runs after the flag clears - useful for "flash feedback, then close menu". */
   onReset?: () => void;
 }
 

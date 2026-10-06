@@ -3,7 +3,7 @@
 /**
  * The hint itself: a small card pinned to the control it explains.
  *
- * Positioning is the same solved problem as `AnchoredMenu` — portal to
+ * Positioning is the same solved problem as `AnchoredMenu`: portal to
  * `document.body`, `position: fixed` measured from the anchor's rect,
  * prefer below and flip above when there's no room, clamp to the viewport,
  * stay invisible until measured so it never flashes in the wrong place.
@@ -18,7 +18,7 @@
  *    scroll. A hint pinned to a control the reader is scrolling toward has
  *    to follow it instead.
  *  - **Clicking elsewhere does not dismiss.** Ignoring a hint must not count
- *    as reading it — it should still be there next time. The exceptions are
+ *    as reading it; it should still be there next time. The exceptions are
  *    "Got it", Escape, and using the control itself, which are all
  *    deliberate acts.
  *
@@ -29,6 +29,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '@/i18n/context';
+import Button from '@/components/ui/Button';
+import Text from '@/components/ui/Text';
+import { useDismiss } from '@/hooks/useDismiss';
 
 /** Keeps the card off the viewport edges. */
 const MARGIN = 8;
@@ -83,13 +86,8 @@ export default function HintCallout({
     };
   }, [place]);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onDismiss();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onDismiss]);
+  // Escape only: a press outside lands on the scrim, which has its own handler.
+  useDismiss({ onDismiss, outside: 'none' });
 
   if (typeof document === 'undefined') return null;
 
@@ -98,7 +96,7 @@ export default function HintCallout({
       {/*
         A scrim, because the card is an overlay and used to read as broken
         layout. Anchored under the header it lands squarely on the heading
-        below — the first tip sat on "Find people to follow" and clipped the
+        below: the first tip sat on "Find people to follow" and clipped the
         pack title under it, so the page looked mis-rendered rather than
         annotated. Dimming what is behind says "this is on top of the page",
         and gives the click-outside dismissal the card otherwise lacked.
@@ -123,28 +121,23 @@ export default function HintCallout({
         data-testid="hint-callout"
         data-placement={pos?.below ? 'below' : 'above'}
       >
-        <p className="text-sm font-semibold text-lc-white">{title}</p>
-        <p className="mt-1 text-[13px] leading-relaxed text-lc-muted">{body}</p>
+        <Text as="p" size="sm" weight="semibold" tone="default">{title}</Text>
+        <Text as="p" size="13" tone="muted" className="mt-1 leading-relaxed">{body}</Text>
         <div className="mt-3 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={onMuteAll}
-            className="rounded-full px-2 py-1 text-[11px] text-lc-muted transition-colors hover:text-lc-white"
-            data-testid="hint-mute"
-          >
+          <Button variant="ghost" size="xs" onClick={onMuteAll} data-testid="hint-mute">
             {t('hints.dismissAll')}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="pill"
+            size="xs"
             onClick={onDismiss}
             // Focused on mount: Enter closes the thing that just appeared,
             // which is what a keyboard user will try first.
             autoFocus
-            className="lc-pill-primary px-4 py-1.5 text-xs"
             data-testid="hint-dismiss"
           >
             {t('hints.gotIt')}
-          </button>
+          </Button>
         </div>
       </div>
     </>,

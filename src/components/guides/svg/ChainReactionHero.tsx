@@ -1,6 +1,6 @@
 /**
  * Chain Reaction: one orb too many, and the cell hands its neighbours the
- * problem. The hero draws the moment of the split — a critical cell mid-burst
+ * problem. The hero draws the moment of the split - a critical cell mid-burst
  * with four orbs leaving it, over a board that has already changed colour.
  */
 const SEATS = ['#ff4d5e', '#b4f953', '#38bdf8'];

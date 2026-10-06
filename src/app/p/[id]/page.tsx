@@ -1,13 +1,13 @@
 /**
- * Public profile viewer — `/p/<npub|nprofile|hex>`.
+ * Public profile viewer - `/p/<npub|nprofile|hex>`.
  *
  * The profile half of Obelisk's njump. Server-rendered for the same reason
  * as the note viewer: a shared npub should produce a preview card with the
  * person's name, picture and bio, not a blank shell.
  *
  * The body is the app's own profile component, not a second implementation.
- * This page used to be a static kind-0 card — no notes, no tabs, no
- * pagination — so the profile page was the one place you couldn't read
+ * This page used to be a static kind-0 card - no notes, no tabs, no
+ * pagination - so the profile page was the one place you couldn't read
  * anything the person had written. Everything below the fold (who they
  * follow, what they tag, where they publish) is the same server-rendered
  * context the note viewer builds.
@@ -15,8 +15,8 @@
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { serverLocale } from '@/lib/server/locale';
-import { parseIdentifier } from '@/lib/social/identifier';
+import { serverLocale } from '@/services/server/locale';
+import { parseIdentifier } from '@/services/social/identifier';
 import {
   displayNameFor,
   fetchAuthorForViewer,
@@ -26,7 +26,7 @@ import {
   fetchProfilesForViewer,
   topHashtags,
   type ViewerProfile,
-} from '@/lib/server/nostr-fetch';
+} from '@/services/server/nostr-fetch';
 import ViewerHeader from '@/components/social/ViewerHeader';
 import AuthorContext from '@/app/notes/[id]/AuthorContext';
 import ProfileViewerClient from './ProfileViewerClient';
@@ -36,7 +36,7 @@ export const revalidate = 300;
 
 type Params = { params: Promise<{ id: string }> };
 
-/** kind-0 metadata only — the feed itself needs a signed-in client. */
+/** kind-0 metadata only - the feed itself needs a signed-in client. */
 async function resolve(id: string): Promise<ViewerProfile | null> {
   const target = parseIdentifier(id);
   if (!target || target.kind !== 'profile') return null;

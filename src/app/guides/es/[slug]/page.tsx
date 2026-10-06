@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import GuideArticlePage, {
   buildGuideArticleMetadata,
 } from '@/components/guides/GuideArticlePage';
-import { listSlugs } from '@/lib/guides';
+import { listSlugs } from '@/services/guides';
 
 export async function generateStaticParams() {
   const slugs = await listSlugs('es');

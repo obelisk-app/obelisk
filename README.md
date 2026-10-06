@@ -7,7 +7,7 @@
 
 <p align="center">
   <b>The Discord alternative with Nostr login.</b><br/>
-  Group chat, voice, and DMs — no email, no password, no backend. Just your keys.
+  Group chat, voice, and DMs. No email, no password, no backend. Just your keys.
 </p>
 
 <p align="center">
@@ -27,13 +27,13 @@
 
 ## What it is
 
-A static Next.js app that talks **directly to Nostr relays**. Channels, members, admins, messages, DMs, voice, zaps — all reconstructed from NIP-29 / NIP-04 / NIP-17 events. There is no Postgres, no API server, no Socket.io — just the browser, a relay, and your keys.
+A static Next.js app that talks **directly to Nostr relays**. Channels, members, admins, messages, DMs, voice, zaps, all reconstructed from NIP-29 / NIP-04 / NIP-17 events. There is no Postgres, no API server, no Socket.io: just the browser, a relay, and your keys.
 
 ## Why
 
 - 🔑 **No personal data.** Identity is a Nostr keypair. No email, phone, name, or device fingerprint.
 - 🛰️ **No backend to trust.** Group state lives on relays you choose. Anyone can run one.
-- 🌐 **Trivially self-hostable.** Static export — deploys to any CDN.
+- 🌐 **Trivially self-hostable.** Static export: deploys to any CDN.
 
 ## Demo
 https://github.com/user-attachments/assets/4b6e31a9-a30d-43b3-b18a-dd21c1cf9c15
@@ -45,27 +45,27 @@ Full guided tours: [obelisk.ar/desktop](https://obelisk.ar/desktop) · [obelisk.
 ### Desktop
 
 <p align="center">
-  <img src="public/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png" alt="Obelisk desktop — public General Chat with server rail, channel list, message stream and live NIP-29 member list" width="90%" />
+  <img src="public/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png" alt="Obelisk desktop: public General Chat with server rail, channel list, message stream and live NIP-29 member list" width="90%" />
 </p>
 
-<p align="center"><sub>Public General Chat — server rail, channel list, message stream with reactions, and the live NIP-29 member list. Every message is a signed Nostr event.</sub></p>
+<p align="center"><sub>Public General Chat: server rail, channel list, message stream with reactions, and the live NIP-29 member list. Every message is a signed Nostr event.</sub></p>
 
 <p align="center">
-  <img src="public/pictures-for-posts/desktop-forums-view.png" alt="Obelisk desktop — publications view of plaza-publica with OP, message count and last reply time" width="90%" />
+  <img src="public/pictures-for-posts/desktop-forums-view.png" alt="Obelisk desktop: publications view of plaza-publica with OP, message count and last reply time" width="90%" />
 </p>
 
-<p align="center"><sub>Publication-kind channels become a tidy feed — a list of posts, OP and last-reply metadata, each with its own chat, same NIP-29 moderation as every other channel.</sub></p>
+<p align="center"><sub>Publication-kind channels become a tidy feed: a list of posts, OP and last-reply metadata, each with its own chat, same NIP-29 moderation as every other channel.</sub></p>
 
 <p align="center">
-  <img src="public/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png" alt="Obelisk desktop — voice channel in SFU mode with a test peer streaming an SMPTE color-bar pattern" width="90%" />
+  <img src="public/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png" alt="Obelisk desktop: voice channel in SFU mode with a test peer streaming an SMPTE color-bar pattern" width="90%" />
 </p>
 
-<p align="center"><sub>Voice scales from a P2P mesh to a mediasoup SFU when the relay advertises one. Same UI, same kind-25050 signaling on Nostr — just more peers and screen-share.</sub></p>
+<p align="center"><sub>Voice scales from a P2P mesh to a mediasoup SFU when the relay advertises one. Same UI, same kind-25050 signaling on Nostr, just more peers and screen-share.</sub></p>
 
 ### Mobile
 
 <p align="center">
-  <img src="public/pictures-for-posts/mobile-showcase-readme.png" alt="Obelisk mobile — server and channel list, voice channel with SFU test peer, three-way Nostr login modal, and own kind-0 profile view, each rendered as a phone-framed screen" width="95%" />
+  <img src="public/pictures-for-posts/mobile-showcase-readme.png" alt="Obelisk mobile: server and channel list, voice channel with SFU test peer, three-way Nostr login modal, and own kind-0 profile view, each rendered as a phone-framed screen" width="95%" />
 </p>
 
 <p align="center"><sub>The three-way Nostr login (NIP-46 / generate / import) · your portable kind-0 Nostr profile · mobile-first server list · voice with SFU.</sub></p>
@@ -74,7 +74,7 @@ Full guided tours: [obelisk.ar/desktop](https://obelisk.ar/desktop) · [obelisk.
 
 | | |
 |---|---|
-| **Live** | [obelisk.ar](https://obelisk.ar) — the client, pointed at a public relay I operate |
+| **Live** | [obelisk.ar](https://obelisk.ar): the client, pointed at a public relay I operate |
 | **La Crypta** | A community of 20+ migrated from Discord |
 | **Self-host** | `git clone` + `npm run build` + serve. Bring your own relay. |
 
@@ -99,27 +99,27 @@ For HTTPS dev (needed for NIP-07 / mobile testing): `npm run dev:raise` (require
   <img src="public/og/guides/relay-groups.png" alt="NIP-29 relay-based group: the relay holds the membership list (kind 39002), admin list (kind 39001), and message events (kind 9), and the client subscribes by group id. No central Obelisk server needed." width="85%" />
 </p>
 
-<p align="center"><sub>The relay hosts the group. Members, admins, and messages are signed Nostr events — the client just subscribes.</sub></p>
+<p align="center"><sub>The relay hosts the group. Members, admins, and messages are signed Nostr events; the client just subscribes.</sub></p>
 
 - **Frontend:** Next.js 16 + Tailwind v4, purely client-rendered. No `/api/*` routes.
-- **Bridge** (`src/lib/nostr-bridge/`): the canonical pool, identity, subscriptions, and React hooks. Read this first if you're contributing.
+- **Bridge** (`src/services/nostr-bridge/`): the canonical pool, identity, subscriptions, and React hooks. Read this first if you're contributing.
 - **Voice:** P2P mesh by default; switches to mediasoup SFU automatically when one is advertised on the channel ([obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)).
 - **Cache:** localStorage stale-while-revalidate for instant first paint on reload.
-- **Identity:** comes from the bridge — `useIsLoggedIn`, `useMyPubkey`, `useSignerReady`. **Don't introduce a backend session.**
+- **Identity:** comes from the bridge: `useIsLoggedIn`, `useMyPubkey`, `useSignerReady`. **Don't introduce a backend session.**
 
-See [CLAUDE.md](CLAUDE.md) for the full architecture and conventions.
+See [AGENTS.md](AGENTS.md) for the full architecture and conventions.
 
 ## The Obelisk family
 
 <p align="center">
-  <img src="public/og/guides/swap-anything.png" alt="The Obelisk ecosystem: one self-hostable Nostr relay connected to a chat client, a voice SFU, and a bot runtime — every component independently replaceable, nothing locked together." width="85%" />
+  <img src="public/og/guides/swap-anything.png" alt="The Obelisk ecosystem: one self-hostable Nostr relay connected to a chat client, a voice SFU, and a bot runtime. Every component independently replaceable, nothing locked together." width="85%" />
 </p>
 
-<p align="center"><sub>Four small projects, one open protocol. Swap any of them out — the rest keep working.</sub></p>
+<p align="center"><sub>Four small projects, one open protocol. Swap any of them out; the rest keep working.</sub></p>
 
 | Repo | What |
 |------|------|
-| [**obelisk-app/obelisk**](https://github.com/obelisk-app/obelisk) | This repo — the chat app (relay-only) |
+| [**obelisk-app/obelisk**](https://github.com/obelisk-app/obelisk) | This repo: the chat app (relay-only) |
 | [obelisk-app/obelisk-relay](https://github.com/obelisk-app/obelisk-relay) | NIP-29 groups relay (Rust, fork of `verse-pbc/groups_relay`) |
 | [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) | mediasoup SFU for voice channels (Node, Nostr-RPC signaling) |
 | [obelisk-app/obelisk-bots](https://github.com/obelisk-app/obelisk-bots) | Nostr bots toolkit (price ticker, admin/welcome bots, agent-friendly CLI) |
@@ -131,7 +131,7 @@ Three methods, all client-side:
 
 | Method | How |
 |---|---|
-| NIP-07 extension | Click "Connect" — auto-detected (button hides if no extension) |
+| NIP-07 extension | Click "Connect"; auto-detected (button hides if no extension) |
 | nsec | Paste `nsec1...` |
 | NIP-46 bunker | Paste a `bunker://` URL or scan a Nostr Connect QR |
 
@@ -166,10 +166,10 @@ Issues and PRs welcome.
 
 1. `npm run test` must pass.
 2. Follow the La Crypta design system (`lc-*` CSS classes, `lc-green` accent).
-3. Identity comes from the bridge — don't introduce a new auth store or backend session.
+3. Identity comes from the bridge; don't introduce a new auth store or backend session.
 4. New relay-derived data goes through the bridge (StateStore + ingest method + subscribeXxx + useXxx hook).
 
-See [CLAUDE.md](CLAUDE.md) for the full guide.
+See [AGENTS.md](AGENTS.md) for the full guide.
 
 ## Legal
 
@@ -181,8 +181,8 @@ This repository is software, not a service. Nostr relays are independent servers
 operators. I operate `public.obelisk.ar` and `lacrypta-relay.obelisk.ar`; I do not operate or
 control any other relay, and I cannot moderate, delete, or disclose anything on one.
 
-- **Abuse, illegal content, takedowns:** [ABUSE.md](ABUSE.md) — abuse@obelisk.ar
-- **Security vulnerabilities:** [SECURITY.md](SECURITY.md) — security@obelisk.ar
+- **Abuse, illegal content, takedowns:** [ABUSE.md](ABUSE.md), abuse@obelisk.ar
+- **Security vulnerabilities:** [SECURITY.md](SECURITY.md), security@obelisk.ar
 
 Obelisk is an individual open-source project. There is no company behind it.
 

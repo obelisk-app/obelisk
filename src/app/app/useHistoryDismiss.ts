@@ -4,24 +4,24 @@
  * Make an overlay dismissable with the browser/OS back gesture.
  *
  * Desktop panes and modals are invisible to history by default, so back goes
- * somewhere else entirely — on a phone that means a swipe-back leaves the app
+ * somewhere else entirely - on a phone that means a swipe-back leaves the app
  * instead of closing the thing you just opened, which reads as the app losing
  * your place.
  *
  * Pushing one entry when the overlay opens makes back close it. Closing from
  * the UI calls `history.back()` so the entry is consumed rather than left
- * behind — otherwise back would appear to do nothing once for each overlay
+ * behind - otherwise back would appear to do nothing once for each overlay
  * the user had already dismissed.
  *
  * Overlays that stack pass a DEPTH rather than a boolean. The reader is one:
  * opening a note from inside a thread is a new level, and back should return
- * to the thread you came from rather than dumping you back in the feed —
+ * to the thread you came from rather than dumping you back in the feed -
  * which is what a single entry for the whole pane did, because every level
  * after the first was invisible to history. One entry per level keeps the
  * back gesture, the swipe and the header button all saying the same thing.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 
 const MARKER = 'obelisk:overlay';
 
@@ -36,8 +36,13 @@ export function useHistoryDismiss(
   // How many entries *this* overlay owns, so we only ever consume ones we
   // pushed. Popping someone else's would navigate the app.
   const pushed = useRef(0);
+  // Latest `onClose`, so the popstate listener below never needs re-binding.
+  // Written in a layout effect, not in the render body: a render can be
+  // discarded, and `popstate` can only fire against a committed tree.
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

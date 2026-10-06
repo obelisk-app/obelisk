@@ -1,9 +1,0 @@
-node_modules
-.next
-dev.db
-.env
-.env.production
-.git
-.gitignore
-*.md
-!DEPLOY.md

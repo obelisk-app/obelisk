@@ -1,11 +1,12 @@
 'use client';
 
-import { useInterests } from '@/lib/social/useInterests';
+import { useInterests } from '@/services/social/useInterests';
 import { useTranslation } from '@/i18n/context';
 import WidgetCard, { WidgetEmpty } from './WidgetCard';
+import Button from '@/components/ui/Button';
 
 /**
- * The hashtags this account follows — NIP-51 kind 10015.
+ * The hashtags this account follows: NIP-51 kind 10015.
  *
  * Reads the same list Amethyst and Primal write, so it is not a local
  * bookmark bar: a tag followed on a phone in another client shows up here.
@@ -25,15 +26,15 @@ export default function FollowedTagsWidget({ onOpenTag }: { onOpenTag?: (tag: st
       ) : (
         <div className="flex flex-wrap gap-1.5 p-1">
           {(tags ?? []).map((tag) => (
-            <button
+            <Button
+              variant="outlinePill"
+              size="xs"
               key={tag}
-              type="button"
               onClick={() => onOpenTag?.(tag)}
-              className="rounded-full border border-lc-border px-2.5 py-1 text-xs font-medium text-lc-white transition-colors hover:border-lc-green/50 hover:text-lc-green"
               data-testid="followed-tag"
             >
               #{tag}
-            </button>
+            </Button>
           ))}
         </div>
       )}

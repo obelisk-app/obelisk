@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { quotaSafeLocalStorage } from '@/lib/quota-safe-storage';
+import { quotaSafeLocalStorage } from '@/services/quota-safe-storage';
 import { createEnsureForAccount } from './multi-account';
+import { stringArray, versionedPersist } from './persist-version';
 
 interface ModerationState {
   mutedPubkeys: string[];
@@ -10,6 +11,15 @@ interface ModerationState {
   isBlocked: (pubkey: string) => boolean;
   toggleMute: (pubkey: string) => boolean;
   toggleBlock: (pubkey: string) => boolean;
+}
+
+type ModerationPersisted = Pick<ModerationState, 'mutedPubkeys' | 'blockedPubkeys'>;
+
+/** Saved-shape version. 0: before versioning, same fields. */
+export const MODERATION_STORE_VERSION = 1;
+
+export function sanitizeModerationPersisted(raw: Record<string, unknown>): ModerationPersisted {
+  return { mutedPubkeys: stringArray(raw.mutedPubkeys), blockedPubkeys: stringArray(raw.blockedPubkeys) };
 }
 
 export const useModerationStore = create<ModerationState>()(
@@ -35,12 +45,17 @@ export const useModerationStore = create<ModerationState>()(
     {
       name: 'obelisk:moderation',
       storage: createJSONStorage(() => quotaSafeLocalStorage),
+      partialize: (s): ModerationPersisted => ({ mutedPubkeys: s.mutedPubkeys, blockedPubkeys: s.blockedPubkeys }),
+      ...versionedPersist<ModerationState, ModerationPersisted>({
+        version: MODERATION_STORE_VERSION,
+        sanitize: sanitizeModerationPersisted,
+      }),
     },
   ),
 );
 
 /**
- * Multi-account isolation — swaps the persist key to `obelisk:moderation:{pubkey}`
+ * Multi-account isolation: swaps the persist key to `obelisk:moderation:{pubkey}`
  * so mutes/blocks don't leak across logins on the same device.
  */
 export const ensureModerationStoreForAccount = createEnsureForAccount(

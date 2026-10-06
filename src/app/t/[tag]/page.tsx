@@ -1,5 +1,5 @@
 /**
- * Public hashtag page — `/t/<tag>`.
+ * Public hashtag page - `/t/<tag>`.
  *
  * Hashtags inside notes used to link to njump.me/t/<tag>, which meant every
  * rendered note in the app quietly exported its readers. They point here now,
@@ -10,18 +10,20 @@
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { nip19 } from 'nostr-tools';
 import {
   displayNameFor,
   fetchHashtagNotes,
   fetchProfilesForViewer,
   type ViewerProfile,
-} from '@/lib/server/nostr-fetch';
-import { plainTextForPreview, previewImage } from '@/lib/server/note-preview';
+} from '@/services/server/nostr-fetch';
+import { plainTextForPreview, previewImage } from '@/services/server/note-preview';
 import ViewerHeader from '@/components/social/ViewerHeader';
 import FollowTagButton from '@/components/social/FollowTagButton';
-import { serverLocale } from '@/lib/server/locale';
-import { formatDate } from '@/lib/format';
+import { serverLocale } from '@/services/server/locale';
+import { formatDate } from '@/utils/format/format';
+import RemoteImage from '@/components/ui/RemoteImage';
+import { NOTE_VIEWER_PATH, noteIdentifier } from '@/services/social/note-links';
+import { shortNpubLabel } from '@/utils/identity/short-npub';
 
 export const runtime = 'nodejs';
 export const revalidate = 120;
@@ -98,11 +100,11 @@ export default async function HashtagPage({ params }: Params) {
           const image = previewImage(note);
           return (
             <li key={note.id}>
-              <Link href={eventPath(note)} className="block px-5 py-4 transition-colors hover:bg-white/[0.03]">
+              <Link href={`${NOTE_VIEWER_PATH}/${noteIdentifier(note)}`} className="block px-5 py-4 transition-colors hover:bg-white/[0.03]">
                 <div className="mb-1.5 flex items-center gap-2">
                   <Avatar profile={profile} pubkey={note.pubkey} />
                   <span className="truncate text-sm font-semibold">
-                    {profile ? displayNameFor(profile) : shortNpub(note.pubkey)}
+                    {profile ? displayNameFor(profile) : shortNpubLabel(note.pubkey)}
                   </span>
                   <time
                     className="ml-auto shrink-0 text-[10px] text-lc-muted"
@@ -113,11 +115,9 @@ export default async function HashtagPage({ params }: Params) {
                 </div>
                 <p className="line-clamp-3 text-sm text-lc-white">{text || 'Shared media'}</p>
                 {image && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <RemoteImage
                     src={image}
                     alt=""
-                    loading="lazy"
                     decoding="async"
                     className="mt-2 max-h-56 w-full rounded-xl object-cover"
                   />
@@ -141,14 +141,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Avatar({ profile, pubkey }: { profile?: ViewerProfile; pubkey: string }) {
-  const name = profile ? displayNameFor(profile) : shortNpub(pubkey);
+  const name = profile ? displayNameFor(profile) : shortNpubLabel(pubkey);
   if (profile?.picture) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
-      <img
+      <RemoteImage
         src={profile.picture}
         alt=""
-        loading="lazy"
         decoding="async"
         className="h-6 w-6 shrink-0 rounded-full object-cover"
       />
@@ -161,18 +159,3 @@ function Avatar({ profile, pubkey }: { profile?: ViewerProfile; pubkey: string }
   );
 }
 
-function eventPath(note: { id: string; pubkey: string }): string {
-  try {
-    return `/notes/${nip19.neventEncode({ id: note.id, author: note.pubkey, kind: 1 })}`;
-  } catch {
-    return `/notes/${note.id}`;
-  }
-}
-
-function shortNpub(pubkey: string): string {
-  try {
-    return `${nip19.npubEncode(pubkey).slice(0, 12)}…`;
-  } catch {
-    return `${pubkey.slice(0, 10)}…`;
-  }
-}

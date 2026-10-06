@@ -28,7 +28,7 @@ export const LATAM_COUNTRIES = new Set([
   'CU', 'CR', 'PA', 'HN', 'SV', 'GT', 'NI', 'DO', 'PR', 'ES',
 ]);
 
-/** Portuguese-speaking countries — Brazil first, since that's most of them. */
+/** Portuguese-speaking countries, Brazil first, since that's most of them. */
 export const LUSOPHONE_COUNTRIES = new Set([
   'BR', 'PT', 'AO', 'MZ', 'CV', 'GW', 'ST', 'TL', 'GQ',
 ]);

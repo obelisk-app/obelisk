@@ -5,7 +5,7 @@
  * converge through `applyRemoteState`.
  *
  * Method:
- *   1. Open context A, log in, click into a channel — `useAutoMarkRead`
+ *   1. Open context A, log in, click into a channel; `useAutoMarkRead`
  *      advances `groupCursors[groupId]` to the latest message's ts.
  *   2. After ~10s (8s debounce + 2s grace), context B (same nsec, fresh
  *      browser context) reads its persisted store and observes the
@@ -43,8 +43,8 @@ test('read-state cursors converge across two contexts on the same nsec', async (
   const id = generateIdentity();
   logObserved(`shared npub  ${id.npub}`);
 
-  // ── Context A — open a channel, advance the cursor ────────────────
-  logStep('Context A — log in, open a channel', `relay=${RELAY_URL}`);
+  // ── Context A: open a channel, advance the cursor ────────────────
+  logStep('Context A: log in, open a channel', `relay=${RELAY_URL}`);
   const ctxA = await browser.newContext();
   await seedSession(ctxA, nsecSession(id, RELAY_URL));
   const pageA = await ctxA.newPage();
@@ -66,7 +66,7 @@ test('read-state cursors converge across two contexts on the same nsec', async (
 
   // Read the cursor the auto-mark hook should have advanced.
   let preA = await readLocalStorageJSON<ReadStatePersist>(pageA, READ_STATE_KEY(id.pkHex));
-  // Auto-mark waits for the user to be "watching" — visibility + focus.
+  // Auto-mark waits for the user to be "watching": visibility + focus.
   // In headless Chromium this is usually true but the cursor advance
   // can also wait for messages to arrive. Give it a few seconds.
   for (let i = 0; i < 8; i++) {
@@ -85,8 +85,8 @@ test('read-state cursors converge across two contexts on the same nsec', async (
   logStep('Wait for NIP-59 publish + ingest', '~12s = 8s debounce + grace');
   await pageA.waitForTimeout(12_000);
 
-  // ── Context B — fresh browser, same nsec; expect convergence ─────
-  logStep('Context B — open with the same nsec; expect cursor convergence', '');
+  // ── Context B: fresh browser, same nsec; expect convergence ─────
+  logStep('Context B: open with the same nsec; expect cursor convergence', '');
   const ctxB = await browser.newContext();
   await seedSession(ctxB, nsecSession(id, RELAY_URL));
   const pageB = await ctxB.newPage();

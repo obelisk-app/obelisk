@@ -7,7 +7,7 @@
  * the encoding every NIP-17 client we interoperate with (Amethyst, 0xchat)
  * uses for `decryption-key` / `decryption-nonce`.
  *
- * `x` is the SHA-256 of the *ciphertext* — the blob's Blossom address — and is
+ * `x` is the SHA-256 of the *ciphertext* (the blob's Blossom address) and is
  * checked before decrypting, so a server that swaps the blob is caught even
  * though GCM's tag would also reject it. `ox` is the SHA-256 of the plaintext.
  */
@@ -72,7 +72,7 @@ export async function encryptFile(plaintext: Uint8Array): Promise<EncryptedFile>
 
 /**
  * Verify `expectedX` against the ciphertext, then decrypt. Throws
- * {@link FileIntegrityError} on a hash mismatch or a failed GCM tag — both
+ * {@link FileIntegrityError} on a hash mismatch or a failed GCM tag: both
  * mean the bytes are not the ones the sender encrypted.
  */
 export async function decryptFile(

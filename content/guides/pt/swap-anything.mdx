@@ -1,6 +1,6 @@
 ---
 title: 'Troque tudo, confie em nada: a stack de quatro peças do Obelisk'
-description: O Obelisk são quatro projetos pequenos sobre um protocolo aberto — chat, SFU de voz, runtime de bots e relay. Qualquer peça é substituível, nenhuma é central.
+description: O Obelisk são quatro projetos pequenos sobre um protocolo aberto (chat, SFU de voz, runtime de bots e relay). Qualquer peça é substituível, nenhuma é central.
 heroComponent: swap-anything
 publishedAt: '2026-05-07'
 updatedAt: '2026-05-08'
@@ -9,7 +9,7 @@ tags: [ecosystem, sovereignty, nostr, architecture, self-host]
 
 ## A versão curta
 
-A maioria dos apps de chat é uma empresa. Um servidor, um banco de dados, um time que pode mudar as regras amanhã. Se você não gosta do Discord, pode sair do Discord — mas não pode levar sua comunidade junto. Os dados, a identidade e o histórico ficam para trás.
+A maioria dos apps de chat é uma empresa. Um servidor, um banco de dados, um time que pode mudar as regras amanhã. Se você não gosta do Discord, pode sair do Discord, mas não pode levar sua comunidade junto. Os dados, a identidade e o histórico ficam para trás.
 
 O Obelisk foi construído para não se parecer nada com isso. É um chat em grupo no estilo do Discord, mas, em vez de um backend único, são **quatro projetos independentes** que conversam entre si por relays Nostr. Escolha as peças em que você confia e ignore o resto.
 
@@ -17,10 +17,10 @@ O Obelisk foi construído para não se parecer nada com isso. É um chat em grup
 
 <SvgHero name="swap-anything" />
 
-- <Mark name="mark-dex" /> **obelisk-dex** — o cliente de chat. É o que você vê no navegador ao abrir obelisk.ar. Ele assina mensagens com a sua chave e as envia a um relay. É quase tudo o que faz.
-- <Mark name="mark-sfu" /> **obelisk-sfu** — o servidor de voz para chamadas grandes. Quando uma chamada em grupo fica grande demais para todo mundo falar com todo mundo diretamente, o SFU mistura os fluxos. Ele sinaliza por Nostr como qualquer outro participante.
-- <Mark name="mark-bots" /> **obelisk-bots** — o motor que roda bots. Bots de moderação, de jogos, de integração. Cada bot tem o próprio par de chaves e posta mensagens do mesmo jeito que uma pessoa. Não existe API especial de bot.
-- <Mark name="mark-relay" /> **obelisk-relay** — um relay Nostr que você pode rodar sozinho. Já vem com lista de permissão embutida e uma CLI que te coloca no ar em poucos minutos. Há uma interface web para administrá-lo sem tocar no terminal.
+- <Mark name="mark-dex" /> **obelisk-dex**: o cliente de chat. É o que você vê no navegador ao abrir obelisk.ar. Ele assina mensagens com a sua chave e as envia a um relay. É quase tudo o que faz.
+- <Mark name="mark-sfu" /> **obelisk-sfu**: o servidor de voz para chamadas grandes. Quando uma chamada em grupo fica grande demais para todo mundo falar com todo mundo diretamente, o SFU mistura os fluxos. Ele sinaliza por Nostr como qualquer outro participante.
+- <Mark name="mark-bots" /> **obelisk-bots**: o motor que roda bots. Bots de moderação, de jogos, de integração. Cada bot tem o próprio par de chaves e posta mensagens do mesmo jeito que uma pessoa. Não existe API especial de bot.
+- <Mark name="mark-relay" /> **obelisk-relay**: um relay Nostr que você pode rodar sozinho. Já vem com lista de permissão embutida e uma CLI que te coloca no ar em poucos minutos. Há uma interface web para administrá-lo sem tocar no terminal.
 
 Nenhum desses quatro projetos importa o código do outro. Nunca precisaram. Todos falam o mesmo protocolo e se encontram no relay.
 
@@ -76,11 +76,11 @@ O que sobra é a experiência de chat, a mistura de voz, o runtime de bots e a i
 
 Tudo é código aberto. Bifurque, troque, substitua.
 
-- **App ao vivo** — [obelisk.ar](https://obelisk.ar)
-- **obelisk-dex** (cliente) — [github.com/obelisk-app/obelisk](https://github.com/obelisk-app/obelisk)
-- **obelisk-sfu** (servidor de voz) — [github.com/obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)
-- **obelisk-bots** (motor de bots e modelos) — [github.com/obelisk-app/obelisk-bots](https://github.com/obelisk-app/obelisk-bots)
-- **obelisk-relay** (relay + CLI + interface web) — [github.com/obelisk-app/obelisk-relay](https://github.com/obelisk-app/obelisk-relay)
+- **App ao vivo**: [obelisk.ar](https://obelisk.ar)
+- **obelisk-dex** (cliente): [github.com/obelisk-app/obelisk](https://github.com/obelisk-app/obelisk)
+- **obelisk-sfu** (servidor de voz): [github.com/obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)
+- **obelisk-bots** (motor de bots e modelos): [github.com/obelisk-app/obelisk-bots](https://github.com/obelisk-app/obelisk-bots)
+- **obelisk-relay** (relay + CLI + interface web): [github.com/obelisk-app/obelisk-relay](https://github.com/obelisk-app/obelisk-relay)
 
 Se você construir algo que fale com qualquer um deles, funciona. É esse o ponto.
 

@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * The public profile page's body — the same component the app uses.
+ * The public profile page's body - the same component the app uses.
  *
  * `/p` was a static kind-0 card: name, picture, bio, and a "Follow on
  * Obelisk" link that went to the app and dropped you nowhere in
- * particular. No notes, no tabs, no pagination — a profile page that
+ * particular. No notes, no tabs, no pagination - a profile page that
  * couldn't show you anything the person had written.
  *
  * Rather than build a second profile view that would drift from the real
@@ -18,7 +18,7 @@
 import { useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { nip19 } from 'nostr-tools';
-import type { JsUserMetadata } from '@/lib/nostr-bridge';
+import type { JsUserMetadata } from '@/services/nostr-bridge';
 import NostrProfile from '@/components/chat/NostrProfile';
 
 /** Matches the app's own breakpoint for the phone presentation. */

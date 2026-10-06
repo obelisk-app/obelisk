@@ -7,7 +7,7 @@
  *   1. `[data-testid="sidebar-banner-placeholder"]` is present on first
  *      paint OR branding loaded instantly from cache (already a real img).
  *   2. The title is either a `[data-testid="sidebar-title-skeleton"]` or
- *      the real title — never a flash of empty content.
+ *      the real title, never a flash of empty content.
  *   3. After relay-ok and a small grace, the placeholder disappears
  *      (replaced by the real banner image when one exists, or just gone
  *      when the relay has no branding event).
@@ -57,7 +57,7 @@ test('banner stays transparent until branding arrives', async ({ page, context }
   await expect(skeletonTitle).toBeHidden({ timeout: 5_000 });
 
   // Placeholder unmounts once `branding.updatedAt > 0`. If the relay has
-  // no branding event, the placeholder stays — but only until something
+  // no branding event, the placeholder stays, but only until something
   // tells the client branding is loaded. We accept a short grace.
   // In practice: cleared on `useRelayBranding` resolving (cache or live).
   await expect(placeholder).toBeHidden({ timeout: 10_000 });

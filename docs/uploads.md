@@ -1,4 +1,4 @@
-# Uploads — Blossom storage and event URLs
+# Uploads - Blossom storage and event URLs
 
 Obelisk has no local upload route, upload table, or backend file store. Browser
 clients upload directly to Blossom and publish the returned URL in signed Nostr
@@ -6,7 +6,7 @@ events.
 
 ## Upload flow
 
-`src/lib/blossom.ts` implements the shared BUD-01 flow:
+`src/services/blossom.ts` implements the shared BUD-01 flow:
 
 1. Hash the file with SHA-256.
 2. Sign a short-lived kind `24242` Blossom authorization event.
@@ -34,12 +34,12 @@ of the selected Blossom server.
 DM files and voice notes do not use `uploadToBlossom`. `uploadEncryptedBlob`
 uploads AES-256-GCM **ciphertext** as `application/octet-stream` to its own
 server list (`ENCRYPTED_BLOSSOM_SERVERS`: nostr.download,
-blossom.yakihonne.com — the media hosts above sniff uploads and refuse bytes
+blossom.yakihonne.com; the media hosts above sniff uploads and refuse bytes
 that aren't a recognisable image/video/audio, which ciphertext never is), signs the
 kind `24242` auth with a throwaway key minted per upload (so the server never
 learns the uploader's npub), and binds each attempt to its server with a
 `server` tag. The key travels only inside the NIP-17 gift wrap. The ciphertext
-URL is still public by possession and cannot be revoked — it is just useless
+URL is still public by possession and cannot be revoked; it is just useless
 without the key. See [direct-messages.md](direct-messages.md#files-voice-notes-stickers).
 
 ## Media packs
@@ -69,14 +69,14 @@ Code map:
 
 ~~~text
 src/components/chat/ComposerActions.tsx  recorder and live timer
-src/lib/voice-note-tags.ts              marker validation
-src/lib/nostr-bridge/client.ts          event parsing and optimistic state
+src/utils/media-tags/voice-note-tags.ts              marker validation
+src/services/nostr-bridge/client.ts          event parsing and optimistic state
 src/components/chat/MessageContent.tsx  compact audio player
 ~~~
 
 ## Size limits
 
-Per-mime caps (bytes) live in `src/lib/attachments.ts`:
+Per-mime caps (bytes) live in `src/utils/attachments/attachments.ts`:
 
 - Images: 10 MB
 - Video: 50 MB

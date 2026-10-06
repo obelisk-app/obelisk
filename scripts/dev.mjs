@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Dev launcher: starts `next dev`.
-// Bots live in obelisk-app/obelisk-bots — run them from that repo.
+// Bots live in obelisk-app/obelisk-bots; run them from that repo.
 import { spawn } from 'node:child_process';
 
 const children = [];

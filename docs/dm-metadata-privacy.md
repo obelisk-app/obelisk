@@ -12,8 +12,8 @@ A NIP-17 message has three layers:
 
 | Layer | Kind | Signed by | Visible to a relay |
 |---|---|---|---|
-| Rumor | 14 | nobody (unsigned) | no — encrypted inside the seal |
-| Seal | 13 | the real sender | no — encrypted inside the wrap |
+| Rumor | 14 | nobody (unsigned) | no, encrypted inside the seal |
+| Seal | 13 | the real sender | no, encrypted inside the wrap |
 | Gift wrap | 1059 | a throwaway key, fresh per message | yes |
 
 So a relay holding a wrap sees only: *some pubkey it has never seen published
@@ -79,7 +79,7 @@ relay that just took the recipient's copy, so one relay does not see both.
 
 **AUTH is scoped per publish.** `publishSignedEvent` takes an `authMode`:
 
-- Gift wraps use `'last-resort'` — publish anonymously, and only answer AUTH if
+- Gift wraps use `'last-resort'`: publish anonymously, and only answer AUTH if
   every relay refused with `auth-required`. Identifying ourselves on the socket
   would undo the ephemeral key no matter where the event was routed.
 - The kind-10050 publish uses `'never'`. An inbox list is *meant* to be public,
@@ -99,8 +99,8 @@ honest failure.
 
 ## What this cannot fix
 
-**Shared relays.** If the same relay appears in both parties' inbox sets — very
-common, since most people use the same handful of defaults — it receives both
+**Shared relays.** If the same relay appears in both parties' inbox sets (very
+common, since most people use the same handful of defaults), it receives both
 wraps regardless of anything a client does, and can correlate on timing and
 size. No single client fixes this; it is a property of Nostr's relay model.
 
@@ -112,8 +112,8 @@ the relay actually receives the event. A relay always knows real arrival time.
 is applied inside the envelope, but a relay seeing two same-sized events land
 together can still guess they are a pair.
 
-**The self-copy still tells our own relay that we sent *a* DM.** Not to whom —
-that part is fixed — but the event rides our authenticated socket, and
+**The self-copy still tells our own relay that we sent *a* DM.** Not to whom
+(that part is fixed), but the event rides our authenticated socket, and
 `SimplePool` offers no per-publish unauthenticated connection. Closing this
 needs a second, anonymous pool, which is a larger change than this branch.
 
@@ -147,7 +147,7 @@ expiring wrap. See [voice/dm-calls.md](voice/dm-calls.md#what-this-does-not-hide
 This leak shipped briefly on the branch that introduced NIP-17 and was caught
 by an audit pass reading relay routing rather than cryptography. Four earlier
 review rounds looked at the same branch and missed it, because they were all
-checking the seal, the signature and the envelope — which were correct the
+checking the seal, the signature and the envelope, which were correct the
 whole time.
 
 See `docs/direct-messages.md` for how DMs work generally, and

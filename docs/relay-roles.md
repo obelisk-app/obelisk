@@ -1,6 +1,6 @@
 # Relay roles & ranks
 
-Operator-defined ranks — "Moderator", "Contributor", "OG" — rendered as a badge
+Operator-defined ranks ("Moderator", "Contributor", "OG") rendered as a badge
 next to a user's name in chat and in the member list. Same trust model and
 storage shape as [relay branding and channel layout](relay-layout-and-branding.md):
 NIP-78 (kind 30078) parameterized replaceable events authored by the **relay
@@ -8,7 +8,7 @@ operator** (the NIP-11 `pubkey`). A channel admin does not gain relay-wide role
 authority, and readers filter on the operator as author, so a roles event
 published by anyone else is never parsed.
 
-Code: [`src/lib/relay-roles.ts`](../src/lib/relay-roles.ts) ·
+Code: [`src/services/relay-roles.ts`](../src/services/relay-roles.ts) ·
 UI: `RoleBadge.tsx`, `RelayRolesAdminModal.tsx`.
 
 ## Wire format
@@ -17,7 +17,7 @@ Two `d` tags, both on kind 30078:
 
 | `d` tag | Holds | Tags |
 |---|---|---|
-| `obelisk:roles:<relayUrl>` | the catalog — which roles exist | `["role", id, name, tier, color, emoji]` |
+| `obelisk:roles:<relayUrl>` | the catalog: which roles exist | `["role", id, name, tier, color, emoji]` |
 | `obelisk:role:<relayUrl>:<roleId>` | that role's holders | `["role", id]`, `["p", pubkey]` … |
 
 Holders live in one event **per role** rather than inside the catalog:
@@ -40,7 +40,7 @@ so a holders list published for one relay can't grant roles on another.
 
 A user may hold any number of roles. `topRole()` picks the one that renders:
 highest tier wins, ties broken by `id` so every client agrees. Revoking is
-removing the pubkey from that role's holder list — the badge then falls back
+removing the pubkey from that role's holder list; the badge then falls back
 to the next-highest role the user still holds, or disappears. Deleting a role
 from the catalog has the same effect for everyone holding it (holder lists for
 unknown roles are ignored).
@@ -52,8 +52,8 @@ Roles are relay-wide operator data, so they follow the single-relay rule: the
 
 ```
 subscribeRelayRoles(relayUrl, [operatorPubkey], onChange)
-├── REQ  kind 30078 #d=obelisk:roles:<relay>          — catalog
-└── REQ  kind 30078 #d=[obelisk:role:<relay>:<id>, …] — holders, one REQ for all
+├── REQ  kind 30078 #d=obelisk:roles:<relay>          - catalog
+└── REQ  kind 30078 #d=[obelisk:role:<relay>:<id>, …] - holders, one REQ for all
                                                         roles, re-opened when
                                                         the catalog changes
 ```
@@ -69,7 +69,7 @@ message rows and member rows never open their own REQ.
 
 Both member lists read the same map to section people by standing: channel
 admins first, then one section per role in tier order, then everyone without a
-role. On desktop that applies to the online members only — offline stays a
+role. On desktop that applies to the online members only; offline stays a
 single section, since splitting absent people by rank is noise; the mobile
 screen has no offline split to begin with and sections the whole roster.
 
@@ -77,8 +77,8 @@ screen has no offline split to begin with and sections the whole roster.
 
 Server settings → **Roles & ranks** (relay operator only). Create roles, rename
 them, pick a badge emoji, set the badge color, reorder them (position sets the
-tier — top row is most senior), and grant/revoke per member by npub or hex
-pubkey — the member picker searches everyone the relay knows about
+tier: top row is most senior), and grant/revoke per member by npub or hex
+pubkey; the member picker searches everyone the relay knows about
 (`useRelayPeople()`, the union of every channel's admin and member lists) by
 display name, NIP-05 or pubkey, and still accepts a pasted npub for someone
 the relay has not seen. The emoji picker is unicode-only: a custom emoji is a relay-scoped

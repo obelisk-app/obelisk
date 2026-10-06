@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { quotaSafeLocalStorage } from '@/lib/quota-safe-storage';
-import type { VideoQuality } from '@/lib/voice/quality';
-import type { QualitySample } from '@/lib/voice/stats';
+import { quotaSafeLocalStorage } from '@/services/quota-safe-storage';
+import { VIDEO_QUALITIES, type VideoQuality } from '@/services/voice/quality';
+import type { QualitySample } from '@/services/voice/stats';
+import { oneOf, versionedPersist } from './persist-version';
 
 interface VoiceState {
   /** Channel id of the call we're currently in, or null if not in any call. */
@@ -10,7 +11,7 @@ interface VoiceState {
   /**
    * Relay URL where the active call's channel was hosted at join time.
    * Captured so the sidebar status-bar's "jump to call" button can switch
-   * relays first when the user navigates to it from a different relay —
+   * relays first when the user navigates to it from a different relay:
    * `useGroups()` only returns groups for the currently-active relay, so
    * without this, jumping back from another relay would land on a chat
    * surface that doesn't know the channel exists.
@@ -19,7 +20,7 @@ interface VoiceState {
   /** Mic enabled? Mirror of VoiceClient.getLocalTracks().mic, kept in store so
    *  the sidebar status bar can re-render without owning the client. */
   isMuted: boolean;
-  /** Output silenced (incoming audio not played). Local-only — does not
+  /** Output silenced (incoming audio not played). Local-only: does not
    *  affect what we publish. */
   isDeafened: boolean;
   isCameraOn: boolean;
@@ -49,7 +50,7 @@ interface VoiceState {
    */
   speakingPubkeys: Readonly<Record<string, true>>;
   /**
-   * Pubkeys this client has muted "for me only" — they're still publishing
+   * Pubkeys this client has muted "for me only": they're still publishing
    * audio to the channel, but our `<audio>` elements bind their `.muted`
    * attribute to membership in this set so we don't hear them. No Nostr
    * traffic; never affects other participants.
@@ -75,10 +76,23 @@ interface VoiceState {
   muteLocally: (pubkey: string) => void;
   /** Restore audio for a single peer. */
   unmuteLocally: (pubkey: string) => void;
-  /** Drop every per-peer mute — used when leaving the call. */
+  /** Drop every per-peer mute, used when leaving the call. */
   clearLocalMutes: () => void;
-  /** Reset to defaults — called when the call ends. */
+  /** Reset to defaults, called when the call ends. */
   leaveVoice: () => void;
+}
+
+type VoicePersisted = Pick<VoiceState, 'videoQuality' | 'receivedVideoQuality'>;
+
+/** Saved-shape version. 0: before versioning, same fields. */
+export const VOICE_STORE_VERSION = 1;
+
+/** An unknown quality preset (renamed, removed, or garbage) falls back to `auto`. */
+export function sanitizeVoicePersisted(raw: Record<string, unknown>): VoicePersisted {
+  return {
+    videoQuality: oneOf(raw.videoQuality, VIDEO_QUALITIES) ?? 'auto',
+    receivedVideoQuality: oneOf(raw.receivedVideoQuality, VIDEO_QUALITIES) ?? 'auto',
+  };
 }
 
 export const useVoiceStore = create<VoiceState>()(
@@ -171,9 +185,13 @@ export const useVoiceStore = create<VoiceState>()(
       storage: createJSONStorage(() => quotaSafeLocalStorage),
       // Only persist user-set quality preferences; runtime state (current
       // channel, mic/camera, peer samples) must reset on reload.
-      partialize: (state) => ({
+      partialize: (state): VoicePersisted => ({
         videoQuality: state.videoQuality,
         receivedVideoQuality: state.receivedVideoQuality,
+      }),
+      ...versionedPersist<VoiceState, VoicePersisted>({
+        version: VOICE_STORE_VERSION,
+        sanitize: sanitizeVoicePersisted,
       }),
     },
   ),

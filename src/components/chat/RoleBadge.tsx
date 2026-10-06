@@ -1,18 +1,11 @@
 'use client';
 
-import { useChatStore } from '@/store/chat';
-import type { RelayRole } from '@/lib/relay-roles';
+import { useTopRole } from '@/hooks/chat/useTopRole';
 
 /**
- * The badge shown next to a user's name. A user can hold any number of relay
- * roles; only the highest-tier one renders — the store keeps each pubkey's
- * roles most-senior-first, so the badge is simply the head of that list and
- * falls back to the next role when an operator revokes the top one.
+ * The badge shown next to a user's name: the highest-tier role the user
+ * holds, or nothing.
  */
-export function useTopRole(pubkey: string): RelayRole | null {
-  return useChatStore((state) => state.rolesByPubkey[pubkey]?.[0] ?? null);
-}
-
 export default function RoleBadge({ pubkey, className }: { pubkey: string; className?: string }) {
   const role = useTopRole(pubkey);
   if (!role) return null;

@@ -10,9 +10,9 @@
  * thing that sets it (besides the bell's explicit "mark read").
  *
  * "Seen" means: the message row (`[data-msg-id]`, rendered by both shells)
- * is at least {@link MENTION_SEEN_THRESHOLD} visible — or, for a message
+ * is at least {@link MENTION_SEEN_THRESHOLD} visible - or, for a message
  * taller than the viewport (image, long post), fills at least
- * {@link MENTION_SEEN_VIEWPORT_SHARE} of it — continuously for
+ * {@link MENTION_SEEN_VIEWPORT_SHARE} of it - continuously for
  * {@link MENTION_SEEN_DWELL_MS}, while the tab is visible and focused.
  * IntersectionObserver accounts for clipping by the scroll container. A row
  * scrolled past in a flick, or on screen in a background tab, doesn't count.
@@ -20,7 +20,7 @@
  * A card whose message doesn't exist in the channel (deleted, moderated,
  * never delivered) can never be seen; once the user has been watching the
  * channel at the bottom for {@link MENTION_MISSING_DWELL_MS} and the card
- * falls inside the loaded window, it's cleared — otherwise it would pin the
+ * falls inside the loaded window, it's cleared - otherwise it would pin the
  * channel's `@` forever.
  *
  * Mounted once in `ReadStateRoot`; watches only the unseen mentions of the
@@ -28,11 +28,11 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react';
-import { useCurrentRelayUrl, useMessages } from '@/lib/nostr-bridge';
-import { isUserWatchingChannel } from '@/lib/read-gates';
+import { useCurrentRelayUrl, useMessages } from '@/services/nostr-bridge';
+import { isUserWatchingChannel } from '@/services/read-gates';
 import { useChatStore } from '@/store/chat';
 import { useNotificationsStore } from '@/store/notifications';
-import { useMentionNotifications } from '@/lib/notifications/selectors';
+import { useMentionNotifications } from '@/services/notifications/selectors';
 
 export const MENTION_SEEN_THRESHOLD = 0.6;
 /** A row taller than the viewport counts once it covers this share of it. */
@@ -53,7 +53,7 @@ export function useMentionSeen(): void {
   const relay = useCurrentRelayUrl();
   const activeChannel = useChatStore((s) => s.activeChannelId);
   const mentions = useMentionNotifications(relay);
-  // Loaded messages of the open channel — to tell "not rendered yet" from
+  // Loaded messages of the open channel - to tell "not rendered yet" from
   // "doesn't exist". Read through a ref so a new message doesn't restart
   // the observer.
   const messages = useMessages(activeChannel ?? null);

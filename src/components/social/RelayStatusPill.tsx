@@ -4,8 +4,8 @@
  * Relay connectivity, in the header, where the other state indicators live.
  *
  * The status store has been live for a while, but the only surfaces reading
- * it were the relay settings panel — the place you open *after* you already
- * suspect something is wrong — and briefly a box in the feed's side column.
+ * it were the relay settings panel (the place you open *after* you already
+ * suspect something is wrong) and briefly a box in the feed's side column.
  * An empty feed and a feed whose relays all dropped looked identical.
  *
  * It sits in the header alongside the connection/signer state, and it also
@@ -32,10 +32,14 @@ import {
   subscribeRelayStatus,
   watchRelays,
   type RelayState,
-} from '@/lib/social/relay-status';
-import { normalizeRelayUrl } from '@/lib/social/relays';
-import { useConnectionState, useRelayAccess } from '@/lib/nostr-bridge';
+} from '@/services/social/relay-status';
+import { normalizeRelayUrl } from '@/services/social/relays';
+import { useConnectionState, useRelayAccess } from '@/services/nostr-bridge';
 import { useTranslation } from '@/i18n/context';
+import { shortHost } from '@/utils/relay-url/url-host';
+import Text from '@/components/ui/Text';
+import { MenuDivider } from '@/components/ui/menu';
+import TextButton from '@/components/ui/TextButton';
 
 const DOT: Record<RelayState, string> = {
   connected: 'bg-lc-green',
@@ -55,21 +59,21 @@ export default function RelayStatusPill({
   relays: readonly string[];
   /**
    * The NIP-29 relay this session is bound to. It's a different question
-   * from "are my social relays up" — it's the one that has to be connected
-   * AND authenticated for the chat to work at all — so the popover answers
+   * from "are my social relays up" (it's the one that has to be connected
+   * AND authenticated for the chat to work at all) so the popover answers
    * both rather than making people guess which relay a red dot refers to.
    */
   activeRelay?: string | null;
   /** Where "manage these" goes, when the host has somewhere to send it. */
   onOpenSettings?: () => void;
-  /** Dot only — for a header with no room for the count. */
+  /** Dot only: for a header with no room for the count. */
   compact?: boolean;
   /**
    * Which relay tier the button itself reports.
    *
    * The popover always answers both questions, but the *button* has to be
    * about the surface behind it. Mounted in the chat header it reported the
-   * social relay count — a tier a chat screen never reads — so it sat at a
+   * social relay count (a tier a chat screen never reads) so it sat at a
    * red `0/4` while chat was perfectly healthy and the popover's own
    * active-relay dot was green. `'active'` reports the NIP-29 relay this
    * session is bound to, which is the one that has to work for chat.
@@ -138,9 +142,9 @@ export default function RelayStatusPill({
         <div className="p-1">
           {activeRelay && (
             <>
-              <p className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
+              <Text as="p" size="10" weight="semibold" variant="label" tone="muted" className="px-2.5 pb-1 pt-2">
                 {t('social.thisRelay')}
-              </p>
+              </Text>
               <div className="px-2.5 py-1.5" data-testid="relay-status-active" data-access={access}>
                 <div className="flex items-center gap-2">
                   <span
@@ -157,18 +161,18 @@ export default function RelayStatusPill({
                   <span className="shrink-0 font-mono text-[10px] text-lc-muted">{connection}</span>
                 </div>
                 {/* AUTH is the difference between "connected" and "can read
-                    this relay's groups" — a relay can be up and still hand
+                    this relay's groups": a relay can be up and still hand
                     back nothing until the challenge is answered. */}
                 <p className="pl-4 pt-0.5 text-[10px] text-lc-muted" data-testid="relay-status-auth">
                   {t(`social.auth.${access}`)}
                 </p>
               </div>
-              <div className="my-1 h-px bg-lc-border" aria-hidden="true" />
+              <MenuDivider />
             </>
           )}
-          <p className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
+          <Text as="p" size="10" weight="semibold" variant="label" tone="muted" className="px-2.5 pb-1 pt-2">
             {t('social.relays')}
-          </p>
+          </Text>
           {relays.map((relay) => {
             const url = normalizeRelayUrl(relay);
             const status = url ? statuses[url] : undefined;
@@ -190,38 +194,26 @@ export default function RelayStatusPill({
                   {status && status.notes > 0 && ` · ${status.notes}`}
                 </span>
                 {state === 'failed' && (
-                  <button
-                    type="button"
-                    onClick={() => void probeRelay(relay)}
-                    className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-lc-green hover:bg-white/5"
+                  <TextButton
+                    onClick={() => void probeRelay(relay)} className="shrink-0 px-1.5 py-0.5 text-[10px]"
                     data-testid="relay-retry"
                   >
                     {t('common.retry')}
-                  </button>
+                  </TextButton>
                 )}
               </div>
             );
           })}
           {onOpenSettings && (
-            <button
-              type="button"
-              onClick={() => { setOpen(false); onOpenSettings(); }}
-              className="mt-1 w-full rounded-lg px-2.5 py-2 text-left text-[11px] text-lc-green hover:bg-white/5"
+            <TextButton
+              onClick={() => { setOpen(false); onOpenSettings(); }} className="mt-1 w-full px-2.5 py-2 text-left text-[11px]"
               data-testid="relay-status-manage"
             >
               {t('social.relaySettings')}
-            </button>
+            </TextButton>
           )}
         </div>
       </AnchoredMenu>
     </>
   );
-}
-
-function shortHost(url: string): string {
-  try {
-    return new URL(url).host;
-  } catch {
-    return url;
-  }
 }

@@ -69,7 +69,7 @@ export default function HowObeliskWorksHero() {
         <text x="130" y="275" textAnchor="middle" fontSize="12" fontWeight="600" fill="#a3a3a3">Client</text>
       </g>
 
-      {/* Server node — real Buenos Aires Obelisco silhouette (from ObeliskIcon).
+      {/* Server node - real Buenos Aires Obelisco silhouette (from ObeliskIcon).
           Logo viewBox is 512; scaled to fit tip at (400, 110), base at (400, 290). */}
       <g>
         <g transform="translate(299.98 103.59) scale(0.391)">
@@ -137,7 +137,7 @@ export default function HowObeliskWorksHero() {
         />
       </g>
 
-      {/* Flow: Client ↔ Relays (sign kind 0 / auth challenge — bidirectional) */}
+      {/* Flow: Client ↔ Relays (sign kind 0 / auth challenge - bidirectional) */}
       <g stroke="#8bc34a" strokeWidth="1.5" fill="none" strokeLinecap="round" opacity="0.75">
         <path
           d="M 180 168 Q 400 60 598 118"

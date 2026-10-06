@@ -1,11 +1,11 @@
 /**
  * Phase 3 contract: the whitelist preflight surfaces a rejection within
- * ~1.5s — well before the 4s deferred soak the rest of the fan-out uses.
+ * ~1.5s, well before the 4s deferred soak the rest of the fan-out uses.
  *
  * Seeds a fresh nsec onto the restricted relay (default
  * `wss://lacrypta-relay.obelisk.ar`, overridable via `OBELISK_E2E_RESTRICTED_RELAY`),
  * then asserts `[data-testid="relay-access-banner"]` flips to
- * `data-state="restricted"` (or `auth-required`) within 3500ms — under
+ * `data-state="restricted"` (or `auth-required`) within 3500ms, under
  * the legacy 4000ms soak.
  *
  * Run with the restricted relay (default is provided):
@@ -63,11 +63,11 @@ test('preflight surfaces whitelist rejection within ~1.5s (no 4s soak)', async (
   await page.waitForTimeout(6_000);
   const banner = page.locator('[data-testid="relay-access-banner"]').first();
   expect(await banner.getAttribute('data-state')).toBe('restricted');
-  logOk(`whitelist rejection surfaced in ${elapsed}ms — under 4s soak`);
+  logOk(`whitelist rejection surfaced in ${elapsed}ms, under 4s soak`);
 });
 
 // The phone shell has no banner; a refused key sees the channel list's empty
-// state. It used to read "No channels found" — access had been flipped back to
+// state. It used to read "No channels found": access had been flipped back to
 // 'ok' by the synthetic EOSE nostr-tools fires before every relay CLOSED.
 test.describe('mobile', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });

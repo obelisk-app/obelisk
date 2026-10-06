@@ -1,6 +1,6 @@
 ---
 title: 'Run your own relay: admission is a ladder, not a switch'
-description: Obelisk Relay is a NIP-29 relay that decides for itself who may connect — a hand-written allowlist, the accounts your references follow, and the follow graph beyond them, each on a smaller share of the rate budget. Two commands to run one.
+description: 'Obelisk Relay is a NIP-29 relay that decides for itself who may connect: a hand-written allowlist, the accounts your references follow, and the follow graph beyond them, each on a smaller share of the rate budget. Two commands to run one.'
 heroComponent: run-your-own-relay
 publishedAt: '2026-09-23'
 updatedAt: '2026-09-23'
@@ -15,7 +15,7 @@ most of Nostr it is the right one.
 It does mean a relay has no opinion about membership. Whoever holds a group id
 can write to it, and "who is in this group" is whatever each client decides to
 believe. A private group is private for exactly as long as every client agrees
-to pretend that it is — which is not a security property, it is an etiquette.
+to pretend that it is. That is not a security property, it is an etiquette.
 
 ## A NIP-29 relay decides instead
 
@@ -50,7 +50,7 @@ Stop after the first one and you have a relay on your laptop. That is a
 legitimate place to stop.
 
 <Callout type="warn" title="Pin the image tag">
-`setup.sh` pulls `:latest`, which currently lags the dated builds — `:latest` is
+`setup.sh` pulls `:latest`, which currently lags the dated builds: `:latest` is
 multi-arch and the current builds are arm64-only, so moving it would break every
 amd64 install. Until both architectures are published and joined, pass the tag
 you want explicitly: `RELAY_IMAGE_TAG=<dated-tag> ./setup.sh`. Take the tag from
@@ -69,7 +69,7 @@ that state each time.
 With no admin pubkeys configured it comes up in setup mode, and `/admin` shows a
 wizard rather than a login screen. Three steps, all in the browser.
 
-<Shot name="relay/sign-in" caption="You prove ownership by signing — there is no npub field to type into." maxWidth={420} />
+<Shot name="relay/sign-in" caption="You prove ownership by signing; there is no npub field to type into." maxWidth={420} />
 
 Whichever key signs here becomes the first admin. That is worth reading twice:
 you do not nominate an npub, you demonstrate control of one. Browser extension,
@@ -79,7 +79,7 @@ is open or restricted, and it writes its config and restarts into the console.
 <Callout type="note" title="The screenshots below are purple">
 They are captures of the public relay at `wss://public.obelisk.ar`, which runs
 the purple build. Obelisk's lime is the chat client. Same software, different
-accent — your own relay is branded from the Settings screen.
+accent: your own relay is branded from the Settings screen.
 </Callout>
 
 ## Relay health
@@ -102,7 +102,7 @@ plainly before looking at any screen.
 
 Someone you added by hand. Someone your reference accounts follow. Or someone
 close enough in the follow graph to be worth the benefit of the doubt. Decided
-in that order — and a block list that overrides all three, checked first.
+in that order, and a block list that overrides all three, checked first.
 
 <Shot name="relay/access-tabs" caption="One screen, five tabs, each with a live count." />
 
@@ -117,13 +117,13 @@ think hardest about.
 
 Tier 2 is two hops out. Tier 3 is three, and the console says *at least* rather
 than printing a total, because the outermost hop is the one the graph runs out
-of budget to finish. Honest beats tidy — a number presented as complete when it
+of budget to finish. Honest beats tidy: a number presented as complete when it
 is not is worse than a floor you can reason about.
 
 <Callout type="note" title="Those counts are a measurement, not a spec">
 1,062 / 45,966 / ≥119,708 are what two reference accounts reached on one relay on
-one day. They tell you the *shape* of the thing — that one account admits tens
-of thousands of people two hops out — not a number your relay will reproduce.
+one day. They tell you the *shape* of the thing (that one account admits tens
+of thousands of people two hops out), not a number your relay will reproduce.
 Yours depends entirely on whose follow graph you rooted it in.
 </Callout>
 
@@ -140,7 +140,7 @@ someone is, the less evidence there is that they should be trusted with your
 disk.
 
 Two other limits sit above the per-pubkey one, and both matter more than they
-look. The **per-connection** cap should sit above the per-pubkey budget — it
+look. The **per-connection** cap should sit above the per-pubkey budget: it
 caps a single socket, and setting it lower makes the per-pubkey number
 unreachable. The **whole-relay** cap is the backstop against a flood from
 everybody at once, and it is the one that saves you when the first two were
@@ -152,7 +152,7 @@ tuned optimistically.
 
 Most access questions arrive as "why can't this person connect?", and this is
 the box that answers them. It takes an npub, a hex key or a NIP-05 address, and
-replies with the tier that admits them and how far away they are — or why they
+replies with the tier that admits them and how far away they are, or why they
 were refused. The Block button sits beside the verdict, because the answer and
 the action belong in the same place.
 
@@ -166,7 +166,7 @@ volume.
 
 The part that matters most is the least visible: **the relay snapshots the
 reported message when the report lands.** Without that, a reported account
-deletes their own message and the complaint becomes unreviewable — deletion as a
+deletes their own message and the complaint becomes unreviewable: deletion as a
 defence rather than a remedy.
 
 <Shot name="relay/reports" caption="One row per reported thing, with the decision you made." />
@@ -176,7 +176,7 @@ rather than an oversight. On a relay where admission is a social graph, a public
 report queue is a retaliation channel.
 
 <Callout type="note" title="Reports filed before the snapshot landed">
-Rows from before that change say so explicitly — "this was reported before the
+Rows from before that change say so explicitly: "this was reported before the
 relay began keeping a copy, and the original is gone". A moderation tool that
 quietly shows you nothing is worse than one that tells you why it has nothing.
 </Callout>
@@ -188,7 +188,7 @@ quietly shows you nothing is worse than one that tells you why it has nothing.
 Automatic pruning is off until you turn it on, and retention is set **per event
 kind**, so short-lived traffic can expire without touching conversations. Group
 management and state kinds are never deleted, and neither is anything
-replaceable or addressable — the relay keeps only one of those per user, so
+replaceable or addressable: the relay keeps only one of those per user, so
 deleting them would destroy live state and free no space worth having.
 
 Count before you arm a policy. The overview samples rather than scanning, and the
@@ -210,7 +210,7 @@ Caddy needs nothing special for WebSocket upgrades; nginx needs `Upgrade` and
 
 <Callout type="warn" title="`relay_url` is not cosmetic">
 It must match the public address clients actually reach you on. It is used for
-NIP-42 authentication, so a stale value does not degrade gracefully — it breaks
+NIP-42 authentication, so a stale value does not degrade gracefully: it breaks
 auth outright. Set it from Settings → Relay identity after you have a domain.
 </Callout>
 
@@ -218,7 +218,7 @@ auth outright. Set it from Settings → Relay identity after you have a domain.
 
 <Shot name="relay/landing" caption="Your relay serves its own front page, with the address ready to copy." />
 
-Nothing about your relay is Obelisk-specific — it speaks NIP-29, and any client
+Nothing about your relay is Obelisk-specific: it speaks NIP-29, and any client
 that does will work. But if you want the chat client:
 
 ```
@@ -228,7 +228,7 @@ https://obelisk.ar/app?relay=relay.example.com
 For something you can hand to a person rather than paste into a config, Obelisk
 encodes a relay into a short share link at `obelisk.ar/r/<code>`. Visiting it
 adds the relay to the reader's list and switches to it, and re-visiting is a
-no-op — so it is safe to put in a pinned message or a bio.
+no-op, so it is safe to put in a pinned message or a bio.
 
 The relay is [AGPL-3.0 on GitHub](https://github.com/obelisk-app/obelisk-relay),
 and there is one running right now at `wss://public.obelisk.ar` if you would

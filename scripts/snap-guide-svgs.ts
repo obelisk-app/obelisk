@@ -1,6 +1,6 @@
 /**
  * Renders every guide hero/diagram component to a still-frame SVG + 2x PNG
- * under public/og/guides. The live animated React components stay untouched —
+ * under public/og/guides. The live animated React components stay untouched;
  * these snapshots exist only so Google Image Search can index a real URL with
  * an alt-text-bearing <img>.
  *
@@ -79,7 +79,7 @@ async function main() {
   for (const [name, Component] of Object.entries(HERO_REGISTRY)) {
     const meta = HERO_ASSET_META[name];
     if (!meta) {
-      console.warn(`  ! "${name}" missing asset meta — skipping`);
+      console.warn(`  ! "${name}" missing asset meta; skipping`);
       continue;
     }
     await snap(name, Component, meta);
@@ -89,7 +89,7 @@ async function main() {
   for (const [name, Component] of Object.entries(DIAGRAM_REGISTRY)) {
     const meta = DIAGRAM_ASSET_META[name];
     if (!meta) {
-      console.warn(`  ! "${name}" missing asset meta — skipping`);
+      console.warn(`  ! "${name}" missing asset meta; skipping`);
       continue;
     }
     await snap(name, Component, meta);

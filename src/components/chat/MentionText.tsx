@@ -1,6 +1,6 @@
 import React from 'react';
-import { useUserMetadata } from '@/lib/nostr-bridge';
-import { parseMentions, shortNpub } from '@/lib/mentions';
+import { useUserMetadata } from '@/services/nostr-bridge';
+import { parseMentions, shortNpub } from '@/utils/message-text/mentions';
 
 function MentionName({ pubkey }: { pubkey: string }) {
   const meta = useUserMetadata(pubkey);

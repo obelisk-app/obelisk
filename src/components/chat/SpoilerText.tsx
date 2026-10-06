@@ -17,7 +17,7 @@ export default function SpoilerText({ children }: { children: ReactNode }) {
           : 'bg-lc-muted/60 text-transparent select-none'
       }`}
       data-testid="spoiler-text"
-      aria-label={revealed ? undefined : 'Spoiler — click to reveal'}
+      aria-label={revealed ? undefined : 'Spoiler: click to reveal'}
     >
       {children}
     </span>

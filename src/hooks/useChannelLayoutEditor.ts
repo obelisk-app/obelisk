@@ -6,7 +6,7 @@ import {
   newCategoryId,
   publishLayout,
   type ChannelLayout,
-} from '@/lib/channel-layout';
+} from '@/services/channel-layout';
 
 export function useChannelLayoutEditor(
   relayUrl: string,

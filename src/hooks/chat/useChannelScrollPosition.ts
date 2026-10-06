@@ -6,7 +6,7 @@ import {
   getChannelScrollPosition,
   rememberChannelScrollPosition,
   restoreChannelScrollPosition,
-} from '@/lib/channel-scroll-position';
+} from '@/utils/scroll/channel-scroll-position';
 
 interface UseChannelScrollPositionOptions {
   readonly scrollKey: string | null;
@@ -34,7 +34,12 @@ export function useChannelScrollPosition({
   const restoredKeyRef = useRef<string | null>(null);
   const onNearBottomChangeRef = useRef(onNearBottomChange);
   const getInitialAnchorElementRef = useRef(getInitialAnchorElement);
-  getInitialAnchorElementRef.current = getInitialAnchorElement;
+  // Written at commit, before the restore layout effect below reads it;
+  // callers pass inline arrows, so the ref keeps their identity out of the
+  // restore effect's dependencies.
+  useLayoutEffect(() => {
+    getInitialAnchorElementRef.current = getInitialAnchorElement;
+  });
 
   useEffect(() => {
     onNearBottomChangeRef.current = onNearBottomChange;
@@ -42,8 +47,12 @@ export function useChannelScrollPosition({
 
   useLayoutEffect(() => {
     if (!scrollKey) return;
+    // The element that scrolled under this key, captured when the key became
+    // active: both hosts render the scroller themselves without a channel
+    // key, so it is the same node at cleanup, but a remount would otherwise
+    // hand the cleanup `null`.
+    const el = scrollRef.current;
     return () => {
-      const el = scrollRef.current;
       if (el) rememberChannelScrollPosition(scrollKey, el, nearBottomPx);
     };
   }, [nearBottomPx, scrollKey, scrollRef]);

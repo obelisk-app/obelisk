@@ -6,19 +6,21 @@ import {
   probeRelay,
   subscribeRelayStatus,
   type RelayState,
-} from '@/lib/social/relay-status';
-import { normalizeRelayUrl } from '@/lib/social/relays';
-import { usePreferences } from '@/lib/preferences';
-import { openSettings } from '@/lib/open-settings';
+} from '@/services/social/relay-status';
+import { normalizeRelayUrl } from '@/services/social/relays';
+import { usePreferences } from '@/services/preferences';
+import { openSettings } from '@/utils/open-settings';
 import { useTranslation } from '@/i18n/context';
 import WidgetCard from './WidgetCard';
+import { shortHost } from '@/utils/relay-url/url-host';
+import TextButton from '@/components/ui/TextButton';
 
 /**
  * Where the feed's notes are coming from, and whether it is working.
  *
  * The header pill answers this in a popover, which is the right shape for a
  * glance. This is for the reader who is actively tuning their relay set and
- * wants it on screen while they scroll — the commonest cause of a thin feed
+ * wants it on screen while they scroll: the commonest cause of a thin feed
  * is a relay set nobody chose, and that is invisible until you look.
  *
  * It does not start the watcher; the pill owns that and is always mounted.
@@ -41,14 +43,12 @@ export default function RelaysWidget() {
       title={t('social.relays')}
       testId="widget-relays"
       action={(
-        <button
-          type="button"
-          onClick={() => openSettings('relays')}
-          className="shrink-0 text-[11px] font-medium text-lc-green hover:underline"
+        <TextButton
+          onClick={() => openSettings('relays')} className="shrink-0 text-[11px] font-medium"
           data-testid="widget-relays-manage"
         >
           {t('social.relaySettings')}
-        </button>
+        </TextButton>
       )}
     >
       <ul>
@@ -66,13 +66,11 @@ export default function RelaysWidget() {
               <span className={`h-2 w-2 shrink-0 rounded-full ${DOT[state]}`} role="img" aria-label={state} />
               <span className="min-w-0 flex-1 truncate text-xs text-lc-white">{shortHost(relay)}</span>
               {state === 'failed' ? (
-                <button
-                  type="button"
-                  onClick={() => void probeRelay(relay)}
-                  className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-lc-green hover:bg-white/5"
+                <TextButton
+                  onClick={() => void probeRelay(relay)} className="shrink-0 px-1.5 py-0.5 text-[10px]"
                 >
                   {t('common.retry')}
-                </button>
+                </TextButton>
               ) : (
                 <span className="shrink-0 font-mono text-[10px] text-lc-muted">
                   {status?.latencyMs != null && `${status.latencyMs}ms`}
@@ -84,12 +82,4 @@ export default function RelaysWidget() {
       </ul>
     </WidgetCard>
   );
-}
-
-function shortHost(url: string): string {
-  try {
-    return new URL(url).host;
-  } catch {
-    return url;
-  }
 }

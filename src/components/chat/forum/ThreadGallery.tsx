@@ -1,0 +1,103 @@
+'use client';
+
+import type { JsForumTag, JsGroup } from '@/services/nostr-bridge';
+import { useTranslation } from '@/i18n/context';
+import RemoteImage from '@/components/ui/RemoteImage';
+import { InlineTagChip } from './InlineTagChip';
+import { ThreadGalleryCardSkeleton } from './ThreadCardSkeletons';
+import { formatTimeAgo, posterName } from './thread-card-utils';
+import { useThreadCardData } from './useThreadCardData';
+
+export function ThreadGallery({
+  threads,
+  forumTags,
+  onSelectThread,
+}: {
+  threads: ReadonlyArray<JsGroup>;
+  forumTags: ReadonlyArray<JsForumTag>;
+  onSelectThread: (id: string) => void;
+}) {
+  return (
+    <div
+      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+      data-testid="forum-gallery"
+    >
+      {threads.map((g) => (
+        <ThreadGalleryCard
+          key={g.id}
+          thread={g}
+          forumTags={forumTags}
+          onOpen={() => onSelectThread(g.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Gallery card: larger, hero-image-style layout. Uses the thread's banner /
+ * picture if present, falling back to the OP avatar. Same three states as
+ * the list card.
+ */
+function ThreadGalleryCard({
+  thread,
+  forumTags,
+  onOpen,
+}: {
+  thread: JsGroup;
+  forumTags: ReadonlyArray<JsForumTag>;
+  onOpen: () => void;
+}) {
+  const { t, locale } = useTranslation();
+  const { messages, messagesStatus, op, lastMsg, opMeta, tags } = useThreadCardData(thread, forumTags);
+  if (!op || !lastMsg) {
+    if (messagesStatus === 'empty-confirmed') return null;
+    return <ThreadGalleryCardSkeleton thread={thread} onOpen={onOpen} />;
+  }
+  const opName = posterName(opMeta, op.pubkey);
+  const heroUrl = thread.banner || thread.picture || opMeta?.picture || null;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="lc-card flex flex-col text-left overflow-hidden hover:border-lc-green/40 transition-colors"
+      data-testid="thread-gallery-card"
+      data-thread-id={thread.id}
+    >
+      <div className="h-28 w-full bg-lc-black border-b border-lc-border overflow-hidden relative">
+        {heroUrl ? (
+          <RemoteImage src={heroUrl} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-lc-muted text-2xl">
+            #
+          </div>
+        )}
+        {tags.length > 0 && (
+          <div className="absolute left-2 bottom-2 flex flex-wrap gap-1 max-w-[calc(100%-1rem)]">
+            {tags.slice(0, 3).map((tag) => (
+              <InlineTagChip key={tag.id} tag={tag} />
+            ))}
+            {tags.length > 3 && (
+              <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-lc-white/90">
+                +{tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="p-3 flex-1 flex flex-col gap-1.5">
+        <div className="text-sm font-semibold text-lc-white truncate">
+          {thread.name || '(untitled publication)'}
+        </div>
+        <div className="text-xs text-lc-muted line-clamp-3 break-words">{op.content}</div>
+        <div className="mt-auto flex items-center justify-between gap-2 text-[11px] text-lc-muted pt-1">
+          <span className="truncate">OP {opName}</span>
+          <span className="shrink-0">
+            {messages.length} {messages.length === 1 ? 'msg' : 'msgs'} ·{' '}
+            {formatTimeAgo(lastMsg.createdAt, t, locale)}
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}

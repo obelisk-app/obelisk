@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { detectLocale, LOCALE_COOKIE, LOCALE_HEADER } from './i18n/index';
+import { buildCsp } from './utils/csp';
 
 /**
  * Per-request CSP nonce generator + locale-cookie initializer.
@@ -9,7 +10,7 @@ import { detectLocale, LOCALE_COOKIE, LOCALE_HEADER } from './i18n/index';
  *      Content-Security-Policy header with `'nonce-<n>'` in script-src.
  *      The page reads the nonce via next/headers and stamps it onto every
  *      inline <Script> we control. Anything else (Cloudflare Rocket
- *      Loader, third-party script tags) gets blocked — the strict CSP
+ *      Loader, third-party script tags) gets blocked; the strict CSP
  *      keeps the site safe even if some upstream injects markup.
  *   2. Set/pass a long-lived locale derived from explicit user choice,
  *      Cloudflare/Vercel geo headers, or Accept-Language so every client
@@ -22,62 +23,15 @@ export function proxy(request: NextRequest) {
     response.headers.set('Service-Worker-Allowed', '/');
     return response;
   }
-  // 16 random bytes → ~22 base64 chars. Edge runtime exposes
-  // crypto.randomUUID; we strip dashes and base64-encode for compactness.
+  // A UUIDv4 carries 122 random bits; the 32 hex characters left after
+  // stripping dashes are base64-encoded into a 44-character nonce token.
+  // crypto.randomUUID is available in both the Node and the (deprecated)
+  // Edge proxy runtimes.
   const nonce = btoa(crypto.randomUUID().replace(/-/g, ''));
 
-  // Google Analytics: src/app/layout.tsx loads gtag.js from googletagmanager.
-  // Allow that origin in script-src and connect-src (gtag posts beacons too).
-  //
-  // 'unsafe-eval' is dev-only — React's dev build uses eval() to reconstruct
-  // call stacks across module boundaries (production never does). Without
-  // it the React tree fails to hydrate over a tunneled origin.
-  const isDev = process.env.NODE_ENV !== 'production';
-  const evalSrc = isDev ? " 'unsafe-eval'" : '';
-  const csp = [
-    "default-src 'self'",
-    `script-src 'self' 'wasm-unsafe-eval'${evalSrc} 'nonce-${nonce}' https://www.googletagmanager.com`,
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
-    "media-src 'self' blob: https:",
-    "connect-src 'self' wss: https: https://www.google-analytics.com https://www.googletagmanager.com",
-    "font-src 'self' data:",
-    // Allow common embeddable players (YouTube, Vimeo, Twitch, SoundCloud,
-    // Spotify, Twitter/X, TikTok, Instagram, Reddit, Bandcamp, Mixcloud,
-    // Loom, CodePen, CodeSandbox, GitHub Gist, Google Maps/Docs).
-    [
-      'frame-src',
-      "'self'",
-      'https://www.youtube.com',
-      'https://www.youtube-nocookie.com',
-      'https://player.vimeo.com',
-      'https://player.twitch.tv',
-      'https://clips.twitch.tv',
-      'https://embed.twitch.tv',
-      'https://w.soundcloud.com',
-      'https://open.spotify.com',
-      'https://platform.twitter.com',
-      'https://platform.x.com',
-      'https://www.tiktok.com',
-      'https://www.instagram.com',
-      'https://www.redditmedia.com',
-      'https://embed.reddit.com',
-      'https://bandcamp.com',
-      'https://*.bandcamp.com',
-      'https://www.mixcloud.com',
-      'https://www.loom.com',
-      'https://codepen.io',
-      'https://codesandbox.io',
-      'https://gist.github.com',
-      'https://www.google.com',
-      'https://docs.google.com',
-    ].join(' '),
-    "frame-ancestors 'none'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    'upgrade-insecure-requests',
-  ].join('; ');
+  // The directive list lives in src/utils/csp.ts, shared with the static
+  // floor next.config.ts sends on the responses this proxy never sees.
+  const csp = buildCsp({ nonce, isDev: process.env.NODE_ENV !== 'production' });
 
   const country =
     request.headers.get('x-vercel-ip-country') ||
@@ -115,7 +69,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip API + static assets — they don't render HTML and don't need a
+  // Skip API + static assets: they don't render HTML and don't need a
   // per-request CSP. Match everything else (pages + dynamic routes).
   matcher: [
     '/sw.js',

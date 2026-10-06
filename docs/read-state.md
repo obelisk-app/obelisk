@@ -16,8 +16,8 @@ for message data; `useNotificationsStore` holds the notification card
 logs. Pure selectors derive unread counts and highlights from the
 persisted cursor stores. An auto-mark hook advances
 cursors when the user is watching a channel/DM. A relay-sync engine
-publishes cursor snapshots with an 8-second debounce — a replaceable
-`kind:30078` for groups scope, a NIP-59 gift wrap for DM scope — and
+publishes cursor snapshots with an 8-second debounce (a replaceable
+`kind:30078` for groups scope, a NIP-59 gift wrap for DM scope) and
 subscribes on each device so cursors converge via monotonic `max()` merge.
 
 ```
@@ -61,18 +61,18 @@ interface ReadStateStore {
 }
 ```
 
-- **Single cursor per channel/peer** — Discord-style. Mentions and replies
+- **Single cursor per channel/peer**: Discord-style. Mentions and replies
   are derived views of unread messages, not separate cursors. The
   auto-mark hook advances `lastReadAt`; all three badges (unread count,
   mention bubble, reply bubble) clear together.
-- **Monotonicity** — `setDmCursor` / `setGroupCursor` / `applyRemoteState`
+- **Monotonicity**: `setDmCursor` / `setGroupCursor` / `applyRemoteState`
   only ever advance forward. Cursors are a CRDT under `max()`: two
   devices (or two tabs) advance independently and converge by taking the
   larger value per key.
-- **Bootstrap fallback** — first paint with no cursor for a key falls
+- **Bootstrap fallback**: first paint with no cursor for a key falls
   back to `Date.now() − 24h`. Matches the legacy heuristic; converges to
   a real cursor as soon as the user opens the conversation.
-- **Multi-account isolation** — persist key `obelisk-read-state:{myPubkey}`
+- **Multi-account isolation**: persist key `obelisk-read-state:{myPubkey}`
   via `ensureReadStateStoreForAccount`. Mounted from
   `ReadStateRoot` on every login change.
 
@@ -91,7 +91,7 @@ channel mention read.
 Rules:
 
 - **`@you` and replies-to-you ping; ordinary traffic does not.**
-  `classifyGroupPing` (`src/lib/notifications/classify.ts`) returns
+  `classifyGroupPing` (`src/services/notifications/classify.ts`) returns
   `'reply'` when the NIP-10 `reply` parent is ours (resolved from the local
   message list, or from the `p` tag when the parent isn't loaded) and
   `'mention'` when we're in `mentions`. The card carries that `reason`;
@@ -102,10 +102,10 @@ Rules:
     channel and ≤8 others get a per-channel stream, so without the live REQ
     a mention in any other channel never arrived. `ingestPing` skips
     channels that have their own stream.
-  - The **background relay watch** (`src/lib/nostr-bridge/background-watch.ts`)
+  - The **background relay watch** (`src/services/nostr-bridge/background-watch.ts`)
     on the 3 most-recently-used *other* relays, on a separate pool: a
     `#p:[me]` REQ from the relay's mention cursor (catch-up while the app
-    was closed — needs the sender to p-tag, which Obelisk does per NIP-27)
+    was closed; needs the sender to p-tag, which Obelisk does per NIP-27)
     and a live relay-wide kind-9 REQ from now (catches un-tagged mentions).
     Both pass `onauth`: a whitelist relay CLOSEs the first REQ on a fresh
     socket with `auth-required:`, and nostr-tools re-issues it only when
@@ -114,7 +114,7 @@ Rules:
     badge their rail tiles, and the bell only shows the active relay's.
 - **Sound and OS popups.** A card that was actually added (the push
   actions return `true`) is handed to `announceIncoming`
-  (`src/lib/notifications/alert.ts`): a chime per kind (`sound.ts`) and,
+  (`src/services/notifications/alert.ts`): a chime per kind (`sound.ts`) and,
   when the page is hidden/unfocused and `preferences.desktopNotifications`
   is on, a `Notification`. Only events < 2 minutes old alert, once per event
   id, and chimes are throttled to one per 1.2s so a reconnect burst is one
@@ -123,13 +123,13 @@ Rules:
   its mention cards with their unread state intact.
 - **First connect to an unseen relay ignores history.** `registerRelay`
   stamps `Date.now()` as that relay's cursor the first time the bridge
-  connects to it — called from `finalizeLogin`, `switchRelay` **and the
+  connects to it, called from `finalizeLogin`, `switchRelay` **and the
   page-reload restore in `initialize()`** (which does not go through
   `finalizeLogin`), all *before* subscriptions open. Missing it on the
   reload path turned every historical mention into an unread card that
   could never be seen. A relay whose cursor already exists keeps
   it, so a reconnect never silences cards the user hasn't read.
-- **A mention clears only when it has actually been seen** — or the bell
+- **A mention clears only when it has actually been seen**, or the bell
   is dismissed (relay mention cursor). `isMentionRead(m, relayCursor)` is
   `m.seen || m.createdAt <= relayCursor`; the channel cursor is deliberately
   NOT consulted, because it jumps to the newest message the moment a
@@ -139,7 +139,7 @@ Rules:
   (IntersectionObserver, so scroll-container clipping counts) for 1s with
   the tab visible and focused. A mention in the channel you're watching
   still gets a card (no chime); the observer clears it once it's really on
-  screen. `seen` is per device — only the relay mention cursor syncs.
+  screen. `seen` is per device; only the relay mention cursor syncs.
 - **Per-channel preferences** (`src/store/channel-prefs.ts`, set from the
   channel right-click / long-press menu, `ChannelContextMenu.tsx`), keyed
   `relay|channelId`, persisted per account. Applied in one place, the
@@ -147,7 +147,7 @@ Rules:
   - *Notification settings* `nothing` → no card, no sound; `all` → ordinary
     messages chime too (no card); `mentions` (default).
   - *Mute* (15 min … forever) → cards and badges kept, no sound or popup.
-  - *Stop following* → no unread count, dimmed row, no `all` pings — but
+  - *Stop following* → no unread count, dimmed row, no `all` pings, but
     @mentions and replies still card and chime.
   - *Mark as read* → channel cursor to now + every card for the channel
     marked seen. The escape hatch for any card the seen-detection can't
@@ -165,7 +165,7 @@ works untouched. One source of truth per value, two stores.
 
 ## 3. Mention detection
 
-`extractMentionPubkeysFromMessage(content, tags)` (`src/lib/mentions.ts`)
+`extractMentionPubkeysFromMessage(content, tags)` (`src/utils/message-text/mentions.ts`)
 unions:
 
 - Content tokens: `nostr:npub1<hex>` and `nostr:npub1<bech32>` and bare
@@ -173,13 +173,13 @@ unions:
 - `["p", <64 hex>]` event tags (NIP-29 messages routinely carry these).
 
 Precomputed once at ingest (`client.ts:ingestMessage`) and stored on
-`JsMessage.mentions`. UI selectors filter that list — no re-parsing per
+`JsMessage.mentions`. UI selectors filter that list; no re-parsing per
 render.
 
 ## 4. Reply detection
 
-`isReplyToMe(msg, authorById, myPubkey)` (`src/lib/read-state/replies.ts`)
-— strict NIP-10:
+`isReplyToMe(msg, authorById, myPubkey)` (`src/services/read-state/replies.ts`),
+strict NIP-10:
 
 - Message must have an `e` tag with marker `"reply"` (parsed by the
   bridge into `JsMessage.replyToId`).
@@ -187,7 +187,7 @@ render.
   list AND have `pubkey === myPubkey`.
 
 Root-only e-tags (`marker === "root"` or unmarked positional) are NOT
-replies — those denote thread membership.
+replies; those denote thread membership.
 
 Replies feed the **channel highlight** views (the `↑↓` MentionNavigator
 and the green channel-row pill) and, since the notification-sounds work,
@@ -208,7 +208,7 @@ interface ChannelHighlights {
 ```
 
 `useHasAnyHighlights(myPubkey)` returns `true` when any
-currently-loaded channel has unread mentions or replies — drives the
+currently-loaded channel has unread mentions or replies, drives the
 ServerRail relay-tile `@` overlay on the active relay.
 
 ## 6. UI surfaces
@@ -218,26 +218,26 @@ ServerRail relay-tile `@` overlay on the active relay.
 | Relay-tile `@` overlay | `src/app/app/ServerRail.tsx` (RelayTile) | Tiny green `@` badge when the active relay has unread mentions or replies in any channel. Cross-relay surveillance is a follow-up. |
 | Channel row badges | desktop `DesktopShell.tsx` (`GroupNode`), mobile `PhoneShell.tsx` (channel list) | Gray unread count + green pill for `mentions + replies`. Bold name when unread > 0. |
 | MentionNavigator | `src/components/chat/MentionNavigator.tsx` | Floating bottom-right of the message viewport. `↑ N / total ↓` when there are highlights; `F7` / `Shift+F7` keyboard shortcuts. Plus a `⌄` jump-to-latest button when scrolled away from the bottom. |
-| Inbox bell | desktop `DesktopShell.tsx` (`RelayTopBar`), mobile inbox tab | Two tabs — **Mentions** (active relay) and **DMs** — with independent counts, independent "mark read", and independent "clear". The bell glyph shows their sum. |
-| Tab title + favicon | `src/hooks/useFaviconBadge.ts` | `useTotalDMUnread` + unread mentions on the active relay. Ordinary channel traffic does **not** badge the tab — a busy relay would otherwise pin it at `(99+)` forever. |
+| Inbox bell | desktop `DesktopShell.tsx` (`RelayTopBar`), mobile inbox tab | Two tabs: **Mentions** (active relay) and **DMs**, with independent counts, independent "mark read", and independent "clear". The bell glyph shows their sum. |
+| Tab title + favicon | `src/hooks/useFaviconBadge.ts` | `useTotalDMUnread` + unread mentions on the active relay. Ordinary channel traffic does **not** badge the tab; a busy relay would otherwise pin it at `(99+)` forever. |
 
 ## 7. Encrypted multi-device sync
 
-Two scopes share the same engine (`src/lib/read-state/relay-sync.ts`):
+Two scopes share the same engine (`src/services/read-state/relay-sync.ts`):
 
 | Scope | Where it's published | Inner d-tag | Contents |
 |---|---|---|---|
 | **Groups state** | The **active** relay only (`useCurrentRelayUrl`) | `obelisk:readstate:v1` | `{ v:1, groups: { [groupId]: { lastReadAt } }, mentionsReadAt? }` |
 | **DM state** | User's NIP-65 read+write union (`fetchRelayList`) | `obelisk:dm-readstate:v1` | `{ v:1, dms: { [peerHex]: { lastReadAt } }, inboxLastReadAt }` |
 
-The groups-scope sub used to fan out across `useConfiguredRelays()` —
+The groups-scope sub used to fan out across `useConfiguredRelays()`:
 every relay in the rail got a kind 1059 REQ. That was the source of the
 "send AUTH on a closed connection" loop: a whitelist-gated relay (e.g.
 `lacrypta-relay.obelisk.ar`) the user had in their rail but wasn't
 browsing would issue NIP-42 AUTH, the bridge would auto-sign and send,
 the relay would close the socket, and nostr-tools would resend on
 reconnect. Switching to active-relay-only also satisfies the
-[architectural rule in CLAUDE.md](../CLAUDE.md#single-relay-rule-for-groups-cross-relay-only-for-dms):
+[architectural rule in AGENTS.md](../AGENTS.md#single-relay-rule-for-groups-cross-relay-only-for-dms):
 **only DMs run cross-relay**.
 
 Per-relay group-id collisions are not an in-memory concern because
@@ -262,7 +262,7 @@ That is worth paying for on **third-party** relays, which is why DM scope
 still uses it. It is worth almost nothing on the **groups** relay: that relay
 already authenticates the user over NIP-42 and already publishes their
 membership as `kind:39002`. It learns nothing from a `d` tag it did not
-already know — while the cost is charged in full.
+already know, while the cost is charged in full.
 
 ### What the cost turned out to be
 
@@ -287,7 +287,7 @@ and the wraps carried the very identity the wrap exists to hide.
 
 **A gift wrap can never be deleted by its author.** `wrapForSelf` generates the
 signing key inside the function and discards it; NIP-09 requires a deletion be
-signed by the same pubkey. Nobody — not the user, not the app — can issue a
+signed by the same pubkey. Nobody (not the user, not the app) can issue a
 kind-5 for one. Bound the lifetime with NIP-40, or use a replaceable event.
 
 ### Migration
@@ -298,22 +298,22 @@ Precedence is by inner timestamp, and the store merge is monotonic, so an
 out-of-order arrival cannot roll a cursor backwards. Drop the legacy read path
 once the fleet has turned over.
 
-Existing wraps cannot be cleaned up by the client (see above) — they age out
+Existing wraps cannot be cleaned up by the client (see above); they age out
 under the relay's own retention policy.
 
 ### Read protocol
 
-**Groups scope** subscribes `{kinds:[30078], authors:[myPubkey], "#d":[tag]}`
-— one event back, one NIP-44 decrypt of `content`, then step 3 onward below.
+**Groups scope** subscribes `{kinds:[30078], authors:[myPubkey], "#d":[tag]}`:
+one event back, one NIP-44 decrypt of `content`, then step 3 onward below.
 During the migration window it also runs the wrap path below.
 
 **DM scope** subscribes `{kinds:[1059], "#p":[myPubkey]}`. This filter cannot
-be narrowed — the wrap author is a throwaway key and `created_at` is fuzzed —
+be narrowed (the wrap author is a throwaway key and `created_at` is fuzzed),
 so it delivers every wrap addressed to the user, overwhelmingly real NIP-17
 DMs, each costing two signer round-trips to open and discard. `wrap-ledger.ts`
 exists to remember those verdicts across reloads. For each event:
 
-1. `unwrapForSelf(wrap, signer)` — NIP-44 decrypt the wrap content to
+1. `unwrapForSelf(wrap, signer)`: NIP-44 decrypt the wrap content to
    recover the seal (kind 13), verify `seal.pubkey === me`, NIP-44
    decrypt the seal to recover the rumor.
 2. Filter by `rumor.kind === 30078` AND inner d-tag matches the scope's
@@ -321,7 +321,7 @@ exists to remember those verdicts across reloads. For each event:
 3. Parse `JSON.parse(rumor.content)`; reject when `v !== 1`.
 4. Pick newest by inner `rumor.created_at`. The wrap's `created_at` is
    randomized ±2 days for privacy (NIP-59 §Privacy tags).
-5. `useReadStateStore.applyRemoteState({...})` — atomic monotonic
+5. `useReadStateStore.applyRemoteState({...})`, atomic monotonic
    merge: each cursor takes `max(local, remote)`.
 
 A `bridgeCache` snapshot is painted first for instant first-paint on
@@ -342,7 +342,7 @@ its scope. On any change:
 ### NIP-44 + signing
 
 `wrapForSelf` and `unwrapForSelf` (`src/lib/nip-59.ts`) accept a
-`NipSigner` — `signEvent` + `nip44Encrypt` + `nip44Decrypt`. The bridge
+`NipSigner`: `signEvent` + `nip44Encrypt` + `nip44Decrypt`. The bridge
 builds one for the active session via `getNipSigner()`:
 
 - nsec → `finalizeEvent(template, sk)` + raw `nostr-tools/nip44`
@@ -356,7 +356,7 @@ pubkey never appears on the kind 1059 envelope.
 
 The two scopes have different priorities now:
 
-- **Groups scope** (active relay only) — fires as soon as `myPubkey`,
+- **Groups scope** (active relay only): fires as soon as `myPubkey`,
   `activeRelay`, and at least one group are known. **No `useReadyToSync`
   gate.** It must land before messages paint, otherwise unread badges
   flash on then off when cursors arrive (the bridgeCache seed paints
@@ -364,7 +364,7 @@ The two scopes have different priorities now:
   zero," so a relay that doesn't store our wrap (or doesn't accept kind
   1059) leaves cursors at zero and a fresh wrap is published the moment
   the user marks anything read.
-- **DM scope** (NIP-65 read+write union) — still gated by
+- **DM scope** (NIP-65 read+write union): still gated by
   `useReadyToSync()` because it depends on the asynchronous `fetchRelayList`
   resolution and is one of two acceptable cross-relay fanouts (DMs
   themselves being the other).
@@ -381,7 +381,7 @@ See [`data-system.md` §4](./data-system.md) for the full priority table.
 ```
 src/app/app/AppGate.tsx
 └── <ReadStateRoot/>  (gated on useIsLoggedIn)
-    │  src/lib/read-state/root.tsx
+    │  src/services/read-state/root.tsx
     ├── ensureReadStateStoreForAccount(myPubkey)
     ├── ensureDMStoreForAccount(myPubkey)
     ├── ensureModerationStoreForAccount(myPubkey)
@@ -412,16 +412,16 @@ Two tabs on the same account converge automatically:
 
 ## 12. Limitations
 
-1. **Cross-relay mention surveillance** — the relay-tile `@` overlay only
+1. **Cross-relay mention surveillance**: the relay-tile `@` overlay only
    lights up on the active relay. To show it on inactive relays we'd
    need to subscribe to `{kinds:[9], "#p":[me]}` on each configured
    relay even when the user isn't on them. Tracked as a follow-up; the
    data path is otherwise ready.
-2. **Reply-to-me requires the parent in local state** — backfill that
+2. **Reply-to-me requires the parent in local state**: backfill that
    arrives before the parent does won't count toward the channel's reply
    highlight. Acceptable because messages stream in chronologically.
-   (Replies produce a `reason: 'reply'` card — see §2b.)
-3. **Gift wrap accumulation** — handled by the 8-second debounce, but
+   (Replies produce a `reason: 'reply'` card; see §2b.)
+3. **Gift wrap accumulation**: handled by the 8-second debounce, but
    long-running users on a single relay will accumulate ~10-30 KB of
    stale wraps per month. Future cleanup pass (NIP-09 deletions) is a
    follow-up.
@@ -436,7 +436,7 @@ layered on top. Same predicate as the notification push at
 isNew && !isUserWatching(channel|dm) && (mentioned || isDM)
 ```
 
-Per CLAUDE.md, background OS notifications are **DM-only**: group
+Per AGENTS.md, background OS notifications are **DM-only**: group
 mentions only notify while the user has that group's relay open as the
 active relay, because that's the only time they're scanned.
 
@@ -448,7 +448,7 @@ When that fires AND the user has opted in:
   the right channel/DM.
 
 iOS PWA: feature-detect `Notification` and gate the toggle. Sound works
-everywhere. No backend, no Web Push subscriptions — the relay sub stays
+everywhere. No backend, no Web Push subscriptions; the relay sub stays
 in-page and the browser owns the OS handoff.
 
 ## 14. Testing
@@ -457,13 +457,13 @@ in-page and the browser owns the OS handoff.
 |---|---|
 | `src/store/read-state.test.ts` | cursor monotonicity, account-swap persist key, `applyRemoteState` merge semantics |
 | `src/store/notifications.test.ts` | stream independence, per-relay bucketing, first-connect floor, backfill drop, caps/dedup, remote cursor merge |
-| `src/lib/nostr-bridge/bridge.test.ts` (`mention notifications`) | mentions-only ingest, relay stamping, self-mention and reply suppression, cursor-gated backfill |
-| `src/lib/read-state/selectors.test.ts` | unread counts, own-message exclusion, `computeChannelHighlights` ordering, mention + reply union |
-| `src/lib/read-state/replies.test.ts` | NIP-10 strict reply detection, parent lookup, edge cases |
-| `src/lib/read-state/relay-sync.test.ts` | sub/ingest with merged cursors, debounced publish, d-tag filtering, cache-first paint |
-| `src/lib/read-state/root.test.tsx` | `useReadyToSync` gate: false before connect, flips on EOSE, flips after 1000ms grace, no flip if connection drops mid-grace |
-| `src/lib/nip-59.test.ts` | wrap/unwrap roundtrip, null-on-junk, recipient mismatch, ephemeral pubkey privacy |
-| `src/lib/mentions.test.ts` | content-only and `#p`-tag mention extraction |
+| `tests/services/nostr-bridge/bridge.test.ts` (`mention notifications`) | mentions-only ingest, relay stamping, self-mention and reply suppression, cursor-gated backfill |
+| `tests/services/read-state/selectors.test.ts` | unread counts, own-message exclusion, `computeChannelHighlights` ordering, mention + reply union |
+| `tests/services/read-state/replies.test.ts` | NIP-10 strict reply detection, parent lookup, edge cases |
+| `tests/services/read-state/relay-sync.test.ts` | sub/ingest with merged cursors, debounced publish, d-tag filtering, cache-first paint |
+| `tests/services/read-state/root.test.tsx` | `useReadyToSync` gate: false before connect, flips on EOSE, flips after 1000ms grace, no flip if connection drops mid-grace |
+| `tests/lib/nip-59.test.ts` | wrap/unwrap roundtrip, null-on-junk, recipient mismatch, ephemeral pubkey privacy |
+| `tests/utils/message-text/mentions.test.ts` | content-only and `#p`-tag mention extraction |
 | `src/components/chat/MentionNavigator.test.tsx` | ↑↓ clamping, F7 / Shift+F7 keys, scrollIntoView, hidden when no highlights |
 | `src/hooks/useAutoMarkRead.test.tsx` | cursor advances on watching, halts on hidden, monotonic on backfill |
 | `src/hooks/useFaviconBadge.test.tsx` | tab title + favicon count DMs + active-relay mentions only, ignore ordinary traffic and other relays' mentions |

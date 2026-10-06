@@ -19,7 +19,7 @@
  */
 
 import { useTranslation } from '@/i18n/context';
-import UserAvatar from '@/components/UserAvatar';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 export function ComposeButton({
   pubkey,
@@ -49,7 +49,7 @@ export function ComposeButton({
         pubkey={pubkey}
         picture={picture ?? null}
         size={9}
-        name={name || pubkey.slice(0, 8)}
+        name={name}
         alt=""
       />
       <span className="min-w-0 flex-1 truncate rounded-full border border-lc-border bg-lc-dark px-3.5 py-2 text-[13px] text-lc-muted transition-colors group-hover:border-lc-green/40 group-hover:text-lc-white">
@@ -58,7 +58,7 @@ export function ComposeButton({
       {/*
         On a phone this pill was competing with the placeholder for a ~340px
         row: both got crushed and the row read as two broken inputs. The row
-        is already the button, so below `sm` the pill is redundant chrome —
+        is already the button, so below `sm` the pill is redundant chrome:
         a pen icon says the same thing in 32px.
       */}
       <span className="lc-pill-primary hidden shrink-0 px-4 py-2 text-xs sm:inline-flex" aria-hidden="true">

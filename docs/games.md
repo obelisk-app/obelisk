@@ -4,7 +4,7 @@
 
 Two games share one runtime: **Chain Reaction**, ported from the classic
 centralized stack, and **Vesta**, consumed as a tracked upstream package. The
-runtime itself is game-agnostic — a pure engine plus a replayed event log.
+runtime itself is game-agnostic: a pure engine plus a replayed event log.
 
 Chain Reaction was ported from the classic centralized stack
 ([obelisk-app/obelisk-classic](https://github.com/obelisk-app/obelisk-classic))
@@ -16,7 +16,7 @@ log.
 
 | Classic | Here |
 |---|---|
-| `prisma.game` row holds `state`, `currentTurn`, `turnDeadline` | The **log is the state** — every client replays kind 2390 events through the engine |
+| `prisma.game` row holds `state`, `currentTurn`, `turnDeadline` | The **log is the state**: every client replays kind 2390 events through the engine |
 | API route validates the move, then broadcasts the settled board | Every client validates every move independently; an illegal one is dropped everywhere |
 | `setTimeout` on the server fires `onTimeout` | Any player publishes a `timeout` claim once the deadline has passed; the deadline is derived from the log, so everyone agrees whether the claim is good |
 | socket.io rooms (`channel:`, `server:`, `pubkey:`) | one REQ per channel on the active relay |
@@ -28,14 +28,14 @@ a rewrite, and the only new code is the part that used to be a server.
 
 ## Wire format
 
-One stored kind — `KIND_GAME = 2390` — carries every op. Modeled on the voice
-signaling transport (`src/lib/voice/transport.ts`): plaintext signed events,
+One stored kind (`KIND_GAME = 2390`) carries every op. Modeled on the voice
+signaling transport (`src/services/voice/transport.ts`): plaintext signed events,
 addressed by tags, gated in the handler rather than trusted from the relay.
 
 Common tags:
 
 ```
-["h", <channelId>]   NIP-29 group scoping — the relay's channel write policy IS the game's
+["h", <channelId>]   NIP-29 group scoping: the relay's channel write policy IS the game's
 ["t", "obelisk-game"]
 ["op", <op>]
 ["e", <gameId>, "", "root"]   every op but `create`
@@ -63,25 +63,25 @@ worthless a second later; a game log is the game.
 `deriveSession` (`src/lib/games/session.ts`) is the whole trust model. Rules:
 
 1. Events sort by `(created_at, id)`. The id is a hash, so the tiebreak is
-   total and identical on every client — never "whoever the relay echoed
+   total and identical on every client, never "whoever the relay echoed
    first".
 2. A move must come from the controller of the seat on move **and** carry the
-   current sequence number. (Engines may allow specific out-of-turn actions —
-   see `canAct` — but those are ordered by the same rule.) Duplicates, replays, and moves published against a stale board fail
+   current sequence number. (Engines may allow specific out-of-turn actions,
+   see `canAct`, but those are ordered by the same rule.) Duplicates, replays, and moves published against a stale board fail
    one of those tests, so clock skew cannot reorder a match.
 3. Anything `validateAction` rejects is dropped. A client publishing an
    illegal cell has published noise.
 4. Once a game is `finished` or `cancelled`, later events are inert.
 
 A "waiting" table older than `WAITING_EXPIRY_MINUTES` (60) reads as cancelled.
-That is derived from the clock, not published — no event, no signature, same
+That is derived from the clock, not published: no event, no signature, same
 answer on any client whose clock is roughly right.
 
 ### What this does not defend against
 
 - **A player who simply stops publishing.** That is what the turn clock is
   for. On a table created with `No clock`, a walk-away stalls the table
-  forever — an accepted trade for a friendly game, not an oversight.
+  forever: an accepted trade for a friendly game, not an oversight.
 - **Collusion over the seat order.** The host picks it.
 - **Privacy.** Moves are plaintext on a public relay, exactly like the chat
   messages next to them. A hidden-information game (poker, battleship) would
@@ -89,20 +89,20 @@ answer on any client whose clock is roughly right.
 
 ## Relay scope
 
-Games follow the single-relay rule in [CLAUDE.md](../CLAUDE.md): a table lives
+Games follow the single-relay rule in [AGENTS.md](../AGENTS.md): a table lives
 on the channel's relay, because the channel does.
 
 `subscribeChannelGames` asks `{ kinds:[2390], '#h':[channel], since, limit }`.
 The `#h` is not free: a relay that doesn't index single-letter tags for an
 unfamiliar kind answers a tag-filtered REQ with silence, and that failure looks
-exactly like "nobody is playing" — which is why this filter was originally
+exactly like "nobody is playing", which is why this filter was originally
 kind + `since` alone, gating `h` in the handler. The cost of that was
 downloading every game event on the relay for 24 hours on every channel visit,
 mostly Stacker checkpoints carrying board and input blobs.
 
 So when the tagged REQ produces nothing within `TAG_PROBE_MS`, a one-shot
 `{ kinds:[2390], '#t':[GAME_TAG], limit: 1 }` asks the question that actually
-distinguishes the two cases — same kind, same class of indexed tag, no channel
+distinguishes the two cases: same kind, same class of indexed tag, no channel
 in it. If it returns something the relay can index these tags, the quiet channel
 is genuinely quiet, and the wide filter never opens. If it returns nothing too,
 the old relay-wide filter opens as the fallback and the relay is remembered as
@@ -111,7 +111,7 @@ firehose on every quiet channel, which is most of them.
 
 `CHANNEL_GAME_LIMIT` returns the newest N events, so on a busy channel a
 `create` can fall off the end. That is only acceptable because a card resolves
-itself by id — see below.
+itself by id; see below.
 
 ## Resolving one table
 
@@ -119,11 +119,11 @@ The channel sub answers "what is live in here"; it is not how a specific card
 gets its content. A `[[game:<id>]]` marker is an ordinary chat message, so
 scrolling back past the 24-hour window used to leave a permanent skeleton.
 
-`src/lib/games/resolve.ts` fetches a table directly, batching ids across cards:
+`src/services/games/resolve.ts` fetches a table directly, batching ids across cards:
 `{ ids }` for the creates (a table's id *is* its create event's id, and exact-id
 is the most universally indexed filter in nostr) plus
 `{ kinds:[2390], '#e': ids, limit }` for the ops. Neither carries a `since`.
-The two are disjoint — only ops carry an `e` tag — so no limit on the op filter
+The two are disjoint (only ops carry an `e` tag), so no limit on the op filter
 can starve a create, which is what guarantees a card always resolves to
 something. Ids that come back empty retry at 4s and 12s, then stop.
 
@@ -131,7 +131,7 @@ something. Ids that come back empty retry at 4s and 12s, then stop.
 
 Three sources, fastest first:
 
-1. **localStorage** (`src/lib/games/cache.ts`) — keyed per table, seeded in a
+1. **localStorage** (`src/services/games/cache.ts`): keyed per table, seeded in a
    layout effect so the skeleton commits but never paints. Checkpoints are
    omitted from the write entirely; stripping their blobs would be unsafe, not
    just lossy, because the store dedupes by event id and the stripped copy would
@@ -140,12 +140,12 @@ Three sources, fastest first:
 3. **The by-id resolver**, above.
 
 And for the person who published: `publishResilient` ingests its own signed
-event immediately (`echo`). That is not an optimistic guess — it is the same
+event immediately (`echo`). That is not an optimistic guess; it is the same
 event, with the same id, that everyone else will replay.
 
 ## Why replay is cheap now
 
-`replayLog` takes an event log and nothing else — in particular, **not the wall
+`replayLog` takes an event log and nothing else: in particular, **not the wall
 clock**. That is load-bearing: `selectSession` caches its result in a `WeakMap`
 keyed by the identity of the log array, which is only sound while the output
 depends on nothing but the log. The one time-dependent read (a waiting table
@@ -154,10 +154,10 @@ read and never mutates the cached replay. Reading the clock inside `replayLog`
 would silently freeze every card on whatever the clock said the first time.
 
 The log arrays are copy-on-write, so a new event produces a new array, a new
-cache key, and one replay — for that table only. `useGameSession` subscribes to
+cache key, and one replay, for that table only. `useGameSession` subscribes to
 `logs[gameId]`, not the whole map, so an event on one table no longer
 re-renders and re-derives every card in the channel. Relay events land through
-`src/lib/games/ingest.ts`, which batches a burst into one store update instead
+`src/services/games/ingest.ts`, which batches a burst into one store update instead
 of one per event.
 
 ## UI
@@ -168,10 +168,10 @@ of one per event.
 - `MessageContent` hoists that marker into a `GameCard`. The card is a
   pointer, not a snapshot: an hour-old message shows the match as it stands
   now.
-- `GameModal` is the table — roster while waiting, board while playing.
+- `GameModal` is the table: roster while waiting, board while playing.
   Every button publishes one event and then does nothing; the UI moves when
   the event is in the log. No optimistic board, because a board the relay
-  hasn't accepted is a board the other players cannot see — but the publisher's
+  hasn't accepted is a board the other players cannot see, but the publisher's
   own signed event goes into the log as soon as the relay confirms it, without a
   second round trip to hear it echoed back.
 - Every client watching a table runs `useTurnClockEnforcer` and races to
@@ -180,7 +180,7 @@ of one per event.
 
 ## Vesta
 
-[fchurca/vesta](https://github.com/fchurca/vesta) — a settlement-building game
+[fchurca/vesta](https://github.com/fchurca/vesta): a settlement-building game
 whose core module is already pure and log-shaped. It is a **tracked
 dependency**, not a fork:
 
@@ -197,7 +197,7 @@ package's `main` is `src/vesta.ts`, it is listed in `transpilePackages`
 Three things the relay forces that upstream's hot-seat client never needed:
 
 **1. A move may not name its own player.** The seat comes from the signature.
-Upstream had no reason to care — everyone shared a keyboard.
+Upstream had no reason to care: everyone shared a keyboard.
 
 **2. Validation runs on every client.** Upstream splits `canBuildSettlement`
 (the rules) from `placeSettlement` (does as it's told), and its UI calls the
@@ -207,7 +207,7 @@ guards on every client for every move. Without it you could publish a
 settlement onto an occupied vertex and everyone would agree you owned it.
 
 **3. Dice cannot be self-reported.** `roll-dice` carries values upstream; we
-ignore them and derive the roll from `entropy` — the id of the last accepted
+ignore them and derive the roll from `entropy`: the id of the last accepted
 event plus the turn index, both fixed before the roller published anything.
 See `vesta/dice.ts`. The residual weakness is documented there: whoever
 published the *previous* accepted event can grind it to steer the next roll.
@@ -217,7 +217,7 @@ Upstream's URD dependency (verifiable randomness) is the real fix, and
 Vesta tables default to **no turn clock**. Our clock is per action, and a
 Vesta turn is many actions (roll, build, trade, end), so a short timer would
 guillotine people mid-thought. Timing out or resigning ends that seat's turn
-rather than removing the player — Vesta has no elimination, and deleting a
+rather than removing the player: Vesta has no elimination, and deleting a
 player would rewrite everyone else's board.
 
 ### Seats, hot-seat, and remote players
@@ -233,12 +233,12 @@ A seat's identity stopped being a pubkey when Vesta arrived:
 ```
 
 `id` is what the engine sees as a player; `by` is who may publish its moves.
-Two seats sharing a `by` are two people at one keyboard — Ana and Beto play
+Two seats sharing a `by` are two people at one keyboard: Ana and Beto play
 locally on Ana's machine, and their moves are signed by Ana's key. A move
 names its seat when its signer holds more than one.
 
 For an ordinary all-remote table `id === by`, so a Chain Reaction table reads
-exactly as it did before seats existed — and a bare `["pk1","pk2"]` seat list
+exactly as it did before seats existed, and a bare `["pk1","pk2"]` seat list
 from an older client still parses (`parseSeats`).
 
 The host can only seat people who joined: a seat whose `by` never published a
@@ -246,7 +246,7 @@ The host can only seat people who joined: a seat whose `by` never published a
 
 ### What lives here that upstream keeps in its UI
 
-Vesta's client does real game sequencing between `applyMove` calls — it sets
+Vesta's client does real game sequencing between `applyMove` calls: it sets
 `pendingSettlement`, flips `setupStep`, hands out second-round starting
 resources, calls `nextTurn`, and decides when the robber may move. That is
 fine for one browser with one player at a time. Over a relay there is no
@@ -255,7 +255,7 @@ deterministically, on every replay.
 
 The robber needs a flag that upstream keeps in the DOM ("a seven was rolled,
 now place it"). Ours rides in the state under a namespaced `__obelisk` key,
-because replay has to carry it — every one of upstream's reducers spreads the
+because replay has to carry it: every one of upstream's reducers spreads the
 previous state, so the field survives without touching their rules. A turn
 cannot end while the robber is unplaced, and a steal is only legal once it
 has landed.
@@ -269,8 +269,8 @@ of a fresh board (a serialized state is ~4 KB, comfortably inside one event).
 
 ### Playing it
 
-`/play` opens the picker — every registered game with a thumbnail, its player
-range, and its default clock — then that game's own options (board size for
+`/play` opens the picker (every registered game with a thumbnail, its player
+range, and its default clock), then that game's own options (board size for
 Chain Reaction, seed or a loaded save for Vesta).
 
 Names and icons come from `src/lib/games/catalog.ts`, keyed by game type.
@@ -279,8 +279,8 @@ to say "Chain Reaction" outright, which made a Vesta table read as a Chain
 Reaction table everywhere in chat.
 
 Players join from the in-channel card; the host then hits Start, which opens
-the seat assignment. There is one control per seat — **which account signs its
-moves** — and everything follows from it:
+the seat assignment. There is one control per seat, **which account signs its
+moves**, and everything follows from it:
 
 - an account holding one seat plays it **remotely**, from their own client;
 - an account holding several is playing them **on one machine**. They are
@@ -289,16 +289,16 @@ moves** — and everything follows from it:
 
 Seat order is turn order, and seats can be renamed. When the table resumes a
 save, the rows are fixed to the saved players, in the save's order, each
-showing the name it had — the host assigns each saved player to an account
+showing the name it had; the host assigns each saved player to an account
 rather than the mapping being implicit in row order.
 
 The board highlights exactly the spots upstream's `getValidPositions` calls
-legal, and every button is gated by the engine's own `validateAction` — a
+legal, and every button is gated by the engine's own `validateAction`: a
 rejected move over a relay is silent, so the UI never offers one.
 
 ## Stacker
 
-Falling blocks with attacks — the multiplayer shape, where the lines you clear
+Falling blocks with attacks: the multiplayer shape, where the lines you clear
 bury somebody else. Named Stacker rather than the obvious thing because that
 word is a trademark and this ships in a product.
 
@@ -324,7 +324,7 @@ difference:
 ### Why it stays honest
 
 Everyone starts from the same seed, so everyone gets the same pieces in the
-same order — a match is a race, not a lottery. The seed comes from the create
+same order: a match is a race, not a lottery. The seed comes from the create
 event's opts, or from the table id (a hash: unpredictable before the table
 existed, identical for everyone after).
 
@@ -336,7 +336,7 @@ marks a seat whose claims its own log does not support.
 **This detects cheating rather than preventing it.** Garbage lands before the
 checkpoint that justifies it arrives, so a modified client can land one round
 of unearned attacks before it is flagged. Preventing that outright means
-lockstep — a relay round-trip per frame — which would destroy the thing the
+lockstep (a relay round-trip per frame), which would destroy the thing the
 game is for. The trade is deliberate. It also only catches invented attacks,
 not a human being assisted by a bot that plays legitimately well.
 
@@ -348,30 +348,30 @@ replay reproduces the board that actually happened, garbage included.
 The numbers that decide whether this plays well are all in `useStackerLoop`:
 DAS 10 frames, ARR 2, gravity from 48 frames down to 4 as lines pile up, lock
 delay 30 frames with 15 slide resets. The engine state is mutable and read
-through `useSyncExternalStore` — copying a 400-cell grid immutably sixty times
+through `useSyncExternalStore`: copying a 400-cell grid immutably sixty times
 a second is how a game like this ends up stuttering.
 
 ### Sound
 
-Effects are synthesized at runtime in `stacker/audio.ts` — line clears pitched
+Effects are synthesized at runtime in `stacker/audio.ts`: line clears pitched
 by how many lines, a distinct chime for spins, garbage rumble, a falling
 top-out. No asset files, and they fire straight off engine events.
 
 The music is the `ncc`-prefixed set from
 [TETRA](https://github.com/soyezequiel/tetris-para-luna-negra) by
 **soyezequiel**, a La Crypta hackathon project. That repo marks its
-royalty-free tracks with that prefix — see `ROYALTY_FREE_PREFIX` in its
-`src/audio/music.ts` — and they were generated with Suno. All three ship under
+royalty-free tracks with that prefix (see `ROYALTY_FREE_PREFIX` in its
+`src/audio/music.ts`), and they were generated with Suno. All three ship under
 `public/games/stacker/` and are credited in the game UI, linking back to the
 source.
 
 It just plays: the playlist is shuffled once per session and advances on its
-own, with no picker. `MUSIC_TRACKS` in `audio.ts` is the whole catalogue —
+own, with no picker. `MUSIC_TRACKS` in `audio.ts` is the whole catalogue:
 adding or removing a file there is the entire job.
 
 **The rest of that folder is not ours to ship.** It holds commercial
-recordings — Duel of the Fates, The Final Countdown, a Bonnie Tyler cover,
-orchestral Tetris theme recordings — and no prefix or folder makes those
+recordings (Duel of the Fates, The Final Countdown, a Bonnie Tyler cover,
+orchestral Tetris theme recordings), and no prefix or folder makes those
 redistributable. The `ncc` marker is the uploader's statement about their own
 generated tracks, not a licence covering anybody else's. If you hold licences
 for others, or the author confirms a specific file is their own original, add
@@ -382,8 +382,8 @@ bed plays instead, so the game is never silent because of a missing file.
 
 ## Guides and screenshots
 
-Each game has a public guide under `content/guides/{en,es}/` —
-`chain-reaction`, `vesta`, `stacker` — with an animated SVG hero
+Each game has a public guide under `content/guides/{en,es}/`
+(`chain-reaction`, `vesta`, `stacker`) with an animated SVG hero
 (`src/components/guides/svg/`) and real screenshots of the running boards.
 
 The screenshots are generated, not curated:
@@ -395,7 +395,7 @@ npm run snap-games   # → public/og/guides/games/*.png
 
 `scripts/snap-game-shots.mjs` drives `/dev/game-shots` (a route that 404s in
 production) with Playwright. That page mounts the real board components over
-fixture *logs* — `src/app/dev/game-shots/fixtures.ts` builds kind 2390 events
+fixture *logs*: `src/app/dev/game-shots/fixtures.ts` builds kind 2390 events
 and hands them to `deriveSession`, so the pictures are the shipped engine
 rendering boards it derived, not mocked state. The Stacker table shot is
 played live with scripted keystrokes. A rules change that alters a board
@@ -409,6 +409,6 @@ with no file on disk fails `Shot.test.tsx`.
 
 The runtime is game-agnostic. Port the engine from classic (`chess.ts`,
 `tic-tac-toe.ts` are both already pure), make sure it obeys the contract in
-`src/lib/games/types.ts` — no wall clock, no randomness, no mutation — and add
+`src/lib/games/types.ts` (no wall clock, no randomness, no mutation) and add
 it to `src/lib/games/registry.ts`. Everything in `session.ts`, `transport.ts`,
 and the store works unchanged; only the board component is new.

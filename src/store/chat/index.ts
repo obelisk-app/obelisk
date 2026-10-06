@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { RelayRole } from '@/lib/relay-roles';
+import type { RelayRole } from '@/services/relay-roles';
 
 export interface ChatState {
   activeChannelId: string | null;
@@ -7,7 +7,7 @@ export interface ChatState {
   serverEmojis: Record<string, string>;
   serverMediaKinds: Record<string, 'emoji' | 'gif' | 'sticker'>;
   /**
-   * Relay roles held per pubkey, most senior first — fed by the shell from
+   * Relay roles held per pubkey, most senior first, fed by the shell from
    * `useRelayRoles` so message rows and the member list can render a badge
    * without each subscribing to the relay themselves.
    */
@@ -20,7 +20,7 @@ export interface ChatState {
    *
    * The shell owns navigation, but the search bar is mounted several levels
    * below it in the channel header, so this is the handoff. Calling
-   * `bridge.setActiveGroup` from down there does NOT navigate — it only
+   * `bridge.setActiveGroup` from down there does NOT navigate: it only
    * moves the relay subscription, while what's on screen is driven by the
    * shell's own `view` state. Routing through the shell is the whole point
    * of this field.
@@ -56,7 +56,7 @@ export const useChatStore = create<ChatState>()((set) => ({
   ...CHAT_INITIAL_STATE,
   setServerEmojis: (serverEmojis, serverMediaKinds = {}) => set({ serverEmojis, serverMediaKinds }),
   setRolesByPubkey: (rolesByPubkey) => set({ rolesByPubkey }),
-  openProfilePopup: (profilePopupPubkey, profilePopupAnchor = null) => set({ profilePopupPubkey, profilePopupAnchor }),
+  openProfilePopup: (profilePopupPubkey, anchor) => set({ profilePopupPubkey, profilePopupAnchor: anchor ?? null }),
   closeProfilePopup: () => set({ profilePopupPubkey: null, profilePopupAnchor: null }),
   requestJump: (groupId, messageId = null) => set({ pendingJump: { groupId, messageId } }),
   consumeJump: () => set({ pendingJump: null }),

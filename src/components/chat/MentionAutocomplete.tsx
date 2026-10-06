@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import type { MemberInfo } from '@/lib/mentions';
+import type { MemberInfo } from '@/utils/message-text/mentions';
+import { useMentionAutocomplete } from '@/hooks/chat/useMentionAutocomplete';
+import RemoteImage from '@/components/ui/RemoteImage';
+import OptionRow from '@/components/ui/OptionRow';
 
 interface Props {
   members: MemberInfo[];
@@ -11,53 +13,39 @@ interface Props {
   onClose: () => void;
 }
 
+/**
+ * Desktop skin of the mention picker. Behaviour (touch, mouse, scroll into
+ * view, outside click, the npub label) is `useMentionAutocomplete`, shared
+ * with `MobileMentionAutocomplete`; only the classes are this file's.
+ */
 export default function MentionAutocomplete({ members, selectedIndex, onSelect, onHover, onClose }: Props) {
-  const ref = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const { rootRef, rows } = useMentionAutocomplete({ members, selectedIndex, onSelect, onHover, onClose });
 
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [onClose]);
-
-  useEffect(() => {
-    itemRefs.current[selectedIndex]?.scrollIntoView({ block: 'nearest' });
-  }, [selectedIndex]);
-
-  if (members.length === 0) return null;
+  if (rows.length === 0) return null;
 
   return (
     <div
-      ref={ref}
+      ref={rootRef}
       className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-48 overflow-y-auto rounded-xl border border-lc-border bg-lc-dark shadow-lg"
       data-testid="mention-autocomplete"
     >
-      {members.map((m, i) => (
-        <button
-          key={m.pubkey}
-          ref={(el) => { itemRefs.current[i] = el; }}
-          type="button"
-          onMouseDown={(e) => { e.preventDefault(); onSelect(m); }}
-          onMouseEnter={() => onHover(i)}
-          className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${
-            i === selectedIndex ? 'bg-lc-border/60' : 'hover:bg-lc-border/40'
-          }`}
+      {rows.map(({ member, active, keyLabel, initials, props }) => (
+        <OptionRow
+          key={member.pubkey}
+          {...props}
+          active={active}
           data-testid="mention-option"
         >
-          {m.picture ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={m.picture} alt="" className="h-6 w-6 rounded-full object-cover" />
+          {member.picture ? (
+            <RemoteImage src={member.picture} alt="" className="h-6 w-6 rounded-full object-cover" />
           ) : (
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-lc-border text-xs font-semibold text-lc-green">
-              {m.displayName[0]?.toUpperCase() || '?'}
+              {initials}
             </div>
           )}
-          <span className="truncate text-sm font-medium text-lc-white">{m.displayName}</span>
-          <span className="ml-auto truncate text-xs text-lc-muted">{m.pubkey.slice(0, 8)}…</span>
-        </button>
+          <span className="truncate text-sm font-medium text-lc-white">{member.displayName}</span>
+          <span className="ml-auto truncate text-xs text-lc-muted">{keyLabel}</span>
+        </OptionRow>
       ))}
     </div>
   );

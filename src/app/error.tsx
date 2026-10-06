@@ -1,9 +1,9 @@
 'use client';
 
-import ErrorPanel from '@/components/ErrorPanel';
+import ErrorPanel from '@/components/feedback/ErrorPanel';
 
 /**
- * Route-level error boundary for everything under the root layout — the
+ * Route-level error boundary for everything under the root layout - the
  * chat shell included.
  *
  * Before this existed, a single render throw anywhere in the client tree

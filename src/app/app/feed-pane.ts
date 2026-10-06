@@ -3,7 +3,7 @@
  *
  * This replaced a single rail button that cycled off → split → full → off.
  * That was three states behind one control with nothing on screen saying
- * which you were in or what the next press would do — you had to press it and
+ * which you were in or what the next press would do - you had to press it and
  * find out. The fix isn't a cleverer cycle, it's splitting the two questions
  * apart and giving each a visible control:
  *
@@ -38,7 +38,7 @@ export function openModeFor(host: FeedHost): FeedPaneMode {
 /**
  * Whether the pane should offer "restore to split".
  *
- * Only when there's something to sit beside — offering it against an empty
+ * Only when there's something to sit beside - offering it against an empty
  * pane would produce a half-width feed next to nothing, which is the state
  * the old cycle could strand you in.
  */

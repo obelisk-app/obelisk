@@ -4,7 +4,7 @@
  * The shell every side-column panel wears.
  *
  * The old panel's title was a bare uppercase grey line with 8px under it,
- * sitting flush against the content — it read as a stray label rather than
+ * sitting flush against the content: it read as a stray label rather than
  * the head of a card. This gives it a rule to sit on, room to breathe, and
  * somewhere for a per-widget action to live, so two stacked panels read as
  * two things rather than one long list.
@@ -19,7 +19,7 @@ export default function WidgetCard({
   testId,
 }: {
   title: string;
-  /** Optional control in the header — "see all", a filter, the picker. */
+  /** Optional control in the header: "see all", a filter, the picker. */
   action?: ReactNode;
   children: ReactNode;
   testId?: string;

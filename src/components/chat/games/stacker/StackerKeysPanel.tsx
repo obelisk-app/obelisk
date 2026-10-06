@@ -1,21 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ModalShell from '@/components/ModalShell';
+import Modal from '@/components/ui/Modal';
 import {
   BINDABLE, bindKey, keyLabel, keysFor, loadKeyMap, resetKeyMap, saveKeyMap, unbindKey,
   type KeyMap,
 } from '@/lib/games/stacker/keymap';
 import type { InputKind } from '@/lib/games/stacker/engine';
 import { useTranslation } from '@/i18n/context';
+import Button from '@/components/ui/Button';
+import Chip from '@/components/ui/Chip';
 
 /**
  * Rebind the controls.
  *
  * Bindings live in localStorage, per browser: they are a property of the
  * keyboard in front of you, not of your account, so they have no business on
- * the relay. An action can hold several keys — the defaults bind rotate to
- * both ↑ and X — so binding one key never clears the others.
+ * the relay. An action can hold several keys (the defaults bind rotate to
+ * both ↑ and X), so binding one key never clears the others.
  */
 export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
@@ -42,7 +44,7 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
   }, [listening, map]);
 
   return (
-    <ModalShell
+    <Modal
       onClose={onClose}
       testId="stacker-keys-panel"
       panelClassName="w-full max-w-sm mx-4 rounded-xl bg-lc-dark border border-lc-border p-5"
@@ -73,36 +75,32 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
                   {keyLabel(code)}
                 </button>
               ))}
-              <button
-                type="button"
+              <Chip
+                size="10"
+                state={listening === action ? 'selected' : 'idle'}
                 onClick={() => setListening(action)}
-                className={`rounded-full border px-2 py-0.5 text-[10px] ${
-                  listening === action
-                    ? 'border-lc-green text-lc-green'
-                    : 'border-lc-border text-lc-muted hover:text-lc-white'
-                }`}
                 data-testid={`bind-${action}`}
               >
                 {listening === action ? 'press a key…' : '+ key'}
-              </button>
+              </Chip>
             </li>
           );
         })}
       </ul>
 
       <div className="mt-4 flex justify-between">
-        <button
-          type="button"
+        <Button
+          variant="pillSecondary"
+          size="xs"
           onClick={() => setMap(resetKeyMap())}
-          className="lc-pill-secondary px-4 py-1.5 text-xs"
           data-testid="stacker-keys-reset"
         >
           {t('games.resetKeys')}
-        </button>
-        <button type="button" onClick={onClose} className="lc-pill-primary px-4 py-1.5 text-xs">
+        </Button>
+        <Button variant="pill" size="xs" onClick={onClose}>
           {t('common.done')}
-        </button>
+        </Button>
       </div>
-    </ModalShell>
+    </Modal>
   );
 }

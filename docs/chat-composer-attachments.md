@@ -1,26 +1,26 @@
-# Chat composer — image & video attachments
+# Chat composer - image & video attachments
 
 ## Flow
 
 The chat composer in `src/app/app/AppShell.tsx` accepts media three ways:
 
-1. **Attach button** — opens the OS file picker (`<input type="file" multiple accept="image/*,video/*">`).
-2. **Paste** — `onPaste` on the message input scans `clipboardData.items` for files with an `image/*` or `video/*` MIME type.
-3. **Inline URLs** — pasting a bare image URL into the text still works; the renderer detects it on the receiving side.
+1. **Attach button**: opens the OS file picker (`<input type="file" multiple accept="image/*,video/*">`).
+2. **Paste**: `onPaste` on the message input scans `clipboardData.items` for files with an `image/*` or `video/*` MIME type.
+3. **Inline URLs**: pasting a bare image URL into the text still works; the renderer detects it on the receiving side.
 
 All three paths funnel through `onPickFiles(files: File[])`, which:
 
 - Caps each batch at **4 files** (matches the gallery's 2x2 matrix renderer).
-- Uploads in parallel via `uploadToBlossom` from `src/lib/blossom.ts`.
-- Appends each returned URL on its own line at the end of the draft (NIP-92-style — bare image URLs in message content are auto-rendered as media on receive).
+- Uploads in parallel via `uploadToBlossom` from `src/services/blossom.ts`.
+- Appends each returned URL on its own line at the end of the draft (NIP-92-style: bare image URLs in message content are auto-rendered as media on receive).
 
 Errors surface in `sendError` below the composer; partial-batch failures fail the whole batch (Promise.all). Re-sending after a failure is a manual retry.
 
 ## Preview strip
 
-A thumbnail row renders directly above the input bar whenever the draft contains image URLs (detected via `extractUrls` + `isImageUrl` from `@/lib/markdown`), capped at 4 thumbs. Each thumbnail has an `×` button that removes that URL's line from the draft. While an upload is in flight, a `…` placeholder tile appears next to existing thumbs.
+A thumbnail row renders directly above the input bar whenever the draft contains image URLs (detected via `extractUrls` + `isImageUrl` from `@/utils/message-text/markdown`), capped at 4 thumbs. Each thumbnail has an `×` button that removes that URL's line from the draft. While an upload is in flight, a `…` placeholder tile appears next to existing thumbs.
 
-The strip is purely a view over `draft` — there is no separate "pending attachments" state. Removing a thumb is a string edit on `draft`. This keeps the composer single-source-of-truth and avoids drift between what the user sees and what gets sent.
+The strip is purely a view over `draft`; there is no separate "pending attachments" state. Removing a thumb is a string edit on `draft`. This keeps the composer single-source-of-truth and avoids drift between what the user sees and what gets sent.
 
 ## Rendering on receive
 
@@ -38,7 +38,7 @@ Tapping any tile opens the lightbox (zoom + pan + arrow-key navigation). See `sr
 
 ## Limits & gotchas
 
-- **4-image cap is per batch, not per message.** A user can paste 4, then attach 4 more — all 8 URLs end up in the draft. The renderer/gallery only shows the first 4 with a `+N` overlay; the remaining URLs still travel in the message body and are reachable via the lightbox carousel.
-- **No client-side size check** before upload — Blossom server enforces its own limits and returns an error.
+- **4-image cap is per batch, not per message.** A user can paste 4, then attach 4 more, and all 8 URLs end up in the draft. The renderer/gallery only shows the first 4 with a `+N` overlay; the remaining URLs still travel in the message body and are reachable via the lightbox carousel.
+- **No client-side size check** before upload; Blossom server enforces its own limits and returns an error.
 - **Video files** go through the same path; the gallery itself only handles images, so videos render via the existing video-URL detection in `MessageContent`.
-- **No drag-and-drop** onto the composer yet. Add an `onDrop` handler on the composer container if/when needed — it can call the same `onPickFiles`.
+- **No drag-and-drop** onto the composer yet. Add an `onDrop` handler on the composer container if/when needed; it can call the same `onPickFiles`.

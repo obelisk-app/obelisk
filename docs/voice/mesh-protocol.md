@@ -1,4 +1,4 @@
-# Mesh — Wire Protocol
+# Mesh - Wire Protocol
 
 Two Nostr event kinds + one in-PC data channel:
 
@@ -18,9 +18,9 @@ Two Nostr event kinds + one in-PC data channel:
     ["e", "<channel-id>"],
     ["t", "obelisk-voice-presence"],
     ["expiration", "<unix-seconds, +45 from publish>"],
-    ["p", "<connected-peer-pubkey>"], // 0..N — peers we have a live PC to
-    ["peer", "<observed-peer-pubkey>"], // 0..N — our PCs + live beacons we received (first-hand only)
-    ["v", "camera"], ["v", "screen"],  // 0..2 — outbound video tracks
+    ["p", "<connected-peer-pubkey>"], // 0..N: peers we have a live PC to
+    ["peer", "<observed-peer-pubkey>"], // 0..N: our PCs + live beacons we received (first-hand only)
+    ["v", "camera"], ["v", "screen"],  // 0..2: outbound video tracks
     ["sfu", "1"],                       // present iff this client is an SFU node
     ["client", "obelisk-mesh-test-peer"], // diagnostic mesh test peer marker
     ["test-peer", "mesh"]                // legacy/simple diagnostic marker
@@ -51,7 +51,7 @@ is never swallowed: the initial beacon fails the join, mesh subscriptions are
 closed, and `VoiceRoom` returns to the Join screen with the relay error so the
 user can fix access and retry without a beacon/redial loop.
 
-The receiver dedups by `(pubkey, created_at)` — newer beacons replace
+The receiver dedups by `(pubkey, created_at)`: newer beacons replace
 older ones; expired beacons (`expiration` past, normally 45 s after
 publish) are swept out by `subscribeRoster`'s
 `(PRESENCE_TTL_SECONDS / 2) * 1000` interval.
@@ -59,14 +59,14 @@ publish) are swept out by `subscribeRoster`'s
 Only publishers and their `p` tags count as participants
 (`transitiveParticipants`). `peer` tags are parsed but **not** counted: they
 used to be, and each client re-advertised everything it had learned, so two
-live clients kept a departed pubkey alive between them indefinitely — a ghost
+live clients kept a departed pubkey alive between them indefinitely: a ghost
 that cost a 9 s dial timeout per redial and a slot under the four-person cap.
 A client now puts only what it saw itself (its PCs, live beacons, active-call
 hints) in `peer` tags and control snapshots; the tag stays for older clients.
 
 The leave beacon carries `["status", "left"]` and an `expiration` **10 s in
 the future**. It used to be `now - 1`, which a NIP-40 relay drops before
-delivery — leavers then lingered for the previous beacon's full TTL.
+delivery; leavers then lingered for the previous beacon's full TTL.
 
 ### Subscriptions
 
@@ -89,8 +89,8 @@ A call stays on the relay it was joined on while the user browses others.
 While its roster/signal subs are open, the bridge answers that relay's AUTH
 challenge (`answerAuth` → `voiceAuthRelays`), without touching the browsed
 relay's access indicator. Publishes pass `authRetryOnRestricted`: a
-whitelist relay refuses an EVENT that beats AUTH with `restricted:` — not
-`auth-required:`, the only prefix nostr-tools retries — so the bridge AUTHs
+whitelist relay refuses an EVENT that beats AUTH with `restricted:` (not
+`auth-required:`, the only prefix nostr-tools retries), so the bridge AUTHs
 that socket and republishes once. A socket that still refuses after AUTH is
 not retried again until it reconnects with a new challenge.
 
@@ -123,7 +123,7 @@ non-admin viewers. This is for operator diagnostics and synthetic media tests.
 }
 ```
 
-`content` is a `VoiceSignalPayload` (see `src/lib/voice/types.ts`).
+`content` is a `VoiceSignalPayload` (see `src/services/voice/types.ts`).
 Variants:
 
 | `type` | Carries |
@@ -166,7 +166,7 @@ connection watchdog tears down peers that never open. Its budget depends on
 the signer (`SIGNER_PEER_BUDGET`): a local key trickles ICE with 9 s; NIP-07
 bundles candidates into the SDP (`trickle: false`) with 20 s; a bunker does
 the same with 45 s. Every signal is a separately signed event, and an
-extension signs them one at a time — trickle plus 9 s overran routinely. Terminal library/PC
+extension signs them one at a time; trickle plus 9 s overran routinely. Terminal library/PC
 closure and heartbeat loss converge on `VoiceClient.tearDownPeer`; if the
 pubkey remains present in relay or control discovery, the debounced dial loop
 creates a fresh library peer and reattaches local tracks.
@@ -189,7 +189,7 @@ type ControlMessage =
   | { type: 'pong'; ts: number; echoTs: number };
 ```
 
-Lifecycle (timing constants in `src/lib/voice/control-channel.ts`):
+Lifecycle (timing constants in `src/services/voice/control-channel.ts`):
 
 - **Connection timeout**: 9 s from peer construction to connection.
 - **Heartbeat**: ping every 2.5 s. Pong response carries `echoTs` →
@@ -214,25 +214,25 @@ Discovery propagation:
   OTHER peer as a fast incremental hint.
 
 The receiver feeds these into the `DiscoveryEngine`
-(`src/lib/voice/discovery.ts`), which tracks `(pubkey, viaPeer)` so a
+(`src/services/voice/discovery.ts`), which tracks `(pubkey, viaPeer)` so a
 single peer's `peerRemoved` doesn't drop someone other peers still
 claim. Full `peerSnapshot` messages replace the claims from that one
 neighbor so stale transitive hints age out without requiring relay beacons.
 
 ## Hangup paths (in priority order)
 
-1. **Control-channel `bye`** — primary. Sent synchronously over the
+1. **Control-channel `bye`**: primary. Sent synchronously over the
    data channel before `pc.close()`. Other side receives within
    ~10 ms; `onPeerDead('bye:local-leave')` fires immediately.
-2. **Control-channel heartbeat-lost** — backup. 20 s after the last
+2. **Control-channel heartbeat-lost**: backup. 20 s after the last
    inbound message, `onDead('heartbeat-lost')` fires. Covers tab
    crashes / network blackouts where bye was never sent.
-3. **Relay `bye` (kind 25050 type=bye)** — backup. Used when the data
+3. **Relay `bye` (kind 25050 type=bye)**: backup. Used when the data
    channel hadn't opened yet.
-4. **Library/PC terminal close** — last resort. The owner tears down and
+4. **Library/PC terminal close**: last resort. The owner tears down and
    redials while relay/control discovery still considers the pubkey active.
 
-All four converge on `tearDownPeer` (idempotent — see `client.ts`). A real
+All four converge on `tearDownPeer` (idempotent; see `client.ts`). A real
 `bye` removes the participant; connection-only failures close the local
 `simple-peer` silently and preserve membership while kind 20078 still says the
 remote user is present. This prevents reciprocal kind 25050 leave/redial loops.
@@ -245,8 +245,8 @@ remote user is present. This prevents reciprocal kind 25050 leave/redial loops.
   client surfaces the error and leaves instead of retrying indefinitely.
 - **Full mesh:** `DiscoveryEngine` unions relay beacon publishers, beacon `p`
   tags, active-call hints, and attributed control-channel claims. The same
-  set (`roomCandidates()`) feeds both cap checks — whom we dial and whom we
-  answer — so they agree on who the fifth person is.
+  set (`roomCandidates()`) feeds both cap checks (whom we dial and whom we
+  answer), so they agree on who the fifth person is.
   `VoiceClient.runDialLoop()` opens one `Peer` to every admitted pubkey. Thus,
   when A is connected to B and C, A's beacon/control snapshot teaches B about
   C and C about B; both run the same dial loop until all three pairwise links
@@ -271,7 +271,7 @@ remote user is present. This prevents reciprocal kind 25050 leave/redial loops.
   `DEFERRED_SIGNAL_TTL_MS = 5_000` ms; if `updateRoles()` admits the
   sender within that window the queue replays through `routeSignal`.
   After expiry, `signalsDropped.membershipFinal` increments.
-- WoT is **bypassed** for kinds 20078 + 25050 — `wotEngine` lists
+- WoT is **bypassed** for kinds 20078 + 25050: `wotEngine` lists
   them in `ALWAYS_ALLOW_KINDS`. Voice trust is the per-channel member
   list, not WoT distance. WoT applies to surfaces where the user has
   no other filter (chat, profiles); inside a small per-channel voice

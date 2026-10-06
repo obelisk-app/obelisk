@@ -1,107 +1,52 @@
 'use client';
 
-import { displayNameFor } from '@/lib/display-name';
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import Link from 'next/link';
-import { hexToNpub } from '@nostr-wot/data';
-import { nostrActions, useMyLoginMethod, useMyPubkey, useSignerReady, useUserMetadata as useProfile } from '@/lib/nostr-bridge';
-import { usePreferences, setPreference } from '@/lib/preferences';
-import { setDmOptInEnabled } from '@/lib/dm/opt-in';
-import WotSettings from '@/components/settings/WotSettings';
-import LanguagePreference from '@/components/LanguagePreference';
-import AppearancePreferenceControls from '@/components/AppearancePreferenceControls';
-import NotificationSettings from '@/components/settings/NotificationSettings';
-import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
-import CallSettings from '@/components/settings/CallSettings';
-import MutedAndBlocked from '@/components/settings/MutedAndBlocked';
-import ProfileAppearanceEditor from '@/components/ProfileAppearanceEditor';
-import { uploadToBlossom } from '@/lib/blossom';
-import AccountBackupExport from '@/components/settings/AccountBackupExport';
-import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
-import UserAvatar from '@/components/UserAvatar';
-import ModalShell from '@/components/ModalShell';
-import MediaLibraryModal from '@/components/media/MediaLibraryModal';
-import { clearAllClientCacheExceptSession } from '@/lib/nostr-bridge/cache-clear';
-import { selfPqState, type SelfPqState } from '@/lib/pq/capability';
-import { guidesHref } from '@/lib/guide-urls';
-import { useTranslation } from '@/i18n/context';
-import type { SettingsSection } from '@/lib/open-settings';
-import {
-  BellIcon,
-  LogOutIcon,
-  PaletteIcon,
-  ServerIcon,
-  SettingsIcon,
-  ShieldIcon,
-  SmileIcon,
-  UserIcon,
-  WrenchIcon,
-} from '@/components/ui/icons';
+import { displayNameFor } from '@/utils/identity/display-name';
+import { useState } from 'react';
+import { nostrActions, useUserMetadata as useProfile } from '@/services/nostr-bridge';
+import type { SettingsTab } from './settings/SettingsSections';
+import { UserProfileCard } from './user-panel/UserProfileCard';
+import { UserSettingsModal } from './user-panel/UserSettingsModal';
+import { panelPositionStyle, safeNpub, useUserPanelEffects, type PanelAnchor } from './user-panel/useUserPanel';
 
-const SETTINGS_NAV: ReadonlyArray<{
-  label: string;
-  items: ReadonlyArray<{ id: SettingsTab; Icon: (p: { size?: number }) => React.ReactElement }>;
-}> = [
-  { label: 'settings.group.user', items: [{ id: 'profile', Icon: UserIcon }] },
-  {
-    label: 'settings.group.app',
-    items: [
-      { id: 'general', Icon: SettingsIcon },
-      { id: 'appearance', Icon: PaletteIcon },
-      { id: 'notifications', Icon: BellIcon },
-      { id: 'relays', Icon: ServerIcon },
-      { id: 'privacy', Icon: ShieldIcon },
-      { id: 'media', Icon: SmileIcon },
-      { id: 'advanced', Icon: WrenchIcon },
-    ],
-  },
-];
+// The sections live in `./settings`; re-exported so existing importers of
+// this module keep working.
+export {
+  AdvancedSettingsSection,
+  AppearanceSettingsSection,
+  GeneralSettingsSection,
+  NotificationsSettingsSection,
+  PreferencesPanel,
+  PrivacySettingsSection,
+  RelaysSettingsSection,
+  type SettingsTab,
+} from './settings/SettingsSections';
 
 interface UserPanelProps {
   pubkey: string;
   isMe: boolean;
   onClose: () => void;
   onLogout?: () => void;
-  /** Anchor (the trigger element) — panel is positioned relative to it. */
-  anchor?: { x: number; y: number; placement?: 'top' | 'bottom' };
+  /** Anchor (the trigger element) - panel is positioned relative to it. */
+  anchor?: PanelAnchor;
   /** Open directly into the fullscreen edit modal. */
   initialEditing?: boolean;
   /**
    * Which settings tab to land on. `preferences` is what "manage my relays"
-   * wants — the relay block lives there, and the panel otherwise always
+   * wants - the relay block lives there, and the panel otherwise always
    * opens on the profile tab.
    */
   initialTab?: SettingsTab | 'preferences';
 }
 
 export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, initialEditing = false, initialTab = 'profile' }: UserPanelProps) {
-  const { t } = useTranslation();
   const meta = useProfile(pubkey);
   const [editing, setEditing] = useState(initialEditing);
-  // `preferences` is the pre-sections name for "the app settings" — land on
+  // `preferences` is the pre-sections name for "the app settings" - land on
   // the first of them.
   const [settingsTab, setSettingsTab] = useState<SettingsTab>(initialTab === 'preferences' ? 'general' : initialTab);
+  useUserPanelEffects(pubkey, editing, onClose);
 
-  useEffect(() => {
-    nostrActions.ensureUserMetadata(pubkey).catch(() => {});
-  }, [pubkey]);
-
-  useEffect(() => {
-    if (!editing) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [editing, onClose]);
-
-  const npub = (() => {
-    try { return hexToNpub(pubkey); } catch { return null; }
-  })();
+  const npub = safeNpub(pubkey);
   const displayName = displayNameFor(pubkey, meta);
   const logout = () => {
     onClose();
@@ -111,673 +56,31 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
 
   if (typeof document === 'undefined') return null;
 
-  // Position: by default fixed bottom-left of viewport (Discord-style). If
-  // an anchor is provided, place above/below it.
-  const style: React.CSSProperties = anchor
-    ? {
-        position: 'fixed',
-        left: Math.max(8, Math.min(window.innerWidth - 348, anchor.x)),
-        ...(anchor.placement === 'top'
-          ? { bottom: window.innerHeight - anchor.y + 8 }
-          : { top: anchor.y + 8 }),
-      }
-    : { position: 'fixed', left: 8, bottom: 72 };
-
   if (editing && isMe) {
-    return createPortal(
-      <div
-        className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm p-10 md:p-24 flex items-stretch justify-stretch"
-        data-testid="user-edit-modal"
-      >
-        <div className="relative flex w-full rounded-2xl overflow-hidden border border-lc-border shadow-2xl bg-lc-black">
-          <button
-            onClick={() => { setEditing(false); onClose(); }}
-            className="absolute top-5 right-5 z-10 w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/30 flex items-center justify-center transition-colors ring-2 ring-red-500/30 hover:ring-red-500/60"
-            aria-label={t('common.close')}
-            title={`${t('common.close')} (Esc)`}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-          <aside className="w-64 shrink-0 bg-lc-dark border-r border-lc-border flex flex-col">
-            <div className="px-5 py-5 border-b border-lc-border">
-              <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">{t('user.settings')}</div>
-              <div className="flex items-center gap-2 min-w-0">
-                <UserAvatar pubkey={pubkey} picture={meta?.picture ?? null} size={8} name={displayName} initialClassName="text-sm" />
-                <div className="min-w-0">
-                  <div className="text-sm text-lc-white truncate">{displayName}</div>
-                  {meta?.nip05 && <div className="text-[10px] text-lc-green truncate">{meta.nip05}</div>}
-                </div>
-              </div>
-            </div>
-            <nav className="flex-1 overflow-y-auto p-2" aria-label={t('user.settings')}>
-              {SETTINGS_NAV.map((group) => (
-                <div key={group.label} className="mb-3">
-                  {/* The header card above already says "User settings". */}
-                  {group.label !== 'settings.group.user' && (
-                    <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
-                      {t(group.label)}
-                    </div>
-                  )}
-                  <div className="space-y-0.5">
-                    {group.items.map(({ id, Icon }) => (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => setSettingsTab(id)}
-                        aria-current={settingsTab === id ? 'page' : undefined}
-                        className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${settingsTab === id ? 'bg-lc-green/15 text-lc-green' : 'text-lc-white hover:bg-lc-border/40'}`}
-                        data-testid={id === 'media' ? 'desktop-media-library' : `settings-nav-${id}`}
-                      >
-                        <Icon size={16} />
-                        <span>{t(`settings.section.${id}`)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </nav>
-            <div className="border-t border-lc-border p-2">
-              <button
-                type="button"
-                onClick={logout}
-                className="flex w-full items-center gap-2.5 rounded-md bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/30"
-                data-testid="desktop-logout"
-              >
-                <LogOutIcon size={16} />
-                <span>{t('user.logOut')}</span>
-              </button>
-            </div>
-          </aside>
-          <main className={`flex-1 min-w-0 ${settingsTab === 'media' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-            {settingsTab === 'media' ? (
-              <MediaLibraryModal embedded onClose={() => setSettingsTab('profile')} />
-            ) : (
-              <div className="max-w-3xl mx-auto px-10 py-10" data-testid={`settings-section-${settingsTab}`}>
-                <div className="mb-6">
-                  <h2 className="text-lc-white text-xl font-semibold">{t(`settings.section.${settingsTab}`)}</h2>
-                  <p className="mt-1 text-sm text-lc-muted">{t(`settings.section.${settingsTab}.desc`)}</p>
-                </div>
-                {settingsTab === 'profile' && (
-                  <EditProfileForm
-                    initial={meta}
-                    onCancel={() => { setEditing(false); onClose(); }}
-                    onSaved={() => { setEditing(false); onClose(); }}
-                  />
-                )}
-                {settingsTab === 'general' && <GeneralSettingsSection />}
-                {settingsTab === 'appearance' && <AppearanceSettingsSection />}
-                {settingsTab === 'notifications' && <NotificationsSettingsSection />}
-                {settingsTab === 'relays' && <RelaysSettingsSection />}
-                {settingsTab === 'privacy' && <PrivacySettingsSection />}
-                {settingsTab === 'advanced' && <AdvancedSettingsSection />}
-              </div>
-            )}
-          </main>
-        </div>
-      </div>,
-      document.body,
-    );
-  }
-
-  return createPortal(
-    <>
-      <div className="fixed inset-0 z-[65]" onClick={onClose} />
-      <div
-        style={style}
-        className="z-[70] w-[340px] max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl"
-      >
-        {/* Banner */}
-        {meta?.banner ? (
-          <div className="h-28 overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={meta.banner} alt="" className="h-full w-full object-cover" />
-          </div>
-        ) : (
-          <div className="h-20 bg-gradient-to-r from-lc-olive/30 to-lc-dark" />
-        )}
-
-        {/* Avatar + name */}
-        <div className="relative -mt-10 px-5">
-          <UserAvatar
-            pubkey={pubkey}
-            picture={meta?.picture ?? null}
-            size={20}
-            name={displayName}
-            alt={displayName}
-            className="ring-4 ring-lc-dark"
-            initialClassName="text-2xl"
-          />
-          <div className="mt-3">
-            <div className="text-lg font-semibold text-lc-white">{displayName}</div>
-            {meta?.nip05 && <div className="truncate text-xs text-lc-green">{meta.nip05}</div>}
-            {npub && (
-              <div className="mt-0.5 truncate font-mono text-[10px] text-lc-muted">
-                {npub.slice(0, 24)}…
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* About */}
-        {meta?.about && (
-          <div className="mt-2 px-4">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
-              {t('user.about')}
-            </div>
-            <div className="mt-0.5 line-clamp-3 text-xs text-lc-muted">{meta.about}</div>
-          </div>
-        )}
-
-        <div className="mt-3 border-t border-lc-border" />
-
-        {(
-          <>
-            {npub && (
-              <button
-                onClick={() => navigator.clipboard?.writeText(npub).catch(() => {})}
-                className="flex w-full items-center gap-2 p-3 text-left text-sm text-lc-white transition hover:bg-lc-border/50"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                </svg>
-                {t('user.copyNpub')}
-              </button>
-            )}
-            <button
-              onClick={() => navigator.clipboard?.writeText(pubkey).catch(() => {})}
-              className="flex w-full items-center gap-2 p-3 text-left text-sm text-lc-white transition hover:bg-lc-border/50"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-              </svg>
-              {t('user.copyPubkeyHex')}
-            </button>
-            {npub && (
-              <a
-                href={`/p/${npub}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center gap-2 p-3 text-left text-sm text-lc-white transition hover:bg-lc-border/50"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-                {t('user.openNostrClient')}
-              </a>
-            )}
-
-            {isMe && (
-              <>
-                <div className="border-t border-lc-border" />
-                <button
-                  onClick={() => setEditing(true)}
-                  className="flex w-full items-center gap-2 p-3 text-left text-sm text-lc-white transition hover:bg-lc-border/50"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                  {t('user.editProfile')}
-                </button>
-                <div className="border-t border-lc-border" />
-                <button
-                  onClick={logout}
-                  className="flex w-full items-center gap-2 p-3 text-left text-xs text-red-400 transition hover:bg-lc-border/50"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1="21" y1="12" x2="9" y2="12" />
-                  </svg>
-                  {t('user.logOut')}
-                </button>
-              </>
-            )}
-          </>
-        )}
-      </div>
-    </>,
-    document.body,
-  );
-}
-
-function EditProfileForm({
-  initial,
-  onCancel,
-  onSaved,
-}: {
-  initial: { displayName: string | null; name: string | null; about: string | null; picture: string | null; banner: string | null; nip05: string | null; lud16?: string | null; website: string | null } | null;
-  onCancel: () => void;
-  onSaved: () => void;
-}) {
-  const { t } = useTranslation();
-  const signerReady = useSignerReady();
-  const [name, setName] = useState(initial?.displayName || initial?.name || '');
-  const [about, setAbout] = useState(initial?.about || '');
-  const [picture, setPicture] = useState(initial?.picture || '');
-  const [banner, setBanner] = useState(initial?.banner || '');
-  const [nip05, setNip05] = useState(initial?.nip05 || '');
-  // Desktop was missing lud16 entirely while mobile had it, so a user who
-  // set up their profile here could not be zapped.
-  const [lud16, setLud16] = useState(initial?.lud16 || '');
-  const [website, setWebsite] = useState(initial?.website || '');
-  const [pictureFile, setPictureFile] = useState<File | null>(null);
-  const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState<'picture' | 'banner' | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const firstField = useRef<HTMLInputElement>(null);
-  // Track whether the user has typed into any field. Once true, we stop
-  // overwriting their edits when fresh kind:0 metadata arrives from a relay.
-  const dirtyRef = useRef(false);
-  const markDirty = () => { dirtyRef.current = true; };
-
-  useEffect(() => { firstField.current?.focus(); }, []);
-
-  // Hydrate fields when metadata arrives. The editor often opens before the
-  // bridge has the kind:0 cached (cold relay or first paint), so `initial`
-  // is null on mount and the fields stay empty until the user refreshes.
-  // Re-syncing whenever `initial` changes fills them in as soon as the
-  // metadata lands — without clobbering whatever the user has already typed.
-  useEffect(() => {
-    if (!initial || dirtyRef.current) return;
-    setName(initial.displayName || initial.name || '');
-    setAbout(initial.about || '');
-    setPicture(initial.picture || '');
-    setBanner(initial.banner || '');
-    setNip05(initial.nip05 || '');
-    setLud16(initial.lud16 || '');
-    setWebsite(initial.website || '');
-  }, [initial]);
-
-  const save = async () => {
-    if (!name.trim()) { setError(t('user.nameRequired')); return; }
-    setSaving(true);
-    setError(null);
-    try {
-      if (!signerReady) throw new Error(t('user.notSignedIn'));
-      // Uploads are deferred to save so an abandoned edit doesn't burn
-      // Blossom storage for every image the user tried.
-      let finalPicture = picture.trim();
-      let finalBanner = banner.trim();
-      if (pictureFile) {
-        setUploading('picture');
-        finalPicture = await uploadToBlossom(pictureFile);
-      }
-      if (bannerFile) {
-        setUploading('banner');
-        finalBanner = await uploadToBlossom(bannerFile);
-      }
-      setUploading(null);
-      await nostrActions.editUserMetadata({
-        name: name.trim(),
-        displayName: name.trim(),
-        about: about.trim(),
-        picture: finalPicture,
-        banner: finalBanner,
-        nip05: nip05.trim(),
-        lud16: lud16.trim(),
-        website: website.trim(),
-      });
-      onSaved();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('user.publishFailed'));
-    } finally {
-      setUploading(null);
-      setSaving(false);
-    }
-  };
-
-  const fieldCls = 'w-full rounded-md border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white placeholder:text-lc-muted focus:border-lc-green focus:outline-none';
-
-  return (
-    <div className="space-y-3 p-4">
-      <ProfileAppearanceEditor
-        pubkey={name || '0'}
-        displayName={name}
-        value={{ pictureUrl: picture, bannerUrl: banner, pictureFile, bannerFile }}
-        uploading={uploading}
-        onChange={(next) => {
-          markDirty();
-          setPicture(next.pictureUrl);
-          setBanner(next.bannerUrl);
-          setPictureFile(next.pictureFile);
-          setBannerFile(next.bannerFile);
-        }}
-      />
-      <Field label={t('user.field.name')}>
-        <input ref={firstField} value={name} onChange={(e) => { markDirty(); setName(e.target.value); }} className={fieldCls} />
-      </Field>
-      <Field label={t('user.about')}>
-        <textarea value={about} onChange={(e) => { markDirty(); setAbout(e.target.value); }} rows={2} className={fieldCls} />
-      </Field>
-      <Field label="NIP-05">
-        <input value={nip05} onChange={(e) => { markDirty(); setNip05(e.target.value); }} placeholder="you@example.com" className={fieldCls} />
-      </Field>
-      <Field label={t('user.field.lud16')}>
-        <input value={lud16} onChange={(e) => { markDirty(); setLud16(e.target.value); }} placeholder="you@walletofsatoshi.com" className={fieldCls} />
-      </Field>
-      <Field label={t('user.field.website')}>
-        <input value={website} onChange={(e) => { markDirty(); setWebsite(e.target.value); }} placeholder="https://…" className={fieldCls} />
-      </Field>
-      {error && <div className="text-xs text-red-400">{error}</div>}
-      <div className="flex gap-2 pt-1">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="lc-pill-primary px-4 py-2 text-sm disabled:opacity-50"
-          data-testid="save-profile-button"
-        >
-          {saving ? t('common.saving') : t('common.save')}
-        </button>
-        <button
-          onClick={onCancel}
-          disabled={saving}
-          className="rounded-md border border-lc-border px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40"
-        >
-          {t('common.cancel')}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** Settings sections — one per entry in the settings sidebar. */
-export type SettingsTab = SettingsSection;
-
-export function GeneralSettingsSection() {
-  const prefs = usePreferences();
-  const { t } = useTranslation();
-  return (
-    <div className="space-y-4">
-      <LanguagePreference />
-      <ToggleRow
-        label={t('preferences.activity.label')}
-        description={t('preferences.activity.description')}
-        checked={prefs.showActivityIndicator}
-        onChange={(v) => setPreference('showActivityIndicator', v)}
-      />
-    </div>
-  );
-}
-
-export function AppearanceSettingsSection() {
-  return <AppearancePreferenceControls />;
-}
-
-export function NotificationsSettingsSection() {
-  return <NotificationSettings />;
-}
-
-export function RelaysSettingsSection() {
-  return <SocialRelaySettings />;
-}
-
-export function PrivacySettingsSection() {
-  const prefs = usePreferences();
-  const { t } = useTranslation();
-  return (
-    <div className="space-y-5">
-      <ToggleRow
-        label={t('preferences.directMessages.label')}
-        description={t('preferences.directMessages.description')}
-        checked={prefs.directMessagesEnabled}
-        onChange={setDmOptInEnabled}
-      />
-      <div>
-        <ToggleRow
-          label={t('settings.postQuantum')}
-          description={t('settings.postQuantumHint')}
-          checked={prefs.postQuantumEnabled}
-          onChange={(v) => setPreference('postQuantumEnabled', v)}
-        />
-        <PostQuantumStatusRow />
-      </div>
-      <CallSettings />
-      <MutedAndBlocked />
-      <WotSettings />
-    </div>
-  );
-}
-
-export function AdvancedSettingsSection() {
-  const prefs = usePreferences();
-  const { t } = useTranslation();
-  return (
-    <div className="space-y-4">
-      <section className="space-y-2 rounded-lg border border-lc-border bg-lc-dark/30 p-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-lc-muted">
-          {t("preferences.backup.advanced")}
-        </h3>
-        <AccountBackupExport />
-      </section>
-      <LocalDataSection />
-      <section className="space-y-3 border-t border-lc-border pt-4" data-testid="desktop-developer-settings">
-        <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">{t('developer.section')}</div>
-        <ToggleRow
-          label={t('developer.relayLogs')}
-          description="Log relay calls to the console."
-          checked={prefs.developerRelayDebug}
-          onChange={(v) => setPreference('developerRelayDebug', v)}
-        />
-        <DeveloperSignatureTest />
-      </section>
-    </div>
-  );
-}
-
-/**
- * Every app section stacked — for surfaces with no sidebar. The desktop
- * settings modal shows one section at a time instead.
- */
-export function PreferencesPanel() {
-  return (
-    <div className="space-y-8 p-4">
-      <GeneralSettingsSection />
-      <AppearanceSettingsSection />
-      <NotificationsSettingsSection />
-      <RelaysSettingsSection />
-      <PrivacySettingsSection />
-      <AdvancedSettingsSection />
-    </div>
-  );
-}
-
-/**
- * Read-only status line beneath the post-quantum toggle. Reports the three
- * states `selfPqState()` distinguishes, because they have genuinely different
- * outcomes for the user:
- *
- *   - `canSend` — the signer advertises the `pq` scheme; sends really are
- *     sealed post-quantum whenever the peer publishes keys.
- *   - `capabilityUnknown` — keys are published but the signer reports
- *     nothing, so the send path deliberately stays classic rather than risk
- *     a downgrade it would then mislabel as protected. Saying only "keys
- *     detected" here would be the dead-end the UX audit found: the user does
- *     everything right and nothing changes, with no explanation.
- *   - no keys at all — point at the setup guide.
- */
-function PostQuantumStatusRow() {
-  const { t, locale } = useTranslation();
-  const myPubkey = useMyPubkey();
-  const loginMethod = useMyLoginMethod();
-  const [state, setState] = useState<SelfPqState | null>(null);
-
-  useEffect(() => {
-    setState(null);
-    if (!myPubkey) return;
-    let cancelled = false;
-    selfPqState(myPubkey, loginMethod).then((next) => {
-      if (!cancelled) setState(next);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [myPubkey, loginMethod]);
-
-  if (!myPubkey) return null;
-
-  if (state === null) {
-    return <p className="mt-1 text-xs text-lc-muted">{t('settings.postQuantumChecking')}</p>;
-  }
-
-  if (state.canSend) {
     return (
-      <p className="mt-1 text-xs text-lc-muted" data-testid="pq-status-ready">
-        {t('settings.postQuantumDetected')} {t('settings.postQuantumReady')}
-      </p>
-    );
-  }
-
-  if (state.hasKeys) {
-    // Either `capabilityUnknown` (NIP-07, no `nip44.schemes` marker) or a
-    // non-NIP-07 session, which has no surface that could carry post-quantum
-    // encryption at all. The user-visible outcome is identical in both:
-    // messages keep going out classic, and Obelisk will switch on its own
-    // once the signer says it can.
-    return (
-      <p className="mt-1 text-xs text-lc-muted" data-testid="pq-status-signer-unknown">
-        {t('settings.postQuantumDetected')} {t('settings.postQuantumSignerUnknown')}
-      </p>
+      <UserSettingsModal
+        pubkey={pubkey}
+        meta={meta}
+        displayName={displayName}
+        settingsTab={settingsTab}
+        setSettingsTab={setSettingsTab}
+        onDone={() => { setEditing(false); onClose(); }}
+        onLogout={logout}
+      />
     );
   }
 
   return (
-    <p className="mt-1 text-xs text-lc-muted">
-      {t('settings.postQuantumNotDetected')}{' '}
-      <Link
-        href={guidesHref(locale, 'quantum-safe-dms')}
-        className="text-lc-green underline underline-offset-2 hover:text-lc-green/80"
-      >
-        {t('settings.postQuantumSetupLink')}
-      </Link>
-    </p>
-  );
-}
-
-function LocalDataSection() {
-  const { t } = useTranslation();
-  const [confirming, setConfirming] = useState(false);
-  const [clearing, setClearing] = useState(false);
-
-  const onConfirm = () => {
-    setClearing(true);
-    const removed = clearAllClientCacheExceptSession();
-    // Tiny pause so the modal copy reads naturally before the reload.
-    setTimeout(() => {
-      // Reload from server to rebuild every store from scratch. We keep the
-      // session + preferences so the user lands back in the same place.
-      if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
-      // Defensive: if the reload didn't fire (e.g. test harness), reset state.
-      setClearing(false);
-      setConfirming(false);
-      void removed;
-    }, 200);
-  };
-
-  return (
-    <div className="pt-2 border-t border-lc-border">
-      <div className="text-xs uppercase tracking-wider text-lc-muted font-semibold pt-2 pb-2">
-        {t('preferences.localData.title')}
-      </div>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="text-sm text-lc-white">{t('preferences.localData.clear.title')}</div>
-          <div className="text-xs text-lc-muted mt-0.5">
-            {t('preferences.localData.clear.description')}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          disabled={clearing}
-          className="shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
-          data-testid="clear-cache-button"
-        >
-          {t('preferences.localData.clear.button')}
-        </button>
-      </div>
-      {confirming && (
-        <ModalShell
-          onClose={() => !clearing && setConfirming(false)}
-          testId="clear-cache-confirm"
-          panelClassName="w-full max-w-md mx-4 rounded-xl bg-lc-dark border border-lc-border p-6 shadow-xl"
-        >
-          <div className="text-lg font-semibold text-lc-white mb-2">{t('preferences.localData.confirm.title')}</div>
-          <div className="text-sm text-lc-muted mb-4">
-            {t('preferences.localData.confirm.description')}
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setConfirming(false)}
-              disabled={clearing}
-              className="rounded-md border border-lc-border px-3 py-1.5 text-sm text-lc-white hover:bg-lc-border/40 disabled:opacity-50"
-            >
-              {t('preferences.localData.confirm.cancel')}
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              disabled={clearing}
-              className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
-              data-testid="clear-cache-confirm-button"
-            >
-              {clearing ? t('preferences.localData.confirm.clearing') : t('preferences.localData.confirm.action')}
-            </button>
-          </div>
-        </ModalShell>
-      )}
-    </div>
-  );
-}
-
-function ToggleRow({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="flex items-start justify-between gap-4 cursor-pointer">
-      <div className="min-w-0">
-        <div className="text-sm text-lc-white">{label}</div>
-        {description && <div className="text-xs text-lc-muted mt-0.5">{description}</div>}
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${checked ? 'bg-lc-green' : 'bg-lc-border'}`}
-      >
-        <span
-          className={`inline-block h-5 w-5 transform rounded-full bg-lc-black transition-transform ${checked ? 'translate-x-5' : 'translate-x-0.5'}`}
-        />
-      </button>
-    </label>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-lc-muted">{label}</span>
-      {children}
-    </label>
+    <UserProfileCard
+      pubkey={pubkey}
+      meta={meta}
+      displayName={displayName}
+      npub={npub}
+      isMe={isMe}
+      style={panelPositionStyle(anchor, { width: window.innerWidth, height: window.innerHeight })}
+      onClose={onClose}
+      onEdit={() => setEditing(true)}
+      onLogout={logout}
+    />
   );
 }

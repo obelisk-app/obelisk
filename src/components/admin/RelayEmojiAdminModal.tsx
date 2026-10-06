@@ -1,7 +1,7 @@
 'use client';
 
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
-import type { RelayEmojiSet } from '@/lib/relay-emojis';
+import type { RelayEmojiSet } from '@/services/relay-emojis';
 
 export default function RelayEmojiAdminModal({
   relayUrl,

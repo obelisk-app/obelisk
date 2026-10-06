@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactEventHandler } from 'react';
+import RemoteImage from '@/components/ui/RemoteImage';
 
 /**
  * Picker/library thumbnail that never degrades into its own shortcode.
@@ -37,7 +38,7 @@ export default function MediaThumb({ src, alt, className, onLoad, onError }: {
   }
 
   return (
-    <img
+    <RemoteImage
       src={src}
       alt={alt}
       className={className}

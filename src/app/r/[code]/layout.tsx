@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { decodeRelayShareCode } from '@/lib/relay-share-link';
+import { decodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
 
 type RelayBrand = {
   title: string;
@@ -8,9 +8,9 @@ type RelayBrand = {
 
 const RELAY_BRANDING: Record<string, RelayBrand> = {
   'wss://lacrypta-relay.obelisk.ar': {
-    title: 'La Crypta on Obelisk — Nostr group chat',
+    title: 'La Crypta on Obelisk - Nostr group chat',
     description:
-      'Join La Crypta on Obelisk. Group chat powered by Nostr identity — no email, no password.',
+      'Join La Crypta on Obelisk. Group chat powered by Nostr identity: no email, no password.',
   },
 };
 

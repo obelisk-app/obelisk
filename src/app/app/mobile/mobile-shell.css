@@ -1,14 +1,13 @@
 /*
- * Obelisk mobile shell — full-screen mobile experience for /app on phones.
+ * Obelisk mobile shell - full-screen mobile experience for /app on phones.
  *
  * Every selector is nested under `.obelisk-mobile` so this file cannot leak
- * into the desktop AppShell tree. Token names mirror the design study at
- * /Volumes/Ext Disk/WebstormProjects/obelisk-mobile-design/obelisk-mobile.html
+ * into the desktop AppShell tree. Token names mirror the mobile design study
  * (Inter font, JetBrains Mono for tags, La Crypta accent).
  */
 
 /*
- * Base font size — design study was sized for a 320px mockup. Real phones
+ * Base font size - design study was sized for a 320px mockup. Real phones
  * (375–430px) should bump everything ~13% so it doesn't look cramped.
  */
 .obelisk-mobile {
@@ -77,7 +76,7 @@
   z-index: 1;
 }
 
-/* Drifting green blob — sits behind the grain, breathes slowly so the shell
+/* Drifting green blob - sits behind the grain, breathes slowly so the shell
  * feels alive. Extended past the viewport edge (negative inset) so the
  * transform never reveals a hard edge. */
 .obelisk-mobile::before {
@@ -94,7 +93,7 @@
   animation: obelisk-bg-drift 24s ease-in-out infinite alternate;
 }
 
-/* Subtle film-grain overlay — sits above the drifting blob, below screen
+/* Subtle film-grain overlay - sits above the drifting blob, below screen
  * content. Voice room is opaque so the grain never bleeds onto its stage. */
 .obelisk-mobile::after {
   content: '';
@@ -267,8 +266,8 @@
 /* No `scroll-behavior: smooth` here.
  *
  * As a property on the scroller it applies to EVERY scroll, including the
- * programmatic ones — a deep link into a long feed, restoring a position,
- * jumping to a message — so those animated their way down hundreds of rows
+ * programmatic ones - a deep link into a long feed, restoring a position,
+ * jumping to a message - so those animated their way down hundreds of rows
  * instead of arriving. Callers that genuinely want the animation pass
  * `behavior: 'smooth'` to `scrollTo` themselves; the back-to-top button
  * already does. */
@@ -333,7 +332,7 @@
 }
 /* Sub-screens overlay the carousel at the active position. The opaque
  * background sits on the inner .screen-anim wrapper (not the slot) so the
- * parent tab still peeks through during the slide-in animation — it only
+ * parent tab still peeks through during the slide-in animation - it only
  * gets covered as the screen-anim arrives at translateX(0). Without this,
  * sub-screens like channel/dm-thread/settings-prefs that use the bare
  * `.screen` class (transparent by design over the shell's ambient gradient)
@@ -344,12 +343,12 @@
  * top-level tabs (which use transparent .screen and let the shell gradient
  * show through). The drift blob (.obelisk-mobile::before) and grain
  * (.obelisk-mobile::after) live behind the screens-host at z-0, so the
- * opaque overlay would cover them anyway — replicating only the radials
+ * opaque overlay would cover them anyway - replicating only the radials
  * lands close enough that the seam disappears. */
 /* `pointer-events: none` on the SLOT, restored on its content.
  *
  * The slot is `position: absolute; inset: 0` at `z-index: 1`, so it covered
- * the whole viewport — including the header beneath it — and swallowed taps
+ * the whole viewport - including the header beneath it - and swallowed taps
  * that were meant for the back button. Only `.drag-hidden` opted out. The
  * inner `.screen-anim` carries the actual screen and takes its clicks back,
  * so nothing that should be interactive loses anything. */
@@ -422,7 +421,7 @@
   height: 20px;
 }
 
-/* Voice status slot — hosts the desktop VoiceStatusBar above the bottom nav
+/* Voice status slot - hosts the desktop VoiceStatusBar above the bottom nav
  * whenever a call is active, so users can mute / leave / jump back to the
  * voice channel from anywhere in the mobile shell. */
 .obelisk-mobile .mobile-voice-status-slot {
@@ -561,7 +560,7 @@
           mask-image: linear-gradient(to right, transparent 0%, #000 28px, #000 calc(100% - 28px), transparent 100%);
 }
 
-/* Carousel chevron affordances — only visible when JS toggles the matching
+/* Carousel chevron affordances - only visible when JS toggles the matching
  * can-scroll-* class on the host. Sit over the edge fade so the user sees
  * a clear "more this way" cue rather than just a soft fade. */
 .obelisk-mobile .spaces-arrow {
@@ -582,7 +581,7 @@
 .obelisk-mobile .spaces-strip-host.can-scroll-left .spaces-arrow-left { display: flex; }
 .obelisk-mobile .spaces-strip-host.can-scroll-right .spaces-arrow-right { display: flex; }
 
-/* Page-dot indicator beneath the strip — one dot per configured relay,
+/* Page-dot indicator beneath the strip - one dot per configured relay,
  * the active relay's dot is filled. Gives the user an at-a-glance "this is
  * a swipeable list with N items" cue. */
 .obelisk-mobile .spaces-dots {
@@ -654,7 +653,7 @@
 }
 /* Two lines, not one ellipsed one.
  *
- * The rail is 74px wide, which left ~58px of text at 12.5px — so distinct
+ * The rail is 74px wide, which left ~58px of text at 12.5px - so distinct
  * relays all read `Obelisk …` / `La Crypt…` under icons that were already
  * telling them apart. Wrapping to a second line fits most names whole; the
  * clamp keeps a long one from pushing the rail out of alignment. */
@@ -749,7 +748,7 @@
   font-size: 25px;
 }
 
-/* Unread mentions/replies on a relay you're not browsing — fed by the
+/* Unread mentions/replies on a relay you're not browsing - fed by the
  * background relay watch. Sits outside `.space-icon`, which clips. */
 .obelisk-mobile .space-badge {
   position: absolute;
@@ -903,7 +902,7 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
 }
 
-/* The host reads the same whether it links out or not — underlining it
+/* The host reads the same whether it links out or not - underlining it
  * inside a banner photo is noise; the tap target is what matters. */
 .obelisk-mobile .server-banner-copy span,
 .obelisk-mobile .server-banner-copy a {
@@ -919,7 +918,7 @@
   text-decoration: none;
 }
 
-/* Horizontal category pills — strip above the channel list. Tapping a pill
+/* Horizontal category pills - strip above the channel list. Tapping a pill
  * scrolls the channel-list to that section so users can jump between
  * categories without scrolling through the full list. */
 .obelisk-mobile .cats-strip {
@@ -1076,7 +1075,7 @@
 /* Discord-style vertical rail + L-branches for expanded forum threads.
  * Each thread row owns its own rail segment (::before, full row height) and
  * its own L-corner (::after, top half + curve). On the last row we drop the
- * ::before entirely — the L-corner already provides the full vertical
+ * ::before entirely - the L-corner already provides the full vertical
  * segment for that row, and keeping ::before would protrude past the corner
  * radius as a visible stub. Lines are thickened for mobile visibility. */
 .obelisk-mobile .forum-threads {
@@ -1866,7 +1865,7 @@
   width: 38px;
   height: 38px;
   min-width: 38px;
-  /* Same 44px tap-target floor as .composer-send — without min-height these
+  /* Same 44px tap-target floor as .composer-send - without min-height these
      render 38x44 and the rounded square reads as a lozenge. */
   min-height: 38px;
   border-radius: 10px;
@@ -1894,7 +1893,7 @@
   min-width: 38px;
   /* The global `.obelisk-mobile button { min-width: 44px; min-height: 44px }`
      tap-target floor applies here too. Overriding only min-width left the
-     button 38px wide and 44px tall — a vertical oval, not a circle. The
+     button 38px wide and 44px tall - a vertical oval, not a circle. The
      surrounding composer row is already a 44px+ target, so relaxing the
      floor on this one control does not shrink the real touch area. */
   min-height: 38px;
@@ -2019,7 +2018,7 @@
 }
 
 /* Dissolve the desktop <VoiceRoom>'s inner card chrome so it sits flush with
- * the mobile shell stage — no nested gradient/border/shadow. */
+ * the mobile shell stage - no nested gradient/border/shadow. */
 .obelisk-mobile [data-testid='voice-channel'] {
   padding: 0 !important;
 }
@@ -2029,7 +2028,7 @@
   background: transparent !important;
   box-shadow: none !important;
 }
-/* Hide the desktop RoomHeader — the mobile shell's voice-room-topbar already
+/* Hide the desktop RoomHeader - the mobile shell's voice-room-topbar already
  * shows channel name + status. */
 .obelisk-mobile [data-testid='voice-room-header'] {
   display: none !important;
@@ -2365,6 +2364,13 @@
   border-bottom: 1px solid var(--app-line-soft);
   flex-shrink: 0;
   padding-top: max(10px, env(safe-area-inset-top));
+}
+.obelisk-mobile .dm-protocol-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--app-line-soft);
+  flex-shrink: 0;
 }
 .obelisk-mobile .dm-header-action {
   color: var(--app-text);
@@ -3279,7 +3285,7 @@
   font-weight: 600;
 }
 
-/* Forum chrome — search/create bar, sort/view menu, tag chip row.
+/* Forum chrome - search/create bar, sort/view menu, tag chip row.
    Sits above .forum-list inside .forum-screen. Mirrors the desktop ForumView
    layout: row 1 = search + new-thread button, row 2 = sort pill + tag chips. */
 .obelisk-mobile .forum-chrome {
@@ -3412,7 +3418,7 @@
   to { transform: translateY(0); }
 }
 
-/* Emoji picker bottom sheet — uses the EmojiPicker desktop component
+/* Emoji picker bottom sheet - uses the EmojiPicker desktop component
  * inside a phone-friendly sheet host. Picker has its own search field;
  * we just give it a height-bounded container that animates up. */
 .obelisk-mobile .emoji-sheet-host {
@@ -4496,7 +4502,7 @@
   height: 26px;
 }
 
-/* Tap-press feedback — subtle scale-down on common interactive elements
+/* Tap-press feedback - subtle scale-down on common interactive elements
  * so taps feel responsive and native instead of bone-dry pixel changes.
  * Pairs with the existing background:active rules. */
 .obelisk-mobile .ch-row,
@@ -4649,13 +4655,13 @@
 .obelisk-mobile { scrollbar-width: none; }
 
 /* ─────────────────────────────────────────────────────────────────────
- * @nostr-wot/ui modal overrides — mobile only.
+ * @nostr-wot/ui modal overrides - mobile only.
  *
  * The SDK modal portals to <body>, so it sits *outside* `.obelisk-mobile`.
  * These rules use a viewport media query to scope the overrides to phones
  * (matches AppGate's MOBILE_QUERY). On mobile we want the modal to feel
  * like a native screen continuation of the login picker rather than a
- * card-on-card overlay — full-bleed, no border, generous tap targets.
+ * card-on-card overlay - full-bleed, no border, generous tap targets.
  * ───────────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .nui-modal-overlay {
@@ -4687,7 +4693,7 @@
     font-size: 26px;
   }
 
-  /* Back buttons — both rectangular `.nui-back` and pill `.nui-back-pill`
+  /* Back buttons - both rectangular `.nui-back` and pill `.nui-back-pill`
    * default to small inline buttons. Mobile needs them to be obvious,
    * fingertip-sized, and aligned with the screen edge. */
   .nui-back,
@@ -4716,7 +4722,7 @@
     transform: scale(0.96);
   }
 
-  /* Form chrome — bigger headings, more breathing room. */
+  /* Form chrome - bigger headings, more breathing room. */
   .nui-form {
     gap: 16px;
   }
@@ -4743,7 +4749,7 @@
     font-size: 15px;
   }
 
-  /* Remove the la-crypta keycard's soft elevation — looks heavy on a
+  /* Remove the la-crypta keycard's soft elevation - looks heavy on a
    * full-bleed background. */
   .nui-keycard {
     border-radius: 14px;
@@ -4756,7 +4762,7 @@
   }
 }
 
-/* Transient toast shown when the user presses back from a root tab —
+/* Transient toast shown when the user presses back from a root tab -
  * a second back press within ~2s confirms exit to the landing page. */
 .obelisk-mobile .mobile-exit-toast {
   position: fixed;

@@ -1,0 +1,85 @@
+name: E2E (manual)
+
+# The Playwright suite in scripts/e2e/ drives a real browser against a
+# running build and a real, public Nostr relay. It cannot sit in the CI
+# workflow: it depends on a third party being up, it posts a real kind 9
+# event (login-and-send.spec.ts), and the voice specs hold WebRTC meshes
+# open for minutes. It also cannot run on a developer machine without the
+# Playwright browser download. So it runs here, on demand, from the Actions
+# tab, and keeps its report as an artifact. Nothing else invokes it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      relay:
+        description: 'Open relay a fresh pubkey can read from and post to'
+        default: 'wss://public.obelisk.ar'
+        required: true
+      voice:
+        description: 'Also run scripts/e2e/voice (needs a relay that accepts kinds 20078/25050 from fresh keys)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  GIT_TERMINAL_PROMPT: "0"
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Rewrite ssh GitHub URLs to https
+        run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+
+      # The harness defaults to :3001 (scripts/e2e/playwright.config.ts).
+      - name: Start the production build on 127.0.0.1:3001
+        run: |
+          nohup npx next start -p 3001 -H 127.0.0.1 > e2e-server.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -sf -o /dev/null http://127.0.0.1:3001/; then exit 0; fi
+            sleep 1
+          done
+          echo "server did not answer within 60s"; cat e2e-server.log; exit 1
+
+      - name: Run the app specs
+        env:
+          OBELISK_E2E_BASE_URL: http://127.0.0.1:3001
+          OBELISK_E2E_RELAY: ${{ inputs.relay }}
+        # Quoted: Playwright takes the argument as a path regex, which keeps
+        # the voice/ directory out without depending on shell globbing.
+        run: npx playwright test --config=scripts/e2e/playwright.config.ts 'scripts/e2e/[a-z-]*.spec.ts'
+
+      - name: Run the voice specs
+        if: ${{ inputs.voice }}
+        env:
+          OBELISK_E2E_BASE_URL: http://127.0.0.1:3001
+          OBELISK_E2E_RELAY: ${{ inputs.relay }}
+        run: npx playwright test --config=scripts/e2e/playwright.config.ts scripts/e2e/voice/
+
+      - name: Keep the report and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            scripts/e2e/playwright-report
+            scripts/e2e/test-results
+            e2e-server.log
+          if-no-files-found: ignore
+          retention-days: 14

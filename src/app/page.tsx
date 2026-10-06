@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import LandingPage from '@/components/LandingPage';
+import LandingPage from '@/components/marketing/LandingPage';
 
 // Sister project (server-backed variant): https://classic.obelisk.ar
 

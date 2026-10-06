@@ -102,7 +102,7 @@ export default function WotGraphDiagram() {
         How a trust score is computed
       </text>
       <text x="400" y="62" textAnchor="middle" fontSize="11" fill="#a3a3a3">
-        Pure Nostr data — no KYC, no CAPTCHA, no phone number.
+        Pure Nostr data: no KYC, no CAPTCHA, no phone number.
       </text>
     </svg>
   );

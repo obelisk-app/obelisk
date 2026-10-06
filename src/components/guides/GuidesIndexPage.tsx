@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LOCALES, type Locale } from '@/i18n';
-import { listAllGuides } from '@/lib/guides';
-import { guideAlternates, guidesHref, OG_LOCALE } from '@/lib/guide-urls';
+import { listAllGuides } from '@/services/guides';
+import { guideAlternates, guidesHref, OG_LOCALE } from '@/utils/guides/guide-urls';
 import GuideCard from '@/components/guides/GuideCard';
 import GuideLocaleSync from '@/components/guides/GuideLocaleSync';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import Navbar from '@/components/marketing/Navbar';
+import Footer from '@/components/marketing/Footer';
 
 const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';
 
@@ -14,7 +14,7 @@ const COPY: Record<Locale, Record<string, string>> = {
   en: {
     title: 'Guides',
     subtitle:
-      "Everything about Obelisk — what it is, how it works, and where it's going. Written plain, no jargon walls.",
+      "Everything about Obelisk: what it is, how it works, and where it's going. Written plain, no jargon walls.",
     heading: 'Obelisk Guides',
     seoTitle: 'Guides · Obelisk',
     seoDescription:
@@ -25,7 +25,7 @@ const COPY: Record<Locale, Record<string, string>> = {
   es: {
     title: 'Guías',
     subtitle:
-      'Todo sobre Obelisk — qué es, cómo funciona, a dónde va. Escrito en lenguaje claro, sin paredes de jerga.',
+      'Todo sobre Obelisk: qué es, cómo funciona, a dónde va. Escrito en lenguaje claro, sin paredes de jerga.',
     heading: 'Guías de Obelisk',
     seoTitle: 'Guías · Obelisk',
     seoDescription:
@@ -36,7 +36,7 @@ const COPY: Record<Locale, Record<string, string>> = {
   pt: {
     title: 'Guias',
     subtitle:
-      'Tudo sobre o Obelisk — o que é, como funciona, para onde vai. Escrito em linguagem clara, sem paredes de jargão.',
+      'Tudo sobre o Obelisk: o que é, como funciona, para onde vai. Escrito em linguagem clara, sem paredes de jargão.',
     heading: 'Guias do Obelisk',
     seoTitle: 'Guias · Obelisk',
     seoDescription:

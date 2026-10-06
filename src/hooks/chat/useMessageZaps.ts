@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { sharedCoalescer, getDefaultRelays, parseZapMsats } from '@nostr-wot/data';
 import { validateZapReceipt, type RawNostrEvent } from '@nostr-wot/wallet';
-import { isImportableRelayUrl, useConfiguredRelays } from '@/lib/nostr-bridge';
+import { isImportableRelayUrl, useConfiguredRelays } from '@/services/nostr-bridge';
 
 export interface MessageZapTotal {
   totalSats: number;

@@ -43,7 +43,7 @@ export default defineConfig({
     // Real Chromium WebRTC stack with a fake camera + mic. Without
     // these, getUserMedia would prompt for permission and never resolve
     // headless. The fake device is a green-square video + Beep sine
-    // audio at 440 Hz — enough for the voice mesh tests to validate
+    // audio at 440 Hz, enough for the voice mesh tests to validate
     // RTCPeerConnection negotiation end-to-end without actual hardware.
     launchOptions: {
       args: [

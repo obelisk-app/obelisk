@@ -39,7 +39,7 @@ test('channel menu paints before chat content', async ({ page, context }) => {
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
 
   // Spinner shows up briefly before kind 39000 ingest. On a fast relay
-  // this can be <100ms — race-tolerant assertion via either-or.
+  // this can be <100ms; race-tolerant assertion via either-or.
   const channelsLoading = page.getByTestId('channels-loading');
   const firstChannel = firstChannelRow(page);
   // Either the spinner is visible, OR the first channel row is already
@@ -62,10 +62,10 @@ test('channel menu paints before chat content', async ({ page, context }) => {
   if (spinnerAt) {
     logOk(`channels-loading spinner observed (${channelAt - spinnerAt}ms before first channel row)`);
   } else {
-    logOk('channel row painted within the spinner window — cache-warm path');
+    logOk('channel row painted within the spinner window: cache-warm path');
   }
 
-  // Without clicking, the chat pane should render its EmptyState — the
+  // Without clicking, the chat pane should render its EmptyState; the
   // loader is gated on having an active group selected.
   await waitForRelayOk(page, 30_000);
 
@@ -74,7 +74,7 @@ test('channel menu paints before chat content', async ({ page, context }) => {
   await firstChannel.click();
   // Either the loader appears for a few ms then unmounts, or messages
   // render directly. Either way the loader cannot survive past the
-  // messagesEose flip — assert it eventually leaves.
+  // messagesEose flip; assert it eventually leaves.
   await expect(page.getByTestId('messages-loading')).toBeHidden({ timeout: 30_000 });
   logOk('chat pane loader unmounted after messagesEose');
 });

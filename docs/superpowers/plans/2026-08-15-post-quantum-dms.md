@@ -16,7 +16,7 @@
 - **Obelisk never derives post-quantum keys.** It has no BIP-39 seed. `derivePqKeys()` must not be called anywhere in `src/`.
 - **Never block a send.** When a conversation cannot be quantum-secured, the message still sends over classic NIP-17/NIP-04.
 - Post-quantum encryption is reachable **only** on `loginMethod === 'nip07'`. `nsec` and `bunker` get detection and indicators only.
-- Attestation kind is `10203`, from `PQC_KIND` in `@nostr-wot/pq` — never hardcode the number.
+- Attestation kind is `10203`, from `PQC_KIND` in `@nostr-wot/pq`; never hardcode the number.
 - Locales are **en** and **es** only. Every user-facing string needs both.
 - `vitest.config.ts` inlines `@nostr-wot/*`. Any `vi.mock` of a module that `@nostr-wot/pq` imports depends on this.
 
@@ -93,7 +93,7 @@ describe('messageMark', () => {
 - [ ] **Step 3: Run the test and confirm it fails**
 
 Run: `npx vitest run src/lib/pq/status.test.ts`
-Expected: FAIL — `Failed to resolve import "./status"`.
+Expected: FAIL - `Failed to resolve import "./status"`.
 
 - [ ] **Step 4: Write the implementation**
 
@@ -106,7 +106,7 @@ import type { DMProtocol } from '@/store/dm';
 export type PqConversationStatus = 'secured' | 'not-secured';
 
 /**
- * What a single message lacked. `null` means it lacked nothing — only
+ * What a single message lacked. `null` means it lacked nothing; only
  * deficient messages are marked, so a healthy thread stays quiet.
  */
 export type PqMessageMark = 'no-giftwrap' | 'no-pq' | null;
@@ -255,7 +255,7 @@ describe('hasUsableKeys', () => {
 - [ ] **Step 2: Run the test and confirm it fails**
 
 Run: `npx vitest run src/lib/pq/attestations.test.ts`
-Expected: FAIL — `Failed to resolve import "./attestations"`.
+Expected: FAIL - `Failed to resolve import "./attestations"`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -287,7 +287,7 @@ export function clearAttestationCache(): void {
 async function fetchAttestation(pubkey: string): Promise<PqAttestation | null> {
   try {
     // The bridge's SimplePool is private, so lib modules go through
-    // @nostr-wot/data's shared pool — the same one the profile and follow
+    // @nostr-wot/data's shared pool, the same one the profile and follow
     // fetchers use, so attestation lookups share its connections.
     const events = await getPool().querySync(getDefaultRelays(), attestationFilter([pubkey]));
     if (!events?.length) return null;
@@ -452,7 +452,7 @@ describe('selfPqState', () => {
 - [ ] **Step 2: Run the test and confirm it fails**
 
 Run: `npx vitest run src/lib/pq/capability.test.ts`
-Expected: FAIL — `Failed to resolve import "./capability"`.
+Expected: FAIL - `Failed to resolve import "./capability"`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -477,7 +477,7 @@ export interface SelfPqState {
   /** We advertise usable post-quantum keys. */
   hasKeys: boolean;
   /** The kind:10203 attestation is on a relay. Currently identical to
-   *  `hasKeys` — they diverge only once a signer can report keys it has
+   *  `hasKeys`; they diverge only once a signer can report keys it has
    *  not published. */
   attestationPublished: boolean;
 }
@@ -576,7 +576,7 @@ describe('postQuantumEnabled', () => {
 - [ ] **Step 2: Run the test and confirm it fails**
 
 Run: `npx vitest run src/lib/preferences.test.ts`
-Expected: FAIL — `postQuantumEnabled` is `undefined`.
+Expected: FAIL - `postQuantumEnabled` is `undefined`.
 
 - [ ] **Step 3: Add the field to the interface**
 
@@ -652,7 +652,7 @@ And to `src/i18n/locales/es.json` under `settings`:
 - [ ] **Step 8: Run the settings tests**
 
 Run: `npx vitest run src/components/settings`
-Expected: PASS — existing settings tests still green with the new row present.
+Expected: PASS - existing settings tests still green with the new row present.
 
 - [ ] **Step 9: Commit**
 
@@ -699,7 +699,7 @@ describe('DMMessage post-quantum provenance', () => {
 - [ ] **Step 2: Run the test and confirm it fails**
 
 Run: `npx vitest run src/store/dm.test.ts`
-Expected: FAIL — TypeScript rejects `pq` as an unknown property on the object literal.
+Expected: FAIL - TypeScript rejects `pq` as an unknown property on the object literal.
 
 - [ ] **Step 3: Add the field**
 
@@ -709,7 +709,7 @@ In `src/store/dm.ts`, add to `interface DMMessage` immediately after `protocol: 
   /**
    * True when the NIP-17 payload was a post-quantum envelope. Undefined on
    * messages decoded before this existed, which `messageMark` treats as
-   * classic — the honest reading for a thread that predates the feature.
+   * classic, the honest reading for a thread that predates the feature.
    */
   pq?: boolean;
 ```
@@ -791,7 +791,7 @@ describe('nip44Encrypt post-quantum options', () => {
 - [ ] **Step 2: Run the test and confirm it fails**
 
 Run: `npx vitest run src/lib/nostr-bridge/bridge.test.ts`
-Expected: FAIL — the third argument is dropped.
+Expected: FAIL - the third argument is dropped.
 
 - [ ] **Step 3: Widen the signature and forward on the nip07 branch**
 
@@ -825,7 +825,7 @@ to:
             : w.nip44.encrypt(recipientPubkey, plaintext);
 ```
 
-Leave the `nsec` and `bunker` branches untouched — they ignore `pqOpts` by construction.
+Leave the `nsec` and `bunker` branches untouched: they ignore `pqOpts` by construction.
 
 - [ ] **Step 4: Update the signer type**
 
@@ -876,7 +876,7 @@ In `src/i18n/locales/en.json` add:
   "notSecured": "Not quantum-safe",
   "notSecuredDetail": "This conversation can be recorded now and decrypted later, once a quantum computer breaks the classic key exchange.",
   "learnHow": "How to fix this",
-  "markNoGiftwrap": "Not gift-wrapped — relays can see who you are talking to",
+  "markNoGiftwrap": "Not gift-wrapped: relays can see who you are talking to",
   "markNoPq": "Not quantum-safe"
 }
 ```
@@ -890,7 +890,7 @@ In `src/i18n/locales/es.json` add:
   "notSecured": "Sin protección cuántica",
   "notSecuredDetail": "Esta conversación se puede grabar ahora y descifrar más adelante, cuando una computadora cuántica rompa el intercambio de claves clásico.",
   "learnHow": "Cómo solucionarlo",
-  "markNoGiftwrap": "Sin gift wrap — los relays pueden ver con quién hablas",
+  "markNoGiftwrap": "Sin gift wrap: los relays pueden ver con quién hablas",
   "markNoPq": "Sin protección cuántica"
 }
 ```
@@ -922,7 +922,7 @@ describe('PqConversationNotice', () => {
 - [ ] **Step 3: Run the test and confirm it fails**
 
 Run: `npx vitest run src/components/chat/PqConversationNotice.test.tsx`
-Expected: FAIL — cannot resolve `./PqConversationNotice`.
+Expected: FAIL - cannot resolve `./PqConversationNotice`.
 
 - [ ] **Step 4: Write the components**
 
@@ -988,7 +988,7 @@ export default function PqMessageMark({ mark }: { mark: Mark }) {
 }
 ```
 
-Both components must be rendered inside the app's `LocaleProvider` — `useTranslation` throws outside it. The test above renders them bare, so wrap the render in the same provider the other chat component tests use (grep `LocaleProvider` under `src/components/chat/__tests__/` or `src/test/` for the existing helper).
+Both components must be rendered inside the app's `LocaleProvider`: `useTranslation` throws outside it. The test above renders them bare, so wrap the render in the same provider the other chat component tests use (grep `LocaleProvider` under `src/components/chat/__tests__/` or `src/test/` for the existing helper).
 
 - [ ] **Step 5: Run the test and confirm it passes**
 
@@ -1034,7 +1034,7 @@ tags: [security, post-quantum, direct-messages, encryption]
 
 Nostr's encrypted messages derive their key from secp256k1, the same elliptic curve that secures your identity. Anyone can copy an encrypted message off a public relay today and simply keep it. The day a quantum computer can break that curve, everything they kept becomes readable.
 
-This is called **harvest now, decrypt later**, and it is the only half of the quantum problem you can fix ahead of time. A message protected today stays protected permanently, whenever the break arrives. Forgery is different — nobody can forge your signature until the break happens, so that gets fixed when the whole network moves.
+This is called **harvest now, decrypt later**, and it is the only half of the quantum problem you can fix ahead of time. A message protected today stays protected permanently, whenever the break arrives. Forgery is different: nobody can forge your signature until the break happens, so that gets fixed when the whole network moves.
 
 Post-quantum keys close the confidentiality half. The protection is **hybrid**: the post-quantum secret is combined with today's ordinary key, so it is never weaker than what you already have.
 
@@ -1050,7 +1050,7 @@ Nothing extra to back up: your existing phrase already covers it.
 
 ### Attach an independent identity to the npub you already have
 
-If you already have an npub you do not want to abandon — or you imported it from an `nsec` and have no phrase to derive from — you can generate a post-quantum key pair locally and attach it to your existing account.
+If you already have an npub you do not want to abandon, or you imported it from an `nsec` and have no phrase to derive from, you can generate a post-quantum key pair locally and attach it to your existing account.
 
 Your npub does not change. Your follows, your history, your identity all stay exactly as they are. The extension generates the key pair offline and publishes an attestation signed by your existing key, which is what tells other people your account can receive post-quantum messages.
 
@@ -1058,7 +1058,7 @@ The trade-off: this key **cannot be recovered from your recovery phrase**, becau
 
 ## How to set it up
 
-Both paths run through the [Nostr WoT extension](https://nostr-wot.com), which owns your keys. Obelisk never sees them — it only reads the public attestation that says your account has post-quantum keys, which is why the notice can tell you whether a conversation is protected.
+Both paths run through the [Nostr WoT extension](https://nostr-wot.com), which owns your keys. Obelisk never sees them: it only reads the public attestation that says your account has post-quantum keys, which is why the notice can tell you whether a conversation is protected.
 
 Once your attestation is published, any conversation where the other person also has post-quantum keys shows as quantum-secured, and messages you send from then on carry the stronger protection.
 
@@ -1066,9 +1066,9 @@ Once your attestation is published, any conversation where the other person also
 
 A conversation you have had for a while will contain messages of different kinds, because both of you may have used several clients over the years. Each message is marked for what it actually had:
 
-- **Not gift-wrapped** — an older NIP-04 message. The contents are encrypted, but relays can see who you were talking to.
-- **Not quantum-safe** — a modern gift-wrapped message, but without post-quantum protection. Safe today, harvestable for later.
-- **No mark** — gift-wrapped and post-quantum. Nothing to flag.
+- **Not gift-wrapped**: an older NIP-04 message. The contents are encrypted, but relays can see who you were talking to.
+- **Not quantum-safe**: a modern gift-wrapped message, but without post-quantum protection. Safe today, harvestable for later.
+- **No mark**: gift-wrapped and post-quantum. Nothing to flag.
 
 Only the messages that lack something are marked, so a healthy conversation stays quiet.
 ```
@@ -1113,7 +1113,7 @@ export default function QuantumSafeHero() {
 }
 ```
 
-If `WotHero.tsx` takes props or uses a different CSS variable than `--accent`, follow it rather than the sketch above — the surrounding conventions win.
+If `WotHero.tsx` takes props or uses a different CSS variable than `--accent`, follow it rather than the sketch above: the surrounding conventions win.
 
 - [ ] **Step 4: Register the hero**
 
@@ -1122,7 +1122,7 @@ Add the component to `HERO_REGISTRY` under the key `quantum-safe` (find the regi
 - [ ] **Step 5: Verify both guides load**
 
 Run: `npx vitest run src/lib/guides.test.ts`
-Expected: PASS — the guide loader picks up the new slug in both locales.
+Expected: PASS - the guide loader picks up the new slug in both locales.
 
 - [ ] **Step 6: Run the full suite and build**
 
@@ -1144,4 +1144,4 @@ git commit -m "pq: add the quantum-safe DMs guide in both locales"
 
 ## Wiring note for the executor
 
-Tasks 1-8 build the pieces. The final wiring — mounting `PqConversationNotice` in the DM view and `PqMessageMark` in the message list, and calling `selfPqState`/`hasUsableKeys` to feed them — belongs to whichever component owns the DM thread view. Find it via `grep -rn "activeDMPubkey" src/app/app/`, and follow the loading conventions already in that component rather than introducing new ones. Add the wiring as a ninth commit once the pieces are green.
+Tasks 1-8 build the pieces. The final wiring (mounting `PqConversationNotice` in the DM view and `PqMessageMark` in the message list, and calling `selfPqState`/`hasUsableKeys` to feed them) belongs to whichever component owns the DM thread view. Find it via `grep -rn "activeDMPubkey" src/app/app/`, and follow the loading conventions already in that component rather than introducing new ones. Add the wiring as a ninth commit once the pieces are green.

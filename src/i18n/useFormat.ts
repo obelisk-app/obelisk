@@ -2,7 +2,7 @@
 
 /**
  * `formatDate`/`formatTime`/`formatNumber` bound to the app's current
- * language, so a component never has to pass the locale itself — and,
+ * language, so a component never has to pass the locale itself and,
  * more to the point, never has the option of forgetting to.
  *
  * Sits beside `useTranslation()` rather than inside it: plenty of
@@ -16,7 +16,7 @@ import {
   formatDateTime,
   formatNumber,
   formatTime,
-} from '@/lib/format';
+} from '@/utils/format/format';
 
 export function useFormat() {
   const { locale } = useTranslation();

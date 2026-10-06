@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/context';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 
 export default function VoiceLandingPage() {
   const { t } = useTranslation();
@@ -28,19 +30,17 @@ export default function VoiceLandingPage() {
             over WebRTC; only signaling goes through the relay.
           </p>
         </div>
-        <input
+        <Input
           type="text"
           value={room}
           onChange={(e) => setRoom(e.target.value)}
           placeholder={t('voicePage.roomPlaceholder')}
-          className="w-full bg-black border border-neutral-700 rounded-md px-3 py-2 text-sm font-mono focus:border-emerald-500 outline-none"
+          aria-label={t('voicePage.roomPlaceholder')}
+          className="font-mono"
         />
-        <button
-          type="submit"
-          className="w-full px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium"
-        >
+        <Button type="submit" variant="pill" size="sm" className="w-full">
           {t('voicePage.enter')}
-        </button>
+        </Button>
       </form>
     </div>
   );

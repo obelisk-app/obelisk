@@ -1,7 +1,7 @@
 /**
  * The multiplayer layer: what actually crosses the relay during a match.
  *
- * Everything in the turn-based games goes on the wire — every move is an
+ * Everything in the turn-based games goes on the wire: every move is an
  * event, and the board is the log. That is exactly wrong for a game running at
  * 60 frames a second: a relay round-trip per input would make it feel awful,
  * and nobody wants to pay for 3,600 events a minute.
@@ -22,12 +22,21 @@
  *
  * Cheating is therefore *detectable*, not *prevented*: garbage lands before
  * the checkpoint that justifies it arrives. That is the deliberate trade for a
- * game that has to feel instant — see docs/games.md.
+ * game that has to feel instant (see docs/games.md).
  */
 import { replay, type Input } from './engine';
 
 /** How often a client publishes its progress. Every ~10s of play. */
 export const CHECKPOINT_INTERVAL_FRAMES = 600;
+
+/**
+ * Attacks remembered per match. One event appends one entry, so a seat that
+ * spams `attack` would otherwise grow every client's copy of the match for
+ * as long as the relay keeps serving the log. Receivers only ever ask for
+ * attacks newer than the last one they applied, so dropping the oldest
+ * changes nothing for a board that is keeping up.
+ */
+export const MAX_MATCH_ATTACKS = 2000;
 
 export interface AttackEvent {
   from: string;
@@ -102,7 +111,7 @@ export function incomingFor(match: MatchState, seat: string, since = 0): AttackE
  *
  * Ordering is by arrival, not by turn: two attacks landing in the same second
  * both count, and neither invalidates the other. What the reducer enforces is
- * attribution — an event only speaks for a seat its signer controls, which is
+ * attribution: an event only speaks for a seat its signer controls, which is
  * checked before this is called.
  */
 export function applyMatchEvent(
@@ -137,7 +146,7 @@ export function applyMatchEvent(
       if (!next.progress[event.target]) return match;
       // Garbage aimed at someone already out goes nowhere.
       if (!next.progress[event.target].alive) return match;
-      next.attacks = [...match.attacks, {
+      const appended = [...match.attacks, {
         from: event.seat,
         to: event.target,
         lines: event.lines,
@@ -145,6 +154,9 @@ export function applyMatchEvent(
         nonce: event.nonce,
         at: event.at,
       }];
+      next.attacks = appended.length > MAX_MATCH_ATTACKS
+        ? appended.slice(appended.length - MAX_MATCH_ATTACKS)
+        : appended;
       break;
     }
 
@@ -202,7 +214,7 @@ const CODE_KINDS: Record<string, Input['kind']> = Object.fromEntries(
  * Pack an input log small enough to publish repeatedly.
  *
  * `frame:kind[:lines:hole]`, comma-separated, with the frame stored as a delta
- * from the previous input — a minute of play is a few hundred bytes rather
+ * from the previous input: a minute of play is a few hundred bytes rather
  * than a few tens of kilobytes of JSON.
  */
 export function encodeInputs(inputs: readonly Input[]): string {

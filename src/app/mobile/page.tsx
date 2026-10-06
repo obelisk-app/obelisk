@@ -31,9 +31,9 @@ const SCREENSHOTS = [
 ];
 
 export const metadata: Metadata = {
-  title: 'Obelisk Mobile — Discord-style group chat for your phone',
+  title: 'Obelisk Mobile - Discord-style group chat for your phone',
   description:
-    'See Obelisk on mobile: a Nostr-powered Discord alternative with NIP-29 group chat, voice channels, encrypted DMs, and Lightning zaps. No email, no password — just your keys.',
+    'See Obelisk on mobile: a Nostr-powered Discord alternative with NIP-29 group chat, voice channels, encrypted DMs, and Lightning zaps. No email, no password, just your keys.',
   alternates: { canonical: '/mobile' },
   keywords: [
     'mobile Discord alternative',
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     'self-hosted Discord mobile',
   ],
   openGraph: {
-    title: 'Obelisk Mobile — Nostr group chat on your phone',
+    title: 'Obelisk Mobile - Nostr group chat on your phone',
     description:
       'A guided tour of Obelisk on mobile: Nostr login, NIP-29 channels, voice with SFU, encrypted DMs and Lightning zaps.',
     url: `${SITE_URL}/mobile`,
@@ -59,13 +59,13 @@ export const metadata: Metadata = {
         url: '/pictures-for-posts/mobile-showcase-readme.png',
         width: 3320,
         height: 1840,
-        alt: 'Obelisk mobile — login, channels, voice with SFU, and profile screens',
+        alt: 'Obelisk mobile: login, channels, voice with SFU, and profile screens',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Obelisk Mobile — Nostr group chat on your phone',
+    title: 'Obelisk Mobile - Nostr group chat on your phone',
     description:
       'A mobile tour of Obelisk: NIP-29 channels, voice, encrypted DMs and Lightning zaps. No email, no password.',
     images: ['/pictures-for-posts/mobile-showcase-readme.png'],
@@ -76,7 +76,7 @@ export default function MobilePage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ImageGallery',
-    name: 'Obelisk on mobile — screenshot tour',
+    name: 'Obelisk on mobile: screenshot tour',
     description:
       'Screenshots of Obelisk, a Nostr-powered Discord alternative, captured on a mobile device.',
     url: `${SITE_URL}/mobile`,
@@ -86,7 +86,7 @@ export default function MobilePage() {
       url: `${SITE_URL}${s.path}`,
       width: s.width,
       height: s.height,
-      name: `Obelisk mobile — ${s.name}`,
+      name: `Obelisk mobile: ${s.name}`,
     })),
   };
 

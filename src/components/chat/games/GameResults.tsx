@@ -2,16 +2,15 @@
 
 import type { GameSession } from '@/lib/games/session';
 import { gameIcon, gameName } from '@/lib/games/catalog';
-import { isDraw, standingsFor } from '@/lib/games/standings';
-import { SEAT_COLORS } from './ChainReactionBoard';
-import { VESTA_PLAYER_COLORS } from './vesta/VestaBoard';
+import { isDraw } from '@/lib/games/standings';
+import { rowsFor } from './results-rows';
 import { useTranslation } from '@/i18n/context';
 
 /**
  * How a match ended, for everyone.
  *
  * A finished table is not private: the log is on the relay, so anybody in the
- * channel can replay it. This is that replay made readable — final standings
+ * channel can replay it. This is that replay made readable: final standings
  * with each game's own idea of a score, shown to players and spectators alike,
  * whether or not they were sitting at the table.
  */
@@ -74,22 +73,4 @@ export default function GameResults({
       )}
     </div>
   );
-}
-
-interface Row {
-  seat: string;
-  score: string;
-  color: string;
-  detail?: string;
-}
-
-/** Standings from the shared scorer, painted in each game's seat colours. */
-function rowsFor(session: GameSession): Row[] {
-  const palette = session.game === 'vesta' ? VESTA_PLAYER_COLORS : SEAT_COLORS.map((c) => c.hex);
-  return standingsFor(session).map((row) => ({
-    seat: row.seat,
-    score: row.score,
-    detail: row.detail,
-    color: palette[session.participants.indexOf(row.seat)] ?? '#a3a3a3',
-  }));
 }

@@ -4,7 +4,7 @@
  * Pages the next batch when the reader gets near the bottom.
  *
  * `FeedList` has always had one of these inline, but surfaces that render
- * something other than a list of note cards — the media grid, for one — went
+ * something other than a list of note cards (the media grid, for one) went
  * through a different path and simply stopped at the first page. Extracted
  * so any feed surface can page without re-implementing the observer (and
  * without re-deriving the prefetch margin, which is the part that decides
@@ -30,7 +30,7 @@ export default function InfiniteSentinel({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   // Kept in a ref so the observer isn't torn down and rebuilt every time the
-  // handler's identity changes — which, since it closes over the current
+  // handler's identity changes, which, since it closes over the current
   // page, is on every page.
   const onReachRef = useRef(onReach);
   useEffect(() => { onReachRef.current = onReach; }, [onReach]);

@@ -1,6 +1,6 @@
 # Bitcoin Zaps via Nostr Wallet Connect
 
-Obelisk supports sending Bitcoin zaps (Lightning payments) from chat. The wallet link uses [NIP-47 Nostr Wallet Connect (NWC)](https://github.com/nostr-protocol/nips/blob/master/47.md) — your Lightning wallet stays on your phone / node, and Obelisk only holds a scoped remote-control string that it uses to ask the wallet to pay invoices on your behalf.
+Obelisk supports sending Bitcoin zaps (Lightning payments) from chat. The wallet link uses [NIP-47 Nostr Wallet Connect (NWC)](https://github.com/nostr-protocol/nips/blob/master/47.md): your Lightning wallet stays on your phone / node, and Obelisk only holds a scoped remote-control string that it uses to ask the wallet to pay invoices on your behalf.
 
 ## What you get
 
@@ -47,7 +47,7 @@ Obelisk supports sending Bitcoin zaps (Lightning payments) from chat. The wallet
 
 - The NWC string stays encrypted at rest. Obelisk server code can read it only in the context of a logged-in session that can provide the decryption material.
 - Your Lightning private keys never touch Obelisk; the wallet signs invoices itself and sends back a receipt.
-- Spend limits are enforced by your wallet (set them there — Obelisk does not override them).
+- Spend limits are enforced by your wallet (set them there; Obelisk does not override them).
 - Uninstalling is one-click: revoke the NWC string in your wallet, and any cached copy in Obelisk becomes inert.
 
 ## Troubleshooting
@@ -56,7 +56,7 @@ Obelisk supports sending Bitcoin zaps (Lightning payments) from chat. The wallet
 |---------|--------------|
 | "Connection failed" on paste | NWC relay unreachable; try a wallet-provided relay or `wss://relay.getalby.com/v1`. |
 | Zap button missing on a message | Recipient has no Lightning address / NIP-57 support. |
-| Payment stuck pending | Wallet budget exhausted — check spend limits in your wallet. |
+| Payment stuck pending | Wallet budget exhausted. Check spend limits in your wallet. |
 
 ## Roadmap
 

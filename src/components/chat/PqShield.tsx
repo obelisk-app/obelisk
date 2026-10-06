@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from '@/i18n/context';
-import type { PqProtectionLevel } from '@/lib/pq/status';
+import type { PqProtectionLevel } from '@/services/pq/status';
+import { useDismiss } from '@/hooks/useDismiss';
+import { ICONS } from './pq/pq-shield-icons';
 
 /**
  * The protection indicator for a DM thread: one small shield in the header,
  * with the explanation behind a hover or a tap.
  *
  * This replaces a full-width banner that sat permanently above every
- * conversation. The banner was accurate but disproportionate — a standing
+ * conversation. The banner was accurate but disproportionate: a standing
  * yellow warning for the ordinary case, which is the state almost every Nostr
  * conversation is in and will stay in for a while. A warning that never goes
  * away stops being read, and this one also had nothing good to say about the
@@ -20,45 +22,6 @@ import type { PqProtectionLevel } from '@/lib/pq/status';
  * `wrapped` and `basic` are neutral: they are states to understand, not
  * alarms.
  */
-
-const SIZE = 16;
-
-function ShieldQuantum() {
-  // Shield with a tick: everything the wrap gives, plus quantum protection.
-  return (
-    <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="M9 11.5l2 2 4-4" />
-    </svg>
-  );
-}
-
-function ShieldWrapped() {
-  // Plain shield: contents locked and the social graph hidden.
-  return (
-    <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-  );
-}
-
-function LockBasic() {
-  // A padlock rather than a shield: the contents are locked, but the envelope
-  // is not — deliberately a different silhouette, not a dimmer shield, so the
-  // two are distinguishable without relying on colour.
-  return (
-    <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="4" y="11" width="16" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 018 0v4" />
-    </svg>
-  );
-}
-
-const ICONS: Record<PqProtectionLevel, () => React.ReactElement> = {
-  quantum: ShieldQuantum,
-  wrapped: ShieldWrapped,
-  basic: LockBasic,
-};
 
 const TONE: Record<PqProtectionLevel, string> = {
   quantum: 'text-lc-green',
@@ -80,23 +43,11 @@ export default function PqShield({
   const panelId = useId();
 
   // Pointer users get it on hover, but the panel holds a link, so touch and
-  // keyboard need a real toggle — hover alone would put that link out of reach
+  // keyboard need a real toggle: hover alone would put that link out of reach
   // on a phone, which is where this is most likely to be read.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    const onDown = (e: MouseEvent | TouchEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('touchstart', onDown);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('touchstart', onDown);
-    };
-  }, [open]);
+  const close = () => setOpen(false);
+  // `pointerdown` catches the tap that opened it on a phone as well as a click.
+  useDismiss({ refs: [wrapRef], onDismiss: close, enabled: open, outside: 'pointerdown' });
 
   const Icon = ICONS[level];
   const label = t(`pq.level.${level}`);

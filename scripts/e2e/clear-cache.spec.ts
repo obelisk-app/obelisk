@@ -82,7 +82,7 @@ test('Clear cache wipes relay/UI state but preserves session + preferences', asy
   expect(after.readState).toBeNull();
   expect(after.cacheEntry).toBeNull();
   // Relays might be present or absent depending on whether the seed
-  // wrote them — but if present, they should be preserved.
+  // wrote them, but if present, they should be preserved.
   // (`obelisk-dex/relays` is preserved by clear-cache.)
   // Soft assert: it's either unchanged or was never set.
   void STORAGE_KEY;

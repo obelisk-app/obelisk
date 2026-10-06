@@ -2,7 +2,7 @@
 
 Private 1:1 chat between Nostr identities. Like everything else in Obelisk, DMs are entirely client-driven over relays: there is no server in the data path.
 
-> **This document was rewritten on 2026-08-17.** The version before it described a local `src/lib/dm/` subsystem that commit `5cbcec0` deleted on 2026-05-10, listing modules (`dm.ts`, `dm-cache.ts`, `cache-key.ts`, `coalescer.ts`, `pool.ts`, `src/components/dm/*`, `feature-flags.ts`) that no longer exist. That staleness cost a full spec-and-plan cycle on the post-quantum work, which was written against a system that was not there. If you change how DMs work, change this file in the same commit.
+> **This document was rewritten on 2026-08-17.** The version before it described a local `src/services/dm/` subsystem that commit `5cbcec0` deleted on 2026-05-10, listing modules (`dm.ts`, `dm-cache.ts`, `cache-key.ts`, `coalescer.ts`, `pool.ts`, `src/components/dm/*`, `feature-flags.ts`) that no longer exist. That staleness cost a full spec-and-plan cycle on the post-quantum work, which was written against a system that was not there. If you change how DMs work, change this file in the same commit.
 
 ## Where the code actually is
 
@@ -10,21 +10,21 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 
 | Path | Responsibility |
 |---|---|
-| `src/lib/nostr-bridge/client.ts` | Everything: subscriptions, ingest, send, relay routing, the signer adapter. Search `sendDirectMessage`, `publishDirectMessage`, `ingestIncomingDM`, `ingestIncomingGiftWrap`, `ingestDM`, `getDmSigner`, `subscribeIncomingDMs`, `ensureDmInboxRelaysPublished`, `fetchPartnerInboxRelays`, `resolveDmProtocol`. |
-| `src/lib/nostr-bridge/types.ts` | `JsDirectMessage` — the only DM shape the UI ever sees. |
-| `src/lib/nostr-bridge/stores.ts` | `useDirectMessages()` over the bridge's `dmsByPeer` store. |
-| `src/lib/dm/opt-in.ts` | The `directMessagesEnabled` preference gate. The only surviving file under `src/lib/dm/`. |
+| `src/services/nostr-bridge/client.ts` | Everything: subscriptions, ingest, send, relay routing, the signer adapter. Search `sendDirectMessage`, `publishDirectMessage`, `ingestIncomingDM`, `ingestIncomingGiftWrap`, `ingestDM`, `getDmSigner`, `subscribeIncomingDMs`, `ensureDmInboxRelaysPublished`, `fetchPartnerInboxRelays`, `resolveDmProtocol`. |
+| `src/services/nostr-bridge/types.ts` | `JsDirectMessage`: the only DM shape the UI ever sees. |
+| `src/services/nostr-bridge/stores.ts` | `useDirectMessages()` over the bridge's `dmsByPeer` store. |
+| `src/services/dm/opt-in.ts` | The `directMessagesEnabled` preference gate. The only surviving file under `src/services/dm/`. |
 | `src/store/dm.ts` | Zustand UI state: `activeDMPubkey`, `isDMMode`, and the persisted per-peer `protocolOverrides`. |
-| `src/lib/pq/` | Post-quantum: attestation lookup, own-capability detection, status computation, send-plan resolution. |
+| `src/services/pq/` | Post-quantum: attestation lookup, own-capability detection, status computation, send-plan resolution. |
 | `src/app/app/DMList.tsx`, `DMComposer.tsx`, `DMOptInGate.tsx` | Shared DM UI. |
 | `src/app/app/DesktopShell.tsx` (`DMPanel`) | Desktop thread view. |
 | `src/app/app/mobile/PhoneShell.tsx` (`DmThreadScreen`) | Mobile thread view. |
 | `src/components/chat/PqConversationNotice.tsx`, `PqMessageMark.tsx` | Post-quantum indicators. |
-| `src/components/chat/DmComposer.tsx` | The thread's message bar — the channel bar's widgets (attach, voice note, emoji / GIF / sticker picker, drop, paste) with encrypted uploads. Both shells mount it with `key={peer}`. |
+| `src/components/chat/DmComposer.tsx` | The thread's message bar: the channel bar's widgets (attach, voice note, emoji / GIF / sticker picker, drop, paste) with encrypted uploads. Both shells mount it with `key={peer}`. |
 | `src/components/chat/DmMessageBody.tsx`, `EncryptedDmAttachment.tsx` | What goes inside a bubble; the fetch → verify → decrypt path for file messages. |
-| `src/lib/dm-file.ts`, `src/lib/dm-attachments.ts`, `src/lib/crypto/file-cipher.ts` | Kind-15 tag layout, encrypt + anonymous upload, AES-256-GCM. |
+| `src/utils/attachments/dm-file.ts`, `src/services/dm-attachments.ts`, `src/lib/crypto/file-cipher.ts` | Kind-15 tag layout, encrypt + anonymous upload, AES-256-GCM. |
 
-`@nostr-wot/dm` types never leave `src/lib/nostr-bridge/`. That boundary is deliberate: if the SDK integration turns out wrong, the blast radius is the bridge's DM methods rather than every component.
+`@nostr-wot/dm` types never leave `src/services/nostr-bridge/`. That boundary is deliberate: if the SDK integration turns out wrong, the blast radius is the bridge's DM methods rather than every component.
 
 ## Protocols
 
@@ -34,24 +34,24 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 
 Both inbound paths are live: kind-4 events and kind-1059 wraps ingest into the same `dmsByPeer` store, and each message records which one carried it.
 
-Rumor kinds the bridge reads out of a wrap: **14** (chat), **15** (file message, below) and **25055** (call control — never enters `dmsByPeer`; see [docs/voice/dm-calls.md](voice/dm-calls.md)).
+Rumor kinds the bridge reads out of a wrap: **14** (chat), **15** (file message, below) and **25055** (call control, never enters `dmsByPeer`; see [docs/voice/dm-calls.md](voice/dm-calls.md)).
 
-The wrap ledger (`wrap-ledger.ts`, scope `dm:inert`) remembers only wraps that **never produce a thread entry** — call signals, kinds we don't read, file messages we can't decrypt — so they aren't re-opened on the next load. **Chat wraps are never recorded**: decrypted DMs live in memory only, so re-opening the wrap is how a reload gets the message back. (The retired `dm` scope recorded chat wraps too, and from 2026-08-22 to 2026-09-26 every already-opened NIP-17 message was missing after a page reload; stored ledgers still carry its bit, which nothing reads.) A new rumor kind must still ship its receive path with its send path: an older build files it as inert and won't open it again.
+The wrap ledger (`wrap-ledger.ts`, scope `dm:inert`) remembers only wraps that **never produce a thread entry** (call signals, kinds we don't read, file messages we can't decrypt), so they aren't re-opened on the next load. **Chat wraps are never recorded**: decrypted DMs live in memory only, so re-opening the wrap is how a reload gets the message back. (The retired `dm` scope recorded chat wraps too, and from 2026-08-22 to 2026-09-26 every already-opened NIP-17 message was missing after a page reload; stored ledgers still carry its bit, which nothing reads.) A new rumor kind must still ship its receive path with its send path: an older build files it as inert and won't open it again.
 
 ## Files, voice notes, stickers
 
 The DM bar is the channel bar (`DmComposer`), with one change: **every file and voice note is encrypted in the browser before it leaves**, and sent as a NIP-17 **kind-15 file message** rather than a URL in the text.
 
-1. `checkDmAttachment` — the channel's mime allowlist and size caps (`src/lib/attachments.ts`), on the base type (`MediaRecorder` reports `audio/webm;codecs=opus`).
-2. `encryptFile` — AES-256-GCM, fresh random key and 12-byte nonce per file.
-3. `uploadEncryptedBlob` — the **ciphertext** goes to Blossom as `application/octet-stream`, with a BUD-01 auth signed by a **throwaway key minted per upload** and bound to each server with a `server` tag. The server learns the blob's size and hash, not who stored it or what it is.
-4. `sendDirectFile` — a kind-15 rumor whose content is the blob URL and whose tags carry `file-type`, `encryption-algorithm: aes-gcm`, `decryption-key`, `decryption-nonce` (hex), `x` (SHA-256 of the ciphertext), `ox`, `size`, `dim`, plus Obelisk's `name` and, for a voice note, `duration`. Sealed, wrapped and routed exactly like a kind 14, including the self-copy and the post-quantum seal.
+1. `checkDmAttachment`: the channel's mime allowlist and size caps (`src/utils/attachments/attachments.ts`), on the base type (`MediaRecorder` reports `audio/webm;codecs=opus`).
+2. `encryptFile`: AES-256-GCM, fresh random key and 12-byte nonce per file.
+3. `uploadEncryptedBlob`: the **ciphertext** goes to Blossom as `application/octet-stream`, with a BUD-01 auth signed by a **throwaway key minted per upload** and bound to each server with a `server` tag. The server learns the blob's size and hash, not who stored it or what it is.
+4. `sendDirectFile`: a kind-15 rumor whose content is the blob URL and whose tags carry `file-type`, `encryption-algorithm: aes-gcm`, `decryption-key`, `decryption-nonce` (hex), `x` (SHA-256 of the ciphertext), `ox`, `size`, `dim`, plus Obelisk's `name` and, for a voice note, `duration`. Sealed, wrapped and routed exactly like a kind 14, including the self-copy and the post-quantum seal.
 
-On receipt `parseDmFileRumor` drops anything we could not decrypt (another algorithm, a non-http URL, a missing key). `EncryptedDmAttachment` fetches the blob, checks `x`, decrypts in memory and shows it from an object URL that is revoked on unmount — images, video and voice notes on mount, other files only on click. Nothing decrypted is written to disk.
+On receipt `parseDmFileRumor` drops anything we could not decrypt (another algorithm, a non-http URL, a missing key). `EncryptedDmAttachment` fetches the blob, checks `x`, decrypts in memory and shows it from an object URL that is revoked on unmount (images, video and voice notes on mount, other files only on click). Nothing decrypted is written to disk.
 
-Stickers, GIFs and custom emoji are references to public pack URLs, as in a channel; their NIP-30 `emoji` / Obelisk `sticker` tags ride inside the rumor. On a NIP-04 thread the tags are dropped (a kind 4's tags are in the clear) and attach / voice are hidden — NIP-04 has no file message, and `sendDirectFile` refuses one.
+Stickers, GIFs and custom emoji are references to public pack URLs, as in a channel; their NIP-30 `emoji` / Obelisk `sticker` tags ride inside the rumor. On a NIP-04 thread the tags are dropped (a kind 4's tags are in the clear) and attach / voice are hidden: NIP-04 has no file message, and `sendDirectFile` refuses one.
 
-Each bubble has a ⋯ (`DmMessageMenu`): copy text / file link / message id / sender npub, and **View raw event**, which shows both layers kept in memory on `JsDirectMessage.raw` — the decrypted rumor (kind 14/15) and what the relay stores (the kind-1059 wrap; for NIP-04, the kind-4 event plus its decrypted text). A file rumor's raw JSON carries its decryption key, and the dialog says so.
+Each bubble has a ⋯ (`DmMessageMenu`): copy text / file link / message id / sender npub, and **View raw event**, which shows both layers kept in memory on `JsDirectMessage.raw`: the decrypted rumor (kind 14/15) and what the relay stores (the kind-1059 wrap; for NIP-04, the kind-4 event plus its decrypted text). A file rumor's raw JSON carries its decryption key, and the dialog says so.
 
 Bubbles render through `DmMessageBody`, not `MessageContent`: no link unfurls (that would hand our own `/api/link-preview` every URL two people send each other), and text keeps the bubble's colour.
 
@@ -59,7 +59,7 @@ Bubbles render through `DmMessageBody`, not `MessageContent`: no link unfurls (t
 
 ## Opt-in
 
-DMs are off by default (`directMessagesEnabled`, `src/lib/preferences.ts`). While off, the bridge opens no DM subscriptions and publishes no kind-10050. `DMOptInGate` renders the enable prompt; `setDmOptInEnabled(false)` calls `bridge.disableDirectMessages()` to tear the subscriptions down.
+DMs are off by default (`directMessagesEnabled`, `src/services/preferences.ts`). While off, the bridge opens no DM subscriptions and publishes no kind-10050. `DMOptInGate` renders the enable prompt; `setDmOptInEnabled(false)` calls `bridge.disableDirectMessages()` to tear the subscriptions down.
 
 ## Subscriptions
 
@@ -75,7 +75,7 @@ DMs are the **one** thing in Obelisk that runs cross-relay. Everything group-rel
 
 Then `fetchMyDmRelays()` resolves our own kind-10050 (NIP-17 inbox) and kind-10002 (NIP-65 read/write) sets and duplicates all three filters onto any relay not already covered. Without this, DMs sent by clients that respect our published inbox would never arrive.
 
-A relay switch or a pool reset closes these REQs along with the old sockets. `connect()` reopens them itself when anything has asked for DMs this page-load (`dmWanted`), rather than waiting for a component to remount — a call invite is worth nothing a minute late.
+A relay switch or a pool reset closes these REQs along with the old sockets. `connect()` reopens them itself when anything has asked for DMs this page-load (`dmWanted`), rather than waiting for a component to remount: a call invite is worth nothing a minute late.
 
 There is no "gift wraps authored by me" filter, and there cannot be: the wrap is signed by a fresh ephemeral key, not by us. That is why every NIP-17 send publishes a **second wrap addressed to ourselves** (below). The `{ kinds: [1059], '#p': [me] }` filter picks it up like any other inbound wrap, which is how the sender's own outgoing history survives a reload and reaches their other devices.
 
@@ -90,7 +90,7 @@ There is no "gift wraps authored by me" filter, and there cannot be: the wrap is
 1. `buildChatMessage(me, peer, content)` builds the kind-14 rumor, with its `created_at` pinned to the timestamp the optimistic placeholder already committed to.
 2. `resolvePqSend` decides whether the seal can be post-quantum (below).
 3. `sealAndGiftWrap` produces the kind-1059, post-quantum or classic.
-4. `resolveGiftWrapRelays` decides where the wrap goes — see [Inbox routing](#inbox-routing-kind-10050).
+4. `resolveGiftWrapRelays` decides where the wrap goes; see [Inbox routing](#inbox-routing-kind-10050).
 5. Publish, then replace the placeholder.
 6. `publishSelfGiftWrapCopy` seals the **same rumor** a second time, addressed to us, and publishes it to our own inbox only.
 
@@ -118,7 +118,7 @@ NIP-04 threads publish no self-copy and need none. Those events are authored by 
 > anyone changing DM routing: **[docs/dm-metadata-privacy.md](dm-metadata-privacy.md)**.
 > Read it before adding a relay to any publish target.
 
-Relay selection is a privacy control, not a delivery convenience. A kind-1059 is signed by a throwaway key so a relay learns only "some ephemeral key dropped a wrap for someone". Publishing that wrap to the relay the user is browsing destroys the guarantee: that socket is NIP-42-authenticated as the real sender, so the relay gets the true identity, the true send time, and — if the recipient reads there too — the sender-to-recipient edge.
+Relay selection is a privacy control, not a delivery convenience. A kind-1059 is signed by a throwaway key so a relay learns only "some ephemeral key dropped a wrap for someone". Publishing that wrap to the relay the user is browsing destroys the guarantee: that socket is NIP-42-authenticated as the real sender, so the relay gets the true identity, the true send time, and (if the recipient reads there too) the sender-to-recipient edge.
 
 `resolveGiftWrapRelays` therefore walks a strictly ordered ladder and uses each rung **alone**, never unioned:
 
@@ -128,7 +128,7 @@ Relay selection is a privacy control, not a delivery convenience. A kind-1059 is
 | 2 | Recipient's NIP-65 read relays | Still relays *they* chose, so the wrap stays on the recipient's infrastructure. |
 | 3 | Our active relay | Last resort, and the only rung with a real cost: this relay sees an authenticated publish from us. Taken anyway, because the spec forbids letting a missing inbox list block a send. |
 
-The self-copy goes to **our own inbox only** — the relays `subscribeIncomingDMs` already holds authenticated REQs on (`this.relays` ∪ `myDmRelays`). It never rides along to the recipient's relays, and any relay that just took the recipient's copy is subtracted from its target set so no single relay can pair the two same-sized wraps. If that subtraction would empty the set (both parties on one relay), durability wins and it is logged as `dm-self-copy-shares-relay`.
+The self-copy goes to **our own inbox only**: the relays `subscribeIncomingDMs` already holds authenticated REQs on (`this.relays` ∪ `myDmRelays`). It never rides along to the recipient's relays, and any relay that just took the recipient's copy is subtracted from its target set so no single relay can pair the two same-sized wraps. If that subtraction would empty the set (both parties on one relay), durability wins and it is logged as `dm-self-copy-shares-relay`.
 
 Gift-wrap publishes use `authMode: 'last-resort'`: no NIP-42 identity is volunteered up front, since AUTH would staple our real pubkey to an envelope built not to carry it. Only if *every* target refused, and at least one refusal was auth-shaped, do we re-publish authenticated rather than drop the message.
 
@@ -148,10 +148,10 @@ Full design: [`docs/superpowers/specs/2026-08-15-post-quantum-dms-design.md`](su
 
 The post-quantum envelope replaces the **seal's** ciphertext. Everything outside the seal is unchanged, so a relay or a client that has not implemented it still sees an ordinary kind-1059. `@nostr-wot/pq` owns the envelope; `@nostr-wot/dm` passes an opts bag through to the signer; the signer owns the key material. Obelisk holds no post-quantum secrets and cannot derive any: its logins are `nsec | nip07 | bunker` and it never sees a BIP-39 seed.
 
-**Sending.** `resolvePqSend` (`src/lib/pq/send.ts`) returns the peer's ML-KEM key plus our own (for the self-copy), or `null` meaning "send classic". All three of these must hold:
+**Sending.** `resolvePqSend` (`src/services/pq/send.ts`) returns the peer's ML-KEM key plus our own (for the self-copy), or `null` meaning "send classic". All three of these must hold:
 
 1. The `postQuantumEnabled` preference is on.
-2. `selfPqState().canSend` — the extension advertises `window.nostr.nip44.schemes` including `'pq'`.
+2. `selfPqState().canSend`: the extension advertises `window.nostr.nip44.schemes` including `'pq'`.
 3. The peer publishes a usable `kind:10203` attestation carrying a KEM key.
 
 Condition 2 requires the **explicit marker**, not merely a NIP-07 session with published keys (`capabilityUnknown`). Post-quantum is an optional third argument to `nip44.encrypt`; an unaware extension silently ignores it and returns classic ciphertext, which we would then record as protected. A false claim of protection is worse than an honest classic send, so unknown means classic. No shipping extension advertises the marker yet, so in practice post-quantum sending is reachable only against a signer that opts in.
@@ -169,17 +169,17 @@ Condition 2 is checked **locally first**, before any relay round trip, because i
 ## Who the thread says you are talking to
 
 DM surfaces resolve the peer's name and picture through **`useAuthor`**
-(`src/lib/social/useAuthor.ts`), never the bridge's `useUserMetadata`
+(`src/services/social/useAuthor.ts`), never the bridge's `useUserMetadata`
 directly.
 
-The bridge queries only `DEFAULT_PROFILE_LOOKUP_RELAYS` — lacrypta,
-public.obelisk.ar, purplepag.es — which hold kind 0 for people in your NIP-29
+The bridge queries only `DEFAULT_PROFILE_LOOKUP_RELAYS` (lacrypta,
+public.obelisk.ar, purplepag.es), which hold kind 0 for people in your NIP-29
 rooms. A DM peer is usually someone from the wider network with no reason to
 have published there, and `public.obelisk.ar` is whitelist-gated so it
 answers for nobody else at all. The lookup always fired; it just asked relays
 that could not know. Every DM row, thread header and compose row therefore
 rendered a petname and a letter avatar, while the *same person* resolved
-fine in the feed — which had hit this first and grown `useAuthor` to merge
+fine in the feed, which had hit this first and grown `useAuthor` to merge
 the group tier with the social one.
 
 Two rules for this surface:
@@ -187,13 +187,13 @@ Two rules for this surface:
 - **Lists batch.** Call `ensureSocialProfiles(allPeers)` once in an effect;
   `useSocialProfile` fires per hook otherwise, so thirty conversations is
   thirty round trips. Both DM lists do this.
-- **Tests must mock it.** `vi.mock('@/lib/social/useAuthor', …)` — the real
+- **Tests must mock it.** `vi.mock('@/services/social/useAuthor', …)`; the real
   hook opens sockets to public relays from jsdom.
 
 The privacy cost is real and worth stating: opening a DM now asks the social
 relays for that peer's kind 0, which tells those relays somebody is
 interested in that pubkey. It is an unauthenticated REQ, batched with
-unrelated lookups, and it is the same exposure the feed has always had — but
+unrelated lookups, and it is the same exposure the feed has always had, but
 it is new for DMs. See [dm-metadata-privacy.md](./dm-metadata-privacy.md); if
 that trade ever stops being acceptable, the lever is to resolve DM peers from
 cache only and accept the petname fallback.
@@ -202,12 +202,12 @@ cache only and accept the petname fallback.
 
 Three things sit at the top right, and they are not interchangeable:
 
-- **`PqShield`** — conversation-level protection state. Not gated on the
+- **`PqShield`**: conversation-level protection state. Not gated on the
   post-quantum preference, because two of its three states describe the gift
   wrap. It is *state*, not a menu, and must stay visible.
-- **`PqMessageMark`** — per-message, aggregated to protocol transitions only.
+- **`PqMessageMark`**: per-message, aggregated to protocol transitions only.
   A pill per bubble is unreadable when all of pre-NIP-17 history is NIP-04.
-- **`DMThreadMenu`** — the `⋯` beside the shield: profile, copy npub, mute,
+- **`DMThreadMenu`**: the `⋯` beside the shield: profile, copy npub, mute,
   block. Added beside the indicators deliberately; folding them into a menu
   would hide the one thing the header says about safety.
 
@@ -239,7 +239,7 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 
 ## Troubleshooting
 
-- **"Sent a message but they never got it."** Check whether the recipient has published a kind-10050. Without one the wrap falls to their NIP-65 read set, and without that to our own active relay — neither of which is guaranteed to overlap with what they actually read. They can fix it once, for everyone, with any modern client.
+- **"Sent a message but they never got it."** Check whether the recipient has published a kind-10050. Without one the wrap falls to their NIP-65 read set, and without that to our own active relay, neither of which is guaranteed to overlap with what they actually read. They can fix it once, for everyone, with any modern client.
 - **"Older NIP-17 messages vanish after a reload, only new ones show."** That was the wrap ledger recording chat wraps as seen (fixed 2026-09-26, see Protocols). If it comes back, check what `hasSeenWrap` is being asked in `ingestIncomingGiftWrap`.
 - **"My own DMs are missing after a reload."** Nothing is cached, so the whole thread rebuilds from relays on every load and takes a moment. If an outgoing NIP-17 message never comes back, its self-copy did not land: check whether we have a published kind-10050 (`ensureDmInboxRelaysPublished`) and whether the relay accepted the second wrap. Messages sent before the self-copy shipped are gone from the sender's side for good; the recipient still has them.
 - **"The post-quantum toggle is on but nothing is post-quantum."** Almost certainly `capabilityUnknown`: the extension does not advertise `nip44.schemes`. The settings status row says so explicitly.
@@ -253,13 +253,13 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 
 ## Tests
 
-- `src/lib/nostr-bridge/dm-nip17.test.ts` — NIP-17 default, inbox routing, forged-authorship rejection, all three login methods.
-- `src/lib/nostr-bridge/dm-pq-send.test.ts` — post-quantum send and receive, every negative case, the classic fallback.
-- `src/lib/nostr-bridge/optimistic-send.test.ts` — placeholder lifecycle.
+- `tests/services/nostr-bridge/dm-nip17.test.ts`: NIP-17 default, inbox routing, forged-authorship rejection, all three login methods.
+- `tests/services/nostr-bridge/dm-pq-send.test.ts`: post-quantum send and receive, every negative case, the classic fallback.
+- `tests/services/nostr-bridge/optimistic-send.test.ts`: placeholder lifecycle.
 - `dm-nip17.test.ts` also covers kind-15 send and receive, the NIP-04 refusal, and the 1059 REQ reopening after `switchRelay`.
-- `src/lib/crypto/file-cipher.test.ts`, `src/lib/dm-file.test.ts`, `src/lib/dm-attachments.test.ts`, `src/lib/blossom.test.ts` — the file path end to end, without a relay.
-- `src/components/chat/DmComposer.test.tsx`, `DmMessageBody.test.tsx`, `EncryptedDmAttachment.test.tsx` — the bar, the bubble body, decrypt / integrity failure / revoke.
-- `src/lib/pq/*.test.ts` — attestations, capability, status lattice, send-plan resolution.
-- `src/app/app/DMPanel.pq.test.tsx` — indicator mounting, mark aggregation, on-accent contrast.
-- `src/app/app/DMList.identity.test.tsx` — the peer resolves through the social tier, and one batched lookup per list.
-- `src/components/chat/DMThreadMenu.test.tsx` — the ⋯ actions, and that they close after acting.
+- `tests/lib/crypto/file-cipher.test.ts`, `tests/utils/attachments/dm-file.test.ts`, `tests/services/dm-attachments.test.ts`, `tests/services/blossom.test.ts`: the file path end to end, without a relay.
+- `src/components/chat/DmComposer.test.tsx`, `DmMessageBody.test.tsx`, `EncryptedDmAttachment.test.tsx`: the bar, the bubble body, decrypt / integrity failure / revoke.
+- `src/services/pq/*.test.ts`: attestations, capability, status lattice, send-plan resolution.
+- `src/app/app/DMPanel.pq.test.tsx`: indicator mounting, mark aggregation, on-accent contrast.
+- `src/app/app/DMList.identity.test.tsx`: the peer resolves through the social tier, and one batched lookup per list.
+- `src/components/chat/DMThreadMenu.test.tsx`: the ⋯ actions, and that they close after acting.

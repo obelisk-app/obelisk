@@ -1,14 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { GameSession } from '@/lib/games/session';
 import { incomingFor, type MatchState } from '@/lib/games/stacker/match';
 import { useStackerLoop } from '@/hooks/chat/useStackerLoop';
-import { MUSIC_CREDIT, currentTrack, setTrackListener } from '@/lib/games/stacker/audio';
+import { MUSIC_CREDIT } from '@/lib/games/stacker/audio';
 import StackerBoard, { MiniBoard, PieceChip } from './StackerBoard';
 import StackerKeysPanel from './StackerKeysPanel';
-import { HEIGHT } from '@/lib/games/stacker/engine';
+import { useStackerCellSize } from './useStackerCellSize';
+import { useTrackTitle } from './useTrackTitle';
 import { useTranslation } from '@/i18n/context';
+import Button from '@/components/ui/Button';
 
 export interface StackerTableProps {
   session: GameSession;
@@ -34,7 +36,7 @@ export interface StackerTableProps {
  * A match: your board at full speed, everyone else's as a meter.
  *
  * Opponents are deliberately coarse. Their real boards run on their own
- * machines and only reach us through checkpoints every few seconds — drawing a
+ * machines and only reach us through checkpoints every few seconds, and drawing a
  * detailed board that is seconds stale would be a lie, so we show the one thing
  * that stays true between updates: how buried they are.
  */
@@ -95,31 +97,9 @@ export default function StackerTable({
   const banner = stats.lastClear;
   const [keysOpen, setKeysOpen] = useState(false);
   // The credit line follows whatever the playlist moved on to.
-  const [track, setTrack] = useState(() => currentTrack().title);
-  useEffect(() => {
-    setTrackListener(setTrack);
-    return () => setTrackListener(null);
-  }, []);
+  const track = useTrackTitle();
 
-  /**
-   * Size the cells to the space available rather than to a constant. A fixed
-   * 26px board is 520px tall, which is taller than a phone's usable area and
-   * taller than the modal — so it was getting cut off at the top and bottom.
-   */
-  const [cell, setCell] = useState(26);
-  useEffect(() => {
-    const measure = () => {
-      if (typeof window === 'undefined') return;
-      // Leave room for the rails, the opponents strip and the controls line.
-      const chrome = fullscreen ? 190 : 260;
-      const byHeight = Math.floor((window.innerHeight - chrome) / HEIGHT);
-      const byWidth = Math.floor((window.innerWidth - 190) / 10);
-      setCell(Math.max(12, Math.min(30, byHeight, byWidth)));
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [fullscreen]);
+  const cell = useStackerCellSize(fullscreen);
 
   return (
     <div className="space-y-3" data-testid="stacker-table">
@@ -151,7 +131,7 @@ export default function StackerTable({
 
           <StackerBoard runner={runner} cell={cell} dimmed={!iAmAlive || match.over} />
 
-          {/* Clear banner — brief, centred, never in the way of the stack */}
+          {/* Clear banner: brief, centred, never in the way of the stack */}
           {banner && (
             <div className="pointer-events-none absolute inset-x-0 top-[38%] flex justify-center">
               <span
@@ -213,32 +193,32 @@ export default function StackerTable({
       )}
 
       <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] text-lc-muted">
-        <button
-          type="button"
+        <Button
+          variant="outlinePill"
+          size="xs"
           onClick={() => setKeysOpen(true)}
-          className="rounded-full border border-lc-border px-2 py-0.5 hover:text-lc-white"
           data-testid="stacker-keys-open"
         >
           ⌨ controls
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="outlinePill"
+          size="xs"
           onClick={toggleMuted}
-          className="rounded-full border border-lc-border px-2 py-0.5 hover:text-lc-white"
           data-testid="stacker-mute"
         >
           {prefs.muted ? '🔇 muted' : '🔊 sound'}
-        </button>
+        </Button>
         {!prefs.muted && (
           <a
             href={MUSIC_CREDIT.source}
             target="_blank"
             rel="noreferrer noopener"
             className="text-[10px] text-lc-muted underline decoration-dotted hover:text-lc-white"
-            title={`${track} — ${MUSIC_CREDIT.author}, ${MUSIC_CREDIT.note}`}
+            title={`${track} - ${MUSIC_CREDIT.author}, ${MUSIC_CREDIT.note}`}
             data-testid="stacker-music-credit"
           >
-            ♫ {track} — {MUSIC_CREDIT.author}
+            ♫ {track} - {MUSIC_CREDIT.author}
           </a>
         )}
       </div>

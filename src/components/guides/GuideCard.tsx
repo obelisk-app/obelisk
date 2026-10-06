@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Locale } from '@/i18n';
-import type { GuideFrontmatter } from '@/lib/guides';
-import { guidesHref } from '@/lib/guide-urls';
+import type { GuideFrontmatter } from '@/services/guides';
+import { guidesHref } from '@/utils/guides/guide-urls';
 import { HERO_REGISTRY } from './svg';
 
 interface Props {

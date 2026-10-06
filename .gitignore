@@ -31,7 +31,7 @@ node_modules/
 
 # user uploads (written by /api/upload, served by /uploads/[name])
 /uploads
-# legacy location from before the uploads-path refactor — keep ignored
+# legacy location from before the uploads-path refactor; keep ignored
 /public/uploads
 
 # misc
@@ -47,7 +47,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.production.example
-# voice probe identities (real nsecs — never commit)
+# voice probe identities (real nsecs, never commit)
 /scripts/test-peers.env
 
 # vercel
@@ -77,7 +77,12 @@ key.pem.bak
 .claude/scheduled_tasks.lock
 *.log
 
-# SFU test peer state — scripts moved to obelisk-sfu repo, but tolerate
+# Git worktrees live inside the repo (see AGENTS.md). Without this line the
+# canonical clone shows every worktree as untracked, and tsc / next build /
+# eslint run from the clone would walk into four extra copies of src/.
+/worktrees/
+
+# SFU test peer state: scripts moved to obelisk-sfu repo, but tolerate
 # stale state dirs from older checkouts.
 scripts/.test-peer/
 scripts/.test-peer-ms/
@@ -85,10 +90,14 @@ scripts/.test-peer-ms/
 # Local SFU server runtime (server source lives in obelisk-app/obelisk-sfu)
 /services/
 
-# Playwright e2e harness artifacts (scripts/e2e/)
+# Playwright e2e harness artifacts (scripts/e2e/), plus the default
+# locations Playwright uses when run without --config.
 /scripts/e2e/test-results/
 /scripts/e2e/playwright-report/
 /scripts/e2e/.auth/
+/test-results/
+/playwright-report/
+/e2e-server.log
 tmp/
 
 # Local issue reference screenshots (never ship)
@@ -105,3 +114,6 @@ tmp/
 # *.bak / *.bak.* do not catch them.
 *.pre-*
 *-candidate
+
+# JetBrains IDE settings (per-developer, not shared)
+.idea/

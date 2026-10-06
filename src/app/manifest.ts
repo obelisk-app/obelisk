@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    // Keep `name` short — Android Chrome renders it under the icon on the
+    // Keep `name` short - Android Chrome renders it under the icon on the
     // PWA splash and clips anything that doesn't fit on one line. The longer
     // marketing string lives in `description` and the page metadata.
     name: 'Obelisk',
@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description:
       'Chat grupal estilo Discord con identidad criptográfica Nostr. Sin emails, sin contraseñas.',
     // Land directly on the chat shell when the user opens the installed
-    // app — bypassing the marketing landing page is the expected mobile
+    // app - bypassing the marketing landing page is the expected mobile
     // PWA behavior. `scope: '/'` keeps in-app navigation to the landing
     // pages, guides, etc. inside the standalone window.
     start_url: '/app',

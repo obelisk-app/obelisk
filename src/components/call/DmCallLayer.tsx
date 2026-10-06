@@ -5,42 +5,27 @@
  *
  * - wires the call store to the bridge (`initDmCalls`) while logged in;
  * - the incoming-call banner (ringing is done by the store, through the
- *   notification stack — `ringIncomingCall`);
+ *   notification stack - `ringIncomingCall`);
  * - the call view, from "Calling…" through the "Call ended" card;
  * - one hidden `<audio>` for the other side's voice, mounted here rather
  *   than in the view so minimising or re-rendering the view never cuts it.
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useIsLoggedIn } from '@/lib/nostr-bridge';
-import { useAuthor } from '@/lib/social/useAuthor';
-import { displayNameFor } from '@/lib/display-name';
+import { useIsLoggedIn } from '@/services/nostr-bridge';
+import { useAuthor } from '@/services/social/useAuthor';
+import { displayNameFor } from '@/utils/identity/display-name';
 import { useTranslation } from '@/i18n/context';
-import UserAvatar from '@/components/UserAvatar';
+import { useCallFullscreen } from '@/hooks/useCallFullscreen';
+import { useStreamRef } from '@/hooks/useStreamRef';
+import { formatElapsed } from '@/utils/format/format-elapsed';
+import UserAvatar from '@/components/ui/UserAvatar';
 import { initDmCalls, useDmCallStore, type DmCallStatus } from '@/store/dm-call';
 import {
   CloseIcon, FlipCameraIcon, LockIcon, MaximizeIcon, MicIcon, MicOffIcon, MinimizeIcon, PhoneIcon, PhoneOffIcon,
   ScreenShareIcon, ShieldIcon, VideoIcon, VideoOffIcon,
 } from '@/components/ui/icons';
-
-function useStreamRef<T extends HTMLMediaElement>(stream: MediaStream | null) {
-  const ref = useRef<T>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (el.srcObject !== stream) el.srcObject = stream;
-    if (stream) void el.play?.()?.catch?.(() => {});
-  }, [stream]);
-  return ref;
-}
-
-function formatElapsed(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = String(s % 60).padStart(2, '0');
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
-}
+import IconButton from '@/components/ui/IconButton';
 
 function CallTimer({ since }: { since: number }) {
   const [now, setNow] = useState(() => Date.now());
@@ -83,37 +68,37 @@ export function IncomingCallBanner() {
           <span className="truncate">{video ? t('call.incomingVideo') : t('call.incomingVoice')}</span>
         </div>
       </div>
-      <button
-        type="button"
+      <IconButton
+        tone="dangerSolid"
+        size="10"
         onClick={() => useDmCallStore.getState().declineCall()}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
         aria-label={t('call.decline')}
         title={t('call.decline')}
         data-testid="dm-call-decline"
       >
         <PhoneOffIcon size={18} />
-      </button>
-      <button
-        type="button"
+      </IconButton>
+      <IconButton
+        tone="primary"
+        size="10"
         onClick={() => void useDmCallStore.getState().acceptCall(false)}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lc-green text-lc-black hover:brightness-110"
         aria-label={t('call.acceptVoice')}
         title={t('call.acceptVoice')}
         data-testid="dm-call-accept"
       >
         <PhoneIcon size={18} />
-      </button>
+      </IconButton>
       {video && (
-        <button
-          type="button"
+        <IconButton
+          tone="primary"
+          size="10"
           onClick={() => void useDmCallStore.getState().acceptCall(true)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lc-green text-lc-black hover:brightness-110"
           aria-label={t('call.acceptVideo')}
           title={t('call.acceptVideo')}
           data-testid="dm-call-accept-video"
         >
           <VideoIcon size={18} />
-        </button>
+        </IconButton>
       )}
     </div>
   );
@@ -142,51 +127,6 @@ function ControlButton({
       {children}
     </button>
   );
-}
-
-/**
- * Fullscreen for the call view. Uses the Fullscreen API on the view itself
- * (true fullscreen, the browser chrome goes away); where that isn't available
- * — iOS Safari only allows it on `<video>` — the view just fills the window.
- * Esc leaves either way.
- */
-function useCallFullscreen(ref: React.RefObject<HTMLDivElement | null>) {
-  const [native, setNative] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  useEffect(() => {
-    const onChange = () => setNative(document.fullscreenElement === ref.current && ref.current !== null);
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
-  }, [ref]);
-  useEffect(() => {
-    if (!expanded) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpanded(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [expanded]);
-  // Leaving the call must not leave the page stuck in fullscreen.
-  useEffect(() => () => {
-    if (typeof document !== 'undefined' && document.fullscreenElement && document.fullscreenElement === ref.current) {
-      void document.exitFullscreen?.().catch(() => {});
-    }
-  }, [ref]);
-  const toggle = () => {
-    const el = ref.current;
-    if (native) {
-      void document.exitFullscreen?.().catch(() => {});
-      return;
-    }
-    if (expanded) {
-      setExpanded(false);
-      return;
-    }
-    if (el && typeof el.requestFullscreen === 'function' && document.fullscreenEnabled !== false) {
-      el.requestFullscreen().catch(() => setExpanded(true));
-    } else {
-      setExpanded(true);
-    }
-  };
-  return { full: native || expanded, toggle };
 }
 
 export function DmCallView() {
@@ -218,16 +158,17 @@ export function DmCallView() {
     >
       <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black" onDoubleClick={ended ? undefined : toggleFullscreen}>
         {!ended && (
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="absolute right-3 top-3 z-10 hidden h-9 w-9 items-center justify-center rounded-full bg-black/60 text-lc-white hover:bg-black/80 sm:flex"
-            aria-label={full ? t('call.exitFullscreen') : t('call.fullscreen')}
-            title={full ? t('call.exitFullscreen') : t('call.fullscreen')}
-            data-testid="dm-call-fullscreen"
-          >
-            {full ? <MinimizeIcon size={18} /> : <MaximizeIcon size={18} />}
-          </button>
+          <div className="absolute right-3 top-3 z-10 hidden sm:block">
+            <IconButton
+              tone="overlay"
+              onClick={toggleFullscreen}
+              aria-label={full ? t('call.exitFullscreen') : t('call.fullscreen')}
+              title={full ? t('call.exitFullscreen') : t('call.fullscreen')}
+              data-testid="dm-call-fullscreen"
+            >
+              {full ? <MinimizeIcon size={18} /> : <MaximizeIcon size={18} />}
+            </IconButton>
+          </div>
         )}
         {showRemoteVideo ? (
           <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-contain" data-testid="dm-call-remote-video" />

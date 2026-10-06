@@ -1,18 +1,20 @@
 'use client';
 
-import { avatarInitials } from '@/lib/display-name';
+import { avatarInitials } from '@/utils/identity/display-name';
 import { useMemo, useState } from 'react';
 import { useChatStore } from '@/store/chat';
-import { useCurrentRelayUrl, useGroupMemberInfo } from '@/lib/nostr-bridge';
-import type { JsMemberInfo } from '@/lib/nostr-bridge';
+import { useCurrentRelayUrl, useGroupMemberInfo } from '@/services/nostr-bridge';
+import type { JsMemberInfo } from '@/services/nostr-bridge';
 import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/useNostrPresence';
 import RoleBadge from '@/components/chat/RoleBadge';
-import type { RelayRole } from '@/lib/relay-roles';
+import RemoteImage from '@/components/ui/RemoteImage';
+import Text from '@/components/ui/Text';
+import type { RelayRole } from '@/services/relay-roles';
 import { useTranslation } from '@/i18n/context';
 
 function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: boolean }) {
   const { t } = useTranslation();
-  // `displayName` is always set — `useGroupMemberInfo` resolves it through
+  // `displayName` is always set: `useGroupMemberInfo` resolves it through
   // `displayNameFor`, so there is nothing left to fall back to here.
   const name = member.displayName;
   const openProfilePopup = useChatStore((state) => state.openProfilePopup);
@@ -26,7 +28,7 @@ function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: bool
     >
       <div className={`relative shrink-0 ${isOnline ? '' : 'opacity-60'}`}>
         {member.picture ? (
-          <img src={member.picture} alt="" className="w-8 h-8 rounded-full object-cover" />
+          <RemoteImage src={member.picture} alt="" className="w-8 h-8 rounded-full object-cover" />
         ) : (
           <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center">
             {/* Not `name.slice(0, 2)`: that used to read letters off a hex
@@ -69,7 +71,7 @@ export default function MemberList({ groupId }: { groupId: string }) {
 
   // Online members are bucketed by standing: channel admins, then one section
   // per relay role in tier order (the same ladder the badge picks from), then
-  // everyone without a role. Offline stays one section regardless of standing —
+  // everyone without a role. Offline stays one section regardless of standing:
   // splitting absent people by rank is noise.
   const { onlineGroups, offline } = useMemo(() => {
     const admins: JsMemberInfo[] = [];
@@ -119,9 +121,9 @@ export default function MemberList({ groupId }: { groupId: string }) {
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-2" data-testid="member-list">
         {onlineGroups.map((group) => (
           <div key={group.key} data-testid={`member-group-${group.key}`}>
-            <div className="px-2 py-1 text-[10px] font-semibold text-lc-muted uppercase tracking-wider">
-              {group.label} — {group.members.length}
-            </div>
+            <Text as="div" size="10" weight="semibold" variant="label" tone="muted" className="px-2 py-1">
+              {group.label} - {group.members.length}
+            </Text>
             {group.members.map((member) => <MemberItem key={member.pubkey} member={member} isOnline />)}
           </div>
         ))}
@@ -135,9 +137,9 @@ export default function MemberList({ groupId }: { groupId: string }) {
               data-testid="offline-toggle"
             >
               <span className="text-[10px] text-lc-muted">{offlineCollapsed ? '▸' : '▾'}</span>
-              <span className="text-[10px] font-semibold text-lc-muted uppercase tracking-wider">
-                Offline — {offline.length}
-              </span>
+              <Text size="10" weight="semibold" variant="label" tone="muted">
+                Offline - {offline.length}
+              </Text>
             </button>
             {!offlineCollapsed && offline.map((member) => (
               <MemberItem key={member.pubkey} member={member} isOnline={false} />

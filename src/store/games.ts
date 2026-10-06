@@ -1,7 +1,7 @@
 /**
  * Client state for relay-hosted games.
  *
- * The store holds the raw event log per table — never a derived board. The
+ * The store holds the raw event log per table, never a derived board. The
  * board is recomputed from the log by `replayLog` on read, so an event that
  * arrives late (relay reconnect, a peer's re-publish, history backfill) can
  * never leave a client on a state some other client disagrees with.
@@ -10,7 +10,7 @@
  * made a channel with a few game cards in it crawl: a fresh `logs` object per
  * ingested event, a whole-map subscription in `useGameSession`, and one full
  * sort-and-replay per card per event. The replay is still the only source of
- * truth — it is now cached by the identity of the log array it consumed, which
+ * truth: it is now cached by the identity of the log array it consumed, which
  * is exactly as strict and costs nothing.
  */
 import { create } from 'zustand';
@@ -40,7 +40,7 @@ interface GamesStore {
  * Deliberately module state mutated in place, not a field on the store: it is
  * an index, never selected, never rendered. Copying it per batch would
  * reintroduce exactly the per-event O(n) work it exists to remove. It is kept
- * in lockstep with `logs` by every writer below — `reset` and `clearChannel`
+ * in lockstep with `logs` by every writer below: `reset` and `clearChannel`
  * included, or a channel you came back to could never re-ingest.
  */
 const seen = new Set<string>();
@@ -96,7 +96,7 @@ function mergeEvents(
   }
 
   // Nothing new: return the same state objects, so every memo keyed on a log
-  // array — and every component subscribed to one — stays valid.
+  // array (and every component subscribed to one) stays valid.
   if (!fresh) return {};
 
   const logs = { ...s.logs };
@@ -112,7 +112,7 @@ function mergeEvents(
  * A `WeakMap` rather than an LRU because the key IS the log: `mergeEvents` is
  * copy-on-write, so an event produces a new array, the old key becomes
  * unreachable, and the entry is collected. There is no eviction policy to tune
- * and no staleness window to get wrong — a stale log is a different object, so
+ * and no staleness window to get wrong: a stale log is a different object, so
  * it is a different cache entry. It is impossible for this cache to hand back a
  * session derived from a log that has since grown.
  *
@@ -139,7 +139,7 @@ export function selectSession(
     // mutating one would corrupt everybody's view without changing the object
     // identity React compares. Nothing does today; freeze in dev so the day
     // something starts, it throws instead of going quietly wrong. Shallow on
-    // purpose — `state` and `match` are engine-owned.
+    // purpose: `state` and `match` are engine-owned.
     if (base && process.env.NODE_ENV !== 'production') Object.freeze(base);
     BASE.set(log, base);
   }

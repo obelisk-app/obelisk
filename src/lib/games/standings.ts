@@ -3,7 +3,7 @@
  *
  * Lives here rather than in a component because two surfaces need it: the
  * results table, and the end-of-game splash that wants to tell you what you
- * finished with. Colours stay in the components — this is about numbers.
+ * finished with. Colours stay in the components; this is about numbers.
  */
 import type { GameState as VestaState } from 'vesta';
 import type { GameSession } from './session';
@@ -70,7 +70,7 @@ export function standingsFor(session: GameSession): Standing[] {
 
   return seats.map((seat) => ({
     seat,
-    score: seat === session.winner ? 'winner' : session.eliminated.includes(seat) ? 'out' : '—',
+    score: seat === session.winner ? 'winner' : session.eliminated.includes(seat) ? 'out' : '-',
     sort: seat === session.winner ? 1 : 0,
   }));
 }
@@ -84,7 +84,7 @@ export function scoreFor(session: GameSession, seat: string | null): string | nu
 /**
  * Did this end in an actual draw?
  *
- * A game with no winner is not automatically a draw — a solo run ends with
+ * A game with no winner is not automatically a draw: a solo run ends with
  * nobody winning because there was nobody to beat, and calling that "draw:
  * nobody took the board" is both wrong and slightly insulting to whoever just
  * lost with a score on the table.

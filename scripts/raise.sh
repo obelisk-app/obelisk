@@ -14,10 +14,14 @@
 #   SKIP_TUNNEL=1     skip cloudflared
 #   FORCE_KILL=1      kill anything on $PORT instead of failing
 #   PM2_APP           default: obelisk-dex  (if registered with PM2, raise will pm2-restart it
-#                     instead of starting next directly — avoids fighting the supervisor)
+#                     instead of starting next directly, avoids fighting the supervisor)
 #   PM2_TUNNEL        default: obelisk-dex-tunnel  (if registered, the cloudflared step is skipped)
+#
+# Failure model: `set -euo pipefail`. Any command that is allowed to fail
+# (a probe that finds nothing, a kill of a process that already left) says
+# so with `|| true`; everything else stops the script at the first error.
 
-set -u
+set -euo pipefail
 
 if [ -f "$(dirname "$0")/../.env" ]; then
   set -a
@@ -35,13 +39,30 @@ SKIP_BUILD="${SKIP_BUILD:-0}"
 SKIP_TUNNEL="${SKIP_TUNNEL:-0}"
 FORCE_KILL="${FORCE_KILL:-0}"
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 red()   { printf "\033[0;31m%s\033[0m\n" "$*"; }
 green() { printf "\033[0;32m%s\033[0m\n" "$*"; }
 blue()  { printf "\033[0;34m%s\033[0m\n" "$*"; }
 dim()   { printf "\033[2m%s\033[0m\n"     "$*"; }
 step()  { printf "\n\033[1;36m▸ %s\033[0m\n" "$*"; }
+
+# Does pm2 know this app name? `pm2 id` prints `[ <n> ]` or `[]`. Captured
+# rather than piped to `grep -q`: under pipefail a grep that exits early can
+# hand the writer SIGPIPE and turn a match into a failure.
+pm2_knows() {
+  local ids
+  ids=$(pm2 id "$1" 2>/dev/null || true)
+  case "$ids" in *[0-9]*) return 0 ;; *) return 1 ;; esac
+}
+
+# PIDs listening on $PORT, one per line; empty when the port is free.
+# lsof exits 1 when it finds nothing and `ss` does not exist on macOS, so
+# the whole probe is allowed to fail.
+listeners_on_port() {
+  { lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null \
+    || ss -ltnp 2>/dev/null | awk -v p=":$PORT" '$4 ~ p { match($0,/pid=([0-9]+)/,a); if (a[1]) print a[1] }' | sort -u; } || true
+}
 
 # ── Pre-flight ───────────────────────────────────────────────────
 step "Pre-flight"
@@ -58,7 +79,7 @@ TUNNEL_UUID=""
 CRED_FILE=""
 if [ "$SKIP_TUNNEL" != "1" ]; then
   step "Tunnel lookup"
-  TUNNEL_UUID=$(cloudflared tunnel list 2>/dev/null | awk -v n="$TUNNEL_NAME" '$2==n {print $1}')
+  TUNNEL_UUID=$(cloudflared tunnel list 2>/dev/null | awk -v n="$TUNNEL_NAME" '$2==n {print $1}' || true)
   if [ -z "$TUNNEL_UUID" ]; then
     red "Tunnel '$TUNNEL_NAME' not found."
     echo "  cloudflared tunnel create $TUNNEL_NAME"
@@ -74,7 +95,7 @@ fi
 # ── Build ────────────────────────────────────────────────────────
 step "Build"
 if [ "$SKIP_BUILD" = "1" ]; then
-  [ -d .next ] || { red ".next/ missing — can't SKIP_BUILD."; exit 1; }
+  [ -d .next ] || { red ".next/ missing; can't SKIP_BUILD."; exit 1; }
   dim "skipped (SKIP_BUILD=1)"
 else
   blue "next build…"
@@ -87,55 +108,62 @@ fi
 # for port $PORT. PM2 will respawn the old build otherwise.
 PM2_APP="${PM2_APP:-obelisk-dex}"
 PM2_TUNNEL="${PM2_TUNNEL:-obelisk-dex-tunnel}"
-if command -v pm2 >/dev/null 2>&1 && pm2 id "$PM2_APP" 2>/dev/null | grep -q '[0-9]'; then
+if command -v pm2 >/dev/null 2>&1 && pm2_knows "$PM2_APP"; then
   step "PM2-managed app detected ($PM2_APP)"
   blue "pm2 restart $PM2_APP --update-env"
   pm2 restart "$PM2_APP" --update-env >/dev/null
   sleep 2
-  if ! pm2 jlist 2>/dev/null | grep -q "\"name\":\"$PM2_APP\".*\"status\":\"online\""; then
+  # `grep -c >/dev/null` reads the whole jlist (no SIGPIPE to pm2) and still
+  # exits 1 when nothing matched, which is what `grep -q` would have said.
+  if ! pm2 jlist 2>/dev/null | grep -c "\"name\":\"$PM2_APP\".*\"status\":\"online\"" >/dev/null; then
     red "PM2 app failed to come online. Recent logs:"
     pm2 logs "$PM2_APP" --lines 20 --nostream 2>/dev/null || true
     exit 1
   fi
   green "App online via PM2."
-  if pm2 id "$PM2_TUNNEL" 2>/dev/null | grep -q '[0-9]'; then
-    dim "Tunnel ($PM2_TUNNEL) supervised by PM2 — leaving as-is."
+  if pm2_knows "$PM2_TUNNEL"; then
+    dim "Tunnel ($PM2_TUNNEL) supervised by PM2; leaving as-is."
     SKIP_TUNNEL=1
   fi
   step "Raised"
   green "Local:    http://127.0.0.1:$PORT"
-  [ "$SKIP_TUNNEL" = "1" ] && green "Public:   https://$TUNNEL_HOST  (PM2 tunnel)"
+  if [ "$SKIP_TUNNEL" = "1" ]; then
+    green "Public:   https://$TUNNEL_HOST  (PM2 tunnel)"
+  fi
   dim   "Logs:   pm2 logs $PM2_APP"
   exit 0
 fi
 
 # ── Port check ───────────────────────────────────────────────────
 step "Production server on port $PORT"
-pids=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || ss -ltnp 2>/dev/null | awk -v p=":$PORT" '$4 ~ p { match($0,/pid=([0-9]+)/,a); if (a[1]) print a[1] }' | sort -u)
+pids=$(listeners_on_port)
 if [ -n "$pids" ]; then
   cmd=$(ps -p "$(echo "$pids" | head -1)" -o command= 2>/dev/null || true)
   blue "Port $PORT held by: $cmd"
   if [ "$FORCE_KILL" = "1" ]; then
-    blue "FORCE_KILL=1 — killing."
+    blue "FORCE_KILL=1: killing."
+    # shellcheck disable=SC2086  # one pid per word is the point
     kill $pids 2>/dev/null || true; sleep 1
-    still=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || ss -ltnp 2>/dev/null | awk -v p=":$PORT" '$4 ~ p { match($0,/pid=([0-9]+)/,a); if (a[1]) print a[1] }' | sort -u)
-    [ -n "$still" ] && { kill -9 $still 2>/dev/null || true; sleep 1; }
+    still=$(listeners_on_port)
+    if [ -n "$still" ]; then
+      # shellcheck disable=SC2086
+      kill -9 $still 2>/dev/null || true; sleep 1
+    fi
   else
     red "Port $PORT in use. Free it or set FORCE_KILL=1."; exit 1
   fi
 fi
 
-# ── Launch (detached — script exits while children keep running) ─
+# ── Launch (detached: script exits while children keep running) ─
 APP_PID=""
 TUNNEL_PID=""
-BOT_PID=""
 
 blue "Starting next start on :$PORT (logs → ./app.log)…"
 PORT="$PORT" nohup npx next start -p "$PORT" > app.log 2>&1 &
 APP_PID=$!
 disown "$APP_PID" 2>/dev/null || true
-for i in $(seq 1 60); do
-  lsof -iTCP:"$PORT" -sTCP:LISTEN -n -P >/dev/null 2>&1 && { green "App up."; break; }
+for _ in $(seq 1 60); do
+  if lsof -iTCP:"$PORT" -sTCP:LISTEN -n -P >/dev/null 2>&1; then green "App up."; break; fi
   if ! kill -0 "$APP_PID" 2>/dev/null; then
     red "next start died. Last 20 log lines:"; tail -20 app.log; exit 1
   fi
@@ -143,21 +171,20 @@ for i in $(seq 1 60); do
 done
 lsof -iTCP:"$PORT" -sTCP:LISTEN -n -P >/dev/null 2>&1 || { red "App didn't start within 60s. See app.log"; exit 1; }
 
-# Bots are no longer started from this script — they live in
+# Bots are no longer started from this script; they live in
 # obelisk-app/obelisk-bots and are supervised by PM2 from there.
 
 if [ "$SKIP_TUNNEL" = "1" ]; then
   step "Ready"
   green "App: http://127.0.0.1:$PORT  (SKIP_TUNNEL=1)"
-  dim "App PID $APP_PID — running in background. Stop: kill $APP_PID"
+  dim "App PID $APP_PID, running in background. Stop: kill $APP_PID"
   exit 0
 fi
 
 step "Cloudflare tunnel"
 if pgrep -f "cloudflared .* ${TUNNEL_UUID}" >/dev/null 2>&1 \
    || pgrep -f "cloudflared .* ${TUNNEL_NAME}\b" >/dev/null 2>&1; then
-  green "Tunnel '$TUNNEL_NAME' already running — reusing."
-  TUNNEL_REUSED=1
+  green "Tunnel '$TUNNEL_NAME' already running; reusing."
 else
   blue "Starting cloudflared '$TUNNEL_NAME' → $ORIGIN_URL (logs → ./tunnel.log)"
   nohup cloudflared tunnel \
@@ -180,7 +207,7 @@ green "Local:    http://127.0.0.1:$PORT"
 green "Public:   https://$TUNNEL_HOST"
 green "Legacy:   https://$TUNNEL_HOST_LEGACY  (308 → https://$TUNNEL_HOST)"
 dim   "Logs:   ./app.log  ./tunnel.log"
-dim   "PIDs:   app=$APP_PID${TUNNEL_PID:+  tunnel=$TUNNEL_PID}${BOT_PID:+  bot=$BOT_PID}"
-dim   "Stop:   kill $APP_PID${TUNNEL_PID:+ $TUNNEL_PID}${BOT_PID:+ $BOT_PID}"
+dim   "PIDs:   app=$APP_PID${TUNNEL_PID:+  tunnel=$TUNNEL_PID}"
+dim   "Stop:   kill $APP_PID${TUNNEL_PID:+ $TUNNEL_PID}"
 echo
 exit 0

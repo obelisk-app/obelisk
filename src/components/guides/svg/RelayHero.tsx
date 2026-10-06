@@ -7,7 +7,7 @@
  * smaller share of the rate budget, and a block list cutting across all three
  * because it is decided first and overrides everything behind it.
  *
- * Lime, like every other hero here. The relay's own console is purple — the
+ * Lime, like every other hero here. The relay's own console is purple - the
  * screenshots inside the article carry that, and this does not pretend to be
  * one of them.
  */
@@ -18,7 +18,7 @@ export default function RelayHero() {
     { r: 255, label: 'TIER 3', sub: 'three hops', budget: '1,500/min', opacity: 0.46 },
   ];
 
-  /** Keys sitting on each arc — fewer drawn than exist, further out, dimmer. */
+  /** Keys sitting on each arc - fewer drawn than exist, further out, dimmer. */
   const keys = [
     { r: 135, angles: [-38, -13, 13, 38] },
     { r: 195, angles: [-42, -25, -8, 9, 26, 43] },
@@ -46,7 +46,7 @@ export default function RelayHero() {
       <title id="hero-relay-title">Admission is a ladder, not a switch</title>
       <desc id="hero-relay-desc">
         A self-hosted Nostr relay with three widening tiers of admitted keys around
-        it — added by hand, two hops away, three hops away — each publishing on a
+        it, added by hand, two hops away, three hops away, each publishing on a
         smaller share of the rate budget, with a block list cutting across all three.
       </desc>
 

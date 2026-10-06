@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
+import { clipPath, clipPosterPath } from '@/utils/guides/clip-paths';
 
 /**
  * A short silent screen recording, for guides that describe software you
  * cannot see from here.
  *
  * The sibling `Shot` is a still of the running app; this is the same idea
- * with motion, and the same rule applies — these are captures, not
+ * with motion, and the same rule applies - these are captures, not
  * illustrations. The files come out of the `obelisk-relay-shorts` project in
  * the media repo, transcoded to 720p and stripped of their audio track
  * (they never had one) before being committed under
@@ -17,8 +18,8 @@ import { useEffect, useState } from 'react';
  * idea is a moving illustration, not something a reader scrubs through, and
  * a progress bar invites them to treat it as a video they must finish.
  *
- * `width`/`height` are the intrinsic CSS size — half the encoded pixel
- * width, matching `Shot`'s 2x convention — so the column does not reflow
+ * `width`/`height` are the intrinsic CSS size - half the encoded pixel
+ * width, matching `Shot`'s 2x convention - so the column does not reflow
  * when the first frame arrives.
  */
 export interface ClipMeta {
@@ -34,7 +35,7 @@ export const CLIP_META: Record<string, ClipMeta> = {
     width: 640,
     height: 360,
     seconds: 32,
-    alt: 'Two commands are the whole install: ./setup.sh gives you a relay on localhost, ./expose.sh gives the world a way in — no SSH session and no YAML to hand-edit.',
+    alt: 'Two commands are the whole install: ./setup.sh gives you a relay on localhost, ./expose.sh gives the world a way in, no SSH session and no YAML to hand-edit.',
   },
   'relay/ladder': {
     width: 640,
@@ -56,34 +57,13 @@ export const CLIP_META: Record<string, ClipMeta> = {
   },
 };
 
-export function clipPath(name: string): string {
-  return `/media-kit/video/${name}.mp4`;
-}
-
-/** The poster sits with the screenshots, since that is what it is. */
-export function clipPosterPath(name: string): string {
-  return `/og/guides/${name.replace(/\/([^/]+)$/, '/clip-$1')}.jpg`;
-}
-
 /**
  * Autoplay is the right default for a silent loop and the wrong one for a
  * reader who has asked their OS to stop things moving. Honouring that in
- * CSS is not possible — `autoplay` is an attribute, not a style — so the
+ * CSS is not possible, `autoplay` is an attribute, not a style, so the
  * query is read here and the clip degrades to its poster with a play
  * control, which is the same picture plus consent.
  */
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReduced(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  return reduced;
-}
-
 export default function Clip({
   name,
   caption,

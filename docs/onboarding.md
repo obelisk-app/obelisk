@@ -9,14 +9,14 @@ you get there.
 They are **not** a tour. There is no forced sequence, nothing dims, nothing
 stops taking clicks, and no step demands attention before you can use the
 app. A control you haven't met carries a dot; arriving on its screen shows
-one small card beside it; dismissing it — or just using the control — ends
+one small card beside it; dismissing it (or just using the control) ends
 it for good.
 
 ## The pieces
 
 | File | Role |
 |---|---|
-| `src/lib/hints/registry.ts` | Every hint: id, surface, anchor, copy keys, order |
+| `src/utils/hints/registry.ts` | Every hint: id, surface, anchor, copy keys, order |
 | `src/store/hints.ts` | What this account has seen (`obelisk:hints:{pubkey}`) |
 | `src/components/hints/HintDot.tsx` | The "something here" marker on a control |
 | `src/components/hints/HintCallout.tsx` | The card, pinned to the control |
@@ -24,7 +24,7 @@ it for good.
 
 ## Adding a hint
 
-1. Put `data-tour="<anchor>"` on the **real control**, not a wrapper — the
+1. Put `data-tour="<anchor>"` on the **real control**, not a wrapper: the
    callout is measured from its rect, and a full-width wrapper points the
    card at the middle of the screen.
 2. Add an entry to `HINTS` with a `surface` (the screen that reveals it) and
@@ -38,8 +38,8 @@ it for good.
 
 - **A hint can never point at nothing.** `HintHost` only shows one whose
   anchor is in the DOM and laid out (`offsetParent !== null`). That is also
-  why one registry serves both shells, and why conditional UI — voice off,
-  no relays yet, DMs not opted into — drops its own steps with no condition
+  why one registry serves both shells, and why conditional UI (voice off,
+  no relays yet, DMs not opted into) drops its own steps with no condition
   field to maintain.
 - **Using a control teaches it.** A delegated `pointerdown` marks the hint
   for whatever `[data-tour]` was clicked. Someone who already found the feed
@@ -50,7 +50,7 @@ it for good.
   alone, so "Show tips again" restores the whole set rather than the
   remainder.
 - **Per account.** Switching accounts clears the in-memory set before
-  rehydrating — zustand's `rehydrate()` merges, so without the clear a fresh
+  rehydrating: zustand's `rehydrate()` merges, so without the clear a fresh
   key would inherit the previous account's "already seen" and be told
   nothing.
 - **Not cache.** `clearAllClientCacheExceptSession` deliberately leaves

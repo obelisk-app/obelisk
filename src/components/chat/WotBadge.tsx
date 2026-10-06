@@ -1,6 +1,6 @@
 'use client';
 
-import { useWotDistance, useWotEnabled } from '@/lib/wot';
+import { useWotDistance, useWotEnabled } from '@/services/wot';
 
 /**
  * Pill showing WoT distance for `pubkey`. Hidden when WoT is disabled or
@@ -10,7 +10,7 @@ export default function WotBadge({ pubkey, className = '' }: { pubkey: string; c
   const enabled = useWotEnabled();
   const distance = useWotDistance(pubkey);
   if (!enabled) return null;
-  const label = distance === null ? '—' : `${distance}°`;
+  const label = distance === null ? '-' : `${distance}°`;
   const tone =
     distance === null ? 'border-lc-border text-lc-muted' :
     distance === 0 ? 'border-lc-green/60 text-lc-green' :

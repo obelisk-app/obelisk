@@ -18,7 +18,7 @@ export { STACKER_KEYS };
  *
  * React only ever sees `stats`, which updates a few times a second. The board
  * itself subscribes to the runner directly and draws without re-rendering
- * anything — see `StackerBoard`.
+ * anything - see `StackerBoard`.
  */
 export function useStackerLoop(opts: {
   seed: number;
@@ -28,7 +28,7 @@ export function useStackerLoop(opts: {
    * modal suspends the match instead of destroying it.
    */
   matchKey: string;
-  /** True once the match is decided — the run is then dropped rather than kept. */
+  /** True once the match is decided - the run is then dropped rather than kept. */
   matchOver: boolean;
   incoming: readonly AttackEvent[];
   enabled: boolean;
@@ -138,7 +138,7 @@ export function useStackerLoop(opts: {
       e.preventDefault();
       // Browsers only allow audio to start from a gesture, so the first
       // keypress is where the sound comes up.
-      // Music is not a choice the player makes — it just plays, once the
+      // Music is not a choice the player makes - it just plays, once the
       // browser has let us start audio at all.
       if (!prefsRef.current.muted && ensureAudio()) startMusic();
       runner.press(kind);

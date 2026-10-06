@@ -1,6 +1,6 @@
 /**
  * Stacker: two wells, and the only thing that travels between them. Clearing
- * lines does not score points here — it sends rows, so the hero draws the
+ * lines does not score points here - it sends rows, so the hero draws the
  * attack crossing the gap rather than a scoreboard.
  */
 const PIECES = ['#22d3ee', '#3b82f6', '#f97316', '#facc15', '#b4f953', '#a855f7', '#ef4444'];
@@ -123,7 +123,7 @@ export default function StackerHero() {
       <title id="hero-stacker-title">Two Stacker wells trading garbage lines</title>
       <desc id="hero-stacker-desc">
         Two ten-column wells of falling coloured blocks side by side. A completed line in
-        the left well sends grey garbage rows into the right one — the only thing that
+        the left well sends grey garbage rows into the right one: the only thing that
         crosses the Nostr relay in a real-time Obelisk Stacker match.
       </desc>
 

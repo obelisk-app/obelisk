@@ -4,7 +4,7 @@
  * The desktop feed's right-hand column.
  *
  * A wide screen gave the feed one column and ~600px of black either side of
- * it. This puts the space to work with what the feed already knows — and
+ * it. This puts the space to work with what the feed already knows, and
  * which panels appear is the reader's call, because the one panel that used
  * to live here (trending tags) is not the one everybody wants.
  *
@@ -15,19 +15,23 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useRef, useState } from 'react';
-import { setPreference, usePreferences } from '@/lib/preferences';
+import { setPreference, usePreferences } from '@/services/preferences';
 import {
   FEED_WIDGETS,
   normalizeFeedWidgets,
   toggleFeedWidget,
   type FeedWidgetId,
-} from '@/lib/social/widgets';
+} from '@/services/social/widgets';
 import { useTranslation } from '@/i18n/context';
+import Text from '@/components/ui/Text';
+import { MenuItem } from '@/components/ui/menu';
+import { CheckIcon } from '@/components/ui/icons';
 import AnchoredMenu from './AnchoredMenu';
 import TrendingWidget from './widgets/TrendingWidget';
 import WhoToFollowWidget from './widgets/WhoToFollowWidget';
 import FollowedTagsWidget from './widgets/FollowedTagsWidget';
 import RelaysWidget from './widgets/RelaysWidget';
+import Button from '@/components/ui/Button';
 
 export default function FeedWidgets({
   notes,
@@ -67,31 +71,32 @@ export default function FeedWidgets({
         belongs to the column, not to whichever widget happens to be first.
 
         Stuck to the bottom of the column so a full stack can't push it out
-        of reach — the control that changes how many widgets there are must
+        of reach: the control that changes how many widgets there are must
         not be the thing that disappears when you add one.
       */}
       {/*
         Blur, not a painted gradient.
 
         This was `bg-gradient-to-t from-lc-black`, a flat fill over a page
-        whose background is a tinted radial gradient — so it read as a dark
+        whose background is a tinted radial gradient, so it read as a dark
         rectangle floating behind the button rather than a fade. Blurring
         what is actually behind works against any background, including the
         user's own `backgroundColor`.
       */}
       <div className="sticky bottom-0 -mx-1 px-1 pb-1 pt-3 backdrop-blur-sm">
-        <button
+        <Button
+          variant="outline"
+          size="xs"
           ref={pickerRef}
-          type="button"
           onClick={() => setPickerOpen((open) => !open)}
           // Solid border: the dashed one was the only dashed control in the
           // app and read as a placeholder rather than a button.
-          className="w-full rounded-xl border border-lc-border bg-lc-dark/70 px-3 py-2 text-[11px] font-medium text-lc-muted transition-colors hover:border-lc-green/40 hover:text-lc-white"
+          className="w-full"
           aria-expanded={pickerOpen}
           data-testid="feed-widgets-picker"
         >
           {t('social.widgets.customize')}
-        </button>
+        </Button>
       </div>
 
       <AnchoredMenu
@@ -102,37 +107,33 @@ export default function FeedWidgets({
         testId="feed-widgets-menu"
       >
         <div className="p-1">
-          <p className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
+          <Text as="p" size="10" weight="semibold" variant="label" tone="muted" className="px-2.5 pb-1 pt-2">
             {t('social.widgets.title')}
-          </p>
+          </Text>
           {FEED_WIDGETS.map((id) => {
             const on = selected.includes(id);
-            // The last one on can't be switched off — an empty column reads
+            // The last one on can't be switched off: an empty column reads
             // as a bug rather than as a choice.
             const locked = on && selected.length === 1;
             return (
-              <button
+              <MenuItem
                 key={id}
-                type="button"
+                role="menuitemcheckbox"
                 disabled={locked}
                 onClick={() => setPreference('feedWidgets', toggleFeedWidget(selected, id))}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-lc-white hover:bg-white/5 disabled:opacity-50"
-                role="menuitemcheckbox"
-                aria-checked={on}
-                data-testid="feed-widget-option"
-                data-widget={id}
-                data-on={on || undefined}
-              >
-                <span
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] ${
-                    on ? 'border-lc-green bg-lc-green text-lc-black' : 'border-lc-border text-transparent'
-                  }`}
-                  aria-hidden="true"
-                >
-                  ✓
-                </span>
-                <span className="min-w-0 flex-1 truncate">{t(`social.widgets.${id}`)}</span>
-              </button>
+                testId="feed-widget-option"
+                buttonProps={{ 'aria-checked': on, 'data-widget': id, 'data-on': on || undefined }}
+                icon={(
+                  <span
+                    className={`flex h-4 w-4 items-center justify-center rounded border ${
+                      on ? 'border-lc-green bg-lc-green text-lc-black' : 'border-lc-border text-transparent'
+                    }`}
+                  >
+                    <CheckIcon size={11} />
+                  </span>
+                )}
+                label={t(`social.widgets.${id}`)}
+              />
             );
           })}
         </div>

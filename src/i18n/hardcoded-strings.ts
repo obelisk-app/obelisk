@@ -1,7 +1,7 @@
 /**
  * Finds user-visible text that never reaches a dictionary.
  *
- * `locales.test.ts` checks the forward direction — every key the code asks
+ * `locales.test.ts` checks the forward direction: every key the code asks
  * a translate call for exists. This is the inverse, and it's the one that
  * matters for a third language: ~670 strings are written straight into JSX, so
  * they are English *in the Spanish build too*, and no amount of
@@ -22,7 +22,7 @@
  * Anything that isn't prose: single words with no letters (`#`, `⋯`),
  * protocol and identifier fragments (`wss://`, `npub`, `kind 9`),
  * interpolations (`{count}`), and short lowercase tokens. The rule is two
- * or more letters plus either a space or an initial capital — enough to
+ * or more letters plus either a space or an initial capital, enough to
  * catch "Add relay" and "No messages yet" while leaving `px`, `nsec` and
  * `id` alone.
  *
@@ -42,7 +42,7 @@ const ATTRIBUTE_RE = new RegExp(
 );
 
 /**
- * JSX text between tags. Deliberately crude — it over-matches into things
+ * JSX text between tags. Deliberately crude: it over-matches into things
  * like `{cond && (` which the prose filter then discards.
  */
 const JSX_TEXT_RE = />\s*([A-Za-z][^<>{}\n]{1,120}?)\s*</g;
@@ -75,7 +75,7 @@ export function looksLikeProse(value: string): boolean {
   if (text.length < 3) return false;
   if (CODE_SHAPED.test(text)) return false;
   if (TYPE_NAMES.has(text)) return false;
-  // Short acronyms — SFU, GIF, B2B, PWA. A translator has nothing to do
+  // Short acronyms: SFU, GIF, B2B, PWA. A translator has nothing to do
   // with them, and they are the same word in every language we ship.
   if (text.length <= 5 && /^[A-Z0-9-]+$/.test(text)) return false;
   // Pure interpolation, or a fragment of one.

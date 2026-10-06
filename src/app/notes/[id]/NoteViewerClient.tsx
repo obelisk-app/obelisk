@@ -4,8 +4,8 @@
  * Interactive half of the public note viewer.
  *
  * The server resolves the event so the HTML (and the link preview) is
- * complete without JS. This island re-renders it with the real components —
- * clickable mentions, media galleries, article typography — and falls back to
+ * complete without JS. This island re-renders it with the real components -
+ * clickable mentions, media galleries, article typography - and falls back to
  * fetching client-side when the server's bounded query came up empty, which
  * happens when the relays were slow rather than when the note is gone.
  */
@@ -15,14 +15,14 @@ import Link from 'next/link';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import { fetchNote } from '@nostr-wot/data';
-import { initSocial, querySocial } from '@/lib/social/pool';
-import { DEFAULT_SOCIAL_RELAYS } from '@/lib/social/relays';
-import { KIND_NOTE, renderModeFor } from '@/lib/social/kinds';
-import { getPreferences } from '@/lib/preferences';
+import { initSocial, querySocial } from '@/services/social/pool';
+import { DEFAULT_SOCIAL_RELAYS } from '@/services/social/relays';
+import { KIND_NOTE, renderModeFor } from '@/services/social/kinds';
+import { getPreferences } from '@/services/preferences';
 import { useTranslation } from '@/i18n/context';
 import NoteCard from '@/components/social/NoteCard';
 import ArticleReader from '@/components/social/ArticleCard';
-import type { ViewerTarget } from '@/lib/social/identifier';
+import type { ViewerTarget } from '@/services/social/identifier';
 
 export default function NoteViewerClient({
   target,
@@ -126,9 +126,15 @@ export default function NoteViewerClient({
           // The reader's author button was a dead click here: this page has no
           // in-app profile pane, so send them to the public profile viewer.
           onOpenProfile={(pubkey) => {
+            // Full-page navigation between two public viewers. `router.push`
+            // would make it client-side, which is a behaviour change (the
+            // profile viewer is server-rendered for its link preview) and
+            // not a lint fix; left as is in rounds 7 and 9.
             try {
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- kept as a full-page navigation, see above
               window.location.assign(`/p/${nip19.npubEncode(pubkey)}`);
             } catch {
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- kept as a full-page navigation, see above
               window.location.assign(`/p/${pubkey}`);
             }
           }}

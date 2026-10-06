@@ -1,54 +1,30 @@
 'use client';
 
-import { useMemo, useRef, useState, type ReactNode } from 'react';
-import ModalShell from '@/components/ModalShell';
-import { uploadToBlossom } from '@/lib/blossom';
-import { isValidCustomEmojiName, normalizeCustomEmojiName } from '@/lib/custom-emoji-tags';
-import { nostrActions, useMediaPacks, useMyMediaFavorites, useMyPubkey } from '@/lib/nostr-bridge';
-import type { JsMediaItem, JsMediaKind, JsMediaPack } from '@/lib/nostr-bridge';
-import { publishRelayEmojiSet, type RelayEmojiSet } from '@/lib/relay-emojis';
-import { inferMediaKind } from '@/lib/media-kind';
-import MediaThumb from '@/components/media/MediaThumb';
+import { useRef } from 'react';
 import { useTranslation } from '@/i18n/context';
-import { confirmDialog } from '@/components/ui/ConfirmDialog';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Chip from '@/components/ui/Chip';
+import CloseButton from '@/components/ui/CloseButton';
+import EmptyState from '@/components/ui/EmptyState';
+import FileInput from '@/components/ui/FileInput';
+import Input from '@/components/ui/Input';
+import MediaLibraryShell from './library/MediaLibraryShell';
+import LibraryTabs from './library/LibraryTabs';
+import PackCard from './library/PackCard';
+import PackViewer from './library/PackViewer';
+import MediaItemMenu from './library/MediaItemMenu';
+import MediaItemGrid from './library/MediaItemGrid';
+import PackEditor from './library/PackEditor';
+import { newPack } from './library/pack-utils';
+import { useMediaLibrary, type LibraryServer } from './library/useMediaLibrary';
+import type { LibraryTab, MediaFilter, SelectedMedia } from './library/types';
 
-type LibraryTab = 'discover' | 'mine' | 'favorites' | 'server';
-type MediaFilter = 'all' | JsMediaKind;
-type EditablePack = Pick<JsMediaPack, 'identifier' | 'title' | 'description' | 'image' | 'items'>;
-type SelectedMedia = { pack?: JsMediaPack; item: JsMediaItem };
-
-const fieldClass = 'w-full rounded-lg border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white outline-none focus:border-lc-green';
-const tabClass = 'w-full rounded-lg px-3 py-2 text-left text-sm transition';
-
-function uniqueName(raw: string, used: Set<string>): string {
-  const base = normalizeCustomEmojiName(raw) || 'media';
-  let name = base;
-  for (let suffix = 2; used.has(name); suffix += 1) name = `${base}_${suffix}`;
-  used.add(name);
-  return name;
-}
-
-function newPack(): EditablePack {
-  return {
-    identifier: typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    title: 'New pack',
-    description: '',
-    image: '',
-    items: [],
-  };
-}
-
-function validHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:';
-  } catch {
-    return false;
-  }
-}
-
+/**
+ * Media packs: browse the marketplace, your own packs and favourites, or
+ * (with `server`) pick the packs a relay offers. Opened with
+ * `initialSelection`, it is just the item menu for that one item.
+ */
 export default function MediaLibraryModal({
   onClose,
   embedded = false,
@@ -59,142 +35,20 @@ export default function MediaLibraryModal({
 }: {
   onClose: () => void;
   embedded?: boolean;
-  server?: { relayUrl: string; emojiSet: RelayEmojiSet };
+  server?: LibraryServer;
   initialTab?: LibraryTab;
   initialKind?: MediaFilter;
   initialSelection?: SelectedMedia;
 }) {
   const { t } = useTranslation();
-  const myPubkey = useMyPubkey();
   const uploadRef = useRef<HTMLInputElement>(null);
   const launchedFromItem = !!initialSelection;
-  const packsByAddress = useMediaPacks();
-  const favorites = useMyMediaFavorites();
-  const [tab, setTab] = useState<LibraryTab>(initialTab);
-  const [kindFilter, setKindFilter] = useState<MediaFilter>(initialKind);
-  const [query, setQuery] = useState('');
-  const [editing, setEditing] = useState<EditablePack | null>(null);
-  const [viewingPack, setViewingPack] = useState<JsMediaPack | null>(null);
-  const [selectedMedia, setSelectedMedia] = useState<SelectedMedia | null>(initialSelection ?? null);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const packs = useMemo(() => Object.values(packsByAddress)
-    .filter((pack) => pack.items.length > 0)
-    .sort((a, b) => b.createdAt - a.createdAt), [packsByAddress]);
-  const visiblePacks = useMemo(() => {
-    const value = query.trim().toLowerCase();
-    const source = tab === 'mine'
-      ? packs.filter((pack) => pack.author === myPubkey)
-      : tab === 'favorites'
-        ? packs.filter((pack) => favorites.packAddresses.includes(pack.address))
-        : packs;
-    const matchingKind = kindFilter === 'all'
-      ? source
-      : source.filter((pack) => pack.items.some((item) => item.kind === kindFilter));
-    return value
-      ? matchingKind.filter((pack) => `${pack.title} ${pack.description} ${pack.items.map((item) => item.name).join(' ')}`.toLowerCase().includes(value))
-      : matchingKind;
-  }, [favorites.packAddresses, kindFilter, myPubkey, packs, query, tab]);
-
-  const saveFavorites = async (next: { items: readonly JsMediaItem[]; packAddresses: readonly string[] }) => {
-    setBusy(true);
-    setMessage(null);
-    try {
-      await nostrActions.saveMediaFavorites(next);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Could not save favorites.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const uploadFavorite = async (file: File | undefined) => {
-    if (!file || server) return;
-    setBusy(true);
-    setMessage(null);
-    try {
-      if (!myPubkey) throw new Error("Log in to upload media.");
-      const url = await uploadToBlossom(file);
-      const name = normalizeCustomEmojiName(file.name) || "media";
-      const kind = kindFilter === "all" ? inferMediaKind(url) : kindFilter;
-      await nostrActions.saveMediaFavorites({
-        items: [
-          ...favorites.items.filter((item) => item.url !== url && item.name !== name),
-          { name, url, kind },
-        ],
-        packAddresses: favorites.packAddresses,
-      });
-      setTab("favorites");
-      setMessage("Uploaded :" + name + ": to individual favorites.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not upload media.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const togglePack = (pack: JsMediaPack) => {
-    const selected = favorites.packAddresses.includes(pack.address);
-    void saveFavorites({
-      items: favorites.items,
-      packAddresses: selected
-        ? favorites.packAddresses.filter((address) => address !== pack.address)
-        : [...favorites.packAddresses, pack.address],
-    });
-  };
-
-  const toggleItem = (item: JsMediaItem) => {
-    const selected = favorites.items.some((favorite) => favorite.url === item.url);
-    void saveFavorites({
-      packAddresses: favorites.packAddresses,
-      items: selected
-        ? favorites.items.filter((favorite) => favorite.url !== item.url)
-        : [...favorites.items, item],
-    });
-  };
-
-  const deletePack = async (pack: JsMediaPack) => {
-    const ok = await confirmDialog({
-      title: t('media.confirmDeletePack').replace('{title}', pack.title),
-      message: t('media.confirmDeletePackBody'),
-      confirmLabel: t('confirm.delete'),
-    });
-    if (!ok) return;
-    setBusy(true);
-    setMessage(null);
-    try {
-      await nostrActions.deleteMediaPack(pack.address);
-      setMessage('Deleted “' + pack.title + '”.');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Could not delete pack.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const toggleServerPack = async (pack: JsMediaPack) => {
-    if (!server) return;
-    const selected = server.emojiSet.packAddresses?.includes(pack.address) ?? false;
-    const packAddresses = selected
-      ? (server.emojiSet.packAddresses ?? []).filter((address) => address !== pack.address)
-      : [...(server.emojiSet.packAddresses ?? []), pack.address];
-    setBusy(true);
-    setMessage(null);
-    try {
-      await publishRelayEmojiSet(server.relayUrl, {
-        ...server.emojiSet,
-        title: server.emojiSet.title || "Server packs",
-        emojis: [],
-        packAddresses,
-      });
-      setMessage((selected ? "Removed “" : "Added “") + pack.title + (selected ? "” from" : "” to") + " this server.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not update server packs.");
-      throw error;
-    } finally {
-      setBusy(false);
-    }
-  };
+  const {
+    myPubkey, packsByAddress, favorites, packs, visiblePacks,
+    tab, setTab, kindFilter, setKindFilter, query, setQuery,
+    editing, setEditing, viewingPack, setViewingPack, selectedMedia, setSelectedMedia,
+    busy, message, uploadFavorite, togglePack, toggleItem, deletePack, toggleServerPack,
+  } = useMediaLibrary({ server, initialTab, initialKind, initialSelection });
 
   if (launchedFromItem && selectedMedia) {
     return <MediaItemMenu
@@ -241,7 +95,7 @@ export default function MediaLibraryModal({
       onClose={onClose}
       closeOnEscape={!editing && !viewingPack && !selectedMedia}
     >
-      {!server && <input ref={uploadRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(event) => { void uploadFavorite(event.target.files?.[0]); event.target.value = ""; }} />}
+      {!server && <FileInput ref={uploadRef} accept="image/png,image/jpeg,image/webp,image/gif" aria-label={t('media.upload')} onChange={(event) => { void uploadFavorite(event.target.files?.[0]); event.target.value = ""; }} />}
       <aside className="hidden w-52 shrink-0 flex-col border-r border-lc-border bg-lc-black/40 p-3 sm:flex">
         <div className="px-2 pb-4 pt-2">
           <div className="text-base font-bold text-lc-white">{t('media.title')}</div>
@@ -249,8 +103,8 @@ export default function MediaLibraryModal({
         </div>
         <LibraryTabs tab={tab} setTab={setTab} server={!!server} />
         {!server && <div className="mt-auto grid gap-2">
-          <button type="button" disabled={busy} onClick={() => uploadRef.current?.click()} className="rounded-lg border border-lc-green px-3 py-2 text-sm font-semibold text-lc-green disabled:opacity-40">{t('media.upload')}</button>
-          <button type="button" onClick={() => setEditing(newPack())} className="rounded-lg bg-lc-green px-3 py-2 text-sm font-semibold text-lc-black">{t('media.createPack')}</button>
+          <Button variant="outline" tone="accent" size="sm" disabled={busy} onClick={() => uploadRef.current?.click()}>{t('media.upload')}</Button>
+          <Button size="lg" onClick={() => setEditing(newPack())}>{t('media.createPack')}</Button>
         </div>}
       </aside>
 
@@ -258,16 +112,16 @@ export default function MediaLibraryModal({
         <header className="flex shrink-0 items-center gap-3 border-b border-lc-border p-4">
           <div className="min-w-0 flex-1">
             <div className="text-base font-bold text-lc-white sm:hidden">{t('media.title')}</div>
-            <input
+            <Input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('media.searchPlaceholder')}
               aria-label={t('media.searchPlaceholder')}
-              className={`${fieldClass} mt-2 sm:mt-0`}
+              className="mt-2 sm:mt-0"
             />
           </div>
-          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-lg text-lc-muted hover:bg-white/5 hover:text-lc-white" aria-label={t('media.close')}>✕</button>
+          <CloseButton onClick={onClose} label={t('media.close')} />
         </header>
 
         <div className="shrink-0 overflow-x-auto border-b border-lc-border p-2 sm:hidden">
@@ -275,32 +129,32 @@ export default function MediaLibraryModal({
         </div>
 
         {!server && <div className="grid shrink-0 grid-cols-2 gap-2 border-b border-lc-border p-2 sm:hidden">
-          <button type="button" disabled={busy} onClick={() => uploadRef.current?.click()} className="rounded-lg border border-lc-green px-3 py-2 text-sm text-lc-green disabled:opacity-40">{t('media.upload')}</button>
-          <button type="button" onClick={() => setEditing(newPack())} className="rounded-lg bg-lc-green px-3 py-2 text-sm font-semibold text-lc-black">{t('media.createPack')}</button>
+          <Button variant="outline" tone="accent" size="sm" disabled={busy} onClick={() => uploadRef.current?.click()}>{t('media.upload')}</Button>
+          <Button size="lg" onClick={() => setEditing(newPack())}>{t('media.createPack')}</Button>
         </div>}
 
         <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-lc-border px-4 py-2" role="group" aria-label={t('media.filterByType')}>
           {([['all', 'All'], ['emoji', 'Emoji'], ['gif', 'GIFs'], ['sticker', 'Stickers']] as Array<[MediaFilter, string]>).map(([value, label]) => (
-            <button key={value} type="button" onClick={() => setKindFilter(value)} aria-pressed={kindFilter === value} className={`rounded-full border px-3 py-1 text-xs ${kindFilter === value ? 'border-lc-green bg-lc-green/10 text-lc-green' : 'border-lc-border text-lc-muted'}`}>
+            <Chip key={value} onClick={() => setKindFilter(value)} state={kindFilter === value ? 'selected' : 'idle'}>
               {label}
-            </button>
+            </Chip>
           ))}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {tab === "server" && server && (
-            <section data-testid="server-pack-summary" className="mb-5 rounded-xl border border-lc-border bg-lc-black/40 p-4">
+            <Card as="section" surface="translucent" padding="lg" data-testid="server-pack-summary" className="mb-5">
               <h2 className="font-semibold text-lc-white">{t('media.serverPacks')}</h2>
               <p className="mt-1 text-xs text-lc-muted">{(server.emojiSet.packAddresses ?? []).length} packs selected. Add or remove existing packs below.</p>
               <p className="mt-2 text-xs text-lc-muted">{t('media.serverPacksHelp')}</p>
               {server.emojiSet.emojis.length > 0 && <p className="mt-2 text-xs text-amber-300">{t('media.legacyHelp')}</p>}
-            </section>
+            </Card>
           )}
 
           {tab === "favorites" && favorites.items.length > 0 && (
             <section className="mb-5">
               <h2 className="mb-2 text-sm font-semibold text-lc-white">{t('media.individualFavorites')}</h2>
-              <MediaGrid
+              <MediaItemGrid
                 items={favorites.items.filter((item) => kindFilter === "all" || item.kind === kindFilter)}
                 favorites={favorites.items}
                 onOpen={(item) => {
@@ -333,9 +187,9 @@ export default function MediaLibraryModal({
             ))}
           </div>
           {visiblePacks.length === 0 && (
-            <div className="py-16 text-center text-sm text-lc-muted">
+            <EmptyState padding="none" className="py-16">
               {tab === 'mine' ? 'Create your first reusable media pack.' : tab === 'favorites' ? 'Favorite a pack or individual item to keep it across servers.' : 'No packs found.'}
-            </div>
+            </EmptyState>
           )}
         </div>
         {message && <div className="shrink-0 border-t border-lc-border px-4 py-2 text-xs text-lc-green">{message}</div>}
@@ -385,291 +239,5 @@ export default function MediaLibraryModal({
         }}
       />}
     </MediaLibraryShell>
-  );
-}
-
-function MediaLibraryShell({ embedded, onClose, closeOnEscape, children }: {
-  embedded: boolean;
-  onClose: () => void;
-  closeOnEscape: boolean;
-  children: ReactNode;
-}) {
-  if (embedded) {
-    return <div data-testid="media-library-embedded" className="flex h-full min-h-0 w-full overflow-hidden bg-lc-dark">{children}</div>;
-  }
-  return (
-    <ModalShell
-      onClose={onClose}
-      closeOnEscape={closeOnEscape}
-      testId="media-library-modal"
-      panelClassName="lc-card mx-2 flex h-[calc(100dvh_-_1rem)] max-h-[calc(100%_-_1rem)] w-full max-w-6xl overflow-hidden bg-lc-dark sm:mx-3 sm:h-[min(780px,94vh)] sm:max-h-none"
-    >
-      {children}
-    </ModalShell>
-  );
-}
-
-function LibraryTabs({ tab, setTab, server, mobile = false }: {
-  tab: LibraryTab;
-  setTab: (tab: LibraryTab) => void;
-  server: boolean;
-  mobile?: boolean;
-}) {
-  return <>{([
-    ['discover', 'Marketplace'],
-    ['mine', 'My packs'],
-    ...(server ? [["server", "Server packs"]] : [['favorites', 'Favorites']]),
-  ] as Array<[LibraryTab, string]>).map(([value, label]) => (
-    <button key={value} type="button" onClick={() => setTab(value)} className={`${mobile ? 'rounded-lg px-3 py-2 text-sm' : tabClass} ${tab === value ? 'bg-lc-green/15 text-lc-green' : 'text-lc-muted hover:bg-white/5 hover:text-lc-white'}`}>
-      {label}
-    </button>
-  ))}</>;
-}
-
-function PackCard({ pack, mine, favorite, itemFavorites, busy, server, serverSelected, onView, onOpenItem, onEdit, onDelete, onFavorite, onServer }: {
-  pack: JsMediaPack;
-  mine: boolean;
-  favorite: boolean;
-  itemFavorites: readonly JsMediaItem[];
-  busy: boolean;
-  server: boolean;
-  serverSelected: boolean;
-  onView: () => void;
-  onOpenItem: (item: JsMediaItem) => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onFavorite: () => void;
-  onServer: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <article className="overflow-hidden rounded-xl border border-lc-border bg-lc-black/40">
-      <div className="flex min-h-24 items-center gap-2 bg-lc-black p-3">
-        {pack.items.slice(0, 5).map((item) => (
-          <button key={item.url} type="button" onClick={() => onOpenItem(item)} title={t('media.openActions')} aria-label={"Open :" + item.name + ": actions"} className="group relative flex h-14 min-w-0 flex-1 items-center justify-center rounded-lg bg-lc-dark p-1">
-            <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
-            {!server && itemFavorites.some((saved) => saved.url === item.url) && <span className="absolute right-1 top-1 text-xs text-lc-green">★</span>}
-          </button>
-        ))}
-      </div>
-      <div className="p-3">
-        <h3 className="truncate text-sm font-semibold text-lc-white">{pack.title}</h3>
-        <p className="mt-1 line-clamp-2 text-xs text-lc-muted">{pack.description || pack.items.length + " items"}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" onClick={onView} className="rounded-lg border border-lc-border px-2 py-1 text-xs text-lc-white">{t('media.viewPack')}</button>
-          {!server && <button type="button" disabled={busy} onClick={onFavorite} className={"rounded-lg border px-2 py-1 text-xs " + (favorite ? "border-lc-green bg-lc-green/10 text-lc-green" : "border-lc-border text-lc-white")} aria-label={favorite ? "Remove " + pack.title + " from saved packs" : "Save " + pack.title}>{favorite ? "★ Saved" : "☆ Save pack"}</button>}
-          {mine && !server && <button type="button" onClick={onEdit} className="rounded-lg border border-lc-border px-2 py-1 text-xs text-lc-white">{t('media.edit')}</button>}
-          {mine && !server && <button type="button" disabled={busy} onClick={onDelete} className="rounded-lg border border-red-500/30 px-2 py-1 text-xs text-red-300">{t('media.delete')}</button>}
-          {server && <button type="button" disabled={busy} onClick={onServer} className={"rounded-lg px-2 py-1 text-xs font-semibold " + (serverSelected ? "border border-red-500/30 text-red-300" : "bg-lc-green text-lc-black")}>{serverSelected ? "Remove pack from server" : "Add pack to server"}</button>}
-          <span className="ml-auto self-center text-[10px] uppercase tracking-wide text-lc-muted">{pack.items.length} items</span>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function PackViewer({ pack, favorite, itemFavorites, busy, server, serverSelected, closeOnEscape, onClose, onOpenItem, onFavorite, onServer }: {
-  pack: JsMediaPack;
-  favorite: boolean;
-  itemFavorites: readonly JsMediaItem[];
-  busy: boolean;
-  server: boolean;
-  serverSelected: boolean;
-  closeOnEscape: boolean;
-  onClose: () => void;
-  onOpenItem: (item: JsMediaItem) => void;
-  onFavorite: () => void;
-  onServer: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <ModalShell onClose={onClose} closeOnEscape={closeOnEscape} testId="media-pack-viewer" panelClassName="lc-card mx-3 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden bg-lc-dark">
-      <header className="flex items-start justify-between gap-4 border-b border-lc-border p-4">
-        <div className="min-w-0">
-          <h2 className="truncate font-semibold text-lc-white">{pack.title}</h2>
-          <p className="mt-1 text-xs text-lc-muted">{pack.description ? pack.description + " · " : ""}{pack.items.length} items</p>
-        </div>
-        <button type="button" onClick={onClose} aria-label={t('media.closeViewer')} className="text-lc-muted">✕</button>
-      </header>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        <MediaGrid items={pack.items} favorites={server ? [] : itemFavorites} onOpen={onOpenItem} />
-      </div>
-      <footer className="flex justify-end border-t border-lc-border p-4">
-        {server
-          ? <button type="button" disabled={busy} onClick={onServer} className={"rounded-lg px-3 py-2 text-sm font-semibold " + (serverSelected ? "border border-red-500/30 text-red-300" : "bg-lc-green text-lc-black")}>{serverSelected ? "Remove pack from server" : "Add pack to server"}</button>
-          : <button type="button" disabled={busy} onClick={onFavorite} className={"rounded-lg border px-3 py-2 text-sm " + (favorite ? "border-lc-green bg-lc-green/10 text-lc-green" : "border-lc-border text-lc-white")} aria-label={favorite ? "Remove " + pack.title + " from saved packs" : "Save " + pack.title}>{favorite ? "★ Saved" : "☆ Save pack"}</button>}
-      </footer>
-    </ModalShell>
-  );
-}
-
-function MediaItemMenu({ selection, favorite, busy, server, onClose, onViewPack, onFavorite, onCreatePack }: {
-  selection: SelectedMedia;
-  favorite: boolean;
-  busy: boolean;
-  server: boolean;
-  onClose: () => void;
-  onViewPack: () => void;
-  onFavorite: () => void;
-  onCreatePack?: () => void;
-}) {
-  const { t } = useTranslation();
-  const { item, pack } = selection;
-  return (
-    <ModalShell onClose={onClose} testId="media-item-menu" panelClassName="lc-card mx-3 w-full max-w-sm overflow-hidden bg-lc-dark">
-      <header className="flex items-center justify-between border-b border-lc-border p-4">
-        <div>
-          <h2 className="font-semibold text-lc-white">:{item.name}:</h2>
-          <p className="mt-1 text-xs capitalize text-lc-muted">{item.kind}{pack ? " from " + pack.title : " · Individual favorite"}</p>
-        </div>
-        <button type="button" onClick={onClose} aria-label={t('media.closeActions')} className="text-lc-muted">✕</button>
-      </header>
-      <div className="flex h-64 items-center justify-center bg-lc-black p-6">
-        <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
-      </div>
-      <div className="grid gap-2 p-4">
-        {pack && <button type="button" onClick={onViewPack} className="rounded-lg border border-lc-border px-3 py-2 text-sm text-lc-white">View {pack.title}</button>}
-        {!server && onCreatePack && <button type="button" onClick={onCreatePack} className="rounded-lg border border-lc-green px-3 py-2 text-sm text-lc-green">{t('media.createPackWithItem')}</button>}
-        {!server && <button type="button" disabled={busy} onClick={onFavorite} className="rounded-lg bg-lc-green px-3 py-2 text-sm font-semibold text-lc-black">{favorite ? "Remove item from favorites" : "Add item to favorites"}</button>}
-      </div>
-    </ModalShell>
-  );
-}
-
-function MediaGrid({ items, favorites = [], busy = false, onOpen, onFavorite, onRemove }: {
-  items: readonly JsMediaItem[];
-  favorites?: readonly JsMediaItem[];
-  busy?: boolean;
-  onOpen?: (item: JsMediaItem) => void;
-  onFavorite?: (item: JsMediaItem) => void;
-  onRemove?: (item: JsMediaItem) => void;
-}) {
-  return (
-    <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
-      {items.map((item) => {
-        const favorite = favorites.some((value) => value.url === item.url);
-        return <div key={item.url} className="relative">
-          {onOpen ? (
-            <button type="button" onClick={() => onOpen(item)} title={"Open :" + item.name + ": actions"} aria-label={"Open :" + item.name + ": actions"} className="relative flex aspect-square w-full items-center justify-center rounded-lg border border-lc-border bg-lc-dark p-2 hover:border-lc-green/50">
-              <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
-              {favorite && !onFavorite && <span className="absolute right-1 top-1 text-xs text-lc-green">★</span>}
-            </button>
-          ) : onFavorite ? (
-            <button type="button" onClick={() => onFavorite(item)} title={(favorite ? "Remove favorite :" : "Favorite :") + item.name + ":"} className="relative flex aspect-square w-full items-center justify-center rounded-lg border border-lc-border bg-lc-dark p-2 hover:border-lc-green/50">
-              <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
-              <span className={"absolute right-1 top-1 text-xs " + (favorite ? "text-lc-green" : "text-white/50")}>★</span>
-            </button>
-          ) : (
-            <div className="flex aspect-square w-full items-center justify-center rounded-lg border border-lc-border bg-lc-dark p-2">
-              <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
-            </div>
-          )}
-          {onOpen && onFavorite && <button type="button" disabled={busy} onClick={() => onFavorite(item)} aria-label={(favorite ? "Remove :" : "Add :") + item.name + (favorite ? ": from favorites" : ": to favorites")} className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full border border-lc-green bg-lc-black/85 text-xs text-lc-green">{favorite ? "★" : "☆"}</button>}
-          {onRemove && <button type="button" disabled={busy} onClick={() => onRemove(item)} aria-label={"Remove :" + item.name + ": from server"} className="absolute left-1 top-1 rounded bg-lc-black/80 px-1 text-xs text-red-300">✕</button>}
-        </div>;
-      })}
-    </div>
-  );
-}
-
-function PackEditor({ pack, initialKind, onClose, onSaved }: {
-  pack: EditablePack;
-  initialKind: JsMediaKind;
-  onClose: () => void;
-  onSaved: (pack: EditablePack) => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const [draft, setDraft] = useState<EditablePack>({ ...pack, items: [...pack.items] });
-  const [newItemKind, setNewItemKind] = useState<JsMediaKind>(initialKind);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const addFiles = async (files: FileList | null) => {
-    const images = Array.from(files ?? []).filter((file) => file.type.startsWith('image/'));
-    if (images.length === 0) return;
-    setBusy(true);
-    setError(null);
-    const used = new Set(draft.items.map((item) => item.name));
-    try {
-      const added: JsMediaItem[] = [];
-      for (const file of images) {
-        const url = await uploadToBlossom(file);
-        added.push({ name: uniqueName(file.name, used), url, kind: newItemKind });
-      }
-      setDraft((current) => ({ ...current, items: [...current.items, ...added] }));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Upload failed.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const save = async () => {
-    const title = draft.title.trim();
-    if (!title) return setError('Pack name is required.');
-    const names = new Set<string>();
-    for (const item of draft.items) {
-      const name = normalizeCustomEmojiName(item.name);
-      if (!isValidCustomEmojiName(name) || !validHttpUrl(item.url)) return setError('Every item needs a unique shortcode and HTTP(S) image URL.');
-      if (names.has(name)) return setError(`Duplicate shortcode: :${name}:`);
-      names.add(name);
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const saved = { ...draft, title, items: draft.items.map((item) => ({ ...item, name: normalizeCustomEmojiName(item.name) })) };
-      await nostrActions.saveMediaPack(saved);
-      await onSaved(saved);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save pack.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <ModalShell onClose={onClose} testId="media-pack-editor" panelClassName="lc-card mx-3 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden bg-lc-dark">
-      <header className="flex items-center justify-between border-b border-lc-border p-4">
-        <h2 className="font-semibold text-lc-white">{t('media.editPack')}</h2>
-        <button type="button" onClick={onClose} aria-label={t('media.closeEditor')} className="text-lc-muted">✕</button>
-      </header>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} className={fieldClass} placeholder={t('media.packName')} aria-label={t('media.packName')} />
-          <input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} className={fieldClass} placeholder={t('mobile.field.description')} aria-label={t('media.packDescription')} />
-        </div>
-        <div className="my-4 flex flex-wrap items-end gap-2">
-          <input ref={inputRef} type="file" multiple accept="image/*" className="hidden" onChange={(event) => { void addFiles(event.target.files); event.target.value = ''; }} />
-          <label className="text-xs text-lc-muted">
-            <span className="mb-1 block">{t('media.newItemsAre')}</span>
-            <select value={newItemKind} onChange={(event) => setNewItemKind(event.target.value as JsMediaKind)} aria-label={t('media.newItemType')} className="rounded-lg border border-lc-border bg-lc-black px-3 py-2 text-sm text-lc-white">
-              <option value="emoji">{t('media.kind.emoji')}</option><option value="gif">{t('media.kind.gif')}</option><option value="sticker">{t('media.kind.sticker')}</option>
-            </select>
-          </label>
-          <button type="button" disabled={busy} onClick={() => inputRef.current?.click()} className="rounded-lg border border-lc-green px-3 py-2 text-sm text-lc-green">{t('media.upload')}</button>
-          <button type="button" onClick={() => setDraft({ ...draft, items: [...draft.items, { name: '', url: '', kind: newItemKind }] })} className="rounded-lg border border-lc-border px-3 py-2 text-sm text-lc-white">{t('media.addUrl')}</button>
-        </div>
-        <div className="space-y-2">
-          {draft.items.map((item, index) => (
-            <div key={`${index}-${item.url}`} className="grid items-center gap-2 rounded-lg border border-lc-border p-2 sm:grid-cols-[3rem_10rem_7rem_minmax(0,1fr)_auto]">
-              <div className="flex h-12 w-12 items-center justify-center rounded bg-lc-black p-1">{item.url && <MediaThumb src={item.url} alt="" className="max-h-full max-w-full object-contain" />}</div>
-              <input value={item.name} onChange={(event) => setDraft({ ...draft, items: draft.items.map((value, itemIndex) => itemIndex === index ? { ...value, name: event.target.value } : value) })} className={fieldClass} placeholder="shortcode" aria-label={t('media.itemShortcode').replace('{n}', String(index + 1))} />
-              <select value={item.kind} onChange={(event) => setDraft({ ...draft, items: draft.items.map((value, itemIndex) => itemIndex === index ? { ...value, kind: event.target.value as JsMediaKind } : value) })} className={fieldClass} aria-label={t('media.itemType').replace('{n}', String(index + 1))}>
-                <option value="emoji">{t('media.kind.emoji')}</option><option value="gif">{t('media.kind.gif')}</option><option value="sticker">{t('media.kind.sticker')}</option>
-              </select>
-              <input value={item.url} onChange={(event) => setDraft({ ...draft, items: draft.items.map((value, itemIndex) => itemIndex === index ? { ...value, url: event.target.value } : value) })} className={fieldClass} placeholder="https://…" aria-label={t('media.itemUrl').replace('{n}', String(index + 1))} />
-              <button type="button" onClick={() => setDraft({ ...draft, items: draft.items.filter((_, itemIndex) => itemIndex !== index) })} className="px-2 py-1 text-xs text-red-300">{t('media.remove')}</button>
-            </div>
-          ))}
-          {draft.items.length === 0 && <div className="py-10 text-center text-sm text-lc-muted">{t('media.uploadHelp')}</div>}
-        </div>
-      </div>
-      {error && <div className="border-t border-lc-border px-4 py-2 text-xs text-red-300" role="alert">{error}</div>}
-      <footer className="flex justify-end gap-2 border-t border-lc-border p-4">
-        <button type="button" onClick={onClose} className="rounded-lg border border-lc-border px-4 py-2 text-sm text-lc-white">{t('common.cancel')}</button>
-        <button type="button" disabled={busy} onClick={() => void save()} className="rounded-lg bg-lc-green px-4 py-2 text-sm font-semibold text-lc-black disabled:opacity-40">{busy ? "Saving…" : "Save pack"}</button>
-      </footer>
-    </ModalShell>
   );
 }

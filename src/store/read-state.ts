@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { quotaSafeLocalStorage } from '@/lib/quota-safe-storage';
+import { quotaSafeLocalStorage } from '@/services/quota-safe-storage';
 import { createEnsureForAccount } from './multi-account';
+import { finiteOrUndefined, recordOf, versionedPersist } from './persist-version';
 
 interface ReadStatePersisted {
-  /** Per-peer DM read cursor in unix milliseconds. Monotonic — only advances. */
+  /** Per-peer DM read cursor in unix milliseconds. Monotonic: only advances. */
   dmCursors: Record<string, number>;
   /** Per-channel read cursor in unix milliseconds. Monotonic. */
   groupCursors: Record<string, number>;
@@ -14,7 +15,7 @@ interface ReadStatePersisted {
    *
    * Group mentions have their own per-relay cursor in
    * `useNotificationsStore.mentionCursorByRelay` and are deliberately NOT
-   * governed by this value — reading DMs must not silence channel pings.
+   * governed by this value: reading DMs must not silence channel pings.
    *
    * The name is kept (rather than `dmNotificationLastReadAt`) because it
    * is the wire field in the NIP-59 DM-scope payload; renaming it would
@@ -26,12 +27,12 @@ interface ReadStatePersisted {
 /**
  * Snapshot delivered by the relay-sync engine after unwrapping a
  * NIP-59 gift-wrapped state event. All fields are optional so a single
- * remote state event can carry just the parts that scope demands —
+ * remote state event can carry just the parts that scope demands:
  * per-relay events carry only `groupCursors`; DM events carry
  * `dmCursors` + `inboxLastReadAt`.
  *
  * The merge is monotonic: each cursor takes `max(local, remote)`,
- * making the entire state a CRDT under cursor-wise max — devices
+ * making the entire state a CRDT under cursor-wise max: devices
  * converge regardless of arrival order.
  */
 export interface RemoteReadState {
@@ -48,7 +49,7 @@ interface ReadStateActions {
   /** Mark the DM notification stream as read at `Date.now()`. */
   advanceInboxRead: () => void;
   /**
-   * Mark everything as read at `Date.now()` — inbox cursor + every DM peer
+   * Mark everything as read at `Date.now()`: inbox cursor + every DM peer
    * cursor + every channel cursor in the supplied lists. The lists come from
    * the bridge (currently-loaded `dmsByPeer` keys + `messagesByGroup` keys)
    * so the store stays bridge-agnostic. Used by the "Mark all read" buttons
@@ -59,7 +60,7 @@ interface ReadStateActions {
   /**
    * Merge a remote state snapshot (from a NIP-59 state event) into the
    * local store. Each cursor advances to `max(local, remote)`; smaller
-   * values are dropped. Atomic — a single Zustand state update so
+   * values are dropped. Atomic: a single Zustand state update so
    * subscribers re-render once.
    */
   applyRemoteState: (remote: RemoteReadState) => void;
@@ -74,6 +75,18 @@ export const READ_STATE_INITIAL: ReadStatePersisted = {
   groupCursors: {},
   inboxLastReadAt: 0,
 };
+
+/** Saved-shape version. 0: before versioning, same fields. */
+export const READ_STATE_STORE_VERSION = 1;
+
+/** Cursors that are not finite numbers are dropped; a missing one reads as "never read". */
+export function sanitizeReadStatePersisted(raw: Record<string, unknown>): ReadStatePersisted {
+  return {
+    dmCursors: recordOf(raw.dmCursors, finiteOrUndefined),
+    groupCursors: recordOf(raw.groupCursors, finiteOrUndefined),
+    inboxLastReadAt: finiteOrUndefined(raw.inboxLastReadAt) ?? 0,
+  };
+}
 
 export const useReadStateStore = create<ReadStateStore>()(
   persist(
@@ -159,18 +172,21 @@ export const useReadStateStore = create<ReadStateStore>()(
     {
       name: 'obelisk-read-state',
       storage: createJSONStorage(() => quotaSafeLocalStorage),
-      partialize: (state) =>
-        ({
-          dmCursors: state.dmCursors,
-          groupCursors: state.groupCursors,
-          inboxLastReadAt: state.inboxLastReadAt,
-        }) as ReadStatePersisted,
+      partialize: (state): ReadStatePersisted => ({
+        dmCursors: state.dmCursors,
+        groupCursors: state.groupCursors,
+        inboxLastReadAt: state.inboxLastReadAt,
+      }),
+      ...versionedPersist<ReadStateStore, ReadStatePersisted>({
+        version: READ_STATE_STORE_VERSION,
+        sanitize: sanitizeReadStatePersisted,
+      }),
     },
   ),
 );
 
 /**
- * Multi-account isolation — swaps the persist key to `obelisk-read-state:{pubkey}`
+ * Multi-account isolation: swaps the persist key to `obelisk-read-state:{pubkey}`
  * so cursors don't leak across logins on the same device. Idempotent.
  */
 export const ensureReadStateStoreForAccount = createEnsureForAccount(

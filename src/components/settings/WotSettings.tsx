@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { initializeWot, useWotStore, wotEngine } from '@/lib/wot';
-import { WOT_TIERS } from '@/lib/wot/colors';
+import { initializeWot, useWotStore, wotEngine } from '@/services/wot';
+import { WOT_TIERS } from '@/services/wot/colors';
 import { useTranslation } from '@/i18n/context';
+import Range from '@/components/ui/Range';
+import Toggle from '@/components/ui/Toggle';
+import Text from '@/components/ui/Text';
+import TextButton from '@/components/ui/TextButton';
 
 /**
- * WoT controls — toggle, max-hops slider, live extension status. Reads
+ * WoT controls: toggle, max-hops slider, live extension status. Reads
  * from `useWotStore` and drives the engine config through its setters.
  *
  * The probe runs on mount + whenever the tab regains focus (via
@@ -59,30 +63,21 @@ export default function WotSettings() {
             </div>
           )}
         </div>
-        <button
-          type="button"
-          role="switch"
+        <Toggle
           aria-label={t('wot.title')}
-          aria-checked={active}
+          checked={active}
           disabled={!canEnable}
-          onClick={() => setEnabled(!enabled)}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${active ? 'bg-lc-green' : 'bg-lc-border'} disabled:opacity-50`}
-        >
-          <span
-            className={`inline-block h-5 w-5 transform rounded-full bg-lc-black transition-transform ${active ? 'translate-x-5' : 'translate-x-0.5'}`}
-          />
-        </button>
+          onChange={() => setEnabled(!enabled)}
+        />
       </header>
 
       <div className="flex items-center gap-2 text-xs">
         <span className={statusTone}>● {statusLabel}</span>
-        <button
-          type="button"
+        <TextButton tone="muted"
           onClick={() => void refreshStatus()}
-          className="text-lc-muted underline-offset-2 hover:text-lc-white hover:underline"
         >
           re-check
-        </button>
+        </TextButton>
       </div>
 
       {active && (
@@ -92,14 +87,13 @@ export default function WotSettings() {
               <span>{t('wot.maxHops')}</span>
               <span className="font-mono text-lc-white">{maxHops}°</span>
             </div>
-            <input
-              type="range"
+            <Range
+              aria-label={t('wot.maxHops')}
               min={1}
               max={4}
               step={1}
               value={maxHops}
               onChange={(e) => setMaxHops(Number(e.target.value))}
-              className="w-full accent-lc-green"
             />
             <div className="mt-1 text-[11px] text-lc-muted">
               1° = direct follows only · 2° = friends of follows · higher = wider net.
@@ -111,14 +105,13 @@ export default function WotSettings() {
               <span>{t('wot.minPaths')}</span>
               <span className="font-mono text-lc-white">{minPaths}</span>
             </div>
-            <input
-              type="range"
+            <Range
+              aria-label={t('wot.minPaths')}
               min={1}
               max={3}
               step={1}
               value={minPaths}
               onChange={(e) => setMinPaths(Number(e.target.value))}
-              className="w-full accent-lc-green"
             />
             <div className="mt-1 text-[11px] text-lc-muted">
               Require this many independent follow paths before trusting a pubkey.
@@ -127,12 +120,12 @@ export default function WotSettings() {
             </div>
           </div>
 
-          {/* Color legend — channels in the rail are colored by the closest
+          {/* Color legend: channels in the rail are colored by the closest
               principal's hop distance. */}
           <div className="rounded-md border border-lc-border bg-lc-black/40 p-2">
-            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
+            <Text as="div" variant="label" size="10" weight="semibold" tone="muted" className="mb-1.5">
               {t('wot.channelColors')}
-            </div>
+            </Text>
             <ul className="space-y-1">
               {WOT_TIERS.map((tier) => (
                     <li key={tier.label} className="flex items-center gap-2 text-xs">
@@ -143,7 +136,7 @@ export default function WotSettings() {
                     </li>
               ))}
               <li className="flex items-center gap-2 text-xs">
-                    <span className="inline-block w-8 text-center rounded-full border border-lc-border px-1 py-0 font-mono text-[10px] text-lc-muted">—</span>
+                    <span className="inline-block w-8 text-center rounded-full border border-lc-border px-1 py-0 font-mono text-[10px] text-lc-muted">-</span>
                     <span className="flex-1 text-lc-muted">{t('wot.outOfGraph')}</span>
               </li>
             </ul>

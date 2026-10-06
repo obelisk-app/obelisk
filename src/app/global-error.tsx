@@ -1,8 +1,8 @@
 'use client';
 
-import ErrorPanel from '@/components/ErrorPanel';
+import ErrorPanel from '@/components/feedback/ErrorPanel';
 // `global-error.tsx` replaces the root layout wholesale, so the layout's
-// own `globals.css` import is not in play here — pull it in or the lc-*
+// own `globals.css` import is not in play here - pull it in or the lc-*
 // classes render unstyled.
 import './globals.css';
 
@@ -11,7 +11,7 @@ import './globals.css';
  * `error.tsx` cannot see (it renders *inside* that layout).
  *
  * Because it replaces the layout, this file owns the `<html>` and `<body>`
- * tags, and nothing from the provider tree is available — which is exactly
+ * tags, and nothing from the provider tree is available - which is exactly
  * why {@link ErrorPanel} takes no context and reads its locale off
  * `<html lang>`.
  */

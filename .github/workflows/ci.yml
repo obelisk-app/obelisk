@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# The default GITHUB_TOKEN can write to the repo. Nothing here needs more than
+# a checkout, so pin the token to read-only for every job.
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR supersedes the run in flight.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  # Never let git sit on a credential prompt inside npm ci.
+  GIT_TERMINAL_PROMPT: "0"
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 22: the line the lockfile was generated under (npm 10.9 / node
+      # 22.23) and the one developers run. Node 20 reached end of life in
+      # April 2026. Every engine range in the tree accepts 22 (next >=20.9,
+      # vite/vitest ^20.19 || ^22.12). @types/node is still ^20; bumping it
+      # is a package.json change and is listed in the audit report.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `vesta` and `urd` are git dependencies. Their lockfile entries are
+      # pinned to a commit but resolve as git+ssh://git@github.com/..., and a
+      # hosted runner has no GitHub SSH key. npm's git fetcher does try the
+      # https form first for a github-hosted spec, but it falls back to ssh on
+      # any https failure and would then hang or fail instead of reporting the
+      # real error. The rewrite makes every github fetch https, full stop.
+      # Verified with `GIT_SSH_COMMAND=false git -c url.<...>.insteadOf
+      # ls-remote ssh://git@github.com/fchurca/urd.git`, which reaches the
+      # pinned commit without ssh. Both repos are public.
+      - name: Rewrite ssh GitHub URLs to https
+        run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+
+      - run: npm ci
+
+      # A raw control byte in a source file hides it from grep. Fail fast
+      # before lint has a chance to read around it.
+      - name: Reject control bytes in tracked source
+        run: bash scripts/check-source-bytes.sh
+
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+      # Informational: the step shows up amber on a finding but does not fail
+      # the run. This repo carried a Critical advisory for months with nobody
+      # looking; a visible step is the cheapest way to keep looking.
+      - name: npm audit (informational, non-blocking)
+        continue-on-error: true
+        run: npm audit
+
+  # `next build` is the deploy gate (scripts/deploy.sh runs it after the
+  # tests) and since typescript.ignoreBuildErrors was dropped it typechecks
+  # as well. Running it here means a PR cannot merge something that the
+  # production box would refuse to build. It runs as its own job so a build
+  # failure and a test failure are two different red marks, and so the two
+  # run in parallel instead of adding minutes to one critical path.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Rewrite ssh GitHub URLs to https
+        run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+      - run: npm ci
+      - run: npm run build

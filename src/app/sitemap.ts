@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
-import { listAllGuides, type Guide } from '@/lib/guides';
-import { LOCALES, type Locale } from '@/i18n';
-import { guidesHref } from '@/lib/guide-urls';
+import { listAllGuides, type Guide } from '@/services/guides';
+import { LOCALES } from '@/i18n';
+import { guidesHref } from '@/utils/guides/guide-urls';
 import { snapshotPaths } from '@/components/guides/svg/asset-meta';
 
 const SITE_URL = process.env.CORS_ORIGIN || 'https://obelisk.ar';

@@ -2,7 +2,7 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMemo } from 'react';
-import { trendingTags } from '@/lib/social/trending';
+import { trendingTags } from '@/services/social/trending';
 import { useTranslation } from '@/i18n/context';
 import FollowTagButton from '../FollowTagButton';
 import WidgetCard, { WidgetEmpty } from './WidgetCard';
@@ -46,7 +46,7 @@ export default function TrendingWidget({
               </button>
               {/*
                 Revealed on hover so the list reads as tags first. It stays
-                visible once followed — that is state, not an affordance.
+                visible once followed: that is state, not an affordance.
               */}
               <span className="opacity-0 transition-opacity group-hover/tag:opacity-100 group-focus-within/tag:opacity-100 [&:has([data-following])]:opacity-100">
                 <FollowTagButton tag={tag} size="sm" />

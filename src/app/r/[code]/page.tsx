@@ -1,11 +1,12 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { nostrActions } from '@/lib/nostr-bridge';
-import { decodeRelayShareCode } from '@/lib/relay-share-link';
+import { nostrActions } from '@/services/nostr-bridge';
+import { decodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
 import { useTranslation } from '@/i18n/context';
+import Button from '@/components/ui/Button';
 
 const RELAY_BRANDING: Record<string, { logo: string; alt: string }> = {
   'wss://lacrypta-relay.obelisk.ar': { logo: '/lacrypta-logo.png', alt: 'La Crypta' },
@@ -15,23 +16,22 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
   const { t } = useTranslation();
   const { code } = use(params);
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [relayUrl, setRelayUrl] = useState<string | null>(null);
+  // The relay is a pure function of the code; only the add/switch outcome
+  // is state.
+  const relayUrl = useMemo(() => decodeRelayShareCode(code), [code]);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const error = relayUrl ? joinError : 'Invalid relay share link.';
 
   useEffect(() => {
-    const url = decodeRelayShareCode(code);
-    if (!url) {
-      setError('Invalid relay share link.');
-      return;
-    }
-    setRelayUrl(url);
+    const url = relayUrl;
+    if (!url) return;
     let cancelled = false;
     (async () => {
       try {
         try {
           await nostrActions.addRelay(url);
         } catch (e) {
-          // addRelay throws if already added or unreachable — only surface
+          // addRelay throws if already added or unreachable - only surface
           // the unreachable case. We probe by checking the message.
           const msg = (e as Error).message || '';
           if (!/already/i.test(msg)) throw e;
@@ -48,13 +48,13 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
         })();
         router.replace(`/app?relay=${encodeURIComponent(host)}`);
       } catch (e) {
-        if (!cancelled) setError((e as Error).message || 'Failed to add relay.');
+        if (!cancelled) setJoinError((e as Error).message || 'Failed to add relay.');
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [code, router]);
+  }, [relayUrl, router]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-lc-black p-6">
@@ -63,12 +63,9 @@ export default function RelayShareLinkPage({ params }: { params: Promise<{ code:
           <>
             <h1 className="text-lg font-bold text-lc-white">{t('relayLanding.failed')}</h1>
             <p className="mt-2 text-sm text-lc-muted">{error}</p>
-            <button
-              onClick={() => router.replace('/app')}
-              className="mt-4 rounded-lg bg-lc-green px-4 py-1.5 text-sm font-semibold text-lc-black"
-            >
+            <Button onClick={() => router.replace('/app')} className="mt-4">
               {t('relayLanding.goToApp')}
-            </button>
+            </Button>
           </>
         ) : (
           <>

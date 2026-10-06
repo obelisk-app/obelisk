@@ -74,7 +74,7 @@ async function main() {
   /**
    * Mute the game before it mounts. The music credit line names whichever
    * track the shuffled playlist landed on, so an unmuted run has a caption
-   * that changes under the shutter — Playwright waits for the element to stop
+   * that changes under the shutter: Playwright waits for the element to stop
    * moving, and the shot is different every time. Muted, the line is not
    * rendered at all.
    */
@@ -88,7 +88,7 @@ async function main() {
   const url = `${BASE}/dev/game-shots`;
   const res = await page.goto(url, { waitUntil: 'networkidle', timeout: 60_000 });
   if (!res || !res.ok()) {
-    throw new Error(`${url} responded ${res ? res.status() : 'nothing'} — is \`npm run dev\` running?`);
+    throw new Error(`${url} responded ${res ? res.status() : 'nothing'}; is \`npm run dev\` running?`);
   }
   await page.waitForSelector('[data-shots-ready]', { timeout: 30_000 });
   // Fonts decide layout; capturing before they land shifts every label.

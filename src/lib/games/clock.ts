@@ -5,12 +5,12 @@
  *
  * Every game card used to own its own `setInterval`. Ten cards meant ten
  * unaligned timers firing at ten different moments, so a single logical tick
- * produced ten separate React commits — each one re-deriving that card's table.
+ * produced ten separate React commits, each one re-deriving that card's table.
  * Here the timer is per *interval length*, not per subscriber: all ten cards
  * read the same value, updated once, in one batch.
  *
  * The first tick is aligned to the next multiple of the interval so that
- * subscribers which mount at different times still share a tick boundary —
+ * subscribers which mount at different times still share a tick boundary;
  * otherwise "shared timer" would still mean staggered renders for anything
  * mounted late.
  */

@@ -1,14 +1,14 @@
 'use client';
 
 import { memo, useEffect, useLayoutEffect } from 'react';
-import { useGroupMemberInfo, useMyPubkey } from '@/lib/nostr-bridge';
+import { useGroupMemberInfo, useMyPubkey } from '@/services/nostr-bridge';
 import { useGamesStore } from '@/store/games';
 import { useGameSession } from '@/hooks/chat/useChannelGames';
 import { canJoin, controllerOf, type GameSession } from '@/lib/games/session';
 import { seatDisplayLabel } from '@/lib/games/seat-label';
 import { gameIcon, gameName } from '@/lib/games/catalog';
-import { seedGameFromCache } from '@/lib/games/cache';
-import { requestGameLoad } from '@/lib/games/resolve';
+import { seedGameFromCache } from '@/services/games/cache';
+import { requestGameLoad } from '@/services/games/resolve';
 import { SEAT_COLORS } from './ChainReactionBoard';
 import { useTranslation } from '@/i18n/context';
 
@@ -27,8 +27,8 @@ export const RESOLVE_GRACE_MS = 400;
  *
  * Three things get it something to replay, in order of how fast they are:
  * the localStorage seed (before the first paint), the channel subscription, and
- * — for a table the channel sub cannot reach, which is any table older than its
- * 24-hour window — a direct lookup by id.
+ * (for a table the channel sub cannot reach, which is any table older than its
+ * 24-hour window) a direct lookup by id.
  */
 function GameCard({ gameId }: { gameId: string }) {
   const session = useGameSession(gameId);
@@ -39,7 +39,7 @@ function GameCard({ gameId }: { gameId: string }) {
   // browser paints: the skeleton is committed but never seen.
   useLayoutEffect(() => {
     if (!session) seedGameFromCache(gameId);
-    // Only on mount / id change — re-seeding a table the relay has since
+    // Only on mount / id change: re-seeding a table the relay has since
     // extended would be pointless work and the seed no-ops anyway.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
@@ -105,7 +105,7 @@ function StatusLabel({ session, myPubkey }: { session: GameSession; myPubkey: st
       return <>{t('games.inProgress')}</>;
     case 'finished':
       if (session.draw || !session.winner) return <>{t('games.draw')}</>;
-      // Naming the reader is safe here — this is rendered per viewer and never
+      // Naming the reader is safe here: this is rendered per viewer and never
       // published, unlike the seat labels that travel in the `start` event.
       if (controllerOf(session, session.winner) === myPubkey) return <>🏆 you won</>;
       return <WinnerLabel session={session} winner={session.winner} />;
@@ -125,7 +125,7 @@ function StatusLabel({ session, myPubkey }: { session: GameSession; myPubkey: st
  */
 function WinnerLabel({ session, winner }: { session: GameSession; winner: string }) {
   const memberList = useGroupMemberInfo(session.channelId);
-  // `winner` is a SEAT id, which on a hot-seat table is `pubkey#1` — looking
+  // `winner` is a SEAT id, which on a hot-seat table is `pubkey#1`, and looking
   // that up in the member list misses and leaves a mangled hex prefix on
   // screen. The controller is the person; the label is what the table chose to
   // call the seat.

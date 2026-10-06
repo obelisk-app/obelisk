@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Harness from './Harness';
 
 /**
- * Screenshot harness for the game guides — `npm run snap-games` photographs
+ * Screenshot harness for the game guides - `npm run snap-games` photographs
  * the real board components here, without a relay, a login, or a second
  * player.
  *
