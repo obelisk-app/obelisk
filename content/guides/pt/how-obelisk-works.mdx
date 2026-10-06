@@ -1,79 +1,90 @@
 ---
 title: Como o Obelisk funciona
-description: O Obelisk é um frontend. Não há backend, não há banco de dados, não há servidor de API. O app assina eventos Nostr no seu navegador e publica direto nos relays que você escolher. Aqui está o que acontece quando você entra, envia uma mensagem ou entra num grupo.
+description: O Obelisk é um app web sem backend próprio. Ele assina eventos Nostr com sua chave e os envia direto para o seu servidor, que é um relay NIP-29, e para os outros relays de que precisa. Aqui está o que acontece quando você entra, envia uma mensagem ou entra num grupo.
 heroComponent: how-obelisk-works
 publishedAt: '2026-04-16'
-updatedAt: '2026-04-28'
+updatedAt: '2026-10-06'
 tags: [architecture, how-it-works, nostr, nip-29]
 ---
 
 ## O formato do app
 
-O Obelisk é um único pedaço de código: o **cliente**.
+O Obelisk tem duas partes em movimento: o **app web** no seu navegador e os **relays** com que ele fala.
 
 ```
-┌──────────────────────┐         ┌──────────────────┐
-│  Frontend do Obelisk │ ──────► │  Relay(s) Nostr  │
-│  (seu navegador)     │ ◄────── │  (você escolhe)  │
-└──────────────────────┘         └──────────────────┘
+┌───────────────────────┐ eventos assinados ┌──────────────────────┐
+│  App web do Obelisk   │ ────────────────► │  Seu servidor        │
+│  (seu navegador;      │ ◄──────────────── │  (um relay NIP-29)   │
+│   sua chave assina)   │                   └──────────────────────┘
+│                       │    perfis, DMs    ┌──────────────────────┐
+│                       │ ◄───────────────► │  Outros relays Nostr │
+└───────────────────────┘                   └──────────────────────┘
 ```
 
-Essa é a arquitetura inteira. Não há servidor do Obelisk, nem banco de dados, nem serviço de autenticação, nem API. O navegador guarda sua chave (ou a pede emprestada a uma extensão NIP-07), assina eventos Nostr localmente e os envia aos relays que você configurou. Para ler mensagens, o mesmo cliente assina o fluxo do relay.
+O **servidor** de uma comunidade, o que você configura em Configurações do servidor, é um relay NIP-29. Ele guarda os canais, as mensagens e os cargos, e aplica quem pode fazer o quê. Não há nada entre você e ele: não existe banco de dados do Obelisk, nem serviço de contas, nem servidor de sessões. Sua chave fica com você (numa extensão do navegador, num app assinador ou selada no seu dispositivo) e assina cada evento. Um único gerenciador de conexões no app mantém um WebSocket aberto com cada relay e envia os eventos assinados direto para lá; para ler, o mesmo app assina o fluxo do relay.
+
+O site em si é servido por um pequeno servidor Next.js: as páginas, os cabeçalhos de segurança, as prévias de links (assim um link que você só olha nunca chega a um serviço de prévias de terceiros) e as páginas públicas de notas e perfis. Ele não guarda contas, nem chaves, nem mensagens.
 
 ## O que acontece quando você entra
 
-1. A tela de login oferece três caminhos:
-   - **NIP-07**: chamar `window.nostr.signEvent()` do assinador instalado (Alby, nos2x etc.)
-   - **nsec**: colar uma chave privada, guardada no `localStorage` e usada diretamente
-   - **Gerar**: criar um par de chaves novinho ali mesmo
+1. A tela de login oferece estas formas de entrar:
+   - **Extensão do navegador (NIP-07)**: Alby, nos2x e similares assinam via `window.nostr`. A chave nunca sai da extensão.
+   - **App assinador (NIP-46)**: escaneie um QR code ou cole um link de bunker do Amber, do nsec.app ou de outro assinador remoto. A chave fica nesse app, e o Obelisk pede que ele assine.
+   - **nsec**: cole uma chave privada. Antes de ser salva neste dispositivo, ela é selada com uma chave que o navegador não consegue exportar, então nunca fica guardada em texto puro.
+   - **Gerar**: crie um par de chaves novinho ali mesmo, e faça o backup.
 
-2. O app deriva sua pubkey, busca seu perfil kind 0 nos relays configurados, e pronto. Não há sessão, não há token, não há cookie: a chave criptográfica *é* a sessão.
+2. O app deriva sua pubkey, busca seu perfil kind 0 em relays de perfis, se conecta ao seu servidor, e pronto. Não há conta, nem senha, nem token nosso: a chave *é* a sua identidade, e o registro de sessão no seu dispositivo é cifrado. Se o navegador não conseguir guardar esse registro com segurança, o login dura só enquanto a aba estiver aberta.
 
 ## O que acontece quando você envia uma mensagem
 
-1. Você digita uma mensagem num canal de grupo NIP-29.
-2. O cliente monta um evento kind 9 (mensagem de grupo NIP-29), etiquetado com o ID do grupo e, se for o caso, com o ID do evento pai, para respostas.
-3. O evento é assinado com sua chave (no navegador).
-4. Ele é publicado no relay ativo via `SimplePool.publish()`.
-5. Todo mundo que assina aquele grupo naquele relay vê a mensagem chegar.
+1. Você digita uma mensagem num canal do seu servidor.
+2. O app monta um evento kind 9 (mensagem de grupo NIP-29), etiquetado com o ID do grupo e, numa resposta, com o evento respondido.
+3. O evento é assinado com sua chave: pela extensão, pelo app assinador ou, para uma chave colada ou gerada, pelo navegador.
+4. O gerenciador de conexões o publica nesse relay pelo WebSocket.
+5. O relay confere se você pode postar ali, guarda a mensagem, e todo mundo que assina aquele canal vê a mensagem chegar.
 
-Não existe uma etapa de "enviar para o servidor do Obelisk". O relay é o barramento de mensagens.
+Não existe uma etapa de "enviar para o servidor do Obelisk". Seu servidor é o relay.
 
 ## O que acontece quando você entra num grupo ou cria um
 
 Grupos são grupos **NIP-29**. Quem os guarda é o relay, não nós.
 
-- **Criar**: o cliente envia um evento `9007` (criação de grupo). O relay registra você como primeiro admin por meio de um evento `39001`.
-- **Entrar / sair**: admins emitem eventos `9000` (adicionar usuário) e `9001` (remover usuário); o relay os aplica.
-- **Canais, metadados, admins, membros**: todos eventos NIP-29 padrão: `39000` (metadados), `39001` (admins), `39002` (membros), e assim por diante.
+- **Criar**: o app envia um evento `9007` (criação de grupo). O relay registra você como primeiro admin do grupo na lista de admins `39001`.
+- **Entrar / sair**: você envia um pedido de entrada `9021` ou de saída `9022`. O relay deixa você entrar (ou guarda o pedido para um admin) e atualiza a lista de membros `39002`.
+- **Moderação**: admins adicionam e removem pessoas com `9000` (adicionar usuário) e `9001` (remover usuário); o relay os aplica.
+- **Canais, metadados, admins, membros**: todos eventos NIP-29 padrão que o próprio relay publica: `39000` (metadados), `39001` (admins), `39002` (membros).
 
-Trocar de relay é só trocar de quais grupos NIP-29 você está vendo. O app não se importa com qual relay é, desde que ele fale NIP-29.
+Os grupos pertencem ao relay que você está vendo, então trocar de relay é trocar de servidor. O app não se importa com qual relay é, desde que ele fale NIP-29.
 
-## E os DMs?
+## E os perfis e os DMs?
 
-Mensagens diretas não usam NIP-29. Elas usam **DMs Nostr criptografados**:
+Perfis e mensagens diretas não ficam no seu servidor. O app busca sozinho outros relays Nostr para eles:
 
-- **NIP-04**: o kind de DM criptografado mais antigo, ainda amplamente suportado
-- **NIP-17**: o DM mais novo, com "gift wrap" e privacidade de metadados; o cliente publica os eventos embrulhados nos relays de caixa de entrada NIP-17 do destinatário
+- **Perfis** (kind 0) e feeds sociais vêm de relays de perfis e de feed que você pode trocar nas configurações, nunca do seu servidor.
+- **DMs** ficam desligados até você ativá-los nas configurações. O Obelisk os envia como **NIP-17**: com "gift wrap" e cifrados com NIP-44, entregues nos relays de caixa de entrada do destinatário, então um relay não vê nem quem envia nem o conteúdo. Ele ainda lê as mensagens **NIP-04** mais antigas (kind 4), para que as conversas que você já tinha apareçam.
 
-Os dois são criptografados ponta a ponta: só quem envia e quem recebe têm as chaves para descriptografar.
+Os dois são cifrados ponta a ponta: só quem envia e quem recebe têm as chaves para decifrar.
+
+## E a voz?
+
+Canais de voz usam WebRTC, negociado com eventos Nostr. Num canal de voz comum, até quatro pessoas se conectam direto entre si (uma malha). Para salas maiores, um admin do canal pode transformá-lo num canal SFU, que passa por um SFU mediasoup que o admin escolhe ou hospeda. Áudio e vídeo nunca passam por um servidor do Obelisk.
 
 ## E os zaps Lightning?
 
-Zaps são **NIP-57 + NIP-47**:
+Zaps são **NIP-57**:
 
-- Um pedido de zap (kind 9734) é enviado ao endpoint LNURL do destinatário.
-- Sua carteira (conectada via Nostr Wallet Connect, NIP-47) paga a fatura.
-- Um recibo de zap (kind 9735) é publicado de volta no relay, para todo mundo ver que os sats se moveram.
+- O app assina um pedido de zap (kind 9734) e o envia ao servidor LNURL do destinatário, que responde com uma fatura Lightning.
+- Sua carteira paga: uma carteira do navegador via WebLN, ou uma carteira que você conecta com Nostr Wallet Connect (NIP-47).
+- O servidor LNURL do destinatário publica o recibo do zap (kind 9735) nos relays citados no pedido, para todo mundo ver que os sats se moveram.
 
 Nenhuma plataforma cobra taxa. Sua carteira, a carteira de quem recebe, sem intermediário.
 
 ## O que nós não fazemos
 
-- Não hospedamos suas mensagens.
-- Não temos banco de dados de usuários.
-- Não emitimos tokens nem cookies.
-- Não podemos te desplataformizar, e não podemos perder seus dados, porque nunca os tivemos.
+- Não hospedamos suas mensagens: quem as guarda é o relay do seu servidor.
+- Não temos banco de dados de usuários nem contas.
+- Não emitimos tokens de login nem cookies de sessão. O único cookie lembra o seu idioma.
+- Nunca vemos sua chave, então o app não pode te trancar do lado de fora: sua identidade funciona em qualquer relay que fale NIP-29.
 
 <RelatedGuides items={[
   { slug: "what-is-obelisk", note: "o resumo de elevador" },
