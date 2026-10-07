@@ -4,16 +4,14 @@ import { avatarInitials } from '@/utils/identity/display-name';
 import DmThreadMenu from '@/components/chat/dm/thread/DmThreadMenu';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import PqShield from '@/components/chat/pq/PqShield';
-import PqMessageMark from '@/components/chat/pq/PqMessageMark';
 import { guidePath } from '@/utils/guides/guide-urls';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { DmComposer } from '@/components/chat/dm/composer/DmComposer';
 import { DmCallButtons } from '@/components/call/DmCallButtons';
-import { DmMessageBody } from '@/components/chat/dm/message/DmMessageBody';
-import { DmMessageMenu } from '@/components/chat/dm/message/DmMessageMenu';
 import { useDmThread, useDmThreadScroll } from '@/hooks/chat/dm/thread/useDmThread';
-import { avatarStyle } from '../../common/avatar';
-import { timeOfDay } from '@/utils/shell/mobile/labels';
+import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
+import { markAt } from '@/utils/shell/mobile/dm-list';
+import { DmThreadEntry } from './DmThreadEntry';
 import BackButton from '../../chrome/BackButton';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { DmProtocolNotice, DmProtocolSwitch } from '../../../dm/DmProtocolSwitch';
@@ -36,7 +34,6 @@ export function DmThreadScreen({
   openProfile: (pubkey: string) => void;
 }) {
   const t = useTranslations();
-  const locale = useLocale();
   const thread = useDmThread(peer);
   const scrollRef = useDmThreadScroll(peer, thread.messages.length);
   const protocolChoice = useDmProtocolChoice(peer);
@@ -77,53 +74,15 @@ export function DmThreadScreen({
           <svg className="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
           {t('dm.encryptedPill')}
         </div>
-        {thread.items.map((it) =>
-          it.type === 'divider' ? (
-            <div key={it.key} className="day-divider">{it.label}</div>
-          ) : (
-            <div
-              key={it.key}
-              className={
-                'dm-bubble '
-                + (it.msg.outgoing ? 'outgoing delivered' : 'incoming') // i18n-exempt: CSS class names
-                + (it.msg.pending ? ' pending' : '')
-                + (it.msg.failed ? ' failed' : '')
-              }
-            >
-              <DmMessageMenu message={it.msg} />
-              <div className="dm-bubble-text"><DmMessageBody message={it.msg} /></div>
-              <div className="dm-bubble-meta">
-                {/* `onAccent` on outgoing: the bubble is `var(--accent)` with
-                    `var(--accent-ink)` text, the same contrast trap as
-                    desktop's `bg-lc-green`. */}
-                <PqMessageMark mark={thread.marks[it.index] ?? null} onAccent={it.msg.outgoing} />
-                {it.msg.pending && <span className="dm-bubble-spinner" aria-label={t('common.sending')} role="status" />}
-                <span className="dm-bubble-time">{timeOfDay(it.msg.createdAt, locale)}</span>
-              </div>
-              {it.msg.failed && it.msg.clientTag && (
-                <div className="dm-bubble-failed" data-testid="mobile-dm-failed">
-                  <span className="dm-bubble-failed-label">{t('dm.failedSend')}</span>
-                  <button
-                    type="button"
-                    className="dm-bubble-retry"
-                    onClick={() => thread.retry(it.msg.clientTag!)}
-                    data-testid="mobile-dm-retry"
-                  >
-                    {t('common.retry')}
-                  </button>
-                  <button
-                    type="button"
-                    className="dm-bubble-dismiss"
-                    onClick={() => thread.dismiss(it.msg.clientTag!)}
-                    aria-label={t('dm.dismissFailed')}
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-            </div>
-          ),
-        )}
+        {thread.items.map((it) => (
+          <DmThreadEntry
+            key={it.key}
+            item={it}
+            mark={markAt(thread.marks, it)}
+            onRetry={thread.retry}
+            onDismiss={thread.dismiss}
+          />
+        ))}
       </div>
 
       <DmComposer key={peer} peer={peer} variant="mobile" />

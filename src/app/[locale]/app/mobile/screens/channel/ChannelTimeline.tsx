@@ -2,7 +2,7 @@
 
 import type { JsMessage, JsReaction, MessagesStatus } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import { ChannelMessage, EMPTY_REACTIONS } from './ChannelMessage';
+import { ChannelTimelineItem } from './ChannelTimelineItem';
 import type { TimelineItem } from '@/utils/chat/timeline/channel-timeline';
 
 type Props = {
@@ -43,23 +43,19 @@ export function ChannelTimeline({
   }
   return (
     <>
-      {items.map((it) =>
-        it.type === 'divider' ? (
-          <div key={it.key} className="day-divider">{it.label}</div>
-        ) : (
-          <ChannelMessage
-            key={it.key}
-            msg={it.msg}
-            parent={it.msg.replyToId ? messagesById.get(it.msg.replyToId) ?? null : null}
-            myPubkey={myPubkey}
-            isAdmin={isAdmin}
-            groupId={groupId}
-            reactions={reactions[it.msg.id] ?? EMPTY_REACTIONS}
-            onLongPress={onLongPress}
-            onAvatar={onAvatar}
-          />
-        ),
-      )}
+      {items.map((it) => (
+        <ChannelTimelineItem
+          key={it.key}
+          item={it}
+          messagesById={messagesById}
+          reactions={reactions}
+          myPubkey={myPubkey}
+          isAdmin={isAdmin}
+          groupId={groupId}
+          onLongPress={onLongPress}
+          onAvatar={onAvatar}
+        />
+      ))}
     </>
   );
 }

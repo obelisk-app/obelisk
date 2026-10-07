@@ -317,14 +317,15 @@ pending cleanup timer from the previous animation so its
 
 ```
 src/app/[locale]/app/mobile/
-├── PhoneShell.tsx       (the state machine: go, pushNav, BottomNav,
-│                         onTabPress, popstate handler, drag carousel,
-│                         openers, screen renderers, seed/init)
+├── PhoneShell.tsx       (the frame: login or the carousel, BottomNav,
+│                         sheets; its view model is `usePhoneShell`)
 ├── mobile-shell.css     (.drag-layer, .drag-slot.*, .drag-overlay,
 │                         .screen-anim slide keyframes, sheet keyframes)
-├── carousel/            (MobileScreens, MobileScreensHost: the screen slots)
+├── carousel/            (MobileScreensHost: the slots; TopLevelScreen: the
+│                         four persistent tabs; MobileScreenBody: the
+│                         sub-screen for `nav.screen`)
 ├── chrome/              (BottomNav, BackButton, the voice status slot)
-├── common/              (avatar.tsx, shared by screens and sheets)
+├── common/              (NameAvatar, shared by screens and sheets)
 ├── rail/                (the relay rail and server banner)
 ├── screens/<screen>/    (one folder per screen: channel, dm, forum, inbox,
 │                         login, profile, search, server, settings, status, voice)
@@ -336,17 +337,27 @@ src/utils/shell/mobile/  (the pure navigation rules, no React)
 ├── swipe-nav.ts         (NAV_ORDER, SUB_TO_NAV, resolveParent,
 │                         neighborsFor, decideSwipeNav, decideSnap,
 │                         buildSeedHistory)
-├── carousel-slots.ts    (slot roles, swipe axis, rubber band)
+├── carousel-slots.ts    (slot roles, which nav has a body or an overlay,
+│                         swipe axis, rubber band)
+├── bottom-nav.ts        (active tab, badges, hint surfaces, when to hide)
 ├── swipe-target.ts      (which touch targets never start a swipe)
-└── labels.ts            (channel header halves, time of day)
+├── labels.ts            (channel header halves, time of day, reply quote)
+└── ...                  (the screens' own shaping: avatar colours, channel
+                          rows and lists, DM lists, member sections, ...)
+
+src/services/shell/mobile/  (what the phone screens and sheets do to the
+                             page: reply and react events, clipboard, the
+                             relay menu, game cards, inbox read cursors)
 ```
 
 The shell's hooks live in the hooks layer, `src/hooks/shell/mobile/`, in the
-same sub-folders: `nav/` (`useMobileNavState`, `useMobileNavActions`,
-`useMobileHistorySync`, `useMobileShellEvents`), `carousel/`
-(`useScreenCarousel`, `useCarouselDrag`, ...), `chrome/` (`useKeyboardInset`
-for the visualViewport keyboard inset), `rail/` and `screens/`. Their tests
-are under `tests/hooks/shell/mobile/`; `tests/utils/shell/mobile/swipe-nav.test.ts` covers
+same sub-folders: `nav/` (`usePhoneShell`, the shell's view model, over
+`useMobileNavState`, `useMobileNavActions`, `useMobileHistorySync`,
+`useMobileShellEvents`), `carousel/` (`useScreenCarousel`,
+`useCarouselDrag`, ...), `chrome/` (`useKeyboardInset` for the
+visualViewport keyboard inset), `rail/`, `screens/` and `sheets/` (one
+view-model hook per screen or sheet, `use<Component>`). Their tests are
+under `tests/hooks/shell/mobile/`; `tests/utils/shell/mobile/swipe-nav.test.ts` covers
 the swipe decisions.
 
 When you add a new screen or transition, the order of operations is:
@@ -356,6 +367,6 @@ When you add a new screen or transition, the order of operations is:
    dynamic (thread `parentScreen` through the opener).
 3. Add it to the screen catalog table in this doc.
 4. Add its navigation row to the trigger table in Section 4.
-5. Render it in the `body` switch in `PhoneShell.tsx`.
+5. Render it in the switch in `carousel/MobileScreenBody.tsx`.
 6. Add a test case covering the new trigger (`tests/utils/shell/mobile/url-state.test.ts` for the URL
    state, a test under `tests/app/[locale]/app/mobile/` for the screen).

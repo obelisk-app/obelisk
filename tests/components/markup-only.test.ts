@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { analyzeSource, KINDS, total, type Counts } from '../../scripts/markup-only/analyze';
 import { MULTI_COMPONENT, MULTI_COMPONENT_CEILING } from '../../scripts/markup-only/multi-component';
-import { BASELINE_PATH, countsByFile, scanTree } from '../../scripts/markup-only/scan';
+import { BASELINE_PATH, countsByFile, guardedFiles, scanTree } from '../../scripts/markup-only/scan';
 
 /**
  * The owner's rule: a component file is markup. Its state and handlers come
@@ -68,9 +68,14 @@ describe('component files are markup', () => {
     for (const reason of Object.values(MULTI_COMPONENT)) expect(reason.length).toBeGreaterThan(30);
   });
 
-  it('is looking at the real tree', () => {
-    expect(Object.keys(BASELINE).length).toBeGreaterThan(0);
-    expect(Object.values(counts).reduce((sum, c) => sum + total(c), 0)).toBeGreaterThan(0);
+  it('is looking at the real tree, which is now fully markup-only', () => {
+    // Proof that the analyzer still finds logic (so an empty baseline is not
+    // a vacuous pass) lives in 'the markup-only rule' below and in the test
+    // that pastes a calculation into the real relay admin panel. The
+    // baseline reached zero in round 29.
+    expect(guardedFiles().length).toBeGreaterThan(400);
+    expect(Object.keys(BASELINE)).toEqual([]);
+    expect(Object.values(counts).reduce((sum, c) => sum + total(c), 0)).toBe(0);
   });
 });
 

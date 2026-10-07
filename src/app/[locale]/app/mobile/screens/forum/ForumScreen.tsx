@@ -31,8 +31,8 @@ export function ForumScreen({
 }) {
   const t = useTranslations();
   const relay = useCurrentRelayUrl();
-  const forum = useForumScreen(groupId);
-  const { group, forumTags, children, visibleThreads, threadsLoading, searchQuery } = forum;
+  const forum = useForumScreen(groupId, selectChild);
+  const { group, forumTags, children, visibleThreads, threadsLoading, query } = forum;
 
   return (
     <div className="screen forum-screen active" data-screen="forum">
@@ -66,18 +66,18 @@ export function ForumScreen({
         ) : visibleThreads.length === 0 ? (
           <div className="empty-state" data-testid="mobile-forum-no-matches">
             <div className="empty-state-title">
-              {searchQuery.trim()
-                ? t('mobile.forum.noMatchesQuery', { query: searchQuery.trim() })
+              {query
+                ? t('mobile.forum.noMatchesQuery', { query })
                 : t('mobile.forum.noMatchesTags')}
             </div>
-            {searchQuery.trim() && (
+            {query && (
               <button
                 type="button"
                 className="forum-new-pill"
-                onClick={() => forum.openNewThread(searchQuery.trim())}
+                onClick={() => forum.openNewThread(query)}
                 style={{ marginTop: 10 }}
               >
-                {t('mobile.forum.createNamed', { title: searchQuery.trim() })}
+                {t('mobile.forum.createNamed', { title: query })}
               </button>
             )}
           </div>
@@ -103,11 +103,7 @@ export function ForumScreen({
           isRestricted={group?.isRestricted ?? false}
           isOpen={group?.isOpen ?? true}
           close={forum.closeNewThread}
-          onCreated={(childId) => {
-            forum.closeNewThread();
-            forum.setSearchQuery('');
-            selectChild(childId);
-          }}
+          onCreated={forum.onThreadCreated}
         />
       )}
       {forum.showSort && (

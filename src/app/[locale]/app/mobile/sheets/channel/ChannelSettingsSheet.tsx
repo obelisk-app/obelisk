@@ -14,6 +14,7 @@ import TextArea from '@/components/ui/forms/TextArea';
 import Checkbox from '@/components/ui/forms/Checkbox';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
+import { accessPillStyle, kindPillStyle } from '@/utils/shell/mobile/pill-styles';
 
 // Bottom-sheet for per-channel admin settings (kind 9002 metadata edits +
 // kind 9000/9001/9003 member management). Mirrors the desktop
@@ -49,19 +50,6 @@ export function ChannelSettingsSheet({
     adminSet, allPubkeys,
     newMember, setNewMember, makeAdmin, setMakeAdmin, memberBusy, memberError: memberErr, addMember,
   } = useChannelSettingsForm(group, close);
-
-  const togglePillStyle = (active: boolean): React.CSSProperties => ({
-    flex: 1,
-    padding: '10px 12px',
-    borderRadius: 12,
-    border: `1px solid ${active ? 'var(--accent)' : 'var(--app-line)'}`,
-    background: active ? 'rgba(180, 249, 83, 0.08)' : 'var(--app-surface)',
-    color: active ? 'var(--accent)' : 'var(--app-text-dim)',
-    fontWeight: 600,
-    fontSize: 12,
-    textAlign: 'center',
-    cursor: 'pointer',
-  });
 
   return (
     <Sheet onClose={close} screen="channel-settings" label={t('mobile.channel.settingsTitle', { name: group.name ?? group.id.slice(0, 8) })} maxHeight="94%">
@@ -110,17 +98,17 @@ export function ChannelSettingsSheet({
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.channel.access')}</label>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" data-testid="mobile-channel-access-public" style={togglePillStyle(access === 'public')} onClick={() => setAccess('public')}>
+          <button type="button" data-testid="mobile-channel-access-public" style={accessPillStyle(access === 'public')} onClick={() => setAccess('public')}>
             <div style={{ fontSize: 16 }}>🌐</div>
             <div>{t('mobile.channel.public')}</div>
             <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.publicHint')}</div>
           </button>
-          <button type="button" data-testid="mobile-channel-access-read-only" style={togglePillStyle(access === 'read-only')} onClick={() => setAccess('read-only')}>
+          <button type="button" data-testid="mobile-channel-access-read-only" style={accessPillStyle(access === 'read-only')} onClick={() => setAccess('read-only')}>
             <div style={{ fontSize: 16 }}>👁</div>
             <div>{t('mobile.channel.readOnly')}</div>
             <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.readOnlyHint')}</div>
           </button>
-          <button type="button" data-testid="mobile-channel-access-private" style={togglePillStyle(access === 'private')} onClick={() => setAccess('private')}>
+          <button type="button" data-testid="mobile-channel-access-private" style={accessPillStyle(access === 'private')} onClick={() => setAccess('private')}>
             <div style={{ fontSize: 16 }}>🔒</div>
             <div>{t('mobile.channel.private')}</div>
             <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.privateHint')}</div>
@@ -137,16 +125,7 @@ export function ChannelSettingsSheet({
               key={k}
               type="button"
               onClick={() => setChannelKind(k)}
-              style={{
-                flex: '1 1 calc(50% - 6px)',
-                padding: '8px 10px',
-                borderRadius: 10,
-                border: `1px solid ${channelKind === k ? 'var(--accent)' : 'var(--app-line)'}`,
-                background: channelKind === k ? 'rgba(180, 249, 83, 0.08)' : 'var(--app-surface)',
-                color: channelKind === k ? 'var(--accent)' : 'var(--app-text-dim)',
-                fontSize: 12,
-                fontWeight: 600,
-              }}
+              style={kindPillStyle(channelKind === k)}
             >
               {t(KIND_LABEL[k])}
             </button>

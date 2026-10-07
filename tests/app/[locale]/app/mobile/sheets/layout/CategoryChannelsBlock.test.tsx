@@ -2,7 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { groupFixture } from '@tests/support/mocks/nostr-bridge';
 import { LocaleProvider } from '@tests/support/intl';
-import { CategoryChannelsBlock, NO_CATEGORY, categoryOptions } from '@/app/[locale]/app/mobile/sheets/layout/CategoryChannelsBlock';
+import { CategoryChannelsBlock } from '@/app/[locale]/app/mobile/sheets/layout/CategoryChannelsBlock';
+import { NO_CATEGORY, categoryOptions } from '@/utils/shell/mobile/category-options';
 
 describe('categoryOptions', () => {
   it('offers "no category" first, under the label it is given, then the categories in order', () => {

@@ -1,5 +1,5 @@
 import type { NavState, ScreenName } from './url-state';
-import { resolveParent } from './swipe-nav';
+import { NAV_ORDER, resolveParent } from './swipe-nav';
 
 export type SlotRole = 'drag-curr' | 'drag-prev' | 'drag-next' | 'drag-hidden';
 
@@ -41,6 +41,31 @@ export function overlayScreenKeyFor(nav: NavState): ScreenName {
   return nav.screen === 'msg-actions'
     ? (nav.baseScreen ?? 'channel')
     : nav.screen;
+}
+
+/** The four persistent tab slots, in order, each with where it sits now. */
+export function carouselSlots(
+  nav: NavState,
+  neighbors: { left: ScreenName | null; right: ScreenName | null },
+): Array<{ screen: ScreenName; role: SlotRole }> {
+  return NAV_ORDER.map((screen) => ({ screen, role: slotRoleFor(screen, nav, neighbors) }));
+}
+
+/**
+ * Whether the current nav has a body to show. Every screen does except the
+ * message sheet over a base that cannot mount (a channel sheet with no
+ * channel, a DM sheet with no peer, any other base): then the shell renders
+ * no overlay slot at all.
+ */
+export function hasScreenBody(nav: NavState): boolean {
+  if (nav.screen !== 'msg-actions') return true;
+  if ((nav.baseScreen === 'channel' || !nav.baseScreen) && nav.groupId) return true;
+  return nav.baseScreen === 'dm-thread' && !!nav.dmPeer;
+}
+
+/** Whether the sub-screen overlay is up: a body that is not one of the persistent tabs. */
+export function showsOverlay(nav: NavState): boolean {
+  return !NAV_ORDER.includes(overlayScreenKeyFor(nav)) && hasScreenBody(nav);
 }
 
 /** The slide-in class for the overlay; `suppress` mounts it without one. */

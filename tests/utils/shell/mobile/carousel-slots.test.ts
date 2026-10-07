@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { overlayScreenKeyFor, rubberBandDx, slideClassFor, slotRoleFor, swipeAxis } from '@/utils/shell/mobile/carousel-slots';
+import { carouselSlots, hasScreenBody, overlayScreenKeyFor, rubberBandDx, showsOverlay, slideClassFor, slotRoleFor, swipeAxis } from '@/utils/shell/mobile/carousel-slots';
 import { initialNav, type NavState } from '@/utils/shell/mobile/url-state';
 import { neighborsFor } from '@/utils/shell/mobile/swipe-nav';
 
@@ -65,5 +65,30 @@ describe('rubberBandDx', () => {
   it('resists at 30% when there is nothing to reveal', () => {
     expect(rubberBandDx(100, { left: null, right: 'feed' })).toBe(30);
     expect(rubberBandDx(-100, { left: 'server', right: null })).toBe(-30);
+  });
+});
+
+describe('the carousel slots and the overlay', () => {
+  const nav = (over: Partial<NavState>): NavState => ({ ...initialNav, ...over });
+
+  it('lists the five tabs in order with their roles', () => {
+    const slots = carouselSlots(nav({ screen: 'feed' }), { left: 'server', right: 'dms-list' });
+    expect(slots.map((s) => s.screen)).toEqual(['server', 'feed', 'dms-list', 'inbox', 'settings-profile']);
+    expect(slots.map((s) => s.role)).toEqual(['drag-prev', 'drag-curr', 'drag-next', 'drag-hidden', 'drag-hidden']);
+  });
+
+  it('has a body for every screen but a message sheet over a base that cannot mount', () => {
+    expect(hasScreenBody(nav({ screen: 'channel' }))).toBe(true);
+    expect(hasScreenBody(nav({ screen: 'msg-actions', groupId: 'g' }))).toBe(true);
+    expect(hasScreenBody(nav({ screen: 'msg-actions', baseScreen: 'dm-thread', dmPeer: 'p' }))).toBe(true);
+    expect(hasScreenBody(nav({ screen: 'msg-actions', baseScreen: 'dm-thread' }))).toBe(false);
+    expect(hasScreenBody(nav({ screen: 'msg-actions', baseScreen: 'inbox', groupId: 'g' }))).toBe(false);
+  });
+
+  it('shows the overlay for a sub-screen, never for a tab', () => {
+    expect(showsOverlay(nav({ screen: 'search' }))).toBe(true);
+    expect(showsOverlay(nav({ screen: 'inbox' }))).toBe(false);
+    expect(showsOverlay(nav({ screen: 'msg-actions', groupId: 'g' }))).toBe(true);
+    expect(showsOverlay(nav({ screen: 'msg-actions', baseScreen: 'channel' }))).toBe(false);
   });
 });

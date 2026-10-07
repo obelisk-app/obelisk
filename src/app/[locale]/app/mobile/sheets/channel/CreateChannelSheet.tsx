@@ -2,7 +2,7 @@
 
 import { useId } from 'react';
 import { useTranslations } from 'next-intl';
-import { useCreateChannelForm } from '@/hooks/chat/channel/useCreateChannelForm';
+import { useCreateChannelSheet } from '@/hooks/shell/mobile/sheets/channel/useCreateChannelSheet';
 import Sheet from '@/components/ui/overlays/Sheet';
 import Input from '@/components/ui/forms/Input';
 import SheetActions from '../chrome/SheetActions';
@@ -24,10 +24,7 @@ export function CreateChannelSheet({
 }) {
   const t = useTranslations();
   const nameId = useId();
-  const form = useCreateChannelForm((id) => {
-    onCreated(id);
-    close();
-  });
+  const form = useCreateChannelSheet(onCreated, close);
 
   return (
     <Sheet onClose={close} screen="create-channel" label={t('mobile.space.newChannel')} maxHeight="88%">

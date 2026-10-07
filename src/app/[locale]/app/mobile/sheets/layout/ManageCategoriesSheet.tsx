@@ -1,14 +1,15 @@
 'use client';
 
-import { useId, useMemo } from 'react';
+import { useId } from 'react';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { type ChannelLayout } from '@/services/relay/channel-layout';
-import { useChannelLayoutEditor } from '@/hooks/relay/useChannelLayoutEditor';
+import { useManageCategoriesSheet } from '@/hooks/shell/mobile/sheets/layout/useManageCategoriesSheet';
 import { useTranslations } from 'next-intl';
 import { categoryLabel } from '@/utils/relay/category-label';
 import Sheet from '@/components/ui/overlays/Sheet';
 import Input from '@/components/ui/forms/Input';
-import { CategoryChannelsBlock, NO_CATEGORY, categoryOptions } from './CategoryChannelsBlock';
+import { CategoryChannelsBlock } from './CategoryChannelsBlock';
+import { NO_CATEGORY } from '@/utils/shell/mobile/category-options';
 import { CategoryListEditor } from './CategoryListEditor';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
@@ -31,7 +32,6 @@ export function ManageCategoriesSheet({
   const t = useTranslations();
   const newCatId = useId();
   const {
-    draft,
     error: err,
     laidOut,
     newCategoryName: newCatName,
@@ -44,16 +44,11 @@ export function ManageCategoriesSheet({
     renameCategory,
     save,
     setChannelCategory,
-  } = useChannelLayoutEditor(relayUrl, layout, channels, close);
-  const channelsById = useMemo(
-    () => Object.fromEntries(channels.map((group) => [group.id, group])),
-    [channels],
-  );
-
-  const catOptions = categoryOptions(
-    draft.categories.map((c) => ({ id: c.id, name: categoryLabel(c.name, t) })),
-    t('mobile.layout.uncategorized'),
-  );
+    draft,
+    channelsById,
+    catOptions,
+    onNewCategoryKeyDown,
+  } = useManageCategoriesSheet(relayUrl, layout, channels, close);
 
   return (
     <Sheet onClose={close} screen="manage-categories" label={t('mobile.layout.title')} zIndex={20} maxHeight="94%">
@@ -74,12 +69,7 @@ export function ManageCategoriesSheet({
               id={newCatId}
               value={newCatName}
               onChange={(e) => setNewCatName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addCategory();
-                }
-              }}
+              onKeyDown={onNewCategoryKeyDown}
               placeholder={t('mobile.layout.categoryPlaceholder')}
             />
           </div>

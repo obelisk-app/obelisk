@@ -1,25 +1,13 @@
 'use client';
 
-import { useGroups, useActiveCallByChannel } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import { LazyVoiceRoom } from '../../../mounts/lazy-mounts';
 import BackButton from '../../chrome/BackButton';
+import { useVoiceRoomScreen } from '@/hooks/shell/mobile/screens/voice/useVoiceRoomScreen';
 
 export function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; back: () => void; openChat: () => void }) {
   const t = useTranslations();
-  const groups = useGroups();
-  const group = groups.find((g) => g.id === groupId) ?? null;
-  const activeCallByChannel = useActiveCallByChannel();
-  const call = activeCallByChannel[groupId] ?? null;
-  const isSfu = group?.kind === 'voice-sfu';
-  // Status only shows once a call exists; the topology (SFU vs P2P) is now
-  // expressed by the inline tag next to the title, so the subtitle stays
-  // empty on the idle "no one's here" view instead of repeating "SFU room".
-  const sub =
-    call?.status === 'connected' ? t('mobile.voice.connected') :
-    call?.status === 'starting' ? t('mobile.voice.starting') :
-    call?.status === 'active' ? t('mobile.voice.live') :
-    call?.status ?? null; // an unknown status is a wire value, shown as it came
+  const { group, isSfu, sub } = useVoiceRoomScreen(groupId);
 
   return (
     <div className="screen voice-room-screen active" data-screen="voice-room">
@@ -53,5 +41,3 @@ export function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; 
   );
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-// 06 - DMs list

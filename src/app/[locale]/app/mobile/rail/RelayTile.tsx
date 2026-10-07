@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useMobileRelayTile, type RelayLongPressInfo } from '@/hooks/shell/mobile/rail/useMobileRelayTile';
-import { avatarStyle } from '../common/avatar';
+import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 
 /**
  * Relay tile in the spaces strip: the domain favicon, falling back to a

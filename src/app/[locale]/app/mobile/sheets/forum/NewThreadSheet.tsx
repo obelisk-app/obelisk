@@ -2,10 +2,9 @@
 
 import { useId } from 'react';
 import { type JsForumTag } from '@/services/nostr-bridge';
-import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
 import { MAX_THREAD_TAGS, useNewThreadForm } from '@/hooks/chat/forum/useNewThreadForm';
 import { useTranslations } from 'next-intl';
-import { MobileTagDot } from '../../screens/forum/MobileTagDot';
+import { NewThreadTagChip } from './NewThreadTagChip';
 import Sheet from '@/components/ui/overlays/Sheet';
 import SheetHeader from '../chrome/SheetHeader';
 import Input from '@/components/ui/forms/Input';
@@ -74,25 +73,9 @@ export function NewThreadSheet({
               {t('mobile.forum.tagsCount', { count: selectedTagIds.length, max: MAX_TAGS })}
             </label>
             <div className="forum-filter-row" style={{ flexWrap: 'wrap', overflow: 'visible', margin: 0, padding: 0 }} data-testid="mobile-new-thread-tag-picker">
-              {forumTags.map((tag) => {
-                const active = selectedTagIds.includes(tag.id);
-                const disabled = !active && selectedTagIds.length >= MAX_TAGS;
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={() => toggleTag(tag.id)}
-                    disabled={disabled}
-                    className="forum-chip"
-                    style={{ ...tagChipStyle(tag, active), opacity: disabled ? 0.4 : 1 }}
-                    data-testid={`mobile-new-thread-tag-${tag.id}`}
-                    aria-pressed={active}
-                  >
-                    {tag.emoji ? <span>{tag.emoji}</span> : <MobileTagDot tag={tag} />}
-                    <span>{tag.name}</span>
-                  </button>
-                );
-              })}
+              {forumTags.map((tag) => (
+                <NewThreadTagChip key={tag.id} tag={tag} selectedTagIds={selectedTagIds} max={MAX_TAGS} onToggle={() => toggleTag(tag.id)} />
+              ))}
             </div>
           </>
         )}
@@ -130,5 +113,3 @@ export function NewThreadSheet({
   );
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-// 14 - message actions sheet (over channel)

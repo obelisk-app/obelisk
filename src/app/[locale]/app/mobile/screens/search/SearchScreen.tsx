@@ -1,10 +1,8 @@
 'use client';
 
 import { shortHost } from '@/utils/relay-url/url-host';
-import { useRef } from 'react';
-import { useCurrentRelayUrl, useMyPubkey, type JsGroup, type JsSearchHit } from '@/services/nostr-bridge';
-import { isEmptyQuery } from '@/utils/chat/search/search-query';
-import { useRelaySearch } from '@/hooks/chat/search/useRelaySearch';
+import { useCurrentRelayUrl, useMyPubkey, type JsGroup } from '@/services/nostr-bridge';
+import { useSearchScreen } from '@/hooks/shell/mobile/screens/search/useSearchScreen';
 import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';
 import BackButton from '../../chrome/BackButton';
@@ -27,25 +25,9 @@ export function SearchScreen({
   selectGroup: (groupId: string, kind: JsGroup['kind']) => void;
 }) {
   const t = useTranslations();
-  const search = useRelaySearch();
   const relay = useCurrentRelayUrl();
   const myPubkey = useMyPubkey();
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const addToken = (token: string) => {
-    search.applyFilter(token);
-    requestAnimationFrame(() => inputRef.current?.focus());
-  };
-
-  const openHit = (h: JsSearchHit) => {
-    if (!h.groupId) return;
-    search.jumpTo(h);
-    selectGroup(h.groupId, search.groupById.get(h.groupId)?.kind ?? 'text');
-  };
-
-  const empty = isEmptyQuery(search.parsed);
-  const showChannels = search.channelMatches.length > 0;
-  const nothingAtAll = !search.busy && !search.error && search.results.length === 0 && !showChannels;
+  const { search, inputRef, empty, showChannels, nothingAtAll, addToken, openHit, onKeyDown } = useSearchScreen({ back, selectGroup });
 
   return (
     <div className="screen search-screen active" data-screen="search">
@@ -67,7 +49,7 @@ export function SearchScreen({
             placeholder={t('mobile.search.placeholder')}
             value={search.raw}
             onChange={(e) => search.setRaw(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Escape') { if (search.raw) search.setRaw(''); else back(); } }}
+            onKeyDown={onKeyDown}
             autoFocus
           />
           {search.raw && <button className="search-clear" onClick={() => search.setRaw('')}>×</button>}

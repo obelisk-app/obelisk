@@ -29,3 +29,8 @@ export function timeOfDay(ts: number, locale: Locale): string {
     hour: '2-digit', minute: '2-digit', hour12: false,
   });
 }
+
+/** A reply quote's text: whitespace runs folded to one space, cut at 120 characters. */
+export function replyPreviewText(content: string): string {
+  return content.replace(/\s+/g, ' ').slice(0, 120);
+}

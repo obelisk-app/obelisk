@@ -9,17 +9,11 @@ import type { ForumScreenState } from '@/hooks/shell/mobile/screens/forum/useFor
 /** Search-or-create, the + pill, the sort chip and the tag filter chips. */
 export function ForumChrome({ forum }: { forum: ForumScreenState }) {
   const t = useTranslations();
-  const { searchQuery, setSearchQuery, canCreateFromSearch, openNewThread, selectedTagIds } = forum;
+  const { searchQuery, setSearchQuery, canCreateFromSearch, openNewThread, selectedTagIds, query } = forum;
   const allActive = selectedTagIds.length === 0;
   return (
     <div className="forum-chrome" data-testid="mobile-forum-chrome">
-      <form
-        className="forum-search-row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (canCreateFromSearch) openNewThread(searchQuery.trim());
-        }}
-      >
+      <form className="forum-search-row" onSubmit={forum.submitSearch}>
         <div className="search-input-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
           <Input
@@ -48,7 +42,7 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
           // The placeholder tells the user to "Tap + to create", so + has
           // to carry the text they typed, it used to discard it and open
           // an empty composer.
-          onClick={() => openNewThread(searchQuery.trim())}
+          onClick={() => openNewThread(query)}
           data-testid="mobile-forum-new-thread-btn"
           aria-label={t('chat.forum.new')}
         >

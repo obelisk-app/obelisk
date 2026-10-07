@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import {
   useChildrenByParent,
   useGroupMetadataEose,
@@ -15,8 +15,12 @@ import { hasExactThreadMatch, visibleForumThreads } from '@/utils/chat/forum/for
 /** One shared empty list, so a forum with no threads keeps a stable identity. */
 const NO_CHILDREN: ReadonlyArray<string> = [];
 
-/** The phone forum's data and filters: its threads, search, tag chips, sort and the two sheets. */
-export function useForumScreen(groupId: string) {
+/**
+ * The phone forum's data and filters: its threads, search, tag chips, sort
+ * and the two sheets. `selectChild` opens a thread, the one just created
+ * included.
+ */
+export function useForumScreen(groupId: string, selectChild: (childId: string) => void = () => {}) {
   const groups = useGroups();
   const childrenByParent = useChildrenByParent();
   const groupMetadataEose = useGroupMetadataEose();
@@ -54,6 +58,12 @@ export function useForumScreen(groupId: string) {
     [children, searchQuery, selectedTagIds, prefs, messagesByGroup],
   );
 
+  const openNewThread = (initial = '') => {
+    setPrefillTitle(initial);
+    setShowNewThread(true);
+  };
+  const canCreateFromSearch = !exactMatch && searchQuery.trim().length > 0;
+
   return {
     group,
     forumTags,
@@ -63,19 +73,29 @@ export function useForumScreen(groupId: string) {
     prefs,
     updatePrefs,
     searchQuery,
+    /** The search as typed, trimmed: what a new thread from it is titled. */
+    query: searchQuery.trim(),
     setSearchQuery,
+    /** Enter in the search box creates a thread named after it, when none has that name. */
+    submitSearch: (e: FormEvent) => {
+      e.preventDefault();
+      if (canCreateFromSearch) openNewThread(searchQuery.trim());
+    },
     selectedTagIds,
     clearTags: () => setSelectedTagIds([]),
     toggleTag: (id: string) => {
       setSelectedTagIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     },
-    canCreateFromSearch: !exactMatch && searchQuery.trim().length > 0,
+    canCreateFromSearch,
     showNewThread,
     closeNewThread: () => setShowNewThread(false),
     prefillTitle,
-    openNewThread: (initial = '') => {
-      setPrefillTitle(initial);
-      setShowNewThread(true);
+    openNewThread,
+    /** A thread was created from the sheet: close it, clear the search and open the thread. */
+    onThreadCreated: (childId: string) => {
+      setShowNewThread(false);
+      setSearchQuery('');
+      selectChild(childId);
     },
     showSort,
     setShowSort,

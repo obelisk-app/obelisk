@@ -1,33 +1,18 @@
 'use client';
 
-import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
-import { useAuthor } from '@/hooks/social/profile/useAuthor';
-import { shortNpubLabel } from '@/utils/identity/short-npub';
-import { useId, useMemo, useState } from 'react';
-import { useDirectMessages } from '@/services/nostr-bridge';
+import { useId } from 'react';
 import { useTranslations } from 'next-intl';
-import { npubToHex } from '@nostr-wot/data';
-import { useNostrUserSearch, type UserHit } from '@/hooks/identity/useNostrUserSearch';
-import { avatarStyle } from '../../common/avatar';
+import { useComposeDmScreen } from '@/hooks/shell/mobile/screens/dm/useComposeDmScreen';
 import Input from '@/components/ui/forms/Input';
-import RemoteImage from '@/components/ui/media/RemoteImage';
 import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
+import { ComposeUserRow } from './ComposeUserRow';
+import { ComposeRecentRow } from './ComposeRecentRow';
 
+/** The phone new-message screen: a To: field, recent conversations, people search. */
 export function ComposeDmScreen({ back, selectPeer }: { back: () => void; selectPeer: (peer: string) => void }) {
   const t = useTranslations();
   const toId = useId();
-  const [query, setQuery] = useState('');
-  const dms = useDirectMessages();
-  const { directHit, nip05Hit, nostrResults, loading } = useNostrUserSearch(query);
-  const recent = useMemo(() => Object.keys(dms).slice(0, 20), [dms]);
-  const results = useMemo(() => {
-    const seen = new Set<string>();
-    return [directHit, nip05Hit, ...nostrResults].filter((hit): hit is UserHit =>
-      !!hit && !seen.has(hit.pubkey) && !!seen.add(hit.pubkey),
-    );
-  }, [directHit, nip05Hit, nostrResults]);
-  const decoded = npubToHex(query);
-  const searching = query.trim().length >= 2;
+  const { query, setQuery, recent, results, loading, searching, canNext, next } = useComposeDmScreen(selectPeer);
 
   return (
     <div className="screen compose-dm-screen active" data-screen="compose-dm">
@@ -35,9 +20,9 @@ export function ComposeDmScreen({ back, selectPeer }: { back: () => void; select
         <button className="compose-dm-cancel" onClick={back}>{t('common.cancel')}</button>
         <h2>{t('dm.newMessage')}</h2>
         <button
-          className={`compose-dm-next ${decoded ? 'active' : ''}`}
-          disabled={!decoded}
-          onClick={() => decoded && selectPeer(decoded)}
+          className={`compose-dm-next ${canNext ? 'active' : ''}`}
+          disabled={!canNext}
+          onClick={next}
         >
           {t('dm.compose.next')}
         </button>
@@ -76,39 +61,3 @@ export function ComposeDmScreen({ back, selectPeer }: { back: () => void; select
     </div>
   );
 }
-
-function ComposeUserRow({ hit, onClick }: { hit: UserHit; onClick: () => void }) {
-  const name = hit.displayName || displayNameFor(hit.pubkey);
-  return (
-    <button className="dm-row" onClick={onClick} data-testid="mobile-user-search-result">
-      <div className="dm-ava-list" style={avatarStyle(hit.pubkey)}>
-        {hit.picture ? <RemoteImage src={hit.picture} alt="" /> : avatarInitials(name, hit.pubkey)}
-      </div>
-      <div className="dm-meta">
-        <div className="dm-row-top"><span className="dm-name">{name}</span></div>
-        <div className="dm-preview">{hit.nip05 ?? shortNpubLabel(hit.pubkey)}</div>
-      </div>
-    </button>
-  );
-}
-
-function ComposeRecentRow({ peer, onClick }: { peer: string; onClick: () => void }) {
-  const meta = useAuthor(peer);
-  const name = displayNameFor(peer, meta);
-  return (
-    <button className="dm-row" onClick={onClick}>
-      <div className="dm-ava-list" style={avatarStyle(peer)}>
-        {meta?.picture ? <RemoteImage src={meta.picture} alt="" /> : avatarInitials(name, peer)}
-      </div>
-      <div className="dm-meta">
-        <div className="dm-row-top">
-          <span className="dm-name">{name}</span>
-        </div>
-        <div className="dm-preview">{meta?.nip05 ?? shortNpubLabel(peer)}</div>
-      </div>
-    </button>
-  );
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// 12 - search

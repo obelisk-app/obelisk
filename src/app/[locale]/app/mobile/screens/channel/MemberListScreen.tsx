@@ -1,88 +1,14 @@
 'use client';
 
-import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
-import { avatarStyle } from '../../common/avatar';
-import { shortNpubLabel } from '@/utils/identity/short-npub';
-import { useCallback, useMemo } from 'react';
-import {
-  useGroups,
-  useUserMetadata,
-  useAdmins,
-  useMembers,
-  useMembershipReady,
-  useCurrentRelayUrl,
-} from '@/services/nostr-bridge';
-import RoleBadge from '@/components/chat/members/RoleBadge';
-import { type RelayRole } from '@/services/relay/relay-roles';
 import { useTranslations } from 'next-intl';
-import { useChatStore } from '@/store/chat';
-import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/members/useNostrPresence';
-import { channelHeaderLabel } from '@/utils/shell/mobile/labels';
+import { useMemberListScreen } from '@/hooks/shell/mobile/screens/channel/useMemberListScreen';
 import BackButton from '../../chrome/BackButton';
-import RemoteImage from '@/components/ui/media/RemoteImage';
+import { MemberRow } from './MemberRow';
 
+/** The phone member list: admins, then a section per relay role, then everyone else, with who is online. */
 export function MemberListScreen({ groupId, back, openProfile }: { groupId: string; back: () => void; openProfile: (p: string) => void }) {
   const t = useTranslations();
-  const groups = useGroups();
-  const relayUrl = useCurrentRelayUrl();
-  const group = groups.find((g) => g.id === groupId) ?? null;
-  const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
-  const header = channelHeaderLabel(group, parentGroup, groupId);
-  const admins = useAdmins(groupId);
-  const members = useMembers(groupId);
-  const membershipReady = useMembershipReady(groupId);
-
-  const adminSet = useMemo(() => new Set(admins), [admins]);
-  const nonAdminMembers = useMemo(() => members.filter((m) => !adminSet.has(m)), [members, adminSet]);
-  const memberRoles = useChatStore((s) => s.rolesByPubkey);
-
-  // Same ladder as the desktop rail: admins, then a section per relay role in
-  // tier order, then everyone holding no role.
-  const rankedSections = useMemo(() => {
-    const byRole = new Map<string, { role: RelayRole; pubkeys: string[] }>();
-    const plain: string[] = [];
-    for (const pubkey of nonAdminMembers) {
-      const top = memberRoles[pubkey]?.[0];
-      if (!top) {
-        plain.push(pubkey);
-        continue;
-      }
-      const bucket = byRole.get(top.id) ?? { role: top, pubkeys: [] };
-      bucket.pubkeys.push(pubkey);
-      byRole.set(top.id, bucket);
-    }
-    const ranked = Array.from(byRole.values())
-      .sort((a, b) => (b.role.tier - a.role.tier) || a.role.id.localeCompare(b.role.id))
-      .map(({ role, pubkeys }) => ({
-        key: role.id,
-        label: role.emoji ? `${role.emoji} ${role.name}` : role.name,
-        pubkeys,
-      }));
-    return [...ranked, { key: 'member', label: t('mobile.members.members'), pubkeys: plain }]
-      .filter((section) => section.pubkeys.length > 0);
-  }, [memberRoles, nonAdminMembers, t]);
-
-  const allPubkeys = useMemo(() => {
-    const set = new Set<string>([...admins, ...members]);
-    return [...set];
-  }, [admins, members]);
-  useNostrPresence(allPubkeys, relayUrl);
-  // presenceTick re-renders the list on the offline-fade timer.
-  useChatStore((s) => s.presenceTick);
-  const lastActivityAt = useChatStore((s) => s.lastActivityAt);
-
-  const isOnline = useCallback(
-    (pubkey: string) => {
-      const at = lastActivityAt[presenceActivityKey(relayUrl, pubkey)];
-      return !!at && at >= Date.now() - PRESENCE_WINDOW_MS;
-    },
-    [lastActivityAt, relayUrl],
-  );
-
-  const onlineCount = useMemo(
-    () => allPubkeys.reduce((n, pk) => (isOnline(pk) ? n + 1 : n), 0),
-    [allPubkeys, isOnline],
-  );
+  const vm = useMemberListScreen(groupId);
 
   return (
     <div className="screen member-list-screen active" data-screen="member-list">
@@ -90,25 +16,25 @@ export function MemberListScreen({ groupId, back, openProfile }: { groupId: stri
         <div className="chat-row">
           <div className="chat-title-block">
             <BackButton onClick={back} />
-            <div className="chat-channel"><span className="hash">#</span>{header.channel} · {t('mobile.members.label')}</div>
+            <div className="chat-channel"><span className="hash">#</span>{vm.header.channel} · {t('mobile.members.label')}</div>
           </div>
-          <div className="member-presence-count">{onlineCount}/{allPubkeys.length}</div>
+          <div className="member-presence-count">{vm.onlineCount}/{vm.total}</div>
         </div>
       </div>
       <div className="search-body">
-        {admins.length > 0 && (
+        {vm.admins.length > 0 && (
           <>
-            <div className="member-section-label" data-testid="member-section-admin">{t('mobile.members.admins')} · {admins.length}</div>
-            {admins.map((p) => <MemberRow key={p} pubkey={p} role="admin" online={isOnline(p)} onClick={() => openProfile(p)} />)}
+            <div className="member-section-label" data-testid="member-section-admin">{t('mobile.members.admins')} · {vm.admins.length}</div>
+            {vm.admins.map((p) => <MemberRow key={p} pubkey={p} role="admin" online={vm.isOnline(p)} onClick={() => openProfile(p)} />)}
           </>
         )}
-        {rankedSections.map((section) => (
+        {vm.sections.map((section) => (
           <div key={section.key} data-testid={`member-section-${section.key}`}>
             <div className="member-section-label">{section.label} · {section.pubkeys.length}</div>
-            {section.pubkeys.map((p) => <MemberRow key={p} pubkey={p} online={isOnline(p)} onClick={() => openProfile(p)} />)}
+            {section.pubkeys.map((p) => <MemberRow key={p} pubkey={p} online={vm.isOnline(p)} onClick={() => openProfile(p)} />)}
           </div>
         ))}
-        {members.length === 0 && admins.length === 0 && !membershipReady && (
+        {vm.loading && (
           <div
             className="empty-state"
             data-testid="members-loading"
@@ -118,7 +44,7 @@ export function MemberListScreen({ groupId, back, openProfile }: { groupId: stri
             <div className="empty-state-title">{t('mobile.members.loading')}</div>
           </div>
         )}
-        {members.length === 0 && admins.length === 0 && membershipReady && (
+        {vm.empty && (
           <div className="empty-state">
             <div className="empty-state-title">{t('mobile.members.empty')}</div>
             <div className="empty-state-desc">{t('mobile.members.emptyDescription')}</div>
@@ -128,26 +54,3 @@ export function MemberListScreen({ groupId, back, openProfile }: { groupId: stri
     </div>
   );
 }
-
-function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; role?: 'admin'; online: boolean; onClick: () => void }) {
-  const t = useTranslations();
-  const meta = useUserMetadata(pubkey);
-  const name = displayNameFor(pubkey, meta);
-  return (
-    <button className="member-row" onClick={onClick}>
-      <div className={`dm-ava-list ${online ? '' : 'offline'}`} style={{ ...avatarStyle(pubkey), width: 36, height: 36, fontSize: 12 }}>
-        {meta?.picture ? <RemoteImage src={meta.picture} alt="" /> : avatarInitials(name, pubkey)}
-      </div>
-      <div className="member-row-meta">
-        <span className="member-row-name">{name}</span>
-        <span className="member-row-nip">{meta?.nip05 ?? shortNpubLabel(pubkey)}</span>
-      </div>
-      <RoleBadge pubkey={pubkey} />
-      {role === 'admin' && <span className="role-badge b-core">{t('mobile.members.admin')}</span>}
-      <span className={`member-row-presence ${online ? 'on' : 'off'}`} />
-    </button>
-  );
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// 11 - compose DM (search + open thread)

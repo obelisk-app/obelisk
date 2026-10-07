@@ -48,7 +48,8 @@ vi.mock('@/app/[locale]/app/panes/channel/ChatPanel', () => ({ ChatLayout: Stale
 vi.mock('@/app/[locale]/app/mobile/screens/channel/ChannelScreen', () => ({ ChannelScreen: StalePane }));
 
 import { DesktopMain } from '@/app/[locale]/app/desktop/DesktopMain';
-import { renderScreenBody, type MobileScreenProps } from '@/app/[locale]/app/mobile/carousel/MobileScreens';
+import { MobileScreenBody } from '@/app/[locale]/app/mobile/carousel/MobileScreenBody';
+import type { MobileScreenProps } from '@/hooks/shell/mobile/nav/usePhoneShell';
 import type { NavState } from '@/utils/shell/mobile/url-state';
 import type { FeedPaneControls } from '@/hooks/shell/desktop/useDesktopLayout';
 import type { View } from '@/utils/shell/desktop/view';
@@ -89,7 +90,7 @@ const PROPS = new Proxy({ t: (k: string) => k, dmOptInEnabled: true, myFollows: 
 }) as unknown as MobileScreenProps;
 
 function phone(nav: Partial<NavState>) {
-  return <>{renderScreenBody({ ...NAV, ...nav }, PROPS)}</>;
+  return <MobileScreenBody nav={{ ...NAV, ...nav }} p={PROPS} />;
 }
 
 describe('switching channels', () => {

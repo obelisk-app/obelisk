@@ -3,7 +3,7 @@
 import { useRef, type ChangeEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import FileInput from '@/components/ui/forms/FileInput';
-import { NameAvatar } from '../../common/avatar';
+import { NameAvatar } from '../../common/NameAvatar';
 
 /** The avatar as a tap target that opens the image picker, with the upload tip beside it. */
 export default function EditProfileAvatarTap({

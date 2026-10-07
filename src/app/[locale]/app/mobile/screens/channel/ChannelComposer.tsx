@@ -1,8 +1,7 @@
 'use client';
 
-import { displayNameFor } from '@/utils/identity/display-name';
-import { forwardRef, useImperativeHandle, useRef, type InputHTMLAttributes } from 'react';
-import { useUserMetadata, type JsGroup, type JsMessage } from '@/services/nostr-bridge';
+import { forwardRef, type InputHTMLAttributes } from 'react';
+import { type JsGroup, type JsMessage } from '@/services/nostr-bridge';
 import { MentionText } from '@/components/chat/mentions/MentionText';
 import MessageMediaPicker from '@/components/chat/picker/MessageMediaPicker';
 import {
@@ -11,21 +10,17 @@ import {
   VoiceNoteButton,
   VoiceNoteDraft,
 } from '@/components/chat/composer/ComposerActions';
-import { useChannelComposer, type ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
+import { type ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
+import { usePhoneChannelComposer } from '@/hooks/shell/mobile/screens/channel/usePhoneChannelComposer';
 import { useTranslations } from 'next-intl';
 import { MESSAGE_INPUT_PROPS } from '@/utils/chat/composer/message-input-props';
 import { MobileMentionAutocomplete } from './MobileMentionAutocomplete';
 import Input from '@/components/ui/forms/Input';
 import EmojiSheet from '../../sheets/message/EmojiSheet';
+import { ReplyAuthorName } from './ReplyAuthorName';
 
 /** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
 const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
-
-function ReplyAuthorName({ pubkey }: { pubkey: string }) {
-  const meta = useUserMetadata(pubkey);
-  const name = displayNameFor(pubkey, meta);
-  return <span className="composer-reply-author">{name}</span>;
-}
 
 /**
  * The phone composer skin over `useChannelComposer`. Its own component so a
@@ -40,12 +35,7 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
   onOpenNewGame: () => void;
 }>(function ChannelComposer({ groupId, group, messages, replyingTo, setReplyingTo, onOpenNewGame }, ref) {
   const t = useTranslations();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const composer = useChannelComposer({
-    groupId, group, messages, replyingTo, setReplyingTo, inputRef, onOpenNewGame, maxMentionResults: 6,
-  });
-  const { onPickFiles } = composer;
-  useImperativeHandle(ref, () => ({ pickFiles: (files) => { void onPickFiles(files); } }), [onPickFiles]);
+  const composer = usePhoneChannelComposer({ groupId, group, messages, replyingTo, setReplyingTo, onOpenNewGame }, ref);
 
   return (
     <div className="composer">
@@ -107,14 +97,11 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
         <Input
           variant="bare"
           {...messageInputProps}
-          ref={inputRef}
+          ref={composer.inputRef}
           className={composer.draftVoiceNote ? "hidden" : "composer-input"}
           value={composer.draft}
-          onChange={(e) => composer.onInput(e.target.value, e.target.selectionStart ?? e.target.value.length)}
-          onSelect={(e) => {
-            const el = e.currentTarget;
-            composer.onSelect(el.value, el.selectionStart ?? el.value.length);
-          }}
+          onChange={composer.onInputChange}
+          onSelect={composer.onInputSelect}
           onPaste={composer.onPaste}
           placeholder={t('mobile.channel.messagePlaceholder', { name: group?.name ?? t('common.channel') })}
           aria-label={t('mobile.channel.messagePlaceholder', { name: group?.name ?? t('common.channel') })}

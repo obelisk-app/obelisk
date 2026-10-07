@@ -41,8 +41,10 @@ describe('deep-link relay gate', () => {
   });
 
   it('the phone shell hands the parsed relay to useRelayDeepLink and never switches directly', () => {
-    // The URL parse and history seeding live in `src/hooks/shell/mobile/nav/useMobileHistorySync.ts`.
-    expect(read('mobile/PhoneShell.tsx')).toContain('useMobileHistorySync(');
+    // The shell's view model is `src/hooks/shell/mobile/nav/usePhoneShell.ts`; the URL parse and
+    // history seeding live in `src/hooks/shell/mobile/nav/useMobileHistorySync.ts`.
+    expect(read('mobile/PhoneShell.tsx')).toContain('usePhoneShell(');
+    expect(read('../../../hooks/shell/mobile/nav/usePhoneShell.ts')).toContain('useMobileHistorySync(');
     const shell = read('../../../hooks/shell/mobile/nav/useMobileHistorySync.ts');
     expect(shell).toContain("from '@/hooks/relay/useRelayDeepLink'");
     const effect = deepLinkEffect(shell, 'parseUrl(window.location.search)', 'buildSeedHistory(');

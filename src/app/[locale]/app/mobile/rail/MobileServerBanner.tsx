@@ -5,7 +5,7 @@ import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator
 import RelayStatusPill from '@/components/relay/RelayStatusPill';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useMobileServerBanner } from '@/hooks/shell/mobile/rail/useMobileServerBanner';
-import { avatarStyle } from '../common/avatar';
+import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 
 /**
  * The active relay's banner above the phone's channel list: its banner

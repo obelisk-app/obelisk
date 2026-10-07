@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import { nostrActions } from '@/services/nostr-bridge';
 import LanguagePreference from '@/components/settings/appearance/LanguagePreference';
 import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
 import AppearancePreferenceControls from '@/components/settings/appearance/AppearancePreferenceControls';
@@ -14,47 +12,29 @@ import AccountBackupExport from '@/components/settings/account/AccountBackupExpo
 import DeveloperSignatureTest from '@/components/settings/account/DeveloperSignatureTest';
 import LocalDataPanel from '@/components/settings/privacy/LocalDataPanel';
 import { useTranslations } from 'next-intl';
-import { setDmOptInEnabled } from '@/services/chat/dm/opt-in';
-import { useDmOptInEnabled } from '@/hooks/chat/dm/unlock/useDmOptInEnabled';
-import { useHintsStore } from '@/store/hints';
-import { useToastStore } from '@/store/feedback/toast';
+import { useSettingsPrefsScreen } from '@/hooks/shell/mobile/screens/settings/useSettingsPrefsScreen';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { DisconnectConfirmSheet } from '../../sheets/account/DisconnectConfirmSheet';
 import BackButton from '../../chrome/BackButton';
+import { SettingsSubScreen } from './SettingsSubScreen';
 
 export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward' | 'back') => void }) {
   const t = useTranslations();
-  const dmOptInEnabled = useDmOptInEnabled();
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
-  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
-  const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const [dataOpen, setDataOpen] = useState(false);
+  const vm = useSettingsPrefsScreen();
 
-  if (appearanceOpen) {
+  if (vm.view === 'appearance') {
     return (
-      <div className="screen active" data-screen="settings-appearance">
-        <div className="app-header">
-          <BackButton onClick={() => setAppearanceOpen(false)} />
-          <h2>{t('settings.preferences.appearance.title')}</h2>
-        </div>
-        <div className="settings-body">
-          <AppearancePreferenceControls variant="mobile" />
-        </div>
-      </div>
+      <SettingsSubScreen screen="settings-appearance" title={t('settings.preferences.appearance.title')} onBack={vm.closeView}>
+        <AppearancePreferenceControls variant="mobile" />
+      </SettingsSubScreen>
     );
   }
 
-  if (dataOpen) {
+  if (vm.view === 'data') {
     return (
-      <div className="screen active" data-screen="settings-data">
-        <div className="app-header">
-          <BackButton onClick={() => setDataOpen(false)} data-testid="local-data-back" />
-          <h2>{t('settings.section.data.label')}</h2>
-        </div>
-        <div className="settings-body">
-          <LocalDataPanel mobile />
-        </div>
-      </div>
+      <SettingsSubScreen screen="settings-data" title={t('settings.section.data.label')} onBack={vm.closeView} backTestId="local-data-back">
+        <LocalDataPanel mobile />
+      </SettingsSubScreen>
     );
   }
 
@@ -73,7 +53,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
           <button
             type="button"
             className="settings-row action"
-            onClick={() => setAppearanceOpen(true)}
+            onClick={() => vm.openView('appearance')}
             data-testid="mobile-appearance-submenu"
           >
             <span>{t('settings.preferences.appearance.title')}</span>
@@ -83,15 +63,12 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
           <button
             type="button"
             className="settings-row action"
-            onClick={() => {
-              useHintsStore.getState().resetHints();
-              useToastStore.getState().pushToast({ title: t('shell.hints.replayed'), body: '' });
-            }}
+            onClick={vm.replayHints}
             data-testid="mobile-replay-hints"
           >
             <span>{t('shell.hints.replay')}</span>
           </button>
-          <button type="button" className="settings-row action" onClick={() => setMediaLibraryOpen(true)} data-testid="mobile-media-library">
+          <button type="button" className="settings-row action" onClick={vm.openMediaLibrary} data-testid="mobile-media-library">
             <span style={{ minWidth: 0, flex: 1 }}>
               <span style={{ display: 'block' }}>{t('mobile.settings.packs')}</span>
               <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>{t('mobile.settings.packsHint')}</span>
@@ -101,7 +78,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
           <button
             type="button"
             className="settings-row action"
-            onClick={() => setDmOptInEnabled(!dmOptInEnabled)}
+            onClick={vm.toggleDms}
           >
             <span style={{ minWidth: 0, flex: 1 }}>
               <span style={{ display: 'block' }}>{t('settings.preferences.directMessages.label')}</span>
@@ -110,9 +87,9 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
               </span>
             </span>
             <span
-              className={`toggle ${dmOptInEnabled ? 'on' : ''}`}
+              className={`toggle ${vm.dmOptInEnabled ? 'on' : ''}`}
               role="switch"
-              aria-checked={dmOptInEnabled}
+              aria-checked={vm.dmOptInEnabled}
               data-testid="mobile-dm-opt-in-toggle"
             />
           </button>
@@ -127,7 +104,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
           <button
             type="button"
             className="settings-row action"
-            onClick={() => setDataOpen(true)}
+            onClick={() => vm.openView('data')}
             data-testid="mobile-local-data-submenu"
           >
             <span style={{ minWidth: 0, flex: 1 }}>
@@ -147,7 +124,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
           <div className="settings-section-title">{t("mobile.settings.identity")}</div>
           <button
             className="settings-btn-danger"
-            onClick={() => setConfirmingLogout(true)}
+            onClick={vm.askLogout}
             data-testid="disconnect-btn"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -160,16 +137,14 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
         </div>
       </div>
     </div>
-      {mediaLibraryOpen && <MediaLibraryModal onClose={() => setMediaLibraryOpen(false)} />}
-      {confirmingLogout && (
+      {vm.mediaLibraryOpen && <MediaLibraryModal onClose={vm.closeMediaLibrary} />}
+      {vm.confirmingLogout && (
         <DisconnectConfirmSheet
-          onConfirm={() => { setConfirmingLogout(false); void nostrActions.logout(); }}
-          onCancel={() => setConfirmingLogout(false)}
+          onConfirm={vm.confirmLogout}
+          onCancel={vm.cancelLogout}
         />
       )}
     </>
   );
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-// rehydrating

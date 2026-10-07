@@ -21,7 +21,7 @@ vi.mock('@/services/voice/jump-to-voice', () => ({
 }));
 
 import { useVoiceStore } from '@/store/voice';
-import { shouldHideMobileBottomNav } from '@/app/[locale]/app/mobile/chrome/BottomNav';
+import { shouldHideMobileBottomNav } from '@/utils/shell/mobile/bottom-nav';
 import { MobileVoiceStatusSlot } from '@/app/[locale]/app/mobile/chrome/MobileVoiceStatusSlot';
 import { LocaleProvider } from '@tests/support/intl';
 

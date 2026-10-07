@@ -1,7 +1,7 @@
 'use client';
 
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
-import { avatarStyle } from '../../common/avatar';
+import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useUserMetadata } from '@/services/nostr-bridge';
 import { useManageMemberRow } from '@/hooks/chat/members/useManageMemberRow';

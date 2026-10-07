@@ -220,7 +220,7 @@ Verified on 2026-10-06. Do not add to any of these.
 
 - Local `KIND_*` constants remain in five `src/services/social/` files, and raw kind numbers in a few filters; the lists are in `tests/utils/nostr/nip-kinds.test.ts`.
 - `normalizeRelayUrl` exists twice with different signatures: `src/utils/relay-url/normalize.ts` (canonical) and `src/services/social/relays.ts` (the social tier's).
-- The muted-channel marker is still the `🔕` emoji in `mobile/screens/server/ChannelRow.tsx` and `panes/sidebar/GroupNode.tsx`.
+- The muted-channel marker is still the `🔕` emoji in `mobile/screens/server/ChannelRowCounts.tsx` and `panes/sidebar/GroupNode.tsx`.
 - Hooks outside the hooks layer: the bridge's own hooks (`src/services/nostr-bridge/hooks/`), `useRemoteMediaGate` (`src/services/media/remote-media-gate.ts`, on the front-door allow-list) and `useWotStore` (`src/services/wot/store.ts`). `ReadStateRoot` (`src/services/read-state/root.tsx`) is a component in services.
 - `tests/support/mocks/ndk.ts` mocks a library that is no longer a dependency; nothing imports it.
 - Open bugs: [docs/known-bugs.md](docs/known-bugs.md), [docs/sfu-known-bugs.md](docs/sfu-known-bugs.md).

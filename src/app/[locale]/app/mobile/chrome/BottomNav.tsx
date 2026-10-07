@@ -3,9 +3,8 @@
 import { type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import HintDot from '@/components/hints/HintDot';
-import type { SurfaceId } from '@/utils/hints/registry';
 import { type ScreenName, type NavState } from '@/utils/shell/mobile/url-state';
-import { NAV_ORDER, resolveParent } from '@/utils/shell/mobile/swipe-nav';
+import { activeTabFor, badgeLabel, NAV_HINT_ANCHOR, NAV_HINT_ID } from '@/utils/shell/mobile/bottom-nav';
 
 interface NavTab { id: ScreenName; icon: ReactNode; label: string; badge?: number }
 
@@ -27,41 +26,6 @@ const NAV_ICONS: Record<'servers' | 'feed' | 'dms' | 'inbox' | 'you', ReactNode>
   ),
 };
 
-/**
- * Which hint each bottom-nav tab introduces.
- *
- * The tab is the only control that exists before you have been to the
- * screen, so it is where the dot goes: the app says "there is something
- * over there" before it explains what.
- */
-const NAV_HINT_ANCHOR: Partial<Record<ScreenName, string>> = {
-  feed: 'nav-feed',
-  'dms-list': 'dm-list',
-  inbox: 'inbox-tabs',
-  'settings-profile': 'profile-button',
-};
-
-const NAV_HINT_ID: Partial<Record<ScreenName, string>> = {
-  feed: 'feed-source',
-  'dms-list': 'dms',
-  inbox: 'inbox',
-  'settings-profile': 'identity',
-};
-
-/**
- * Screens that have something to explain. Anything else (a sheet, an
- * editor, a sub-screen) maps to nothing rather than borrowing its parent's
- * hint, which would point at a control the reader cannot see.
- */
-const HINT_SURFACES = new Set<string>([
-  'server', 'channel', 'feed', 'dms-list', 'inbox', 'settings-profile', 'voice-room',
-]);
-
-export function hintSurfaceFor(screen: ScreenName): SurfaceId | null {
-  if (!HINT_SURFACES.has(screen)) return null;
-  return (screen === 'voice-room' ? 'voice' : screen) as SurfaceId;
-}
-
 export function BottomNav({
   nav,
   onTabPress,
@@ -81,11 +45,7 @@ export function BottomNav({
     { id: 'inbox', icon: NAV_ICONS.inbox, label: t('shell.inbox.title'), badge: inboxBadge },
     { id: 'settings-profile', icon: NAV_ICONS.you, label: t('settings.you') },
   ];
-  // Active tab = the top-level tab the current nav resolves to. For sub-
-  // screens with dynamic parents (profile-view from inbox, member-list from
-  // channel, ...) this respects where the user actually came from rather
-  // than the hardcoded static map. See docs/mobile-navigation.md §3.
-  const activeTab = NAV_ORDER.includes(nav.screen) ? nav.screen : resolveParent(nav);
+  const activeTab = activeTabFor(nav);
   return (
     <nav className="bottom-nav">
       {tabs.map((t) => (
@@ -101,24 +61,9 @@ export function BottomNav({
           {t.icon}
           <span>{t.label}</span>
           {NAV_HINT_ID[t.id] && <HintDot hintId={NAV_HINT_ID[t.id] as string} />}
-          {t.badge !== undefined && t.badge > 0 && (
-            <span className="nav-badge">{t.badge > 99 ? '99+' : t.badge}</span>
-          )}
+          {badgeLabel(t.badge) && <span className="nav-badge">{badgeLabel(t.badge)}</span>}
         </button>
       ))}
     </nav>
   );
 }
-
-export function shouldHideMobileBottomNav(screen: ScreenName, kbInset: number): boolean {
-  return (
-    screen === 'profile-view' ||
-    screen === 'search' ||
-    screen === 'compose-dm' ||
-    screen === 'profile-edit' ||
-    kbInset > 0
-  );
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// 01 - login
