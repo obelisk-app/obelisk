@@ -1,15 +1,11 @@
 'use client';
 
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useMemo } from 'react';
-import { shortNpubLabel } from '@/utils/identity/short-npub';
-import { useMyFollows, useMyPubkey } from '@/services/nostr-bridge';
-import { suggestedAuthors } from '@/services/social/feed-people';
-import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { useTranslations } from 'next-intl';
-import UserAvatar from '@/components/ui/media/UserAvatar';
-import FollowButton from '@/app/[locale]/notes/[id]/FollowButton';
-import WidgetCard, { WidgetEmpty } from './WidgetCard';
+import { useWhoToFollowWidget } from '@/hooks/social/widgets/useWhoToFollowWidget';
+import WidgetCard from './WidgetCard';
+import WidgetEmpty from './WidgetEmpty';
+import WhoToFollowRow from './WhoToFollowRow';
 
 /**
  * People in the feed the reader does not follow yet.
@@ -26,16 +22,7 @@ export default function WhoToFollowWidget({
   onOpenProfile?: (pubkey: string) => void;
 }) {
   const t = useTranslations();
-  const myPubkey = useMyPubkey();
-  const follows = useMyFollows();
-
-  const people = useMemo(
-    () => suggestedAuthors(notes, {
-      limit: 5,
-      exclude: myPubkey ? [...follows, myPubkey] : follows,
-    }),
-    [notes, follows, myPubkey],
-  );
+  const { people } = useWhoToFollowWidget(notes);
 
   return (
     <WidgetCard title={t('social.whoToFollow')} testId="widget-who-to-follow">
@@ -44,40 +31,10 @@ export default function WhoToFollowWidget({
       ) : (
         <ul>
           {people.map((person) => (
-            <PersonRow key={person.pubkey} pubkey={person.pubkey} onOpenProfile={onOpenProfile} />
+            <WhoToFollowRow key={person.pubkey} pubkey={person.pubkey} onOpenProfile={onOpenProfile} />
           ))}
         </ul>
       )}
     </WidgetCard>
-  );
-}
-
-function PersonRow({
-  pubkey,
-  onOpenProfile,
-}: {
-  pubkey: string;
-  onOpenProfile?: (pubkey: string) => void;
-}) {
-  const meta = useAuthor(pubkey);
-  const name = meta?.displayName || meta?.name || shortNpubLabel(pubkey);
-
-  return (
-    <li className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5" data-testid="who-to-follow-row">
-      <button
-        type="button"
-        onClick={() => onOpenProfile?.(pubkey)}
-        className="flex min-w-0 flex-1 items-center gap-2 text-left"
-      >
-        <UserAvatar pubkey={pubkey} picture={meta?.picture} size={8} name={name} alt={name} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-semibold text-lc-white">{name}</span>
-          {meta?.nip05 && (
-            <span className="block truncate text-[10px] text-lc-muted">{meta.nip05}</span>
-          )}
-        </span>
-      </button>
-      <FollowButton pubkey={pubkey} />
-    </li>
   );
 }

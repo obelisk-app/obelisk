@@ -1,7 +1,7 @@
 'use client';
 
 import type { RefObject } from 'react';
-import { scrollBehavior } from '@/utils/layout/scroll-behavior';
+import { useFeedFloatingControls } from '@/hooks/social/feed/useFeedFloatingControls';
 import { useTranslations } from 'next-intl';
 import IconButton from '@/components/ui/buttons/IconButton';
 
@@ -30,6 +30,7 @@ export default function FeedFloatingControls({
   onCompose: () => void;
 }) {
   const t = useTranslations();
+  const { backToTop } = useFeedFloatingControls({ scrollRef, onShowPending });
   return (
     <>
       {/*
@@ -42,10 +43,7 @@ export default function FeedFloatingControls({
       {showBackToTop && (
         <button
           type="button"
-          onClick={() => {
-            onShowPending();
-            scrollRef.current?.scrollTo({ top: 0, behavior: scrollBehavior() });
-          }}
+          onClick={backToTop}
           aria-label={t('social.backToTop')}
           title={t('social.backToTop')}
           className={`absolute right-5 z-20 flex h-11 items-center justify-center gap-1.5 rounded-full border border-lc-border bg-lc-dark/95 px-3 text-xs font-semibold text-lc-white shadow-2xl shadow-black/50 backdrop-blur transition hover:border-lc-green/40 active:scale-95 ${

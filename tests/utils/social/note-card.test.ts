@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MouseEvent } from 'react';
-import { bodyClickHandler, LONG_NOTE_CHARS } from '@/utils/social/note-card';
+import { bodyClickHandler, LONG_NOTE_CHARS, sameNoteCardProps, type NoteCardProps } from '@/utils/social/note-card';
 import { relativeTime as sharedRelativeTime } from '@/utils/format/relative-time';
 import type { Locale } from '@/i18n';
 
@@ -89,4 +89,21 @@ describe('relativeTime', () => {
 
 it('collapses notes above a thousand characters', () => {
   expect(LONG_NOTE_CHARS).toBe(1000);
+});
+
+describe('sameNoteCardProps', () => {
+  const note = { id: 'n', pubkey: 'p', kind: 1, content: '', created_at: 1, sig: '', tags: [] };
+  const base: NoteCardProps = { note, reposters: ['a'] };
+
+  it('is the same card for the same note, handlers and reposter count', () => {
+    expect(sameNoteCardProps(base, { ...base, note: { ...note }, reposters: ['b'] })).toBe(true);
+  });
+
+  it('re-renders for a new note, a new handler, a new variant or another reposter', () => {
+    expect(sameNoteCardProps(base, { ...base, note: { ...note, id: 'm' } })).toBe(false);
+    expect(sameNoteCardProps(base, { ...base, onReply: () => {} })).toBe(false);
+    expect(sameNoteCardProps(base, { ...base, variant: 'quoted' })).toBe(false);
+    expect(sameNoteCardProps(base, { ...base, reposters: ['a', 'b'] })).toBe(false);
+    expect(sameNoteCardProps({ note }, { note, reposters: [] })).toBe(true);
+  });
 });

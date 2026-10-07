@@ -196,4 +196,36 @@ describe('which tier the button reports', () => {
     expect(screen.getAllByTestId('relay-status-row')).toHaveLength(2);
     expect(screen.getByTestId('relay-status-active')).toBeInTheDocument();
   });
+
+  it('closes the popover and goes to settings from "manage"', () => {
+    const onOpenSettings = vi.fn();
+    renderPill({ onOpenSettings });
+    fireEvent.click(screen.getByTestId('relay-status-pill'));
+    fireEvent.click(screen.getByTestId('relay-status-manage'));
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('relay-status-popover')).not.toBeInTheDocument();
+  });
+
+  it('offers no "manage" link when the host has nowhere to send it', () => {
+    renderPill();
+    fireEvent.click(screen.getByTestId('relay-status-pill'));
+    expect(screen.queryByTestId('relay-status-manage')).not.toBeInTheDocument();
+  });
+
+  it('says so when the device is offline', () => {
+    mocks.statuses = { [A]: status(A, { state: 'offline' }), [B]: status(B, { state: 'offline' }) };
+    renderPill();
+    const pill = screen.getByTestId('relay-status-pill');
+    expect(pill).toHaveAttribute('data-state', 'offline');
+    expect(pill.getAttribute('aria-label')).not.toMatch(/2/);
+  });
+
+  it('shows no latency or count for a relay that has not reported', () => {
+    mocks.statuses = { [A]: status(A, { latencyMs: null, notes: 0 }) };
+    renderPill();
+    fireEvent.click(screen.getByTestId('relay-status-pill'));
+    const rows = screen.getAllByTestId('relay-status-row');
+    expect(rows[0].textContent).not.toMatch(/ms|·/);
+    expect(rows[1]).toHaveAttribute('data-state', 'unknown');
+  });
 });

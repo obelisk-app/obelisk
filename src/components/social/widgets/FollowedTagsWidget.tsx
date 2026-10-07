@@ -2,7 +2,8 @@
 
 import { useInterests } from '@/hooks/social/tags/useInterests';
 import { useTranslations } from 'next-intl';
-import WidgetCard, { WidgetEmpty } from './WidgetCard';
+import WidgetCard from './WidgetCard';
+import WidgetEmpty from './WidgetEmpty';
 import Button from '@/components/ui/buttons/Button';
 
 /**

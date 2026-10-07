@@ -53,4 +53,19 @@ describe('useFeedSearch', () => {
     await act(async () => { vi.advanceTimersByTime(300); await Promise.resolve(); });
     expect(mocks.searchNotes).toHaveBeenCalledWith('bitcoin');
   });
+
+  it('hands profile opens to the host through one stable handler', () => {
+    const onOpenProfile = vi.fn();
+    const { result, rerender } = renderHook(() => useFeedSearch('', onOpenProfile));
+    const first = result.current.openProfile;
+    rerender();
+    expect(result.current.openProfile).toBe(first);
+    first('p'.repeat(64));
+    expect(onOpenProfile).toHaveBeenCalledWith('p'.repeat(64));
+  });
+
+  it('ignores a profile open when the host has nowhere to send it', () => {
+    const { result } = renderHook(() => useFeedSearch(''));
+    expect(() => result.current.openProfile('x')).not.toThrow();
+  });
 });

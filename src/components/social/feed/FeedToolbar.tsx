@@ -78,14 +78,20 @@ export default function FeedToolbar({
           aria-label={t('social.feed')}
           value={tab}
           onChange={onTab}
-          options={(['following', 'global'] as const).map((value) => ({
-            value,
-            label: <>{value === 'following' ? <FollowingIcon /> : <GlobeIcon />}{t(`social.${value}`)}</>,
-            title: value === 'following'
-              ? t('social.followingN', { count: followCount })
-              : t('social.relaysCount', { count: relayCount }),
-            testId: `feed-tab-${value}`,
-          }))}
+          options={[
+            {
+              value: 'following',
+              label: <><FollowingIcon />{t('social.following')}</>,
+              title: t('social.followingN', { count: followCount }),
+              testId: 'feed-tab-following',
+            },
+            {
+              value: 'global',
+              label: <><GlobeIcon />{t('social.global')}</>,
+              title: t('social.relaysCount', { count: relayCount }),
+              testId: 'feed-tab-global',
+            },
+          ]}
         />
       </div>
 

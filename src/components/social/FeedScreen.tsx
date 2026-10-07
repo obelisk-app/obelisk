@@ -18,7 +18,7 @@ import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import NoteComposer from './composer/NoteComposer';
 import MobileComposer from './composer/MobileComposer';
 import NoteThread from './note/NoteThread';
-import ArticleReader from './article/ArticleCard';
+import ArticleReader from './article/ArticleReader';
 import FeedSearch from './feed/FeedSearch';
 import InlineReader from './article/InlineReader';
 import FeedWidgets from './widgets/FeedWidgets';

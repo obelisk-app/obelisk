@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useNostrUserSearch, type UserHit } from '@/hooks/identity/useNostrUserSearch';
 import { parseQuery, searchHashtag, searchNotes, relatedHashtags, type ParsedQuery } from '@/services/social/search';
@@ -14,8 +14,11 @@ const EMPTY_NOTES: NostrEvent[] = [];
  * The open-network search behind the feed's search screen: the typed text,
  * debounced, parsed into a hashtag, text or identifier query, and answered
  * with notes, people and related hashtags.
+ *
+ * `openProfile` is the host's profile handler with a stable identity, so
+ * the memoised note cards in the results don't re-render on every keystroke.
  */
-export function useFeedSearch(initialQuery: string) {
+export function useFeedSearch(initialQuery: string, onOpenProfile?: (pubkey: string) => void) {
   const [raw, setRaw] = useState(initialQuery);
   // Seeded, not debounced-from-empty: arriving with a query already chosen
   // shouldn't cost a 300ms wait before anything happens.
@@ -79,5 +82,7 @@ export function useFeedSearch(initialQuery: string) {
   const busy = loading || people.loading;
   const empty = debounced.length > 0 && !busy && notes.length === 0 && userHits.length === 0;
 
-  return { raw, setRaw, debounced, notes, userHits, tags, busy, empty };
+  const openProfile = useCallback((pubkey: string) => onOpenProfile?.(pubkey), [onOpenProfile]);
+
+  return { raw, setRaw, debounced, notes, userHits, tags, busy, empty, openProfile };
 }

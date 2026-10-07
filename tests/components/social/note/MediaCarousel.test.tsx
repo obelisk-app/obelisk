@@ -149,4 +149,34 @@ describe('video slides', () => {
     render1({ url: 'https://v.example/clip.mp4?token=abc' });
     expect(screen.getByTestId('carousel-video')).toBeInTheDocument();
   });
+
+  it('steps through the stills in the lightbox, wrapping at both ends', () => {
+    renderLocalized(<MediaCarousel items={[image(1), image(2), image(3)]} />);
+    fireEvent.click(screen.getAllByTestId('carousel-image')[2]);
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('lightbox-next'));
+    expect(screen.getByText('1 / 3')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('lightbox-prev'));
+    fireEvent.click(screen.getByTestId('lightbox-prev'));
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+  });
+
+  it('zooms a lone image too, and closes', () => {
+    renderLocalized(<MediaCarousel items={[image(1)]} />);
+    fireEvent.click(screen.getByTestId('carousel-image'));
+    expect(screen.getByTestId('lightbox')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('lightbox'));
+    expect(screen.queryByTestId('lightbox')).not.toBeInTheDocument();
+  });
+
+  it('keeps an untyped video out of the zoomable set too', () => {
+    // The slide already plays `clip.mp4` as a video (by its extension), but
+    // the zoomable set only skipped items typed `video/*`, so the lightbox
+    // counted the video as a still and stepping onto it showed a broken image.
+    renderLocalized(<MediaCarousel items={[{ url: 'https://example.com/clip.mp4' }, image(2)]} />);
+    fireEvent.click(screen.getByTestId('carousel-image'));
+    expect(screen.getByTestId('lightbox')).toBeInTheDocument();
+    expect(screen.queryByText('2 / 2')).not.toBeInTheDocument();
+    expect(screen.queryByText('1 / 2')).not.toBeInTheDocument();
+  });
 });

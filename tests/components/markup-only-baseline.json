@@ -681,110 +681,11 @@
     "state": 3,
     "functions": 2
   },
-  "src/components/relay/RelayStatusPill.tsx": {
-    "effects": 1,
-    "memos": 1,
-    "functions": 2
-  },
   "src/components/seo/OgCard.tsx": {
     "functions": 2
   },
   "src/components/seo/OgIcon.tsx": {
     "functions": 1
-  },
-  "src/components/social/article/ArticleCard.tsx": {
-    "memos": 4,
-    "components": 1
-  },
-  "src/components/social/composer/MobileComposer.tsx": {
-    "components": 1
-  },
-  "src/components/social/feed/FeedFloatingControls.tsx": {
-    "functions": 1
-  },
-  "src/components/social/feed/FeedList.tsx": {
-    "effects": 3,
-    "memos": 1
-  },
-  "src/components/social/feed/FeedSearch.tsx": {
-    "memos": 1,
-    "components": 3
-  },
-  "src/components/social/feed/FeedToolbar.tsx": {
-    "functions": 1
-  },
-  "src/components/social/feed/InfiniteSentinel.tsx": {
-    "effects": 2
-  },
-  "src/components/social/feed/StarterPacks.tsx": {
-    "effects": 1,
-    "memos": 1,
-    "functions": 1,
-    "components": 1
-  },
-  "src/components/social/note/MediaCarousel.tsx": {
-    "memos": 1,
-    "state": 1,
-    "functions": 6,
-    "components": 1
-  },
-  "src/components/social/note/NoteActionRow.tsx": {
-    "functions": 1
-  },
-  "src/components/social/note/NoteActions.tsx": {
-    "functions": 2,
-    "components": 8
-  },
-  "src/components/social/note/NoteBody.tsx": {
-    "memos": 1,
-    "functions": 3,
-    "components": 1
-  },
-  "src/components/social/note/NoteCard.tsx": {
-    "functions": 1
-  },
-  "src/components/social/note/NoteContent.tsx": {
-    "memos": 1,
-    "functions": 2,
-    "components": 4
-  },
-  "src/components/social/note/NoteMenu.tsx": {
-    "state": 1,
-    "functions": 5,
-    "components": 1
-  },
-  "src/components/social/note/PlainNoteCard.tsx": {
-    "memos": 4
-  },
-  "src/components/social/note/ReplyLine.tsx": {
-    "functions": 2
-  },
-  "src/components/social/note/RepostCard.tsx": {
-    "memos": 3,
-    "functions": 2,
-    "components": 2
-  },
-  "src/components/social/profile/ProfileMenu.tsx": {
-    "functions": 5
-  },
-  "src/components/social/tags/FollowTagButton.tsx": {
-    "functions": 1
-  },
-  "src/components/social/widgets/FeedWidgets.tsx": {
-    "functions": 2
-  },
-  "src/components/social/widgets/RelaysWidget.tsx": {
-    "functions": 1
-  },
-  "src/components/social/widgets/TrendingWidget.tsx": {
-    "memos": 1
-  },
-  "src/components/social/widgets/WhoToFollowWidget.tsx": {
-    "memos": 1,
-    "components": 1
-  },
-  "src/components/social/widgets/WidgetCard.tsx": {
-    "components": 1
   },
   "src/components/voice/audio/BackgroundVoiceAudio.tsx": {
     "effects": 3,

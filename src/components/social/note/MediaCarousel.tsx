@@ -13,62 +13,25 @@
  * is no transform state to get out of sync with the DOM.
  */
 
-import { useCallback, useRef, useState } from 'react';
 import { Lightbox } from '@/components/chat/gallery/ImageGallery';
-import RemoteImage from '@/components/ui/media/RemoteImage';
-import { isVideo } from '@/utils/attachments/attachments';
+import { useMediaCarousel } from '@/hooks/social/note/useMediaCarousel';
+import type { CarouselItem } from '@/utils/social/media-carousel';
+import CarouselSlide from './CarouselSlide';
 
-export type CarouselItem = {
-  url: string;
-  mimeType?: string | null;
-  width?: number | null;
-  height?: number | null;
-  /** NIP-71 poster frame, from the `imeta` `image`/`thumb` field. */
-  poster?: string | null;
-};
+export type { CarouselItem } from '@/utils/social/media-carousel';
 
 export default function MediaCarousel({ items }: { items: readonly CarouselItem[] }) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [index, setIndex] = useState(0);
-  const [zoom, setZoom] = useState<number | null>(null);
-
-  const onScroll = useCallback(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    // Round rather than floor: mid-swipe the nearest slide is the one the
-    // dots should already be pointing at.
-    const next = Math.round(track.scrollLeft / Math.max(track.clientWidth, 1));
-    setIndex((current) => (current === next ? current : next));
-  }, []);
-
-  const goTo = (target: number) => {
-    const track = trackRef.current;
-    if (!track) return;
-    track.scrollTo({ left: target * track.clientWidth, behavior: 'smooth' });
-  };
-
-  // Zoom, like every other image in the app. A picture note rendered
-  // through this had no way to be opened at all: the markdown path had a
-  // lightbox and this one silently didn't.
-  const stills = items.filter((item) => !item.mimeType?.startsWith('video/')).map((item) => item.url);
-  const openAt = (url: string) => {
-    const at = stills.indexOf(url);
-    if (at >= 0) setZoom(at);
-  };
+  const {
+    trackRef, index, onScroll, goTo, stills, zoom, openAt, closeZoom, prevZoom, nextZoom,
+  } = useMediaCarousel(items);
 
   if (items.length === 0) return null;
   if (items.length === 1) {
     return (
       <>
-        <Slide item={items[0]} onOpen={openAt} />
+        <CarouselSlide item={items[0]} onOpen={openAt} />
         {zoom !== null && (
-          <Lightbox
-            urls={stills}
-            index={zoom}
-            onClose={() => setZoom(null)}
-            onPrev={() => setZoom((at) => (at === null ? null : (at - 1 + stills.length) % stills.length))}
-            onNext={() => setZoom((at) => (at === null ? null : (at + 1) % stills.length))}
-          />
+          <Lightbox urls={stills} index={zoom} onClose={closeZoom} onPrev={prevZoom} onNext={nextZoom} />
         )}
       </>
     );
@@ -84,7 +47,7 @@ export default function MediaCarousel({ items }: { items: readonly CarouselItem[
       >
         {items.map((item) => (
           <div key={item.url} className="w-full shrink-0 snap-center">
-            <Slide item={item} onOpen={openAt} />
+            <CarouselSlide item={item} onOpen={openAt} />
           </div>
         ))}
       </div>
@@ -114,51 +77,8 @@ export default function MediaCarousel({ items }: { items: readonly CarouselItem[
       </div>
 
       {zoom !== null && (
-        <Lightbox
-          urls={stills}
-          index={zoom}
-          onClose={() => setZoom(null)}
-          onPrev={() => setZoom((at) => (at === null ? null : (at - 1 + stills.length) % stills.length))}
-          onNext={() => setZoom((at) => (at === null ? null : (at + 1) % stills.length))}
-        />
+        <Lightbox urls={stills} index={zoom} onClose={closeZoom} onPrev={prevZoom} onNext={nextZoom} />
       )}
     </div>
-  );
-}
-
-function Slide({ item, onOpen }: { item: CarouselItem; onOpen?: (url: string) => void }) {
-  const ratio = item.width && item.height ? `${item.width}/${item.height}` : undefined;
-  if (isVideo(item)) {
-    return (
-      <video
-        src={item.url}
-        controls
-        playsInline
-        // `poster` is the difference between a video note and a grey box
-        // reading `0:00`. Without one there is nothing to look at until you
-        // press play, so the card says nothing about itself in the feed.
-        poster={item.poster ?? undefined}
-        // With a poster there is already something to show, so don't spend
-        // a metadata round trip on every video in the viewport.
-        preload={item.poster ? 'none' : 'metadata'}
-        className="w-full rounded-xl"
-        style={ratio ? { aspectRatio: ratio } : undefined}
-        data-testid="carousel-video"
-      />
-    );
-  }
-  return (
-    <RemoteImage
-      src={item.url}
-      alt=""
-      decoding="async"
-      onClick={onOpen ? () => onOpen(item.url) : undefined}
-      className={`w-full rounded-xl object-cover ${onOpen ? 'cursor-zoom-in' : ''}`}
-      data-testid="carousel-image"
-      // `imeta` dimensions reserve the space before the bytes arrive, which
-      // is the whole point of the tag: without it the feed jumps as images
-      // land under the reader.
-      style={ratio ? { aspectRatio: ratio } : undefined}
-    />
   );
 }

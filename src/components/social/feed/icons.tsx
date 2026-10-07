@@ -1,4 +1,4 @@
-/** Glyphs for the feed toolbar's source segment. */
+/** Glyphs for the feed toolbar's source segment and the feed search box. */
 
 export function FollowingIcon() {
   return (
@@ -17,6 +17,25 @@ export function GlobeIcon() {
       <circle cx="12" cy="12" r="10" />
       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
       <path d="M2 12h20" />
+    </svg>
+  );
+}
+
+export function SearchIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      className="shrink-0 text-lc-white/70"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
     </svg>
   );
 }

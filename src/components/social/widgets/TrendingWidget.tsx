@@ -1,11 +1,11 @@
 'use client';
 
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useMemo } from 'react';
-import { trendingTags } from '@/services/social/trending';
+import { useTrendingWidget } from '@/hooks/social/widgets/useTrendingWidget';
 import { useTranslations } from 'next-intl';
 import FollowTagButton from '../tags/FollowTagButton';
-import WidgetCard, { WidgetEmpty } from './WidgetCard';
+import WidgetCard from './WidgetCard';
+import WidgetEmpty from './WidgetEmpty';
 
 /**
  * What the loaded feed is about, with a way to keep any of it.
@@ -22,7 +22,7 @@ export default function TrendingWidget({
   onOpenTag?: (tag: string) => void;
 }) {
   const t = useTranslations();
-  const tags = useMemo(() => trendingTags(notes, { limit: 8 }), [notes]);
+  const { tags } = useTrendingWidget(notes);
 
   return (
     <WidgetCard title={t('social.trending')} testId="widget-trending">

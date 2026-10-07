@@ -33,7 +33,7 @@ import { useNoteDraft, type ComposerMode } from '@/hooks/social/composer/useNote
 import Spinner from '@/components/ui/feedback/Spinner';
 import ErrorState from '@/components/ui/feedback/ErrorState';
 import FileInput from '@/components/ui/forms/FileInput';
-import IconButton from '@/components/ui/buttons/IconButton';
+import ComposerToolButton from './ComposerToolButton';
 
 /** Twitter-ish soft limit: past this, a note is an article. */
 const SOFT_LIMIT = 1000;
@@ -163,7 +163,7 @@ export default function MobileComposer({
         className="flex shrink-0 items-center gap-1 border-t border-lc-border px-2 py-2"
         style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}
       >
-        <ToolButton
+        <ComposerToolButton
           label={t('social.profileFeed.upload')}
           onClick={() => fileRef.current?.click()}
           disabled={busy}
@@ -174,7 +174,7 @@ export default function MobileComposer({
             <circle cx="8.5" cy="8.5" r="1.5" />
             <path d="m21 15-5-5L5 21" />
           </svg>
-        </ToolButton>
+        </ComposerToolButton>
         <FileInput
           ref={fileRef}
           accept="image/*,video/*,audio/*"
@@ -184,16 +184,16 @@ export default function MobileComposer({
           data-testid="composer-files"
         />
 
-        <ToolButton label={t('chat.composer.bold')} onClick={() => wrapSelection('**')} testId="mobile-composer-bold">
+        <ComposerToolButton label={t('chat.composer.bold')} onClick={() => wrapSelection('**')} testId="mobile-composer-bold">
           <span className="text-base font-bold">B</span>
-        </ToolButton>
-        <ToolButton label={t('chat.composer.link')} onClick={() => wrapSelection('[', '](https://)')} testId="mobile-composer-link">
+        </ComposerToolButton>
+        <ComposerToolButton label={t('chat.composer.link')} onClick={() => wrapSelection('[', '](https://)')} testId="mobile-composer-link">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
             <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" />
             <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19" />
           </svg>
-        </ToolButton>
-        <ToolButton
+        </ComposerToolButton>
+        <ComposerToolButton
           label={t('social.markSensitive')}
           onClick={() => setSensitive(!sensitive)}
           pressed={sensitive}
@@ -203,7 +203,7 @@ export default function MobileComposer({
             <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
             <path d="M12 9v4" /><path d="M12 17h.01" />
           </svg>
-        </ToolButton>
+        </ComposerToolButton>
 
         {busy && <Spinner size="sm" className="ml-1" />}
 
@@ -220,34 +220,3 @@ export default function MobileComposer({
   );
 }
 
-function ToolButton({
-  label,
-  onClick,
-  children,
-  disabled = false,
-  pressed,
-  testId,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-  disabled?: boolean;
-  pressed?: boolean;
-  testId: string;
-}) {
-  return (
-    <IconButton
-      // 40px square: the smallest thing a thumb hits reliably.
-      size="10"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      aria-pressed={pressed}
-      title={label}
-      className="active:bg-white/10"
-      data-testid={testId}
-    >
-      {children}
-    </IconButton>
-  );
-}

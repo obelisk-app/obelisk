@@ -2,15 +2,11 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
-import {
-  ActionButton,
-  LikeIcon,
-  RepostButton,
-  ReplyIcon,
-  ShareIcon,
-  ZapIcon,
-} from './NoteActions';
 import type { NoteEngagement } from '@/hooks/social/note/useNoteEngagement';
+import { useNoteActionRow } from '@/hooks/social/note/useNoteActionRow';
+import ActionButton from './ActionButton';
+import RepostButton from './RepostButton';
+import NoteIcon from './NoteIcon';
 
 /**
  * Reply, repost, like, zap, share: the row under a full card.
@@ -39,7 +35,8 @@ export default function NoteActionRow({
   onZap?: (note: NostrEvent) => void;
 }) {
   const t = useTranslations();
-  const { counts, busy, reacted, reposted, share, react, repost } = engagement;
+  const { counts, busy, reacted, reposted } = engagement;
+  const act = useNoteActionRow({ note, engagement, onOpenNote, onReply, onQuote, onZap });
 
   return (
     <div className="mt-2 flex items-center justify-between gap-1 pt-1 text-xs sm:justify-start">
@@ -52,37 +49,37 @@ export default function NoteActionRow({
       <ActionButton
         kind="reply"
         label={t('social.replyAction')}
-        icon={<ReplyIcon />}
+        icon={<NoteIcon name="reply" />}
         count={counts.replyCount}
         testId="note-reply"
         disabled={!canInteract && !onOpenNote}
-        onClick={() => (onOpenNote ? onOpenNote(note.id) : onReply?.(note))}
+        onClick={act.reply}
       />
       <RepostButton
         count={counts.repostCount}
         active={reposted}
         disabled={!canInteract || busy}
-        onRepost={() => void repost()}
-        onQuote={onQuote ? () => onQuote(note) : undefined}
+        onRepost={act.repost}
+        onQuote={act.quote}
       />
       <ActionButton
         kind="like"
         label={t('social.react')}
-        icon={<LikeIcon filled={reacted} />}
+        icon={<NoteIcon name="like" filled={reacted} />}
         count={counts.reactionCount}
         testId="note-react"
         active={reacted}
         disabled={!canInteract || busy || reacted}
-        onClick={() => void react()}
+        onClick={act.react}
       />
       <ActionButton
         kind="zap"
         label={t('social.zap')}
-        icon={<ZapIcon filled={counts.zapTotalSats > 0} />}
+        icon={<NoteIcon name="zap" filled={counts.zapTotalSats > 0} />}
         count={counts.zapTotalSats}
         testId="note-zap"
         disabled={!canInteract}
-        onClick={() => onZap?.(note)}
+        onClick={act.zap}
       />
       {/*
         Sharing was buried in the ⋯ menu, two taps deep, even though it's
@@ -91,9 +88,9 @@ export default function NoteActionRow({
       <ActionButton
         kind="share"
         label={t('social.share')}
-        icon={<ShareIcon />}
+        icon={<NoteIcon name="share" />}
         testId="note-share"
-        onClick={() => void share()}
+        onClick={act.share}
       />
     </div>
   );

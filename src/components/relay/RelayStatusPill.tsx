@@ -23,32 +23,16 @@
  * rank it against the page instead.
  */
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import AnchoredMenu from '../common/AnchoredMenu';
-import {
-  getRelayStatuses,
-  probeRelay,
-  relayStatusSummary,
-  subscribeRelayStatus,
-  watchRelays,
-  type RelayState,
-} from '@/services/social/relay-status';
-import { normalizeRelayUrl } from '@/services/social/relays';
-import { useConnectionState, useRelayAccess } from '@/services/nostr-bridge';
+import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
+import AnchoredMenu from '../common/AnchoredMenu';
+import { useRelayStatusPill } from '@/hooks/social/common/useRelayStatusPill';
 import { shortHost } from '@/utils/relay-url/url-host';
+import { RELAY_STATE_DOT, relayLatencyLabel } from '@/utils/social/relay-status-rows';
+import { accessDotClass } from '@/utils/social/relay-status-pill';
 import Text from '@/components/ui/layout/Text';
 import { MenuDivider } from '@/components/ui/overlays/menu';
 import TextButton from '@/components/ui/buttons/TextButton';
-import { connectionLabel } from '@/utils/relay/relay-status';
-
-const DOT: Record<RelayState, string> = {
-  connected: 'bg-lc-green',
-  connecting: 'bg-amber-400 animate-pulse',
-  unknown: 'bg-lc-border',
-  failed: 'bg-red-500',
-  offline: 'bg-lc-muted',
-};
 
 export default function RelayStatusPill({
   relays,
@@ -82,60 +66,33 @@ export default function RelayStatusPill({
   indicate?: 'social' | 'active';
 }) {
   const t = useTranslations();
-  const statuses = useSyncExternalStore(subscribeRelayStatus, getRelayStatuses, getRelayStatuses);
-  const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const connection = useConnectionState();
-  const access = useRelayAccess(activeRelay ?? null);
-
-  // The header is the surface that's always mounted, so it owns the watcher.
-  // `watchRelays` is idempotent; settings calls it too.
-  useEffect(() => { watchRelays(relays); }, [relays]);
-
-  const summary = useMemo(() => relayStatusSummary(relays, statuses), [relays, statuses]);
-
-  // `access` is the bridge's NIP-42/whitelist verdict for the active relay:
-  // connected AND allowed to read, which is what "chat works" means.
-  const activeState: RelayState = access === 'ok'
-    ? 'connected'
-    : access === 'authenticating' || access === 'unknown'
-      ? 'connecting'
-      : 'failed';
-
-  const reportsActive = indicate === 'active' && !!activeRelay;
-  const dotState = reportsActive ? activeState : summary.state;
-  const showCount = !compact && !reportsActive;
-
-  const label = reportsActive
-    ? `${shortHost(activeRelay)} · ${t(`social.auth.${access}`)}`
-    : summary.state === 'offline'
-      ? t('social.relayOffline')
-      : t('social.relaysConnected', { connected: summary.connected, total: summary.total });
+  const vm = useRelayStatusPill({ relays, activeRelay, onOpenSettings, compact, indicate });
 
   return (
     <>
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={vm.toggle}
         className={`flex shrink-0 items-center gap-1.5 rounded-lg text-[11px] font-medium text-lc-white/70 transition-colors hover:bg-lc-border/40 hover:text-lc-white ${
           compact ? 'h-7 w-7 justify-center' : 'px-2 py-1'
         }`}
-        title={label}
-        aria-label={label}
-        aria-expanded={open}
+        title={vm.label}
+        aria-label={vm.label}
+        aria-expanded={vm.open}
         data-testid="relay-status-pill"
         data-tour="relay-status"
-        data-state={dotState}
-        data-indicate={reportsActive ? 'active' : 'social'}
+        data-state={vm.dotState}
+        data-indicate={vm.reportsActive ? 'active' : 'social'}
       >
-        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT[dotState]}`} aria-hidden="true" />
-        {showCount && <span className="tabular-nums">{summary.connected}/{summary.total}</span>}
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${RELAY_STATE_DOT[vm.dotState]}`} aria-hidden="true" />
+        {vm.showCount && <span className="tabular-nums">{vm.summary.connected}/{vm.summary.total}</span>}
       </button>
 
       <AnchoredMenu
-        open={open}
-        onClose={() => setOpen(false)}
+        open={vm.open}
+        onClose={vm.close}
         anchorRef={triggerRef}
         width={272}
         testId="relay-status-popover"
@@ -146,26 +103,22 @@ export default function RelayStatusPill({
               <Text as="p" size="10" weight="semibold" variant="label" tone="muted" className="px-2.5 pb-1 pt-2">
                 {t('social.thisRelay')}
               </Text>
-              <div className="px-2.5 py-1.5" data-testid="relay-status-active" data-access={access}>
+              <div className="px-2.5 py-1.5" data-testid="relay-status-active" data-access={vm.access}>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${
-                      access === 'ok' ? 'bg-lc-green'
-                        : access === 'authenticating' ? 'bg-amber-400 animate-pulse'
-                          : access === 'unknown' ? 'bg-lc-border' : 'bg-red-500'
-                    }`}
+                    className={`h-2 w-2 shrink-0 rounded-full ${accessDotClass(vm.access)}`}
                     aria-hidden="true"
                   />
                   <span className="min-w-0 flex-1 truncate text-[11px] text-lc-white">
                     {shortHost(activeRelay)}
                   </span>
-                  <span className="shrink-0 text-[10px] text-lc-muted" data-testid="relay-status-connection">{connectionLabel(connection, t)}</span>
+                  <span className="shrink-0 text-[10px] text-lc-muted" data-testid="relay-status-connection">{vm.connectionLabel}</span>
                 </div>
                 {/* AUTH is the difference between "connected" and "can read
                     this relay's groups": a relay can be up and still hand
                     back nothing until the challenge is answered. */}
                 <p className="pl-4 pt-0.5 text-[10px] text-lc-muted" data-testid="relay-status-auth">
-                  {t(`social.auth.${access}`)}
+                  {t(`social.auth.${vm.access}`)}
                 </p>
               </div>
               <MenuDivider />
@@ -174,40 +127,35 @@ export default function RelayStatusPill({
           <Text as="p" size="10" weight="semibold" variant="label" tone="muted" className="px-2.5 pb-1 pt-2">
             {t('social.relays')}
           </Text>
-          {relays.map((relay) => {
-            const url = normalizeRelayUrl(relay);
-            const status = url ? statuses[url] : undefined;
-            const state = status?.state ?? 'unknown';
-            return (
-              <div
-                key={relay}
-                className="flex items-center gap-2 px-2.5 py-1.5"
-                data-testid="relay-status-row"
-                data-state={state}
-              >
-                <span className={`h-2 w-2 shrink-0 rounded-full ${DOT[state]}`} aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate text-[11px] text-lc-white">
-                  {shortHost(relay)}
-                </span>
-                {/* Latency says it answers; the count says it's earning its slot. */}
-                <span className="shrink-0 font-mono text-[10px] text-lc-muted">
-                  {status?.latencyMs !== null && status?.latencyMs !== undefined && `${status.latencyMs}ms`}
-                  {status && status.notes > 0 && ` · ${status.notes}`}
-                </span>
-                {state === 'failed' && (
-                  <TextButton
-                    onClick={() => void probeRelay(relay)} className="shrink-0 px-1.5 py-0.5 text-[10px]"
-                    data-testid="relay-retry"
-                  >
-                    {t('common.retry')}
-                  </TextButton>
-                )}
-              </div>
-            );
-          })}
-          {onOpenSettings && (
+          {vm.rows.map(({ relay, status, state }) => (
+            <div
+              key={relay}
+              className="flex items-center gap-2 px-2.5 py-1.5"
+              data-testid="relay-status-row"
+              data-state={state}
+            >
+              <span className={`h-2 w-2 shrink-0 rounded-full ${RELAY_STATE_DOT[state]}`} aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate text-[11px] text-lc-white">
+                {shortHost(relay)}
+              </span>
+              {/* Latency says it answers; the count says it's earning its slot. */}
+              <span className="shrink-0 font-mono text-[10px] text-lc-muted">
+                {relayLatencyLabel(status)}
+                {status && status.notes > 0 && ` · ${status.notes}`}
+              </span>
+              {state === 'failed' && (
+                <TextButton
+                  onClick={() => vm.retry(relay)} className="shrink-0 px-1.5 py-0.5 text-[10px]"
+                  data-testid="relay-retry"
+                >
+                  {t('common.retry')}
+                </TextButton>
+              )}
+            </div>
+          ))}
+          {vm.manage && (
             <TextButton
-              onClick={() => { setOpen(false); onOpenSettings(); }} className="mt-1 w-full px-2.5 py-2 text-left text-[11px]"
+              onClick={vm.manage} className="mt-1 w-full px-2.5 py-2 text-left text-[11px]"
               data-testid="relay-status-manage"
             >
               {t('social.relaySettings')}

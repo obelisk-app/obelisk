@@ -14,10 +14,8 @@
  * neutral label rather than popping into existence a second later.
  */
 
-import { displayNameFor } from '@/utils/identity/display-name';
-import { useAuthor } from '@/hooks/social/profile/useAuthor';
-import { useNotePreview } from '@/hooks/social/note/useNotePreview';
 import { useTranslations } from 'next-intl';
+import { useReplyLine } from '@/hooks/social/note/useReplyLine';
 import type { ReplyParent } from '@/services/social/feed';
 import TextButton from '@/components/ui/buttons/TextButton';
 
@@ -31,30 +29,22 @@ export default function ReplyLine({
   onOpenProfile?: (pubkey: string) => void;
 }) {
   const t = useTranslations();
-  // Only fetch when the tag didn't name the author: that is the whole point
-  // of reading the tag first.
-  const fetched = useNotePreview(parent.author ? null : parent.id, parent.relay ? [parent.relay] : undefined);
-  const authorPubkey = parent.author ?? fetched?.pubkey ?? null;
-  const meta = useAuthor(authorPubkey);
-
-  const name = authorPubkey
-    ? displayNameFor(authorPubkey, meta)
-    : t('social.replyingToUnknown');
+  const vm = useReplyLine({ parent, onOpenNote, onOpenProfile });
 
   return (
     <span className="flex min-w-0 items-center gap-1 text-[11px] text-lc-muted">
       <span aria-hidden="true">↩</span>
       <span className="shrink-0">{t('social.replyingTo')}</span>
-      {authorPubkey && onOpenProfile ? (
+      {vm.canOpenAuthor ? (
         <TextButton className="min-w-0 truncate font-medium"
-          onClick={(event) => { event.stopPropagation(); onOpenProfile(authorPubkey); }}
+          onClick={vm.openAuthor}
           data-testid="reply-line-author"
         >
-          {name}
+          {vm.name}
         </TextButton>
       ) : (
         <span className="min-w-0 truncate font-medium text-lc-white/80" data-testid="reply-line-author">
-          {name}
+          {vm.name}
         </span>
       )}
       {/*
@@ -64,7 +54,7 @@ export default function ReplyLine({
       */}
       {onOpenNote && (
         <TextButton tone="muted" className="shrink-0 decoration-dotted"
-          onClick={(event) => { event.stopPropagation(); onOpenNote(parent.id); }}
+          onClick={vm.openParent}
           title={t('social.openParent')}
           data-testid="reply-line-open-parent"
         >

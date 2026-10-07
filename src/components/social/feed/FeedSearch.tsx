@@ -13,20 +13,17 @@
  * to a full-text index that will never match it.
  */
 
-import { useCallback } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import type { UserHit } from '@/hooks/identity/useNostrUserSearch';
-import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { useTranslations } from 'next-intl';
-import { shortNpubLabel } from '@/utils/identity/short-npub';
 import Button from '@/components/ui/buttons/Button';
-import Text from '@/components/ui/layout/Text';
-import UserAvatar from '@/components/ui/media/UserAvatar';
 import NoteCard from '../note/NoteCard';
 import Spinner from '@/components/ui/feedback/Spinner';
 import Input from '@/components/ui/forms/Input';
 import EmptyState from '@/components/ui/feedback/EmptyState';
 import { useFeedSearch } from '@/hooks/social/feed/useFeedSearch';
+import { SearchIcon } from './icons';
+import FeedSearchSection from './FeedSearchSection';
+import FeedSearchPerson from './FeedSearchPerson';
 
 export default function FeedSearch({
   initialQuery = '',
@@ -43,8 +40,7 @@ export default function FeedSearch({
   onClose?: () => void;
 }) {
   const t = useTranslations();
-  const { raw, setRaw, debounced, notes, userHits, tags, busy, empty } = useFeedSearch(initialQuery);
-  const openProfile = useCallback((pubkey: string) => onOpenProfile?.(pubkey), [onOpenProfile]);
+  const { raw, setRaw, debounced, notes, userHits, tags, busy, empty, openProfile } = useFeedSearch(initialQuery, onOpenProfile);
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="feed-search">
@@ -114,15 +110,15 @@ export default function FeedSearch({
         )}
 
         {userHits.length > 0 && (
-          <Section title={t('social.searchPeople')} testId="search-people">
+          <FeedSearchSection title={t('social.searchPeople')} testId="search-people">
             {userHits.map((hit) => (
-              <PersonRow key={hit.pubkey} hit={hit} onOpen={openProfile} />
+              <FeedSearchPerson key={hit.pubkey} hit={hit} onOpen={openProfile} />
             ))}
-          </Section>
+          </FeedSearchSection>
         )}
 
         {tags.length > 0 && (
-          <Section title={t('social.searchTags')} testId="search-tags">
+          <FeedSearchSection title={t('social.searchTags')} testId="search-tags">
             <div className="flex flex-wrap gap-1.5 px-5 pb-3">
               {tags.map((tag) => (
                 <Button
@@ -135,11 +131,11 @@ export default function FeedSearch({
                 </Button>
               ))}
             </div>
-          </Section>
+          </FeedSearchSection>
         )}
 
         {notes.length > 0 && (
-          <Section title={t('social.searchPosts')} testId="search-posts">
+          <FeedSearchSection title={t('social.searchPosts')} testId="search-posts">
             <div className="divide-y divide-lc-border/70">
               {notes.map((note) => (
                 <NoteCard
@@ -151,76 +147,10 @@ export default function FeedSearch({
                 />
               ))}
             </div>
-          </Section>
+          </FeedSearchSection>
         )}
       </div>
     </div>
   );
 }
 
-function Section({
-  title,
-  testId,
-  children,
-}: {
-  title: string;
-  testId: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section data-testid={testId}>
-      <Text as="h3" size="10" weight="semibold" variant="label" tone="muted" className="px-5 pb-2 pt-4">
-        {title}
-      </Text>
-      {children}
-    </section>
-  );
-}
-
-function PersonRow({ hit, onOpen }: { hit: UserHit; onOpen: (pubkey: string) => void }) {
-  // Merge with our own resolver: NIP-50 hits often carry no picture, and the
-  // cached profile usually does.
-  const author = useAuthor(hit.pubkey);
-  const name = author.displayName || author.name || hit.displayName || shortNpubLabel(hit.pubkey);
-  const nip05 = author.nip05 || hit.nip05;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(hit.pubkey)}
-      className="flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
-      data-testid="search-person"
-    >
-      <UserAvatar
-        pubkey={hit.pubkey}
-        picture={author.picture ?? hit.picture}
-        size={9}
-        name={name}
-        alt=""
-      />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-lc-white">{name}</span>
-        {nip05 && <span className="block truncate text-[11px] text-lc-green">{nip05}</span>}
-      </span>
-    </button>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      className="shrink-0 text-lc-white/70"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}

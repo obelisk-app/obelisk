@@ -5,10 +5,13 @@ import { LocaleProvider } from '@tests/support/intl';
 
 const writeText = vi.fn();
 
-vi.mock('@/services/social/publish', () => ({ publishDelete: vi.fn().mockResolvedValue({}) }));
+const publishDelete = vi.hoisted(() => vi.fn());
+vi.mock('@/services/social/publish', () => ({ publishDelete }));
 
 import NoteMenu from '@/components/social/note/NoteMenu';
 import { useModerationStore } from '@/store/moderation';
+import { useToastStore } from '@/store/feedback/toast';
+import { waitFor } from '@testing-library/react';
 
 const note: NostrEvent = {
   id: 'a'.repeat(64),
@@ -31,6 +34,8 @@ const open = (isMine = false) => {
 
 beforeEach(() => {
   writeText.mockClear();
+  publishDelete.mockReset().mockResolvedValue({});
+  useToastStore.getState().clearToasts();
   Object.assign(navigator, { clipboard: { writeText }, share: undefined });
   useModerationStore.setState({ mutedPubkeys: [], blockedPubkeys: [] });
 });
@@ -137,5 +142,53 @@ describe('NoteMenu', () => {
     expect(screen.getByTestId('note-menu')).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByTestId('note-menu')).not.toBeInTheDocument();
+  });
+
+  it('deletes your own note, says so and tells the host', async () => {
+    cleanup();
+    const onDeleted = vi.fn();
+    render(<LocaleProvider initialLocale="en"><NoteMenu note={note} isMine onDeleted={onDeleted} /></LocaleProvider>);
+    fireEvent.click(screen.getByTestId('note-more'));
+    fireEvent.click(screen.getByTestId('note-menu-delete'));
+    expect(screen.queryByTestId('note-menu')).not.toBeInTheDocument();
+    await waitFor(() => expect(onDeleted).toHaveBeenCalled());
+    expect(publishDelete).toHaveBeenCalledWith(note);
+    expect(useToastStore.getState().toasts).toHaveLength(1);
+  });
+
+  it('reports a failed delete and keeps the note', async () => {
+    publishDelete.mockRejectedValue(new Error('relay said no'));
+    cleanup();
+    const onDeleted = vi.fn();
+    render(<LocaleProvider initialLocale="en"><NoteMenu note={note} isMine onDeleted={onDeleted} /></LocaleProvider>);
+    fireEvent.click(screen.getByTestId('note-more'));
+    fireEvent.click(screen.getByTestId('note-menu-delete'));
+    await waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1));
+    expect(onDeleted).not.toHaveBeenCalled();
+  });
+
+  it('mutes the author and closes', () => {
+    open();
+    fireEvent.click(screen.getByTestId('note-menu-mute'));
+    expect(useModerationStore.getState().mutedPubkeys).toContain(note.pubkey);
+    expect(screen.queryByTestId('note-menu')).not.toBeInTheDocument();
+  });
+
+  it('copies the share link when there is no share sheet, and says so', async () => {
+    writeText.mockResolvedValue(undefined);
+    open();
+    fireEvent.click(screen.getByTestId('note-menu-share'));
+    await waitFor(() => expect(screen.queryByTestId('note-menu')).not.toBeInTheDocument());
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(useToastStore.getState().toasts).toHaveLength(1);
+  });
+
+  it('closes the menu when the raw view opens, and closes the raw view', () => {
+    open();
+    fireEvent.click(screen.getByTestId('note-menu-raw'));
+    expect(screen.queryByTestId('note-menu')).not.toBeInTheDocument();
+    expect(screen.getByTestId('note-raw-id')).toHaveTextContent(note.id);
+    fireEvent.click(screen.getByTestId('note-raw-copy'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining(note.id));
   });
 });

@@ -12,40 +12,11 @@
 
 import { memo } from 'react';
 import { isRepost } from '@/services/social/repost';
+import { sameNoteCardProps, type NoteCardProps } from '@/utils/social/note-card';
 import RepostCard from './RepostCard';
 import PlainNoteCard from './PlainNoteCard';
-import type { Event as NostrEvent } from 'nostr-tools';
 
-/** The props of a feed row, shared by the two shapes it renders (`PlainNoteCard`, `RepostCard`). */
-export type NoteCardProps = {
-  note: NostrEvent;
-  onOpenProfile?: (pubkey: string) => void;
-  onOpenNote?: (id: string) => void;
-  onReply?: (note: NostrEvent) => void;
-  onQuote?: (note: NostrEvent) => void;
-  onZap?: (note: NostrEvent) => void;
-  onOpenArticle?: (note: NostrEvent) => void;
-  /** Hashtags open in-app (the feed's search) instead of leaving for /t. */
-  onOpenTag?: (tag: string) => void;
-  /**
-   * Everyone who reposted this note, newest first. A repost row renders the
-   * whole list; without it "eight people reposted this" reads as one
-   * anonymous row, which throws away the only signal a repost carries.
-   */
-  reposters?: readonly string[];
-  /**
-   * `full`: a normal row with the whole action set.
-   * `quoted`: a bordered box with no actions, for a note embedded inside
-   *   another note's body (you act on the outer note, not the quoted one).
-   *
-   * These used to be one `embedded` boolean, which conflated "draw it as a
-   * box" with "no actions". A repost needs the first and NOT the second: the
-   * whole point is to reply to, like or zap the note that was reposted.
-   */
-  variant?: 'full' | 'quoted';
-  /** Parent already supplies the outer padding (repost attribution wrapper). */
-  nested?: boolean;
-};
+export type { NoteCardProps } from '@/utils/social/note-card';
 
 /**
  * Memoised on the note identity and the handlers.
@@ -57,21 +28,7 @@ export type NoteCardProps = {
  * The note itself is immutable once received, so re-running that is pure
  * waste.
  */
-export default memo(NoteCardInner, (prev, next) => (
-  prev.note.id === next.note.id
-  && prev.variant === next.variant
-  && prev.nested === next.nested
-  && prev.onReply === next.onReply
-  && prev.onQuote === next.onQuote
-  && prev.onZap === next.onZap
-  && prev.onOpenNote === next.onOpenNote
-  && prev.onOpenProfile === next.onOpenProfile
-  && prev.onOpenArticle === next.onOpenArticle
-  && prev.onOpenTag === next.onOpenTag
-  // Compared by length: the list is rebuilt each page, so reference equality
-  // would defeat the memo, and reposters only ever grow for a given note.
-  && (prev.reposters?.length ?? 0) === (next.reposters?.length ?? 0)
-));
+export default memo(NoteCardInner, sameNoteCardProps);
 
 function NoteCardInner(props: NoteCardProps) {
   const { note } = props;

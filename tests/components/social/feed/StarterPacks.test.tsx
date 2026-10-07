@@ -24,6 +24,7 @@ vi.mock('@/hooks/social/profile/useSocialProfile', () => ({
 }));
 
 import StarterPacks from '@/components/social/feed/StarterPacks';
+import { useToastStore } from '@/store/feedback/toast';
 
 const pk = (n: number) => String(n).repeat(64).slice(0, 64);
 
@@ -148,5 +149,48 @@ describe('who is in a pack', () => {
       expect(face.textContent).not.toMatch(/^[0-9a-f]{8}$/);
       expect(face.textContent?.trim()).toBeTruthy();
     }
+  });
+});
+
+describe('following a pack', () => {
+  it('says so in a toast and shows the busy label while the write runs', async () => {
+    let finish: () => void = () => {};
+    mocks.publishEvent.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
+    renderPacks();
+    const button = await screen.findByTestId('starter-pack-follow');
+    fireEvent.click(button);
+    await waitFor(() => expect(button).toHaveTextContent('Saving'));
+    expect(button).toBeDisabled();
+    finish();
+    await waitFor(() => expect(button).toHaveTextContent('Follow 3'));
+    expect(useToastStore.getState().toasts.at(-1)).toMatchObject({ title: 'Followed the pack', body: 'Nostr devs' });
+  });
+
+  it('reports a failed write and frees the button', async () => {
+    mocks.publishEvent.mockRejectedValue(new Error('relay said no'));
+    renderPacks();
+    const button = await screen.findByTestId('starter-pack-follow');
+    fireEvent.click(button);
+    await waitFor(() => expect(button).not.toBeDisabled());
+    expect(useToastStore.getState().toasts.at(-1)).toMatchObject({ title: 'Could not publish to the feed relays.', body: 'Nostr devs' });
+  });
+
+  it('publishes a contact list newer than the one it replaces', async () => {
+    mocks.contactEvent = {
+      id: 'c', pubkey: pk(5), kind: 3, created_at: 4_000_000_000, sig: '', content: '', tags: [],
+    };
+    renderPacks();
+    fireEvent.click(await screen.findByTestId('starter-pack-follow'));
+    await waitFor(() => expect(mocks.publishEvent).toHaveBeenCalled());
+    const [event, opts] = mocks.publishEvent.mock.calls[0];
+    expect(event.created_at).toBe(4_000_000_001);
+    expect(opts).toMatchObject({ mode: 'replace' });
+  });
+
+  it('shows twelve faces and counts the rest', async () => {
+    mocks.fetchStarterPacks.mockResolvedValue([pack({ members: Array.from({ length: 15 }, (_, i) => pk(i + 10)) })]);
+    renderPacks();
+    expect(await screen.findAllByTestId('starter-pack-face')).toHaveLength(12);
+    expect(screen.getByTestId('starter-pack')).toHaveTextContent('+3');
   });
 });

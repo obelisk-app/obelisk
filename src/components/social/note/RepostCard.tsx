@@ -10,44 +10,16 @@
  * note by id instead.
  */
 
-import { useMemo } from 'react';
-import { displayNameFor } from '@/utils/identity/display-name';
-import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { useTranslations } from 'next-intl';
-import { embeddedRepostEvent, repostTarget } from '@/services/social/repost';
-import { RepostIcon } from './NoteActions';
+import { useRepostCard } from '@/hooks/social/note/useRepostCard';
 import PlainNoteCard from './PlainNoteCard';
-import { bodyClickHandler } from '@/utils/social/note-card';
+import NoteIcon from './NoteIcon';
+import RepostersLine from './RepostersLine';
 import type { NoteCardProps } from './NoteCard';
-import TextButton from '@/components/ui/buttons/TextButton';
 
 export default function RepostCard(props: NoteCardProps) {
   const t = useTranslations();
-  const { note, reposters } = props;
-  // `embeddedRepostEvent` only returns a note whose signature verifies and
-  // whose id matches the wrapper's `e` tag; the pool never saw the inner
-  // event, so this is where it gets checked. A forged blob comes back null
-  // and the row falls through to the e-tag button below, which opens the
-  // real note by id. Memoised per card on top of the module-level memo in
-  // `repost.ts`, so a feed re-render costs no schnorr verification.
-  const inner = useMemo(() => embeddedRepostEvent(note), [note]);
-  const target = useMemo(() => repostTarget(note), [note]);
-
-  // The row's own author first, then anyone else who reposted the same note.
-  const everyone = useMemo(() => {
-    const list = [note.pubkey, ...(reposters ?? [])];
-    return [...new Set(list)];
-  }, [note.pubkey, reposters]);
-
-  // The reposted note is the content of this row, so the row opens it. The
-  // inner card renders with `nested` and has no handler of its own, so this
-  // is the single owner of a body click, and `bodyClickHandler` steps aside
-  // for the real controls inside, including the inner timestamp button.
-  const openReposted = bodyClickHandler(
-    props.onOpenNote && (inner || target)
-      ? () => props.onOpenNote?.((inner ?? target!).id)
-      : undefined,
-  );
+  const { inner, everyone, openReposted, openTarget } = useRepostCard(props);
 
   return (
     <article
@@ -66,7 +38,7 @@ export default function RepostCard(props: NoteCardProps) {
         data-testid="repost-attribution"
       >
         <span className="flex h-4 w-4 shrink-0 items-center justify-center text-lc-green">
-          <RepostIcon />
+          <NoteIcon name="repost" />
         </span>
         <span className="min-w-0 truncate">
           <RepostersLine pubkeys={everyone} onOpenProfile={props.onOpenProfile} />
@@ -87,7 +59,7 @@ export default function RepostCard(props: NoteCardProps) {
         <button
           type="button"
           className="w-full rounded-xl border border-lc-border bg-lc-dark p-3 text-left text-xs text-lc-muted"
-          onClick={() => target && props.onOpenNote?.(target.id)}
+          onClick={openTarget}
         >
           {t('social.openRepostedNote')}
         </button>
@@ -96,55 +68,3 @@ export default function RepostCard(props: NoteCardProps) {
   );
 }
 
-/**
- * "Alice, Bob and 6 others".
- *
- * Two names then a count: three is already too wide for a feed row, and the
- * number is what tells you how much reach the note actually got.
- */
-function RepostersLine({
-  pubkeys,
-  onOpenProfile,
-}: {
-  pubkeys: readonly string[];
-  onOpenProfile?: (pubkey: string) => void;
-}) {
-  const t = useTranslations();
-  const shown = pubkeys.slice(0, 2);
-  const rest = pubkeys.length - shown.length;
-
-  return (
-    <>
-      {shown.map((pubkey, index) => (
-        <span key={pubkey}>
-          {index > 0 && <span>, </span>}
-          <ReposterName pubkey={pubkey} onOpenProfile={onOpenProfile} />
-        </span>
-      ))}
-      {rest > 0 && (
-        <span data-testid="repost-others">
-          {' '}
-          {t('social.andOthers', { n: String(rest) })}
-        </span>
-      )}
-    </>
-  );
-}
-
-function ReposterName({
-  pubkey,
-  onOpenProfile,
-}: {
-  pubkey: string;
-  onOpenProfile?: (pubkey: string) => void;
-}) {
-  const author = useAuthor(pubkey);
-  const name = displayNameFor(pubkey, author);
-  return (
-    <TextButton tone="plain" className="font-semibold text-lc-white"
-      onClick={() => onOpenProfile?.(pubkey)}
-    >
-      {name}
-    </TextButton>
-  );
-}

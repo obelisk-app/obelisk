@@ -37,3 +37,8 @@ export function readingMinutes(content: string): number {
 export function articleDate(locale: Locale, seconds: number): string {
   return formatDate(locale, seconds, { year: 'numeric', month: 'short', day: 'numeric' });
 }
+
+/** The card's teaser: the author's summary, else the opening of the body with the markdown marks stripped. */
+export function articleExcerpt(meta: Pick<ArticleMeta, 'summary'>, content: string): string {
+  return meta.summary || content.replace(/[#*_`>[\]()!]/g, '').slice(0, 220);
+}

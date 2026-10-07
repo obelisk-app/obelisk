@@ -14,14 +14,9 @@
  * `NoteMenu`: share, copy the link, then the identifiers, then moderation.
  */
 
-import { useRef, useState } from 'react';
-import { copyWithToast } from '@/services/common/clipboard';
-import { safeNpub } from '@/utils/identity/short-npub';
+import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { usePreferences } from '@/hooks/preferences/usePreferences';
-import { useModerationStore } from '@/store/moderation';
-import { useToastStore } from '@/store/feedback/toast';
-import { profileUrl } from '@/services/social/note-links';
+import { useProfileMenu } from '@/hooks/social/profile/useProfileMenu';
 import AnchoredMenu from '../../common/AnchoredMenu';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem, MenuLink } from '@/components/ui/overlays/menu';
 import { BanIcon, BellOffIcon, ExternalIcon, HashIcon, KeyIcon, LinkIcon, MoreIcon, ShareIcon, ZapIcon } from '@/components/ui/icons/icons';
@@ -46,36 +41,8 @@ export default function ProfileMenu({
   onBeforeAction?: () => void;
 }) {
   const t = useTranslations();
-  const relays = usePreferences().socialRelays;
-  const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const muted = useModerationStore((state) => state.mutedPubkeys.includes(pubkey));
-  const blocked = useModerationStore((state) => state.blockedPubkeys.includes(pubkey));
-  const toggleMute = useModerationStore((state) => state.toggleMute);
-  const toggleBlock = useModerationStore((state) => state.toggleBlock);
-
-  const url = profileUrl(pubkey, relays);
-  const npub = safeNpub(pubkey);
-
-  const toast = (title: string) =>
-    useToastStore.getState().pushToast({ title, body: displayName });
-
-  const copy = (value: string, message: string) => {
-    copyWithToast(value, message);
-    setOpen(false);
-  };
-
-  const share = async () => {
-    try {
-      if (navigator.share) await navigator.share({ title: displayName, url });
-      else await navigator.clipboard?.writeText(url);
-      toast(t('social.profileFeed.profileShared'));
-    } catch {
-      // Share sheet dismissed: not an error worth surfacing.
-    }
-    setOpen(false);
-  };
-
+  const vm = useProfileMenu({ pubkey, displayName, onZap, onBeforeAction });
 
   return (
     <>
@@ -83,12 +50,12 @@ export default function ProfileMenu({
         ref={triggerRef}
         shape="square"
         size={size === 'sm' ? '8' : '10'}
-        tone={open ? 'accent' : 'outline'}
+        tone={vm.open ? 'accent' : 'outline'}
         className="active:scale-95"
-        onClick={() => setOpen((value) => !value)}
+        onClick={vm.toggle}
         aria-label={t('mobile.profile.more')}
         aria-haspopup="menu"
-        aria-expanded={open}
+        aria-expanded={vm.open}
         title={t('mobile.profile.more')}
         data-testid="profile-more-button"
       >
@@ -96,22 +63,22 @@ export default function ProfileMenu({
       </IconButton>
 
       <AnchoredMenu
-        open={open}
-        onClose={() => setOpen(false)}
+        open={vm.open}
+        onClose={vm.close}
         anchorRef={triggerRef}
         width={248}
         testId="profile-more-menu"
         panelClassName={MENU_PANEL_CLASS}
       >
         <>
-          <MenuItem icon={<ShareIcon />} label={t('social.profileFeed.shareProfile')} onClick={() => void share()} testId="profile-menu-share" />
-          <MenuItem icon={<LinkIcon />} label={t('social.profileFeed.copyProfileLink')} onClick={() => copy(url, t('social.profileFeed.linkCopied'))} testId="profile-menu-copy-link" />
-          <MenuLink icon={<ExternalIcon />} label={t('social.profileFeed.openProfilePage')} href={url} testId="profile-menu-open-page" />
+          <MenuItem icon={<ShareIcon />} label={t('social.profileFeed.shareProfile')} onClick={vm.share} testId="profile-menu-share" />
+          <MenuItem icon={<LinkIcon />} label={t('social.profileFeed.copyProfileLink')} onClick={() => vm.copy(vm.url, t('social.profileFeed.linkCopied'))} testId="profile-menu-copy-link" />
+          <MenuLink icon={<ExternalIcon />} label={t('social.profileFeed.openProfilePage')} href={vm.url} testId="profile-menu-open-page" />
 
           <MenuDivider />
 
-          <MenuItem icon={<KeyIcon />} label={t('social.profileFeed.copyNpub')} onClick={() => copy(npub, t('social.profileFeed.npubCopied'))} testId="profile-menu-copy-npub" />
-          <MenuItem icon={<HashIcon />} label={t('social.profileFeed.copyHex')} onClick={() => copy(pubkey, t('social.profileFeed.hexCopied'))} testId="profile-menu-copy-hex" />
+          <MenuItem icon={<KeyIcon />} label={t('social.profileFeed.copyNpub')} onClick={() => vm.copy(vm.npub, t('social.profileFeed.npubCopied'))} testId="profile-menu-copy-npub" />
+          <MenuItem icon={<HashIcon />} label={t('social.profileFeed.copyHex')} onClick={() => vm.copy(pubkey, t('social.profileFeed.hexCopied'))} testId="profile-menu-copy-hex" />
 
           {onZap && (
             <>
@@ -119,7 +86,7 @@ export default function ProfileMenu({
               <MenuItem
                 icon={<ZapIcon />}
                 label={t('chat.profilePopover.zap')}
-                onClick={() => { setOpen(false); onBeforeAction?.(); onZap(); }}
+                onClick={vm.zap}
                 testId="profile-menu-zap"
               />
             </>
@@ -130,15 +97,15 @@ export default function ProfileMenu({
               <MenuDivider />
               <MenuItem
                 icon={<BellOffIcon />}
-                label={t(muted ? 'social.profileFeed.unmute' : 'social.profileFeed.mute')}
-                onClick={() => { toggleMute(pubkey); setOpen(false); }}
+                label={t(vm.muted ? 'social.profileFeed.unmute' : 'social.profileFeed.mute')}
+                onClick={vm.mute}
                 testId="profile-menu-mute"
               />
               <MenuItem
                 icon={<BanIcon />}
                 danger
-                label={t(blocked ? 'social.profileFeed.unblock' : 'social.profileFeed.block')}
-                onClick={() => { toggleBlock(pubkey); setOpen(false); }}
+                label={t(vm.blocked ? 'social.profileFeed.unblock' : 'social.profileFeed.block')}
+                onClick={vm.block}
                 testId="profile-menu-block"
               />
             </>

@@ -19,7 +19,12 @@ vi.mock('@/components/chat/message/MessageContent', () => ({
   ),
 }));
 
-vi.mock('@/hooks/social/profile/useAuthor', () => ({ useAuthor: () => ({ displayName: 'Alice' }) }));
+vi.mock('@/hooks/social/profile/useAuthor', () => ({
+  useAuthor: (pubkey: string | null) => (pubkey ? { displayName: 'Alice' } : {}),
+}));
+
+const preview = vi.hoisted(() => ({ value: undefined as unknown }));
+vi.mock('@/hooks/social/note/useNotePreview', () => ({ useNotePreview: () => preview.value }));
 
 import NoteContent from '@/components/social/note/NoteContent';
 
@@ -100,5 +105,51 @@ describe('addressable references', () => {
     renderChip(`look ${naddr}`);
     expect(screen.getByTestId('address-ref')).toBeInTheDocument();
     expect(screen.queryByText(new RegExp(naddr))).not.toBeInTheDocument();
+  });
+});
+
+describe('people and notes in a note', () => {
+  const PK = 'a'.repeat(64);
+  const ID = 'e'.repeat(64);
+  const renderNote = (content: string, props: Record<string, unknown> = {}) => render(
+    <LocaleProvider initialLocale="en"><NoteContent content={content} {...props} /></LocaleProvider>,
+  );
+
+  it('renders a mention as a name that opens the profile', () => {
+    const onOpenProfile = vi.fn();
+    renderNote(`hi nostr:${nip19.npubEncode(PK)} there`, { onOpenProfile });
+    const chip = screen.getByTestId('note-mention');
+    expect(chip).toHaveTextContent('@Alice');
+    fireEvent.click(chip);
+    expect(onOpenProfile).toHaveBeenCalledWith(PK);
+  });
+
+  it('shows a skeleton while a referenced note loads, then its author and opening words', () => {
+    preview.value = undefined;
+    const onOpenNote = vi.fn();
+    const content = `see nostr:${nip19.neventEncode({ id: ID, author: PK })}`;
+    const { unmount } = renderNote(content, { onOpenNote });
+    expect(screen.getByTestId('note-ref').querySelector('.lc-skeleton')).not.toBeNull();
+    expect(screen.getByTestId('note-ref')).toHaveTextContent('Alice');
+    unmount();
+    preview.value = { id: ID, pubkey: PK, content: 'gm   everyone\n\nhave a day' };
+    renderNote(content, { onOpenNote });
+    expect(screen.getByTestId('note-ref')).toHaveTextContent('gm everyone have a day');
+    fireEvent.click(screen.getByTestId('note-ref'));
+    expect(onOpenNote).toHaveBeenCalledWith(ID);
+  });
+
+  it('falls back to a short id when no relay has the note', () => {
+    preview.value = null;
+    renderNote(`nostr:${nip19.noteEncode(ID)}`);
+    expect(screen.getByTestId('note-ref')).toHaveTextContent(`${ID.slice(0, 12)}…`);
+    expect(screen.getByTestId('note-ref').querySelector('.lc-skeleton')).toBeNull();
+  });
+
+  it('drops whitespace-only text between references', () => {
+    preview.value = null;
+    renderNote(`nostr:${nip19.noteEncode(ID)}   nostr:${nip19.npubEncode(PK)}`);
+    const parts = screen.getByTestId('note-content').children;
+    expect(parts).toHaveLength(2);
   });
 });
