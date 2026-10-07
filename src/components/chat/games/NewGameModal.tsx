@@ -9,7 +9,8 @@ import GamePickList from './new-game/GamePickList';
 import GameSetupOptions from './new-game/GameSetupOptions';
 import PlayersAndClock from './new-game/PlayersAndClock';
 import { useNewGameForm } from '@/hooks/chat/games/new-game/useNewGameForm';
-import Button from '@/components/ui/Button';
+import ModalHeader from '@/components/ui/ModalHeader';
+import ModalFooter from '@/components/ui/ModalFooter';
 
 /**
  * Pick a game, set it up, open the table.
@@ -42,52 +43,50 @@ export default function NewGameModal({
     <Modal
       onClose={onClose}
       testId="new-game-modal"
-      panelClassName="w-full max-w-md mx-4 rounded-xl bg-lc-dark border border-lc-border p-5"
+      panelClassName="w-full max-w-md mx-4 rounded-xl border border-lc-border bg-lc-dark shadow-xl flex flex-col overflow-hidden max-h-[85vh]"
     >
       {!selected ? (
-        <GamePickList onChoose={choose} onClose={onClose} />
+        <>
+          <ModalHeader title={t('games.pick')} onClose={onClose} />
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <GamePickList onChoose={choose} />
+          </div>
+          <ModalFooter cancel={{ onClick: onClose }} />
+        </>
       ) : (
         <>
-          <div className="flex items-start gap-3">
-            <GameTypePreview type={selected.type} size={44} icon={selected.icon} />
-            <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-lc-white" data-testid="config-title">
-                {selected.icon} {selected.displayName}
-              </h2>
-              <p className="text-[11px] text-lc-muted">{gameDescription(t, selected.type)}</p>
-            </div>
+          <ModalHeader
+            icon={<GameTypePreview type={selected.type} size={44} icon={selected.icon} />}
+            decorativeIcon={false}
+            title={<>{selected.icon} {selected.displayName}</>}
+            titleTestId="config-title"
+            subtitle={gameDescription(t, selected.type)}
+            onClose={onClose}
+          />
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <GameSetupOptions form={form} />
+            <PlayersAndClock form={form} />
+
+            <p className="mt-3 text-[11px] text-lc-muted">
+              {t(localPlayers > 0 ? 'games.newGame.everyoneHere' : 'games.newGame.hostSeated', {
+                summary: gameSummary(t, selected),
+              })}
+            </p>
+
+            {error && <ErrorState className="mt-3">{error}</ErrorState>}
           </div>
 
-          <GameSetupOptions form={form} />
-          <PlayersAndClock form={form} />
-
-          <p className="mt-3 text-[11px] text-lc-muted">
-            {t(localPlayers > 0 ? 'games.newGame.everyoneHere' : 'games.newGame.hostSeated', {
-              summary: gameSummary(t, selected),
-            })}
-          </p>
-
-          {error && <ErrorState className="mt-3">{error}</ErrorState>}
-
-          <div className="mt-5 flex justify-between">
-            <Button
-              variant="pillSecondary"
-              size="xs"
-              onClick={() => setSelected(null)}
-              data-testid="game-back"
-            >
-              {t('common.back')}
-            </Button>
-            <Button
-              variant="pill"
-              size="xs"
-              onClick={create}
-              disabled={busy}
-              data-testid="game-create"
-            >
-              {t(busy ? 'games.newGame.creating' : localPlayers > 0 ? 'games.newGame.startPlaying' : 'games.newGame.createTable')}
-            </Button>
-          </div>
+          <ModalFooter
+            cancel={{ onClick: () => setSelected(null), label: t('common.back'), testId: 'game-back' }}
+            actions={[{
+              label: t(busy ? 'games.newGame.creating' : localPlayers > 0 ? 'games.newGame.startPlaying' : 'games.newGame.createTable'),
+              onClick: create,
+              disabled: busy,
+              tone: 'primary',
+              testId: 'game-create',
+            }]}
+          />
         </>
       )}
     </Modal>

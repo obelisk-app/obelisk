@@ -133,4 +133,15 @@ describe('channel menu', () => {
     fireEvent.click(screen.getByTestId(`channel-menu-mute-${15 * 60_000}`));
     expect(isChannelMuted(getChannelPref(R, target.channelId))).toBe(true);
   });
+
+  it('mobile sheet: the shared sheet header titles each view and backs out of a sub-view', () => {
+    wrap(<ChannelActionSheet target={target} onClose={() => {}} />);
+    expect(screen.getByRole('heading', { level: 2, name: '# general' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    fireEvent.click(screen.getByTestId('channel-menu-mute'));
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Mute');
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByRole('heading', { level: 2, name: '# general' })).toBeInTheDocument();
+    expect(screen.getByTestId('channel-menu-mute')).toBeInTheDocument();
+  });
 });

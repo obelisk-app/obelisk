@@ -11,6 +11,7 @@ import Input from '@/components/ui/Input';
 import { CategoryChannelsBlock, NO_CATEGORY, categoryOptions } from './categories/CategoryChannelsBlock';
 import { CategoryListEditor } from './categories/CategoryListEditor';
 import SheetActions from './SheetActions';
+import SheetHeader from './SheetHeader';
 
 // Bottom-sheet for the kind 30078 channel-layout doc - categories + their
 // position, plus per-channel category assignment. Mirrors the desktop
@@ -56,13 +57,11 @@ export function ManageCategoriesSheet({
 
   return (
     <Sheet onClose={close} screen="manage-categories" label={t('mobile.layout.title')} zIndex={20} maxHeight="94%">
-      <div className="zap-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
-        {t('mobile.layout.title')}
-      </div>
-      <p style={{ fontSize: 11, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
-        {t('mobile.layout.help')}
-      </p>
+      <SheetHeader
+        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>}
+        title={t('mobile.layout.title')}
+        subtitle={t('mobile.layout.help')}
+      />
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <label htmlFor={newCatId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>

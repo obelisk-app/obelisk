@@ -11,6 +11,8 @@ import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
 import { CloseIcon } from '@/components/ui/icons';
 import Text from '@/components/ui/Text';
+import ModalHeader from '@/components/ui/ModalHeader';
+import ModalFooter from '@/components/ui/ModalFooter';
 
 /**
  * The host's last decision before a table starts: who plays which seat, and
@@ -56,121 +58,117 @@ export default function StartTableModal({
     <Modal
       onClose={onClose}
       testId="start-table-modal"
-      panelClassName="w-full max-w-lg mx-4 rounded-xl bg-lc-dark border border-lc-border p-5 max-h-[85vh] overflow-y-auto"
+      panelClassName="w-full max-w-lg mx-4 rounded-xl border border-lc-border bg-lc-dark shadow-xl flex flex-col overflow-hidden max-h-[85vh]"
     >
-      <h2 className="text-sm font-semibold text-lc-white">{t('games.seats')}</h2>
-      <p className="mt-1 text-[11px] text-lc-muted">
-        {realtime
+      <ModalHeader
+        title={t('games.seats')}
+        subtitle={realtime
           ? t('games.startTable.realtimeHelp', { game: gameName(session.game) })
           : savedPlayers
             ? t('games.startTable.resumeHelp', { game: gameName(session.game), count: savedPlayers.length })
             : t('games.startTable.assignHelp')}
-      </p>
+        onClose={onClose}
+      />
 
-      <ul className="mt-4 space-y-2" data-testid="seat-list">
-        {rows.map((row, i) => {
-          const shared = seatsFor(row.by) > 1;
-          return (
-            <li key={row.rowId} className="rounded-lg border border-lc-border p-2">
-              <div className="flex items-center gap-2">
-                <span className="w-5 shrink-0 text-center text-[11px] text-lc-muted">{i + 1}</span>
-                <Input
-                  variant="ghost"
-                  size="xs"
-                  value={row.label}
-                  onChange={(e) => rename(row.rowId, e.target.value)}
-                  className="min-w-0 flex-1"
-                  aria-label={t('games.startTable.seatName', { n: i + 1 })}
-                />
-                <span
-                  className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] ${
-                    shared ? 'border-lc-green/60 text-lc-green' : 'border-lc-border text-lc-muted'
-                  }`}
-                  data-testid={`seat-mode-${i}`}
-                >
-                  {realtime
-                    ? t('games.startTable.ownDevice')
-                    : shared ? t('games.startTable.onMachine', { name: nameOf(row.by) }) : t('games.startTable.remote')}
-                </span>
-                <div className="flex shrink-0 items-center gap-0.5">
-                  <Button variant="ghost" size="icon" onClick={() => move(i, -1)} aria-label={t('shell.desktop.layout.moveUp')}>↑</Button>
-                  <Button variant="ghost" size="icon" onClick={() => move(i, 1)} aria-label={t('shell.desktop.layout.moveDown')}>↓</Button>
-                  {!savedPlayers && rows.length > session.minPlayers && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      tone="danger"
-                      onClick={() => removeRow(row.rowId)}
-                      aria-label={t('games.removeSeat')}
-                    >
-                      <CloseIcon size={14} />
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Who signs for this seat */}
-              <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-7">
-                <Text size="10" variant="label" tone="muted">{t('games.playedBy')}</Text>
-                {session.joined.map((pubkey) => (
-                  <Chip
-                    key={pubkey}
-                    size="10"
-                    state={row.by === pubkey ? 'selected' : 'idle'}
-                    disabled={realtime && row.by !== pubkey && seatsFor(pubkey) > 0}
-                    onClick={() => setController(row.rowId, pubkey)}
-                    data-testid={`seat-${i}-by-${pubkey}`}
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <ul className="space-y-2" data-testid="seat-list">
+          {rows.map((row, i) => {
+            const shared = seatsFor(row.by) > 1;
+            return (
+              <li key={row.rowId} className="rounded-lg border border-lc-border p-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 shrink-0 text-center text-[11px] text-lc-muted">{i + 1}</span>
+                  <Input
+                    variant="ghost"
+                    size="xs"
+                    value={row.label}
+                    onChange={(e) => rename(row.rowId, e.target.value)}
+                    className="min-w-0 flex-1"
+                    aria-label={t('games.startTable.seatName', { n: i + 1 })}
+                  />
+                  <span
+                    className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] ${
+                      shared ? 'border-lc-green/60 text-lc-green' : 'border-lc-border text-lc-muted'
+                    }`}
+                    data-testid={`seat-mode-${i}`}
                   >
-                    {nameOf(pubkey)}
-                  </Chip>
-                ))}
-              </div>
+                    {realtime
+                      ? t('games.startTable.ownDevice')
+                      : shared ? t('games.startTable.onMachine', { name: nameOf(row.by) }) : t('games.startTable.remote')}
+                  </span>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button variant="ghost" size="icon" onClick={() => move(i, -1)} aria-label={t('shell.desktop.layout.moveUp')}>↑</Button>
+                    <Button variant="ghost" size="icon" onClick={() => move(i, 1)} aria-label={t('shell.desktop.layout.moveDown')}>↓</Button>
+                    {!savedPlayers && rows.length > session.minPlayers && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        tone="danger"
+                        onClick={() => removeRow(row.rowId)}
+                        aria-label={t('games.removeSeat')}
+                      >
+                        <CloseIcon size={14} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
 
-              {row.savedName && (
-                <p className="mt-1 pl-7 text-[10px] text-lc-muted">
-                  {t('games.startTable.takesOver', { name: row.savedName })}
-                </p>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                {/* Who signs for this seat */}
+                <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-7">
+                  <Text size="10" variant="label" tone="muted">{t('games.playedBy')}</Text>
+                  {session.joined.map((pubkey) => (
+                    <Chip
+                      key={pubkey}
+                      size="10"
+                      state={row.by === pubkey ? 'selected' : 'idle'}
+                      disabled={realtime && row.by !== pubkey && seatsFor(pubkey) > 0}
+                      onClick={() => setController(row.rowId, pubkey)}
+                      data-testid={`seat-${i}-by-${pubkey}`}
+                    >
+                      {nameOf(pubkey)}
+                    </Chip>
+                  ))}
+                </div>
 
-      {!savedPlayers && !realtime && (
-        <Button
-          variant="outlinePill"
-          size="xs"
-          disabled={rows.length >= session.maxPlayers}
-          onClick={addRow} className="mt-3"
-          data-testid="add-seat"
-        >
-          {t('games.startTable.addSeat')}
-        </Button>
-      )}
+                {row.savedName && (
+                  <p className="mt-1 pl-7 text-[10px] text-lc-muted">
+                    {t('games.startTable.takesOver', { name: row.savedName })}
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
 
-      <p className="mt-3 text-[11px] text-lc-muted">
-        {[
+        {!savedPlayers && !realtime && (
+          <Button
+            variant="outlinePill"
+            size="xs"
+            disabled={rows.length >= session.maxPlayers}
+            onClick={addRow} className="mt-3"
+            data-testid="add-seat"
+          >
+            {t('games.startTable.addSeat')}
+          </Button>
+        )}
+      </div>
+
+      <ModalFooter
+        meta={[
           t('games.startTable.seatCount', { count: rows.length, min: session.minPlayers, max: session.maxPlayers }),
           tooFew && t('games.startTable.needsMore'),
           tooMany && t('games.startTable.tooMany'),
           wrongForSave && t('games.startTable.saveHas', { count: savedPlayers!.length }),
         ].filter(Boolean).join(' · ')}
-      </p>
-
-      <div className="mt-4 flex justify-end gap-2">
-        <Button variant="pillSecondary" size="xs" onClick={onClose}>
-          {t('common.cancel')}
-        </Button>
-        <Button
-          variant="pill"
-          size="xs"
-          disabled={tooFew || tooMany || wrongForSave}
-          onClick={() => onStart(seats)}
-          data-testid="confirm-start"
-        >
-          {t('games.start')}
-        </Button>
-      </div>
+        cancel={{ onClick: onClose }}
+        actions={[{
+          label: t('games.start'),
+          onClick: () => onStart(seats),
+          disabled: tooFew || tooMany || wrongForSave,
+          tone: 'primary',
+          testId: 'confirm-start',
+        }]}
+      />
     </Modal>
   );
 }

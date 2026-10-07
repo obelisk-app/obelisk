@@ -3549,6 +3549,7 @@
 }
 
 .obelisk-mobile .zap-title {
+  margin: 0;
   font-weight: 800;
   font-size: 18px;
   letter-spacing: -0.02em;
@@ -3563,6 +3564,52 @@
   width: 18px;
   height: 18px;
   color: var(--accent);
+}
+/* SheetHeader (sheets/SheetHeader.tsx): the title row, its back chevron, the help line, the identity shape */
+.obelisk-mobile .sheet-title-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.obelisk-mobile .sheet-title-row .sheet-title-back {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.obelisk-mobile .sheet-subtitle {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--app-text-dim);
+}
+.obelisk-mobile .sheet-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 14px;
+}
+.obelisk-mobile .sheet-identity-text {
+  min-width: 0;
+  flex: 1;
+}
+.obelisk-mobile .sheet-identity-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.obelisk-mobile .sheet-identity-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--app-text-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .obelisk-mobile .settings-status-dot {
   width: 7px;
@@ -4334,6 +4381,7 @@
   height: 22px;
 }
 .obelisk-mobile .confirm-sheet-title {
+  margin: 0;
   text-align: center;
   font-weight: 700;
   font-size: 17px;
@@ -4347,7 +4395,7 @@
   font-size: 13px;
   line-height: 1.5;
   padding: 0 8px;
-  margin-bottom: 16px;
+  margin: 0 0 16px;
 }
 
 /* ===== reply / quote ===== */

@@ -14,8 +14,9 @@
  * a plain function) can ask without owning modal state.
  */
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import Button from './Button';
 import Modal from './Modal';
+import ModalHeader from './ModalHeader';
+import ModalFooter from './ModalFooter';
 import { useTranslations } from 'next-intl';
 import { LogOutIcon, TrashIcon } from './icons';
 import {
@@ -62,46 +63,30 @@ function ConfirmDialogPanel({ pending }: { pending: PendingConfirm }) {
       aria-labelledby={titleId}
       aria-describedby={pending.message ? messageId : undefined}
     >
-      <div>
-        {icon !== 'none' && (
-          <div
-            className={
-              'mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full '
-              + (tone === 'danger' ? 'bg-red-500/10 text-red-400' : 'bg-lc-green/10 text-lc-green')
-            }
-            aria-hidden="true"
-          >
-            {icon === 'trash' ? <TrashIcon size={22} /> : <LogOutIcon size={22} />}
-          </div>
-        )}
-        <h2 id={titleId} className="text-center text-lg font-semibold text-lc-white break-words">
-          {pending.title}
-        </h2>
-        {pending.message && (
-          <p id={messageId} className="mt-2 text-center text-sm text-lc-muted whitespace-pre-line break-words">
-            {pending.message}
-          </p>
-        )}
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button
-            ref={cancelRef}
-            variant="outlinePill"
-            size="lg"
-            onClick={() => settleConfirm(false)}
-            data-testid="confirm-dialog-cancel"
-          >
-            {pending.cancelLabel ?? t('common.cancel')}
-          </Button>
-          <Button
-            variant={tone === 'danger' ? 'danger' : 'pill'}
-            size={tone === 'danger' ? 'lg' : 'sm'}
-            onClick={() => settleConfirm(true)}
-            data-testid="confirm-dialog-confirm"
-          >
-            {pending.confirmLabel ?? t('common.confirm.delete')}
-          </Button>
-        </div>
-      </div>
+      <ModalHeader
+        variant="alert"
+        tone={tone === 'danger' ? 'danger' : 'accent'}
+        icon={icon === 'none' ? undefined : icon === 'trash' ? <TrashIcon size={22} /> : <LogOutIcon size={22} />}
+        title={pending.title}
+        subtitle={pending.message || undefined}
+        titleId={titleId}
+        subtitleId={messageId}
+      />
+      <ModalFooter
+        variant="alert"
+        cancelRef={cancelRef}
+        cancel={{
+          onClick: () => settleConfirm(false),
+          label: pending.cancelLabel ?? t('common.cancel'),
+          testId: 'confirm-dialog-cancel',
+        }}
+        actions={[{
+          label: pending.confirmLabel ?? t('common.confirm.delete'),
+          onClick: () => settleConfirm(true),
+          tone: tone === 'danger' ? 'danger' : 'primary',
+          testId: 'confirm-dialog-confirm',
+        }]}
+      />
     </Modal>
   );
 }

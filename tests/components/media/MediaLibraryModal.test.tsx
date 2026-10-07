@@ -86,6 +86,8 @@ describe('MediaLibraryModal', () => {
     const modal = screen.getByTestId('media-library-modal');
     expect(modal.firstElementChild).toHaveClass('h-[calc(100dvh_-_1rem)]', 'max-h-[calc(100%_-_1rem)]');
     expect(modal.querySelector('main')).toHaveClass('min-h-0');
+    expect(within(modal).getByRole('heading', { level: 2, name: 'Media library' })).toBeInTheDocument();
+    expect(within(modal).getByRole('button', { name: 'Close media library' })).toBeInTheDocument();
     expect(screen.getByText('Cat pack')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Save Cat pack' }));
     expect(mocks.saveMediaFavorites).toHaveBeenCalledWith({

@@ -20,6 +20,7 @@ import { useModerationStore } from '@/store/moderation';
 import { useToastStore } from '@/store/toast';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
+import ModalHeader from '@/components/ui/ModalHeader';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
 import AnchoredMenu from './AnchoredMenu';
 import {
@@ -182,36 +183,36 @@ export default function NoteMenu({
         <Modal
           onClose={() => setRawOpen(false)}
           testId="note-raw-modal"
-          panelClassName="w-full max-w-2xl mx-4 rounded-xl bg-lc-dark border border-lc-border p-5 shadow-xl"
+          panelClassName="w-full max-w-2xl mx-4 flex flex-col overflow-hidden rounded-xl bg-lc-dark border border-lc-border shadow-xl"
         >
-          <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-lc-white">{t('social.rawEvent')}</h2>
+          <ModalHeader title={t('social.rawEvent')} onClose={() => setRawOpen(false)}>
             <Button
               variant="pillSecondary"
               size="xs"
-              className="ml-auto"
               onClick={() => copyWithToast(rawEventJson(note), t('social.rawCopied'))}
               data-testid="note-raw-copy"
             >
               {t('social.copyJson')}
             </Button>
+          </ModalHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            {/*
+              `break-all` because an event is full of 64-character hex strings
+              that would otherwise force the dialog wider than the viewport.
+            */}
+            <dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px]">
+              <dt className="text-lc-muted">{t('social.eventIdLabel')}</dt>
+              <dd className="truncate font-mono text-lc-white" data-testid="note-raw-id">{note.id}</dd>
+              <dt className="text-lc-muted">{t('social.kindLabel')}</dt>
+              <dd className="font-mono text-lc-white">{note.kind}</dd>
+            </dl>
+            <pre
+              className="max-h-[60vh] overflow-auto whitespace-pre-wrap break-all rounded-lg border border-lc-border bg-lc-black p-3 font-mono text-[11px] leading-relaxed text-lc-muted"
+              data-testid="note-raw-json"
+            >
+              {rawEventJson(note)}
+            </pre>
           </div>
-          {/*
-            `break-all` because an event is full of 64-character hex strings
-            that would otherwise force the dialog wider than the viewport.
-          */}
-          <dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px]">
-            <dt className="text-lc-muted">{t('social.eventIdLabel')}</dt>
-            <dd className="truncate font-mono text-lc-white" data-testid="note-raw-id">{note.id}</dd>
-            <dt className="text-lc-muted">{t('social.kindLabel')}</dt>
-            <dd className="font-mono text-lc-white">{note.kind}</dd>
-          </dl>
-          <pre
-            className="max-h-[60vh] overflow-auto whitespace-pre-wrap break-all rounded-lg border border-lc-border bg-lc-black p-3 font-mono text-[11px] leading-relaxed text-lc-muted"
-            data-testid="note-raw-json"
-          >
-            {rawEventJson(note)}
-          </pre>
         </Modal>
       )}
     </div>

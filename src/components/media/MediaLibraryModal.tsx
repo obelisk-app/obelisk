@@ -5,10 +5,10 @@ import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
-import CloseButton from '@/components/ui/CloseButton';
 import EmptyState from '@/components/ui/EmptyState';
 import FileInput from '@/components/ui/FileInput';
 import Input from '@/components/ui/Input';
+import ModalHeader from '@/components/ui/ModalHeader';
 import MediaLibraryShell from './library/MediaLibraryShell';
 import LibraryTabs from './library/LibraryTabs';
 import PackCard from './library/PackCard';
@@ -99,10 +99,6 @@ export default function MediaLibraryModal({
     >
       {!server && <FileInput ref={uploadRef} accept="image/png,image/jpeg,image/webp,image/gif" aria-label={t('media.upload')} onChange={(event) => { void uploadFavorite(event.target.files?.[0]); event.target.value = ""; }} />}
       <aside className="hidden w-52 shrink-0 flex-col border-r border-lc-border bg-lc-black/40 p-3 sm:flex">
-        <div className="px-2 pb-4 pt-2">
-          <div className="text-base font-bold text-lc-white">{t('media.title')}</div>
-          <div className="mt-1 text-xs text-lc-muted">{t('media.subtitle')}</div>
-        </div>
         <LibraryTabs tab={tab} setTab={setTab} server={!!server} />
         {!server && <div className="mt-auto grid gap-2">
           <Button variant="outline" tone="accent" size="sm" disabled={busy} onClick={() => uploadRef.current?.click()}>{t('media.upload')}</Button>
@@ -111,20 +107,16 @@ export default function MediaLibraryModal({
       </aside>
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center gap-3 border-b border-lc-border p-4">
-          <div className="min-w-0 flex-1">
-            <div className="text-base font-bold text-lc-white sm:hidden">{t('media.title')}</div>
-            <Input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t('media.searchPlaceholder')}
-              aria-label={t('media.searchPlaceholder')}
-              className="mt-2 sm:mt-0"
-            />
-          </div>
-          <CloseButton onClick={onClose} label={t('media.close')} />
-        </header>
+        <ModalHeader title={t('media.title')} subtitle={t('media.subtitle')} onClose={onClose} closeLabel={t('media.close')}>
+          <Input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t('media.searchPlaceholder')}
+            aria-label={t('media.searchPlaceholder')}
+            className="w-36 sm:w-72"
+          />
+        </ModalHeader>
 
         <div className="shrink-0 overflow-x-auto border-b border-lc-border p-2 sm:hidden">
           <div className="flex min-w-max gap-1"><LibraryTabs tab={tab} setTab={setTab} server={!!server} mobile /></div>
@@ -146,7 +138,7 @@ export default function MediaLibraryModal({
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {tab === "server" && server && (
             <Card as="section" surface="translucent" padding="lg" data-testid="server-pack-summary" className="mb-5">
-              <h2 className="font-semibold text-lc-white">{t('media.serverPacks')}</h2>
+              <h3 className="font-semibold text-lc-white">{t('media.serverPacks')}</h3>
               <p className="mt-1 text-xs text-lc-muted">{t('media.serverPacksSelected', { count: (server.emojiSet.packAddresses ?? []).length })}</p>
               <p className="mt-2 text-xs text-lc-muted">{t('media.serverPacksHelp')}</p>
               {server.emojiSet.emojis.length > 0 && <p className="mt-2 text-xs text-amber-300">{t('media.legacyHelp')}</p>}
@@ -155,7 +147,7 @@ export default function MediaLibraryModal({
 
           {tab === "favorites" && favorites.items.length > 0 && (
             <section className="mb-5">
-              <h2 className="mb-2 text-sm font-semibold text-lc-white">{t('media.individualFavorites')}</h2>
+              <h3 className="mb-2 text-sm font-semibold text-lc-white">{t('media.individualFavorites')}</h3>
               <MediaItemGrid
                 items={favorites.items.filter((item) => kindFilter === "all" || item.kind === kindFilter)}
                 favorites={favorites.items}

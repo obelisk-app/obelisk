@@ -76,6 +76,10 @@ describe('NoteMenu', () => {
     fireEvent.click(screen.getByTestId('note-menu-raw'));
     const json = screen.getByTestId('note-raw-json').textContent ?? '';
     expect(JSON.parse(json)).toMatchObject({ id: note.id, sig: note.sig, kind: 1 });
+    // The shared ModalHeader: the copy button sits in it, and it can be closed.
+    expect(screen.getByTestId('note-raw-copy')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByTestId('note-raw-modal')).toBeNull();
   });
 
   it('copies the note text', () => {

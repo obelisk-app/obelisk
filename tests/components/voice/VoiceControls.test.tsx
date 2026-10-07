@@ -236,3 +236,59 @@ describe('VoiceControls error surface', () => {
     await waitFor(() => expect(screen.getByTestId('voice-error')).toHaveTextContent('No se encontró ningún micrófono ni cámara.'));
   });
 });
+
+describe('VoiceControls details', () => {
+  const CIRCLE = 'w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-95 ';
+  const DANGER = 'bg-red-500/15 text-red-300 hover:bg-red-500/25 ring-1 ring-red-500/30';
+  const ACTIVE = 'bg-lc-green/20 text-lc-green hover:bg-lc-green/30 ring-1 ring-lc-green/40';
+  const IDLE = 'bg-white/5 text-white/85 hover:bg-white/10 ring-1 ring-white/10';
+
+  it('keeps the look, title and label of each round button for its state', () => {
+    useVoiceStore.setState({ isMuted: true, isDeafened: false, isCameraOn: true, isScreenSharing: true });
+    renderLocalized(<VoiceControls onLeave={() => {}} onToggleChat={() => {}} isChatOpen />);
+    const mute = screen.getByTestId('mute-btn');
+    expect(mute.className).toBe(CIRCLE + DANGER);
+    expect(mute.title).toBe('Unmute');
+    expect(mute.getAttribute('aria-label')).toBe('Unmute');
+    expect(screen.getByTestId('deafen-btn').className).toBe(CIRCLE + ACTIVE);
+    expect(screen.getByTestId('deafen-btn').title).toBe('Deafen');
+    expect(screen.getByTestId('camera-btn').className).toBe(CIRCLE + ACTIVE);
+    expect(screen.getByTestId('camera-btn').title).toBe('Turn off camera');
+    expect(screen.getByTestId('screen-share-btn').className).toBe(CIRCLE + ACTIVE + ' hidden sm:flex');
+    expect(screen.getByTestId('screen-share-btn').title).toBe('Stop sharing');
+    expect(screen.getByTestId('voice-chat-toggle').className).toBe(CIRCLE + ACTIVE);
+    expect(screen.getByTestId('voice-chat-toggle').title).toBe('Hide chat');
+    expect(screen.getByTestId('quality-btn').className).toBe(CIRCLE + IDLE);
+    expect(screen.getByTestId('quality-btn').getAttribute('aria-label')).toBe('Video quality');
+  });
+
+  it('has no chat toggle without a handler, and an idle one while the chat is closed', () => {
+    const { unmount } = renderLocalized(<VoiceControls onLeave={() => {}} />);
+    expect(screen.queryByTestId('voice-chat-toggle')).toBeNull();
+    unmount();
+    renderLocalized(<VoiceControls onLeave={() => {}} onToggleChat={() => {}} />);
+    expect(screen.getByTestId('voice-chat-toggle').className).toBe(CIRCLE + IDLE);
+    expect(screen.getByTestId('voice-chat-toggle').title).toBe('Show chat');
+  });
+
+  it('turns the camera and the screen share off when they are on, and undeafens without touching the mic', () => {
+    useVoiceStore.setState({ isCameraOn: true, isScreenSharing: true, isDeafened: true });
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
+    fireEvent.click(screen.getByTestId('camera-btn'));
+    expect(activeClient.setCameraEnabled).toHaveBeenCalledWith(false);
+    fireEvent.click(screen.getByTestId('screen-share-btn'));
+    expect(activeClient.setScreenShareEnabled).toHaveBeenCalledWith(false);
+    fireEvent.click(screen.getByTestId('deafen-btn'));
+    expect(activeClient.setDeafenEnabled).toHaveBeenCalledWith(false);
+    expect(useVoiceStore.getState().isDeafened).toBe(false);
+    expect(activeClient.setMicEnabled).not.toHaveBeenCalled();
+  });
+
+  it('the gear closes the quality popover on a second click and lights up while it is open', () => {
+    renderLocalized(<VoiceControls onLeave={() => {}} />);
+    fireEvent.click(screen.getByTestId('quality-btn'));
+    expect(screen.getByTestId('quality-btn').className).toBe(CIRCLE + ACTIVE);
+    fireEvent.click(screen.getByTestId('quality-btn'));
+    expect(screen.queryByTestId('quality-popover')).toBeNull();
+  });
+});

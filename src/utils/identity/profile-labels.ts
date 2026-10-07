@@ -22,3 +22,8 @@ export function profileShortNpub(pubkey: string): string {
 export function popoverShortNpub(pubkey: string): string {
   return shortNpubLabel(pubkey) || formatPubkey(pubkey);
 }
+
+/** A person's chosen name from their profile, else `fallback` (a short npub, a trimmed key). */
+export function profileNameOr(meta: { displayName?: string | null; name?: string | null } | null | undefined, fallback: string): string {
+  return meta?.displayName || meta?.name || fallback;
+}

@@ -160,3 +160,94 @@ describe('VoiceStatusBar', () => {
     expect(warn).toHaveBeenCalledWith('[voice] leave failed; the call was dropped locally anyway', expect.any(Error));
   });
 });
+
+describe('VoiceStatusBar details', () => {
+  const SMALL = 'flex-1 h-8 rounded-md flex items-center justify-center transition-colors ';
+
+  it('names the channel, or shows the first eight characters of an unknown id', () => {
+    const { unmount } = renderBar();
+    expect(screen.getByText('Lounge')).toBeTruthy();
+    unmount();
+    useVoiceStore.setState({ currentVoiceChannelId: 'abcdef0123456789' });
+    renderBar();
+    expect(screen.getByText('abcdef01…')).toBeTruthy();
+  });
+
+  it('keeps the look of each small button for its state', () => {
+    useVoiceStore.setState({ isMuted: true, isDeafened: false, isCameraOn: true, isScreenSharing: false });
+    renderBar();
+    expect(screen.getByTitle('Unmute').className).toBe(SMALL + 'bg-red-600/20 text-red-400 hover:bg-red-600/30');
+    expect(screen.getByTitle('Deafen').className).toBe(SMALL + 'bg-lc-green/20 text-lc-green hover:bg-lc-green/30');
+    expect(screen.getByTestId('voice-bar-camera').className).toBe(SMALL + 'bg-lc-green/20 text-lc-green hover:bg-lc-green/30');
+    expect(screen.getByTestId('voice-bar-screenshare').className)
+      .toBe(SMALL + 'bg-lc-border/40 hover:bg-lc-border/60 text-lc-muted hover:text-lc-white');
+    expect(screen.getByTestId('voice-bar-camera').title).toBe('Turn off camera');
+    expect(screen.getByTestId('voice-bar-screenshare').title).toBe('Share screen');
+  });
+
+  it('undeafening, or deafening while muted, leaves the microphone alone', () => {
+    const client: FakeClient = {
+      setMicEnabled: vi.fn(async () => {}), leave: vi.fn(async () => {}), setDeafenEnabled: vi.fn(),
+    };
+    harness.client = client;
+    useVoiceStore.setState({ isMuted: true, isDeafened: false });
+    const { unmount } = renderBar();
+    fireEvent.click(screen.getByTitle('Deafen'));
+    expect(client.setDeafenEnabled).toHaveBeenCalledWith(true);
+    expect(client.setMicEnabled).not.toHaveBeenCalled();
+    unmount();
+    useVoiceStore.setState({ isMuted: false, isDeafened: true });
+    renderBar();
+    fireEvent.click(screen.getByTitle('Undeafen'));
+    expect(client.setDeafenEnabled).toHaveBeenLastCalledWith(false);
+    expect(useVoiceStore.getState().isDeafened).toBe(false);
+    expect(client.setMicEnabled).not.toHaveBeenCalled();
+  });
+
+  it('does nothing on the toggles without an active client', () => {
+    useVoiceStore.setState({ isMuted: false, isDeafened: false });
+    renderBar();
+    fireEvent.click(screen.getByTitle('Deafen'));
+    expect(useVoiceStore.getState().isDeafened).toBe(false);
+  });
+
+  it('leaving without an active client still drops the call locally', async () => {
+    renderBar();
+    fireEvent.click(screen.getByTestId('voice-bar-leave'));
+    await waitFor(() => expect(useVoiceStore.getState().currentVoiceChannelId).toBeNull());
+    expect(harness.setActiveVoiceClient).toHaveBeenCalledWith(null);
+  });
+
+  it('jumping back without a home relay passes null', () => {
+    useVoiceStore.setState({ currentVoiceRelayUrl: null });
+    renderBar();
+    fireEvent.click(screen.getByTitle('Go to voice channel'));
+    expect(harness.jump).toHaveBeenCalledWith({ channelId: 'ch1', relayUrl: null });
+  });
+
+  it('checks the cameras again when a device is plugged in, and stops listening on unmount', async () => {
+    const nav = globalThis.navigator as unknown as { mediaDevices?: unknown };
+    const prev = nav.mediaDevices;
+    let cams = [{ kind: 'videoinput' }];
+    let onChange: (() => void) | null = null;
+    const removeEventListener = vi.fn();
+    nav.mediaDevices = {
+      enumerateDevices: async () => cams,
+      addEventListener: (_: string, cb: () => void) => { onChange = cb; },
+      removeEventListener,
+    };
+    try {
+      useVoiceStore.setState({ isCameraOn: true });
+      const { unmount } = renderBar();
+      await waitFor(() => expect(onChange).not.toBeNull());
+      expect(screen.queryByTestId('voice-bar-switch-camera')).toBeNull();
+      cams = [{ kind: 'videoinput' }, { kind: 'audioinput' }, { kind: 'videoinput' }];
+      onChange!();
+      expect(await screen.findByTestId('voice-bar-switch-camera')).toBeTruthy();
+      unmount();
+      expect(removeEventListener).toHaveBeenCalledWith('devicechange', onChange);
+    } finally {
+      nav.mediaDevices = prev;
+    }
+  });
+});

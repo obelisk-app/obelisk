@@ -25,9 +25,10 @@ import { describe, expect, it } from 'vitest';
  * buttons, the profile, the member lists, the deep link, presence, the
  * slash catalog); 97 after round 21 moved the invoice card's suite to
  * `fakeBridge`; 96 after round 23 deleted the phone's mock zap sheet and
- * its suite.
+ * its suite; 95 after round 27 moved the relay admin panel's suite to
+ * `fakeBridge`.
  */
-const BUDGET = 96;
+const BUDGET = 95;
 
 const TESTS = join(process.cwd(), 'tests');
 /** The front door itself, not a path inside it (`/client` and friends are counted elsewhere, if at all). */

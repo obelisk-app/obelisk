@@ -12,9 +12,13 @@ import { useMemo, useSyncExternalStore } from 'react';
  * sizes its own cells.
  *
  * The subtraction is the chrome above and below: title row, turn clock,
- * seat legend, and the action buttons.
+ * seat legend, and the action buttons. The title row is the shared
+ * ModalHeader since round 27: 65px (py-3, a 24px title over a 16px status
+ * line, the hairline) plus the body's 12px top padding, where the old
+ * hand-built row took 60.5px (12px panel padding, 20px title over a 16.5px
+ * status line, a 12px gap). So 210 became 227 (16.5 rounded up).
  */
-export const FULLSCREEN_CHROME_PX = 210;
+export const FULLSCREEN_CHROME_PX = 227;
 
 function subscribeResize(notify: () => void): () => void {
   if (typeof window === 'undefined') return () => {};

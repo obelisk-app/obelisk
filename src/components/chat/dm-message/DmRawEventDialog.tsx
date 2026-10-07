@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { DmRawEvent, JsDirectMessage } from '@/services/nostr-bridge';
 import Modal from '@/components/ui/Modal';
+import ModalHeader from '@/components/ui/ModalHeader';
 import { LockIcon } from '@/components/ui/icons';
 import Button from '@/components/ui/Button';
 import SegmentedControl from '@/components/ui/SegmentedControl';
@@ -54,10 +55,9 @@ export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessag
     <Modal
       onClose={onClose}
       testId="dm-raw-modal"
-      panelClassName="w-full max-w-2xl mx-4 rounded-xl bg-lc-dark border border-lc-border p-5 shadow-xl"
+      panelClassName="w-full max-w-2xl mx-4 flex flex-col overflow-hidden rounded-xl bg-lc-dark border border-lc-border shadow-xl"
     >
-      <div className="mb-3 flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-lc-white">{t('dm.raw.title')}</h2>
+      <ModalHeader title={t('dm.raw.title')} onClose={onClose}>
         {rumor && wire && (
           <SegmentedControl
             aria-label={t('dm.raw.title')}
@@ -70,29 +70,31 @@ export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessag
             ]}
           />
         )}
+      </ModalHeader>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        {!rumor && !wire && <p className="text-xs text-lc-muted">{t('dm.raw.unavailable')}</p>}
+        {rumor && tab === 'message' && (
+          <RawEventView
+            event={rumor}
+            hint={t('dm.raw.rumorHint', { kind: String(rumor.kind) })}
+            warning={holdsKey ? t('dm.raw.keyWarning') : null}
+            testId="dm-raw-rumor"
+          />
+        )}
+        {wire && (tab === 'wire' || !rumor) && (
+          <>
+            <RawEventView event={wire} hint={nip04 ? t('dm.raw.nip04Hint') : t('dm.raw.wrapHint')} testId="dm-raw-wire" />
+            {nip04 && (
+              <div className="mt-3">
+                <p className="mb-1 text-[11px] text-lc-muted">{t('dm.raw.decrypted')}</p>
+                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-lc-border bg-lc-black p-3 text-xs text-lc-white">
+                  {message.content}
+                </pre>
+              </div>
+            )}
+          </>
+        )}
       </div>
-      {!rumor && !wire && <p className="text-xs text-lc-muted">{t('dm.raw.unavailable')}</p>}
-      {rumor && tab === 'message' && (
-        <RawEventView
-          event={rumor}
-          hint={t('dm.raw.rumorHint', { kind: String(rumor.kind) })}
-          warning={holdsKey ? t('dm.raw.keyWarning') : null}
-          testId="dm-raw-rumor"
-        />
-      )}
-      {wire && (tab === 'wire' || !rumor) && (
-        <>
-          <RawEventView event={wire} hint={nip04 ? t('dm.raw.nip04Hint') : t('dm.raw.wrapHint')} testId="dm-raw-wire" />
-          {nip04 && (
-            <div className="mt-3">
-              <p className="mb-1 text-[11px] text-lc-muted">{t('dm.raw.decrypted')}</p>
-              <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-lc-border bg-lc-black p-3 text-xs text-lc-white">
-                {message.content}
-              </pre>
-            </div>
-          )}
-        </>
-      )}
     </Modal>
   );
 }

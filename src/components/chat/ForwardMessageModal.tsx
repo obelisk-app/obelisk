@@ -12,6 +12,7 @@
 
 import { useMemo, useState } from 'react';
 import Modal from '@/components/ui/Modal';
+import ModalHeader from '@/components/ui/ModalHeader';
 import Input from '@/components/ui/Input';
 import { nostrActions, useGroups } from '@/services/nostr-bridge';
 import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
@@ -77,40 +78,39 @@ export default function ForwardMessageModal({
   };
 
   return (
-    <Modal onClose={onClose} testId="forward-modal" panelClassName="w-[min(420px,calc(100vw-2rem))] rounded-xl border border-lc-border bg-lc-dark p-4 shadow-2xl">
-      <div className="mb-3 flex items-center gap-2 text-lc-white">
-        <ForwardIcon size={18} />
-        <h2 className="text-base font-semibold">{t('chat.message.forwardTitle')}</h2>
+    <Modal onClose={onClose} testId="forward-modal" panelClassName="flex w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl">
+      <ModalHeader title={t('chat.message.forwardTitle')} icon={<ForwardIcon size={18} />} onClose={onClose} />
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <blockquote className="mb-3 line-clamp-3 border-l-2 border-lc-green/40 pl-3 text-sm text-lc-white/80">
+          {message.content}
+        </blockquote>
+        <Input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('chat.message.forwardSearch')}
+          aria-label={t('chat.message.forwardSearch')}
+          className="mb-2"
+          data-testid="forward-search"
+        />
+        <ul className="max-h-72 space-y-0.5 overflow-y-auto" role="menu" aria-label={t('chat.message.forwardTitle')}>
+          {targets.length === 0 && (
+            <EmptyState as="li" padding="md" className="px-3">{t('chat.message.forwardEmpty')}</EmptyState>
+          )}
+          {targets.map((g) => (
+            <li key={g.id} role="none">
+              <MenuItem
+                icon={<HashIcon size={15} />}
+                label={g.name ?? g.id.slice(0, 12)}
+                trailing={sending === g.id ? <Spinner size="sm" /> : undefined}
+                disabled={sending !== null}
+                onClick={() => void forward(g)}
+                testId={`forward-target-${g.id}`}
+              />
+            </li>
+          ))}
+        </ul>
       </div>
-      <blockquote className="mb-3 line-clamp-3 border-l-2 border-lc-green/40 pl-3 text-sm text-lc-white/80">
-        {message.content}
-      </blockquote>
-      <Input
-        autoFocus
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={t('chat.message.forwardSearch')}
-        aria-label={t('chat.message.forwardSearch')}
-        className="mb-2"
-        data-testid="forward-search"
-      />
-      <ul className="max-h-72 space-y-0.5 overflow-y-auto" role="menu" aria-label={t('chat.message.forwardTitle')}>
-        {targets.length === 0 && (
-          <EmptyState as="li" padding="md" className="px-3">{t('chat.message.forwardEmpty')}</EmptyState>
-        )}
-        {targets.map((g) => (
-          <li key={g.id} role="none">
-            <MenuItem
-              icon={<HashIcon size={15} />}
-              label={g.name ?? g.id.slice(0, 12)}
-              trailing={sending === g.id ? <Spinner size="sm" /> : undefined}
-              disabled={sending !== null}
-              onClick={() => void forward(g)}
-              testId={`forward-target-${g.id}`}
-            />
-          </li>
-        ))}
-      </ul>
     </Modal>
   );
 }

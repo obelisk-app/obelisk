@@ -8,7 +8,8 @@ import {
 } from '@/lib/games/stacker/keymap';
 import type { InputKind } from '@/lib/games/stacker/engine';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
+import ModalHeader from '@/components/ui/ModalHeader';
+import ModalFooter from '@/components/ui/ModalFooter';
 import Chip from '@/components/ui/Chip';
 
 /**
@@ -47,60 +48,52 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
     <Modal
       onClose={onClose}
       testId="stacker-keys-panel"
-      panelClassName="w-full max-w-sm mx-4 rounded-xl bg-lc-dark border border-lc-border p-5"
+      panelClassName="w-full max-w-sm mx-4 rounded-xl border border-lc-border bg-lc-dark shadow-xl flex flex-col overflow-hidden max-h-[85vh]"
     >
-      <h2 className="text-sm font-semibold text-lc-white">{t('games.controls')}</h2>
-      <p className="mt-1 text-[11px] text-lc-muted">
-        {t('games.controlsHelp')}
-      </p>
+      <ModalHeader title={t('games.controls')} subtitle={t('games.controlsHelp')} onClose={onClose} />
 
-      <ul className="mt-3 space-y-1.5" data-testid="stacker-key-list">
-        {BINDABLE.map(({ action }) => {
-          const bound = keysFor(map, action);
-          return (
-            <li key={action} className="flex items-center gap-2">
-              <span className="flex-1 text-xs text-lc-white">{t(`games.stacker.action.${action}`)}</span>
-              {bound.map((code) => (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() => {
-                    const next = unbindKey(map, code);
-                    setMap(next);
-                    saveKeyMap(next);
-                  }}
-                  title={t('games.removeKey')}
-                  className="rounded border border-lc-border px-1.5 py-0.5 font-mono text-[10px] text-lc-muted hover:border-red-400 hover:text-red-400"
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <ul className="space-y-1.5" data-testid="stacker-key-list">
+          {BINDABLE.map(({ action }) => {
+            const bound = keysFor(map, action);
+            return (
+              <li key={action} className="flex items-center gap-2">
+                <span className="flex-1 text-xs text-lc-white">{t(`games.stacker.action.${action}`)}</span>
+                {bound.map((code) => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => {
+                      const next = unbindKey(map, code);
+                      setMap(next);
+                      saveKeyMap(next);
+                    }}
+                    title={t('games.removeKey')}
+                    className="rounded border border-lc-border px-1.5 py-0.5 font-mono text-[10px] text-lc-muted hover:border-red-400 hover:text-red-400"
+                  >
+                    {code === 'Space' ? t('games.stacker.space') : keyLabel(code)}
+                  </button>
+                ))}
+                <Chip
+                  size="10"
+                  state={listening === action ? 'selected' : 'idle'}
+                  onClick={() => setListening(action)}
+                  data-testid={`bind-${action}`}
                 >
-                  {code === 'Space' ? t('games.stacker.space') : keyLabel(code)}
-                </button>
-              ))}
-              <Chip
-                size="10"
-                state={listening === action ? 'selected' : 'idle'}
-                onClick={() => setListening(action)}
-                data-testid={`bind-${action}`}
-              >
-                {t(listening === action ? 'games.stacker.pressKey' : 'games.stacker.addKey')}
-              </Chip>
-            </li>
-          );
-        })}
-      </ul>
-
-      <div className="mt-4 flex justify-between">
-        <Button
-          variant="pillSecondary"
-          size="xs"
-          onClick={() => setMap(resetKeyMap())}
-          data-testid="stacker-keys-reset"
-        >
-          {t('games.resetKeys')}
-        </Button>
-        <Button variant="pill" size="xs" onClick={onClose}>
-          {t('common.done')}
-        </Button>
+                  {t(listening === action ? 'games.stacker.pressKey' : 'games.stacker.addKey')}
+                </Chip>
+              </li>
+            );
+          })}
+        </ul>
       </div>
+
+      <ModalFooter
+        actions={[
+          { label: t('games.resetKeys'), onClick: () => setMap(resetKeyMap()), tone: 'secondary', testId: 'stacker-keys-reset' },
+          { label: t('common.done'), onClick: onClose, tone: 'primary' },
+        ]}
+      />
     </Modal>
   );
 }

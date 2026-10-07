@@ -16,6 +16,9 @@ import Spinner from './Spinner';
  * the stylesheet pill's shape and padding with a faint red fill, quieter
  * than the solid `danger` a confirmation dialog uses.
  *
+ * `zap` is the yellow pill of a Lightning payment (send a zap): zaps are
+ * yellow everywhere in the app. It sets its own size, like the tool buttons.
+ *
  * `tool` / `toolIcon` are the stylesheet's `lc-tool` (the 28px composer
  * toolbar buttons, which show `aria-pressed`) and `lc-icon-btn` (the 36px
  * round feed toolbar button, 40px on phones). Like the pills they live
@@ -24,7 +27,7 @@ import Spinner from './Spinner';
  */
 export type ButtonVariant =
   | 'primary' | 'secondary' | 'ghost' | 'danger' | 'pill' | 'pillSecondary' | 'outline' | 'outlinePill'
-  | 'pillDanger' | 'tool' | 'toolIcon';
+  | 'pillDanger' | 'tool' | 'toolIcon' | 'zap';
 /**
  * `icon` is the square `p-1` footprint of the list-row icon buttons.
  * `icon-md` (`p-2`) and `icon-touch` (`p-2.5`, `p-1.5` from `md` up) are the
@@ -60,6 +63,7 @@ const VARIANT_CLASS: Record<Exclude<ButtonVariant, 'ghost' | 'outline' | 'outlin
   pillDanger: 'lc-pill bg-red-500/20 text-red-300 hover:bg-red-500/30 focus-visible:ring-red-400/70',
   tool: 'lc-tool focus-visible:ring-lc-green/60',
   toolIcon: 'lc-icon-btn focus-visible:ring-lc-green/60',
+  zap: 'rounded-full bg-yellow-400 px-4 py-1.5 text-xs font-semibold text-lc-black hover:bg-yellow-300 focus-visible:ring-yellow-300/70',
 };
 
 const GHOST_TONE_CLASS: Record<ButtonTone, string> = {
@@ -113,9 +117,9 @@ function isPill(variant: ButtonVariant): boolean {
   return variant === 'pill' || variant === 'pillSecondary' || variant === 'pillDanger';
 }
 
-/** The stylesheet's own fixed-size buttons: no size class at all. */
+/** Variants that set their own size (the stylesheet's tool buttons, the zap pill): no size class at all. */
 function isStylesheetSized(variant: ButtonVariant): boolean {
-  return variant === 'tool' || variant === 'toolIcon';
+  return variant === 'tool' || variant === 'toolIcon' || variant === 'zap';
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import TextArea from '@/components/ui/TextArea';
 import Input from '@/components/ui/Input';
 import ModalHeader from '@/components/ui/ModalHeader';
+import ModalFooter from '@/components/ui/ModalFooter';
 import { useChannelSettingsForm } from '@/hooks/chat/useChannelSettingsForm';
 import ForumTagsEditor from '@/components/chat/ForumTagsEditor';
 import { ChannelAppearanceInput } from '@/components/media/BlossomImageInput';
@@ -33,7 +34,7 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
       panelClassName="lc-card flex max-h-[90vh] w-full max-w-xl mx-4 flex-col overflow-hidden bg-lc-dark"
     >
         <ModalHeader title={t('shell.desktop.channel.settingsTitle', { name: group.name ?? group.id.slice(0, 8) })} onClose={onClose} />
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <form onSubmit={(e) => void saveMeta(e)} id="channel-meta-form" className="space-y-7 p-5">
             {/* Appearance ----------------------------------------------- */}
             <section className="space-y-4">
@@ -256,17 +257,15 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
             </div>
           </section>
         </div>
-        <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-lc-border bg-lc-dark px-5 py-3">
-          <div className="text-[11px] text-lc-muted">{t('shell.desktop.channel.saveHelp')}</div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="md" onClick={onClose} className="rounded-lg font-medium">
-              {t('common.cancel')}
-            </Button>
-            <Button type="submit" form="channel-meta-form" disabled={savingMeta}>
-              {savingMeta ? t('shell.desktop.channel.saving') : t('shell.desktop.channel.saveChanges')}
-            </Button>
-          </div>
-        </footer>
+        <ModalFooter
+          meta={t('shell.desktop.channel.saveHelp')}
+          cancel={{ onClick: onClose }}
+          actions={[{
+            label: savingMeta ? t('shell.desktop.channel.saving') : t('shell.desktop.channel.saveChanges'),
+            form: 'channel-meta-form',
+            disabled: savingMeta,
+          }]}
+        />
     </Modal>
   );
 }

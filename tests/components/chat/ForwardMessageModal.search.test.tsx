@@ -29,4 +29,17 @@ describe('ForwardMessageModal search', () => {
     expect(screen.getByTestId('forward-target-a')).toBeInTheDocument();
     expect(screen.queryByTestId('forward-target-b')).toBeNull();
   });
+
+  it('has the shared header: the title as the dialog heading and a close button', () => {
+    groups.list = [];
+    const onClose = vi.fn();
+    render(
+      <LocaleProvider initialLocale="en">
+        <ForwardMessageModal message={{ content: 'hi' } as JsMessage} authorName="Ana" fromGroupId="from" onClose={onClose} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalled();
+  });
 });

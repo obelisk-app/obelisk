@@ -7,6 +7,7 @@ import { MAX_THREAD_TAGS, useNewThreadForm } from '@/hooks/chat/useNewThreadForm
 import { useTranslations } from 'next-intl';
 import { MobileTagDot } from '../screens/forum/MobileTagDot';
 import Sheet from '@/components/ui/Sheet';
+import SheetHeader from './SheetHeader';
 import Input from '@/components/ui/Input';
 import TextArea from '@/components/ui/TextArea';
 
@@ -42,7 +43,7 @@ export function NewThreadSheet({
 
   return (
     <Sheet onClose={close} screen="new-thread" label={t('chat.forum.new')} testId="mobile-new-thread-sheet" maxHeight="92%" as="form" onSubmit={(e) => void submit(e)}>
-      <div className="zap-title">{t('chat.forum.new')}</div>
+      <SheetHeader title={t('chat.forum.new')} />
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <label htmlFor={titleId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('chat.forum.titleLabel')}</label>
         <div className="setup-input-wrap">

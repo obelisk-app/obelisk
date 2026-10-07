@@ -6,7 +6,7 @@ import type { ChannelLayout } from '@/services/channel-layout';
 import type { RelayBranding } from '@/services/relay-branding';
 import type { RelayEmojiSet } from '@/services/relay-emojis';
 import type { RelayRoles } from '@/services/relay-roles';
-import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
+import RelayAdminPanel from '@/components/admin/relay-admin/RelayAdminPanel';
 import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
 import RelayRolesAdminModal from '@/components/admin/RelayRolesAdminModal';
 import { ManageLayoutModal } from '../../modals/ManageLayoutModal';

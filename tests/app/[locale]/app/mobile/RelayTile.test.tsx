@@ -30,7 +30,9 @@ vi.mock('@/services/social/relay-status', () => {
   };
 });
 
-import { MobileServerBanner, MobileServerRail, RelayTile } from '@/app/[locale]/app/mobile/MobileServerRail';
+import { MobileServerRail } from '@/app/[locale]/app/mobile/MobileServerRail';
+import { MobileServerBanner } from '@/app/[locale]/app/mobile/rail/MobileServerBanner';
+import { RelayTile } from '@/app/[locale]/app/mobile/rail/RelayTile';
 import { shouldIgnoreMobileSwipeTarget } from '@/utils/shell/mobile/swipe-target';
 /** Every screen in the shell reads copy from the dictionary now. */
 const renderLocalized = (ui: React.ReactElement) => render(

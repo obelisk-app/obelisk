@@ -229,7 +229,7 @@ describe('RelayRolesAdminModal', () => {
   it('names every field, closes with the icon button and never reads avatar letters off hex', () => {
     renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
     expect(screen.getByLabelText('mod color')).toHaveAttribute('type', 'color');
-    const close = screen.getAllByRole('button', { name: 'Close' })[0];
+    const close = screen.getByRole('button', { name: 'Close' }); // one Close: the header's
     expect(close.querySelector('svg')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '1 member' }));
     const carol = within(screen.getByTestId('role-candidates-mod')).getByRole('button', { name: /Carol Danvers/ });

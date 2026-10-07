@@ -5,7 +5,9 @@ import { useIsLoggedIn, useCurrentRelayUrl, useRelayAccess, useMyLoginMethod } f
 import { shortHost } from '@/utils/relay-url/url-host';
 import Modal from '@/components/ui/Modal';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
+import ModalHeader from '@/components/ui/ModalHeader';
+import ModalFooter from '@/components/ui/ModalFooter';
+import { LockIcon, ServerIcon, ShieldIcon } from '@/components/ui/icons';
 
 export function RelayAccessModal() {
   const t = useTranslations();
@@ -42,25 +44,19 @@ export function RelayAccessModal() {
       ? t('shell.status.modal.unreachable')
       : t('shell.status.modal.restricted');
 
-  const tone = isAuth ? 'yellow' : 'red';
+  const tone = isAuth ? 'warning' : 'danger';
+  const icon = isAuth ? <LockIcon size={22} /> : isUnreachable ? <ServerIcon size={22} /> : <ShieldIcon size={22} />;
 
   return (
     <Modal
       onClose={() => setDismissed(key)}
       panelClassName={
         'max-w-md mx-4 rounded-xl border bg-lc-card p-6 shadow-2xl ' +
-        (tone === 'yellow' ? 'border-yellow-500/50' : 'border-red-500/50')
+        (tone === 'warning' ? 'border-yellow-500/50' : 'border-red-500/50')
       }
     >
-        <div className={'text-xl font-bold ' + (tone === 'yellow' ? 'text-yellow-200' : 'text-red-300')}>
-          {title}
-        </div>
-        <div className="mt-3 text-sm text-lc-white/90">{body}</div>
-        <div className="mt-4 flex justify-end">
-          <Button onClick={() => setDismissed(key)}>
-            {t('shell.desktop.gotIt')}
-          </Button>
-        </div>
+      <ModalHeader variant="alert" tone={tone} icon={icon} title={title} subtitle={body} />
+      <ModalFooter variant="alert" actions={[{ label: t('shell.desktop.gotIt'), onClick: () => setDismissed(key) }]} />
     </Modal>
   );
 }

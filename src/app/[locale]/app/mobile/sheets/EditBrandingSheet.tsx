@@ -10,6 +10,7 @@ import Sheet from '@/components/ui/Sheet';
 import Input from '@/components/ui/Input';
 import TextArea from '@/components/ui/TextArea';
 import SheetActions from './SheetActions';
+import SheetHeader from './SheetHeader';
 
 // Bottom-sheet for editing kind 30078 relay branding (name, description,
 // icon, banner). Mobile-native counterpart of the desktop RelayBrandingModal,
@@ -33,13 +34,11 @@ export function EditBrandingSheet({
 
   return (
     <Sheet onClose={close} screen="edit-branding" label={t('mobile.branding.edit')} zIndex={20} maxHeight="94%">
-      <div className="zap-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
-        {t('mobile.branding.edit')}
-      </div>
-      <p style={{ fontSize: 11, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
-        {t('mobile.branding.help')}
-      </p>
+      <SheetHeader
+        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>}
+        title={t('mobile.branding.edit')}
+        subtitle={t('mobile.branding.help')}
+      />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <BlossomImageInput
           label={t('mobile.branding.iconAlt')}

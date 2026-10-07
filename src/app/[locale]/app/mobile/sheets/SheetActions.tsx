@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/utils/style/cn';
 
@@ -11,6 +12,10 @@ export interface SheetPrimaryAction {
   busyLabel?: string;
   disabled?: boolean;
   testId?: string;
+  /** `danger` is the solid red full-width button of a destructive confirmation (disconnect). */
+  tone?: 'primary' | 'danger';
+  /** A glyph before the label. */
+  icon?: ReactNode;
 }
 
 export interface SheetActionsProps {
@@ -23,10 +28,14 @@ export interface SheetActionsProps {
   cancelClassName?: string;
 }
 
+const PRIMARY_CLASS = { primary: 'btn-primary', danger: 'settings-btn-danger' } as const;
+
 /**
- * The footer that ends a mobile sheet: the full-width `.btn-primary` and the
- * quiet `.btn-cancel` under it. Renders a fragment, so both stay direct
- * children of the sheet exactly as when every sheet wrote them by hand.
+ * The footer that ends a mobile sheet: the full-width `.btn-primary` (or the
+ * red `.settings-btn-danger` of a destructive confirmation) and the quiet
+ * `.btn-cancel` under it. Every `<Sheet>` with actions at its foot uses this.
+ * Renders a fragment, so both stay direct children of the sheet exactly as
+ * when every sheet wrote them by hand.
  */
 export default function SheetActions({ primary, onCancel, dismiss = 'cancel', cancelClassName }: SheetActionsProps) {
   const t = useTranslations();
@@ -37,9 +46,10 @@ export default function SheetActions({ primary, onCancel, dismiss = 'cancel', ca
           type="button"
           onClick={primary.onClick}
           disabled={primary.disabled || primary.busy}
-          className="btn-primary"
+          className={PRIMARY_CLASS[primary.tone ?? 'primary']}
           data-testid={primary.testId}
         >
+          {primary.icon}
           {primary.busy && primary.busyLabel ? primary.busyLabel : primary.label}
         </button>
       )}

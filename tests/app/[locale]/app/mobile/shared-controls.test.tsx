@@ -59,6 +59,29 @@ describe('SheetActions', () => {
     expect(container.querySelectorAll('button')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Close' })).toHaveClass('btn-cancel', 'relay-menu-close');
   });
+
+  it('renders a destructive primary as the red danger button with its glyph before the label', () => {
+    const confirm = vi.fn();
+    en(
+      <SheetActions
+        primary={{ label: 'Disconnect', onClick: confirm, tone: 'danger', testId: 'go', icon: <svg data-testid="glyph" /> }}
+        onCancel={vi.fn()}
+      />,
+    );
+    const button = screen.getByTestId('go');
+    expect(button).toHaveClass('settings-btn-danger');
+    expect(button).not.toHaveClass('btn-primary');
+    expect(button.firstElementChild).toBe(screen.getByTestId('glyph'));
+    expect(button).toHaveTextContent('Disconnect');
+    fireEvent.click(button);
+    expect(confirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('defaults the primary to the primary tone with no glyph', () => {
+    en(<SheetActions primary={{ label: 'Save', onClick: vi.fn(), testId: 'save' }} onCancel={vi.fn()} />);
+    expect(screen.getByTestId('save')).toHaveClass('btn-primary');
+    expect(screen.getByTestId('save').querySelector('svg')).toBeNull();
+  });
 });
 
 describe('EmojiSheet', () => {

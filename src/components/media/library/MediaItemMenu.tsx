@@ -2,8 +2,8 @@
 
 import MediaThumb from '@/components/media/MediaThumb';
 import Button from '@/components/ui/Button';
-import CloseButton from '@/components/ui/CloseButton';
 import Modal from '@/components/ui/Modal';
+import ModalHeader from '@/components/ui/ModalHeader';
 import { useTranslations } from 'next-intl';
 import type { SelectedMedia } from '@/utils/media-library/types';
 
@@ -21,15 +21,14 @@ export default function MediaItemMenu({ selection, favorite, busy, server, onClo
   const t = useTranslations();
   const { item, pack } = selection;
   return (
-    <Modal onClose={onClose} testId="media-item-menu" panelClassName="lc-card mx-3 w-full max-w-sm overflow-hidden bg-lc-dark">
-      <header className="flex items-center justify-between border-b border-lc-border p-4">
-        <div>
-          <h2 className="font-semibold text-lc-white">:{item.name}:</h2>
-          <p className="mt-1 text-xs text-lc-muted">{pack ? t('media.item.fromPack', { kind: t(`media.kind.${item.kind}`), title: pack.title }) : t('media.item.individual', { kind: t(`media.kind.${item.kind}`) })}</p>
-        </div>
-        <CloseButton onClick={onClose} label={t('media.closeActions')} />
-      </header>
-      <div className="flex h-64 items-center justify-center bg-lc-black p-6">
+    <Modal onClose={onClose} testId="media-item-menu" panelClassName="mx-3 flex w-full max-w-sm flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-xl">
+      <ModalHeader
+        title={<>:{item.name}:</>}
+        subtitle={pack ? t('media.item.fromPack', { kind: t(`media.kind.${item.kind}`), title: pack.title }) : t('media.item.individual', { kind: t(`media.kind.${item.kind}`) })}
+        onClose={onClose}
+        closeLabel={t('media.closeActions')}
+      />
+      <div className="flex h-64 shrink-0 items-center justify-center bg-lc-black p-6">
         <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
       </div>
       <div className="grid gap-2 p-4">

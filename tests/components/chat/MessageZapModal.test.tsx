@@ -40,7 +40,9 @@ describe('MessageZapModal', () => {
     expect(comment).toHaveAttribute('maxlength', '200');
     fireEvent.change(comment, { target: { value: 'gm' } });
     expect(comment).toHaveValue('gm');
-    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Zap Ana');
+    // The shared ModalHeader renders the dialog's title as its <h2>, with a close button.
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Zap Ana');
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
   });
 
   it('names both fields by their visible captions', () => {
@@ -48,5 +50,13 @@ describe('MessageZapModal', () => {
     act(() => useMessageZapStore.getState().open({ recipientPubkey: RECIPIENT, displayName: 'Ana', groupId: 'g' }));
     expect(screen.getByLabelText('Amount (sats)')).toBe(screen.getByRole('spinbutton'));
     expect(screen.getByLabelText('Comment (optional)')).toBe(screen.getByPlaceholderText('Nice post!'));
+  });
+
+  it('sends with the yellow zap pill, the same yellow as every zap in the app', () => {
+    mount();
+    act(() => useMessageZapStore.getState().open({ recipientPubkey: RECIPIENT, displayName: 'Ana', groupId: 'g', defaultAmountSats: 500 }));
+    const send = screen.getByRole('button', { name: 'Zap 500 sats' });
+    expect(send).toHaveClass('bg-yellow-400', 'rounded-full');
+    expect(send.querySelector('svg')).not.toBeNull();
   });
 });

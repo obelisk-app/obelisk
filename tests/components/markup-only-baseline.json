@@ -1,0 +1,950 @@
+{
+  "src/app/[locale]/app/AppGate.tsx": {
+    "effects": 1
+  },
+  "src/app/[locale]/app/Avatar.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/DMComposer.tsx": {
+    "effects": 2,
+    "memos": 1,
+    "state": 1,
+    "functions": 2,
+    "components": 1
+  },
+  "src/app/[locale]/app/DMList.tsx": {
+    "effects": 1,
+    "memos": 4,
+    "functions": 2,
+    "components": 1
+  },
+  "src/app/[locale]/app/DMOptInGate.tsx": {
+    "functions": 1,
+    "components": 1
+  },
+  "src/app/[locale]/app/DesktopShell.tsx": {
+    "functions": 6
+  },
+  "src/app/[locale]/app/GeneratedProfileEnhancements.tsx": {
+    "effects": 1,
+    "functions": 1
+  },
+  "src/app/[locale]/app/RelayStatusBanner.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/SearchBar.tsx": {
+    "effects": 1,
+    "memos": 1,
+    "state": 2,
+    "functions": 8
+  },
+  "src/app/[locale]/app/ServerRail.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/UserPanel.tsx": {
+    "functions": 2
+  },
+  "src/app/[locale]/app/dm-protocol/DmProtocolSwitch.tsx": {
+    "components": 1
+  },
+  "src/app/[locale]/app/mobile/BottomNav.tsx": {
+    "functions": 2
+  },
+  "src/app/[locale]/app/mobile/MobileScreens.tsx": {
+    "functions": 2
+  },
+  "src/app/[locale]/app/mobile/MobileScreensHost.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/PhoneShell.tsx": {
+    "memos": 1,
+    "state": 1
+  },
+  "src/app/[locale]/app/mobile/avatar.tsx": {
+    "functions": 2
+  },
+  "src/app/[locale]/app/mobile/screens/ChannelComposer.tsx": {
+    "effects": 1,
+    "functions": 2,
+    "components": 1
+  },
+  "src/app/[locale]/app/mobile/screens/ChannelMessage.tsx": {
+    "functions": 6,
+    "components": 1
+  },
+  "src/app/[locale]/app/mobile/screens/ChannelRow.tsx": {
+    "state": 1,
+    "functions": 4,
+    "components": 2
+  },
+  "src/app/[locale]/app/mobile/screens/ChannelScreen.tsx": {
+    "memos": 4,
+    "state": 1,
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/screens/ComposeDmScreen.tsx": {
+    "memos": 2,
+    "functions": 1,
+    "components": 2
+  },
+  "src/app/[locale]/app/mobile/screens/DmThreadScreen.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/screens/DmsListScreen.tsx": {
+    "effects": 1,
+    "memos": 2,
+    "functions": 1,
+    "components": 2
+  },
+  "src/app/[locale]/app/mobile/screens/ForumScreen.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/screens/InboxScreen.tsx": {
+    "functions": 2,
+    "components": 4
+  },
+  "src/app/[locale]/app/mobile/screens/LoginScreen.tsx": {
+    "components": 1
+  },
+  "src/app/[locale]/app/mobile/screens/MemberListScreen.tsx": {
+    "memos": 6,
+    "functions": 2,
+    "components": 1
+  },
+  "src/app/[locale]/app/mobile/screens/SearchScreen.tsx": {
+    "functions": 3
+  },
+  "src/app/[locale]/app/mobile/screens/ServerScreen.tsx": {
+    "memos": 3,
+    "state": 3,
+    "functions": 5
+  },
+  "src/app/[locale]/app/mobile/screens/SettingsPrefsScreen.tsx": {
+    "state": 2,
+    "functions": 2
+  },
+  "src/app/[locale]/app/mobile/screens/StatusScreens.tsx": {
+    "components": 1
+  },
+  "src/app/[locale]/app/mobile/screens/VoiceRoomScreen.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/screens/channel/ChannelTimeline.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/screens/forum/ForumChrome.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/screens/forum/MobileForumCard.tsx": {
+    "memos": 1
+  },
+  "src/app/[locale]/app/mobile/sheets/AddRelaySheet.tsx": {
+    "effects": 1,
+    "memos": 1,
+    "state": 2,
+    "components": 2
+  },
+  "src/app/[locale]/app/mobile/sheets/ChannelSettingsSheet.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/sheets/CreateChannelSheet.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/sheets/ForumSortSheet.tsx": {
+    "components": 1
+  },
+  "src/app/[locale]/app/mobile/sheets/ManageCategoriesSheet.tsx": {
+    "memos": 1,
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/sheets/MessageActionsSheet.tsx": {
+    "functions": 7
+  },
+  "src/app/[locale]/app/mobile/sheets/NewThreadSheet.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/mobile/sheets/RelayMenuSheet.tsx": {
+    "state": 1,
+    "functions": 5,
+    "components": 1
+  },
+  "src/app/[locale]/app/mobile/sheets/categories/CategoryChannelsBlock.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/modals/ManageLayoutModal.tsx": {
+    "memos": 1,
+    "functions": 3
+  },
+  "src/app/[locale]/app/modals/ManageMemberRow.tsx": {
+    "components": 1
+  },
+  "src/app/[locale]/app/modals/RelayBrandingModal.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/modals/RelaySettingsModal.tsx": {
+    "functions": 1,
+    "components": 1
+  },
+  "src/app/[locale]/app/modals/form-primitives.tsx": {
+    "components": 2
+  },
+  "src/app/[locale]/app/modals/layout/ChannelOrderRow.tsx": {
+    "functions": 3,
+    "components": 2
+  },
+  "src/app/[locale]/app/modals/layout/LayoutCategoryCard.tsx": {
+    "functions": 3
+  },
+  "src/app/[locale]/app/panes/ChatComposer.tsx": {
+    "effects": 2,
+    "functions": 4,
+    "components": 1
+  },
+  "src/app/[locale]/app/panes/ChatPanel.tsx": {
+    "memos": 2,
+    "state": 4,
+    "components": 1
+  },
+  "src/app/[locale]/app/panes/CreateGroupSection.tsx": {
+    "functions": 2,
+    "components": 1
+  },
+  "src/app/[locale]/app/panes/DMPanel.tsx": {
+    "effects": 1,
+    "functions": 1
+  },
+  "src/app/[locale]/app/panes/GroupNode.tsx": {
+    "functions": 5,
+    "components": 2
+  },
+  "src/app/[locale]/app/panes/MessageHoverCards.tsx": {
+    "memos": 2,
+    "components": 3
+  },
+  "src/app/[locale]/app/panes/MessageRow.tsx": {
+    "functions": 2
+  },
+  "src/app/[locale]/app/panes/ReaderPane.tsx": {
+    "components": 3
+  },
+  "src/app/[locale]/app/panes/RelayTopBar.tsx": {
+    "functions": 5
+  },
+  "src/app/[locale]/app/panes/ResizablePane.tsx": {
+    "effects": 1,
+    "functions": 2
+  },
+  "src/app/[locale]/app/panes/ShellStates.tsx": {
+    "components": 3
+  },
+  "src/app/[locale]/app/panes/Sidebar.tsx": {
+    "memos": 3
+  },
+  "src/app/[locale]/app/panes/SidebarMe.tsx": {
+    "effects": 1,
+    "functions": 2
+  },
+  "src/app/[locale]/app/panes/channel/ChannelMessageList.tsx": {
+    "components": 1
+  },
+  "src/app/[locale]/app/panes/message/MessageMenu.tsx": {
+    "functions": 8
+  },
+  "src/app/[locale]/app/panes/message/MessageToolbar.tsx": {
+    "functions": 4
+  },
+  "src/app/[locale]/app/panes/message/ReactionPills.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/app/panes/sidebar/ChannelTree.tsx": {
+    "functions": 1,
+    "components": 1
+  },
+  "src/app/[locale]/app/panes/sidebar/RelayAdminModals.tsx": {
+    "state": 3
+  },
+  "src/app/[locale]/app/panes/topbar/HelpPopover.tsx": {
+    "functions": 1,
+    "components": 1
+  },
+  "src/app/[locale]/app/panes/topbar/InboxPopover.tsx": {
+    "functions": 1,
+    "components": 1
+  },
+  "src/app/[locale]/app/rail/AddRelayModal.tsx": {
+    "memos": 1,
+    "components": 3
+  },
+  "src/app/[locale]/app/rail/RelayTile.tsx": {
+    "functions": 3
+  },
+  "src/app/[locale]/app/search/FilterAndHistoryPane.tsx": {
+    "components": 1
+  },
+  "src/app/[locale]/app/search/ResultsPane.tsx": {
+    "effects": 1,
+    "memos": 1,
+    "functions": 1,
+    "components": 4
+  },
+  "src/app/[locale]/app/settings/EditProfileForm.tsx": {
+    "effects": 1,
+    "functions": 1,
+    "components": 1
+  },
+  "src/app/[locale]/app/settings/SettingsSections.tsx": {
+    "components": 7
+  },
+  "src/app/[locale]/app/shell/DesktopDrawer.tsx": {
+    "functions": 4
+  },
+  "src/app/[locale]/media-kit/kit/BannerCard.tsx": {
+    "components": 2
+  },
+  "src/app/[locale]/media-kit/kit/ReferenceSections.tsx": {
+    "functions": 1,
+    "components": 2
+  },
+  "src/app/[locale]/media-kit/kit/kit-ui.tsx": {
+    "components": 3
+  },
+  "src/app/[locale]/notes/[id]/AuthorContext.tsx": {
+    "functions": 3,
+    "components": 1
+  },
+  "src/app/[locale]/notes/[id]/FollowButton.tsx": {
+    "functions": 3
+  },
+  "src/app/[locale]/notes/[id]/NoteViewerClient.tsx": {
+    "effects": 1,
+    "memos": 1,
+    "functions": 1
+  },
+  "src/app/[locale]/p/[id]/ProfileViewerClient.tsx": {
+    "functions": 2
+  },
+  "src/app/[locale]/p/[id]/page.tsx": {
+    "functions": 1
+  },
+  "src/app/[locale]/r/[code]/RelayShareLanding.tsx": {
+    "effects": 1,
+    "memos": 1
+  },
+  "src/app/[locale]/t/[tag]/page.tsx": {
+    "functions": 1,
+    "components": 2
+  },
+  "src/app/[locale]/voice/VoiceRoomForm.tsx": {
+    "functions": 1
+  },
+  "src/app/dev/game-shots/Harness.tsx": {
+    "memos": 5,
+    "functions": 1,
+    "components": 1
+  },
+  "src/components/admin/RelayRolesAdminModal.tsx": {
+    "functions": 1
+  },
+  "src/components/admin/relay-roles/RoleEmojiField.tsx": {
+    "functions": 3
+  },
+  "src/components/admin/relay-roles/RoleMembers.tsx": {
+    "memos": 2,
+    "functions": 4,
+    "components": 2
+  },
+  "src/components/admin/relay-roles/RoleRow.tsx": {
+    "components": 1
+  },
+  "src/components/call/DmCallButtons.tsx": {
+    "functions": 1
+  },
+  "src/components/call/DmCallLayer.tsx": {
+    "effects": 1,
+    "functions": 1,
+    "components": 4
+  },
+  "src/components/chat/ChannelContextMenu.tsx": {
+    "functions": 3
+  },
+  "src/components/chat/ChannelLinkPill.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/DMThreadMenu.tsx": {
+    "functions": 3
+  },
+  "src/components/chat/DmComposer.tsx": {
+    "functions": 2
+  },
+  "src/components/chat/DmMessageMenu.tsx": {
+    "state": 1,
+    "functions": 1
+  },
+  "src/components/chat/EmojiPicker.tsx": {
+    "functions": 2
+  },
+  "src/components/chat/ForumTagsEditor.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/ForwardMessageModal.tsx": {
+    "memos": 1,
+    "functions": 3
+  },
+  "src/components/chat/ImageGallery.tsx": {
+    "functions": 3
+  },
+  "src/components/chat/MediaGrid.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/MemberList.tsx": {
+    "memos": 3,
+    "components": 1
+  },
+  "src/components/chat/MentionText.tsx": {
+    "functions": 1,
+    "components": 1
+  },
+  "src/components/chat/MessageContent.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/MessageZapModal.tsx": {
+    "functions": 1,
+    "components": 1
+  },
+  "src/components/chat/NostrProfile.tsx": {
+    "memos": 3,
+    "state": 2,
+    "functions": 3
+  },
+  "src/components/chat/PqShield.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/ProfileLinks.tsx": {
+    "functions": 2
+  },
+  "src/components/chat/ProfilePopover.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/SlashCommandAutocomplete.tsx": {
+    "functions": 2
+  },
+  "src/components/chat/SlashCommandScaffold.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/SpoilerText.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/channel-menu/ChannelActionSheet.tsx": {
+    "functions": 2
+  },
+  "src/components/chat/composer/AttachmentMenu.tsx": {
+    "state": 3,
+    "functions": 5,
+    "components": 2
+  },
+  "src/components/chat/dm-composer/DmComposerControls.tsx": {
+    "components": 1
+  },
+  "src/components/chat/dm-message/DmRawEventDialog.tsx": {
+    "components": 1
+  },
+  "src/components/chat/dm-message/TextWithEmoji.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/forum/ForumChrome.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/forum/NewThreadModal.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/forum/SortViewMenu.tsx": {
+    "components": 2
+  },
+  "src/components/chat/forum/TagColorPicker.tsx": {
+    "functions": 2
+  },
+  "src/components/chat/forum/ThreadCardSkeletons.tsx": {
+    "components": 1
+  },
+  "src/components/chat/forum/ThreadGallery.tsx": {
+    "components": 1
+  },
+  "src/components/chat/forum/ThreadListStates.tsx": {
+    "components": 2
+  },
+  "src/components/chat/gallery/Lightbox.tsx": {
+    "functions": 4
+  },
+  "src/components/chat/games/ChainReactionBoard.tsx": {
+    "functions": 3
+  },
+  "src/components/chat/games/GameCard.tsx": {
+    "effects": 2,
+    "functions": 2,
+    "components": 3
+  },
+  "src/components/chat/games/GameModal.tsx": {
+    "functions": 2,
+    "components": 1
+  },
+  "src/components/chat/games/GameOverOverlay.tsx": {
+    "functions": 3
+  },
+  "src/components/chat/games/GamePreviews.tsx": {
+    "functions": 2,
+    "components": 3
+  },
+  "src/components/chat/games/GameResults.tsx": {
+    "functions": 2
+  },
+  "src/components/chat/games/StartTableModal.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/games/new-game/GameSetupOptions.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/games/stacker/MiniBoard.tsx": {
+    "effects": 1
+  },
+  "src/components/chat/games/stacker/PieceChip.tsx": {
+    "effects": 1
+  },
+  "src/components/chat/games/stacker/StackerBoard.tsx": {
+    "effects": 2
+  },
+  "src/components/chat/games/stacker/StackerKeysPanel.tsx": {
+    "effects": 1,
+    "functions": 1
+  },
+  "src/components/chat/games/stacker/StackerTable.tsx": {
+    "memos": 5,
+    "functions": 3,
+    "components": 1
+  },
+  "src/components/chat/games/vesta/VestaBoard.tsx": {
+    "effects": 1,
+    "memos": 1,
+    "functions": 1
+  },
+  "src/components/chat/games/vesta/VestaPlayers.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/games/vesta/VestaPrompts.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/games/vesta/VestaTable.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/games/vesta/VestaTradePanel.tsx": {
+    "functions": 3
+  },
+  "src/components/chat/games/vesta/VestaTurnActions.tsx": {
+    "functions": 3
+  },
+  "src/components/chat/games/vesta/table-controls.tsx": {
+    "functions": 2,
+    "components": 4
+  },
+  "src/components/chat/message/MarkdownBody.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/message/MentionChips.tsx": {
+    "components": 2
+  },
+  "src/components/chat/message/VideoMedia.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/message/VoiceMessage.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/message/markdown-components.tsx": {
+    "functions": 2
+  },
+  "src/components/chat/message/placeholders.tsx": {
+    "functions": 3
+  },
+  "src/components/chat/picker/CreateMediaControl.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/picker/EmojiGridParts.tsx": {
+    "functions": 2,
+    "components": 2
+  },
+  "src/components/chat/picker/EmojiPickerHeader.tsx": {
+    "functions": 1,
+    "components": 1
+  },
+  "src/components/chat/picker/MediaSection.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/profile/PopoverActions.tsx": {
+    "functions": 4
+  },
+  "src/components/chat/profile/popover-emoji.tsx": {
+    "functions": 1
+  },
+  "src/components/chat/slash/SlashRows.tsx": {
+    "functions": 1,
+    "components": 2
+  },
+  "src/components/feedback/ActivityIndicator.tsx": {
+    "functions": 1,
+    "components": 2
+  },
+  "src/components/feedback/ErrorPanel.tsx": {
+    "effects": 1,
+    "functions": 6
+  },
+  "src/components/feedback/MobileSigningIndicator.tsx": {
+    "functions": 2,
+    "components": 1
+  },
+  "src/components/feedback/ToastStack.tsx": {
+    "effects": 1,
+    "functions": 2
+  },
+  "src/components/guides/RelatedGuides.tsx": {
+    "functions": 3
+  },
+  "src/components/guides/Shot.tsx": {
+    "functions": 1
+  },
+  "src/components/guides/guide-og-image.tsx": {
+    "functions": 1
+  },
+  "src/components/guides/svg/ChainReactionHero.tsx": {
+    "functions": 2
+  },
+  "src/components/guides/svg/FutureRelaysHero.tsx": {
+    "functions": 2
+  },
+  "src/components/guides/svg/RelayHero.tsx": {
+    "functions": 4
+  },
+  "src/components/guides/svg/StackerHero.tsx": {
+    "functions": 2,
+    "components": 1
+  },
+  "src/components/guides/svg/SwapAnythingHero.tsx": {
+    "functions": 2
+  },
+  "src/components/guides/svg/VestaHero.tsx": {
+    "functions": 5
+  },
+  "src/components/guides/svg/WhatIsObeliskHero.tsx": {
+    "functions": 2
+  },
+  "src/components/guides/svg/WotHero.tsx": {
+    "functions": 3
+  },
+  "src/components/guides/svg/admin-cli/ChannelSettingsPanel.tsx": {
+    "functions": 1,
+    "components": 2
+  },
+  "src/components/guides/svg/admin-cli/ServerSettingsPanel.tsx": {
+    "functions": 1,
+    "components": 1
+  },
+  "src/components/guides/svg/diagrams/RelayGroupsDiagram.tsx": {
+    "functions": 1
+  },
+  "src/components/guides/svg/diagrams/SwapMatrixDiagram.tsx": {
+    "functions": 1
+  },
+  "src/components/guides/svg/diagrams/ZapFlowDiagram.tsx": {
+    "functions": 1
+  },
+  "src/components/guides/svg/how-it-works/BrowserApp.tsx": {
+    "components": 2
+  },
+  "src/components/guides/svg/how-it-works/Elsewhere.tsx": {
+    "components": 3
+  },
+  "src/components/guides/svg/how-it-works/KeyCard.tsx": {
+    "components": 3
+  },
+  "src/components/guides/svg/index.tsx": {
+    "components": 3
+  },
+  "src/components/help/LocalDataHelp.tsx": {
+    "components": 1
+  },
+  "src/components/hints/HintCallout.tsx": {
+    "effects": 2,
+    "memos": 1
+  },
+  "src/components/hints/HintHost.tsx": {
+    "effects": 2,
+    "memos": 1
+  },
+  "src/components/marketing/LandingPage.tsx": {
+    "functions": 1
+  },
+  "src/components/marketing/LanguageToggle.tsx": {
+    "functions": 1
+  },
+  "src/components/marketing/Navbar.tsx": {
+    "effects": 1,
+    "state": 3,
+    "functions": 2
+  },
+  "src/components/marketing/ShootingStars.tsx": {
+    "effects": 1,
+    "functions": 3
+  },
+  "src/components/marketing/landing/RoadmapSection.tsx": {
+    "functions": 1
+  },
+  "src/components/media/BlossomImageInput.tsx": {
+    "functions": 3,
+    "components": 1
+  },
+  "src/components/media/MediaLibraryModal.tsx": {
+    "functions": 12
+  },
+  "src/components/media/MediaThumb.tsx": {
+    "functions": 1
+  },
+  "src/components/media/library/MediaItemGrid.tsx": {
+    "functions": 1
+  },
+  "src/components/media/library/PackCard.tsx": {
+    "functions": 1
+  },
+  "src/components/media/library/PackEditor.tsx": {
+    "functions": 1,
+    "components": 1
+  },
+  "src/components/seo/OgCard.tsx": {
+    "functions": 2
+  },
+  "src/components/seo/OgIcon.tsx": {
+    "functions": 1
+  },
+  "src/components/settings/AccountBackupExport.tsx": {
+    "functions": 1
+  },
+  "src/components/settings/AppearancePreferenceControls.tsx": {
+    "functions": 1,
+    "components": 2
+  },
+  "src/components/settings/AppearancePreferencesRoot.tsx": {
+    "effects": 1
+  },
+  "src/components/settings/CallSettings.tsx": {
+    "functions": 6,
+    "components": 2
+  },
+  "src/components/settings/DeveloperSignatureTest.tsx": {
+    "functions": 3
+  },
+  "src/components/settings/LanguagePreference.tsx": {
+    "functions": 1
+  },
+  "src/components/settings/LocalDataPanel.tsx": {
+    "components": 2
+  },
+  "src/components/settings/MutedAndBlocked.tsx": {
+    "memos": 1,
+    "functions": 1,
+    "components": 1
+  },
+  "src/components/settings/NotificationSettings.tsx": {
+    "effects": 1,
+    "functions": 4
+  },
+  "src/components/settings/ProfileAppearanceEditor.tsx": {
+    "effects": 1,
+    "state": 2,
+    "functions": 5,
+    "components": 2
+  },
+  "src/components/settings/WotSettings.tsx": {
+    "effects": 2
+  },
+  "src/components/settings/social-relays/RelayIndicators.tsx": {
+    "components": 1
+  },
+  "src/components/settings/social-relays/SocialRelayPresets.tsx": {
+    "functions": 1
+  },
+  "src/components/social/ArticleCard.tsx": {
+    "memos": 4,
+    "components": 1
+  },
+  "src/components/social/FeedList.tsx": {
+    "effects": 3,
+    "memos": 1
+  },
+  "src/components/social/FeedSearch.tsx": {
+    "memos": 1,
+    "components": 3
+  },
+  "src/components/social/FeedWidgets.tsx": {
+    "functions": 2
+  },
+  "src/components/social/FollowTagButton.tsx": {
+    "functions": 1
+  },
+  "src/components/social/InfiniteSentinel.tsx": {
+    "effects": 2
+  },
+  "src/components/social/MediaCarousel.tsx": {
+    "memos": 1,
+    "state": 1,
+    "functions": 6,
+    "components": 1
+  },
+  "src/components/social/MobileComposer.tsx": {
+    "components": 1
+  },
+  "src/components/social/NoteActions.tsx": {
+    "functions": 2,
+    "components": 8
+  },
+  "src/components/social/NoteCard.tsx": {
+    "functions": 1
+  },
+  "src/components/social/NoteContent.tsx": {
+    "memos": 1,
+    "functions": 2,
+    "components": 4
+  },
+  "src/components/social/NoteMenu.tsx": {
+    "state": 1,
+    "functions": 5,
+    "components": 1
+  },
+  "src/components/social/ProfileMenu.tsx": {
+    "functions": 5
+  },
+  "src/components/social/RelayStatusPill.tsx": {
+    "effects": 1,
+    "memos": 1,
+    "functions": 2
+  },
+  "src/components/social/ReplyLine.tsx": {
+    "functions": 2
+  },
+  "src/components/social/StarterPacks.tsx": {
+    "effects": 1,
+    "memos": 1,
+    "functions": 1,
+    "components": 1
+  },
+  "src/components/social/feed-screen/FeedFloatingControls.tsx": {
+    "functions": 1
+  },
+  "src/components/social/feed-screen/FeedToolbar.tsx": {
+    "functions": 1
+  },
+  "src/components/social/note-card/NoteActionRow.tsx": {
+    "functions": 1
+  },
+  "src/components/social/note-card/NoteBody.tsx": {
+    "memos": 1,
+    "functions": 3,
+    "components": 1
+  },
+  "src/components/social/note-card/PlainNoteCard.tsx": {
+    "memos": 4
+  },
+  "src/components/social/note-card/RepostCard.tsx": {
+    "memos": 3,
+    "functions": 2,
+    "components": 2
+  },
+  "src/components/social/widgets/RelaysWidget.tsx": {
+    "functions": 1
+  },
+  "src/components/social/widgets/TrendingWidget.tsx": {
+    "memos": 1
+  },
+  "src/components/social/widgets/WhoToFollowWidget.tsx": {
+    "memos": 1,
+    "components": 1
+  },
+  "src/components/social/widgets/WidgetCard.tsx": {
+    "components": 1
+  },
+  "src/components/ui/Button.tsx": {
+    "functions": 4
+  },
+  "src/components/ui/ConfirmDialog.tsx": {
+    "effects": 2,
+    "functions": 1,
+    "components": 1
+  },
+  "src/components/ui/CopyButton.tsx": {
+    "functions": 1
+  },
+  "src/components/ui/Field.tsx": {
+    "functions": 1
+  },
+  "src/components/ui/Input.tsx": {
+    "memos": 1,
+    "functions": 1
+  },
+  "src/components/ui/InputEnd.tsx": {
+    "functions": 1
+  },
+  "src/components/ui/PopoverPanel.tsx": {
+    "effects": 1
+  },
+  "src/components/ui/SegmentedControl.tsx": {
+    "functions": 7
+  },
+  "src/components/ui/Select.tsx": {
+    "functions": 1
+  },
+  "src/components/ui/Table.tsx": {
+    "functions": 1
+  },
+  "src/components/ui/TextArea.tsx": {
+    "memos": 1
+  },
+  "src/components/ui/UserAvatar.tsx": {
+    "functions": 1
+  },
+  "src/components/ui/menu.tsx": {
+    "functions": 1
+  },
+  "src/components/voice/BackgroundVoiceAudio.tsx": {
+    "effects": 3,
+    "functions": 2,
+    "components": 1
+  },
+  "src/components/voice/DebugOverlay.tsx": {
+    "effects": 1,
+    "functions": 1,
+    "components": 2
+  },
+  "src/components/voice/QualityPopover.tsx": {
+    "functions": 2,
+    "components": 1
+  },
+  "src/components/voice/VoiceRoom.tsx": {
+    "memos": 7
+  },
+  "src/components/voice/room/StageArea.tsx": {
+    "functions": 2
+  },
+  "src/components/voice/room/chrome.tsx": {
+    "effects": 1,
+    "memos": 1,
+    "state": 1,
+    "functions": 1,
+    "components": 5
+  },
+  "src/components/voice/room/controls.tsx": {
+    "functions": 2,
+    "components": 1
+  },
+  "src/components/voice/room/header.tsx": {
+    "components": 2
+  },
+  "src/components/voice/room/tiles.tsx": {
+    "functions": 1,
+    "components": 7
+  }
+}

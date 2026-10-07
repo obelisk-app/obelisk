@@ -48,7 +48,7 @@ vi.mock('@/components/media/BlossomImageInput', () => ({
   default: () => <div />,
 }));
 
-vi.mock('@/components/admin/RelayAdminPanel', () => ({
+vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({
   default: () => <div />,
 }));
 

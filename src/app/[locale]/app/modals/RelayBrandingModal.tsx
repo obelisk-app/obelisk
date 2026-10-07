@@ -2,11 +2,11 @@
 
 import { shortHost } from '@/utils/relay-url/url-host';
 import Modal from '@/components/ui/Modal';
-import Button from '@/components/ui/Button';
 import ErrorState from '@/components/ui/ErrorState';
 import TextArea from '@/components/ui/TextArea';
 import Input from '@/components/ui/Input';
 import ModalHeader from '@/components/ui/ModalHeader';
+import ModalFooter from '@/components/ui/ModalFooter';
 import { useRelayBrandingForm } from '@/hooks/chat/useRelayBrandingForm';
 import { type RelayBranding } from '@/services/relay-branding';
 import { ChannelAppearanceInput } from '@/components/media/BlossomImageInput';
@@ -40,7 +40,7 @@ export function RelayBrandingModal({
         />
         <form
           id="relay-branding-form"
-          className="flex-1 space-y-7 overflow-y-auto p-5"
+          className="min-h-0 flex-1 space-y-7 overflow-y-auto p-5"
           onSubmit={(event) => { event.preventDefault(); void save(); }}
         >
           <section className="space-y-4">
@@ -62,12 +62,10 @@ export function RelayBrandingModal({
           </section>
           {err && <ErrorState>{err}</ErrorState>}
         </form>
-        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-lc-border px-5 py-3">
-          <Button variant="pillSecondary" size="xs" onClick={onClose}>{t('common.cancel')}</Button>
-          <Button type="submit" form="relay-branding-form" disabled={saving}>
-            {saving ? t('common.saving') : t('common.save')}
-          </Button>
-        </footer>
+        <ModalFooter
+          cancel={{ onClick: onClose }}
+          actions={[{ label: saving ? t('common.saving') : t('common.save'), form: 'relay-branding-form', disabled: saving }]}
+        />
     </Modal>
   );
 }

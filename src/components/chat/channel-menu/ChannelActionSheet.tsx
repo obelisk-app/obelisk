@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useChannelActions } from '@/hooks/chat/useChannelActions';
 import { useMutedLabel } from '@/hooks/chat/useMutedLabel';
 import Sheet from '@/components/ui/Sheet';
+import SheetHeader from '@/app/[locale]/app/mobile/sheets/SheetHeader';
 import { MUTE_OPTIONS, NOTIFY_OPTIONS, type ChannelMenuTarget } from '@/utils/chat/channel-menu-options';
 
 /** The phone's long-press version of the channel menu, as a sheet with drill-in views. */
@@ -38,13 +39,12 @@ export function ChannelActionSheet({ target, onClose }: { target: ChannelMenuTar
 
   return (
     <Sheet onClose={onClose} screen="channel-menu" label={target.name} testId="channel-action-sheet" maxHeight="88%">
-      <div style={{ padding: '4px 4px 12px', fontSize: 16, fontWeight: 700, color: 'var(--app-text)' }}>
-        {view === 'main' ? `# ${target.name}` : (
-          <button type="button" onClick={() => setView('main')} style={{ background: 'none', border: 0, color: 'var(--app-text)', font: 'inherit', padding: 0 }}>
-            ‹ {view === 'mute' ? t('chat.channelMenu.mute.label') : t('chat.channelMenu.notify.label')}
-          </button>
-        )}
-      </div>
+      {view === 'main' ? <SheetHeader title={`# ${target.name}`} /> : (
+        <SheetHeader
+          title={view === 'mute' ? t('chat.channelMenu.mute.label') : t('chat.channelMenu.notify.label')}
+          onBack={() => setView('main')}
+        />
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {view === 'main' && <>
           {row(t('chat.channelMenu.markRead'), act(a.markRead), { testId: 'channel-menu-mark-read', disabled: !target.hasUnread })}

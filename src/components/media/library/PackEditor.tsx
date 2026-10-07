@@ -4,8 +4,9 @@ import { useRef } from 'react';
 import type { JsMediaKind } from '@/services/nostr-bridge';
 import MediaThumb from '@/components/media/MediaThumb';
 import Button from '@/components/ui/Button';
-import CloseButton from '@/components/ui/CloseButton';
 import Modal from '@/components/ui/Modal';
+import ModalHeader from '@/components/ui/ModalHeader';
+import ModalFooter from '@/components/ui/ModalFooter';
 import EmptyState from '@/components/ui/EmptyState';
 import FileInput from '@/components/ui/FileInput';
 import Input from '@/components/ui/Input';
@@ -38,12 +39,9 @@ export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
   } = usePackEditor(pack, initialKind, onSaved);
 
   return (
-    <Modal onClose={onClose} testId="media-pack-editor" panelClassName="lc-card mx-3 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden bg-lc-dark">
-      <header className="flex items-center justify-between border-b border-lc-border p-4">
-        <h2 className="font-semibold text-lc-white">{t('media.editPack')}</h2>
-        <CloseButton onClick={onClose} label={t('media.closeEditor')} />
-      </header>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+    <Modal onClose={onClose} testId="media-pack-editor" panelClassName="mx-3 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-xl">
+      <ModalHeader title={t('media.editPack')} onClose={onClose} closeLabel={t('media.closeEditor')} />
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder={t('media.packName')} aria-label={t('media.packName')} />
           <Input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder={t('mobile.field.description')} aria-label={t('media.packDescription')} />
@@ -78,10 +76,10 @@ export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
         </div>
       </div>
       {error && <div className="border-t border-lc-border px-4 py-2 text-xs text-red-300" role="alert">{error}</div>}
-      <footer className="flex justify-end gap-2 border-t border-lc-border p-4">
-        <Button variant="secondary" size="lg" onClick={onClose}>{t('common.cancel')}</Button>
-        <Button size="lg" disabled={busy} onClick={() => void save()}>{t(busy ? 'media.pack.saving' : 'media.pack.save')}</Button>
-      </footer>
+      <ModalFooter
+        cancel={{ onClick: onClose }}
+        actions={[{ label: t(busy ? 'media.pack.saving' : 'media.pack.save'), onClick: () => void save(), disabled: busy, tone: 'primary' }]}
+      />
     </Modal>
   );
 }

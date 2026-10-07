@@ -52,6 +52,21 @@ describe('NewGameModal', () => {
     expect(screen.getByLabelText('Vesta preview')).toBeInTheDocument();
   });
 
+  it('wears the shared modal header and footer in both steps', () => {
+    const onClose = vi.fn();
+    renderLocalized(<NewGameModal channelId={CH} onClose={onClose} onPostMarker={vi.fn()} />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Pick a game' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onClose).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByTestId('pick-vesta'));
+    expect(screen.getByRole('heading', { level: 2 })).toBe(screen.getByTestId('config-title'));
+    // The picked game's preview sits in the header and still announces itself.
+    expect(screen.getByRole('img', { name: 'Vesta preview' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
   it('shows each game\'s own player range and default clock', () => {
     open();
     expect(screen.getByTestId('pick-chain-reaction')).toHaveTextContent('2–8 players · 45s turns');

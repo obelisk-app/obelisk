@@ -12,7 +12,7 @@ import Input from '@/components/ui/Input';
 import { useTranslations } from 'next-intl';
 import { colorFor, letterFor } from '@/utils/relay-url/relay-tile-style';
 import { useRelayInfo } from '@/hooks/app/rail/useRelayInfo';
-import CloseButton from '@/components/ui/CloseButton';
+import ModalHeader from '@/components/ui/ModalHeader';
 import RemoteImage from '@/components/ui/RemoteImage';
 
 /** Add a relay to the rail: pick a suggested one, or type a URL. */
@@ -27,15 +27,9 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       panelClassName="lc-card flex max-h-[85vh] w-full max-w-lg mx-4 flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark shadow-2xl"
     >
-        <div className="flex items-start justify-between gap-4 px-6 pt-6">
-          <div>
-            <h2 className="text-lg font-bold text-lc-white">{t('shell.rail.addModal.title')}</h2>
-            <p className="mt-1 text-sm text-lc-muted">{t('shell.rail.addModal.subtitle')}</p>
-          </div>
-          <CloseButton onClick={onClose} />
-        </div>
+        <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} />
 
-        <div className="mt-4 flex border-b border-lc-border px-6">
+        <div className="flex shrink-0 border-b border-lc-border px-5">
           <TabButton active={tab === 'suggested'} onClick={() => setTab('suggested')}>
             {t('shell.rail.addModal.suggested')}
           </TabButton>
@@ -44,7 +38,7 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
           </TabButton>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {tab === 'suggested' ? (
             <ul className="flex flex-col gap-2">
               {SUGGESTED_RELAYS.map((r) => (

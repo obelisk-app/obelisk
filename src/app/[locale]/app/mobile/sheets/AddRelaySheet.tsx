@@ -10,6 +10,7 @@ import { avatarStyle } from '../avatar';
 import Sheet from '@/components/ui/Sheet';
 import Input from '@/components/ui/Input';
 import SheetActions from './SheetActions';
+import SheetHeader from './SheetHeader';
 import RemoteImage from '@/components/ui/RemoteImage';
 
 export function AddRelaySheet({ close }: { close: () => void }) {
@@ -20,10 +21,10 @@ export function AddRelaySheet({ close }: { close: () => void }) {
 
   return (
     <Sheet onClose={close} screen="add-relay" label={t('mobile.rail.addTitle')} maxHeight="88%">
-      <div className="zap-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-        {t('mobile.rail.addTitle')}
-      </div>
+      <SheetHeader
+        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>}
+        title={t('mobile.rail.addTitle')}
+      />
       <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
         <button className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}

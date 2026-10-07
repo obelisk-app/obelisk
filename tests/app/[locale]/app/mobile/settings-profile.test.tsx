@@ -91,7 +91,7 @@ vi.mock('@/services/blossom', () => ({
   BlossomUploadError: class extends Error {},
 }));
 
-vi.mock('@/components/admin/RelayAdminPanel', () => ({
+vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({
   default: () => <div data-testid="relay-admin-panel-stub" />,
 }));
 

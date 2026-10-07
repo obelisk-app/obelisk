@@ -6,7 +6,7 @@ import { nostrActions, useConfiguredRelays, type JsGroup } from '@/services/nost
 import { type ChannelLayout } from '@/services/channel-layout';
 import { type RelayBranding } from '@/services/relay-branding';
 import { type RelayEmojiSet } from '@/services/relay-emojis';
-import RelayAdminPanel from '@/components/admin/RelayAdminPanel';
+import RelayAdminPanel from '@/components/admin/relay-admin/RelayAdminPanel';
 import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
 import RelayRolesAdminModal from '@/components/admin/RelayRolesAdminModal';
 import { type RelayRoles } from '@/services/relay-roles';
@@ -17,6 +17,7 @@ import { EditBrandingSheet } from './EditBrandingSheet';
 import { ManageCategoriesSheet } from './ManageCategoriesSheet';
 import Sheet from '@/components/ui/Sheet';
 import SheetActions from './SheetActions';
+import SheetHeader from './SheetHeader';
 import RemoteImage from '@/components/ui/RemoteImage';
 
 const rowStyle: React.CSSProperties = {
@@ -194,15 +195,16 @@ export function RelayMenuSheet({
 
   return (
     <Sheet onClose={close} screen="relay-menu" label={label} maxHeight="88%" stacked={stackedPanels}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 4px 14px' }}>
-        <div className="space-icon" style={{ width: 44, height: 44, ...(iconUrl ? {} : avatarStyle(relayUrl)) }}>
-          {iconUrl ? <RemoteImage src={iconUrl} alt="" /> : shortHost(relayUrl).slice(0, 1).toUpperCase()}
-        </div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--app-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
-          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--app-text-mute)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shortHost(relayUrl)}</div>
-        </div>
-      </div>
+      <SheetHeader
+        variant="identity"
+        media={
+          <div className="space-icon" style={{ width: 44, height: 44, ...(iconUrl ? {} : avatarStyle(relayUrl)) }}>
+            {iconUrl ? <RemoteImage src={iconUrl} alt="" /> : shortHost(relayUrl).slice(0, 1).toUpperCase()}
+          </div>
+        }
+        title={label}
+        subtitle={shortHost(relayUrl)}
+      />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <Row
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></svg>}

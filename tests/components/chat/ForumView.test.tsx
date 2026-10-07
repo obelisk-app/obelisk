@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import type { JsGroup, JsMessage, JsForumTag } from '@/services/nostr-bridge';
 import ForumView from '@/components/chat/ForumView';
 import { LocaleProvider } from '@tests/support/intl';
@@ -461,5 +461,138 @@ describe('NewThreadModal tag picker', () => {
     expect(args.parent).toBe('forum-1');
     expect(args.topics).toEqual(['tag-b']);
     expect(args.name).toBe('a');
+  });
+});
+
+describe('ForumView behaviour kept across the markup-only refactor', () => {
+  const onSelectThread = vi.fn();
+  beforeEach(() => onSelectThread.mockReset());
+
+  /** Two threads whose first and last messages disagree on the order. */
+  function seedTwoThreads() {
+    const forum = makeForum({
+      id: 'forum-1',
+      forumTags: [{ id: 'tag-a', name: 'tagA', emoji: null, color: null }],
+    });
+    // early: opened first (t=100), but chatted in last (t=900)
+    // late: opened later (t=200), quiet since (t=300)
+    const early = makeThread({ id: 'early', name: 'early bird', parent: 'forum-1', topics: ['tag-a'] });
+    const late = makeThread({ id: 'late', name: 'late riser', parent: 'forum-1' });
+    mockGroups = [forum, early, late];
+    mockChildrenByParent = { 'forum-1': [early.id, late.id] };
+    mockMessagesByGroup = {
+      early: [makeMsg({ id: 'e1', content: 'a', createdAt: 100 }), makeMsg({ id: 'e2', content: 'b', createdAt: 900 })],
+      late: [makeMsg({ id: 'l1', content: 'c', createdAt: 200 }), makeMsg({ id: 'l2', content: 'd', createdAt: 300 })],
+    };
+  }
+
+  const order = () => screen.getAllByTestId('thread-card').map((c) => c.getAttribute('data-thread-id'));
+
+  it('sorts by last activity by default and by first message under "creation date"', () => {
+    seedTwoThreads();
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    expect(order()).toEqual(['early', 'late']);
+    fireEvent.click(screen.getByTestId('forum-sortview-trigger'));
+    fireEvent.click(screen.getByTestId('forum-sort-created'));
+    expect(order()).toEqual(['late', 'early']);
+  });
+
+  it('remembers the sort choice for the same forum after a remount', () => {
+    seedTwoThreads();
+    const { unmount } = renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    fireEvent.click(screen.getByTestId('forum-sortview-trigger'));
+    fireEvent.click(screen.getByTestId('forum-sort-created'));
+    unmount();
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    expect(order()).toEqual(['late', 'early']);
+  });
+
+  it('shows the empty state once metadata EOSE arrives with no publications, and its CTA opens a blank composer', () => {
+    mockGroups = [makeForum({ id: 'forum-1' })];
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    expect(screen.queryByTestId('threads-loading')).toBeNull();
+    expect(screen.getByText('No publications yet.')).toBeTruthy();
+    fireEvent.click(screen.getByText('Start the first publication →'));
+    expect((screen.getByTestId('new-thread-title') as HTMLInputElement).value).toBe('');
+  });
+
+  it('lists the publications it has even before metadata EOSE', () => {
+    seedTwoThreads();
+    mockGroupMetadataEose = false;
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    expect(screen.queryByTestId('threads-loading')).toBeNull();
+    expect(order()).toEqual(['early', 'late']);
+  });
+
+  it('a tag filter that matches nothing shows the tag-only no-match copy', () => {
+    seedTwoThreads();
+    mockGroups = [
+      makeForum({
+        id: 'forum-1',
+        forumTags: [
+          { id: 'tag-a', name: 'tagA', emoji: null, color: null },
+          { id: 'tag-z', name: 'tagZ', emoji: null, color: null },
+        ],
+      }),
+      ...mockGroups.slice(1),
+    ];
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    fireEvent.click(screen.getByTestId('forum-tag-tag-z'));
+    expect(screen.getByTestId('forum-no-matches').textContent).toContain('No publications match the selected tags.');
+    expect(screen.queryByTestId('forum-create-from-search')).toBeNull();
+  });
+
+  it('the no-match "Create" button opens the composer prefilled with the trimmed query', () => {
+    seedTwoThreads();
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    fireEvent.change(screen.getByTestId('forum-search-input'), { target: { value: '  brand new  ' } });
+    fireEvent.click(screen.getByTestId('forum-create-from-search'));
+    expect((screen.getByTestId('new-thread-title') as HTMLInputElement).value).toBe('brand new');
+  });
+
+  it('clicking a gallery card opens that publication', () => {
+    seedTwoThreads();
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    fireEvent.click(screen.getByTestId('forum-sortview-trigger'));
+    fireEvent.click(screen.getByTestId('forum-view-gallery'));
+    fireEvent.click(screen.getAllByTestId('thread-gallery-card')[0]);
+    expect(onSelectThread).toHaveBeenCalledWith('early');
+  });
+
+  it('switching to another forum clears the search and the tag filter', () => {
+    seedTwoThreads();
+    const other = makeForum({ id: 'forum-2', forumTags: [{ id: 'tag-a', name: 'tagA', emoji: null, color: null }] });
+    mockGroups = [...mockGroups, other];
+    const { rerender } = renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    fireEvent.change(screen.getByTestId('forum-search-input'), { target: { value: 'early' } });
+    fireEvent.click(screen.getByTestId('forum-tag-tag-a'));
+    expect(screen.getByTestId('forum-tag-tag-a').getAttribute('aria-pressed')).toBe('true');
+    rerender(<LocaleProvider initialLocale="en"><ForumView groupId="forum-2" onSelectThread={onSelectThread} /></LocaleProvider>);
+    expect((screen.getByTestId('forum-search-input') as HTMLInputElement).value).toBe('');
+    expect(screen.getByTestId('forum-tag-all').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('cancelling the composer closes it', () => {
+    mockGroups = [makeForum({ id: 'forum-1' })];
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    fireEvent.click(screen.getByTestId('forum-new-thread-btn'));
+    expect(screen.getByTestId('new-thread-modal')).toBeTruthy();
+    fireEvent.click(within(screen.getByTestId('new-thread-modal')).getByText('Cancel'));
+    expect(screen.queryByTestId('new-thread-modal')).toBeNull();
+  });
+
+  it('after a publication is created it closes the composer, clears the search and opens the new one', async () => {
+    mockCreateGroup.mockResolvedValue('child-1');
+    mockSendMessage.mockResolvedValue(undefined);
+    mockGroups = [makeForum({ id: 'forum-1' })];
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    const input = screen.getByTestId('forum-search-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'fresh idea' } });
+    fireEvent.submit(input.closest('form')!);
+    fireEvent.change(screen.getByTestId('new-thread-body'), { target: { value: 'body' } });
+    fireEvent.click(screen.getByTestId('new-thread-submit'));
+    await waitFor(() => expect(onSelectThread).toHaveBeenCalledWith('child-1'));
+    expect(screen.queryByTestId('new-thread-modal')).toBeNull();
+    expect((screen.getByTestId('forum-search-input') as HTMLInputElement).value).toBe('');
   });
 });

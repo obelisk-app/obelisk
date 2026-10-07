@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { GameSession } from '@/lib/games/session';
 import { LocaleProvider } from '@tests/support/intl';
@@ -106,5 +106,26 @@ describe('GameModal result splash', () => {
     // A board that never reports "settled" must not eat the splash.
     act(() => { vi.advanceTimersByTime(7000); });
     expect(screen.getByText('YOU WON')).toBeTruthy();
+  });
+});
+
+describe('GameModal chrome', () => {
+  it('uses the shared modal header: title, status line, fullscreen and close', () => {
+    session = finishedTable();
+    const onClose = vi.fn();
+    renderLocalized(<GameModal gameId="table-1" onClose={onClose} />);
+    expect(screen.getByRole('heading', { level: 2 })).toBe(screen.getByTestId('game-modal-title'));
+    expect(screen.getByTestId('game-fullscreen')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('wears the same header while the table loads, so it can be closed before it arrives', () => {
+    session = null;
+    const onClose = vi.fn();
+    renderLocalized(<GameModal gameId="table-1" onClose={onClose} />);
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Loading the table from the relay');
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

@@ -14,6 +14,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { useMyPubkey } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/Modal';
+import ModalHeader from '@/components/ui/ModalHeader';
 import NoteComposer from './NoteComposer';
 import MobileComposer from './MobileComposer';
 import NoteThread from './NoteThread';
@@ -230,16 +231,19 @@ export default function FeedScreen({
       )}
 
       {!mobile && composer && composer.kind !== 'note' && (
-        <Modal onClose={() => feed.setComposer(null)} testId="composer-modal">
-          <div className="mb-3 text-sm font-semibold text-lc-white">
-            {t(composer.kind === 'reply' ? 'social.replyAction' : 'social.quote')}
-          </div>
-          <NoteComposer
-            autoFocus
-            mode={composer}
-            onPublished={feed.published}
-            onCancel={() => feed.setComposer(null)}
+        <Modal onClose={() => feed.setComposer(null)} testId="composer-modal" panelClassName="w-full max-w-lg mx-4 flex max-h-[85vh] flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-xl">
+          <ModalHeader
+            title={t(composer.kind === 'reply' ? 'social.replyAction' : 'social.quote')}
+            onClose={() => feed.setComposer(null)}
           />
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <NoteComposer
+              autoFocus
+              mode={composer}
+              onPublished={feed.published}
+              onCancel={() => feed.setComposer(null)}
+            />
+          </div>
         </Modal>
       )}
 

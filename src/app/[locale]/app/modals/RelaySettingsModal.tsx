@@ -2,7 +2,7 @@
 
 import Modal from '@/components/ui/Modal';
 import { useTranslations } from 'next-intl';
-import CloseButton from '@/components/ui/CloseButton';
+import ModalHeader from '@/components/ui/ModalHeader';
 
 export function RelaySettingsModal({
   onClose,
@@ -29,15 +29,9 @@ export function RelaySettingsModal({
   ] as const;
 
   return (
-    <Modal onClose={onClose} panelClassName="lc-card w-full max-w-lg mx-4 overflow-hidden bg-lc-dark">
-      <header className="flex items-start justify-between border-b border-lc-border px-5 py-4">
-        <div>
-          <h2 className="text-base font-bold text-lc-white">{t('shell.desktop.server.settings')}</h2>
-          <p className="mt-1 text-xs text-lc-muted">{t('shell.desktop.server.settingsHelp')}</p>
-        </div>
-        <CloseButton onClick={onClose} />
-      </header>
-      <div className="grid gap-2 p-4">
+    <Modal onClose={onClose} panelClassName="lc-card w-full max-w-lg mx-4 flex flex-col overflow-hidden bg-lc-dark">
+      <ModalHeader title={t('shell.desktop.server.settings')} subtitle={t('shell.desktop.server.settingsHelp')} onClose={onClose} />
+      <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto px-5 py-4">
         {items.map(([icon, action]) => (
           <button
             key={icon}

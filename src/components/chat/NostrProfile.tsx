@@ -26,6 +26,7 @@ import type { ComposerMode } from '@/hooks/social/useNoteDraft';
 import NoteThread from '@/components/social/NoteThread';
 import ArticleReader from '@/components/social/ArticleCard';
 import Modal from '@/components/ui/Modal';
+import ModalHeader from '@/components/ui/ModalHeader';
 import InlineReader from '@/components/social/InlineReader';
 import ProfileLinks from './ProfileLinks';
 import MediaGrid from './MediaGrid';
@@ -216,13 +217,19 @@ export default function NostrProfile({
       )}
 
       {!mobile && composer && composer.kind !== 'note' && (
-        <Modal onClose={() => setComposer(null)} testId="profile-composer-modal">
-          <NoteComposer
-            autoFocus
-            mode={composer}
-            onPublished={() => { setComposer(null); state.refresh(); }}
-            onCancel={() => setComposer(null)}
+        <Modal onClose={() => setComposer(null)} testId="profile-composer-modal" panelClassName="w-full max-w-lg mx-4 flex max-h-[85vh] flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-xl">
+          <ModalHeader
+            title={t(composer.kind === 'reply' ? 'social.replyAction' : 'social.quote')}
+            onClose={() => setComposer(null)}
           />
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <NoteComposer
+              autoFocus
+              mode={composer}
+              onPublished={() => { setComposer(null); state.refresh(); }}
+              onCancel={() => setComposer(null)}
+            />
+          </div>
         </Modal>
       )}
 

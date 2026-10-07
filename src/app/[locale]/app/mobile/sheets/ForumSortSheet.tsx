@@ -3,6 +3,7 @@
 import type { ForumPrefs } from '@/services/forum-prefs';
 import { useTranslations } from 'next-intl';
 import Sheet from '@/components/ui/Sheet';
+import SheetHeader from './SheetHeader';
 
 export function ForumSortSheet({
   prefs,
@@ -16,7 +17,7 @@ export function ForumSortSheet({
   const t = useTranslations();
   return (
     <Sheet onClose={close} screen="forum-sort" label={t('chat.forum.sortTitle')} testId="mobile-forum-sort-sheet">
-      <div className="zap-title">{t('chat.forum.sortTitle')}</div>
+      <SheetHeader title={t('chat.forum.sortTitle')} />
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('chat.forum.sortBy')}</label>
         <SortSheetRow

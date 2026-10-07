@@ -10,7 +10,8 @@ import Input from '@/components/ui/Input';
 import { ZapIcon } from '@/components/ui/icons';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
-import Button from '@/components/ui/Button';
+import ModalHeader from '@/components/ui/ModalHeader';
+import ModalFooter from '@/components/ui/ModalFooter';
 import PayingWalletNote from './PayingWalletNote';
 
 export default function MessageZapModal() {
@@ -47,69 +48,65 @@ function MessageZapModalInner({ target, close }: { target: ZapTarget; close: () 
   return (
     <Modal
       onClose={close}
-      panelClassName="w-full max-w-md mx-4 rounded-xl border border-lc-border bg-lc-dark p-5"
+      panelClassName="w-full max-w-md mx-4 flex flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark"
     >
-        <div className="mb-3 flex items-center gap-2">
-          <ZapIcon filled className="h-5 w-5 text-yellow-400" />
-          <h3 className="font-semibold text-lc-white">{t('chat.zap.title', { name: displayName })}</h3>
-        </div>
-        <label htmlFor={amountId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.amount')}</label>
-        <Input
-          id={amountId}
-          type="number"
-          value={amount}
-          min={1}
-          autoFocus
-          onChange={(e) => setAmount(parseInt(e.target.value, 10) || 0)}
-          className="mb-3"
+        <ModalHeader
+          title={t('chat.zap.title', { name: displayName })}
+          icon={<ZapIcon filled className="h-5 w-5 text-yellow-400" />}
+          onClose={close}
         />
-        <div className="mb-3 flex flex-wrap gap-2">
-          {ZAP_QUICK_AMOUNTS_SATS.map((a) => (
-            <button
-              key={a}
-              type="button"
-              onClick={() => setAmount(a)}
-              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                amount === a
-                  ? 'border-yellow-400 bg-yellow-400 text-lc-black'
-                  : 'border-lc-border text-lc-white hover:bg-lc-border/40'
-              }`}
-            >
-              {formatNumber(a)}
-            </button>
-          ))}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <label htmlFor={amountId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.amount')}</label>
+          <Input
+            id={amountId}
+            type="number"
+            value={amount}
+            min={1}
+            autoFocus
+            onChange={(e) => setAmount(parseInt(e.target.value, 10) || 0)}
+            className="mb-3"
+          />
+          <div className="mb-3 flex flex-wrap gap-2">
+            {ZAP_QUICK_AMOUNTS_SATS.map((a) => (
+              <button
+                key={a}
+                type="button"
+                onClick={() => setAmount(a)}
+                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                  amount === a
+                    ? 'border-yellow-400 bg-yellow-400 text-lc-black'
+                    : 'border-lc-border text-lc-white hover:bg-lc-border/40'
+                }`}
+              >
+                {formatNumber(a)}
+              </button>
+            ))}
+          </div>
+          <label htmlFor={commentId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.comment')}</label>
+          <Input
+            id={commentId}
+            type="text"
+            value={comment}
+            maxLength={200}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder={t('chat.zap.commentPlaceholder')}
+            className="mb-3"
+          />
+          {err && <p className="mb-3 break-words text-xs text-red-400">{err}</p>}
+          {!lud16 && (
+            <p className="mb-3 text-xs text-yellow-400">{t('chat.zap.noAddress')}</p>
+          )}
+          <PayingWalletNote className="mb-3" />
         </div>
-        <label htmlFor={commentId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.comment')}</label>
-        <Input
-          id={commentId}
-          type="text"
-          value={comment}
-          maxLength={200}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder={t('chat.zap.commentPlaceholder')}
-          className="mb-3"
+        <ModalFooter
+          cancel={{ onClick: close }}
+          actions={[{
+            label: busy ? t('common.sending') : t('chat.zap.send', { amount: formatNumber(amount) }),
+            onClick: send,
+            tone: 'zap',
+            disabled: busy || unconfirmed || !amount,
+          }]}
         />
-        {err && <p className="mb-3 break-words text-xs text-red-400">{err}</p>}
-        {!lud16 && (
-          <p className="mb-3 text-xs text-yellow-400">{t('chat.zap.noAddress')}</p>
-        )}
-        <PayingWalletNote className="mb-3" />
-        <div className="flex justify-end gap-2">
-          <Button variant="pillSecondary" size="xs" onClick={close}>
-            {t('common.cancel')}
-          </Button>
-          <button
-            type="button"
-            onClick={send}
-            disabled={busy || unconfirmed || !amount}
-            className="inline-flex items-center gap-1 rounded-full bg-yellow-400 px-4 py-1.5 text-xs font-semibold text-lc-black hover:bg-yellow-300 disabled:opacity-50"
-          >
-            <ZapIcon filled className="h-3.5 w-3.5" />
-            {busy
-              ? t('common.sending')
-              : t('chat.zap.send', { amount: formatNumber(amount) })}
-          </button>
-        </div>
     </Modal>
   );
 }

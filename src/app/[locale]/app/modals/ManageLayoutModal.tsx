@@ -7,6 +7,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import ModalHeader from '@/components/ui/ModalHeader';
+import ModalFooter from '@/components/ui/ModalFooter';
 import { type ChannelLayout } from '@/services/channel-layout';
 import { useChannelLayoutEditor } from '@/hooks/useChannelLayoutEditor';
 import { useTranslations } from 'next-intl';
@@ -58,7 +59,7 @@ export function ManageLayoutModal({
           subtitle={t('shell.desktop.layout.subtitle', { host: shortHost(relayUrl) })}
           onClose={onClose}
         />
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-6">
           {/* Add category */}
           <section className="space-y-2">
             <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">{t('mobile.layout.newCategory')}</div>
@@ -149,19 +150,15 @@ export function ManageLayoutModal({
 
           {err && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{err}</div>}
         </div>
-        <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-lc-border bg-lc-dark px-5 py-3">
-          <div className="text-[11px] text-lc-muted">
-            {t('shell.desktop.layout.saveHelp')}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="md" onClick={onClose} className="rounded-lg font-medium">
-              {t('common.cancel')}
-            </Button>
-            <Button onClick={save} disabled={saving}>
-              {saving ? t('shell.desktop.layout.publishing') : t('shell.desktop.layout.publish')}
-            </Button>
-          </div>
-        </footer>
+        <ModalFooter
+          meta={t('shell.desktop.layout.saveHelp')}
+          cancel={{ onClick: onClose }}
+          actions={[{
+            label: saving ? t('shell.desktop.layout.publishing') : t('shell.desktop.layout.publish'),
+            onClick: save,
+            disabled: saving,
+          }]}
+        />
     </Modal>
   );
 }

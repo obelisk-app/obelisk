@@ -72,7 +72,7 @@ vi.mock('@/components/media/BlossomImageInput', () => ({
   ChannelAppearanceInput: () => <div />,
 }));
 
-vi.mock('@/components/admin/RelayAdminPanel', () => ({ default: () => <div /> }));
+vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({ default: () => <div /> }));
 vi.mock('@/components/admin/RelayEmojiAdminModal', () => ({ default: () => <div /> }));
 
 import { SearchScreen } from '@/app/[locale]/app/mobile/screens/SearchScreen';

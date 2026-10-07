@@ -6,6 +6,7 @@ import { useCreateChannelForm } from '@/hooks/chat/useCreateChannelForm';
 import Sheet from '@/components/ui/Sheet';
 import Input from '@/components/ui/Input';
 import SheetActions from './SheetActions';
+import SheetHeader from './SheetHeader';
 
 /**
  * Phone skin of the new-channel form, as a bottom sheet over the channel
@@ -30,13 +31,11 @@ export function CreateChannelSheet({
 
   return (
     <Sheet onClose={close} screen="create-channel" label={t('mobile.space.newChannel')} maxHeight="88%">
-      <div className="zap-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-        {t('mobile.space.newChannel')}
-      </div>
-      <p style={{ fontSize: 12, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
-        {t.rich('shell.channel.create.help', { settings: () => <strong>{t('shell.desktop.channel.settings')}</strong> })}
-      </p>
+      <SheetHeader
+        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>}
+        title={t('mobile.space.newChannel')}
+        subtitle={t.rich('shell.channel.create.help', { settings: () => <strong>{t('shell.desktop.channel.settings')}</strong> })}
+      />
       <form onSubmit={form.submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <label htmlFor={nameId}
           style={{

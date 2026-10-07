@@ -51,7 +51,7 @@ vi.mock('@/components/media/BlossomImageInput', () => ({
   default: () => null,
   ChannelAppearanceInput: () => null,
 }));
-vi.mock('@/components/admin/RelayAdminPanel', () => ({ default: () => null }));
+vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({ default: () => null }));
 vi.mock('@/components/admin/RelayEmojiAdminModal', () => ({ default: () => null }));
 vi.mock('@/components/admin/RelayRolesAdminModal', () => ({ default: () => null }));
 

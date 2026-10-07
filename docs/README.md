@@ -4,6 +4,7 @@ Detailed specs, plans and references for Obelisk subsystems. Start with [../AGEN
 
 ## Architecture & platform
 
+- [conventions.md](conventions.md) - component files are markup (view-model hooks, utils, services, one component per file, the markup-only ratchet) and the shared modal and sheet chrome.
 - [data-system.md](data-system.md) - priority tiers (P0/P1/P2/P3), login → connect contract, whitelist preflight, connection banner, bridgeCache, NIP-42 AUTH, watchdog tunables, UI loading states, local data (the inventory, Settings > Data on this device, the write fence).
 - [read-state.md](read-state.md) - per-channel and per-DM cursors, mention/reply detection, MentionNavigator, encrypted multi-device sync via NIP-59 gift wrap, deferred-mount gating for relay-sync subs.
 - [i18n.md](i18n.md) - the three languages: URL locales, message modules and route scopes, `errorText`, the hardcoded-string ratchet, adding a language.

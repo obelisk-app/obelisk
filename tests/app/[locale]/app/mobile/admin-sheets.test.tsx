@@ -78,7 +78,7 @@ vi.mock('@/components/media/BlossomImageInput', () => ({
   ChannelAppearanceInput: () => <div data-testid="channel-appearance-preview" />,
 }));
 
-vi.mock('@/components/admin/RelayAdminPanel', () => ({
+vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({
   default: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="relay-admin-panel-stub" onClick={onClose}>panel</div>
   ),
