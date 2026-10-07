@@ -6,7 +6,7 @@ import ProfileMenu from '@/components/social/profile/ProfileMenu';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import Button from '@/components/ui/buttons/Button';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { ChevronLeftIcon, CloseIcon, EditIcon, GearIcon } from '@/assets/icons';
 import { profileShortNpub } from '@/utils/identity/profile-labels';
 import IconButton from '@/components/ui/buttons/IconButton';
 
@@ -70,9 +70,7 @@ export function ProfileHeader({
         <div className={'profile-view-topbar absolute inset-x-3 top-3 z-10 flex ' + (settingsMode ? 'justify-end' : 'justify-between')}>
           {!settingsMode && (
             <IconButton tone="overlay" onClick={onClose} className="back-btn md:hidden" aria-label={t('common.back')}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
+              <ChevronLeftIcon size={18} strokeWidth={2} />
             </IconButton>
           )}
           {settingsMode && onEditProfile && (
@@ -122,10 +120,7 @@ export function ProfileHeader({
               aria-label={t('social.profileFeed.createPost')}
               data-testid="profile-create-post"
             >
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-              </svg>
+              <EditIcon size={19} strokeWidth={2} />
             </IconButton>
           )}
           {onOpenSettings && (
@@ -138,10 +133,7 @@ export function ProfileHeader({
               title={t('settings.preferencesTitle')}
               data-testid="profile-settings-gear"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
+              <GearIcon size={20} />
             </IconButton>
           )}
         </div>

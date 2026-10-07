@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { TrashIcon } from '@/components/ui/icons/icons';
+import { TrashIcon } from '@/assets/icons';
 import Spinner from '@/components/ui/feedback/Spinner';
 import { VoiceMessage } from '../../message/VoiceMessage';
 import type { PendingVoice } from '@/utils/chat/dm/pending';

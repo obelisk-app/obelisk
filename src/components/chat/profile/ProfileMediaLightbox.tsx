@@ -3,7 +3,7 @@
 import { isVideoUrl } from '@/utils/attachments/attachments';
 import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import { useDismiss } from '@/hooks/common/useDismiss';
 import IconButton from '@/components/ui/buttons/IconButton';
 

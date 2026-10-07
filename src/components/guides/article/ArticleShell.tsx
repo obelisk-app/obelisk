@@ -4,7 +4,7 @@ import type { Locale } from '@/i18n';
 import type { GuideFrontmatter } from '@/services/guides/guides';
 import { formatDate } from '@/utils/format/format';
 import { useTranslations } from 'next-intl';
-import { HERO_REGISTRY } from '../svg';
+import { HERO_REGISTRY } from '@/assets/illustrations/guides';
 
 interface Props {
   frontmatter: GuideFrontmatter;

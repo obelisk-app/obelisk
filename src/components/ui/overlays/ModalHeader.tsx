@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import Button from '../buttons/Button';
 import CloseButton from '../buttons/CloseButton';
-import { ChevronLeftIcon } from '../icons/icons';
+import { ChevronLeftIcon } from '@/assets/icons';
 import { cn } from '@/utils/style/cn';
 
 /**

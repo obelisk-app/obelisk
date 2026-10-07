@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import Modal from './Modal';
 import ModalHeader from './ModalHeader';
 import ModalFooter from './ModalFooter';
-import { LogOutIcon, TrashIcon } from '../icons/icons';
+import { LogOutIcon, TrashIcon } from '@/assets/icons';
 import { useConfirmDialogPanel } from '@/hooks/common/useConfirmDialogPanel';
 import type { PendingConfirm } from '@/services/common/confirm-dialog';
 

@@ -3,6 +3,7 @@
 import type { ReactEventHandler } from 'react';
 import { useMediaThumb } from '@/hooks/media/library/useMediaThumb';
 import RemoteImage from '@/components/ui/media/RemoteImage';
+import { ImageOffIcon } from '@/assets/icons';
 
 /**
  * Picker/library thumbnail that never degrades into its own shortcode.
@@ -29,11 +30,7 @@ export default function MediaThumb({ src, alt, className, onLoad, onError }: {
         className={'flex items-center justify-center text-lc-muted ' + (className ?? '')}
         {...(alt ? { role: 'img', 'aria-label': alt, title: alt } : { 'aria-hidden': true })}
       >
-        <svg viewBox="0 0 24 24" className="h-[1.25em] w-[1.25em]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <rect x="3" y="4" width="18" height="16" rx="2" />
-          <path d="m4 17 4.5-4.5 3 3 2-2L20 18" />
-          <path d="m3 3 18 18" />
-        </svg>
+        <ImageOffIcon size={null} className="h-[1.25em] w-[1.25em]" />
       </span>
     );
   }

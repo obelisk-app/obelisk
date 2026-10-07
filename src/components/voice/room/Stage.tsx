@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useVideoTile } from '@/hooks/voice/room/useVideoTile';
 import MuteForMeButton from './MuteForMeButton';
 import FullscreenButton from './FullscreenButton';
+import { PinIcon } from '@/assets/icons';
 
 /** The main stage: one person's screen or camera, with mute-for-me, fullscreen and pin. */
 export default function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTogglePin }: {
@@ -54,10 +55,7 @@ export default function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTo
               : 'bg-black/60 text-white/80 border border-white/15 hover:bg-black/80')
           }
         >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 17v5" />
-            <path d="M9 10.76V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4.76a2 2 0 0 0 .55 1.39l1.65 1.7A1 1 0 0 1 16.5 15.5h-9A1 1 0 0 1 6.8 13.85l1.65-1.7A2 2 0 0 0 9 10.76z" />
-          </svg>
+          <PinIcon size={11} strokeWidth={2} />
           {t(pinned ? 'voice.tile.pinned' : 'voice.tile.pin')}
         </button>
       </div>

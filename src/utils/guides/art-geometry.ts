@@ -1,5 +1,5 @@
 /**
- * Geometry shared by the guide drawings (`src/components/guides/svg/`): a
+ * Geometry shared by the guide drawings (`src/assets/illustrations/guides/`): a
  * point on a circle, a hexagon's corners, and the field of drifting packets
  * three heroes scatter over their background. Pure numbers, so a drawing's
  * markup only places what these return (docs/conventions.md#component-files).

@@ -7,6 +7,7 @@ import { InboxPopover } from './InboxPopover';
 import { useRelayTopBar } from '@/hooks/shell/panes/topbar/useRelayTopBar';
 import Button from '@/components/ui/buttons/Button';
 import RemoteImage from '@/components/ui/media/RemoteImage';
+import { BellAltIcon, HelpCircleIcon, MenuIcon } from '@/assets/icons';
 
 /**
  * The desktop top bar: the relay's name and icon (a link to its website),
@@ -43,11 +44,7 @@ export function RelayTopBar({
           aria-label={t('shell.desktop.header.openMenu')}
           className="absolute left-2 top-1/2 -translate-y-1/2 p-3 rounded-lg md:hidden"
         >
-          <svg className="w-7 h-7 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
+          <MenuIcon size={null} strokeWidth={2} className="w-7 h-7 md:w-5 md:h-5" />
         </Button>
       )}
       <div className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -72,9 +69,7 @@ export function RelayTopBar({
           title={t('common.notifications')}
           aria-label={t('common.notifications')}
         >
-          <svg className="w-6 h-6 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-          </svg>
+          <BellAltIcon size={null} strokeWidth={1.5} className="w-6 h-6 md:w-4 md:h-4" />
           {vm.inbox.unreadInboxCount > 0 && (
             <span className="absolute top-0.5 right-0.5 md:top-0 md:right-0 min-w-[16px] h-[16px] md:min-w-[14px] md:h-[14px] px-1 rounded-full bg-lc-green text-lc-black text-[10px] md:text-[9px] font-bold flex items-center justify-center leading-none">
               {vm.inbox.unreadInboxCount > 99 ? '99+' : vm.inbox.unreadInboxCount}
@@ -90,11 +85,7 @@ export function RelayTopBar({
           title={t('common.help')}
           aria-label={t('common.help')}
         >
-          <svg className="w-6 h-6 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
+          <HelpCircleIcon size={null} strokeWidth={2} className="w-6 h-6 md:w-4 md:h-4" />
         </Button>
       </div>
       {vm.notifOpen && <InboxPopover inbox={vm.inbox} onMentionClick={vm.onMentionClick} onDmClick={vm.onDmClick} onOpenDms={vm.onOpenDms} />}

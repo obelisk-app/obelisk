@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import type { NavbarModel } from '@/hooks/marketing/useNavbar';
 import { guidePath } from '@/utils/guides/guide-urls';
+import { CaretDownIcon } from '@/assets/icons';
 
 const GUIDE_ITEMS = [
   { slug: 'what-is-obelisk', tKey: 'marketing.learn.card.whatIsObelisk.title' },
@@ -31,16 +32,7 @@ export default function NavGuidesMenu({ guides }: { guides: NavbarModel['guides'
         data-testid="nav-guides-link"
       >
         {t('marketing.nav.guides')}
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          fill="none"
-          className={`transition-transform ${guides.open ? 'rotate-180' : ''}`}
-          aria-hidden="true"
-        >
-          <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <CaretDownIcon size={10} className={`transition-transform ${guides.open ? 'rotate-180' : ''}`} />
       </Link>
 
       {guides.open && (

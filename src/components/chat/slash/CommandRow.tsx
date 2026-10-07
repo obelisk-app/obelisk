@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import ObeliskIcon from '@/components/ui/icons/ObeliskIcon';
+import ObeliskIcon from '@/assets/brand/ObeliskIcon';
 import { commandDescription, type SlashCommand } from '@/utils/chat/slash/slash-commands';
 import { keepingFocus } from '@/utils/chat/slash/slash-rows';
 import { BotAvatar } from './BotAvatar';

@@ -2,7 +2,7 @@
 
 import type { Nip05State } from '@/services/identity/nip05-verify';
 import { useTranslations } from 'next-intl';
-import { CheckBadgeIcon, CopyIcon } from '@/components/ui/icons/icons';
+import { CheckBadgeIcon, CopyIcon } from '@/assets/icons';
 import Spinner from '@/components/ui/feedback/Spinner';
 import WotBadge from '../../wot/WotBadge';
 import { EmojiText } from './EmojiText';

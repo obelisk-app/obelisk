@@ -3,7 +3,7 @@
 import type { RefObject } from 'react';
 import { useTranslations } from 'next-intl';
 import UserAvatar from '@/components/ui/media/UserAvatar';
-import { LogOutIcon, UserIcon } from '@/components/ui/icons/icons';
+import { LogOutIcon, UserIcon } from '@/assets/icons';
 import { MENU_PANEL_CLASS, MenuItem, MenuLink } from '@/components/ui/overlays/menu';
 import type { SavedAccount } from '@/hooks/marketing/useSavedAccount';
 import type { NavbarModel } from '@/hooks/marketing/useNavbar';

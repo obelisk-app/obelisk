@@ -1,7 +1,7 @@
 'use client';
 
 import EmojiPicker from '@/components/chat/picker/EmojiPicker';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import { useTranslations } from 'next-intl';
 import type { RelayRole } from '@/services/relay/relay-roles';
 import IconButton from '@/components/ui/buttons/IconButton';

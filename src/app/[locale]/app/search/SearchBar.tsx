@@ -13,10 +13,10 @@ import { useSearchBar } from '@/hooks/shell/search/useSearchBar';
 import { useTranslations } from 'next-intl';
 import { FilterAndHistoryPane } from './FilterAndHistoryPane';
 import { ResultsPane } from './ResultsPane';
-import { SearchIcon } from './SearchIcon';
 import Input from '@/components/ui/forms/Input';
 import Button from '@/components/ui/buttons/Button';
 import CloseButton from '@/components/ui/buttons/CloseButton';
+import { SearchIcon } from '@/assets/icons';
 
 export default function SearchBar({
   serverName,
@@ -45,7 +45,7 @@ export default function SearchBar({
           className="sm:hidden rounded-md"
           aria-label={t('shell.search.open')}
         >
-          <SearchIcon size={20} />
+          <SearchIcon size={20} strokeWidth={2} />
         </Button>
       )}
       <form
@@ -74,7 +74,7 @@ export default function SearchBar({
           aria-activedescendant={vm.activeDescendant}
         />
         <Button type="submit" variant="ghost" size="icon" className="shrink-0" aria-label={t('common.search')}>
-          <SearchIcon size={18} />
+          <SearchIcon size={18} strokeWidth={2} />
         </Button>
         <CloseButton
           onClick={vm.closeAndClear}

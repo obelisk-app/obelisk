@@ -13,6 +13,7 @@ import { NO_CATEGORY } from '@/utils/shell/mobile/category-options';
 import { CategoryListEditor } from './CategoryListEditor';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
+import { MenuIcon } from '@/assets/icons';
 
 // Bottom-sheet for the kind 30078 channel-layout doc - categories + their
 // position, plus per-channel category assignment. Mirrors the desktop
@@ -53,7 +54,7 @@ export function ManageCategoriesSheet({
   return (
     <Sheet onClose={close} screen="manage-categories" label={t('mobile.layout.title')} zIndex={20} maxHeight="94%">
       <SheetHeader
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>}
+        icon={<MenuIcon size={null} />}
         title={t('mobile.layout.title')}
         subtitle={t('mobile.layout.help')}
       />

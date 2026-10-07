@@ -388,7 +388,7 @@ bed plays instead, so the game is never silent because of a missing file.
 
 Each game has a public guide under `content/guides/{en,es}/`
 (`chain-reaction`, `vesta`, `stacker`) with an animated SVG hero
-(`src/components/guides/svg/`) and real screenshots of the running boards.
+(`src/assets/illustrations/guides/`) and real screenshots of the running boards.
 
 The screenshots are generated, not curated:
 

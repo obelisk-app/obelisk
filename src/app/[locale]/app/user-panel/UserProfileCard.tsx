@@ -5,7 +5,7 @@ import type { JsUserMetadata } from '@/services/nostr-bridge';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import { useTranslations } from 'next-intl';
 import { MenuDivider, MenuItem, MenuLink } from '@/components/ui/overlays/menu';
-import { CopyIcon, EditIcon, ExternalIcon, LogOutIcon } from '@/components/ui/icons/icons';
+import { CopyIcon, EditIcon, ExternalIcon, LogOutIcon } from '@/assets/icons';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 
 type Props = {

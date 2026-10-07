@@ -22,7 +22,7 @@ import { Resvg } from '@resvg/resvg-js';
 import { DEFAULT_LOCALE, LOCALES, type Locale } from '@/i18n';
 import { MODULES } from '@/i18n/modules';
 
-import { HERO_REGISTRY, DIAGRAM_REGISTRY } from '../src/components/guides/svg';
+import { HERO_REGISTRY, DIAGRAM_REGISTRY } from '../src/assets/illustrations/guides';
 import {
   HERO_ASSET_META,
   DIAGRAM_ASSET_META,

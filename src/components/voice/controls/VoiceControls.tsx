@@ -12,10 +12,7 @@ import { useVoiceControls } from '@/hooks/voice/controls/useVoiceControls';
 import { voiceErrorText } from '@/utils/voice/error-text';
 import QualityPopover from './QualityPopover';
 import CircleBtn from './CircleBtn';
-import {
-  CameraOffIcon, CameraOnIcon, ChatIcon, DeafenOffIcon, DeafenOnIcon, GearIcon, LeaveIcon,
-  MicOffIcon, MicOnIcon, ScreenShareIcon, SwitchCameraIcon,
-} from '../common/icons';
+import { ChatIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicStandIcon, MicStandOffIcon, MonitorIcon, PhoneSlashIcon, SwitchCameraIcon, VideoCameraIcon, VideoCameraOffIcon } from '@/assets/icons';
 
 interface VoiceControlsProps {
   onLeave: () => void;
@@ -49,7 +46,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           title={t(vm.isMuted ? 'voice.controls.unmute' : 'voice.controls.mute')}
           data-testid="mute-btn"
         >
-          {vm.isMuted ? <MicOffIcon /> : <MicOnIcon />}
+          {vm.isMuted ? <MicStandOffIcon size={18} strokeWidth={2} /> : <MicStandIcon size={18} strokeWidth={2} />}
         </CircleBtn>
 
         <CircleBtn
@@ -59,7 +56,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           title={t(vm.isDeafened ? 'voice.controls.undeafen' : 'voice.controls.deafen')}
           data-testid="deafen-btn"
         >
-          {vm.isDeafened ? <DeafenOffIcon /> : <DeafenOnIcon />}
+          {vm.isDeafened ? <HeadphonesOffIcon size={18} strokeWidth={2} /> : <HeadphonesIcon size={18} strokeWidth={2} />}
         </CircleBtn>
 
         <CircleBtn
@@ -68,7 +65,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           title={t(vm.isCameraOn ? 'voice.controls.cameraOff' : 'voice.controls.cameraOn')}
           data-testid="camera-btn"
         >
-          {vm.isCameraOn ? <CameraOnIcon /> : <CameraOffIcon />}
+          {vm.isCameraOn ? <VideoCameraIcon size={18} strokeWidth={2} /> : <VideoCameraOffIcon size={18} strokeWidth={2} />}
         </CircleBtn>
 
         {vm.showSwitchCamera && (
@@ -78,7 +75,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
             title={t('voice.switchCamera')}
             data-testid="switch-camera-btn"
           >
-            <SwitchCameraIcon />
+            <SwitchCameraIcon size={18} strokeWidth={2} />
           </CircleBtn>
         )}
 
@@ -89,7 +86,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           data-testid="screen-share-btn"
           className="hidden sm:flex"
         >
-          <ScreenShareIcon sharing={vm.isScreenSharing} />
+          <MonitorIcon size={18} strokeWidth={2} checked={vm.isScreenSharing} />
         </CircleBtn>
 
         {onToggleChat && (
@@ -99,7 +96,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
             title={t(isChatOpen ? 'voice.controls.hideChat' : 'voice.controls.showChat')}
             data-testid="voice-chat-toggle"
           >
-            <ChatIcon />
+            <ChatIcon size={18} strokeWidth={2} />
           </CircleBtn>
         )}
 
@@ -110,7 +107,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
             title={t('voice.videoQuality')}
             data-testid="quality-btn"
           >
-            <GearIcon />
+            <GearIcon size={18} strokeWidth={2} />
           </CircleBtn>
           {qualityOpen && <QualityPopover />}
         </div>
@@ -123,7 +120,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           title={t('voice.disconnect')}
           data-testid="leave-voice-btn"
         >
-          <LeaveIcon />
+          <PhoneSlashIcon size={18} strokeWidth={2} strokeLinejoin="miter" />
         </button>
       </div>
     </div>

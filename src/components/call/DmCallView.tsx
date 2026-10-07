@@ -7,7 +7,7 @@ import IconButton from '@/components/ui/buttons/IconButton';
 import {
   CloseIcon, FlipCameraIcon, LockIcon, MaximizeIcon, MicIcon, MicOffIcon, MinimizeIcon, PhoneOffIcon,
   ScreenShareIcon, ShieldIcon, VideoIcon, VideoOffIcon,
-} from '@/components/ui/icons/icons';
+} from '@/assets/icons';
 import CallControlButton from './CallControlButton';
 import CallStatusText from './CallStatusText';
 

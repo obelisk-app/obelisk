@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl';
 import ErrorState from '@/components/ui/feedback/ErrorState';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import Button from '@/components/ui/buttons/Button';
-import { MaximizeIcon, MinimizeIcon } from '@/components/ui/icons/icons';
+import { MaximizeIcon, MinimizeIcon } from '@/assets/icons';
 import { gameIcon, gameName } from '@/lib/games/core/catalog';
 
 /**

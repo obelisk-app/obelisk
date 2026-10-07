@@ -11,7 +11,7 @@ import {
   SmileIcon,
   TrashIcon,
   ZapIcon,
-} from '@/components/ui/icons/icons';
+} from '@/assets/icons';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/overlays/menu';
 import FloatingPanel from '@/components/ui/overlays/FloatingPanel';
 import { useTranslations } from 'next-intl';

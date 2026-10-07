@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Text from '@/components/ui/layout/Text';
 import { MenuItem } from '@/components/ui/overlays/menu';
-import { CheckIcon } from '@/components/ui/icons/icons';
+import { CheckIcon } from '@/assets/icons';
 import Button from '@/components/ui/buttons/Button';
 import type { FeedWidgetsModel } from '@/hooks/social/widgets/useFeedWidgets';
 import AnchoredMenu from '../../common/AnchoredMenu';

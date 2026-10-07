@@ -6,6 +6,7 @@ import { useSearchScreen } from '@/hooks/shell/mobile/screens/search/useSearchSc
 import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';
 import BackButton from '../../chrome/BackButton';
+import { SearchShortIcon } from '@/assets/icons';
 
 /**
  * Phone skin of relay search. The search itself (grammar, debounce, race
@@ -34,7 +35,7 @@ export function SearchScreen({
       <div className="search-header">
         <BackButton onClick={back} />
         <div className="search-input-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <SearchShortIcon size={null} />
           <Input
             variant="bare"
             ref={inputRef}
@@ -128,7 +129,7 @@ export function SearchScreen({
         {nothingAtAll && (
           <div className="search-empty">
             <div className="search-empty-mark">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <SearchShortIcon size={null} strokeWidth={1.6} />
             </div>
             {t('mobile.search.channelsHelp')}<br />{t('mobile.search.serverSideHelp')}
           </div>

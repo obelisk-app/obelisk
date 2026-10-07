@@ -2,7 +2,7 @@
 
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
-import ObeliskIcon from '@/components/ui/icons/ObeliskIcon';
+import ObeliskIcon from '@/assets/brand/ObeliskIcon';
 import Button from '@/components/ui/buttons/Button';
 import LanguageToggle from '@/components/marketing/site/LanguageToggle';
 import { useNavbar } from '@/hooks/marketing/useNavbar';

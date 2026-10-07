@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import OgCard from '@/components/seo/OgCard';
-import OgIcon from '@/components/seo/OgIcon';
+import OgArt from '@/assets/illustrations/seo/OgArt';
 import { PAGE_CARDS, type OgIconName } from '@/utils/seo/cards';
 
 const ICONS: OgIconName[] = [...(Object.keys(PAGE_CARDS) as OgIconName[]), 'note', 'profile', 'tag'];
@@ -22,7 +22,7 @@ describe('the page preview card', () => {
 
   it('has a drawing for every page that has a card', () => {
     for (const name of ICONS) {
-      const html = renderToStaticMarkup(OgIcon({ name }));
+      const html = renderToStaticMarkup(OgArt({ name }));
       expect(html, name).toMatch(/^<svg[^>]*viewBox="0 0 200 200"><(g|path)/);
     }
   });

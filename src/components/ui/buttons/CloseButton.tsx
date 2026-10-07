@@ -4,7 +4,7 @@ import type { ButtonHTMLAttributes } from 'react';
 import { useTranslations } from 'next-intl';
 import Button from './Button';
 import { cn } from '@/utils/style/cn';
-import { CloseIcon } from '../icons/icons';
+import { CloseIcon } from '@/assets/icons';
 
 /**
  * Square footprints. `md` (32px) is what the `✕` glyph button occupied in a

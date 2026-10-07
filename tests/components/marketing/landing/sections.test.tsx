@@ -12,7 +12,7 @@ import RoadmapSection from '@/components/marketing/landing/RoadmapSection';
 import LearnSection from '@/components/marketing/landing/LearnSection';
 import StackSection from '@/components/marketing/landing/StackSection';
 import FaqSection from '@/components/marketing/landing/FaqSection';
-import RelayPulse from '@/components/marketing/landing/RelayPulse';
+import RelayPulse from '@/assets/illustrations/marketing/RelayPulse';
 import { FAQ_IDS, FEATURE_KEYS, LEARN_GUIDES, ROADMAP_PHASES, TECH_STACK } from '@/components/marketing/landing/landing-data';
 
 vi.mock('next/image', () => ({

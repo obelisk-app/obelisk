@@ -4,8 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useCreateGroupSection } from '@/hooks/shell/panes/sidebar/useCreateGroupSection';
 import Input from '@/components/ui/forms/Input';
 import Button from '@/components/ui/buttons/Button';
-import { CloseIcon } from '@/components/ui/icons/icons';
-import { PlusGlyph } from './PlusGlyph';
+import { CloseIcon, PlusIcon } from '@/assets/icons';
 
 /**
  * Desktop skin of the new-channel form: a `+` in the channels header that
@@ -23,7 +22,7 @@ export function CreateGroupSection({ count, onCreated }: { count: number; onCrea
         <span className="truncate">{t('shell.channel.create.header', { count: String(count) })}</span>
         {/* Icons rather than the `×` / `+` glyphs, which rendered in the OS font. */}
         <Button variant="ghost" size="icon" onClick={toggle} className="-my-0.5 shrink-0" title={toggleLabel} aria-label={toggleLabel}>
-          {open ? <CloseIcon size={12} /> : <PlusGlyph />}
+          {open ? <CloseIcon size={12} /> : <PlusIcon size={12} />}
         </Button>
       </div>
       {open && (

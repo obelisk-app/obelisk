@@ -5,6 +5,7 @@ import { type JsGroup } from '@/services/nostr-bridge';
 import { useChannelRowBody } from '@/hooks/shell/mobile/screens/server/useChannelRow';
 import { channelRowClass, isVoiceKind } from '@/utils/shell/mobile/channel-row';
 import { ChannelRowCounts } from './ChannelRowCounts';
+import { ChevronRightIcon, ListIcon, MicCapsuleIcon } from '@/assets/icons';
 
 export type ChannelRowProps = {
   group: JsGroup;
@@ -19,11 +20,11 @@ export type ChannelRowProps = {
 
 const FORUM_ICON = (
   <span className="ch-icon">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18M3 12h18M3 19h18" /></svg>
+    <ListIcon size={null} strokeWidth={1.6} />
   </span>
 );
 const CHEVRON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
+  <ChevronRightIcon size={null} strokeWidth={2.5} />
 );
 
 /**
@@ -40,7 +41,7 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
     return (
       <button className={`ch-row voice ${active ? 'active' : ''}`} onClick={onClick}>
         <span className="ch-icon" style={{ color: live ? 'var(--accent)' : 'var(--app-text-mute)' }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /></svg>
+          <MicCapsuleIcon size={null} />
         </span>
         <div className="ch-body">
           <div className="ch-row-top">

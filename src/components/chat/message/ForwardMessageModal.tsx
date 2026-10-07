@@ -15,7 +15,7 @@ import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import Input from '@/components/ui/forms/Input';
 import type { JsMessage } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import { ForwardIcon, HashIcon } from '@/components/ui/icons/icons';
+import { ForwardIcon, HashIcon } from '@/assets/icons';
 import Spinner from '@/components/ui/feedback/Spinner';
 import EmptyState from '@/components/ui/feedback/EmptyState';
 import { MenuItem } from '@/components/ui/overlays/menu';

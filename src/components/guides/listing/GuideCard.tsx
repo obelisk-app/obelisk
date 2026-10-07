@@ -1,7 +1,7 @@
 import { Link } from '@/i18n/navigation';
 import type { GuideFrontmatter } from '@/services/guides/guides';
 import { guidePath } from '@/utils/guides/guide-urls';
-import { HERO_REGISTRY } from '../svg';
+import { HERO_REGISTRY } from '@/assets/illustrations/guides';
 
 interface Props {
   slug: string;

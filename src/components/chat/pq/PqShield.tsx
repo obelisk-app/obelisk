@@ -4,7 +4,7 @@ import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import type { PqProtectionLevel } from '@/services/chat/pq/status';
 import { usePqShield } from '@/hooks/chat/pq/usePqShield';
-import { ICONS } from './pq-shield-icons';
+import { LockMediumIcon, ShieldCheckIcon, ShieldIcon } from '@/assets/icons';
 
 /**
  * The protection indicator for a DM thread: one small shield in the header,
@@ -41,7 +41,6 @@ export default function PqShield({
   // keyboard need a real toggle (`usePqShield`).
   const { open, wrapRef, panelId, show, hide, toggle, onBlur } = usePqShield();
 
-  const Icon = ICONS[level];
   const label = t(`chat.pq.level.${level}`);
   const detail = t(`chat.pq.level.${level}Detail`);
 
@@ -66,7 +65,7 @@ export default function PqShield({
         onBlur={onBlur}
         className={`rounded p-1 transition-colors ${TONE[level]}`}
       >
-        <Icon />
+        {level === 'quantum' ? <ShieldCheckIcon /> : level === 'wrapped' ? <ShieldIcon /> : <LockMediumIcon />}
       </button>
 
       {open && (

@@ -3,7 +3,7 @@
 import type { UserHit } from '@/hooks/identity/useNostrUserSearch';
 import { useComposeDmResultRow } from '@/hooks/shell/dm/useComposeDmResultRow';
 import UserAvatar from '@/components/ui/media/UserAvatar';
-import { CheckBadgeIcon } from '@/components/ui/icons/icons';
+import { CheckBadgeIcon } from '@/assets/icons';
 
 /** One person in the desktop "New message" results. */
 export function ComposeDmResultRow({ hit, active, onPick, onHover }: { hit: UserHit; active: boolean; onPick: () => void; onHover: () => void }) {

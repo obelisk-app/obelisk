@@ -10,7 +10,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useDmCallButtons } from '@/hooks/call/useDmCallButtons';
-import { PhoneIcon, VideoIcon } from '@/components/ui/icons/icons';
+import { PhoneIcon, VideoIcon } from '@/assets/icons';
 import { prefetchDmCallSession } from '@/services/call/load-session';
 
 const GROUP_CLASS = {

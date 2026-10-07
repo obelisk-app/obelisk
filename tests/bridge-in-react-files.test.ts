@@ -21,7 +21,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const ROOTS = ['src/components', 'src/app', 'src/hooks'];
+const ROOTS = ['src/components', 'src/app', 'src/assets', 'src/hooks'];
 const NAMES = /\bgetBridge(?:Impl)?\b/;
 
 const EXCEPTIONS: Record<string, string> = {

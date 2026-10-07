@@ -7,6 +7,7 @@ import Range from '@/components/ui/forms/Range';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { formatElapsed } from '@/utils/format/format-elapsed';
 import { useVoicePlayback } from '@/hooks/chat/message/useVoicePlayback';
+import { MicSmallIcon, PauseIcon, PlayLargeIcon, UserSolidIcon } from '@/assets/icons';
 
 /** Bar heights (px) of the decorative waveform the player draws. */
 const VOICE_WAVEFORM = [10, 18, 13, 25, 20, 12, 28, 17, 23, 14, 30, 20, 12, 24, 17, 28, 15, 22, 30, 18, 11, 25, 16, 21, 13, 27, 19, 10] as const;
@@ -54,9 +55,9 @@ export function VoiceMessage({
       />
       <button type="button" onClick={toggle} className={`flex shrink-0 items-center justify-center text-white ${compact ? "h-11 w-9" : "h-14 w-10"}`} aria-label={t(playing ? 'chat.voiceNote.pause' : 'chat.voiceNote.play')}>
         {playing ? (
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>
+          <PauseIcon size={null} className="h-5 w-5" />
         ) : (
-          <svg className="ml-0.5 h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="m7 4 13 8-13 8z" /></svg>
+          <PlayLargeIcon size={null} className="ml-0.5 h-6 w-6" />
         )}
       </button>
       <span className={`min-w-0 flex-1 ${compact ? "" : "relative h-16 pr-2"}`}>
@@ -100,11 +101,11 @@ export function VoiceMessage({
             <RemoteImage src={authorPicture} alt={t('chat.voiceNote.sender')} className="h-14 w-14 rounded-full object-cover" />
           ) : (
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#6b7c85] text-white/80">
-              <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm-8 9a8 8 0 0 1 16 0Z" /></svg>
+              <UserSolidIcon size={null} className="h-7 w-7" />
             </span>
           )}
           <span className="absolute -bottom-1 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full bg-[#202c33] text-[#53bdeb]" data-testid="voice-mic-badge">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3" /><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" /></svg>
+            <MicSmallIcon size={null} strokeWidth={2.2} className="h-5 w-5" />
           </span>
           {playing && (
             <button

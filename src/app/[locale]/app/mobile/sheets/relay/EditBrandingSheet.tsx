@@ -11,6 +11,7 @@ import Input from '@/components/ui/forms/Input';
 import TextArea from '@/components/ui/forms/TextArea';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
+import { ImageIcon } from '@/assets/icons';
 
 // Bottom-sheet for editing kind 30078 relay branding (name, description,
 // icon, banner). Mobile-native counterpart of the desktop RelayBrandingModal,
@@ -35,7 +36,7 @@ export function EditBrandingSheet({
   return (
     <Sheet onClose={close} screen="edit-branding" label={t('mobile.branding.edit')} zIndex={20} maxHeight="94%">
       <SheetHeader
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>}
+        icon={<ImageIcon size={null} />}
         title={t('mobile.branding.edit')}
         subtitle={t('mobile.branding.help')}
       />

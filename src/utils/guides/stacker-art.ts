@@ -1,5 +1,5 @@
 /**
- * The Stacker hero's two wells (`src/components/guides/svg/heroes/StackerHero.tsx`
+ * The Stacker hero's two wells (`src/assets/illustrations/guides/heroes/StackerHero.tsx`
  * and `StackerWell.tsx`): the grid's size, the blocks already in each well,
  * and where every block and garbage cell is drawn. The arithmetic is the
  * hero's own, so its still frame under `public/og/guides/` does not change.

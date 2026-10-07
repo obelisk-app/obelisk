@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { BRAND_NAME, GLOW_GRADIENT, GRID_OVERLAY } from '@/utils/media-kit/content';
-import { ObeliskMark } from './ObeliskMark';
+import ObeliskTwoToneMark from '@/assets/brand/ObeliskTwoToneMark';
 
 /** Where each layer of a centered composition sits, as % of the banner. */
 type CenteredLayout = {
@@ -68,7 +68,7 @@ function CenteredBanner({ layout: l }: { layout: CenteredLayout }) {
           transform: 'translateX(-50%)',
         }}
       >
-        <ObeliskMark />
+        <ObeliskTwoToneMark width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden leftFill="#a3a3a3" rightFill="#fafafa" />
       </div>
       {/* Title */}
       <div
@@ -228,7 +228,7 @@ function HorizontalBanner({
             transform: 'translateX(-50%)',
           }}
         >
-          <ObeliskMark />
+          <ObeliskTwoToneMark width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden leftFill="#a3a3a3" rightFill="#fafafa" />
         </div>
       </div>
       {/* Text */}

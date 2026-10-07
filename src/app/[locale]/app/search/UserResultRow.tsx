@@ -2,7 +2,7 @@
 
 import type { UserHit } from '@/hooks/identity/useNostrUserSearch';
 import { useUserResultRow } from '@/hooks/shell/search/useUserResultRow';
-import { CheckBadgeIcon } from '@/components/ui/icons/icons';
+import { CheckBadgeIcon } from '@/assets/icons';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 
 /** One person in the search dropdown: picture or initial, name, how they were found, and their handle. */

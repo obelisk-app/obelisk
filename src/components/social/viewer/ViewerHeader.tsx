@@ -10,7 +10,7 @@
 
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/ui/buttons/Button';
-import ObeliskIcon from '@/components/ui/icons/ObeliskIcon';
+import ObeliskIcon from '@/assets/brand/ObeliskIcon';
 import { useTranslations } from 'next-intl';
 
 /**

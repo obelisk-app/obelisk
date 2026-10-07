@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { categoryLabel } from '@/utils/relay/category-label';
 import Input from '@/components/ui/forms/Input';
+import { ChevronDownIcon, ChevronUpIcon } from '@/assets/icons';
 
 const arrowBtnStyle: React.CSSProperties = {
   width: 28,
@@ -49,10 +50,10 @@ export function CategoryListEditor({ categories, moveCategory, renameCategory, d
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <button type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, -1)} disabled={i === 0} aria-label={t('mobile.layout.moveUp')}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
+                <ChevronUpIcon size={14} strokeWidth={2.5} />
               </button>
               <button type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, 1)} disabled={i === categories.length - 1} aria-label={t('mobile.layout.moveDown')}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                <ChevronDownIcon size={14} strokeWidth={2.5} />
               </button>
             </div>
             <Input

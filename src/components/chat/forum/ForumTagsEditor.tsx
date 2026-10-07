@@ -5,7 +5,7 @@ import { paletteForTag, tagChipStyle } from '@/utils/chat/forum/forum-tag-colors
 import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';
 import Button from '@/components/ui/buttons/Button';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import { tagEmojiValue } from '@/utils/chat/forum/forum-tags';
 import { useForumTagsEditor } from '@/hooks/chat/forum/useForumTagsEditor';
 import { TagColorPicker } from './TagColorPicker';

@@ -187,6 +187,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  /*
+   * Every module under src/assets/ (icons, brand marks, illustrations) only
+   * declares components, so it is marked side-effect free: a page that imports
+   * `{ CloseIcon }` from the `@/assets/icons` barrel then bundles that icon
+   * alone, not all of them. Without the flag webpack keeps every module the
+   * barrel re-exports (about 4 kB gzip on each page). Turbopack (dev) does
+   * not read this hook; it only affects `next build --webpack`.
+   */
+  webpack(config) {
+    config.module.rules.push({ test: /[\\/]src[\\/]assets[\\/].*\.tsx?$/, sideEffects: false });
+    return config;
+  },
 };
 
 export default withNextIntl(nextConfig);

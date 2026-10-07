@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { CompassIcon, EditIcon, MessageIcon, SettingsIcon } from '@/components/ui/icons/icons';
+import { CompassIcon, EditIcon, MessageIcon, SettingsIcon } from '@/assets/icons';
 import { usePopoverActions } from '@/hooks/chat/profile/usePopoverActions';
 import Button from '@/components/ui/buttons/Button';
 

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
  * The owner's rule: hooks live in the hooks layer, `src/hooks/<module>/`, so
  * they can be found and reused. Component folders hold components.
  *
- * So no file under `src/components/` or `src/app/` may
+ * So no file under `src/components/`, `src/app/` or `src/assets/` may
  *   - be a hook file (a file named `useX.ts` or `useX.tsx`), or
  *   - define a hook: a top-level `function useX`, a top-level
  *     `const useX =`, or an `export` of a name `useX` (re-exports included,
@@ -18,7 +18,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const ROOT = process.cwd();
-const GUARDED = ['src/components', 'src/app'];
+const GUARDED = ['src/components', 'src/app', 'src/assets'];
 
 const HOOK_FILE = /^use[A-Z][A-Za-z0-9]*\.tsx?$/;
 const HOOK_NAME = 'use[A-Z][A-Za-z0-9_$]*';

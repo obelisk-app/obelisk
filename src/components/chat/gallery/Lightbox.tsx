@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useLightbox } from '@/hooks/chat/gallery/useLightbox';
 import IconButton from '@/components/ui/buttons/IconButton';
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '@/assets/icons';
 
 /** Exported so other media surfaces (the feed's carousel) zoom identically. */
 export interface LightboxProps {
@@ -47,10 +48,7 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
         onClick={vm.closeClick}
         className="absolute top-4 right-4 z-10"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
+        <CloseIcon size={20} strokeWidth={2.5} />
       </IconButton>
 
       {urls.length > 1 && (
@@ -63,9 +61,7 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
             className={`absolute left-4 top-1/2 -translate-y-1/2 ${vm.isZoomed ? 'pointer-events-none opacity-50' : ''}`}
             data-testid="lightbox-prev"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
+            <ChevronLeftIcon size={24} strokeWidth={2.5} />
           </IconButton>
           <IconButton
             tone="overlay"
@@ -75,9 +71,7 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
             className={`absolute right-4 top-1/2 -translate-y-1/2 ${vm.isZoomed ? 'pointer-events-none opacity-50' : ''}`}
             data-testid="lightbox-next"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+            <ChevronRightIcon size={24} strokeWidth={2.5} />
           </IconButton>
         </>
       )}

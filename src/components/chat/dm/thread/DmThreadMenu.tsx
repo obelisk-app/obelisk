@@ -22,7 +22,7 @@ import AnchoredMenu from '@/components/common/AnchoredMenu';
 import { useDmThreadMenu } from '@/hooks/chat/dm/thread/useDmThreadMenu';
 import { useTranslations } from 'next-intl';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/overlays/menu';
-import { BanIcon, BellIcon, BellOffIcon, CheckBadgeIcon, KeyIcon, MoreIcon, UserIcon } from '@/components/ui/icons/icons';
+import { BanIcon, BellIcon, BellOffIcon, CheckBadgeIcon, KeyIcon, MoreIcon, UserIcon } from '@/assets/icons';
 import IconButton from '@/components/ui/buttons/IconButton';
 
 export default function DmThreadMenu({

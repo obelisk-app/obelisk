@@ -8,6 +8,7 @@ import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
 import { SuggestedRelayItem } from './SuggestedRelayItem';
 import { CustomRelayForm } from './CustomRelayForm';
+import { PlusIcon } from '@/assets/icons';
 
 export function AddRelaySheet({ close }: { close: () => void }) {
   const t = useTranslations();
@@ -16,7 +17,7 @@ export function AddRelaySheet({ close }: { close: () => void }) {
   return (
     <Sheet onClose={close} screen="add-relay" label={t('mobile.rail.addTitle')} maxHeight="88%">
       <SheetHeader
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>}
+        icon={<PlusIcon size={null} />}
         title={t('mobile.rail.addTitle')}
       />
       <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>

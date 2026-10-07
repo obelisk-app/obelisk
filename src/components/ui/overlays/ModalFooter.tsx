@@ -3,7 +3,7 @@
 import type { ReactNode, Ref } from 'react';
 import { useTranslations } from 'next-intl';
 import Button, { type ButtonSize, type ButtonTone, type ButtonVariant } from '../buttons/Button';
-import { ZapIcon } from '../icons/icons';
+import { ZapIcon } from '@/assets/icons';
 import { cn } from '@/utils/style/cn';
 
 /**

@@ -6,6 +6,7 @@ import RelayStatusPill from '@/components/relay/RelayStatusPill';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useMobileServerBanner } from '@/hooks/shell/mobile/rail/useMobileServerBanner';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
+import { MoreVerticalIcon, PlusIcon, SearchShortIcon } from '@/assets/icons';
 
 /**
  * The active relay's banner above the phone's channel list: its banner
@@ -55,7 +56,7 @@ export function MobileServerBanner({
         />
         <MobileSigningIndicator />
         <button className="icon-btn action-search" aria-label={t('mobile.header.search')} onClick={onSearch}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <SearchShortIcon size={20} strokeWidth={1.6} />
         </button>
         <button
           className="icon-btn action-create"
@@ -63,10 +64,10 @@ export function MobileServerBanner({
           data-testid="mobile-create-channel-btn"
           onClick={onCreateChannel}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+          <PlusIcon size={20} />
         </button>
         <button className="icon-btn action-menu" aria-label={t('mobile.header.spaceMenu')} onClick={onOpenMenu}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
+          <MoreVerticalIcon size={20} strokeWidth={1.6} />
         </button>
       </div>
       <div className="server-banner-meta">

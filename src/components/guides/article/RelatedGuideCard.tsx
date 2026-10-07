@@ -1,7 +1,7 @@
 import { Link } from '@/i18n/navigation';
 import { guidePath } from '@/utils/guides/guide-urls';
 import type { RelatedGuideCard as Card } from '@/utils/guides/related';
-import { HERO_REGISTRY } from '../svg';
+import { HERO_REGISTRY } from '@/assets/illustrations/guides';
 
 /** One related guide: its hero (or a plain panel when it has none), title and line under it. */
 export default function RelatedGuideCard({ guide }: { guide: Card }) {

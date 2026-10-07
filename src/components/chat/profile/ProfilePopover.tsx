@@ -9,7 +9,7 @@ import UserAvatar from '@/components/ui/media/UserAvatar';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useTranslations } from 'next-intl';
 import ProfileMenu from '@/components/social/profile/ProfileMenu';
-import { ZapIcon } from '@/components/ui/icons/icons';
+import { ZapIcon } from '@/assets/icons';
 import { useProfilePopover } from '@/hooks/chat/profile/useProfilePopover';
 import { EmojiText } from './EmojiText';
 import { PopoverIdentity } from './PopoverIdentity';

@@ -6,8 +6,8 @@ import { categoryLabel } from '@/utils/relay/category-label';
 import Select from '@/components/ui/forms/Select';
 import Button from '@/components/ui/buttons/Button';
 import { useChannelOrderRow } from '@/hooks/shell/modals/layout/useChannelOrderRow';
-import { DragHandleIcon } from './DragHandleIcon';
 import { MoveButtons } from './MoveButtons';
+import { DragHandleIcon } from '@/assets/icons';
 
 /** One channel in the layout editor: drag handle, category picker, up/down. */
 export function ChannelOrderRow({
@@ -53,7 +53,7 @@ export function ChannelOrderRow({
         aria-label={t('shell.desktop.layout.grabChannel', { name: channel.name ?? channel.id })}
         title={t('shell.desktop.layout.dragChannel')}
       >
-        <DragHandleIcon />
+        <DragHandleIcon size={14} />
       </Button>
       <span className="text-lc-muted">#</span>
       <span className="flex-1 truncate text-sm text-lc-white">

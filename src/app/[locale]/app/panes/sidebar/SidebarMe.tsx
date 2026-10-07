@@ -1,7 +1,7 @@
 'use client';
 
 import UserPanel from '../../user-panel/UserPanel';
-import { GearIcon } from '@/components/ui/icons/icons';
+import { GearIcon } from '@/assets/icons';
 import { useTranslations } from 'next-intl';
 import { Avatar } from '../../desktop/Avatar';
 import { useSidebarMe } from '@/hooks/shell/panes/sidebar/useSidebarMe';

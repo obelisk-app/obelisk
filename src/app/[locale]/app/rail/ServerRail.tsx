@@ -19,6 +19,7 @@ import type { RailMode } from '@/utils/shell/desktop/desktop-layout';
 import { AddRelayModal } from './AddRelayModal';
 import { RailTile } from './RailTile';
 import { RelayTile } from './RelayTile';
+import { GlobeIcon, PaperPlaneIcon, PlusIcon } from '@/assets/icons';
 
 export default function ServerRail({
   mode,
@@ -42,10 +43,7 @@ export default function ServerRail({
         hint="rail-dm"
         onClick={onPickDM}
         icon={
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13" />
-            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
+          <PaperPlaneIcon size={22} strokeWidth={2} />
         }
         emphasis
       />
@@ -63,11 +61,7 @@ export default function ServerRail({
           hint="rail-feed"
           onClick={onPickFeed}
           icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              <path d="M2 12h20" />
-            </svg>
+            <GlobeIcon size={22} strokeWidth={2} />
           }
           emphasis
         />
@@ -95,10 +89,7 @@ export default function ServerRail({
         data-tour="rail-add-relay"
         className="group/tile relative flex h-12 w-12 items-center justify-center rounded-2xl bg-lc-card text-lc-green ring-1 ring-lc-border transition-all duration-150 hover:rounded-xl hover:bg-lc-green/15 hover:ring-lc-green"
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
+        <PlusIcon size={22} strokeWidth={2.5} />
       </button>
 
       {vm.adding && <AddRelayModal onClose={vm.closeAdd} />}

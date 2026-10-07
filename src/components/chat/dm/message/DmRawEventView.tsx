@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { DmRawEvent } from '@/services/nostr-bridge';
-import { LockIcon } from '@/components/ui/icons/icons';
+import { LockIcon } from '@/assets/icons';
 import Button from '@/components/ui/buttons/Button';
 import { copyWithToast } from '@/services/common/clipboard';
 import { json } from '@/utils/chat/dm/dm-message-utils';

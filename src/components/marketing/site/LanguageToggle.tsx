@@ -16,7 +16,7 @@
 import { LOCALES, type Locale } from '@/i18n';
 import { useLanguageToggle } from '@/hooks/marketing/useLanguageToggle';
 import Button from '@/components/ui/buttons/Button';
-import { CheckIcon, ChevronDownIcon } from '@/components/ui/icons/icons';
+import { CheckIcon, ChevronDownIcon } from '@/assets/icons';
 import { MenuItem } from '@/components/ui/overlays/menu';
 import PopoverPanel from '@/components/ui/overlays/PopoverPanel';
 

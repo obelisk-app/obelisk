@@ -6,6 +6,7 @@ import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { useDmsListScreen } from '@/hooks/shell/mobile/screens/dm/useDmsListScreen';
 import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
 import { DmRow } from './DmRow';
+import { LockWideIcon, PlusIcon, SearchShortIcon } from '@/assets/icons';
 
 /** The phone DMs tab: conversations with people you follow, and with everyone else. */
 export function DmsListScreen({
@@ -27,10 +28,10 @@ export function DmsListScreen({
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <MobileSigningIndicator />
           <button className="icon-btn action-search" onClick={() => go('compose-dm')} aria-label={t('common.search')}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <SearchShortIcon size={20} strokeWidth={1.6} />
           </button>
           <button className="icon-btn action-create" onClick={() => go('compose-dm')} aria-label={t('dm.newMessage')}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            <PlusIcon size={20} strokeWidth={1.6} />
           </button>
         </div>
       </div>
@@ -48,7 +49,7 @@ export function DmsListScreen({
       <div className="dms-list-rows native-scroll-y" ref={listRef}>
         {shown.length === 0 && (
           <div className="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="11" width="18" height="9" rx="1.5" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+            <LockWideIcon size={null} strokeWidth={1.6} />
             <div className="empty-state-title">{t('dm.noConversations')}</div>
             <div className="empty-state-desc">{t('dm.emptyMobileDescription')}</div>
           </div>

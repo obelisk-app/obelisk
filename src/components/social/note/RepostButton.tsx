@@ -6,7 +6,7 @@ import { MENU_PANEL_CLASS, MenuItem } from '@/components/ui/overlays/menu';
 import { useRepostButton } from '@/hooks/social/note/useRepostButton';
 import AnchoredMenu from '../../common/AnchoredMenu';
 import ActionButton from './ActionButton';
-import NoteIcon from './NoteIcon';
+import { QuoteIcon, RepostIcon } from '@/assets/icons';
 
 /**
  * Repost with a Quote option. A plain button can't offer both, and hiding
@@ -37,7 +37,7 @@ export default function RepostButton({
       <ActionButton
         kind="repost"
         label={t('social.repost')}
-        icon={<NoteIcon name="repost" />}
+        icon={<RepostIcon size={18} strokeWidth={1.75} />}
         count={count}
         testId="note-repost"
         active={active}
@@ -52,7 +52,7 @@ export default function RepostButton({
       <ActionButton
         kind="repost"
         label={t('social.repost')}
-        icon={<NoteIcon name="repost" />}
+        icon={<RepostIcon size={18} strokeWidth={1.75} />}
         count={count}
         testId="note-repost"
         active={active}
@@ -74,13 +74,13 @@ export default function RepostButton({
         panelClassName={MENU_PANEL_CLASS}
       >
         <MenuItem
-          icon={<NoteIcon name="repost" />}
+          icon={<RepostIcon size={18} strokeWidth={1.75} />}
           label={t('social.repost')}
           onClick={menu.repost}
           testId="note-repost-confirm"
         />
         <MenuItem
-          icon={<NoteIcon name="quote" />}
+          icon={<QuoteIcon size={18} strokeWidth={1.75} />}
           label={t('social.quote')}
           onClick={menu.quote}
           testId="note-quote"

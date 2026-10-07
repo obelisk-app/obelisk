@@ -19,7 +19,7 @@ import { useTranslations } from 'next-intl';
 import { useProfileMenu } from '@/hooks/social/profile/useProfileMenu';
 import AnchoredMenu from '../../common/AnchoredMenu';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem, MenuLink } from '@/components/ui/overlays/menu';
-import { BanIcon, BellOffIcon, ExternalIcon, HashIcon, KeyIcon, LinkIcon, MoreIcon, ShareIcon, ZapIcon } from '@/components/ui/icons/icons';
+import { BanIcon, BellOffIcon, ExternalIcon, HashIcon, KeyIcon, LinkIcon, MoreIcon, ShareIcon, ZapIcon } from '@/assets/icons';
 import IconButton from '@/components/ui/buttons/IconButton';
 
 export default function ProfileMenu({

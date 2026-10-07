@@ -7,6 +7,7 @@ import { useInboxScreen } from '@/hooks/shell/mobile/screens/inbox/useInboxScree
 import { MentionInboxCard } from './MentionInboxCard';
 import { DmInboxCard } from './DmInboxCard';
 import { LockedDmsCard } from './LockedDmsCard';
+import { BellAltIcon } from '@/assets/icons';
 
 /** The phone inbox: mentions on the active relay and DM pings, a tab each. */
 export function InboxScreen({
@@ -46,7 +47,7 @@ export function InboxScreen({
       <div className="activity-list native-scroll-y">
         {vm.isEmpty && (
           <div className="empty-state" style={{ padding: '40px 24px' }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+            <BellAltIcon size={null} strokeWidth={1.5} />
             <div className="empty-state-title">{t('mobile.inbox.caughtUp')}</div>
             <div className="empty-state-desc">
               {vm.tab === 'mentions'

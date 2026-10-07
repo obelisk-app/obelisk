@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import Sheet from '@/components/ui/overlays/Sheet';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
+import { LogOutIcon } from '@/assets/icons';
 
 export function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   const t = useTranslations();
@@ -12,11 +13,7 @@ export function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () 
       <SheetHeader
         variant="confirm"
         icon={
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
+          <LogOutIcon size={null} strokeWidth={2} />
         }
         title={t('mobile.settings.disconnectTitle')}
         subtitle={t('mobile.settings.disconnectDescription')}
@@ -28,11 +25,7 @@ export function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () 
           tone: 'danger',
           testId: 'disconnect-confirm',
           icon: (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
+            <LogOutIcon size={null} strokeWidth={2} />
           ),
         }}
         onCancel={onCancel}

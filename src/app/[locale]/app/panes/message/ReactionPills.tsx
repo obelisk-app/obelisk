@@ -3,7 +3,7 @@
 import type { MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
-import { ZapIcon } from '@/components/ui/icons/icons';
+import { ZapIcon } from '@/assets/icons';
 import { ReactorHoverCard } from './ReactorHoverCard';
 import { ZapperHoverCard } from './ZapperHoverCard';
 import type { MessageRowActions } from '@/hooks/shell/panes/message/useMessageRowActions';

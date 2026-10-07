@@ -4,6 +4,7 @@ import type { RefObject } from 'react';
 import { useFeedFloatingControls } from '@/hooks/social/feed/useFeedFloatingControls';
 import { useTranslations } from 'next-intl';
 import IconButton from '@/components/ui/buttons/IconButton';
+import { ArrowUpIcon, PlusIcon } from '@/assets/icons';
 
 /**
  * Back-to-top and the compose button, floating over the feed scroller.
@@ -51,9 +52,7 @@ export default function FeedFloatingControls({
           } bottom-24`}
           data-testid="feed-back-to-top"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M12 19V5" /><path d="m5 12 7-7 7 7" />
-          </svg>
+          <ArrowUpIcon size={18} strokeWidth={2.5} />
           {pendingCount > 0 && <span>{pendingCount}</span>}
         </button>
       )}
@@ -68,9 +67,7 @@ export default function FeedFloatingControls({
           className={`absolute right-5 z-20 shadow-2xl shadow-black/50 active:scale-95 ${mobile ? 'bottom-6' : 'bottom-5'}`}
           data-testid="feed-compose-fab"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
-            <path d="M12 5v14" /><path d="M5 12h14" />
-          </svg>
+          <PlusIcon size={24} strokeWidth={2.5} />
         </IconButton>
       )}
     </>

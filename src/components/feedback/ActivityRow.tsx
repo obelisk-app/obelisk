@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { dismissActivity, type ActivityEntry } from '@/services/feedback/activity-log';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import { activityDetail, activityTitle } from '@/utils/errors/activity-text';
 import ActivityStatusGlyph from './ActivityStatusGlyph';
 

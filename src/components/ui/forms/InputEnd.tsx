@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Button from '../buttons/Button';
 import Spinner from '../feedback/Spinner';
-import { CloseIcon, EyeIcon, EyeOffIcon } from '../icons/icons';
+import { CloseIcon, EyeIcon, EyeOffIcon } from '@/assets/icons';
 
 export { endSlotCount } from '@/utils/style/input-end-slots';
 

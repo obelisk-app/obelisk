@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import RevealSection from './RevealSection';
 import { STEP_ICONS } from './landing-data';
+import { ArrowDownIcon } from '@/assets/icons';
 
 /**
  * How it works: three numbered steps with a connector line on desktop.
@@ -35,9 +36,7 @@ export default function StepsSection() {
               <p className="text-sm text-lc-muted leading-relaxed">{t(`marketing.steps.${num}.desc`)}</p>
               {i < 2 && (
                 <div className="md:hidden flex justify-center py-2 mt-4 text-lc-green/30">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 5v14M5 12l7 7 7-7"/>
-                  </svg>
+                  <ArrowDownIcon size={20} strokeWidth={2} strokeLinecap="butt" strokeLinejoin="miter" />
                 </div>
               )}
             </div>

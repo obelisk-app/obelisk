@@ -1,14 +1,13 @@
 'use client';
 
 import Button from '@/components/ui/buttons/Button';
-import { ChevronDownIcon, ChevronUpIcon } from '@/components/ui/icons/icons';
+import { ChevronDownIcon, ChevronUpIcon, UserAddIcon } from '@/assets/icons';
 import Input from '@/components/ui/forms/Input';
 import { useTranslations } from 'next-intl';
 import { normalizeRoleColor, type RelayRole } from '@/services/relay/relay-roles';
 import type { RelayRolesDraft } from '@/hooks/admin/relay-roles/useRelayRolesDraft';
 import RoleEmojiField from './RoleEmojiField';
 import RoleMembers from './RoleMembers';
-import MembersIcon from './MembersIcon';
 
 /** One role on the ladder: tier, emoji, name, colour, reorder, members toggle, delete, and the members panel. */
 export default function RoleRow({ role, index, holders, roles }: {
@@ -54,7 +53,7 @@ export default function RoleRow({ role, index, holders, roles }: {
           aria-expanded={open}
           title={saved ? undefined : t('admin.roles.saveFirst')}
         >
-          <MembersIcon />
+          <UserAddIcon size={14} strokeWidth={1.9} />
           {t('admin.roles.members', { count: holders.length })}
         </Button>
         <Button variant="outline" tone="danger" size="xs" onClick={() => { void roles.removeRole(role); }} aria-label={t('admin.roles.delete', { name: role.name })}>

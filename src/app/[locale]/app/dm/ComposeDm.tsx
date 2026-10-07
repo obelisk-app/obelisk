@@ -18,6 +18,7 @@ import { useComposeDm } from '@/hooks/shell/dm/useComposeDm';
 import Input from '@/components/ui/forms/Input';
 import CloseButton from '@/components/ui/buttons/CloseButton';
 import { ComposeDmResultRow } from './ComposeDmResultRow';
+import { SearchIcon } from '@/assets/icons';
 
 export default function ComposeDm({
   onClose,
@@ -33,10 +34,7 @@ export default function ComposeDm({
   return (
     <div className="border-b border-lc-border bg-lc-card/30 p-3" data-testid="dm-composer-search">
       <div className="flex items-center gap-2 rounded-lg border border-lc-border bg-lc-black px-2.5 focus-within:border-lc-green">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-lc-muted" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
+        <SearchIcon size={14} strokeWidth={2} className="shrink-0 text-lc-muted" />
         <Input
           variant="bare"
           ref={inputRef}

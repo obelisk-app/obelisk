@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import CloseButton from '@/components/ui/buttons/CloseButton';
 import IconButton from '@/components/ui/buttons/IconButton';
 import { MediaPickerSearch } from './MediaPickerSearch';

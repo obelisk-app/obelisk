@@ -18,6 +18,7 @@ import { copyWithToast } from '@/services/common/clipboard';
 import { useTranslations } from 'next-intl';
 import TextButton from '@/components/ui/buttons/TextButton';
 import { BioSegmentView } from './BioSegmentView';
+import { BoltIcon, GlobeIcon } from '@/assets/icons';
 
 export default function ProfileLinks({
   about,
@@ -52,11 +53,7 @@ export default function ProfileLinks({
               className="inline-flex items-center gap-1.5 text-lc-green hover:underline"
               data-testid="profile-website"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M2 12h20" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
+              <GlobeIcon size={13} strokeWidth={2} strokeLinejoin="miter" />
               {prettyUrl(site)}
             </a>
           )}
@@ -66,9 +63,7 @@ export default function ProfileLinks({
               data-testid="profile-lud16"
               title={lud16}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />
-              </svg>
+              <BoltIcon size={13} strokeWidth={2} />
               {lud16}
             </TextButton>
           )}

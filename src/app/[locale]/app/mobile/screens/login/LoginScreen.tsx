@@ -1,7 +1,7 @@
 'use client';
 
 import LoginModal from '../../../login/LoginModal';
-import { LoginObeliskMark } from './LoginObeliskMark';
+import ObeliskTwoToneMark from '@/assets/brand/ObeliskTwoToneMark';
 
 // nip07 is intentionally omitted on mobile - browser extensions don't run on
 // phones, and showing the option just leads to "no extension" errors. The
@@ -17,7 +17,7 @@ export function LoginScreen() {
     <div className="screen login-screen active" data-screen="login">
       <LoginModal
         methods={[...MOBILE_LOGIN_METHODS]}
-        headerSlot={<LoginObeliskMark />}
+        headerSlot={<ObeliskTwoToneMark className="login-mark" fill="currentColor" aria-hidden="true" />}
       />
     </div>
   );

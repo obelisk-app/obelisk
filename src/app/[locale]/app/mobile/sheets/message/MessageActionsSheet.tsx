@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useMessageActionsSheet, type MobileActionMessage } from '@/hooks/shell/mobile/sheets/message/useMessageActionsSheet';
 import { QUICK_REACTIONS } from '@/services/shell/mobile/message-actions';
 import EmojiSheet from './EmojiSheet';
+import { BoltAltIcon, CopyLargeIcon, CornerUpLeftIcon, TrashFlatIcon } from '@/assets/icons';
 
 export function MessageActionsSheet({
   msg,
@@ -49,19 +50,19 @@ export function MessageActionsSheet({
             data-testid="mobile-msg-actions-reply"
             onClick={vm.reply}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
+            <CornerUpLeftIcon size={null} />
             {t('social.reply')}
           </button>
           <button className="ma-action" onClick={vm.copyText}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+            <CopyLargeIcon size={null} />
             {t('social.copyText')}
           </button>
           <button className="ma-action zap" onClick={onZap}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-2 8 10-12h-7l2-8z" /></svg>
+            <BoltAltIcon size={null} />
             {t('mobile.message.zap')}
           </button>
           <button className="ma-action" onClick={vm.copyId}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+            <CopyLargeIcon size={null} />
             {t('social.copyEventId')}
           </button>
           {vm.canDelete && (
@@ -70,7 +71,7 @@ export function MessageActionsSheet({
               data-testid="mobile-msg-actions-delete"
               onClick={() => void vm.deleteMessage()}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg>
+              <TrashFlatIcon size={null} />
               {msg.canModerate ? t('mobile.message.deleteEveryone') : t('mobile.message.deleteMessage')}
             </button>
           )}

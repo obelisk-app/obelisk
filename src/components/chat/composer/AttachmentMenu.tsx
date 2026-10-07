@@ -5,6 +5,7 @@ import IconButton from '@/components/ui/buttons/IconButton';
 import { useAttachmentMenu } from '@/hooks/chat/composer/useAttachmentMenu';
 import { AttachmentMenuItem } from './AttachmentMenuItem';
 import { AttachmentPickerInput } from './AttachmentPickerInput';
+import { CalendarIcon, CameraAltIcon, ContactIcon, DocumentIcon, PhotoIcon, PlusIcon, PollIcon, StickerIcon } from '@/assets/icons';
 
 export function AttachmentMenu({
   disabled,
@@ -33,17 +34,17 @@ export function AttachmentMenu({
         aria-label={t('chat.composer.addAttachment')}
         aria-expanded={open}
       >
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        <PlusIcon size={null} strokeWidth={2} className="h-5 w-5" />
       </IconButton>
       {open && (
         <div className="absolute bottom-full left-0 z-40 mb-2 w-56 overflow-hidden rounded-2xl border border-lc-border bg-lc-dark p-2 text-sm text-lc-white shadow-2xl" role="menu">
-          <AttachmentMenuItem label={t('chat.composer.document')} icon="document" onClick={() => pick('document')} />
-          <AttachmentMenuItem label={t('chat.composer.photos')} icon="media" onClick={() => pick('media')} />
-          <AttachmentMenuItem label={t('chat.composer.camera')} icon="camera" onClick={() => pick('camera')} />
-          <AttachmentMenuItem label={t('chat.composer.contact')} icon="contact" onClick={contact} />
-          <AttachmentMenuItem label={t('chat.composer.newSticker')} icon="sticker" onClick={newSticker} />
-          <AttachmentMenuItem label={t('chat.composer.poll')} icon="poll" disabled />
-          <AttachmentMenuItem label={t('chat.composer.event')} icon="event" disabled />
+          <AttachmentMenuItem label={t('chat.composer.document')} icon={<DocumentIcon size={null} className="h-[18px] w-[18px]" />} onClick={() => pick('document')} />
+          <AttachmentMenuItem label={t('chat.composer.photos')} icon={<PhotoIcon size={null} className="h-[18px] w-[18px]" />} onClick={() => pick('media')} />
+          <AttachmentMenuItem label={t('chat.composer.camera')} icon={<CameraAltIcon size={null} className="h-[18px] w-[18px]" />} onClick={() => pick('camera')} />
+          <AttachmentMenuItem label={t('chat.composer.contact')} icon={<ContactIcon size={null} className="h-[18px] w-[18px]" />} onClick={contact} />
+          <AttachmentMenuItem label={t('chat.composer.newSticker')} icon={<StickerIcon size={null} className="h-[18px] w-[18px]" />} onClick={newSticker} />
+          <AttachmentMenuItem label={t('chat.composer.poll')} icon={<PollIcon size={null} className="h-[18px] w-[18px]" />} disabled />
+          <AttachmentMenuItem label={t('chat.composer.event')} icon={<CalendarIcon size={null} className="h-[18px] w-[18px]" />} disabled />
         </div>
       )}
     </div>

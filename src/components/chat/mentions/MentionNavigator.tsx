@@ -22,6 +22,7 @@ import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import { useMentionNavigation } from '@/hooks/chat/mentions/useMentionNavigation';
 import IconButton from '@/components/ui/buttons/IconButton';
+import { ChevronDownIcon, ChevronUpIcon } from '@/assets/icons';
 
 export interface MentionNavigatorProps {
   /** Scroll container ref: the same `scrollRef` the message list uses. */
@@ -54,9 +55,7 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
             aria-label={t('chat.mentions.previousTitle')}
             title={t('chat.mentions.previous')}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="18 15 12 9 6 15" />
-            </svg>
+            <ChevronUpIcon size={14} strokeWidth={2.5} />
           </Button>
           <span className="px-1 tabular-nums">
             <span className="font-semibold text-lc-green">{index + 1}</span>
@@ -72,9 +71,7 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
             aria-label={t('chat.mentions.nextTitle')}
             title={t('chat.mentions.next')}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+            <ChevronDownIcon size={14} strokeWidth={2.5} />
           </Button>
         </div>
       )}
@@ -86,9 +83,7 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
           aria-label={t('chat.mentions.latestTitle')}
           title={t('chat.mentions.latest')}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
+          <ChevronDownIcon strokeWidth={2.5} />
         </IconButton>
       )}
     </div>

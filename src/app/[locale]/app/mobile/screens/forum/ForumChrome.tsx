@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';
 import { MobileTagDot } from './MobileTagDot';
 import type { ForumScreenState } from '@/hooks/shell/mobile/screens/forum/useForumScreen';
+import { PlusIcon, SearchIcon, SortIcon } from '@/assets/icons';
 
 /** Search-or-create, the + pill, the sort chip and the tag filter chips. */
 export function ForumChrome({ forum }: { forum: ForumScreenState }) {
@@ -15,7 +16,7 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
     <div className="forum-chrome" data-testid="mobile-forum-chrome">
       <form className="forum-search-row" onSubmit={forum.submitSearch}>
         <div className="search-input-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+          <SearchIcon size={null} strokeWidth={2} />
           <Input
             variant="bare"
             type="text"
@@ -46,7 +47,7 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
           data-testid="mobile-forum-new-thread-btn"
           aria-label={t('chat.forum.new')}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+          <PlusIcon size={null} strokeWidth={2} />
         </button>
       </form>
       <div className="forum-filter-row">
@@ -56,7 +57,7 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
           onClick={() => forum.setShowSort(true)}
           data-testid="mobile-forum-sort-trigger"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v16" /><path d="m3 8 4-4 4 4" /><path d="M17 20V4" /><path d="m21 16-4 4-4-4" /></svg>
+          <SortIcon size={null} strokeWidth={2} />
           {t('chat.forum.sort')}
         </button>
         {forum.forumTags.map((tag) => (

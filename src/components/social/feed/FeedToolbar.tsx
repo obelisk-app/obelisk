@@ -6,9 +6,9 @@ import Chip from '@/components/ui/data/Chip';
 import SegmentedControl from '@/components/ui/forms/SegmentedControl';
 import { CONTENT_FILTERS, type ContentFilter } from '@/services/social/kinds';
 import type { FeedSort } from '@/services/social/rank';
-import { FollowingIcon, GlobeIcon } from './icons';
 import type { FeedKind } from '@/services/social/feed';
 import Button from '@/components/ui/buttons/Button';
+import { FilterIcon, GearIcon, GlobeIcon, SearchWideIcon, UsersIcon } from '@/assets/icons';
 
 /** Source segment, content filters, sort, and the action cluster on the right. */
 export default function FeedToolbar({
@@ -81,13 +81,13 @@ export default function FeedToolbar({
           options={[
             {
               value: 'following',
-              label: <><FollowingIcon />{t('social.following')}</>,
+              label: <><UsersIcon size={14} strokeWidth={2} />{t('social.following')}</>,
               title: t('social.followingN', { count: followCount }),
               testId: 'feed-tab-following',
             },
             {
               value: 'global',
-              label: <><GlobeIcon />{t('social.global')}</>,
+              label: <><GlobeIcon size={14} strokeWidth={2} />{t('social.global')}</>,
               title: t('social.relaysCount', { count: relayCount }),
               testId: 'feed-tab-global',
             },
@@ -195,9 +195,7 @@ export default function FeedToolbar({
             title={t('social.filters')}
             data-testid="feed-filters-open"
           >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
-              <path d="M3 5h18" /><path d="M6 12h12" /><path d="M10 19h4" />
-            </svg>
+            <FilterIcon size={19} strokeWidth={1.9} />
           </Button>
         )}
         {/*
@@ -218,9 +216,7 @@ export default function FeedToolbar({
           data-testid="feed-search-open"
           data-tour="feed-search"
         >
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-          </svg>
+          <SearchWideIcon size={19} strokeWidth={2} />
         </Button>
         {onOpenSettings && !embedded && (
           <Button
@@ -231,10 +227,7 @@ export default function FeedToolbar({
             data-testid="feed-settings"
           >
             <span className="flex items-center justify-center">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
+              <GearIcon size={19} />
             </span>
           </Button>
         )}

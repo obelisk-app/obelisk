@@ -18,6 +18,11 @@ import { describe, expect, it } from 'vitest';
  *    sub-feature.
  * 4. Every `src/lib/` mini-package is a folder with an `index.ts`.
  *
+ * `src/assets/` (round 31) is a layer too: nothing loose at its root, and its
+ * top-level folders are the asset kinds in its `LAYER_ONLY` list (`icons`,
+ * `brand`, `illustrations`, `textures`), never feature names. Inside a kind,
+ * the feature names hold (`illustrations/guides`, `illustrations/seo`).
+ *
  * The app router follows rule 3 too: Next.js route files stay where routing
  * needs them, every other file of a folder with sub-folders sits in one.
  *
@@ -26,7 +31,9 @@ import { describe, expect, it } from 'vitest';
  */
 
 const ROOT = process.cwd();
-const LAYERS = ['src/components', 'src/hooks', 'src/services', 'src/utils', 'src/store', 'src/lib'] as const;
+const LAYERS = ['src/components', 'src/hooks', 'src/services', 'src/utils', 'src/store', 'src/lib', 'src/assets'] as const;
+/** Layers whose top-level folders are their own kinds, not features: lib packages and asset kinds. */
+const OWN_LIST_ONLY = new Set<string>(['src/lib', 'src/assets']);
 /** Rule 3 also covers the route tree, where only its non-route files are held to it. */
 const RULE3_ROOTS = [...LAYERS, 'src/app'] as const;
 
@@ -60,6 +67,12 @@ export const LAYER_ONLY: Readonly<Record<string, Readonly<Record<string, string>
     storage: 'shared topic: safe JSON and localStorage reads and writes',
     style: 'shared topic: class-name joining',
     url: 'shared topic: http(s) URL checks',
+  },
+  'src/assets': {
+    icons: 'every UI icon, one file per icon, drawn on IconSvg; the index.ts barrel lists them',
+    brand: 'the Obelisk marks (the app icon silhouette, the two-tone Obelisco, the OG card mark) and other brand marks',
+    illustrations: 'artwork that is not an icon: guide heroes, diagrams and marks, OG card art, game thumbnails, landing decoration',
+    textures: 'image files the stylesheets reference with url(), such as the background noise',
   },
   'src/lib': {
     crypto: 'mini-package: the session vault and the record and file ciphers',
@@ -145,7 +158,7 @@ export function layoutProblems(files: readonly string[]): string[] {
     for (const d of dirs) {
       if (parent(d) !== layer) continue;
       const name = base(d);
-      if (layer === 'src/lib' ? !(name in own) : !(MODULES as readonly string[]).includes(name) && !(name in own)) {
+      if (OWN_LIST_ONLY.has(layer) ? !(name in own) : !(MODULES as readonly string[]).includes(name) && !(name in own)) {
         problems.push(`not a module of the map: ${d}`);
       }
     }
@@ -271,5 +284,16 @@ describe('the layout rules', () => {
   it('bites on a lib package without an index', () => {
     expect(layoutProblems([...ok, 'src/lib/games/core/types.ts'])).toEqual(['lib package without an index.ts: src/lib/games']);
     expect(layoutProblems([...ok, 'src/lib/nip-59.ts'])).toEqual(['loose at the layer root: src/lib/nip-59.ts']);
+  });
+});
+
+describe('the assets layer', () => {
+  it('bites on a loose asset, an asset kind not on its list, and a file loose beside sub-folders', () => {
+    expect(layoutProblems(['src/assets/CloseIcon.tsx'])).toEqual(['loose at the layer root: src/assets/CloseIcon.tsx']);
+    expect(layoutProblems(['src/assets/chat/CloseIcon.tsx'])).toEqual(['not a module of the map: src/assets/chat']);
+    expect(layoutProblems(['src/assets/icons/CloseIcon.tsx', 'src/assets/illustrations/guides/heroes/RelayHero.tsx'])).toEqual([]);
+    expect(layoutProblems(['src/assets/illustrations/Hero.tsx', 'src/assets/illustrations/guides/heroes/RelayHero.tsx'])).toEqual([
+      'loose beside sub-folders: src/assets/illustrations/Hero.tsx',
+    ]);
   });
 });

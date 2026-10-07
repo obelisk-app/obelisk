@@ -9,7 +9,7 @@ import { join, relative, sep } from 'node:path';
 import { analyzeSource, KINDS, type Counts, type Finding } from './analyze';
 import { MULTI_COMPONENT } from './multi-component';
 
-export const GUARDED = ['src/components', 'src/app'];
+export const GUARDED = ['src/components', 'src/app', 'src/assets'];
 /** Where the shrink-only baseline lives; regenerate it with `npx tsx scripts/markup-only/baseline.ts`. */
 export const BASELINE_PATH = 'tests/components/markup-only-baseline.json';
 

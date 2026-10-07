@@ -2,13 +2,13 @@
 
 import { createPortal } from 'react-dom';
 import Button from '@/components/ui/buttons/Button';
-import { BookIcon, SparklesIcon } from '@/components/ui/icons/icons';
+import { BookIcon, SparklesIcon } from '@/assets/icons';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { localizedPath } from '@/utils/seo/alternates';
 import { HELP_TOPICS, helpTopicPath } from '@/utils/guides/help-topics';
 import { useTranslations } from 'next-intl';
 import { useHelpPopover } from '@/hooks/shell/panes/topbar/useHelpPopover';
-import { HelpTopicIcon } from './HelpTopicIcon';
+import { HelpTopicBadge } from './HelpTopicBadge';
 
 /**
  * Help panel, deliberately the same shell as the notification popover
@@ -50,7 +50,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
                 onClick={onClose}
                 className="lc-card group flex items-start gap-3 p-3 hover:border-lc-green/50"
               >
-                <HelpTopicIcon slug={topic.slug} />
+                <HelpTopicBadge slug={topic.slug} />
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-lc-white group-hover:text-lc-green">
                     {t(topic.titleKey)}

@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
-import { ChevronRightIcon } from '@/components/ui/icons/icons';
+import { ChevronRightIcon } from '@/assets/icons';
 
 /**
  * Up and down for a row in the layout editor: list-row ghost icon buttons

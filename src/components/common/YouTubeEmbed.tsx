@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import RemoteImage from '@/components/ui/media/RemoteImage';
+import { PlayIcon } from '@/assets/icons';
 
 /**
  * Click-to-play YouTube facade. The iframe (and every Google cookie and
@@ -60,9 +61,7 @@ export default function YouTubeEmbed({
         {/* Play button overlay */}
         <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover/yt:bg-black/20 transition-colors">
           <div className="w-14 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-              <path d="M8 5v14l11-7z" />
-            </svg>
+            <PlayIcon size={20} fill="white" />
           </div>
         </div>
       </button>

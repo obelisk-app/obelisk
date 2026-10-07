@@ -1,10 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { TrashIcon } from './composer-icons';
 import { formatElapsed } from '@/utils/format/format-elapsed';
 import { useVoiceRecorder } from '@/hooks/chat/composer/useVoiceRecorder';
 import IconButton from '@/components/ui/buttons/IconButton';
+import { MicRecordIcon, TrashNarrowIcon } from '@/assets/icons';
 
 export function VoiceNoteButton({
   disabled,
@@ -25,7 +25,7 @@ export function VoiceNoteButton({
           aria-label={t('chat.composer.discardRecording')}
           title={t('chat.composer.discardRecording')}
         >
-          <TrashIcon />
+          <TrashNarrowIcon size={null} className="h-5 w-5" />
         </IconButton>
         <span className="flex items-center gap-2 px-1 font-mono text-sm text-red-400">
           <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" aria-hidden="true" />
@@ -49,10 +49,7 @@ export function VoiceNoteButton({
       onClick={() => void start()}
       aria-label={t('chat.composer.recordVoice')}
     >
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="9" y="2" width="6" height="12" rx="3" />
-        <path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8" />
-      </svg>
+      <MicRecordIcon size={null} strokeWidth={2} className="h-5 w-5" />
     </IconButton>
   );
 }

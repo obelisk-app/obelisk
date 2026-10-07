@@ -6,7 +6,7 @@ import type { NoteEngagement } from '@/hooks/social/note/useNoteEngagement';
 import { useNoteActionRow } from '@/hooks/social/note/useNoteActionRow';
 import ActionButton from './ActionButton';
 import RepostButton from './RepostButton';
-import NoteIcon from './NoteIcon';
+import { BoltIcon, HeartIcon, MessageCircleIcon, ShareUpIcon } from '@/assets/icons';
 
 /**
  * Reply, repost, like, zap, share: the row under a full card.
@@ -49,7 +49,7 @@ export default function NoteActionRow({
       <ActionButton
         kind="reply"
         label={t('social.replyAction')}
-        icon={<NoteIcon name="reply" />}
+        icon={<MessageCircleIcon size={18} strokeWidth={1.75} />}
         count={counts.replyCount}
         testId="note-reply"
         disabled={!canInteract && !onOpenNote}
@@ -65,7 +65,7 @@ export default function NoteActionRow({
       <ActionButton
         kind="like"
         label={t('social.react')}
-        icon={<NoteIcon name="like" filled={reacted} />}
+        icon={<HeartIcon size={18} strokeWidth={1.75} fill={reacted ? 'currentColor' : 'none'} />}
         count={counts.reactionCount}
         testId="note-react"
         active={reacted}
@@ -75,7 +75,7 @@ export default function NoteActionRow({
       <ActionButton
         kind="zap"
         label={t('social.zap')}
-        icon={<NoteIcon name="zap" filled={counts.zapTotalSats > 0} />}
+        icon={<BoltIcon size={18} strokeWidth={1.75} fill={counts.zapTotalSats > 0 ? 'currentColor' : 'none'} />}
         count={counts.zapTotalSats}
         testId="note-zap"
         disabled={!canInteract}
@@ -88,7 +88,7 @@ export default function NoteActionRow({
       <ActionButton
         kind="share"
         label={t('social.share')}
-        icon={<NoteIcon name="share" />}
+        icon={<ShareUpIcon size={18} strokeWidth={1.75} />}
         testId="note-share"
         onClick={act.share}
       />

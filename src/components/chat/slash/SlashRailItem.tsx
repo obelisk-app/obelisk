@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { sectionTitle, type BotProfiles, type SlashCommandSection } from '@/utils/chat/slash/slash-commands';
 import { keepingFocus } from '@/utils/chat/slash/slash-rows';
-import { RailIcon } from './RailIcon';
+import { RailBadge } from './RailBadge';
 
 /** One source in the slash rail: a press filters the list to it, or back to all when it is the filter. */
 export function SlashRailItem({ item, botProfiles, onFilter }: {
@@ -21,7 +21,7 @@ export function SlashRailItem({ item, botProfiles, onFilter }: {
       className={`rounded-full ring-2 transition-opacity ${item.active ? 'ring-lc-green opacity-100' : 'ring-transparent opacity-70 hover:opacity-100'}`}
       data-testid="slash-rail-item"
     >
-      <RailIcon sec={item.section} profiles={botProfiles} />
+      <RailBadge sec={item.section} profiles={botProfiles} />
     </button>
   );
 }

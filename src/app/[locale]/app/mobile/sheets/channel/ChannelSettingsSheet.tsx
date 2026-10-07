@@ -15,6 +15,7 @@ import Checkbox from '@/components/ui/forms/Checkbox';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
 import { accessPillStyle, kindPillStyle } from '@/utils/shell/mobile/pill-styles';
+import { GearIcon } from '@/assets/icons';
 
 // Bottom-sheet for per-channel admin settings (kind 9002 metadata edits +
 // kind 9000/9001/9003 member management). Mirrors the desktop
@@ -54,7 +55,7 @@ export function ChannelSettingsSheet({
   return (
     <Sheet onClose={close} screen="channel-settings" label={t('mobile.channel.settingsTitle', { name: group.name ?? group.id.slice(0, 8) })} maxHeight="94%">
       <SheetHeader
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>}
+        icon={<GearIcon size={null} />}
         title={t('mobile.channel.settingsTitle', { name: group.name ?? group.id.slice(0, 8) })}
       />
 

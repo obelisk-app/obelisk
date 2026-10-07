@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { FileIcon, LockIcon, TrashIcon } from '@/components/ui/icons/icons';
+import { FileIcon, LockIcon, TrashIcon } from '@/assets/icons';
 import Spinner from '@/components/ui/feedback/Spinner';
 import type { PendingFile } from '@/utils/chat/dm/pending';
 import IconButton from '@/components/ui/buttons/IconButton';

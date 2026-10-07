@@ -6,9 +6,9 @@ import { DEFAULT_FORUM_PREFS, type ForumPrefs } from '@/services/chat/forum/foru
 import { useDismiss } from '@/hooks/common/useDismiss';
 import { SortViewSection } from './SortViewSection';
 import { SortViewRadioRow } from './SortViewRadioRow';
-import { ChevronDownIcon, SortIcon } from './forum-icons';
 import TextButton from '@/components/ui/buttons/TextButton';
 import Button from '@/components/ui/buttons/Button';
+import { ChevronDownIcon, SortIcon } from '@/assets/icons';
 
 /** The "Sort & view" pill and its popover: sort order, list vs gallery, any/all tag matching, reset. */
 export function SortViewMenu({
@@ -33,9 +33,9 @@ export function SortViewMenu({
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <SortIcon />
+        <SortIcon size={13} strokeWidth={2} />
         <span>{t('chat.forum.sortTitle')}</span>
-        <ChevronDownIcon />
+        <ChevronDownIcon size={11} strokeWidth={2.5} />
       </Button>
       {open && (
         <div

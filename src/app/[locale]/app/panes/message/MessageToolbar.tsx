@@ -2,7 +2,7 @@
 
 import type { RefObject } from 'react';
 import type { JsMessage } from '@/services/nostr-bridge';
-import { ForwardIcon, MoreIcon, ObeliskReactIcon, ReplyIcon } from '@/components/ui/icons/icons';
+import { ForwardIcon, MoreIcon, ObeliskReactIcon, ReplyIcon } from '@/assets/icons';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import type { MessageRowActions } from '@/hooks/shell/panes/message/useMessageRowActions';

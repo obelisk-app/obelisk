@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import type { MediaGridTileModel } from '@/utils/chat/gallery/gallery-layout';
+import { PlayIcon, StackIcon } from '@/assets/icons';
 
 /** One tile of the profile media grid: the still or video, a 2x2 feature cell now and then, and a badge on a video or a multi-image note. */
 export function MediaGridTile({ tile, onOpen }: { tile: MediaGridTileModel; onOpen: (url: string, noteId?: string) => void }) {
@@ -45,14 +46,9 @@ export function MediaGridTile({ tile, onOpen }: { tile: MediaGridTileModel; onOp
           data-testid={video ? 'media-badge-video' : 'media-badge-multi'}
         >
           {video ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8 5v14l11-7z" />
-            </svg>
+            <PlayIcon />
           ) : (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="8" y="3" width="13" height="13" rx="2" />
-              <path d="M3 8v11a2 2 0 0 0 2 2h11" />
-            </svg>
+            <StackIcon size={15} strokeWidth={2} strokeLinecap="butt" />
           )}
         </span>
       )}

@@ -4,7 +4,7 @@ import type { MessageKey } from '@/i18n/keys';
  * The screenshots of the running app that guides embed with `<Shot>`
  * (`src/components/guides/mdx/Shot.tsx`), for guides that describe the app itself.
  *
- * The heroes and diagrams in `src/components/guides/svg/` are drawings - nice, but a drawing of a
+ * The heroes and diagrams in `src/assets/illustrations/guides/` are drawings - nice, but a drawing of a
  * game board is a claim, not evidence. These images come out of
  * `npm run snap-games`, which photographs the real components rendering a
  * board they derived from a real event log (see `src/app/dev/game-shots/`).

@@ -1,30 +1,30 @@
 # Code conventions
 
-Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../AGENTS.md#where-code-goes); this page is the detail behind three of its rules: where a file goes, component files are markup, and every modal and sheet uses the shared header and footer.
+Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../AGENTS.md#where-code-goes); this page is the detail behind four of its rules: where a file goes, component files are markup, every picture lives in `src/assets/`, and every modal and sheet uses the shared header and footer.
 
 ## Where a file goes
 
-The layers are `src/components`, `src/hooks`, `src/services`, `src/utils`, `src/store` and `src/lib`. All of them are split the same way (round 28), and `tests/structure/module-layout.test.ts` holds them to it.
+The layers are `src/components`, `src/hooks`, `src/services`, `src/utils`, `src/store` and `src/lib`. All of them are split the same way (round 28), and `tests/structure/module-layout.test.ts` holds them to it. `src/assets` (round 31) is a layer too, split by kind of picture rather than by feature ([Assets](#assets)).
 
 1. **Nothing loose at a layer's root.** Every file sits in a module folder. Code used across features goes in `common/` (`hooks/common/useDismiss.ts`, `services/common/clipboard.ts`, `components/common/AnchoredMenu.tsx`, `store/common/multi-account.ts`) or, in `utils`, in a named shared topic (`format/`, `identity/`, `message-text/`, `relay-url/`, `nostr/`, ...).
 2. **The same feature names in every layer.** A layer's top-level folders come from one module map (below; `MODULES` in the guard). A feature that has code in several layers uses the same path in each: `components/chat/dm/thread/DmThreadMenu.tsx`, `hooks/chat/dm/thread/useDmThread.ts`, `services/chat/dm/opt-in.ts`, `utils/chat/dm/pending.ts`, `store/chat/dm.ts`. A small layer may stop a level higher (`services/chat/dm/` is flat), but never renames: one folder name is spelled one way everywhere (no `dm-call` beside `call`, no `messages` beside `message`).
-3. **A folder with sub-folders keeps only its entry loose.** Beside its sub-folders a folder holds its `index.ts` or its entry component (`components/social/FeedScreen.tsx`, `app/[locale]/app/AppGate.tsx`, `app/[locale]/app/mobile/PhoneShell.tsx`; the list is `ENTRY` in the guard) and nothing else. Files shared by a feature's sub-features go in its own `common/` (`components/voice/common/icons.tsx`, `services/nostr-bridge/common/`).
+3. **A folder with sub-folders keeps only its entry loose.** Beside its sub-folders a folder holds its `index.ts` or its entry component (`components/social/FeedScreen.tsx`, `app/[locale]/app/AppGate.tsx`, `app/[locale]/app/mobile/PhoneShell.tsx`; the list is `ENTRY` in the guard) and nothing else. Files shared by a feature's sub-features go in its own `common/` (`services/nostr-bridge/common/`).
 4. **A lib package is a folder with an `index.ts`** (`lib/nip-59/index.ts`, `lib/games/index.ts`).
 
 The route tree follows rule 3: Next.js files (`page.tsx`, `layout.tsx`, `opengraph-image.tsx`, ...) stay where routing needs them, every other file of a folder with sub-folders sits in one. The app frame under `src/app/[locale]/app/` is the `shell` module: its hooks mirror it under `src/hooks/shell/` (`app/[locale]/app/mobile/rail/` reads `hooks/shell/mobile/rail/`) and its pure helpers are in `src/utils/shell/`.
 
-**Naming.** Component files are PascalCase after their component, an acronym written as a word (`DmThreadMenu.tsx`, `FaqItem.tsx`); a component module of several pieces or of data is kebab-case (`icons.tsx`, `columns.tsx`, `markdown-components.tsx`). Hooks are `useX.ts`. Everything in `services`, `utils`, `store` and `lib` is kebab-case. A store module's main store is its `index.ts` (`@/store/voice`); a second store in the module has its own name (`@/store/chat/dm`).
+**Naming.** Component files are PascalCase after their component, an acronym written as a word (`DmThreadMenu.tsx`, `FaqItem.tsx`); a component module of several pieces or of data is kebab-case (`columns.tsx`, `mdx-components.tsx`). Hooks are `useX.ts`. Everything in `services`, `utils`, `store` and `lib` is kebab-case. A store module's main store is its `index.ts` (`@/store/voice`); a second store in the module has its own name (`@/store/chat/dm`).
 
 ### The module map
 
 | Module | What it is | Sub-features |
 |---|---|---|
 | `common` | Code used by several features | |
-| `ui` (components only) | The design-system kit, by kind, an `index.ts` per group | `buttons`, `forms`, `overlays`, `layout`, `data`, `feedback`, `media`, `icons` |
+| `ui` (components only) | The design-system kit, by kind, an `index.ts` per group | `buttons`, `forms`, `overlays`, `layout`, `data`, `feedback`, `media` |
 | `shell` | The app frame at `/app` (components in `src/app/[locale]/app/`) | `desktop`, `mobile` (`carousel`, `chrome`, `nav`, `rail`, `screens/<screen>`, `sheets/<topic>`), `panes` (`channel`, `dm`, `message`, `reader`, `sidebar`, `topbar`), `modals`, `rail`, `search`, `settings`, `dm`, `login`, `user-panel`, `mounts` |
 | `chat` | Group channels and DMs | `channel`, `composer`, `dm` (`composer`, `message`, `thread`, `unlock`), `forum`, `gallery`, `members`, `mentions`, `message`, `picker`, `pq`, `profile`, `search`, `slash`, `timeline`, `zaps` |
 | `games` | Turn-based games played in a channel. Its own module, not a part of chat: it has its own lib package, services, store, dev harness and lazy downloads, and chat only embeds its card | `card`, `table`, `new-game`, `start-table`, `results`, `channel`, `chain-reaction`, `stacker`, `vesta` |
-| `voice` | Voice and video rooms | `room`, `controls`, `status-bar`, `audio`, `common` |
+| `voice` | Voice and video rooms | `room`, `controls`, `status-bar`, `audio` |
 | `call` | One-to-one DM calls | |
 | `social` | The Nostr feeds | `feed`, `note`, `composer`, `article`, `profile`, `tags`, `viewer`, `widgets` |
 | `relay` | Relay-wide data and actions: info, branding, emoji, roles, channel layout, bot commands, deep links, status | |
@@ -39,7 +39,7 @@ The route tree follows rule 3: Next.js files (`page.tsx`, `layout.tsx`, `opengra
 | `moderation` | Mutes and blocks | |
 | `wot` | Web of trust | |
 | `login`, `analytics`, `local-data`, `hints`, `i18n` | The login widget's storage, consent and gtag, the on-device data inventory, onboarding hints, the runtime translator | |
-| `marketing`, `guides`, `help`, `media-kit`, `seo` | The public site | `marketing`: `landing`, `site`, `showcase`; `guides`: `article`, `listing`, `mdx`, `svg` |
+| `marketing`, `guides`, `help`, `media-kit`, `seo` | The public site | `marketing`: `landing`, `site`, `showcase`; `guides`: `article`, `listing`, `mdx` (the guide artwork is in `src/assets/illustrations/guides/`) |
 
 Folders one layer has and the others do not: `services/nostr-bridge/` (the bridge, behind its front door), `services/server/` (server-only code) and the `utils` shared topics; each is listed with its reason in `LAYER_ONLY`.
 
@@ -71,7 +71,7 @@ A component file is markup. Reading one should tell you what is on the screen, n
 
 ### Files that may hold more than one component
 
-Only the reasoned list in `scripts/markup-only/multi-component.ts`: the icon sets (`ui/icons/icons.tsx`, `voice/common/icons.tsx` and five small ones), the MDX component map (`guides/mdx/mdx-components.tsx`), the media-kit banner variants (`media-kit/kit/banners.tsx`), the two lazy-boundary modules (`app/mounts/lazy-mounts.tsx`, `games/table/LazyTables.tsx`) and the menu primitive's parts (`ui/overlays/menu.tsx`). Each entry carries its reason; the list only shrinks.
+Only the reasoned list in `scripts/markup-only/multi-component.ts`: the MDX component map (`guides/mdx/mdx-components.tsx`), the media-kit banner variants (`media-kit/kit/banners.tsx`), the two lazy-boundary modules (`app/mounts/lazy-mounts.tsx`, `games/table/LazyTables.tsx`) and the menu primitive's parts (`ui/overlays/menu.tsx`). Each entry carries its reason; the list only shrinks. The seven icon sets that used to be on it were split into one file per icon in round 31 ([Assets](#assets)).
 
 ### Route files
 
@@ -79,7 +79,7 @@ Only the reasoned list in `scripts/markup-only/multi-component.ts`: the icon set
 
 ### The guard
 
-`tests/components/markup-only.test.ts` reads every `.tsx` file under `src/components/` and `src/app/` (and the Next.js `.ts` route files) with the TypeScript parser (`scripts/markup-only/analyze.ts`) and counts six kinds of finding per file:
+`tests/components/markup-only.test.ts` reads every `.tsx` file under `src/components/`, `src/app/` and `src/assets/` (and the Next.js `.ts` route files) with the TypeScript parser (`scripts/markup-only/analyze.ts`) and counts six kinds of finding per file:
 
 | Kind | Counts |
 |---|---|
@@ -117,6 +117,35 @@ npx tsx scripts/markup-only/baseline.ts --top 20               # the worst files
 3. Put the state, effects, memos and handlers in `src/hooks/<module>/use<Component>.ts` and return one object the markup reads.
 4. Split extra components into their own files, in a folder named after the feature when there are several.
 5. Run the same tests unchanged; regenerate the baseline; check `npx tsx scripts/markup-only/baseline.ts --list <file>` prints nothing.
+
+## Assets
+
+Every picture the app draws lives in `src/assets/`, one folder per kind (round 31). A component imports a picture; it never draws one.
+
+| Folder | Holds |
+|---|---|
+| `src/assets/icons/` | Every UI icon, one `<Name>Icon.tsx` per icon, each drawn on `IconSvg.tsx`, all re-exported by `index.ts` (`import { CloseIcon } from '@/assets/icons'`) |
+| `src/assets/brand/` | The Obelisk marks: `ObeliskIcon` (the app icon's silhouette), `ObeliskTwoToneMark` (the two-faced Obelisco on the phone login and the media-kit banners), `ObeliskOgMark` (the OG cards' corner mark), `GitHubMark`, and `embed-badge-mark.ts` (the glyph inside the media kit's copy-paste HTML badge, markup because other sites paste it) |
+| `src/assets/illustrations/` | Artwork that is not an icon, by feature: `guides/` (heroes, diagrams, marks and their parts, with the registry `npm run snap-guides` renders), `seo/OgArt.tsx` (the OG card art), `games/` (the new-game picker thumbnails), `marketing/RelayPulse.tsx` |
+| `src/assets/textures/` | Image files a stylesheet references with `url()` (`noise.svg`, the background grain of the desktop and phone shells); webpack serves them from `/_next/static/media/` |
+| `public/` | Not an asset folder in this sense: only what must be served at a fixed URL stays there (favicon and manifest icons, OG PNGs and the guide snapshots, fonts, `sw.js`, the media kit's downloadable files) |
+
+**Icons.** `IconSvg` is the frame: a 24-unit `viewBox`, `fill="none"`, a 1.8 `currentColor` stroke with round caps and joins, `aria-hidden="true"` and `focusable="false"`. Every icon takes `IconProps`: any `<svg>` attribute plus
+
+- `size`: width and height in px, 16 by default; `size={null}` writes neither, for an icon a stylesheet sizes (`className="h-5 w-5"`, `.nav-item svg { ... }`);
+- `title`: a spoken name for an icon that means something on its own; it renders a `<title>`, adds `role="img"` and drops `aria-hidden` (so does an `aria-label`).
+
+A caller passes only what differs: `<ChevronRightIcon size={12} strokeWidth={2.5} />`, `<SearchIcon size={null} className="h-5 w-5" />`. An icon whose drawing is a filled glyph sets `fill="currentColor" stroke="none"` in its own file (`PlayIcon`, `PauseIcon`, `DragHandleIcon`); one drawn on another grid sets its `viewBox` (`DragHandleIcon`, `CaretDownIcon`). A variant that is the same drawing in another state is a prop, not a second file (`ZapIcon filled`, `StarIcon filled`, `MonitorIcon checked`); any icon can be filled with `fill="currentColor"` (the note actions do).
+
+**One drawing, one icon.** Before adding an icon, look in `index.ts`. Two icons that look the same are one icon; when two drawings of one idea differ visibly (a shorter handle, a wider body), both stay under names that say how (`SearchIcon`, `SearchShortIcon`, `SearchWideIcon`; `LockIcon`, `LockMediumIcon`, `LockWideIcon`, `LockLargeIcon`). A component that only chooses which icon to show (by topic, by category) is a component like any other and is not named `...Icon` (`HelpTopicBadge`, `RailBadge`, `MediaCategoryGlyph`).
+
+**Illustrations** are components that may read translated labels (`useTranslations`), and follow the component rules (markup-only, one component per file). The guide snapshot pipeline imports them from `src/assets/illustrations/guides/` and must keep producing byte-identical files (`tests/assets/illustrations/guides/snapshots-match.test.tsx`).
+
+**Bundle size.** `next.config.ts` marks every module under `src/assets/` side-effect free for webpack, so a page that imports two icons from the barrel ships those two. Without it the barrel pulled about 4 kB gzip of icons into every page.
+
+**Drawn from data.** SVG computed from live data at render time (a chart, a level meter, a QR code) may stay in its component, listed with its reason in `DATA_DRIVEN` in `tests/assets/assets-only.test.ts`. A static shape inside such a component still moves to assets. The list is empty today: the game thumbnails and the landing's relay pulse are drawn from fixed geometry, so they are illustrations.
+
+`tests/assets/assets-only.test.ts` holds all of this: no `<svg>` or SVG shape in JSX, no `<svg` markup in a string or a stylesheet outside `src/assets/`; no `...Icon` component outside `src/assets/icons/` (the brand `ObeliskIcon` aside); only icon files, `IconSvg.tsx` and the barrel in that folder, every icon in the barrel; no two icon files with the same drawing.
 
 ## Modal and sheet chrome
 

@@ -1,11 +1,11 @@
 /**
- * The computed parts of the guide heroes (`src/components/guides/svg/heroes/`):
+ * The computed parts of the guide heroes (`src/assets/illustrations/guides/heroes/`):
  * where each orb, arc, key, tile and edge goes. The heroes keep their words
  * and their fixed shapes; what is worked out from data lives here, so a
  * hero's file is the drawing and nothing else (docs/conventions.md#component-files).
  *
  * The arithmetic is the heroes' own, unchanged, so the still frames under
- * `public/og/guides/` render identically (tests/components/guides/svg/snapshots-match.test.tsx).
+ * `public/og/guides/` render identically (tests/assets/illustrations/guides/snapshots-match.test.tsx).
  */
 
 import { axialCenter, hexCorner, hexPoints, polarPoint, staggerDelay } from './art-geometry';

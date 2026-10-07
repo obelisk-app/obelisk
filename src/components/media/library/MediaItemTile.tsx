@@ -2,7 +2,7 @@
 
 import type { JsMediaItem } from '@/services/nostr-bridge';
 import MediaThumb from '@/components/media/library/MediaThumb';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import { useTranslations } from 'next-intl';
 
 /** One tile of a MediaItemGrid: opens the item, toggles its favourite, or only shows it, with the optional star and remove badges. */

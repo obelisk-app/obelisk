@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useIncomingCallBanner } from '@/hooks/call/useIncomingCallBanner';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import IconButton from '@/components/ui/buttons/IconButton';
-import { LockIcon, PhoneIcon, PhoneOffIcon, VideoIcon } from '@/components/ui/icons/icons';
+import { LockIcon, PhoneIcon, PhoneOffIcon, VideoIcon } from '@/assets/icons';
 
 /** The ringing banner at the top: who is calling, decline, accept, accept with video. */
 export default function IncomingCallBanner() {

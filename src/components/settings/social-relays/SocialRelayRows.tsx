@@ -1,5 +1,5 @@
 import Button from '@/components/ui/buttons/Button';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import Input from '@/components/ui/forms/Input';
 import { probeRelay, type RelayStatus } from '@/services/social/relay-status';
 import { relayKey } from '@/utils/settings/social-relays';

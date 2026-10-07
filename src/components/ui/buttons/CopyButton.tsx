@@ -3,7 +3,7 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { useCopyButton } from '@/hooks/common/useCopyButton';
 import Button from './Button';
-import { CheckIcon, CopyIcon } from '../icons/icons';
+import { CheckIcon, CopyIcon } from '@/assets/icons';
 
 /** `sm` sits in a list row (`p-1`, 14px icon); `md` in a toolbar (`p-2`, 16px icon). */
 export type CopyButtonSize = 'sm' | 'md';

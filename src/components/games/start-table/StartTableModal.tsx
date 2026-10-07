@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { useStartTableModal } from '@/hooks/games/start-table/useStartTableModal';
 import Button from '@/components/ui/buttons/Button';
 import Chip from '@/components/ui/data/Chip';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import Text from '@/components/ui/layout/Text';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';

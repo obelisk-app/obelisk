@@ -19,6 +19,7 @@ import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import Text from '@/components/ui/layout/Text';
 import { useArticleCard } from '@/hooks/social/article/useArticleCard';
+import { BookAltIcon } from '@/assets/icons';
 
 /** Compact card for a feed row. */
 export function ArticleCard({
@@ -53,10 +54,7 @@ export function ArticleCard({
         // Without a banner the card had no visual weight at all and read as
         // a slightly indented note.
         <div className="flex aspect-[4/1] w-full shrink-0 items-center justify-center bg-gradient-to-br from-lc-olive/40 to-lc-black sm:aspect-auto sm:w-20 sm:self-stretch">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-lc-green/60" aria-hidden="true">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-          </svg>
+          <BookAltIcon size={26} strokeWidth={1.5} className="text-lc-green/60" strokeLinecap="butt" strokeLinejoin="miter" />
         </div>
       )}
       <div className="min-w-0 flex-1 space-y-1.5 p-3.5">

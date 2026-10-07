@@ -3,9 +3,9 @@ import { Link } from '@/i18n/navigation';
 import Callout from './Callout';
 import Shot from './Shot';
 import Clip from './Clip';
-import { SvgHero } from '../svg';
-import Diagram from '../svg/embed/Diagram';
-import Mark from '../svg/embed/Mark';
+import { SvgHero } from '@/assets/illustrations/guides';
+import Diagram from '@/assets/illustrations/guides/embed/Diagram';
+import Mark from '@/assets/illustrations/guides/embed/Mark';
 
 function H2(props: ComponentPropsWithoutRef<'h2'>) {
   return (

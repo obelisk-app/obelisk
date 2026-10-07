@@ -7,7 +7,7 @@ import Modal from '@/components/ui/overlays/Modal';
 import { useTranslations } from 'next-intl';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
-import { LockIcon, ServerIcon, ShieldIcon } from '@/components/ui/icons/icons';
+import { LockIcon, ServerIcon, ShieldIcon } from '@/assets/icons';
 
 export function RelayAccessModal() {
   const t = useTranslations();

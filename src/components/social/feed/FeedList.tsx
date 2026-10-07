@@ -25,6 +25,7 @@ import Button from '@/components/ui/buttons/Button';
 import type { FeedState } from '@/hooks/social/feed/useFeed';
 import { useFeedList } from '@/hooks/social/feed/useFeedList';
 import NoteCard from '../note/NoteCard';
+import { ArrowUpIcon } from '@/assets/icons';
 
 export default function FeedList({
   state,
@@ -108,9 +109,7 @@ export default function FeedList({
             onClick={showPending}
             data-testid="feed-pending"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 19V5" /><path d="m5 12 7-7 7 7" />
-            </svg>
+            <ArrowUpIcon size={14} strokeWidth={2.5} />
             {t('social.newNotesCount', { count: pendingCount })}
           </Button>
         </div>

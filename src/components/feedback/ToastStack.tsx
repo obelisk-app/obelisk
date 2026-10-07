@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import { useToastStack } from '@/hooks/feedback/useToastStack';
 
 /** The toasts at the top right; each closes on its own after five seconds. */

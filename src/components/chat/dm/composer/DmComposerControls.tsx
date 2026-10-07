@@ -4,11 +4,11 @@ import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import MessageMediaPicker from '../../picker/MessageMediaPicker';
 import { AttachmentMenu } from '../../composer/AttachmentMenu';
-import { StickerIcon } from '../../composer/composer-icons';
 import { useDismiss } from '@/hooks/common/useDismiss';
 import { MAX_PENDING } from '@/utils/chat/dm/pending';
 import type { DmComposerState } from '@/hooks/chat/dm/composer/useDmComposer';
 import IconButton from '@/components/ui/buttons/IconButton';
+import { StickerIcon } from '@/assets/icons';
 
 /**
  * Attach and picker buttons left of the input. Desktop opens the picker as
@@ -38,7 +38,7 @@ export function DmComposerActions({ state, variant }: { state: DmComposerState; 
             aria-haspopup="dialog"
             aria-expanded={state.pickerOpen}
           >
-            <StickerIcon />
+            <StickerIcon size={null} className="h-5 w-5" />
           </IconButton>
           {state.pickerOpen && (
             <MessageMediaPicker
@@ -56,7 +56,7 @@ export function DmComposerActions({ state, variant }: { state: DmComposerState; 
           aria-label={t('mobile.composer.openPicker')}
           onClick={() => state.openPicker('emoji')}
         >
-          <StickerIcon />
+          <StickerIcon size={null} className="h-5 w-5" />
         </button>
       )}
     </>

@@ -1,5 +1,5 @@
-import ChainReactionPreview from './ChainReactionPreview';
-import VestaPreview from './VestaPreview';
+import ChainReactionPreview from '@/assets/illustrations/games/ChainReactionPreview';
+import VestaPreview from '@/assets/illustrations/games/VestaPreview';
 
 /**
  * Thumbnail for a game type in the picker, falling back to its catalog glyph.

@@ -3,8 +3,8 @@
 import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import { useTranslations } from 'next-intl';
 import { VoiceMessage } from '../message/VoiceMessage';
-import { TrashIcon } from './composer-icons';
 import IconButton from '@/components/ui/buttons/IconButton';
+import { TrashNarrowIcon } from '@/assets/icons';
 
 export function VoiceNoteDraft({
   note,
@@ -23,7 +23,7 @@ export function VoiceNoteDraft({
         aria-label={t('chat.composer.discardVoice')}
         title={t('chat.composer.discardVoice')}
       >
-        <TrashIcon />
+        <TrashNarrowIcon size={null} className="h-5 w-5" />
       </IconButton>
     </div>
   );

@@ -34,6 +34,7 @@ import Spinner from '@/components/ui/feedback/Spinner';
 import ErrorState from '@/components/ui/feedback/ErrorState';
 import FileInput from '@/components/ui/forms/FileInput';
 import ComposerToolButton from './ComposerToolButton';
+import { AlertTriangleIcon, ImageIcon, LinkIcon } from '@/assets/icons';
 
 /** Twitter-ish soft limit: past this, a note is an article. */
 const SOFT_LIMIT = 1000;
@@ -169,11 +170,7 @@ export default function MobileComposer({
           disabled={busy}
           testId="mobile-composer-upload"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <path d="m21 15-5-5L5 21" />
-          </svg>
+          <ImageIcon size={20} />
         </ComposerToolButton>
         <FileInput
           ref={fileRef}
@@ -188,10 +185,7 @@ export default function MobileComposer({
           <span className="text-base font-bold">B</span>
         </ComposerToolButton>
         <ComposerToolButton label={t('chat.composer.link')} onClick={() => wrapSelection('[', '](https://)')} testId="mobile-composer-link">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-            <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" />
-            <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19" />
-          </svg>
+          <LinkIcon size={20} />
         </ComposerToolButton>
         <ComposerToolButton
           label={t('social.markSensitive')}
@@ -199,10 +193,7 @@ export default function MobileComposer({
           pressed={sensitive}
           testId="composer-sensitive"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-            <path d="M12 9v4" /><path d="M12 17h.01" />
-          </svg>
+          <AlertTriangleIcon size={20} />
         </ComposerToolButton>
 
         {busy && <Spinner size="sm" className="ml-1" />}

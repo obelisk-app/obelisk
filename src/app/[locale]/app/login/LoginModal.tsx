@@ -31,12 +31,12 @@ import { usePastedKeyStep } from '@/hooks/shell/login/usePastedKeyStep';
 import { OBELISK_NIP46_PERMISSIONS } from '@/utils/nostr/nostr-signing-kinds';
 import GeneratedProfileEnhancements from './GeneratedProfileEnhancements';
 import { GeneratedNpubStep } from './GeneratedNpubStep';
-import { LOGIN_METHOD_ICONS } from './login-icons';
 import { PastedKeyNoticeStep } from './PastedKeyNoticeStep';
 import { SessionNoticeBanner } from './SessionNoticeBanner';
 import { loginSignerStorage } from '@/services/login/signer-storage';
 import { Nip46SignerDeepLink } from '@/hooks/shell/login/useNip46SignerDeepLink';
 import { useLoginFlow } from '@/hooks/shell/login/useLoginFlow';
+import { KeyAltIcon, LockLargeIcon, ShieldIcon, SparklePairIcon } from '@/assets/icons';
 
 const NIP46_PERMS = OBELISK_NIP46_PERMISSIONS;
 
@@ -120,7 +120,12 @@ export default function LoginModal({
           modalClasses={{ modal: 'obelisk-login-modal' }}
           {...(flow.hideTransientError ? { styles: { error: { display: 'none' } } } : {})}
           onError={flow.handleSdkError}
-          methodIcons={LOGIN_METHOD_ICONS}
+          methodIcons={{
+            nip07: <LockLargeIcon size={20} strokeWidth={2} />,
+            nip46: <ShieldIcon size={20} strokeWidth={2} />,
+            generate: <SparklePairIcon size={20} strokeWidth={2} />,
+            import: <KeyAltIcon size={20} strokeWidth={2} />,
+          }}
           slots={{ ...(headerSlot ? { header: headerSlot } : {}), beforeMethods: <SessionNoticeBanner /> }}
           onLogin={pasted.intercept}
         />

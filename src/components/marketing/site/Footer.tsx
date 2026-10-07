@@ -3,7 +3,7 @@
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { guidePath } from '@/utils/guides/guide-urls';
-import ObeliskIcon from '@/components/ui/icons/ObeliskIcon';
+import ObeliskIcon from '@/assets/brand/ObeliskIcon';
 import TextButton from '@/components/ui/buttons/TextButton';
 import { reviewAnalyticsConsent } from '@/services/analytics/consent';
 

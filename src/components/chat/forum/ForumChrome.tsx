@@ -14,10 +14,10 @@ import { useForumChrome } from '@/hooks/chat/forum/useForumChrome';
 import { useTranslations } from 'next-intl';
 import type { ForumPrefs } from '@/services/chat/forum/forum-prefs';
 import Input from '@/components/ui/forms/Input';
-import { NewPostIcon, SearchIcon } from './forum-icons';
 import { SortViewMenu } from './SortViewMenu';
 import { TagChip } from './TagChip';
 import Button from '@/components/ui/buttons/Button';
+import { MessageCircleIcon, SearchIcon } from '@/assets/icons';
 
 export function ForumChrome({
   searchQuery,
@@ -56,7 +56,7 @@ export function ForumChrome({
       >
         <Input
           variant="pill"
-          prefix={<SearchIcon />}
+          prefix={<SearchIcon strokeWidth={2} />}
           wrapperClassName="flex-1"
           type="text"
           value={searchQuery}
@@ -74,7 +74,7 @@ export function ForumChrome({
           data-testid="forum-new-thread-btn"
           title={t(vm.ready ? 'chat.forum.new' : 'chat.forum.signInToStart')}
         >
-          <NewPostIcon />
+          <MessageCircleIcon size={14} strokeWidth={2} />
           <span className="hidden sm:inline">{t('chat.forum.new')}</span>
         </Button>
       </form>

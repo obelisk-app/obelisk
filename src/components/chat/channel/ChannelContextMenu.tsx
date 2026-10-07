@@ -17,7 +17,7 @@ import { useTranslations } from 'next-intl';
 import { MUTED_FOREVER } from '@/store/chat/channel-prefs';
 import { useChannelContextMenu } from '@/hooks/chat/channel/useChannelContextMenu';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/overlays/menu';
-import { AtIcon, BellIcon, BellOffIcon, CheckCircleIcon, ChevronRightIcon, ClockIcon, LinkIcon, StarIcon } from '@/components/ui/icons/icons';
+import { AtIcon, BellIcon, BellOffIcon, CheckCircleIcon, ChevronRightIcon, ClockIcon, LinkIcon, StarIcon } from '@/assets/icons';
 import { MUTE_OPTIONS, NOTIFY_OPTIONS, type ChannelMenuTarget } from '@/utils/chat/channel/channel-menu-options';
 import { SubMenu } from './SubMenu';
 

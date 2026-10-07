@@ -16,9 +16,9 @@ import { useTranslations } from 'next-intl';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/overlays/menu';
 import { useNoteMenu } from '@/hooks/social/note/useNoteMenu';
 import AnchoredMenu from '../../common/AnchoredMenu';
-import NoteIcon from './NoteIcon';
 import NoteMenuLinkItem from './NoteMenuLinkItem';
 import NoteRawEventModal from './NoteRawEventModal';
+import { MoreIcon } from '@/assets/icons';
 
 export default function NoteMenu({
   note,
@@ -45,7 +45,7 @@ export default function NoteMenu({
         data-testid="note-more"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
-          <NoteIcon name="more" />
+          <MoreIcon size={18} strokeWidth={1.75} />
         </span>
       </button>
 

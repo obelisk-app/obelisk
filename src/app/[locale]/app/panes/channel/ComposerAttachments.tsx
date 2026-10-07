@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 
 /** The images about to be sent, each removable, and a placeholder tile while an upload runs. */

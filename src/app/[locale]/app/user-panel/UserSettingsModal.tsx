@@ -19,7 +19,7 @@ import {
   UserIcon,
   WrenchIcon,
   ZapIcon,
-} from '@/components/ui/icons/icons';
+} from '@/assets/icons';
 import { EditProfileForm } from '../settings/EditProfileForm';
 import { LocalDataSection } from '../settings/LocalDataSection';
 import type { SettingsSection } from '@/utils/settings/open-settings';

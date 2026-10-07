@@ -7,6 +7,7 @@ import type { View } from '@/utils/shell/desktop/view';
 import { useGroupNode } from '@/hooks/shell/panes/sidebar/useGroupNode';
 import { ActiveCallBadge } from './ActiveCallBadge';
 import { ForumThreadRow } from './ForumThreadRow';
+import { ChevronRightIcon } from '@/assets/icons';
 
 /**
  * One channel in the desktop sidebar, with its children under it: a
@@ -95,17 +96,7 @@ export function GroupNode({
             aria-label={vm.collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
             title={vm.collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
           >
-            <svg
-              className={`h-3.5 w-3.5 transition-transform duration-150 ${vm.collapsed ? '' : 'rotate-90'}`}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="9 6 15 12 9 18" />
-            </svg>
+            <ChevronRightIcon size={null} strokeWidth={2.5} className={`h-3.5 w-3.5 transition-transform duration-150 ${vm.collapsed ? '' : 'rotate-90'}`} />
           </button>
         )}
       </div>

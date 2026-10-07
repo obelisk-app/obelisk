@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { ChevronLeftIcon } from '@/components/ui/icons/icons';
+import { ChevronLeftIcon, CloseIcon, ExpandIcon, ShrinkIcon } from '@/assets/icons';
 import { PaneIconButton } from './PaneIconButton';
 
 /**
@@ -45,22 +45,9 @@ export function ReaderPaneHeader({
           label={full ? t('social.restoreFeed') : t('social.expandFeed')}
           testId="desktop-thread-expand"
           onClick={onToggleFull}
-        >
-          {full ? (
-            <>
-              <path d="M4 14h6v6" /><path d="M20 10h-6V4" />
-              <path d="M14 10l7-7" /><path d="M3 21l7-7" />
-            </>
-          ) : (
-            <>
-              <path d="M15 3h6v6" /><path d="M9 21H3v-6" />
-              <path d="M21 3l-7 7" /><path d="M3 21l7-7" />
-            </>
-          )}
-        </PaneIconButton>
-        <PaneIconButton label={t('common.close')} testId="desktop-thread-close" onClick={onBack}>
-          <path d="M18 6 6 18" /><path d="m6 6 12 12" />
-        </PaneIconButton>
+          icon={full ? ShrinkIcon : ExpandIcon}
+        />
+        <PaneIconButton label={t('common.close')} testId="desktop-thread-close" onClick={onBack} icon={CloseIcon} />
       </div>
     </div>
   );

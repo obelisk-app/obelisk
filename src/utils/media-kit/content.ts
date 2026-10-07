@@ -9,6 +9,7 @@
  */
 
 import type { MessageKey } from '@/i18n/keys';
+import { EMBED_BADGE_MARK_SVG } from '@/assets/brand/embed-badge-mark';
 
 type Color = { nameKey: MessageKey; token: string; hex: string; usageKey: MessageKey };
 
@@ -136,7 +137,7 @@ export function embedHtmlBanner(tagline: string): string {
 /** The "powered by" badge snippet; `label` is its text in the page language. */
 export function embedBadge(label: string): string {
   return `<a href="https://obelisk.ar" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#b4f953;color:#0a0a0a;font-family:Inter,system-ui,sans-serif;font-weight:700;font-size:13px;border-radius:9999px;text-decoration:none;">
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2 L8 8 L7 22 H17 L16 8 Z"/></svg>
+  ${EMBED_BADGE_MARK_SVG}
   ${escapeHtml(label)}
 </a>`;
 }

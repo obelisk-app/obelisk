@@ -1,5 +1,5 @@
 /**
- * The computed parts of the guide diagrams (`src/components/guides/svg/diagrams/`):
+ * The computed parts of the guide diagrams (`src/assets/illustrations/guides/diagrams/`):
  * the links from each client to the relay, the swap matrix's grid and the
  * zap flow's arrows. Same arithmetic the diagrams did inline, so their still
  * frames under `public/og/guides/` render identically.

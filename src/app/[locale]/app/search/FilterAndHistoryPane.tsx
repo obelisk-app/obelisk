@@ -1,9 +1,9 @@
 'use client';
 
-import { SearchIcon } from './SearchIcon';
 import { FilterRow } from './FilterRow';
 import Button from '@/components/ui/buttons/Button';
 import type { Translate } from '@/i18n/keys';
+import { BinIcon, SearchIcon } from '@/assets/icons';
 
 /** The dropdown before anything is typed: the grammar as rows, then recent queries. */
 export function FilterAndHistoryPane({
@@ -42,9 +42,7 @@ export function FilterAndHistoryPane({
             <span>{t('shell.search.history.title')}</span>
             {/* `-my-1` keeps the header row at its old height around the `p-1` button. */}
             <Button variant="ghost" size="icon" onClick={onClearHistory} className="-my-1" aria-label={t('shell.search.history.clear')}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/>
-              </svg>
+              <BinIcon size={13} strokeWidth={2} />
             </Button>
           </div>
           {history.map((h) => (
@@ -53,7 +51,7 @@ export function FilterAndHistoryPane({
               onClick={() => onPickHistory(h)}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-lc-white hover:bg-lc-card"
             >
-              <span className="text-lc-muted shrink-0"><SearchIcon size={14} /></span>
+              <span className="text-lc-muted shrink-0"><SearchIcon size={14} strokeWidth={2} /></span>
               <span className="truncate">{h}</span>
             </button>
           ))}

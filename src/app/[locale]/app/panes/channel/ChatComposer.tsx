@@ -4,7 +4,6 @@ import { forwardRef, type InputHTMLAttributes } from 'react';
 import { MESSAGE_INPUT_PROPS } from '@/utils/chat/composer/message-input-props';
 import MessageMediaPicker from '@/components/chat/picker/MessageMediaPicker';
 import { AttachmentMenu } from '@/components/chat/composer/AttachmentMenu';
-import { StickerIcon } from '@/components/chat/composer/composer-icons';
 import { VoiceNoteButton } from '@/components/chat/composer/VoiceNoteButton';
 import { VoiceNoteDraft } from '@/components/chat/composer/VoiceNoteDraft';
 import MentionAutocomplete from '@/components/chat/mentions/MentionAutocomplete';
@@ -16,6 +15,7 @@ import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';
 import { ComposerAttachments } from './ComposerAttachments';
 import { ComposerReplyBar } from './ComposerReplyBar';
+import { SendIcon, StickerIcon } from '@/assets/icons';
 
 /** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
 const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
@@ -59,7 +59,7 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
             aria-haspopup="dialog"
             aria-expanded={composer.emojiOpen}
           >
-            <StickerIcon />
+            <StickerIcon size={null} className="h-5 w-5" />
           </button>
           {composer.emojiOpen && (
             <MessageMediaPicker
@@ -118,7 +118,7 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lc-green text-lc-black disabled:opacity-30"
             aria-label={t("common.send")}
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
+            <SendIcon size={null} strokeWidth={2.2} className="h-5 w-5" />
           </button>
         ) : (
           <VoiceNoteButton disabled={composer.uploading} onRecorded={(file, duration) => void composer.onVoiceRecorded(file, duration)} />

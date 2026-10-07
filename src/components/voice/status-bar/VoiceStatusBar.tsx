@@ -12,10 +12,7 @@
 import { useTranslations } from 'next-intl';
 import { useVoiceStatusBar } from '@/hooks/voice/status-bar/useVoiceStatusBar';
 import SmallBtn from './SmallBtn';
-import {
-  CameraOffIcon, CameraOnIcon, DeafenOffIcon, DeafenOnIcon, LeaveIcon, MicOffIcon, MicOnIcon,
-  ScreenShareIcon, SignalIcon, SwitchCameraIcon,
-} from '../common/icons';
+import { HeadphonesIcon, HeadphonesOffIcon, MicStandIcon, MicStandOffIcon, MonitorIcon, PhoneSlashIcon, SignalIcon, SwitchCameraIcon, VideoCameraIcon, VideoCameraOffIcon } from '@/assets/icons';
 
 export default function VoiceStatusBar() {
   const t = useTranslations();
@@ -33,7 +30,7 @@ export default function VoiceStatusBar() {
             title={t('voice.goToChannel')}
           >
             <span className="shrink-0 w-8 h-8 rounded-md bg-lc-green/10 flex items-center justify-center text-lc-green">
-              <SignalIcon size={16} />
+              <SignalIcon size={16} strokeWidth={2} />
             </span>
             <span className="min-w-0 flex-1 leading-tight">
               {vm.isSignalingDegraded ? (
@@ -54,27 +51,27 @@ export default function VoiceStatusBar() {
             title={t('voice.disconnect')}
             data-testid="voice-bar-leave"
           >
-            <LeaveIcon size={14} />
+            <PhoneSlashIcon size={14} strokeWidth={2} strokeLinejoin="miter" />
           </button>
         </div>
 
         <div className="flex items-center gap-1 w-full">
           <SmallBtn active={!vm.isMuted} danger={vm.isMuted} onClick={vm.toggleMute} title={t(vm.isMuted ? 'voice.controls.unmute' : 'voice.controls.mute')}>
-            {vm.isMuted ? <MicOffIcon size={14} /> : <MicOnIcon size={14} />}
+            {vm.isMuted ? <MicStandOffIcon size={14} strokeWidth={2} /> : <MicStandIcon size={14} strokeWidth={2} />}
           </SmallBtn>
           <SmallBtn active={!vm.isDeafened} danger={vm.isDeafened} onClick={vm.toggleDeafen} title={t(vm.isDeafened ? 'voice.controls.undeafen' : 'voice.controls.deafen')}>
-            {vm.isDeafened ? <DeafenOffIcon size={14} /> : <DeafenOnIcon size={14} />}
+            {vm.isDeafened ? <HeadphonesOffIcon size={14} strokeWidth={2} /> : <HeadphonesIcon size={14} strokeWidth={2} />}
           </SmallBtn>
           <SmallBtn active={vm.isCameraOn} onClick={vm.toggleCamera} title={t(vm.isCameraOn ? 'voice.controls.cameraOff' : 'voice.controls.cameraOn')} data-testid="voice-bar-camera">
-            {vm.isCameraOn ? <CameraOnIcon size={14} /> : <CameraOffIcon size={14} />}
+            {vm.isCameraOn ? <VideoCameraIcon size={14} strokeWidth={2} /> : <VideoCameraOffIcon size={14} strokeWidth={2} />}
           </SmallBtn>
           {vm.showSwitchCamera && (
             <SmallBtn active={false} onClick={vm.switchCamera} title={t('voice.switchCamera')} data-testid="voice-bar-switch-camera">
-              <SwitchCameraIcon size={14} />
+              <SwitchCameraIcon size={14} strokeWidth={2} />
             </SmallBtn>
           )}
           <SmallBtn active={vm.isScreenSharing} onClick={vm.toggleScreen} title={t(vm.isScreenSharing ? 'voice.controls.stopShare' : 'voice.controls.shareScreen')} data-testid="voice-bar-screenshare">
-            <ScreenShareIcon size={14} sharing={vm.isScreenSharing} />
+            <MonitorIcon size={14} strokeWidth={2} checked={vm.isScreenSharing} />
           </SmallBtn>
         </div>
       </div>

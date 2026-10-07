@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { MEDIA_CATEGORIES, MEDIA_CATEGORY_LABEL, type MediaCategory } from '@/utils/chat/picker/media-catalog';
-import { MediaCategoryIcon } from './MediaCategoryIcon';
+import { MediaCategoryGlyph } from './MediaCategoryGlyph';
 
 /** The GIF / sticker category bar. */
 export function MediaCategoryNav({
@@ -25,7 +25,7 @@ export function MediaCategoryNav({
           title={t(MEDIA_CATEGORY_LABEL[value])}
           className={['flex h-10 min-w-0 items-center justify-center rounded-lg border-b-2', category === value ? 'border-lc-green bg-lc-green/10 text-lc-green' : 'border-transparent text-lc-white/80 hover:bg-lc-border/60 hover:text-lc-white'].join(' ')}
         >
-          <MediaCategoryIcon category={value} />
+          <MediaCategoryGlyph category={value} />
         </button>
       ))}
     </nav>

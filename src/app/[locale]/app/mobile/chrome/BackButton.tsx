@@ -3,7 +3,7 @@
 import type { CSSProperties } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/utils/style/cn';
-import { ChevronLeftIcon } from '@/components/ui/icons/icons';
+import { ChevronLeftIcon } from '@/assets/icons';
 
 export interface BackButtonProps {
   onClick: () => void;

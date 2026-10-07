@@ -22,7 +22,7 @@ import type { JsDirectMessage } from '@/services/nostr-bridge';
 import { useDmMessageMenu } from '@/hooks/chat/dm/message/useDmMessageMenu';
 import AnchoredMenu from '@/components/common/AnchoredMenu';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/overlays/menu';
-import { CopyIcon, HashIcon, KeyIcon, LinkIcon, MoreIcon, TerminalIcon } from '@/components/ui/icons/icons';
+import { CopyIcon, HashIcon, KeyIcon, LinkIcon, MoreIcon, TerminalIcon } from '@/assets/icons';
 import { DmRawEventDialog } from './DmRawEventDialog';
 
 /** Right padding a bubble needs so its text never runs under the ⋯ chip. */

@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { VoiceNoteButton } from '../../composer/VoiceNoteButton';
 import type { DmComposerState } from '@/hooks/chat/dm/composer/useDmComposer';
 import IconButton from '@/components/ui/buttons/IconButton';
+import { SendIcon } from '@/assets/icons';
 
 /**
  * Send while there is anything to send (disabled until uploads finish);
@@ -14,7 +15,7 @@ export function DmSendControl({ state, variant }: { state: DmComposerState; vari
   const { canSend } = state;
   if (state.showSend) {
     const icon = (
-      <svg className={variant === 'desktop' ? 'h-5 w-5' : undefined} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
+      <SendIcon size={null} strokeWidth={2.2} className={variant === 'desktop' ? 'h-5 w-5' : undefined} />
     );
     if (variant === 'desktop') {
       return (

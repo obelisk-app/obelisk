@@ -15,7 +15,7 @@ import FeaturesSection from './landing/FeaturesSection';
 import LandingHero from './landing/LandingHero';
 import LearnSection from './landing/LearnSection';
 import PreviewSection from './landing/PreviewSection';
-import RelayPulse from './landing/RelayPulse';
+import RelayPulse from '@/assets/illustrations/marketing/RelayPulse';
 import RevealSection from './landing/RevealSection';
 import RoadmapSection from './landing/RoadmapSection';
 import StackSection from './landing/StackSection';

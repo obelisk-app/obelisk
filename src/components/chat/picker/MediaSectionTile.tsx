@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import MediaThumb from '@/components/media/library/MediaThumb';
-import { StarIcon } from '@/components/ui/icons/icons';
+import { StarIcon } from '@/assets/icons';
 import type { MediaEntry } from '@/utils/chat/picker/media-catalog';
 
 /** One media tile with its favourite star. */

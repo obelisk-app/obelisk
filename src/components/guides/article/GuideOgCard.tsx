@@ -1,4 +1,5 @@
 import type { GuideCardText } from '@/utils/seo/card-layout';
+import ObeliskOgMark from '@/assets/brand/ObeliskOgMark';
 
 /**
  * A guide's 1200x630 preview card: the obelisk mark and wordmark, the
@@ -41,10 +42,7 @@ export default function GuideOgCard({
             justifyContent: 'center',
           }}
         >
-          <svg width="48" height="48" viewBox="0 0 48 48">
-            <polygon points="24,4 30,40 18,40" fill="#b4f953" />
-            <rect x="16" y="40" width="16" height="3" fill="#8bc34a" />
-          </svg>
+          <ObeliskOgMark />
         </div>
         <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5 }}>
           Obelisk

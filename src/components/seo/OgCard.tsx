@@ -1,6 +1,7 @@
 import type { OgCardProps } from '@/utils/seo/cards';
 import { cardTitleSize } from '@/utils/seo/card-layout';
-import OgIcon from './OgIcon';
+import OgArt from '@/assets/illustrations/seo/OgArt';
+import ObeliskOgMark from '@/assets/brand/ObeliskOgMark';
 
 /**
  * A page's 1200x630 preview card, in the look of the guide cards
@@ -22,10 +23,7 @@ export default function OgCard({ label, title, subtitle, footer, icon }: OgCardP
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <svg width="48" height="48" viewBox="0 0 48 48">
-          <polygon points="24,4 30,40 18,40" fill="#b4f953" />
-          <rect x="16" y="40" width="16" height="3" fill="#8bc34a" />
-        </svg>
+        <ObeliskOgMark />
         <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5 }}>Obelisk</div>
         <div style={{ flex: 1 }} />
         <div style={{ fontSize: 20, color: '#b4f953', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700 }}>
@@ -44,7 +42,7 @@ export default function OgCard({ label, title, subtitle, footer, icon }: OgCardP
             borderRadius: 36, border: '2px solid #2d3a1a', background: 'rgba(180,249,83,0.06)',
           }}
         >
-          {OgIcon({ name: icon })}
+          {OgArt({ name: icon })}
         </div>
       </div>
 

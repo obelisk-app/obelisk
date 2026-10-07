@@ -15,7 +15,7 @@ import { dmFileCategory, type JsDmFile } from '@/utils/attachments/dm-file';
 import { useDecryptedDmFile } from '@/hooks/chat/dm/message/useDecryptedDmFile';
 import { formatBytes } from '@/utils/format/format-bytes';
 import { useTranslations } from 'next-intl';
-import { DownloadIcon, FileIcon, LockIcon } from '@/components/ui/icons/icons';
+import { DownloadIcon, FileIcon, LockIcon } from '@/assets/icons';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { VoiceMessage } from '@/components/chat/message/VoiceMessage';
 import TextButton from '@/components/ui/buttons/TextButton';

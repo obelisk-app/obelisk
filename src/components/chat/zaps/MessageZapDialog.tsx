@@ -5,7 +5,7 @@ import { ZAP_QUICK_AMOUNTS_SATS } from '@/services/wallet/zap-constants';
 import { useMessageZapForm } from '@/hooks/chat/zaps/useMessageZapForm';
 import Modal from '@/components/ui/overlays/Modal';
 import Input from '@/components/ui/forms/Input';
-import { ZapIcon } from '@/components/ui/icons/icons';
+import { ZapIcon } from '@/assets/icons';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';

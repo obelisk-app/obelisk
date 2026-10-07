@@ -13,9 +13,9 @@
 import { useTranslations } from 'next-intl';
 import { useRepostCard } from '@/hooks/social/note/useRepostCard';
 import PlainNoteCard from './PlainNoteCard';
-import NoteIcon from './NoteIcon';
 import RepostersLine from './RepostersLine';
 import type { NoteCardProps } from '../../../utils/social/note-card';
+import { RepostIcon } from '@/assets/icons';
 
 export default function RepostCard(props: NoteCardProps) {
   const t = useTranslations();
@@ -38,7 +38,7 @@ export default function RepostCard(props: NoteCardProps) {
         data-testid="repost-attribution"
       >
         <span className="flex h-4 w-4 shrink-0 items-center justify-center text-lc-green">
-          <NoteIcon name="repost" />
+          <RepostIcon size={18} strokeWidth={1.75} />
         </span>
         <span className="min-w-0 truncate">
           <RepostersLine pubkeys={everyone} onOpenProfile={props.onOpenProfile} />

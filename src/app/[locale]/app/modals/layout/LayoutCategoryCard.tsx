@@ -5,10 +5,10 @@ import { useTranslations } from 'next-intl';
 import { categoryLabel } from '@/utils/relay/category-label';
 import Input from '@/components/ui/forms/Input';
 import { ChannelOrderRow } from './ChannelOrderRow';
-import { DragHandleIcon } from './DragHandleIcon';
 import { MoveButtons } from './MoveButtons';
 import type { LayoutDrag } from '@/hooks/shell/modals/layout/useLayoutDrag';
 import Button from '@/components/ui/buttons/Button';
+import { DragHandleIcon } from '@/assets/icons';
 
 type Category = { id: string; name: string; channelIds: ReadonlyArray<string> };
 
@@ -48,7 +48,7 @@ export function LayoutCategoryCard({
           aria-label={t('shell.desktop.layout.grabCategory', { name: categoryLabel(cat.name, t) })}
           title={t('shell.desktop.layout.dragCategory')}
         >
-          <DragHandleIcon />
+          <DragHandleIcon size={14} />
         </Button>
         <Input
           size="xs"

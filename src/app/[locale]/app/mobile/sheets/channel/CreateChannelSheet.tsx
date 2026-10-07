@@ -7,6 +7,7 @@ import Sheet from '@/components/ui/overlays/Sheet';
 import Input from '@/components/ui/forms/Input';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
+import { PlusIcon } from '@/assets/icons';
 
 /**
  * Phone skin of the new-channel form, as a bottom sheet over the channel
@@ -29,7 +30,7 @@ export function CreateChannelSheet({
   return (
     <Sheet onClose={close} screen="create-channel" label={t('mobile.space.newChannel')} maxHeight="88%">
       <SheetHeader
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>}
+        icon={<PlusIcon size={null} />}
         title={t('mobile.space.newChannel')}
         subtitle={t.rich('shell.channel.create.help', { settings: () => <strong>{t('shell.desktop.channel.settings')}</strong> })}
       />

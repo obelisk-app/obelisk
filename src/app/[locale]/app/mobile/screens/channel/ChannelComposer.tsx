@@ -5,7 +5,6 @@ import { type JsGroup, type JsMessage } from '@/services/nostr-bridge';
 import { MentionText } from '@/components/chat/mentions/MentionText';
 import MessageMediaPicker from '@/components/chat/picker/MessageMediaPicker';
 import { AttachmentMenu } from '@/components/chat/composer/AttachmentMenu';
-import { StickerIcon } from '@/components/chat/composer/composer-icons';
 import { VoiceNoteButton } from '@/components/chat/composer/VoiceNoteButton';
 import { VoiceNoteDraft } from '@/components/chat/composer/VoiceNoteDraft';
 import { type ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
@@ -16,6 +15,7 @@ import { MobileMentionAutocomplete } from './MobileMentionAutocomplete';
 import Input from '@/components/ui/forms/Input';
 import EmojiSheet from '../../sheets/message/EmojiSheet';
 import { ReplyAuthorName } from './ReplyAuthorName';
+import { CloseIcon, SendIcon, StickerIcon } from '@/assets/icons';
 
 /** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
 const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
@@ -51,7 +51,7 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
             onClick={() => setReplyingTo(null)}
             aria-label={t('mobile.channel.cancelReply')}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            <CloseIcon size={null} />
           </button>
         </div>
       )}
@@ -86,7 +86,7 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
           aria-label={t('mobile.composer.openPicker')}
           onClick={() => composer.openPicker('emoji')}
         >
-          <StickerIcon />
+          <StickerIcon size={null} className="h-5 w-5" />
         </button>
         </>)}
         {composer.draftVoiceNote && (
@@ -108,7 +108,7 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
         <div className="composer-btns">
           {composer.draft.trim() ? (
             <button className="composer-send" onClick={() => void composer.send()} aria-label={t("common.send")}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
+              <SendIcon size={null} strokeWidth={1} />
             </button>
           ) : (
             <VoiceNoteButton disabled={composer.uploading} onRecorded={(file, duration) => void composer.onVoiceRecorded(file, duration)} />

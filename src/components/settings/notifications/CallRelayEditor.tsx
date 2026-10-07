@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { CALL_RELAY_MAX } from '@/services/preferences/preferences';
-import { CloseIcon } from '@/components/ui/icons/icons';
+import { CloseIcon } from '@/assets/icons';
 import Input from '@/components/ui/forms/Input';
 import Button from '@/components/ui/buttons/Button';
 import { isBadRelayDraft } from '@/utils/settings/call-relays';
