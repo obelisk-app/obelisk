@@ -141,7 +141,7 @@ English, Spanish and Portuguese through next-intl. English is the default and un
 - **In components** `useTranslations()` from next-intl, ICU arguments (never `.replace()`), `t.rich` for markup. Links and routers come from `@/i18n/navigation` (eslint rejects `next/link` and the router hooks of `next/navigation`).
 - **Errors** carry a code (`CodedError`, `src/utils/errors/codes.ts`); the UI turns any thrown value into a sentence with `errorText(t, err, fallbackKey)` (`src/utils/errors/error-text.ts`), which reads `errors.codes.<code>`.
 - **Outside React** use `translate(key, values)` from `src/i18n/runtime.ts`; the app shell registers its translator (`RuntimeTranslator`), and before that `translate` returns the key.
-- **No hardcoded copy.** The scanner (`src/i18n/hardcoded-strings.ts`) reads JSX text (from the syntax tree, so wrapped or `<strong>`-split sentences count), reader-facing attributes, toasts, ternaries and more; its baseline `src/i18n/hardcoded-baseline.json` is empty and may only stay empty. Text that must stay literal (brand names, protocol terms) carries an `i18n-exempt: <reason>` marker on its line (for multi-line JSX text, any of its lines or the parent's opening tag).
+- **No hardcoded copy.** The scanner (`src/i18n/hardcoded-strings.ts`) reads JSX text (from the syntax tree, so wrapped or `<strong>`-split sentences count), a plain string given to any JSX prop (`subtitle="..."`, `heading={'...'}`; a short list of non-copy names such as `className`, `href`, `variant`, `d` is skipped, docs/i18n.md#the-ratchet), toasts, ternaries and more; its baseline `src/i18n/hardcoded-baseline.json` is empty and may only stay empty. Text that must stay literal (brand names, protocol terms) carries an `i18n-exempt: <reason>` marker on its line (for multi-line JSX text, any of its lines or the parent's opening tag; for a string prop, a comment inside the tag on the prop's line).
 
 ### Vocabulary: "publications", not "forums"
 
@@ -188,7 +188,7 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | `tests/lib/relay-hub/isolation.test.ts` | `src/lib/relay-hub/` imports only `nostr-tools` and itself |
 | `tests/components/raw-button-cap.test.ts` | Raw `<button>` count in `src/components/` and `src/hooks/` stays at or under its cap; only the ui primitives may render one |
 | `tests/app/raw-buttons.test.ts` | The same ratchet for the desktop routes in `src/app/` |
-| `tests/i18n/hardcoded-strings.test.ts` | No hardcoded user-visible copy; the baseline is zero |
+| `tests/i18n/hardcoded-strings.test.ts` | No hardcoded user-visible copy (JSX text, any string prop outside the skip list, toasts, object copy, ...); the baseline is zero. Rule cases in `tests/i18n/hardcoded/` |
 | `tests/i18n/locales.test.ts` | Locale parity: one file per module per locale, the same keys and ICU arguments as English, no empty values, no "forum", no em dash |
 | `tests/i18n/route-scopes.test.ts` | Every route renders inside an `IntlScope`, and no client file reachable from a route reads a module the route does not ship |
 | `tests/i18n/call-arguments.test.ts` | Every literal `t('key', {...})` passes exactly the arguments the English message declares |

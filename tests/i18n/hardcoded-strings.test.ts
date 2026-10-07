@@ -13,7 +13,9 @@ const BASELINE = baseline as Record<string, number>;
  * copy, toasts and dialogs, ternaries, fallbacks, templates, `.ts` files,
  * and prose in src/lib; comments are stripped first. JSX text comes from
  * the syntax tree, so wrapped and inline-split sentences count (round 25;
- * cases in tests/i18n/hardcoded/jsx-text.test.ts). Round 18 widened it
+ * cases in tests/i18n/hardcoded/jsx-text.test.ts), and so does a plain
+ * string given to any prop outside a short skip list (round 26; cases in
+ * tests/i18n/hardcoded/jsx-attrs.test.ts). Round 18 widened it
  * from "JSX text and five quoted attributes" to all of that, and the
  * baseline was regenerated honestly: several hundred strings, owned by the
  * translation waves listed in audits/obelisk/round18/I18N-WAVE2.md.

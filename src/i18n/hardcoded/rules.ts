@@ -6,7 +6,9 @@
  *  1. `jsxText`: text between tags, `<p>No messages yet</p>`, read from the
  *     syntax tree in `jsx-text.ts` so a paragraph that wraps lines, or is
  *     split by `{' '}`, `<strong>` or `<a>`, is one candidate.
- *  2. `attr`: a quoted reader-facing attribute, `title="Remove"`.
+ *  2. `attr`: a quoted reader-facing attribute, `title="Remove"`. A plain
+ *     string given to any other prop (`subtitle="..."`, `heading={'...'}`)
+ *     is read from the syntax tree in `jsx-attrs.ts` (rule `jsxAttr`).
  *  3. `attrExpr`: any literal inside such an attribute's braces,
  *     `aria-label={muted ? 'Unmute' : 'Mute'}`, templates included.
  *  4. `objectCopy`: a copy-shaped object key, `{ label: 'Add relay' }`

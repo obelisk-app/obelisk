@@ -104,9 +104,9 @@ export function DebugOverlay() {
             <Row k="notForMe" v={metrics.signalsDropped.notForMe} />
           </Section>
           <Section title={t('voice.voiceDebug.relay')}>
-            <Row k="beacons s/r" v={`${metrics.beacons.sent}/${metrics.beacons.rcvd}`} />
+            <Row k="beacons s/r" /* i18n-exempt: metric name, developer-only ?debug=voice overlay */ v={`${metrics.beacons.sent}/${metrics.beacons.rcvd}`} />
             <Row k="publishFail" v={metrics.relay.publishFail} highlight={metrics.relay.publishFail > 0} />
-            <Row k="auth wait/timeout" v={`${metrics.relay.authWaited}/${metrics.relay.authTimedOut}`} />
+            <Row k="auth wait/timeout" /* i18n-exempt: metric name, developer-only ?debug=voice overlay */ v={`${metrics.relay.authWaited}/${metrics.relay.authTimedOut}`} />
             {metrics.relay.lastError && (
               <Row k="lastErr" v={metrics.relay.lastError.slice(0, 40)} highlight />
             )}

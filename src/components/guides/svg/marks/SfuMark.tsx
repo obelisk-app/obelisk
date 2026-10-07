@@ -1,4 +1,7 @@
+import { useTranslations } from 'next-intl';
+
 export default function SfuMark() {
+  const t = useTranslations();
   const peers = [
     { x: 30, y: 30 },
     { x: 90, y: 30 },
@@ -11,7 +14,7 @@ export default function SfuMark() {
       viewBox="0 0 120 120"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="obelisk-sfu mark: a central voice mixer hub connected to five peers"
+      aria-label={t('guides.asset.alt.markSfu')}
       className="w-full h-auto"
     >
       <rect width="120" height="120" rx="20" fill="#0a0a0a" />

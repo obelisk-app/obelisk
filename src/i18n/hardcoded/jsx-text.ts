@@ -114,9 +114,14 @@ export type JsxScan = {
   readonly ranges: Array<readonly [number, number]>;
 };
 
+/** A `.tsx` source as a syntax tree with parent pointers, shared by the tree-based rules. */
+export function parseTsx(source: string, fileName = 'x.tsx'): ts.SourceFile {
+  return ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+}
+
 /** Every run of JSX text in a `.tsx` source, as candidates with their line span. */
-export function scanJsxText(source: string, fileName = 'x.tsx'): JsxScan {
-  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+export function scanJsxText(source: string | ts.SourceFile): JsxScan {
+  const sf = typeof source === 'string' ? parseTsx(source) : source;
   const flattened = new Set<ts.Node>();
   const candidates: JsxCandidate[] = [];
   const ranges: Array<readonly [number, number]> = [];

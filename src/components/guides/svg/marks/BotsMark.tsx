@@ -1,10 +1,13 @@
+import { useTranslations } from 'next-intl';
+
 export default function BotsMark() {
+  const t = useTranslations();
   return (
     <svg
       viewBox="0 0 120 120"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="obelisk-bots mark: a small robot head with antenna"
+      aria-label={t('guides.asset.alt.markBots')}
       className="w-full h-auto"
     >
       <rect width="120" height="120" rx="20" fill="#0a0a0a" />

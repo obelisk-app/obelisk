@@ -21,7 +21,8 @@
  * A line carrying `i18n-exempt: <reason>` (in any comment on that line) is
  * not reported: brand names, protocol terms, endonyms, artwork text that
  * feeds the OG snapshots. JSX text that spans lines is exempt when the
- * marker is on any of its lines or on its parent's opening tag. The reason is mandatory, so the exemption reads
+ * marker is on any of its lines or on its parent's opening tag; a string
+ * prop, when it is on the prop's name line or its string's line. The reason is mandatory, so the exemption reads
  * as a decision rather than a suppression.
  */
 
@@ -30,7 +31,8 @@ import { join, relative } from 'node:path';
 import { looksLikeProse } from './hardcoded/prose';
 import { stripComments } from './hardcoded/strip';
 import { candidates, type Candidate } from './hardcoded/rules';
-import { scanJsxText } from './hardcoded/jsx-text';
+import { parseTsx, scanJsxText } from './hardcoded/jsx-text';
+import { scanJsxAttrs } from './hardcoded/jsx-attrs';
 
 export { looksLikeProse };
 
@@ -86,16 +88,19 @@ export function scanFile(file: string, source: string): Finding[] {
 }
 
 /**
- * The regex rules over comment-stripped source, plus JSX text from the
- * syntax tree of the original (a `//` inside JSX text is text, not a
- * comment). Offsets agree because stripping keeps every character's place.
+ * The regex rules over comment-stripped source, plus JSX text and string
+ * props from the syntax tree of the original (a `//` inside JSX text is
+ * text, not a comment). Offsets agree because stripping keeps every
+ * character's place. String props come last, so a `title="..."` the
+ * regex `attr` rule also saw keeps that rule's name and is reported once.
  */
 function allCandidates(source: string, stripped: string, kind: { isLib: boolean; isTsx: boolean }): Candidate[] {
   const regex = candidates(stripped, kind);
   if (kind.isLib || !kind.isTsx) return regex;
-  const jsx = scanJsxText(source);
+  const sf = parseTsx(source);
+  const jsx = scanJsxText(sf);
   const inJsxText = (i: number) => jsx.ranges.some(([from, to]) => i >= from && i < to);
-  return [...jsx.candidates, ...regex.filter((c) => c.rule !== 'jsxText' || !inJsxText(c.index))];
+  return [...jsx.candidates, ...regex.filter((c) => c.rule !== 'jsxText' || !inJsxText(c.index)), ...scanJsxAttrs(sf)];
 }
 
 export function sourceFiles(dir: string, root = dir): string[] {

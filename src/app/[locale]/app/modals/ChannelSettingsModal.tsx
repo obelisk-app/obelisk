@@ -211,7 +211,7 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
 
           <section className="space-y-3 p-5">
             <div className="flex min-w-0 items-center gap-3">
-              <SectionHeader title={t('shell.desktop.channel.members')} hint="NIP-29 kind 9000 / 9001" />
+              <SectionHeader title={t('shell.desktop.channel.members')} hint="NIP-29 kind 9000 / 9001" /* i18n-exempt: protocol term, the NIP-29 event kinds */ />
               <span className="shrink-0 rounded-full bg-lc-card px-2 py-0.5 text-[11px] font-semibold text-lc-muted">
                 {members.length}
               </span>

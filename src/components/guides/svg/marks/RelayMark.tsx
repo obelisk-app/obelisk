@@ -1,10 +1,13 @@
+import { useTranslations } from 'next-intl';
+
 export default function RelayMark() {
+  const t = useTranslations();
   return (
     <svg
       viewBox="0 0 120 120"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="obelisk-relay mark: a relay tower broadcasting concentric signal arcs"
+      aria-label={t('guides.asset.alt.markRelay')}
       className="w-full h-auto"
     >
       <rect width="120" height="120" rx="20" fill="#0a0a0a" />
