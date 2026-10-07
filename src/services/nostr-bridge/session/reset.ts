@@ -7,14 +7,11 @@
  * that assumed it is cleared, and the stores notify their listeners in the
  * sequence the shells always saw (`reset.test.ts` pins it).
  */
-import { SESSION_IDENTITY_ID, type Identity } from '@/lib/relay-hub';
 import { dismissActivity } from '@/services/feedback/activity-log';
 import { resetAllClientState } from '@/services/common/reset';
 import type { PerGroupReqs } from './fanout';
 import type { LifecycleTargets } from './lifecycle';
-
-/** The hub identity before login and after logout: its sockets never answer a challenge. */
-export const ANONYMOUS_IDENTITY: Identity = { id: SESSION_IDENTITY_ID, pubkey: null, signer: null, authPolicy: 'auth-when-challenged' };
+import { ANONYMOUS_IDENTITY } from '@/constants/nostr-bridge/session';
 
 /**
  * Release every REQ the session holds and restart the per-session

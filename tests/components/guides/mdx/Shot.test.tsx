@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 import { LocaleProvider, translator } from '@tests/support/intl';
 import type { Locale } from '@/i18n';
 import Shot from '@/components/guides/mdx/Shot';
-import { SHOT_META } from '@/utils/guides/shots';
+import { SHOT_META } from '@/constants/guides/shots';
 
 const render = (ui: ReactElement, locale: Locale = 'en') =>
   rtlRender(<LocaleProvider initialLocale={locale}>{ui}</LocaleProvider>);

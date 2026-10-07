@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FEED_WIDGETS } from '@/services/social/widgets';
+import { FEED_WIDGETS } from '@/constants/social/widgets';
 import { feedWidgetOptions } from '@/utils/social/feed-widget-options';
 
 describe('feedWidgetOptions', () => {

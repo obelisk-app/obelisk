@@ -31,7 +31,7 @@ import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import Text from '@/components/ui/layout/Text';
 import { useHintCallout } from '@/hooks/hints/useHintCallout';
-import { HINT_CARD_WIDTH } from '@/utils/hints/placement';
+import { HINT_CARD_WIDTH } from '@/constants/hints/placement';
 
 export default function HintCallout({
   anchor,

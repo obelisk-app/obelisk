@@ -9,9 +9,9 @@
  */
 
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-import { pageLocale } from '@/i18n/page-locale';
-import { NOINDEX, noindexMetadata, renderedTitle } from '@/utils/seo/page';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
+import { NOINDEX } from '@/constants/seo/page';
 import { cardAlt, cardImage } from '@/utils/seo/og';
 import { hashtagFromSegment } from '@/utils/social/hashtag-segment';
 import { fetchHashtagNotes, fetchProfilesForViewer } from '@/services/server/viewer/nostr-fetch';
@@ -25,7 +25,7 @@ import Text from '@/components/ui/layout/Text';
 export const runtime = 'nodejs';
 export const revalidate = 120;
 
-type Params = { params: Promise<{ tag: string; locale: string }> };
+type Params = { params: Promise<{ tag: string }> };
 
 /**
  * Recent notes under a hashtag, from relays: out of search (`noindex,
@@ -33,7 +33,7 @@ type Params = { params: Promise<{ tag: string; locale: string }> };
  * content is other people's.
  */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const locale = await pageLocale(params);
+  const locale = await getLocale();
   const t = await getTranslations({ locale });
   const { tag } = await params;
   const clean = hashtagFromSegment(tag);

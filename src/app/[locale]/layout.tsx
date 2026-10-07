@@ -3,11 +3,13 @@ import type { ReactNode } from 'react';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import { headers } from 'next/headers';
-import { getTranslations } from 'next-intl/server';
-import { DEFAULT_LOCALE, LOCALES, isLocale } from '@/i18n';
+import { notFound } from 'next/navigation';
+import { locale as segmentLocale } from 'next/root-params';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { LOCALES, isLocale } from '@/i18n';
 import IntlScope from '@/i18n/IntlScope';
-import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
-import { PWA_ROUTE_GUARD, siteJsonLd, siteMetadata } from '@/utils/seo/site';
+import { siteJsonLd, siteMetadata } from '@/utils/seo/site';
+import { PWA_ROUTE_GUARD } from '@/constants/seo/site';
 import ToastStack from '@/components/feedback/ToastStack';
 import { ConfirmDialogHost } from '@/components/ui/overlays/ConfirmDialog';
 import AppearancePreferencesRoot from '@/components/settings/appearance/AppearancePreferencesRoot';
@@ -31,12 +33,11 @@ export function generateStaticParams() {
 /**
  * Site-wide metadata in the URL's language; each page adds its own canonical.
  * A segment that is not a language (`/dev/...`, `/x.txt`, which skip the
- * proxy) gets English here rather than a throw: the page itself still 404s,
- * and this way the 404 keeps a title.
+ * proxy) reads as English (src/i18n/request.ts) rather than a throw: the
+ * layout still 404s, and this way the 404 keeps a title.
  */
-export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
-  const { locale: segment } = await params;
-  const locale = isLocale(segment) ? segment : DEFAULT_LOCALE;
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   return siteMetadata(await getTranslations({ locale }), locale);
 }
 
@@ -56,10 +57,13 @@ export const viewport: Viewport = {
  * The root layout of every page: `<html lang>` is the URL's language
  * (`/es/...` is Spanish), and the client tree gets only the `common`
  * module here; each route adds the modules it renders through its own
- * `IntlScope`.
+ * `IntlScope`. A segment that is not one of our languages is a 404 here,
+ * once for every page under it (so `/fr/app` never renders English under a
+ * French URL); the pages read the language with next-intl's `getLocale()`.
  */
-export default async function LocaleLayout({ children, params }: LocaleParams & { children: ReactNode }) {
-  const locale = await pageLocale(params);
+export default async function LocaleLayout({ children }: { children: ReactNode }) {
+  const locale = await segmentLocale();
+  if (!isLocale(locale)) notFound();
   // Per-request CSP nonce minted by src/proxy.ts. Stamping it on every
   // inline <Script>/<script> we render keeps the strict CSP green; any
   // injected upstream script (Cloudflare, browser extensions) without

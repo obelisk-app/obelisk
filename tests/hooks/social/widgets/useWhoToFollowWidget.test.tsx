@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
-import { useWhoToFollowWidget, WHO_TO_FOLLOW_LIMIT } from '@/hooks/social/widgets/useWhoToFollowWidget';
+import { useWhoToFollowWidget } from '@/hooks/social/widgets/useWhoToFollowWidget';
+import { WHO_TO_FOLLOW_LIMIT } from '@/constants/social/widgets';
 
 const hex = (c: string) => c.repeat(64);
 const note = (id: string, pubkey: string): NostrEvent => ({

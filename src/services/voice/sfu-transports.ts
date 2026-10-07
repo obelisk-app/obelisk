@@ -11,8 +11,8 @@ import type { DtlsParameters, Transport } from 'mediasoup-client/types';
 import type { SfuRpc } from './sfu-rpc';
 import type { SfuClientEvents } from './sfu-types';
 import { ICE_SERVERS } from './ice-config';
+import { STARTUP_RPC_RETRY } from '@/constants/voice/sfu-transports';
 
-export const STARTUP_RPC_RETRY = { attempts: 4, timeoutMs: 1800, retryDelayMs: 75 } as const;
 const CONNECT_RPC_RETRY = { attempts: 3, timeoutMs: 2000, retryDelayMs: 75 } as const;
 
 export interface WebRtcTransportInfo {

@@ -7,6 +7,8 @@
 
 /* Relay groups */
 
+import { SWAP_ROW_HEIGHT, SWAP_TOP, SWAP_COL_X, ZAP_LANE_X } from '@/constants/guides/diagram-art';
+
 /** A client tile at (`x`, `y`), with the dashed link from its inner side to the relay box's edge. */
 export function relayGroupClients<T extends { x: number; y: number }>(clients: readonly T[]) {
   return clients.map((c) => ({
@@ -18,17 +20,6 @@ export function relayGroupClients<T extends { x: number; y: number }>(clients: r
 }
 
 /* Swap matrix */
-
-export const SWAP_ROW_HEIGHT = 64;
-export const SWAP_TOP = 60;
-export const SWAP_COL_W = 200;
-const COL_GAP = 16;
-export const SWAP_LABEL_X = 24;
-export const SWAP_COL_X = [
-  SWAP_LABEL_X + 110,
-  SWAP_LABEL_X + 110 + (SWAP_COL_W + COL_GAP),
-  SWAP_LABEL_X + 110 + 2 * (SWAP_COL_W + COL_GAP),
-];
 
 export interface SwapRow {
   layer: string;
@@ -61,7 +52,6 @@ export function swapMatrixHeight(count: number): number {
 
 /* Zap flow */
 
-export const ZAP_LANE_X = { C: 110, W: 335, L: 565, R: 790 } as const;
 export type ZapLane = keyof typeof ZAP_LANE_X;
 
 /** One step of the flow: an arrow between two lanes at `y`, its head on the receiving side. */

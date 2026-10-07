@@ -6,7 +6,6 @@
 import { getBridge, getBridgeImpl, resubscribeOnQuotaClose } from '@/services/nostr-bridge';
 import { pushVoiceDebug } from './debug';
 
-export const PRESENCE_TTL_SECONDS = 45;
 const VOICE_SUB_WATCHDOG_MS = 2500;
 
 export interface VoiceTransportOptions {

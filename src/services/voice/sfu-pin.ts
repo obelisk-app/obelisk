@@ -22,8 +22,8 @@
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
 import { getBridge, getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
-import { KIND_NIP78_APP_DATA as KIND_NIP78 } from '@/utils/nostr/nip-kinds';
-import { VoiceError } from './errors';
+import { KIND_NIP78_APP_DATA as KIND_NIP78 } from '@/constants/nostr/nip-kinds';
+import { VoiceError } from '@/utils/voice/errors';
 
 export interface SfuPin {
   pubkey: string;

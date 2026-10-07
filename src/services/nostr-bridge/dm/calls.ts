@@ -9,7 +9,7 @@ import { CodedError } from '@/utils/errors/codes';
 import { finalizeEvent, getEventHash, type Event as NostrEvent, type UnsignedEvent } from 'nostr-tools';
 import { generateSecretKey } from 'nostr-tools/pure';
 import { v2 as nip44 } from 'nostr-tools/nip44';
-import { KIND_DM_CALL_RUMOR, KIND_SEAL } from '@/utils/nostr/nip-kinds';
+import { KIND_DM_CALL_RUMOR, KIND_SEAL } from '@/constants/nostr/nip-kinds';
 import { KIND_GIFT_WRAP } from '@nostr-wot/dm';
 import type { NostrSigner as DmNostrSigner } from '@nostr-wot/signers';
 import { getPreferences } from '@/services/preferences/preferences';

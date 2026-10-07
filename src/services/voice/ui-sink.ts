@@ -15,7 +15,7 @@
 import { useVoiceStore } from '@/store/voice';
 import type { VideoQuality } from './quality';
 import type { QualitySample } from './stats';
-import type { VoiceErrorCode } from './errors';
+import type { VoiceErrorCode } from '@/utils/voice/errors';
 
 export interface LocalTracksState {
   mic: boolean;

@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DEFAULT_FEED_WIDGETS,
-  FEED_WIDGET_MAX,
   normalizeFeedWidgets,
   toggleFeedWidget,
 } from '@/services/social/widgets';
+import { DEFAULT_FEED_WIDGETS, FEED_WIDGET_MAX } from '@/constants/social/widgets';
 
 describe('feed widgets', () => {
   it('defaults to two panels', () => {

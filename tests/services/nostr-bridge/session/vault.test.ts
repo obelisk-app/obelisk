@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { SIGNER_STORAGE_KEY_NIP46, SIGNER_STORAGE_KEY_NSEC } from '@nostr-wot/ui';
 import { VaultError } from '@/lib/crypto/session-vault';
-import { SDK_SIGNER_STORAGE_KEYS, forgetSdkSignerStorage, restoreNoticeFor } from '@/services/nostr-bridge/session/vault';
+import { forgetSdkSignerStorage, restoreNoticeFor } from '@/services/nostr-bridge/session/vault';
+import { SDK_SIGNER_STORAGE_KEYS } from '@/constants/nostr-bridge/session';
 
 describe('bridge session vault helpers', () => {
   it('erases exactly the keys the SDK login widget writes', () => {

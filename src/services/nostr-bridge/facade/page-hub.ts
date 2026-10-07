@@ -9,13 +9,7 @@
  */
 import { TextCoercingWebSocket } from '@nostr-wot/data';
 import { getRelayHub, type RelayHub } from '@/lib/relay-hub';
-
-/**
- * Handshake ceiling for the hub's sockets. Keep enough headroom for an Android
- * PWA waking its radio and opening a WebSocket through Cloudflare; 3 s caused
- * healthy relays to be torn down and recreated in a reconnect loop after resume.
- */
-export const CONNECT_HANDSHAKE_TIMEOUT_MS = 10_000;
+import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '@/constants/nostr-bridge/facade';
 
 /**
  * Some relays (or compressing proxies) push EVENT/EOSE frames as binary.

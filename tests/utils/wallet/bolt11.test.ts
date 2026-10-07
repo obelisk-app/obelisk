@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseBolt11, INVOICE_REGEX } from '@/utils/wallet/bolt11';
+import { parseBolt11 } from '@/utils/wallet/bolt11';
+import { INVOICE_REGEX } from '@/constants/wallet/bolt11';
 
 // A real mainnet BOLT11 invoice (5000 sats = 50u).
 const SAMPLE =

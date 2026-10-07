@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { configure } from '@testing-library/dom';
 import { afterAll, afterEach, vi } from 'vitest';
+import { setRootLocale } from './root-params';
 
 // jsdom doesn't implement scrollIntoView.
 if (typeof Element !== 'undefined') {
@@ -160,3 +161,6 @@ vi.mock('next/navigation', async (importOriginal) => {
 
 // The route-level message provider is an async server component; see the stand-in.
 vi.mock('@/i18n/IntlScope', async () => ({ default: (await import('./intl-scope')).default }));
+
+// Each test names its own `[locale]` segment (tests/support/root-params.ts).
+afterEach(() => setRootLocale(undefined));

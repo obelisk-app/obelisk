@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { WOT_TIERS } from '@/services/wot/colors';
+import { WOT_TIERS } from '@/constants/wot/colors';
 import Text from '@/components/ui/layout/Text';
 
 /** The colour legend: channels in the rail are coloured by the closest principal's hop distance. */

@@ -4,7 +4,8 @@ import { useTranslations } from 'next-intl';
 import { useChannelActionSheet } from '@/hooks/chat/channel/useChannelActionSheet';
 import Sheet from '@/components/ui/overlays/Sheet';
 import SheetHeader from '@/app/[locale]/app/mobile/sheets/chrome/SheetHeader';
-import { MUTE_OPTIONS, NOTIFY_OPTIONS, type ChannelMenuTarget } from '@/utils/chat/channel/channel-menu-options';
+import type { ChannelMenuTarget } from '@/utils/chat/channel/channel-menu-options';
+import { MUTE_OPTIONS, NOTIFY_OPTIONS } from '@/constants/chat/channel';
 import { ChannelSheetRow } from './ChannelSheetRow';
 
 /** The phone's long-press version of the channel menu, as a sheet with drill-in views. */

@@ -9,7 +9,7 @@
 import { expect, vi } from 'vitest';
 import { finalizeEvent, nip04, type Event as NostrEvent } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
-import { DM_STORE_DB } from '@/services/nostr-bridge/dm/store-db';
+import { DM_STORE_DB } from '@/constants/nostr-bridge/dm';
 import { hexToBytesForTest } from '@tests/services/nostr-bridge/support/bridge-harness';
 import type { BridgeImpl, JsDirectMessage } from '@/services/nostr-bridge';
 

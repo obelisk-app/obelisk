@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { LocaleProvider, translator } from '@tests/support/intl';
 import { useShortCopy } from '@/hooks/media-kit/kit/useShortCopy';
-import { LINKS, SHORT_COPY } from '@/utils/media-kit/content';
+import { LINKS, SHORT_COPY } from '@/constants/media-kit/content';
 
 function English({ children }: { children: ReactNode }) {
   return <LocaleProvider initialLocale="en">{children}</LocaleProvider>;

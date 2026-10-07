@@ -2,8 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { translator } from '@tests/support/intl';
 import { validateJsonLd } from '../../../scripts/seo/lib/jsonld';
 import {
-  ORGANIZATION_ID, breadcrumbJsonLd, collectionJsonLd, faqJsonLd, organizationNode, webApplicationNode, websiteId, websiteNode,
+  breadcrumbJsonLd,
+  collectionJsonLd,
+  faqJsonLd,
+  organizationNode,
+  webApplicationNode,
+  websiteId,
+  websiteNode,
 } from '@/utils/seo/jsonld';
+import { ORGANIZATION_ID } from '@/constants/seo/jsonld';
 import { siteJsonLd } from '@/utils/seo/site';
 import { tourJsonLd, type Tour } from '@/utils/seo/showcase';
 

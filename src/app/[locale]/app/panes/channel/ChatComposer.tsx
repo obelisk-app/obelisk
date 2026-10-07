@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef, type InputHTMLAttributes } from 'react';
-import { MESSAGE_INPUT_PROPS } from '@/utils/chat/composer/message-input-props';
+import { MESSAGE_INPUT_PROPS } from '@/constants/chat/composer';
 import MessageMediaPicker from '@/components/chat/picker/MessageMediaPicker';
 import { AttachmentMenu } from '@/components/chat/composer/AttachmentMenu';
 import { VoiceNoteButton } from '@/components/chat/composer/VoiceNoteButton';

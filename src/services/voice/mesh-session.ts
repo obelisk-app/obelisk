@@ -32,7 +32,7 @@ import { DiscoveryEngine } from './discovery';
 import { MeshAnnouncer } from './mesh-announce';
 import { pushVoiceDebug } from './debug';
 import { recordRelayAuthWait, reserveVoiceRelayCapacity } from './relay-prep';
-import type { VoiceSigner } from './constants';
+import type { VoiceSigner } from '@/constants/voice/client';
 
 export type { MeshSessionDeps } from './mesh-session-deps';
 

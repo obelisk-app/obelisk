@@ -1,7 +1,7 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { getRelayStatuses, probeRelay, subscribeRelayStatus } from '@/services/social/relay-status';
-import { openSettings } from '@/utils/settings/open-settings';
+import { openSettings } from '@/services/settings/open-settings';
 import { relayStatusRows } from '@/utils/social/relay-status-rows';
 
 /**

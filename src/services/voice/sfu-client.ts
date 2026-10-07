@@ -34,16 +34,16 @@ import type { ProducerAppData, SfuClientEvents, SfuReliabilityEvent } from './sf
 import { SfuConsumers } from './sfu-consumers';
 import { SfuPeerRoster } from './sfu-peers';
 import {
-  STARTUP_RPC_RETRY,
   requestWebRtcTransport,
   transportOptions,
   wireSendTransport,
   wireTransportConnect,
 } from './sfu-transports';
+import { STARTUP_RPC_RETRY } from '@/constants/voice/sfu-transports';
 
 export type { SfuClientEvents, SfuReliabilityEvent, SfuRemoteTrack } from './sfu-types';
-export { CONSUME_RETRY_DELAYS_MS } from './sfu-consume-queue';
-export { STALE_CHECK_INTERVAL_MS, STALE_TIMEOUT_MS, STALE_WARMUP_MS } from './sfu-consumer-health';
+export { CONSUME_RETRY_DELAYS_MS } from '@/constants/voice/sfu-consume-queue';
+export { STALE_CHECK_INTERVAL_MS, STALE_TIMEOUT_MS, STALE_WARMUP_MS } from '@/constants/voice/sfu-consumer-health';
 
 type SfuRpcTransport = Pick<SfuRpc, 'start' | 'close' | 'request' | 'requestWithRetry'>;
 

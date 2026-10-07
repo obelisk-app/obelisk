@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { translator } from '@tests/support/intl';
 import type { ActivityEntry } from '@/services/feedback/activity-log';
-import { ACTIVITY_CODES } from '@/utils/errors/codes';
+import { ACTIVITY_CODES } from '@/constants/errors/codes';
 import { activityDetail, activityKind, activityTitle } from '@/utils/errors/activity-text';
 
 function entry(over: Partial<ActivityEntry>): ActivityEntry {

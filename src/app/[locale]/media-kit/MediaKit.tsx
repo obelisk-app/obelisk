@@ -8,7 +8,7 @@
  */
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
-import { LINKS, NAV_LINKS } from '@/utils/media-kit/content';
+import { LINKS, NAV_LINKS } from '@/constants/media-kit/content';
 import { Section } from './kit/Section';
 import { AboutSections } from './kit/AboutSections';
 import { BannersSection } from './kit/BannersSection';

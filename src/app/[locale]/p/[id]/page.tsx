@@ -15,8 +15,7 @@
 
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
-import { pageLocale } from '@/i18n/page-locale';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
 import { cardAlt, cardImage } from '@/utils/seo/og';
 import { Link } from '@/i18n/navigation';
@@ -40,14 +39,14 @@ import Text from '@/components/ui/layout/Text';
 export const runtime = 'nodejs';
 export const revalidate = 300;
 
-type Params = { params: Promise<{ id: string; locale: string }> };
+type Params = { params: Promise<{ id: string }> };
 
 /**
  * Someone's Nostr profile: out of search (`noindex, follow`) for the same
  * reason as a note; the card is what the page is for.
  */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const locale = await pageLocale(params);
+  const locale = await getLocale();
   const t = await getTranslations({ locale });
   const { id } = await params;
   const path = `/p/${id}`;

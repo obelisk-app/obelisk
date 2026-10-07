@@ -4,7 +4,8 @@
  * RPC. `SfuRpc.start()` tries this first when the SFU advertises a URL and
  * falls back to relays when it fails (unless the SFU refused us outright).
  */
-import { AUTH_KIND, bridge, DIRECT_CONNECT_TIMEOUT_MS, DirectRpcError } from './sfu-rpc-support';
+import { bridge, DirectRpcError } from './sfu-rpc-support';
+import { AUTH_KIND, DIRECT_CONNECT_TIMEOUT_MS } from '@/constants/voice/sfu-rpc-support';
 
 export interface DirectRpcHooks {
   sfuUrl: string;

@@ -1,14 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  LEGACY_RELAYS_KEY,
-  LEGACY_STORAGE_KEY,
-  RELAYS_KEY,
-  STORAGE_KEY,
   parseStoredSession,
   readMigrated,
   secretsOf,
   storedRecordFor,
 } from '@/services/nostr-bridge/session/session-storage';
+import { LEGACY_RELAYS_KEY, LEGACY_STORAGE_KEY, RELAYS_KEY, STORAGE_KEY } from '@/constants/nostr-bridge/session';
 
 describe('readMigrated', () => {
   beforeEach(() => {

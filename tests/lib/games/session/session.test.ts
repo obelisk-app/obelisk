@@ -8,7 +8,7 @@ import { parseGameEvent, buildCreate, buildGameOp, type GameEvent, type ParsedGa
 import { chainReaction, CR_SIZES } from '@/lib/games/chain-reaction/chain-reaction';
 import { GAMES } from '@/lib/games/core/registry';
 import type { GameDefinition } from '@/lib/games/core/types';
-import { KIND_GAME } from '@/utils/nostr/nip-kinds';
+import { KIND_GAME } from '@/constants/nostr/nip-kinds';
 
 const CH = 'channel-1';
 const HOST = 'pk-host';

@@ -99,3 +99,8 @@ export function bioSegments(text: string | null | undefined): BioSegment[] {
   if (cursor < value.length) out.push({ type: 'text', value: value.slice(cursor) });
   return out;
 }
+
+/** `https://` in front of a bare website, so the link leaves the app. */
+export function websiteHref(website: string): string {
+  return /^https?:\/\//i.test(website) ? website : `https://${website}`;
+}

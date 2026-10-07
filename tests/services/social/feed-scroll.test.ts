@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  AT_TOP_PX, PULL_REFRESH_COOLDOWN_MS, findFeedScroller, watchAtTop, watchPullToRefresh, watchSentinel,
+  findFeedScroller,
+  watchAtTop,
+  watchPullToRefresh,
+  watchSentinel,
 } from '@/services/social/feed-scroll';
+import { AT_TOP_PX, PULL_REFRESH_COOLDOWN_MS } from '@/constants/social/feed-scroll';
 
 type Entry = { isIntersecting: boolean };
 

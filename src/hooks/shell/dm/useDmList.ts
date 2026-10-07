@@ -5,8 +5,12 @@ import { useTranslations } from 'next-intl';
 import { useDirectMessages, useMyFollows } from '@/services/nostr-bridge';
 import { ensureSocialProfiles } from '@/services/social/profiles';
 import {
-  DM_LIST_TABS, defaultDmListTab, dmPeers, splitByFollows, type DmListTab,
+  defaultDmListTab,
+  dmPeers,
+  splitByFollows,
+  type DmListTab,
 } from '@/utils/shell/desktop/dm-list';
+import { DM_LIST_TABS } from '@/constants/shell/desktop';
 
 /**
  * The desktop DM list's view model: every conversation split into Follows

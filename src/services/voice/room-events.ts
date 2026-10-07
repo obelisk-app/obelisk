@@ -8,7 +8,8 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { RemoteTrack, VoiceClient, VoiceClientEvents } from '@/services/voice/client';
 import { useVoiceStore } from '@/store/voice';
-import type { VoiceErrorCode } from '@/services/voice/errors';
+import type { VoiceErrorCode } from '@/utils/voice/errors';
+import { NO_LOCAL, NO_LOCAL_VIDEO } from '@/constants/voice/room-events';
 
 /** Where an SFU channel's upgrade stands, as the room header shows it. */
 export type SfuStatus = 'na' | 'starting' | 'connected' | 'unavailable' | 'unauthorized';
@@ -18,8 +19,6 @@ export interface LocalTrackFlags {
   camera: boolean;
   screen: boolean;
 }
-
-export const NO_LOCAL: LocalTrackFlags = { mic: false, camera: false, screen: false };
 
 /**
  * The local camera and screen tracks themselves, held in state so the room
@@ -31,8 +30,6 @@ export interface LocalVideoTracks {
   camera: MediaStreamTrack | null;
   screen: MediaStreamTrack | null;
 }
-
-export const NO_LOCAL_VIDEO: LocalVideoTracks = { camera: null, screen: null };
 
 export interface RoomStateSinks {
   setParticipants: Dispatch<SetStateAction<string[]>>;

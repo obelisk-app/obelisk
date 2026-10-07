@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { WotEngine, _internals } from '@/services/wot/engine';
+import { WotEngine } from '@/services/wot/engine';
+import { VERDICT_TTL_MS } from '@/constants/wot/verdict-cache';
 
 const KIND_GROUP_METADATA = 39000;
 const KIND_GROUP_ADMINS = 39001;
@@ -254,7 +255,7 @@ describe('WotEngine holding the door', () => {
 
     // The verdict's TTL lapses. Before the fix this re-admitted the spammer
     // for one batch window, every TTL, with nothing on their side but patience.
-    vi.advanceTimersByTime(_internals.VERDICT_TTL_MS + 1);
+    vi.advanceTimersByTime(VERDICT_TTL_MS + 1);
     mockApi.getDistanceBatch.mockResolvedValueOnce({ spammer: null });
     expect(e.isAllowed('spammer', KIND_GROUP_MESSAGE)).toBe(false);
     expect(e.isResolvedDeny('spammer')).toBe(true);
@@ -273,7 +274,7 @@ describe('WotEngine holding the door', () => {
     await settle();
     expect(e.isAllowed('newcomer', KIND_GROUP_MESSAGE)).toBe(false);
 
-    vi.advanceTimersByTime(_internals.VERDICT_TTL_MS + 1);
+    vi.advanceTimersByTime(VERDICT_TTL_MS + 1);
     // Somebody we trust followed them in the meantime.
     mockApi.getDistanceBatch.mockResolvedValueOnce({ newcomer: 2 });
     e.isAllowed('newcomer', KIND_GROUP_MESSAGE);
@@ -315,7 +316,7 @@ describe('WotEngine holding the door', () => {
     );
     e.isAllowed('old', KIND_GROUP_MESSAGE);
     await settle();
-    vi.advanceTimersByTime(_internals.VERDICT_TTL_MS + 1);
+    vi.advanceTimersByTime(VERDICT_TTL_MS + 1);
     e.isAllowed('fresh', KIND_GROUP_MESSAGE);
     await settle();
     // Room for one more: 'old' has lapsed and is the one to go, even though

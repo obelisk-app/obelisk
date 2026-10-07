@@ -5,7 +5,7 @@
  * `VoiceClient` owns the state and the eviction side effects.
  */
 import type { VoicePresence, VideoSlotKind } from './types';
-import { MAX_CAMERAS, MAX_SCREEN_SHARES } from './constants';
+import { MAX_CAMERAS, MAX_SCREEN_SHARES } from '@/constants/voice/client';
 
 export interface VideoSlotClaim {
   pubkey: string;

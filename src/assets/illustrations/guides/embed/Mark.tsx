@@ -1,5 +1,6 @@
 import { useLocale, useTranslations } from 'next-intl';
-import { DIAGRAM_ASSET_META, snapshotPaths } from '@/utils/guides/asset-meta';
+import { snapshotPaths } from '@/utils/guides/asset-meta';
+import { DIAGRAM_ASSET_META } from '@/constants/guides/asset-meta';
 import { DIAGRAM_REGISTRY } from '../index';
 
 /** A project's logo mark, inline in a line of text, over its indexable still frame. */

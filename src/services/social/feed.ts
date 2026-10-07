@@ -11,18 +11,7 @@ import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { kindsForFilter, type ContentFilter } from './kinds';
 import { querySocial } from './pool';
 import { dedupeReposts } from './repost';
-
-export const FEED_PAGE_SIZE = 50;
-/** Ceiling on notes held in memory for one feed. Cache keeps fewer still. */
-export const FEED_MAX_NOTES = 500;
-
-/**
- * Relays cap the number of values in a filter field, and a heavy Nostr user
- * follows thousands of pubkeys. Splitting `authors` into chunks keeps each
- * REQ inside what relays actually accept; one oversized filter is commonly
- * answered with nothing at all, which reads as "your follows posted nothing".
- */
-export const AUTHORS_PER_FILTER = 300;
+import { FEED_PAGE_SIZE, FEED_MAX_NOTES, AUTHORS_PER_FILTER } from '@/constants/social/feed';
 
 export type FeedKind = 'following' | 'global';
 

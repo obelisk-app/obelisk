@@ -1,7 +1,5 @@
 import type { JsMemberInfo } from '@/services/nostr-bridge';
-
-/** How many relay members the grant list shows at once. */
-export const ROLE_CANDIDATE_LIMIT = 40;
+import { ROLE_CANDIDATE_LIMIT } from '@/constants/admin/relay-roles-members';
 
 /**
  * The people a role can be granted to: relay members who do not hold it yet,

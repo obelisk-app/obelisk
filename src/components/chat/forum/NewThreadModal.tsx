@@ -3,7 +3,8 @@
 import type { JsForumTag } from '@/services/nostr-bridge';
 import { threadTagChoice } from '@/utils/chat/forum/forum-tags';
 import { useTranslations } from 'next-intl';
-import { MAX_THREAD_TAGS, useNewThreadForm } from '@/hooks/chat/forum/useNewThreadForm';
+import { useNewThreadForm } from '@/hooks/chat/forum/useNewThreadForm';
+import { MAX_THREAD_TAGS } from '@/constants/chat/forum';
 import { NewThreadTagChip } from './NewThreadTagChip';
 import Input from '@/components/ui/forms/Input';
 import TextArea from '@/components/ui/forms/TextArea';

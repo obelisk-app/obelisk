@@ -15,8 +15,8 @@ import { getPreferences, setPreference } from '@/services/preferences/preference
 import { useToastStore } from '@/store/feedback/toast';
 import { translate } from '@/i18n/runtime';
 import { playNotificationSound, startRingLoop, type NotificationSoundKind, type PlayResult } from './sound';
+import { ALERT_FRESH_WINDOW_MS } from '@/constants/notifications/alert';
 
-export const ALERT_FRESH_WINDOW_MS = 2 * 60 * 1000;
 const SEEN_CAP = 500;
 
 export interface IncomingAlert {

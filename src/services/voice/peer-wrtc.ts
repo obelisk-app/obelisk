@@ -6,7 +6,7 @@
  * where simple-peer only needs objects that round-trip through `toJSON`.
  */
 import SimplePeer from 'simple-peer';
-import { CONTROL_CHANNEL_LABEL } from './control-channel';
+import { CONTROL_CHANNEL_LABEL } from '@/constants/voice/control-channel';
 import { ICE_SERVERS } from './ice-config';
 import type { VoiceSignalPayload } from './types';
 

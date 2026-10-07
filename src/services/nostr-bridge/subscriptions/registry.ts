@@ -15,7 +15,7 @@ import type { StateStore } from '../common/state-store';
 import { PinnedRequests } from './pinned';
 import { openWatchedReq, type WatchedReqDeps } from './watched';
 
-export { RELAY_SWITCH_GRACE_MS } from './pinned';
+export { RELAY_SWITCH_GRACE_MS } from '@/constants/nostr-bridge/subscriptions';
 
 export interface RequestsDeps {
   readonly hub: Pick<RelayHub, 'subscribe' | 'query' | 'acquireAuthLease' | 'disconnect'>;

@@ -13,8 +13,8 @@ import { openMeshPeer, randomId, type MeshPeerHost } from './mesh-peer';
 import { DeferredSignalQueue } from './deferred-signals';
 import { pushVoiceDebug } from './debug';
 import { wotEngine } from '@/services/wot/engine';
-import { KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
-import { MAX_PARTICIPANTS } from './constants';
+import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
+import { MAX_PARTICIPANTS } from '@/constants/voice/client';
 import type { VoiceSignalPayload } from './types';
 
 /** What the signal path needs from the session that owns it. */

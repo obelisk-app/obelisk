@@ -7,8 +7,9 @@
  */
 import type { MessagesContext, MessagesParts } from './module';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_GROUP_CHAT_MESSAGE } from '@/utils/nostr/nip-kinds';
-import { BACKGROUND_MESSAGE_LIMIT, EMPTY_RETRY_DELAYS, type MessagesState } from './state';
+import { KIND_GROUP_CHAT_MESSAGE } from '@/constants/nostr/nip-kinds';
+import type { MessagesState } from './state';
+import { BACKGROUND_MESSAGE_LIMIT, EMPTY_RETRY_DELAYS } from '@/constants/nostr-bridge/groups';
 
 export class MessageRetry {
   constructor(

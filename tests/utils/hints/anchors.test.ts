@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { findHintAnchor, hintTaughtBy } from '@/utils/hints/anchors';
-import { HINTS } from '@/utils/hints/registry';
+import { HINTS } from '@/constants/hints/registry';
 
 /** A laid-out element: jsdom has no layout, so offsetParent is stubbed. */
 function mount(anchor: string, visible = true) {

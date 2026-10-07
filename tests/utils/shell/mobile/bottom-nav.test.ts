@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { activeTabFor, badgeLabel, hintSurfaceFor, shouldHideMobileBottomNav } from '@/utils/shell/mobile/bottom-nav';
-import { initialNav } from '@/utils/shell/mobile/url-state';
+import { initialNav } from '@/constants/shell/mobile';
 
 describe('hintSurfaceFor', () => {
   it('maps a screen with something to explain to its own surface', () => {

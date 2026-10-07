@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { GameSession } from '@/lib/games/session/session';
-import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
+import { SEAT_COLORS, NEUTRAL_MATRIX_HEX } from '@/constants/games/chain-reaction';
 import {
   boardSizing,
   boardTurn,
   cellViews,
   isPlayableCell,
   legendEntries,
-  NEUTRAL_MATRIX_HEX,
   readBoard,
 } from '@/utils/games/chain-reaction/board-view';
 

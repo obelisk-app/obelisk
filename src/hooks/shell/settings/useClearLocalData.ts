@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { nostrActions } from '@/services/nostr-bridge';
 import { confirmDialog } from '@/services/common/confirm-dialog';
+import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
 import {
   CONFIRM_KEYS,
-  LOCAL_DATA_CATEGORIES,
   categoryById,
   measureLocalData,
   measureWebStorage,
@@ -16,24 +15,8 @@ import {
   type LocalDataUsage,
   type RemovalEnv,
 } from '@/services/local-data';
-import { unlocalizedPath } from '@/utils/seo/alternates';
-import { disconnectNwcWallet } from '@/services/wallet/nwc-wallet';
-import { forgetAnalyticsConsent, subscribeAnalyticsConsent } from '@/services/analytics/consent';
-
-/** The page-level steps a removal needs: log out, reload, reload without the language prefix. */
-export function browserRemovalEnv(): RemovalEnv {
-  return {
-    logout: () => nostrActions.logout(),
-    disconnectWallet: () => disconnectNwcWallet(),
-    forgetAnalytics: () => forgetAnalyticsConsent(),
-    forgetDirectMessages: () => nostrActions.forgetDirectMessages(),
-    reload: () => window.location.reload(),
-    relocate: () => {
-      const { pathname, search, hash } = window.location;
-      window.location.replace(`${unlocalizedPath(pathname)}${search}${hash}`);
-    },
-  };
-}
+import { subscribeAnalyticsConsent } from '@/services/analytics/consent';
+import { browserRemovalEnv } from '@/services/local-data/browser-removal-env';
 
 /**
  * Settings > Data on this device: the categories with their measured size,

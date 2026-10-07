@@ -21,12 +21,11 @@ import { PeerControlChannel, decodeControl } from './peer-control';
 import { PeerRemoteTracks } from './peer-remote-tracks';
 import { PeerSessionBinding } from './peer-session-binding';
 import { applyAudioSenderParams, applyVideoSenderParams, type VideoCap } from './peer-sender-params';
-import type { ControlMessage } from './control-channel';
+import type { ControlMessage } from '@/constants/voice/control-channel';
+import { INITIAL_CONNECT_TIMEOUT_MS } from '@/constants/voice/peer';
 
 export type { PeerEvents, PeerOptions } from './peer-types';
-export { REMOTE_VIDEO_MUTE_GRACE_MS } from './peer-remote-tracks';
-
-export const INITIAL_CONNECT_TIMEOUT_MS = 9000;
+export { REMOTE_VIDEO_MUTE_GRACE_MS } from '@/constants/voice/peer-remote-tracks';
 
 type SimplePeerInstance = SimplePeer.Instance;
 

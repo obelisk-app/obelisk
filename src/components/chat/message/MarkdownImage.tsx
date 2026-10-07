@@ -1,6 +1,6 @@
 'use client';
 
-import { isSameOriginMediaUrl } from '@/services/media/remote-media';
+import { isSameOriginMediaUrl } from '@/utils/url/same-origin';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { RemoteMediaPlaceholder } from './RemoteMediaPlaceholder';
 

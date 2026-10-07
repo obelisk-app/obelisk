@@ -4,12 +4,11 @@ import type { Event as NostrEvent } from 'nostr-tools';
 const mocks = vi.hoisted(() => ({ querySocial: vi.fn() }));
 vi.mock('@/services/social/pool', () => ({ querySocial: mocks.querySocial, socialRelays: () => ['wss://a'] }));
 
+const { KIND_FOLLOW_SET, KIND_STARTER_PACK } = await import('@/constants/nostr/nip-kinds');
+const { followedCount } = await import('@/utils/social/starter-pack-rows');
 const {
-  KIND_FOLLOW_SET,
-  KIND_STARTER_PACK,
   dedupePacks,
   fetchStarterPacks,
-  followedCount,
   mergedFollowTags,
   parseStarterPack,
 } = await import('@/services/social/starter-packs');

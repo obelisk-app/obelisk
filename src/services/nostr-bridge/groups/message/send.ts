@@ -7,7 +7,7 @@
 import { CodedError } from '@/utils/errors/codes';
 import type { MessagesContext, MessagesDeps } from './module';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_EVENT_DELETION, KIND_GROUP_CHAT_MESSAGE } from '@/utils/nostr/nip-kinds';
+import { KIND_EVENT_DELETION, KIND_GROUP_CHAT_MESSAGE } from '@/constants/nostr/nip-kinds';
 import { customEmojiMapFromTags } from '@/utils/media/tags/custom-emoji-tags';
 import { stickerFromTags } from '@/utils/media/tags/sticker-tags';
 import { voiceNoteFromTags } from '@/utils/media/tags/voice-note-tags';

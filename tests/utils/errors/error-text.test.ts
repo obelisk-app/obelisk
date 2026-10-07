@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { translator } from '@tests/support/intl';
-import { CodedError, ERROR_CODES, codeOrMessage, errorCodeOf, isErrorCode } from '@/utils/errors/codes';
+import { CodedError, codeOrMessage, errorCodeOf, isErrorCode } from '@/utils/errors/codes';
+import { ERROR_CODES } from '@/constants/errors/codes';
 import { errorReason, errorText } from '@/utils/errors/error-text';
 import en from '@/i18n/messages/en/errors.json';
 

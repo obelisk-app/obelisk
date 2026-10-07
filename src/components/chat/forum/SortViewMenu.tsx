@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { DEFAULT_FORUM_PREFS, type ForumPrefs } from '@/services/chat/forum/forum-prefs';
+import type { ForumPrefs } from '@/services/chat/forum/forum-prefs';
+import { DEFAULT_FORUM_PREFS } from '@/constants/chat/forum';
 import { useDismiss } from '@/hooks/common/useDismiss';
 import { SortViewSection } from './SortViewSection';
 import { SortViewRadioRow } from './SortViewRadioRow';

@@ -1,18 +1,14 @@
 'use client';
 
-import { createLocalStore } from '@/utils/storage/local-store';
+import { createLocalStore } from '@/services/common/local-store';
 import {
   normalizePreferenceValue,
   normalizePreferences,
-  APPEARANCE_DEFAULTS,
   type Preferences,
 } from './preferences-schema';
+import { APPEARANCE_DEFAULTS } from '@/constants/preferences/preferences-schema';
 
 export {
-  APPEARANCE_DEFAULTS,
-  DEFAULTS as PREFERENCE_DEFAULTS,
-  CALL_RELAY_MAX,
-  DEFAULT_CALL_RELAYS,
   normalizeCallRelays,
   type BubbleAnimationStyle,
   type CallIpProtection,
@@ -20,6 +16,7 @@ export {
   type NotificationRingtone,
   type Preferences,
 } from './preferences-schema';
+export { APPEARANCE_DEFAULTS, DEFAULTS as PREFERENCE_DEFAULTS, CALL_RELAY_MAX, DEFAULT_CALL_RELAYS } from '@/constants/preferences/preferences-schema';
 export { getAppearanceCssVariables } from './preferences-appearance';
 
 const store = createLocalStore<Partial<Preferences>>('obelisk:preferences', {});

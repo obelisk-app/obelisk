@@ -1,7 +1,9 @@
 import {
-  STACKER_CELL as CELL, STACKER_COLS as COLS, STACKER_ROWS as ROWS, STACKER_TOP as TOP,
-  wellBlocks, wellGarbage, type Block,
+  wellBlocks,
+  wellGarbage,
+  type Block,
 } from '@/utils/guides/stacker-art';
+import { STACKER_CELL as CELL, STACKER_COLS as COLS, STACKER_ROWS as ROWS, STACKER_TOP as TOP } from '@/constants/guides/stacker-art';
 
 /** One Stacker well at `x`: its frame, its faint grid, any garbage rows it received, its blocks and the row about to clear. */
 export default function StackerWell({

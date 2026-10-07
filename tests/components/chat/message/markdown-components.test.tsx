@@ -4,7 +4,7 @@ import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import MarkdownBody from '@/components/chat/message/MarkdownBody';
 import { buildMarkdownComponents } from '@/components/chat/message/markdown-components';
-import { EVERYONE_PLACEHOLDER } from '@/utils/message-text/markdown';
+import { EVERYONE_PLACEHOLDER } from '@/constants/message-text/markdown';
 
 const mentions = new Map([['0', { pubkey: 'a'.repeat(64), displayName: 'Alice' }]]);
 const emojis = { party: 'https://x/party.png' };

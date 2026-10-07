@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MouseEvent } from 'react';
-import { bodyClickHandler, LONG_NOTE_CHARS, sameNoteCardProps, type NoteCardProps } from '@/utils/social/note-card';
+import { bodyClickHandler, sameNoteCardProps, type NoteCardProps } from '@/utils/social/note-card';
+import { LONG_NOTE_CHARS } from '@/constants/social/note-card';
 import { relativeTime as sharedRelativeTime } from '@/utils/format/relative-time';
 import type { Locale } from '@/i18n';
 

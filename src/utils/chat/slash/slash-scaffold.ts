@@ -1,4 +1,5 @@
-import { SLASH_COMMANDS, type SlashCommand, type SlashCommandParam } from './slash-commands';
+import { type SlashCommand, type SlashCommandParam } from './slash-commands';
+import { SLASH_COMMANDS } from '@/constants/chat/slash';
 
 /** The whitespace-separated tokens of a command's argument text, with their offsets. */
 export function tokenize(rest: string): { value: string; start: number; end: number }[] {

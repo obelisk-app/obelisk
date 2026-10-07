@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { MARK_CLASS, looseIndexOf, markHighlights } from '@/services/social/mark-highlights';
+import { looseIndexOf, markHighlights } from '@/services/social/mark-highlights';
+import { MARK_CLASS } from '@/constants/social/mark-highlights';
 
 const root = (html: string): HTMLElement => {
   const element = document.createElement('div');

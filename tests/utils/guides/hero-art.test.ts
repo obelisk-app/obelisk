@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
-  meshLines, orbOffsets, relayKeyDots, relayTierArcs, settledOrbs, vestaSettlements, vestaTiles, VESTA_R,
-  wotEdges, wotNodeFill, wotNodeStroke,
+  meshLines,
+  orbOffsets,
+  relayKeyDots,
+  relayTierArcs,
+  settledOrbs,
+  vestaSettlements,
+  vestaTiles,
+  wotEdges,
+  wotNodeFill,
+  wotNodeStroke,
 } from '@/utils/guides/hero-art';
+import { VESTA_R } from '@/constants/guides/hero-art';
 
 describe('chain reaction orbs', () => {
   it('draws one, two or three orbs per cell', () => {

@@ -26,6 +26,7 @@ import { createKeyedObservable, getProfileAggregators, parseKind0 } from '@nostr
 import type { Event as NostrEvent } from 'nostr-tools';
 import { cacheGet, cacheSet } from '@/services/nostr-bridge';
 import { querySocial, socialRelays } from './pool';
+import { KIND_METADATA } from '@/constants/nostr/nip-kinds';
 
 export type SocialProfile = {
   pubkey: string;
@@ -47,7 +48,6 @@ export type SocialProfile = {
  * relays would needlessly discard every name you'd already resolved.
  */
 const CACHE_NS = 'social-profiles';
-const KIND_METADATA = 0;
 /** Names change rarely; a day avoids re-querying on every session. */
 const TTL_MS = 24 * 60 * 60 * 1000;
 /** Relays cap filter values; a big feed page can exceed a naive single REQ. */

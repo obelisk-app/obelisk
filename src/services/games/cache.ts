@@ -27,21 +27,12 @@
  * still arrives fresh from the relay.
  */
 import { cacheGet, cacheSet, cacheDelete, getBridgeImpl } from '@/services/nostr-bridge';
-import { KIND_GAME } from '@/utils/nostr/nip-kinds';
+import { KIND_GAME } from '@/constants/nostr/nip-kinds';
 import { useGamesStore } from '@/store/games';
 import { registerClientResetHook } from '@/services/common/reset';
 import { setGameIngestListener } from './ingest';
 import type { GameOp, ParsedGameEvent } from '@/lib/games/protocol/protocol';
-
-/**
- * Events cached per table. A table past this is skipped rather than truncated:
- * a truncated log replays to a plausible *wrong* status ("Open table" for a
- * finished match), while an absent one replays to a skeleton, which is honest.
- */
-export const GAME_CACHE_EVENT_LIMIT = 120;
-
-/** Matches CACHE_FLUSH_DELAY_MS in client.ts: one write per burst, not per event. */
-export const GAME_CACHE_FLUSH_MS = 200;
+import { GAME_CACHE_EVENT_LIMIT, GAME_CACHE_FLUSH_MS } from '@/constants/games/cache';
 
 const dirty = new Set<string>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;

@@ -2,13 +2,12 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  GA_MEASUREMENT_ID,
-  GTAG_SRC,
   analyticsLoaded,
   removeAnalyticsCookies,
   startAnalytics,
   stopAnalytics,
 } from '@/services/analytics/gtag';
+import { GA_MEASUREMENT_ID, GTAG_SRC } from '@/constants/analytics/gtag';
 import { googleScripts, optedOut, resetAnalyticsPage, simulateGtagCookies } from '@tests/support/analytics';
 
 beforeEach(resetAnalyticsPage);
@@ -77,6 +76,7 @@ describe('where Google Analytics may appear in the source', () => {
     const loaders = walk(SRC)
       .filter((p) => /googletagmanager\.com\/gtag|gtag\(\s*['"]config/.test(readFileSync(p, 'utf8')))
       .map((p) => relative(SRC, p));
-    expect(loaders).toEqual(['services/analytics/gtag.ts']);
+    // The script's URL is a constant (`constants/analytics/gtag.ts`); only the service loads it.
+    expect(loaders).toEqual(['constants/analytics/gtag.ts', 'services/analytics/gtag.ts']);
   });
 });

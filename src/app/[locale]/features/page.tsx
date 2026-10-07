@@ -4,9 +4,8 @@ import { Link } from '@/i18n/navigation';
 import Footer from '@/components/marketing/site/Footer';
 import Navbar from '@/components/marketing/site/Navbar';
 import ShootingStars from '@/components/ui/animations/ShootingStars';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import IntlScope from '@/i18n/IntlScope';
-import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
 import { standardPageMetadata } from '@/utils/seo/standard';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
@@ -60,8 +59,8 @@ const FEATURES = [
   },
 ] as const;
 
-export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
-  const locale = await pageLocale(params);
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const t = await getTranslations({ locale });
   return standardPageMetadata(t, locale, 'features', '/features', {
     // Search terms, not copy: these are what people type into a search box,
@@ -79,8 +78,8 @@ export async function generateMetadata({ params }: LocaleParams): Promise<Metada
   });
 }
 
-export default async function FeaturesPage({ params }: LocaleParams) {
-  const locale = await pageLocale(params);
+export default async function FeaturesPage() {
+  const locale = await getLocale();
   const t = await getTranslations({ locale });
 
   return (

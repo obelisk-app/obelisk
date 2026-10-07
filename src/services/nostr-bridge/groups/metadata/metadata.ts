@@ -8,13 +8,13 @@
  * without the clear every one of them is dropped (login-race Fix E).
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_GROUP_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_METADATA } from '@/constants/nostr/nip-kinds';
 import { cacheGet, cacheSet } from '../../cache/cache';
 import { groupEqual, parseGroupMetadataTags } from './group-metadata';
 import { StateStore } from '../../common/state-store';
 import type { BridgeContext } from '../../facade/context';
 import type { JsGroup } from '../../common/types';
-import { GROUP_SUB_WATCHDOG_MS } from './watchdog';
+import { GROUP_SUB_WATCHDOG_MS } from '@/constants/nostr-bridge/groups';
 import { MetadataEoseLadder } from './metadata-eose';
 import { GroupNesting } from './nesting';
 import { createGroup, editGroupMetadata } from './metadata-commands';

@@ -4,7 +4,7 @@
  * by the header pill's popover and the side column's relays widget, so the
  * two can never disagree about a relay.
  */
-import { normalizeRelayUrl } from '@/services/social/relays';
+import { normalizeRelayUrl } from '@/utils/social/relay-url';
 import type { RelayState, RelayStatus } from '@/services/social/relay-status';
 
 export interface RelayStatusRow {
@@ -13,15 +13,6 @@ export interface RelayStatusRow {
   status: RelayStatus | undefined;
   state: RelayState;
 }
-
-/** The dot colour for each relay state. */
-export const RELAY_STATE_DOT: Readonly<Record<RelayState, string>> = {
-  connected: 'bg-lc-green',
-  connecting: 'bg-amber-400 animate-pulse',
-  unknown: 'bg-lc-border',
-  failed: 'bg-red-500',
-  offline: 'bg-lc-muted',
-};
 
 /** One row per configured relay; a relay the watcher has not reported on yet is `unknown`. */
 export function relayStatusRows(

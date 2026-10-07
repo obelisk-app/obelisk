@@ -1,7 +1,7 @@
 'use client';
 
 import type { ZapTarget } from '@/store/chat/message-zap';
-import { ZAP_QUICK_AMOUNTS_SATS } from '@/services/wallet/zap-constants';
+import { ZAP_QUICK_AMOUNTS_SATS } from '@/constants/wallet/zap';
 import { useMessageZapForm } from '@/hooks/chat/zaps/useMessageZapForm';
 import Modal from '@/components/ui/overlays/Modal';
 import Input from '@/components/ui/forms/Input';

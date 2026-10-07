@@ -12,7 +12,7 @@
  */
 
 import { decodeEntities, syndicationToken, tweetIdFrom, type LinkPreview } from '@/utils/link-preview/link-preview';
-import { FETCH_TIMEOUT_MS, UA } from './safe-fetch';
+import { FETCH_TIMEOUT_MS, UA } from '@/constants/server/link-preview';
 
 interface SyndicationMedia {
   media_url_https?: string;

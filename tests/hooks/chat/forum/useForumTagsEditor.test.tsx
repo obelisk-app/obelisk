@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useForumTagsEditor } from '@/hooks/chat/forum/useForumTagsEditor';
-import { MAX_FORUM_TAGS } from '@/utils/chat/forum/forum-tags';
+import { MAX_FORUM_TAGS } from '@/constants/chat/forum';
 
 const tag = (id: string) => ({ id, name: id, emoji: null, color: null });
 

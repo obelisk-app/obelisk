@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import Reveal from '@/components/ui/animations/Reveal';
-import { TECH_STACK } from './landing-data';
+import { TECH_STACK } from '@/constants/marketing/landing';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 

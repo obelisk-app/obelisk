@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type React from 'react';
 import { useManageLayoutModal } from '@/hooks/shell/modals/layout/useManageLayoutModal';
-import { EMPTY_LAYOUT } from '@/services/relay/channel-layout';
+import { EMPTY_LAYOUT } from '@/constants/relay/channel-layout';
 import { groupFixture } from '@tests/support/mocks/nostr-bridge';
 import { LocaleProvider } from '@tests/support/intl';
 

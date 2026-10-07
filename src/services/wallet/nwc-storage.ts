@@ -16,9 +16,7 @@
  *   record is erased by the logout path (`src/services/common/reset.ts`).
  */
 import { VaultError, isVaultAvailable, isSealedBox, openSessionVault, type SealedBox } from '@/lib/crypto/session-vault';
-
-export const NWC_RECORD_PREFIX = 'obelisk-dex/nwc:';
-export const NWC_VAULT_KEY_ID = 'wallet-key';
+import { NWC_RECORD_PREFIX, NWC_VAULT_KEY_ID } from '@/constants/wallet/nwc-storage';
 
 /** What the box holds. The alias is cosmetic; the URI is the credential. */
 export interface SealedNwcWallet {

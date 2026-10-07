@@ -6,7 +6,7 @@
  * that fits in a toolbar: how many of your relays are answering, and the
  * worst state among them, which is what decides the colour.
  */
-import { normalizeRelayUrl } from './relays';
+import { normalizeRelayUrl } from '@/utils/social/relay-url';
 import type { RelayState, RelayStatus } from './relay-status-store';
 
 export type RelaySummary = {

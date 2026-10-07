@@ -17,9 +17,9 @@ export interface AnchorBox {
 }
 
 /** Keeps the panel off the viewport edges. */
-export const POPOVER_MARGIN = 8;
+const POPOVER_MARGIN = 8;
 /** Space between the anchor and the panel. */
-export const POPOVER_GAP = 4;
+const POPOVER_GAP = 4;
 
 /**
  * Where a `width` x `height` panel goes next to `anchor` inside a viewport:

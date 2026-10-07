@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { BRIDGE_MOCK_PUBKEY, userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
-import { openSettings } from '@/utils/settings/open-settings';
+import { openSettings } from '@/services/settings/open-settings';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
 
 vi.mock('@/app/[locale]/app/user-panel/UserPanel', () => ({

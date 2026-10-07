@@ -3,18 +3,16 @@ import { useMyPubkey } from '@/services/nostr-bridge';
 import { setPreference } from '@/services/preferences/preferences';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import {
-  DEFAULT_SOCIAL_RELAYS,
-  SOCIAL_RELAY_MAX,
   invalidRelayIndexes,
   normalizeSocialRelays,
 } from '@/services/social/relays';
+import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX } from '@/constants/social/relays';
 import { applySocialRelays, importNip65Relays } from '@/services/social/pool';
 import { getRelayStatuses, subscribeRelayStatus, watchRelays } from '@/services/social/relay-status';
 
 export type SocialRelayDraftStatus = 'idle' | 'saved' | 'invalid' | 'importing' | 'import-empty';
 
 import { relayKey } from '@/utils/settings/social-relays';
-export { relayKey } from '@/utils/settings/social-relays';
 
 /**
  * The editable copy of `preferences.socialRelays` behind SocialRelaySettings:

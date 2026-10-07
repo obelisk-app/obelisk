@@ -1,7 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { embedBadge, embedHtmlBanner, embedOg, OG_IMAGE_URL } from '@/utils/media-kit/content';
+import { embedBadge, embedHtmlBanner, embedOg } from '@/utils/media-kit/content';
+import { OG_IMAGE_URL } from '@/constants/media-kit/content';
 import { CodeBlock } from './CodeBlock';
 import { EmbedPreview } from './EmbedPreview';
 import { Section } from './Section';

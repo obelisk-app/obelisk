@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_IMAGE_BYTES, validateImage, withPickedFile, withTypedUrl } from '@/utils/settings/profile-image';
+import { validateImage, withPickedFile, withTypedUrl } from '@/utils/settings/profile-image';
+import { MAX_IMAGE_BYTES } from '@/constants/settings/profile-image';
 
 const file = (type: string, size: number) => {
   const f = new File(['x'], 'f', { type });

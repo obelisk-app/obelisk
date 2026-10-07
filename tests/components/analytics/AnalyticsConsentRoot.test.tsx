@@ -3,7 +3,8 @@ import { renderToString } from 'react-dom/server';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { LocaleProvider, translator } from '@tests/support/intl';
 import AnalyticsConsentRoot from '@/components/analytics/AnalyticsConsentRoot';
-import { ANALYTICS_CONSENT_KEY, reviewAnalyticsConsent } from '@/services/analytics/consent';
+import { reviewAnalyticsConsent } from '@/services/analytics/consent';
+import { ANALYTICS_CONSENT_KEY } from '@/constants/analytics/consent';
 import { SCOPES } from '@/i18n/modules';
 import { googleScripts, optedOut, resetAnalyticsPage, simulateGtagCookies } from '@tests/support/analytics';
 

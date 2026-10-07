@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent } from '@/lib/games/protocol/protocol';
 import { MAX_GARBAGE_LINES } from '@/lib/games/stacker/engine';
-import { KIND_GAME } from '@/utils/nostr/nip-kinds';
+import { KIND_GAME } from '@/constants/nostr/nip-kinds';
 
 const CH = 'channel-1';
 const GAME_ID = 'g'.repeat(64);

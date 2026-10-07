@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { BRAND_NAME, LINKS, MONO_WORDMARK, OG_IMAGE_URL } from '@/utils/media-kit/content';
+import { BRAND_NAME, LINKS, MONO_WORDMARK, OG_IMAGE_URL } from '@/constants/media-kit/content';
 import { Section } from './Section';
 import { BannerCard } from './BannerCard';
 import { GitHubSocialBanner, HeroBanner, LinkedInBanner, SquareBanner, XHeaderBanner } from './banners';

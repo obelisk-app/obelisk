@@ -218,7 +218,7 @@ describe('ProfilePopover', () => {
 
   it('my own card offers Edit profile and Preferences, and no zap', async () => {
     me.pubkey = PUBKEY;
-    const { OPEN_SETTINGS_EVENT } = await import('@/utils/settings/open-settings');
+    const { OPEN_SETTINGS_EVENT } = await import('@/constants/settings/open-settings');
     const seen: string[] = [];
     const listener = (e: Event) => seen.push((e as CustomEvent).detail.section);
     window.addEventListener(OPEN_SETTINGS_EVENT, listener);

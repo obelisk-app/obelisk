@@ -1,4 +1,4 @@
-import { MAX_IMAGE_BYTES } from '@/utils/attachments/attachments-limits';
+import { MAX_IMAGE_BYTES } from '@/constants/attachments/attachments-limits';
 
 /** Why a picked profile picture or banner cannot be used. */
 export type ProfileImageProblem = 'not-image' | 'too-large';

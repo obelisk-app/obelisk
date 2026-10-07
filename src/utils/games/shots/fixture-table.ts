@@ -30,7 +30,7 @@ const CHANNEL = 'obelisk-guides-channel';
 const GAME_ID = 'f'.repeat(64);
 
 /** Fixed so nothing in here ever reads the wall clock. */
-export const T0 = 1_760_000_000;
+const T0 = 1_760_000_000;
 
 /**
  * A client that publishes and re-derives, minus the relay.

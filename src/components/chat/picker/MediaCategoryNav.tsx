@@ -1,7 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { MEDIA_CATEGORIES, MEDIA_CATEGORY_LABEL, type MediaCategory } from '@/utils/chat/picker/media-catalog';
+import type { MediaCategory } from '@/utils/chat/picker/media-catalog';
+import { MEDIA_CATEGORIES, MEDIA_CATEGORY_LABEL } from '@/constants/chat/picker';
 import { MediaCategoryGlyph } from './MediaCategoryGlyph';
 
 /** The GIF / sticker category bar. */

@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type FocusEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { useDismiss } from '@/hooks/common/useDismiss';
-import { notifySavedAccountChanged, useSavedAccount } from '@/hooks/marketing/useSavedAccount';
+import { useSavedAccount } from '@/hooks/marketing/useSavedAccount';
+import { notifySavedAccountChanged } from '@/services/marketing/saved-account';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 
 /**

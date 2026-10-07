@@ -31,7 +31,7 @@ import type { RoomState, VoiceClientEvents } from './room-state';
 import { RoomMembership } from './membership';
 import { assembleVoiceRoom } from './client-assembly';
 import { TopologySwitch } from './topology-switch';
-import { VoiceError } from './errors';
+import { VoiceError } from '@/utils/voice/errors';
 import type { VoiceClientOptions } from './client-options';
 import { VoiceClientSurface } from './client-surface';
 // The owner-facing types live with the state they describe.
@@ -40,7 +40,7 @@ export type { VoiceClientOptions } from './client-options';
 import { emptyVoiceMetrics, type VoiceMetrics } from './metrics';
 import { setVoiceMetricsRef } from './debug';
 // Kept on the client's public surface for existing importers.
-export { SIGNER_PEER_BUDGET, type VoiceSigner } from './constants';
+export { SIGNER_PEER_BUDGET, type VoiceSigner } from '@/constants/voice/client';
 import { installBeforeUnloadHandler, type UnloadHandlerHandle } from './failure-handlers';
 
 /**

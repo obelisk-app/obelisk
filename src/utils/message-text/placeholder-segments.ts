@@ -1,4 +1,5 @@
-import { MENTION_PLACEHOLDER_REGEX, EVERYONE_PLACEHOLDER, type MentionData } from '@/utils/message-text/markdown';
+import type { MentionData } from '@/utils/message-text/markdown';
+import { MENTION_PLACEHOLDER_REGEX, EVERYONE_PLACEHOLDER } from '@/constants/message-text/markdown';
 import { customEmojiPlaceholderRegex } from '@/utils/message-text/emoji-shortcodes';
 
 export type MentionMap = Map<string, MentionData>;

@@ -1,12 +1,14 @@
 /**
- * next-intl's per-request config: the locale comes from the `[locale]`
- * segment (next-intl's middleware rewrites `/app` to `/en/app` internally),
- * and the server gets every module of that one language. What reaches the
- * browser is decided per route by `IntlScope`.
+ * next-intl's per-request config. The language is read here, once, from the
+ * `[locale]` root param (`next/root-params`; `[locale]/layout.tsx` is a root
+ * layout, and next-intl's proxy rewrites `/app` to `/en/app` internally), so
+ * no page or layout hands it on. The server gets every module of that one
+ * language; what reaches the browser is decided per route by `IntlScope`.
  */
 
 import { getRequestConfig } from 'next-intl/server';
 import { hasLocale } from 'next-intl';
+import { locale as segmentLocale } from 'next/root-params';
 import { routing } from './routing';
 import { MODULES, type Module } from './modules';
 import type { Locale } from './index';
@@ -21,12 +23,14 @@ export async function loadMessages(locale: Locale): Promise<Record<Module, Recor
 }
 
 /**
- * An explicit `getTranslations({ locale })` (metadata, OG images, the
- * manifest) wins over the segment; outside `[locale]` (the dev harness,
- * the manifest) there is no segment and English is used.
+ * An explicit `getTranslations({ locale })` (OG images, the manifest, the
+ * root 404) wins over the segment, and is the only way a route handler
+ * names one, since root params are not readable there. Outside `[locale]`
+ * (the dev harness) there is no segment, and a segment that is not one of
+ * ours (the layout 404s it) reads as English too.
  */
-export default getRequestConfig(async ({ requestLocale, locale: explicit }) => {
-  const requested = explicit ?? (await requestLocale);
+export default getRequestConfig(async ({ locale: explicit }) => {
+  const requested: string | undefined = explicit ?? (await segmentLocale());
   const locale = hasLocale(routing.locales, requested) ? requested : routing.defaultLocale;
   return { locale, messages: await loadMessages(locale), timeZone: 'UTC' };
 });

@@ -7,7 +7,7 @@
  */
 import { CodedError, codeOrMessage, type ActivityCode } from '@/utils/errors/codes';
 import { finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
-import { KIND_VOICE_PRESENCE } from '@/utils/nostr/nip-kinds';
+import { KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
 import { failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
 import { pushRelayDebug } from '../relay/relay-debug';
 import { eventKindDescription } from '../common/kind-description';

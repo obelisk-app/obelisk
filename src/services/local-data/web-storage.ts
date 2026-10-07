@@ -9,9 +9,6 @@ import type { LocalDataCategoryId } from './types';
 
 type WebArea = 'localStorage' | 'sessionStorage';
 
-/** What the error panel's "clear cache" wipes: everything the relays send again. */
-export const CACHE_CATEGORIES: ReadonlyArray<LocalDataCategoryId> = ['channels', 'profiles', 'readState', 'dms'];
-
 function storageFor(area: WebArea): Storage | null {
   try {
     if (typeof window === 'undefined') return null;

@@ -3,7 +3,7 @@
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
 import type { JsMediaKind, JsMediaPack } from '@/services/nostr-bridge';
-import { KIND_EMOJI_SET } from '@/utils/nostr/nip-kinds';
+import { KIND_EMOJI_SET } from '@/constants/nostr/nip-kinds';
 import {
   customEmojiMapFromTags,
   isValidCustomEmojiName,
@@ -12,6 +12,7 @@ import {
 } from '@/utils/media/tags/custom-emoji-tags';
 import { mediaItemsFromPacks } from '@/utils/media/tags/media-packs';
 import { inferMediaKind } from '@/utils/media/tags/media-kind';
+import { EMPTY_RELAY_EMOJI_SET } from '@/constants/relay/relay-emojis';
 
 export interface RelayEmoji {
   readonly name: string;
@@ -28,13 +29,6 @@ export interface RelayEmojiSet {
   readonly author?: string;
   readonly eventId?: string;
 }
-
-export const EMPTY_RELAY_EMOJI_SET: RelayEmojiSet = {
-  title: '',
-  emojis: [],
-  packAddresses: [],
-  updatedAt: 0,
-};
 
 const relayEmojiLatestAt = new Map<string, number>();
 const relayEmojiListeners = new Map<string, Set<(set: RelayEmojiSet) => void>>();

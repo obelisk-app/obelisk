@@ -13,12 +13,12 @@
  */
 
 import { createKeyedObservable, fetchEngagement, type Engagement } from '@nostr-wot/data';
-import { KIND_TEXT_NOTE } from '@/utils/nostr/nip-kinds';
+import { KIND_TEXT_NOTE } from '@/constants/nostr/nip-kinds';
 import { querySocial } from './pool';
 
 export type NoteCounts = Engagement & { replyCount: number };
 
-export const ZERO_COUNTS: NoteCounts = {
+const ZERO_COUNTS: NoteCounts = {
   reactionCount: 0,
   repostCount: 0,
   zapTotalSats: 0,

@@ -32,18 +32,15 @@
  * (`preferences.backgroundRelayWatch`).
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { createLocalStore } from '@/utils/storage/local-store';
+import { createLocalStore } from '@/services/common/local-store';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-import { KIND_GROUP_CHAT_MESSAGE } from '@/utils/nostr/nip-kinds';
-
-/** How many non-active relays stay watched. */
-export const BACKGROUND_RELAY_LIMIT = 3;
-/** MRU length: the active relay plus the watched ones. */
-export const RECENT_RELAY_CAP = BACKGROUND_RELAY_LIMIT + 1;
-/** How far back a (re)opened watch looks, at most. */
-export const BACKGROUND_LOOKBACK_S = 7 * 24 * 3600;
-/** Backoff before reopening a stream the hub gave up on. */
-export const BACKGROUND_RETRY_MS = 30_000;
+import { KIND_GROUP_CHAT_MESSAGE } from '@/constants/nostr/nip-kinds';
+import {
+  BACKGROUND_RELAY_LIMIT,
+  RECENT_RELAY_CAP,
+  BACKGROUND_LOOKBACK_S,
+  BACKGROUND_RETRY_MS,
+} from '@/constants/nostr-bridge/relay';
 
 // -- MRU -----------------------------------------------------------------
 

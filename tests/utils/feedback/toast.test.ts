@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { TOAST_AUTO_DISMISS_MS, toastRemainingMs } from '@/utils/feedback/toast';
+import { toastRemainingMs } from '@/utils/feedback/toast';
+import { TOAST_AUTO_DISMISS_MS } from '@/constants/feedback/toast';
 
 describe('toastRemainingMs', () => {
   it('counts down from when the toast was pushed and never goes below zero', () => {

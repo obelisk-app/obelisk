@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { relayWebsiteUrl } from '@/utils/relay-url/normalize';
 import { shortHost } from '@/utils/relay-url/url-host';
-import { openSettings } from '@/utils/settings/open-settings';
+import { openSettings } from '@/services/settings/open-settings';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { useRelayHeaderInfo } from '@/hooks/relay/info/useRelayHeaderInfo';
 import type { DmNotification, MentionNotification } from '@/store/notifications';

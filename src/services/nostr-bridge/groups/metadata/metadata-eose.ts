@@ -7,7 +7,7 @@
  * once. Pure move from `groups/metadata.ts`.
  */
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_GROUP_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_METADATA } from '@/constants/nostr/nip-kinds';
 import type { BridgeContext } from '../../facade/context';
 import type { StateStore } from '../../common/state-store';
 import type { JsGroup } from '../../common/types';

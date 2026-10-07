@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RELAY_LIST_CACHE_MAX, RELAY_LIST_NEGATIVE_TTL_MS, RELAY_LIST_TTL_MS, RelayListCache } from '@/services/nostr-bridge/dm/relay-cache';
+import { RelayListCache } from '@/services/nostr-bridge/dm/relay-cache';
+import { RELAY_LIST_CACHE_MAX, RELAY_LIST_NEGATIVE_TTL_MS, RELAY_LIST_TTL_MS } from '@/constants/nostr-bridge/dm';
 
 const pk = (i: number) => i.toString(16).padStart(64, '0');
 

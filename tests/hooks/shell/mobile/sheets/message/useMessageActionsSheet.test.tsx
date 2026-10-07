@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { useMessageActionsSheet } from '@/hooks/shell/mobile/sheets/message/useMessageActionsSheet';
-import { REACT_EVENT } from '@/services/shell/mobile/message-actions';
+import { REACT_EVENT } from '@/constants/shell/mobile';
 
 const MSG = { id: 'm1', pubkey: 'b'.repeat(64), content: 'hi' };
 

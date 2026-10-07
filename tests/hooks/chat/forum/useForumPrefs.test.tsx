@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_FORUM_PREFS, forumPrefsKey, legacyMobileForumPrefsKey } from '@/services/chat/forum/forum-prefs';
+import { forumPrefsKey, legacyMobileForumPrefsKey } from '@/services/chat/forum/forum-prefs';
+import { DEFAULT_FORUM_PREFS } from '@/constants/chat/forum';
 import { useForumPrefs } from '@/hooks/chat/forum/useForumPrefs';
 
 describe('useForumPrefs', () => {

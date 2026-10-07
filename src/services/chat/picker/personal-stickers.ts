@@ -1,5 +1,5 @@
 import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
-import { createLocalStore } from '@/utils/storage/local-store';
+import { createLocalStore } from '@/services/common/local-store';
 
 const store = createLocalStore<CustomEmojiMap>('obelisk:personal-stickers', {});
 

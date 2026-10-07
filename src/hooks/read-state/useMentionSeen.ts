@@ -33,12 +33,13 @@ import { isUserWatchingChannel } from '@/services/read-state/read-gates';
 import { useChatStore } from '@/store/chat';
 import { useNotificationsStore } from '@/store/notifications';
 import { useMentionNotifications } from '@/hooks/notifications/useNotificationSelectors';
+import {
+  MENTION_SEEN_THRESHOLD,
+  MENTION_SEEN_VIEWPORT_SHARE,
+  MENTION_SEEN_DWELL_MS,
+  MENTION_MISSING_DWELL_MS,
+} from '@/constants/read-state/mention-seen';
 
-export const MENTION_SEEN_THRESHOLD = 0.6;
-/** A row taller than the viewport counts once it covers this share of it. */
-export const MENTION_SEEN_VIEWPORT_SHARE = 0.4;
-export const MENTION_SEEN_DWELL_MS = 1000;
-export const MENTION_MISSING_DWELL_MS = 2000;
 const THRESHOLDS = Array.from({ length: 21 }, (_, i) => i / 20);
 const TICK_MS = 250;
 const HEX_ID = /^[0-9a-f]{64}$/i;

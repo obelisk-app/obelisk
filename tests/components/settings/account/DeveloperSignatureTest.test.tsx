@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { OBELISK_SIGNING_KINDS } from '@/utils/nostr/nostr-signing-kinds';
+import { OBELISK_SIGNING_KINDS } from '@/constants/nostr/nostr-signing-kinds';
 import DeveloperSignatureTest from '@/components/settings/account/DeveloperSignatureTest';
 import { LocaleProvider } from '@tests/support/intl';
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { bankRatesText, tradePartners, TRADE_TAKE_MAX } from '@/utils/games/vesta/vesta-trade';
+import { bankRatesText, tradePartners } from '@/utils/games/vesta/vesta-trade';
+import { TRADE_TAKE_MAX } from '@/constants/games/vesta';
 
 describe('tradePartners', () => {
   it('is every seat but the acting one, with its player number', () => {

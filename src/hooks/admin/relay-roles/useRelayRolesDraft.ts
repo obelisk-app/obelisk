@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { confirmDialog } from '@/services/common/confirm-dialog';
-import { retier, serializeRoles } from '@/services/relay/relay-roles-model';
+import { retier, serializeRoles } from '@/utils/relay/relay-roles-model';
 import {
   DEFAULT_ROLE_COLOR,
   MAX_ROLES,

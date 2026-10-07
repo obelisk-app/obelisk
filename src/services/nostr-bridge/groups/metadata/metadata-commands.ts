@@ -3,7 +3,7 @@
  * it) and edit metadata (kind 9002). Split from `./metadata.ts` (round 16)
  * so that file holds the store and its ingest.
  */
-import { KIND_GROUP_CREATE, KIND_GROUP_EDIT_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_CREATE, KIND_GROUP_EDIT_METADATA } from '@/constants/nostr/nip-kinds';
 import { generateGroupId } from '../../common/hex';
 import type { BridgeContext } from '../../facade/context';
 import { editMetadataTags, type CreateGroupOptions, type EditGroupMetadataOptions } from './metadata-tags';

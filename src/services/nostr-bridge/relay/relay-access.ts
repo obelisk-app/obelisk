@@ -8,7 +8,7 @@
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { BoundedMap } from '@/lib/relay-hub';
-import { KIND_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_METADATA } from '@/constants/nostr/nip-kinds';
 import { dismissActivity, failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
 import type { ActivityCode, ErrorCode, EventKindLabel } from '@/utils/errors/codes';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
@@ -20,7 +20,7 @@ import type { RelayAccessState, Unsubscribe } from '../common/types';
 // `subscribeWatched` retry path heals most NIP-42 AUTH races in <1s; a 4s
 // soak hides the banner for those, while still surfacing genuinely persistent
 // auth/whitelist problems within a few seconds.
-export const RELAY_ACCESS_SOAK_MS = 4000;
+const RELAY_ACCESS_SOAK_MS = 4000;
 
 export type RelayAccessContext = Pick<
   BridgeContext,

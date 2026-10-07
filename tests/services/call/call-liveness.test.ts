@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CallLiveness } from '@/services/call/call-liveness';
-import { CONNECT_DEADLINE_MS, MAX_REBUILDS, RECONNECT_GIVE_UP_MS } from '@/services/call/session-config';
+import { CONNECT_DEADLINE_MS, MAX_REBUILDS, RECONNECT_GIVE_UP_MS } from '@/constants/call/session-config';
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());

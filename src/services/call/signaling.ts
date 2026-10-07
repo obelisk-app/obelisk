@@ -40,19 +40,17 @@
 
 import { finalizeEvent, getPublicKey, type Event as NostrEvent, type Filter } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
-import { KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
+import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
 import type { VoiceSignalPayload } from '@/services/voice/types';
 import { createCallPool, pageHubForCalls, type CallPoolLike } from './call-pool';
 import { ReliableOutbox, type Body, type OutboxBatch } from './signal-outbox';
+import { DM_CALL_SIGNAL_TAG, READY_TIMEOUT_MS } from '@/constants/call/signaling';
 
 export type { CallPoolLike } from './call-pool';
-export { FLUSH_MS, MAX_ATTEMPTS, RESEND_MS } from './signal-outbox';
+export { FLUSH_MS, MAX_ATTEMPTS, RESEND_MS } from '@/constants/call/signal-outbox';
 
-export const DM_CALL_SIGNAL_TAG = 'obelisk-dm-call';
 /** NIP-40 lifetime of one negotiation event. */
 const SIGNAL_TTL_S = 120;
-/** `ready` resolves at the latest after this, EOSE or not. */
-export const READY_TIMEOUT_MS = 4000;
 const SEEN_MAX = 2048;
 
 interface Wire extends OutboxBatch {

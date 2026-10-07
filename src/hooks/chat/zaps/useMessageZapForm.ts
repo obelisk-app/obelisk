@@ -3,7 +3,7 @@
 import { useId, useState } from 'react';
 import type { ZapTarget } from '@/store/chat/message-zap';
 import { useUserMetadata } from '@/services/nostr-bridge';
-import { DEFAULT_ZAP_AMOUNT_SATS } from '@/services/wallet/zap-constants';
+import { DEFAULT_ZAP_AMOUNT_SATS } from '@/constants/wallet/zap';
 import { useSendZap } from './useSendZap';
 
 /**

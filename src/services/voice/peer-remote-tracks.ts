@@ -6,8 +6,7 @@
  */
 import type { VoiceTrackKind } from './types';
 import type { PeerEvents } from './peer-types';
-
-export const REMOTE_VIDEO_MUTE_GRACE_MS = 2500;
+import { REMOTE_VIDEO_MUTE_GRACE_MS } from '@/constants/voice/peer-remote-tracks';
 
 export class PeerRemoteTracks {
   private readonly kinds = new Map<string, VoiceTrackKind>();

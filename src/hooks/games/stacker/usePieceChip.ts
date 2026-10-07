@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 import type { PieceKind } from '@/lib/games/stacker/engine';
-import { PIECE_COLORS } from '@/utils/games/stacker/piece-colors';
+import { PIECE_COLORS, CHIP_COLUMNS, CHIP_ROWS } from '@/constants/games/stacker';
 import { canvasDpr, drawConnected } from '@/utils/games/stacker/block-paint';
-import { CHIP_COLUMNS, CHIP_ROWS, pieceChipCells, pieceColor } from '@/utils/games/stacker/piece-chip-cells';
+import { pieceChipCells, pieceColor } from '@/utils/games/stacker/piece-chip-cells';
 
 /**
  * A piece in miniature, for the next queue and the hold slot: sizes the

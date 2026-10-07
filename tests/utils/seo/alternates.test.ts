@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { HREFLANG, OG_LOCALE, absoluteUrl, languageAlternates, localizedAlternates, ogLocales } from '@/utils/seo/alternates';
+import { absoluteUrl, languageAlternates, localizedAlternates, ogLocales } from '@/utils/seo/alternates';
+import { HREFLANG, OG_LOCALE } from '@/constants/seo/alternates';
 
 describe('canonical and hreflang', () => {
   it('the canonical is the page in its own language, absolute, without a trailing slash', () => {

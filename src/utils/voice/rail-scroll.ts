@@ -4,9 +4,6 @@
  * while there is more than a few pixels left to scroll that way.
  */
 
-/** The media query under which the rail is a horizontal strip. */
-export const RAIL_HORIZONTAL_QUERY = '(max-width: 767px)';
-
 /** Slack, in pixels, before an end counts as reached. */
 const EDGE = 4;
 

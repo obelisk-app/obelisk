@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { MessageKey } from '@/i18n/keys';
-import { SHORT_COPY } from '@/utils/media-kit/content';
+import { SHORT_COPY } from '@/constants/media-kit/content';
 
 /**
  * The media kit's quick-use phrases with their text resolved: the brand

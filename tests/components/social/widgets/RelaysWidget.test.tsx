@@ -16,7 +16,7 @@ vi.mock('@/services/social/relay-status', () => ({
   subscribeRelayStatus: () => () => {},
   probeRelay: mocks.probeRelay,
 }));
-vi.mock('@/utils/settings/open-settings', () => ({ openSettings: mocks.openSettings }));
+vi.mock('@/services/settings/open-settings', () => ({ openSettings: mocks.openSettings }));
 
 import RelaysWidget from '@/components/social/widgets/RelaysWidget';
 

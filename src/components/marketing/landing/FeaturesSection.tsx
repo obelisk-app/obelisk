@@ -2,7 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import Reveal from '@/components/ui/animations/Reveal';
-import { FEATURE_KEYS } from './landing-data';
+import FeatureGlyph from './FeatureGlyph';
+import { FEATURE_KEYS } from '@/constants/marketing/landing';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
@@ -26,7 +27,7 @@ export default function FeaturesSection() {
           {FEATURE_KEYS.map((f) => (
             <div key={f.titleKey} className="lc-card p-6 group">
               <div className="w-12 h-12 rounded-xl bg-lc-olive/50 flex items-center justify-center text-lc-green mb-4 group-hover:bg-lc-olive transition-colors">
-                {f.icon}
+                <FeatureGlyph feature={f.id} />
               </div>
               <Heading as="h3" variant="card" className="mb-2">{t(f.titleKey)}</Heading>
               <Text as="p" variant="muted" className="leading-relaxed">{t(f.descKey)}</Text>

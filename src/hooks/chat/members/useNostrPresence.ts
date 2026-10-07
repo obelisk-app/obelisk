@@ -4,9 +4,8 @@ import { useEffect } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { isImportableRelayUrl, useBridge } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
-
-/** A user counts as recently active if they published on this group relay in this window. */
-export const PRESENCE_WINDOW_MS = 15 * 60 * 1000;
+import { presenceActivityKey } from '@/utils/chat/members/presence';
+import { PRESENCE_WINDOW_MS } from '@/constants/chat/members';
 
 /** How often the UI re-evaluates the window (so users fade to offline). */
 const TICK_INTERVAL_MS = 30 * 1000;
@@ -22,11 +21,6 @@ const ACTIVITY_KINDS = [
   9735,  // zap receipt
   30023, // long-form
 ];
-
-export function presenceActivityKey(relayUrl: string, pubkey: string): string {
-  const relay = relayUrl.endsWith('/') ? relayUrl.slice(0, -1) : relayUrl;
-  return relay.toLowerCase() + ':' + pubkey.toLowerCase();
-}
 
 /** Subscribes to recent activity from group members on this group's relay. */
 export function useNostrPresence(pubkeys: string[], relayUrl: string): void {

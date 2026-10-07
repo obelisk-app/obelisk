@@ -1,37 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { hexToNpub } from '@nostr-wot/data';
 import { nostrActions, useUserMetadata } from '@/services/nostr-bridge';
 import { displayNameFor } from '@/utils/identity/display-name';
-import type { SettingsSection } from '@/utils/settings/open-settings';
-
-export type PanelAnchor = { x: number; y: number; placement?: 'top' | 'bottom' };
-
-/**
- * Where the profile popover sits: fixed bottom-left of the viewport by
- * default (Discord-style), or above/below an anchor kept 8px inside the
- * window.
- */
-export function panelPositionStyle(
-  anchor: PanelAnchor | undefined,
-  viewport: { width: number; height: number },
-): React.CSSProperties {
-  return anchor
-    ? {
-        position: 'fixed',
-        left: Math.max(8, Math.min(viewport.width - 348, anchor.x)),
-        ...(anchor.placement === 'top'
-          ? { bottom: viewport.height - anchor.y + 8 }
-          : { top: anchor.y + 8 }),
-      }
-    : { position: 'fixed', left: 8, bottom: 72 };
-}
-
-/** `npub1…` for a hex key, or `null` when it is not one. */
-export function safeNpub(pubkey: string): string | null {
-  try { return hexToNpub(pubkey); } catch { return null; }
-}
+import { npubOrNull } from '@/utils/identity/short-npub';
+import type { SettingsSection } from '@/services/settings/open-settings';
 
 /**
  * The user panel's side effects: fetch the profile, and while the
@@ -75,7 +48,7 @@ export function useUserPanel({ pubkey, onClose, onLogout, initialEditing, initia
   return {
     meta,
     displayName: displayNameFor(pubkey, meta),
-    npub: safeNpub(pubkey),
+    npub: npubOrNull(pubkey),
     editing,
     startEditing: () => setEditing(true),
     /** Settings saved or dismissed: close them and the panel. */

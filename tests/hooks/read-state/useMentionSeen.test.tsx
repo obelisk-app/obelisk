@@ -13,7 +13,8 @@ vi.mock('@/services/nostr-bridge', async () => {
   });
 });
 
-import { MENTION_MISSING_DWELL_MS, MENTION_SEEN_DWELL_MS, useMentionSeen } from '@/hooks/read-state/useMentionSeen';
+import { useMentionSeen } from '@/hooks/read-state/useMentionSeen';
+import { MENTION_MISSING_DWELL_MS, MENTION_SEEN_DWELL_MS } from '@/constants/read-state/mention-seen';
 import { useChatStore } from '@/store/chat';
 import { NOTIFICATIONS_INITIAL, getUnreadMentionCount, useNotificationsStore } from '@/store/notifications';
 

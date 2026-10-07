@@ -3,8 +3,8 @@ import { act, renderHook } from '@testing-library/react';
 import type { KeyboardEvent } from 'react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
-import { EMPTY_LAYOUT } from '@/services/relay/channel-layout';
-import { NO_CATEGORY } from '@/utils/shell/mobile/category-options';
+import { EMPTY_LAYOUT } from '@/constants/relay/channel-layout';
+import { NO_CATEGORY } from '@/constants/shell/mobile';
 import { useManageCategoriesSheet } from '@/hooks/shell/mobile/sheets/layout/useManageCategoriesSheet';
 import { group } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 

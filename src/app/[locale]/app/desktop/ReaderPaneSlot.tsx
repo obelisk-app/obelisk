@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ReaderPaneHeader } from '../panes/reader/ReaderPane';
 import { ReaderPaneContent } from '../panes/reader/ReaderPaneContent';
 import { ResizablePane } from './ResizablePane';
-import { THREAD_PANE_KEY } from '@/utils/shell/desktop/desktop-layout';
+import { THREAD_PANE_KEY } from '@/constants/shell/desktop';
 
 type Props = {
   article: NostrEvent | null;

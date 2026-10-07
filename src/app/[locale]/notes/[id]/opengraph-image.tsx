@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 import OgCard from '@/components/seo/OgCard';
 import { noteCard } from '@/services/server/og/og-cards';
-import { OG_SIZE } from '@/utils/seo/og';
+import { OG_SIZE } from '@/constants/seo/og';
 
 export const runtime = 'nodejs';
 export const size = OG_SIZE;

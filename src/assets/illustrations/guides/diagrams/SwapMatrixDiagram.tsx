@@ -1,8 +1,10 @@
 import { useTranslations } from 'next-intl';
 import {
-  SWAP_COL_W as COL_W, SWAP_COL_X as COL_X, SWAP_LABEL_X as LABEL_X, SWAP_ROW_HEIGHT as ROW_HEIGHT, SWAP_TOP as TOP,
-  swapMatrixHeight, swapMatrixRows, type SwapRow,
+  swapMatrixHeight,
+  swapMatrixRows,
+  type SwapRow,
 } from '@/utils/guides/diagram-art';
+import { SWAP_COL_W as COL_W, SWAP_COL_X as COL_X, SWAP_LABEL_X as LABEL_X, SWAP_ROW_HEIGHT as ROW_HEIGHT, SWAP_TOP as TOP } from '@/constants/guides/diagram-art';
 
 export default function SwapMatrixDiagram() {
   const t = useTranslations();

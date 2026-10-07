@@ -7,12 +7,13 @@ import { create } from 'zustand';
 import { generateSecretKey } from 'nostr-tools';
 import { getPreferences } from '@/services/preferences/preferences';
 import { startRingback } from '@/services/notifications/alert';
-import { CALL_RING_TIMEOUT_MS, newCallId } from '@/services/call/protocol';
+import { newCallId } from '@/services/call/protocol';
+import { CALL_RING_TIMEOUT_MS } from '@/constants/call/protocol';
 import type { DmCallMediaState, DmCallPhase, DmCallSession } from '@/services/call/session';
 import { loadDmCallSession } from '@/services/call/load-session';
 import { iceTransportPolicyFor, leaveGroupVoice, lost, send } from './dm-call-policy';
 import { clearRinging, rt } from './dm-call-runtime';
-import { mediaDeviceProblem, type MediaDeviceProblem } from '@/services/voice/errors';
+import { mediaDeviceProblem, type MediaDeviceProblem } from '@/utils/voice/errors';
 
 export type DmCallStatus = 'idle' | 'outgoing' | 'incoming' | 'connecting' | 'active' | 'reconnecting' | 'ended';
 

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { standardPageMetadata } from '@/utils/seo/standard';
 import HelpIndex from './HelpIndex';
 
@@ -9,8 +8,8 @@ import HelpIndex from './HelpIndex';
  * template for every page under it, and its card would be overridden by the
  * `opengraph-image.tsx` beside it.
  */
-export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
-  const locale = await pageLocale(params);
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   return standardPageMetadata(await getTranslations({ locale }), locale, 'help', '/help', {
     // Search terms, not copy (docs/i18n.md): they stay English.
     keywords: [
@@ -20,7 +19,6 @@ export async function generateMetadata({ params }: LocaleParams): Promise<Metada
   });
 }
 
-export default async function Page({ params }: LocaleParams) {
-  await pageLocale(params);
+export default async function Page() {
   return <HelpIndex />;
 }

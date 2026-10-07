@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { EMPTY_RELAY_EMOJI_SET, subscribeRelayEmojiSet, type RelayEmojiSet } from '@/services/relay/relay-emojis';
+import { subscribeRelayEmojiSet, type RelayEmojiSet } from '@/services/relay/relay-emojis';
+import { EMPTY_RELAY_EMOJI_SET } from '@/constants/relay/relay-emojis';
 
 /**
  * The operator's emoji set for `relayUrl`, or the empty set until it arrives.

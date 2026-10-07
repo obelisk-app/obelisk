@@ -22,7 +22,7 @@
 import { DEFAULT_LOCALE, type Locale } from '@/i18n';
 
 /** The BCP-47 tag `Intl` formats with, per language. */
-export const INTL_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-AR', pt: 'pt-BR' };
+const INTL_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-AR', pt: 'pt-BR' };
 
 /** The BCP-47 tag `Intl` expects for one of our locales. */
 export function intlLocale(locale: Locale): string {

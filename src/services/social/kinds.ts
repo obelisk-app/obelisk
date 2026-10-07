@@ -14,39 +14,20 @@
  *    "Reads" surface, and only shows kind 20 when embedded/quoted.
  */
 
-export const KIND_NOTE = 1;
-export const KIND_REPOST = 6;
-export const KIND_GENERIC_REPOST = 16;
-export const KIND_REACTION = 7;
-export const KIND_ZAP_RECEIPT = 9735;
-export const KIND_PICTURE = 20;
-export const KIND_VIDEO = 21;
-export const KIND_SHORT_VIDEO = 22;
-export const KIND_HIGHLIGHT = 9802;
-export const KIND_LONG_FORM = 30023;
-export const KIND_COMMENT = 1111;
-/**
- * NIP-29 group chat message. Deliberately NOT in `FEED_KINDS`: a group's
- * messages belong to that group, not to the open feed. But a link to one
- * can be opened in the viewer, and "this client can't display kind 9" is a
- * silly thing for *this* client to say about its own chat messages.
- */
-export const KIND_GROUP_CHAT = 9;
-/** NIP-94 file metadata; the media lives in tags, not the content. */
-export const KIND_FILE_METADATA = 1063;
-
-/** Kinds we request in a feed REQ. Reactions/zaps are counted, not listed. */
-export const FEED_KINDS = [
-  KIND_NOTE,
-  KIND_REPOST,
+import {
+  KIND_COMMENT,
+  KIND_FILE_METADATA,
   KIND_GENERIC_REPOST,
-  KIND_PICTURE,
-  KIND_VIDEO,
-  KIND_SHORT_VIDEO,
+  KIND_GROUP_CHAT_MESSAGE,
   KIND_HIGHLIGHT,
   KIND_LONG_FORM,
-  KIND_COMMENT,
-];
+  KIND_PICTURE,
+  KIND_REPOST,
+  KIND_SHORT_VIDEO,
+  KIND_TEXT_NOTE,
+  KIND_VIDEO,
+} from '@/constants/nostr/nip-kinds';
+import { FEED_KINDS } from '@/constants/social/kinds';
 
 /**
  * Reader-facing content filter.
@@ -57,14 +38,12 @@ export const FEED_KINDS = [
  */
 export type ContentFilter = 'all' | 'notes' | 'articles' | 'media';
 
-export const CONTENT_FILTERS: ContentFilter[] = ['all', 'notes', 'articles', 'media'];
-
 /** Kinds to request for a given filter, narrowing the REQ, not just the view. */
 export function kindsForFilter(filter: ContentFilter): number[] {
   switch (filter) {
     case 'notes':
       // Reposts belong here: a repost of a note is still a note in the feed.
-      return [KIND_NOTE, KIND_REPOST, KIND_GENERIC_REPOST, KIND_COMMENT];
+      return [KIND_TEXT_NOTE, KIND_REPOST, KIND_GENERIC_REPOST, KIND_COMMENT];
     case 'articles':
       return [KIND_LONG_FORM, KIND_HIGHLIGHT];
     case 'media':
@@ -90,7 +69,7 @@ export type NoteRenderMode =
 
 export function renderModeFor(kind: number): NoteRenderMode {
   switch (kind) {
-    case KIND_NOTE: return 'note';
+    case KIND_TEXT_NOTE: return 'note';
     case KIND_REPOST:
     case KIND_GENERIC_REPOST: return 'repost';
     case KIND_PICTURE: return 'picture';
@@ -99,7 +78,7 @@ export function renderModeFor(kind: number): NoteRenderMode {
     case KIND_HIGHLIGHT: return 'highlight';
     case KIND_LONG_FORM: return 'article';
     case KIND_COMMENT: return 'comment';
-    case KIND_GROUP_CHAT: return 'group';
+    case KIND_GROUP_CHAT_MESSAGE: return 'group';
     case KIND_FILE_METADATA: return 'file';
     default: return 'unsupported';
   }

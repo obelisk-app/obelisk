@@ -1,5 +1,4 @@
-/** The value the category picker uses for "no category". */
-export const NO_CATEGORY = '__none__';
+import { NO_CATEGORY } from '@/constants/shell/mobile';
 
 /** The picker's options: "no category" (labelled by the caller) first, then the draft's categories in order. */
 export function categoryOptions(

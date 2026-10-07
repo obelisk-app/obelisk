@@ -1,5 +1,6 @@
 import { isVideoUrl } from '@/utils/attachments/attachments';
 import type { MediaItem } from '@/services/social/feed-media';
+import { FEATURE_EVERY } from '@/constants/chat/gallery';
 
 /** One tile of a chat image matrix. */
 export interface GalleryTileModel {
@@ -34,9 +35,6 @@ export function galleryLayout(urls: ReadonlyArray<string>) {
     aspectRatio: urls.length === 2 ? '2 / 1' : '1 / 1',
   };
 }
-
-/** Every Nth tile of the profile media grid spans 2x2. 7 keeps the pattern from looking like columns. */
-export const FEATURE_EVERY = 7;
 
 /** One tile of the profile media grid: featured (2x2) every `FEATURE_EVERY`, never the first; video or still. */
 export interface MediaGridTileModel {

@@ -3,8 +3,10 @@
  * caches, pages and tails by. No React here.
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { FEED_PAGE_SIZE, loadFollowingFeed, loadGlobalFeed, loadProfileFeed } from './feed';
-import { FOLLOWING_FEED_ID, GLOBAL_FEED_ID, profileFeedId, type FeedCacheId } from './cache';
+import { loadFollowingFeed, loadGlobalFeed, loadProfileFeed } from './feed';
+import { FEED_PAGE_SIZE } from '@/constants/social/feed';
+import { profileFeedId, type FeedCacheId } from './cache';
+import { FOLLOWING_FEED_ID, GLOBAL_FEED_ID } from '@/constants/social/cache';
 import { kindsForFilter, type ContentFilter } from './kinds';
 
 export type FeedSource =

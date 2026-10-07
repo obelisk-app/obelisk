@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { LOCALES } from '@/i18n';
 import { translator } from '@tests/support/intl';
-import { ROADMAP_PHASES } from '@/components/marketing/landing/landing-data';
+import { ROADMAP_PHASES } from '@/constants/marketing/landing';
 
 /**
  * Voice rooms, NIP-46 signer login and the installable app ship, so the

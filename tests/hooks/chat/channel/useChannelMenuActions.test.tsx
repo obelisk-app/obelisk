@@ -4,7 +4,8 @@ import { LocaleProvider } from '@tests/support/intl';
 import { useChannelMenuActions } from '@/hooks/chat/channel/useChannelMenuActions';
 import { useChannelActionSheet } from '@/hooks/chat/channel/useChannelActionSheet';
 import { useChannelContextMenu } from '@/hooks/chat/channel/useChannelContextMenu';
-import { MUTED_FOREVER, getChannelPref, notifyLevel, useChannelPrefsStore } from '@/store/chat/channel-prefs';
+import { getChannelPref, notifyLevel, useChannelPrefsStore } from '@/store/chat/channel-prefs';
+import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 
 const R = 'wss://lacrypta-relay.obelisk.ar';
 const target = { relay: R, channelId: 'de8bb87545bea285' };

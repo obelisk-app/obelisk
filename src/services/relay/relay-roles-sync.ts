@@ -6,10 +6,9 @@
 import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
-import { KIND_NIP78_APP_DATA as KIND_ROLES } from '@/utils/nostr/nip-kinds';
+import { KIND_NIP78_APP_DATA as KIND_ROLES } from '@/constants/nostr/nip-kinds';
 import {
   EMPTY_RELAY_ROLES,
-  ROLE_ID_RE,
   normalizeRoleId,
   parseRoleCatalog,
   parseRoleHolders,
@@ -21,7 +20,8 @@ import {
   type RelayRole,
   type RelayRoles,
   type RoleHolders,
-} from './relay-roles-model';
+} from '@/utils/relay/relay-roles-model';
+import { ROLE_ID_RE } from '@/constants/relay/relay-roles-model';
 
 interface CachedCatalog {
   readonly roles: readonly RelayRole[];

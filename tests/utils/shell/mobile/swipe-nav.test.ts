@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, isAdjacentTabSwitch, NAV_ORDER, neighborsFor, resolveParent } from '@/utils/shell/mobile/swipe-nav';
-import { initialNav, type NavState, type ScreenName } from '@/utils/shell/mobile/url-state';
+import { buildSeedHistory, decideSnap, decideSwipeNav, decideTabPress, isAdjacentTabSwitch, neighborsFor, resolveParent } from '@/utils/shell/mobile/swipe-nav';
+import { NAV_ORDER, initialNav } from '@/constants/shell/mobile';
+import { type NavState, type ScreenName } from '@/utils/shell/mobile/url-state';
 
 const navOf = (screen: ScreenName, parentScreen: ScreenName | null = null): NavState => ({
   ...initialNav,

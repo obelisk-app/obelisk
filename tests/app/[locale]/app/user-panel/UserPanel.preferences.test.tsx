@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
-import { DM_OPT_IN_STORAGE_KEY } from '@/services/chat/dm/opt-in';
+import { DM_OPT_IN_STORAGE_KEY } from '@/constants/chat/dm';
 
 const mockLogout = vi.hoisted(() => vi.fn());
 const mockSelfPqState = vi.hoisted(() => vi.fn());

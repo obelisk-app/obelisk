@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { botLabel, commandDescription, playableGameNames, sectionTitle, SLASH_COMMANDS } from '@/utils/chat/slash/slash-commands';
+import { botLabel, commandDescription, playableGameNames, sectionTitle } from '@/utils/chat/slash/slash-commands';
+import { SLASH_COMMANDS } from '@/constants/chat/slash';
 import { translator } from '@tests/support/intl';
 import { tokenize } from '@/utils/chat/slash/slash-scaffold';
 

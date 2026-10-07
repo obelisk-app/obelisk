@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-import { pageLocale } from '@/i18n/page-locale';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { LazyVoiceRoom } from '@/app/[locale]/app/mounts/lazy-mounts';
 import BridgeRoute from '@/components/common/BridgeRoute';
 import { cardAlt, cardImage } from '@/utils/seo/og';
@@ -8,11 +7,11 @@ import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
 
 export const dynamic = 'force-dynamic';
 
-type Params = { params: Promise<{ channelId: string; locale: string }> };
+type Params = { params: Promise<{ channelId: string }> };
 
 /** A room: the voice tool's copy and card, at the room's own URL; out of search. */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const locale = await pageLocale(params);
+  const locale = await getLocale();
   const { channelId } = await params;
   const t = await getTranslations({ locale });
   const title = t('seo.voice.title');

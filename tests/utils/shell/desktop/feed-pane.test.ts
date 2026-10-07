@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  INITIAL_FEED_PANE,
   canRestore,
   canSplitAgainst,
   closeFeed,
@@ -10,6 +9,7 @@ import {
   toggleFeed,
   type FeedHost,
 } from '@/utils/shell/desktop/feed-pane';
+import { INITIAL_FEED_PANE } from '@/constants/shell/desktop';
 
 const GROUP: FeedHost = { kind: 'group', groupId: 'g1' };
 const EMPTY: FeedHost = { kind: 'empty' };

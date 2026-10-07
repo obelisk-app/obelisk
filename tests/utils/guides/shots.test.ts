@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { translator } from '@tests/support/intl';
-import { SHOT_META, shotPath } from '@/utils/guides/shots';
+import { shotPath } from '@/utils/guides/shots';
+import { SHOT_META } from '@/constants/guides/shots';
 
 describe('guide screenshots', () => {
   /**

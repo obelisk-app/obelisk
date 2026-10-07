@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { initialNav, type NavState } from '@/utils/shell/mobile/url-state';
+import type { NavState } from '@/utils/shell/mobile/url-state';
+import { initialNav } from '@/constants/shell/mobile';
 import { MobileScreenBody } from '@/app/[locale]/app/mobile/carousel/MobileScreenBody';
 import { TopLevelScreen } from '@/app/[locale]/app/mobile/carousel/TopLevelScreen';
 import type { MobileScreenProps } from '@/hooks/shell/mobile/nav/usePhoneShell';

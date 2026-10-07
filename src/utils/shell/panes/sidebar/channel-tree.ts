@@ -6,9 +6,6 @@ import type { LaidOutSidebar } from '@/services/relay/channel-layout';
  * channels this client knows, then the ones no category claims. Pure.
  */
 
-/** The fold key of the "Uncategorized" section. */
-export const UNCATEGORIZED_ID = '__uncat__';
-
 /** The groups behind a list of ids, in order, skipping ids this client has no group for. */
 export function knownGroups(ids: ReadonlyArray<string>, groupsById: Readonly<Record<string, JsGroup>>): JsGroup[] {
   return ids.flatMap((id) => groupsById[id] ?? []);

@@ -16,7 +16,7 @@ vi.mock('@/services/social/relay-status', () => ({
   subscribeRelayStatus: (cb: () => void) => { mocks.listeners.add(cb); return () => mocks.listeners.delete(cb); },
   probeRelay: mocks.probeRelay,
 }));
-vi.mock('@/utils/settings/open-settings', () => ({ openSettings: mocks.openSettings }));
+vi.mock('@/services/settings/open-settings', () => ({ openSettings: mocks.openSettings }));
 
 import { useRelaysWidget } from '@/hooks/social/widgets/useRelaysWidget';
 

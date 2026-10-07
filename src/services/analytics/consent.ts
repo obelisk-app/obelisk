@@ -16,10 +16,9 @@
  * the `storage` event and is applied here too.
  */
 import { startAnalytics, stopAnalytics } from './gtag';
+import { ANALYTICS_CONSENT_KEY, UNKNOWN_CONSENT } from '@/constants/analytics/consent';
 
 export type AnalyticsChoice = 'granted' | 'denied';
-
-export const ANALYTICS_CONSENT_KEY = 'obelisk:analytics-consent';
 
 export interface AnalyticsConsentState {
   /** `false` until read from this browser (always `false` on the server). */
@@ -29,9 +28,6 @@ export interface AnalyticsConsentState {
   /** The person asked to see the question again (footer link). */
   readonly reviewing: boolean;
 }
-
-/** What the server renders and hydration starts from: nothing shown. */
-export const UNKNOWN_CONSENT: AnalyticsConsentState = Object.freeze({ known: false, choice: null, reviewing: false });
 
 let state: AnalyticsConsentState = UNKNOWN_CONSENT;
 const listeners = new Set<() => void>();

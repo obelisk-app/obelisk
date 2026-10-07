@@ -2,9 +2,10 @@
  * Presence beacons (kind 20078): the periodic one that announces the two
  * peer sets and the outbound video, and the terminal one on leave.
  */
-import { KIND_VOICE_PRESENCE } from '@/utils/nostr/nip-kinds';
+import { KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
 import type { VideoSlotKind } from './types';
-import { PRESENCE_TTL_SECONDS, bridge, publishViaBridge, type VoiceTransportOptions } from './transport-core';
+import { bridge, publishViaBridge, type VoiceTransportOptions } from './transport-core';
+import { PRESENCE_TTL_SECONDS } from '@/constants/voice/transport-core';
 
 /**
  * Publish a presence beacon for the given channel.

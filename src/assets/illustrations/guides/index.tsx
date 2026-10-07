@@ -20,7 +20,7 @@ import DexMark from './marks/DexMark';
 import SfuMark from './marks/SfuMark';
 import BotsMark from './marks/BotsMark';
 import RelayMark from './marks/RelayMark';
-import { HERO_ASSET_META } from '@/utils/guides/asset-meta';
+import { HERO_ASSET_META } from '@/constants/guides/asset-meta';
 import IndexableSvg from './embed/IndexableSvg';
 
 /**

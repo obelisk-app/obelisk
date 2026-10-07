@@ -5,7 +5,7 @@ import { LocaleProvider, translator } from '@tests/support/intl';
 import type { Locale } from '@/i18n';
 import { DIAGRAM_REGISTRY } from '@/assets/illustrations/guides/index';
 import Mark from '@/assets/illustrations/guides/embed/Mark';
-import { DIAGRAM_ASSET_META } from '@/utils/guides/asset-meta';
+import { DIAGRAM_ASSET_META } from '@/constants/guides/asset-meta';
 import DexMark from '@/assets/illustrations/guides/marks/DexMark';
 import SfuMark from '@/assets/illustrations/guides/marks/SfuMark';
 import BotsMark from '@/assets/illustrations/guides/marks/BotsMark';

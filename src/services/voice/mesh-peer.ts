@@ -16,7 +16,7 @@ import type { VoiceTransport } from './transport';
 import type { VoiceMetrics } from './metrics';
 import type { VoicePresence, VoiceSignalPayload } from './types';
 import { pushVoiceDebug } from './debug';
-import { SELF_BUILD_TAG, SIGNER_PEER_BUDGET, type VoiceSigner } from './constants';
+import { SELF_BUILD_TAG, SIGNER_PEER_BUDGET, type VoiceSigner } from '@/constants/voice/client';
 import { withRateLimitBackoff } from './failure-handlers';
 
 /** What a mesh peer's event wiring needs from the session that owns it. */

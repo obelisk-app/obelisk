@@ -4,7 +4,8 @@ import { type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import HintDot from '@/components/hints/HintDot';
 import { type ScreenName, type NavState } from '@/utils/shell/mobile/url-state';
-import { activeTabFor, badgeLabel, NAV_HINT_ANCHOR, NAV_HINT_ID } from '@/utils/shell/mobile/bottom-nav';
+import { activeTabFor, badgeLabel } from '@/utils/shell/mobile/bottom-nav';
+import { NAV_HINT_ANCHOR, NAV_HINT_ID } from '@/constants/shell/mobile';
 import { BellAltIcon, GlobeIcon, GridIcon, PaperPlaneIcon, UserRoundIcon } from '@/assets/icons';
 
 interface NavTab { id: ScreenName; icon: ReactNode; label: string; badge?: number }

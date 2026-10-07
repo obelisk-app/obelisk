@@ -17,8 +17,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { normalizeURL } from 'nostr-tools/utils';
 import type { PublishAuthMode, PublishResult, RelayHub } from '@/lib/relay-hub';
 import type { PublishResults } from './publish-results';
-
-export const PUBLISH_TIMED_OUT = 'publish timed out';
+import { PUBLISH_TIMED_OUT } from '@/constants/nostr-bridge/publish';
 
 function keyOf(url: string): string {
   try {

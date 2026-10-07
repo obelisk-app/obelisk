@@ -8,9 +8,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { groupFixture } from '@tests/support/mocks/nostr-bridge';
-import { EMPTY_LAYOUT } from '@/services/relay/channel-layout';
-import { EMPTY_BRANDING } from '@/services/relay/relay-branding';
-import { EMPTY_RELAY_EMOJI_SET } from '@/services/relay/relay-emojis';
+import { EMPTY_LAYOUT } from '@/constants/relay/channel-layout';
+import { EMPTY_BRANDING } from '@/constants/relay/relay-branding';
+import { EMPTY_RELAY_EMOJI_SET } from '@/constants/relay/relay-emojis';
 import { EMPTY_RELAY_ROLES } from '@/services/relay/relay-roles';
 
 const editor = vi.hoisted(() => (testId: string) => function EditorStub(

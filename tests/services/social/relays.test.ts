@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_SOCIAL_RELAYS,
-  SOCIAL_RELAY_MAX,
-  SOCIAL_RELAY_PRESETS,
-  WIDER_SOCIAL_RELAYS,
   invalidRelayIndexes,
-  normalizeRelayUrl,
   normalizeSocialRelays,
   socialRelayKey,
 } from '@/services/social/relays';
+import { normalizeRelayUrl } from '@/utils/social/relay-url';
+import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX, SOCIAL_RELAY_PRESETS, WIDER_SOCIAL_RELAYS } from '@/constants/social/relays';
 
 describe('normalizeRelayUrl', () => {
   it('accepts a public wss relay and strips a bare trailing slash', () => {

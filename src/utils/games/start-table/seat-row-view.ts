@@ -3,7 +3,7 @@
  * account with another (the hot-seat case), how it will be played, and which
  * accounts may take it.
  */
-import type { Row } from '@/hooks/games/start-table/useSeatRows';
+import type { Row } from '@/utils/games/start-table/seat-specs';
 import type { Translate } from '@/i18n/keys';
 
 export interface SeatChip {

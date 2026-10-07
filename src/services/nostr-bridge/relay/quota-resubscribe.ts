@@ -8,7 +8,7 @@
  */
 
 /** 5 s → 10 s → 20 s → 60 s, then 60 s forever. */
-export const QUOTA_RESUBSCRIBE_DELAYS_MS: readonly number[] = [5_000, 10_000, 20_000, 60_000];
+const QUOTA_RESUBSCRIBE_DELAYS_MS: readonly number[] = [5_000, 10_000, 20_000, 60_000];
 
 export interface QuotaResubscribeHooks {
   /** Pass as `onQuotaOrRateLimitClose` to the watched subscription. */

@@ -6,7 +6,8 @@
  * this file keeps the public names other folders import.
  */
 import { useTranslations } from 'next-intl';
-import { EMOJI_SECTIONS, sectionEmojis } from '@/utils/chat/picker/emoji-sections';
+import { sectionEmojis } from '@/utils/chat/picker/emoji-sections';
+import { EMOJI_SECTIONS } from '@/constants/chat/picker';
 import { emojiPickerClasses } from '@/utils/chat/picker/emoji-picker-classes';
 import { useEmojiPicker } from '@/hooks/chat/picker/useEmojiPicker';
 import { useCategoryJump } from '@/hooks/chat/picker/useCategoryJump';

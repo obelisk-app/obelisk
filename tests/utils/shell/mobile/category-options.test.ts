@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { NO_CATEGORY, categoryChannelRows, categoryIdFromOption, categoryOptions } from '@/utils/shell/mobile/category-options';
+import { categoryChannelRows, categoryIdFromOption, categoryOptions } from '@/utils/shell/mobile/category-options';
+import { NO_CATEGORY } from '@/constants/shell/mobile';
 
 describe('categoryOptions', () => {
   it('puts "no category" first under the given label', () => {

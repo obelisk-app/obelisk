@@ -12,9 +12,9 @@ import {
   channelHasMention,
   computeChannelHighlights,
   effectiveCursor,
-  EMPTY_HIGHLIGHTS,
   type ChannelHighlights,
 } from '@/services/read-state/selectors';
+import { EMPTY_HIGHLIGHTS } from '@/constants/read-state/selectors';
 import { useCachedGroupMessages } from './useCachedGroupMessages';
 
 export function useChannelHasMention(

@@ -10,9 +10,10 @@ vi.mock('@/services/nostr-bridge/facade/client', () => ({
 }));
 
 import {
-  requestGameLoad, __resetGameResolver,
-  RESOLVE_BATCH_MS, RESOLVE_WAIT_MS, RESOLVE_MAX_IDS, RESOLVE_RETRY_MS,
+  requestGameLoad,
+  __resetGameResolver,
 } from '@/services/games/resolve';
+import { RESOLVE_BATCH_MS, RESOLVE_WAIT_MS, RESOLVE_MAX_IDS, RESOLVE_RETRY_MS } from '@/constants/games/resolve';
 import { flushGameIngest, resetGameIngest } from '@/services/games/ingest';
 import { useGamesStore } from '@/store/games';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';

@@ -8,7 +8,7 @@
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { BoundedMap } from '@/lib/relay-hub';
-import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE } from '@/utils/nostr/nip-kinds';
+import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
 import { getAllTags, getTag } from '../common/event-tags';
 import { resubscribeOnQuotaClose } from '../relay/quota-resubscribe';
 import { StateStore } from '../common/state-store';
@@ -22,18 +22,9 @@ import {
   type SfuPresence,
 } from './voice-calls';
 import type { BridgeContext } from '../facade/context';
+import { MAX_PRESENCE_STAMPS } from '@/constants/nostr-bridge/voice';
 
 export type { ActiveCallInfo } from './voice-calls';
-
-/**
- * Newest-beacon stamps kept, across every channel on the relay. LRU: a
- * participant still beaconing (every few seconds) stays; someone who left
- * long ago goes first. ~150 bytes an entry, so 2,000 is about 300 KB. An
- * evicted stamp only means an older replayed beacon from that pubkey is
- * read again, and a beacon that old is past its `expiration` and lands as
- * terminal, so nothing reappears in the roster.
- */
-export const MAX_PRESENCE_STAMPS = 2000;
 
 export type VoicePresenceContext = Pick<BridgeContext, 'relays' | 'subscribeWatched' | 'track'>;
 

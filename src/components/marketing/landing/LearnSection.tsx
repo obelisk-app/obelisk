@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { guidePath } from '@/utils/guides/guide-urls';
 import Reveal from '@/components/ui/animations/Reveal';
-import { LEARN_GUIDES } from './landing-data';
+import { LEARN_GUIDES } from '@/constants/marketing/landing';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 

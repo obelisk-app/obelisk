@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cacheGet, cacheSet } from '@/services/nostr-bridge/cache/cache';
 import { cacheClearAll, cacheDelete, cacheFreeSpaceForQuota, cacheListIdsByKind } from '@/services/nostr-bridge/cache/cache-sweep';
-import { KEY_PREFIX } from '@/services/nostr-bridge/cache/cache-keys';
+import { KEY_PREFIX } from '@/constants/nostr-bridge/cache';
 
 const A = 'wss://a.example';
 const B = 'wss://b.example';

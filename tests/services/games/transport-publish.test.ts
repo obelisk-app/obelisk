@@ -10,7 +10,8 @@ vi.mock('@/services/nostr-bridge/facade/client', () => ({
 }));
 
 import { findCreateByNonce, publishCancel, publishMove } from '@/services/games/transport-publish';
-import { bridge, GAME_SUB_WATCHDOG_MS } from '@/services/games/transport-bridge';
+import { bridge } from '@/services/games/transport-bridge';
+import { GAME_SUB_WATCHDOG_MS } from '@/constants/games/transport-bridge';
 import * as entry from '@/services/games/transport';
 
 const signed = (template: { kind: number; content: string; tags: string[][] }) =>

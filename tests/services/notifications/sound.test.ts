@@ -6,8 +6,8 @@ import {
   RING_PERIOD_MS,
   RINGTONES,
   startRingLoop,
-  SOUND_MIN_GAP_MS,
 } from '@/services/notifications/sound';
+import { SOUND_MIN_GAP_MS } from '@/constants/notifications/sound';
 import { setPreference } from '@/services/preferences/preferences';
 
 function installFakeAudio(state: AudioContextState = 'running') {

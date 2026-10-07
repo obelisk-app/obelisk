@@ -1,18 +1,8 @@
 import type { TradeResource } from 'vesta';
 import type { VestaAction } from '@/lib/games/vesta/definition';
-import type { MessageKey } from '@/i18n/keys';
+import { RESOURCES, RESOURCE_EMOJI } from '@/constants/games/vesta';
 
 export type ResourceCounts = Partial<Record<TradeResource, number>>;
-
-export const RESOURCES: TradeResource[] = ['brick', 'lumber', 'wool', 'grain', 'ore'];
-
-export const RESOURCE_EMOJI: Record<string, string> = {
-  brick: '🧱', lumber: '🪵', wool: '🐑', grain: '🌾', ore: '🪨',
-};
-
-export const DEV_EMOJI: Record<string, string> = {
-  victory: '🪙', knight: '💂', 'road-build': '🌉', 'year-of-plenty': '🧺', monopoly: '👑',
-};
 
 export function tradeAction(
   partner: number | 'bank' | null,
@@ -41,11 +31,3 @@ export function describe(v: ResourceCounts): string | null {
   return parts.length > 0 ? parts.join(' ') : null;
 }
 
-/** The message key naming each development card, by upstream's card type. */
-export const DEV_CARD_KEY = {
-  victory: 'games.vestaTable.card.victory',
-  knight: 'games.vestaTable.card.knight',
-  'road-build': 'games.vestaTable.card.roadBuild',
-  'year-of-plenty': 'games.vestaTable.card.yearOfPlenty',
-  monopoly: 'games.vestaTable.card.monopoly',
-} as const satisfies Record<string, MessageKey>;

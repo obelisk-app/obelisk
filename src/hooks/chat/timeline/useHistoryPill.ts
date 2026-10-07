@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 /** Loading shorter than this never shows a spinner; the pill fades over it too. */
-export const SETTLE_MS = 180;
+const SETTLE_MS = 180;
 
 /**
  * Whether the history pill is mounted, whether it is shown, and what it

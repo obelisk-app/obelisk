@@ -2,7 +2,8 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { Link } from '@/i18n/navigation';
 import type { Locale } from '@/i18n';
 import { plainTextForPreview } from '@/services/server/viewer/note-preview';
-import { NOTE_VIEWER_PATH, noteIdentifier } from '@/services/social/note-links';
+import { noteIdentifier } from '@/services/social/note-links';
+import { NOTE_VIEWER_PATH } from '@/constants/social/note-links';
 import { formatDate } from '@/utils/format/format';
 import Text from '@/components/ui/layout/Text';
 

@@ -10,7 +10,7 @@
 import { CodedError, codeOrMessage, type ActivityCode } from '@/utils/errors/codes';
 import { SESSION_IDENTITY_ID, type AuthLease, type RelayHub, type RelayStatus } from '@/lib/relay-hub';
 import { failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
-import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '../facade/page-hub';
+import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '@/constants/nostr-bridge/facade';
 import { pushRelayDebug } from '../relay/relay-debug';
 import { validateRelayUrl } from '../relay/relay-list';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';

@@ -6,6 +6,7 @@
 
 import type { Locale } from '@/i18n';
 import { localizedPath } from './alternates';
+import { PAGE_CARDS } from '@/constants/seo/cards';
 
 export type OgIconName =
   | 'landing' | 'app' | 'voice' | 'features' | 'desktop' | 'mobile' | 'help' | 'helpLocalData'
@@ -18,20 +19,6 @@ export type OgCardProps = {
   footer: string;
   icon: OgIconName;
 };
-
-/** The pages whose card is their own `seo.<copy>` title and description. */
-export const PAGE_CARDS = {
-  landing: { copy: 'site', path: '/' },
-  app: { copy: 'app', path: '/app' },
-  voice: { copy: 'voice', path: '/voice' },
-  features: { copy: 'features', path: '/features' },
-  desktop: { copy: 'desktop', path: '/desktop' },
-  mobile: { copy: 'mobile', path: '/mobile' },
-  help: { copy: 'help', path: '/help' },
-  helpLocalData: { copy: 'helpLocalData', path: '/help/local-data' },
-  mediaKit: { copy: 'mediaKit', path: '/media-kit' },
-  guides: { copy: 'guides', path: '/guides' },
-} as const satisfies Record<string, { copy: string; path: string }>;
 
 export type PageCard = keyof typeof PAGE_CARDS;
 

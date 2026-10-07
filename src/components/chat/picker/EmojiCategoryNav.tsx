@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { EMOJI_NAV } from '@/utils/chat/picker/emoji-sections';
+import { EMOJI_NAV } from '@/constants/chat/picker';
 import { EmojiCategoryButton } from './EmojiCategoryButton';
 
 /** The category bar (hidden while searching). */

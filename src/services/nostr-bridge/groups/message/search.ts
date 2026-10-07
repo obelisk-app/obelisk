@@ -5,7 +5,7 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import type { Filter } from 'nostr-tools';
-import { KIND_GROUP_CHAT_MESSAGE } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_CHAT_MESSAGE } from '@/constants/nostr/nip-kinds';
 import { extractMentionPubkeysFromMessage } from '@/utils/message-text/mentions';
 import { customEmojiMapFromTags } from '@/utils/media/tags/custom-emoji-tags';
 import { stickerFromTags } from '@/utils/media/tags/sticker-tags';

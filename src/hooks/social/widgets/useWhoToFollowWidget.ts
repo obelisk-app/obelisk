@@ -2,9 +2,7 @@ import { useMemo } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMyFollows, useMyPubkey } from '@/services/nostr-bridge';
 import { suggestedAuthors } from '@/services/social/feed-people';
-
-/** How many people the side column suggests. */
-export const WHO_TO_FOLLOW_LIMIT = 5;
+import { WHO_TO_FOLLOW_LIMIT } from '@/constants/social/widgets';
 
 /**
  * The who-to-follow widget's view model: authors in the loaded window that

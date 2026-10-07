@@ -26,7 +26,7 @@ const A = 'a'.repeat(64);
 const B = 'b'.repeat(64);
 
 async function show(tag: string) {
-  const element = await HashtagPage({ params: Promise.resolve({ tag, locale: 'en' }) });
+  const element = await HashtagPage({ params: Promise.resolve({ tag }) });
   return render(<LocaleProvider initialLocale="en">{element as ReactElement}</LocaleProvider>);
 }
 

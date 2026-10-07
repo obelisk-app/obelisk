@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/chat/dm';
 import { useMessageZapStore } from '@/store/chat/message-zap';
-import { initialNav, type NavState } from '@/utils/shell/mobile/url-state';
+import type { NavState } from '@/utils/shell/mobile/url-state';
+import { initialNav } from '@/constants/shell/mobile';
 import { useMobileNavActions } from '@/hooks/shell/mobile/nav/useMobileNavActions';
 
 const ME = 'a'.repeat(64);

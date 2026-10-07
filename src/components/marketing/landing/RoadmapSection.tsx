@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import Reveal from '@/components/ui/animations/Reveal';
-import { ROADMAP_PHASES } from './landing-data';
+import { ROADMAP_PHASES } from '@/constants/marketing/landing';
 import RoadmapPhase from './RoadmapPhase';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';

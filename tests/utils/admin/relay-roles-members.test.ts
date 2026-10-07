@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isNewPastedHolder, roleCandidates, ROLE_CANDIDATE_LIMIT } from '@/utils/admin/relay-roles-members';
+import { isNewPastedHolder, roleCandidates } from '@/utils/admin/relay-roles-members';
+import { ROLE_CANDIDATE_LIMIT } from '@/constants/admin/relay-roles-members';
 
 const person = (pubkey: string, displayName: string, nip05?: string) => ({ pubkey, displayName, nip05, role: 'member' as const });
 const ALICE = person('a'.repeat(64), 'Alice', 'alice@obelisk.ar');

@@ -8,8 +8,9 @@ import { getBridgeImpl, cacheSet } from '@/services/nostr-bridge';
 import { wrapForSelf } from '@/lib/nip-59';
 import { useReadStateStore } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
-import { KIND_NIP78_APP_DATA as KIND_INNER } from '@/utils/nostr/nip-kinds';
-import { DEBOUNCE_MS, cacheKindFor, type SyncOptions } from './sync-options';
+import { KIND_NIP78_APP_DATA as KIND_INNER } from '@/constants/nostr/nip-kinds';
+import { cacheKindFor, type SyncOptions } from './sync-options';
+import { DEBOUNCE_MS } from '@/constants/read-state/sync-options';
 
 type BridgeImpl = NonNullable<ReturnType<typeof getBridgeImpl>>;
 type Signer = NonNullable<ReturnType<BridgeImpl['getNipSigner']>>;

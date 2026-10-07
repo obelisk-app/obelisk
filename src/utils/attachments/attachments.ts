@@ -10,18 +10,6 @@
  */
 
 export {
-  ALLOWED_AUDIO_TYPES,
-  ALLOWED_DOC_TYPES,
-  ALLOWED_IMAGE_TYPES,
-  ALLOWED_VIDEO_TYPES,
-  DEFAULT_UPLOAD_LIMITS,
-  MAX_ATTACHMENTS_PER_MESSAGE,
-  MAX_AUDIO_BYTES,
-  MAX_DOC_BYTES,
-  MAX_IMAGE_BYTES,
-  MAX_UPLOAD_BYTES,
-  MAX_VIDEO_BYTES,
-  SERVER_MAX_CEILING,
   extensionFor,
   isAllowedMime,
   isAudioMime,
@@ -32,6 +20,7 @@ export {
   parseServerLimits,
   type UploadLimits,
 } from './attachments-limits';
+export { ALLOWED_AUDIO_TYPES, ALLOWED_DOC_TYPES, ALLOWED_IMAGE_TYPES, ALLOWED_VIDEO_TYPES, DEFAULT_UPLOAD_LIMITS, MAX_ATTACHMENTS_PER_MESSAGE, MAX_AUDIO_BYTES, MAX_DOC_BYTES, MAX_IMAGE_BYTES, MAX_UPLOAD_BYTES, MAX_VIDEO_BYTES, SERVER_MAX_CEILING } from '@/constants/attachments/attachments-limits';
 
 /**
  * Does this URL look like a hosted video? Used by MessageContent to hoist

@@ -14,9 +14,12 @@ import type { Metadata } from 'next';
 import type { Locale } from '@/i18n';
 import type { MessageKey, Translate } from '@/i18n/keys';
 import { guidePath } from '@/utils/guides/guide-urls';
-import { DIAGRAM_ASSET_META, HERO_ASSET_META, snapshotPaths } from '@/utils/guides/asset-meta';
-import { HREFLANG, SITE_URL, absoluteUrl } from './alternates';
-import { ORGANIZATION_ID, SCHEMA, breadcrumbJsonLd, websiteId } from './jsonld';
+import { snapshotPaths } from '@/utils/guides/asset-meta';
+import { DIAGRAM_ASSET_META, HERO_ASSET_META } from '@/constants/guides/asset-meta';
+import { absoluteUrl } from './alternates';
+import { SITE_URL, HREFLANG } from '@/constants/seo/alternates';
+import { breadcrumbJsonLd, websiteId } from './jsonld';
+import { ORGANIZATION_ID, SCHEMA } from '@/constants/seo/jsonld';
 import { cardAlt, cardImage } from './og';
 import { pageMetadata, renderedTitle, type PageImage } from './page';
 

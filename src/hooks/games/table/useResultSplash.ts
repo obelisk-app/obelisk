@@ -1,19 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-/**
- * How long the result splash waits before covering the board.
- *
- * The deciding move is the biggest cascade in the game and it arrives in the
- * same event that ends the match, so a splash that renders immediately hides
- * the only explosion anybody wanted to watch. The board reports when it is
- * animating (`onRevealChange`); this short delay covers the gap between the
- * finished session landing and the board starting to play it back.
- */
-export const RESULT_SPLASH_DELAY_MS = 300;
-/** …and a ceiling, so a board that never reports "done" cannot eat the splash. */
-export const RESULT_SPLASH_MAX_WAIT_MS = 6000;
+import { RESULT_SPLASH_DELAY_MS, RESULT_SPLASH_MAX_WAIT_MS } from '@/constants/games/table';
 
 /**
  * Whether the game-over splash may show. `setBoardRevealing` is what the

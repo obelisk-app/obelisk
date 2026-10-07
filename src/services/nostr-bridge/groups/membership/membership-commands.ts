@@ -10,7 +10,7 @@ import {
   KIND_GROUP_PUT_USER,
   KIND_GROUP_REMOVE_PERMISSION,
   KIND_GROUP_REMOVE_USER,
-} from '@/utils/nostr/nip-kinds';
+} from '@/constants/nostr/nip-kinds';
 import type { BridgeContext } from '../../facade/context';
 
 export class MembershipCommands {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMessageZapStore } from '@/store/chat/message-zap';
-import { DEFAULT_ZAP_AMOUNT_SATS } from '@/services/wallet/zap-constants';
+import { DEFAULT_ZAP_AMOUNT_SATS } from '@/constants/wallet/zap';
 import MessageZapDialog from './MessageZapDialog';
 
 /** The zap dialog for a message or a person, open while the zap store has a target; a new target starts a fresh form. */

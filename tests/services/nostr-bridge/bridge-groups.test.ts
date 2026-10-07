@@ -9,7 +9,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
-import { KIND_GROUP_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_METADATA } from '@/constants/nostr/nip-kinds';
 import {
   deliver,
   fakeRelayList,

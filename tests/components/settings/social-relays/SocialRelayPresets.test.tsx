@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import SocialRelayPresets from '@/components/settings/social-relays/SocialRelayPresets';
-import { SOCIAL_RELAY_PRESETS } from '@/services/social/relays';
+import { SOCIAL_RELAY_PRESETS } from '@/constants/social/relays';
 
 const t = (key: string) => key;
 const first = SOCIAL_RELAY_PRESETS[0].url;

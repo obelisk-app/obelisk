@@ -5,7 +5,7 @@
  * from `profiles.ts`.
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_METADATA } from '@/constants/nostr/nip-kinds';
 import type { BridgeContext, TrackedSub } from '../facade/context';
 import { cachedKind0ToEvent, getCachedKind0 } from './profile-sync-cache';
 

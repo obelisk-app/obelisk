@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ADJECTIVES, NOUNS, avatarInitials, displayNameFor, petnameFor, randomProfileName } from '@/utils/identity/display-name';
+import { avatarInitials, displayNameFor, petnameFor, randomProfileName } from '@/utils/identity/display-name';
+import { ADJECTIVES, NOUNS } from '@/constants/identity/display-name';
 
 const PK = 'a'.repeat(64);
 const OTHER = 'b'.repeat(64);

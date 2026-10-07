@@ -15,6 +15,8 @@
  * also what keeps a reconnect's backlog from ringing you for yesterday.
  */
 
+import { CALL_MESSAGE_MAX_AGE_S, MAX_CALL_RELAYS } from '@/constants/call/protocol';
+
 export type DmCallMessageType = 'invite' | 'accept' | 'decline' | 'cancel' | 'hangup' | 'busy';
 
 export interface DmCallMessage {
@@ -36,12 +38,6 @@ export interface IncomingDmCallMessage extends DmCallMessage {
   /** Rumor `created_at`, seconds. */
   readonly sentAt: number;
 }
-
-/** How old a control message may be and still count. */
-export const CALL_MESSAGE_MAX_AGE_S = 60;
-/** How long an invite rings before the caller gives up. */
-export const CALL_RING_TIMEOUT_MS = 45_000;
-export const MAX_CALL_RELAYS = 4;
 
 const HEX64 = /^[0-9a-f]{64}$/;
 const TYPES = new Set<DmCallMessageType>(['invite', 'accept', 'decline', 'cancel', 'hangup', 'busy']);

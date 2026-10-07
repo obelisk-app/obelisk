@@ -1,13 +1,6 @@
 import type { FeedHost, FeedPaneState } from './feed-pane';
 import type { View } from './view';
 
-/** localStorage keys for the desktop shell's remembered layout. */
-export const SIDEBAR_KEY = 'obelisk-dex/sidebar-width';
-export const PROFILE_PANE_KEY = 'obelisk-dex/profile-pane-width';
-export const THREAD_PANE_KEY = 'obelisk-dex/thread-pane-width';
-export const FEED_PANE_KEY = 'obelisk-dex/feed-pane-width';
-export const SHOW_MEMBERS_KEY = 'obelisk-dex/show-members';
-
 export type RailMode = { kind: 'dm' } | { kind: 'feed' } | { kind: 'relay'; url: string };
 
 /** Which rail entry is lit: DMs, the feed (full or split), or the relay. */

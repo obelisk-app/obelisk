@@ -6,7 +6,7 @@ import {
   KIND_GROUP_METADATA,
   KIND_NIP78_APP_DATA,
   KIND_RELAY_LIST,
-} from '@/utils/nostr/nip-kinds';
+} from '@/constants/nostr/nip-kinds';
 import { eventKindDescription } from '@/services/nostr-bridge/common/kind-description';
 
 describe('eventKindDescription', () => {

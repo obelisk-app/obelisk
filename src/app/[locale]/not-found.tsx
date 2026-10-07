@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { DEFAULT_LOCALE, isLocale } from '@/i18n';
 import { Link } from '@/i18n/navigation';
-import { NOINDEX } from '@/utils/seo/page';
+import { NOINDEX } from '@/constants/seo/page';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
@@ -12,9 +11,8 @@ import Text from '@/components/ui/layout/Text';
  * answers 404 and adds its own `noindex`; the localized body below is drawn
  * once the page hydrates, which is how Next 16 renders a `notFound()`.)
  */
-export async function generateMetadata({ params }: { params: Promise<{ locale?: string }> }): Promise<Metadata> {
-  const { locale } = await params;
-  const t = await getTranslations({ locale: isLocale(locale) ? locale : DEFAULT_LOCALE });
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations();
   return { title: t('seo.notFound.title'), description: t('seo.notFound.description'), robots: NOINDEX };
 }
 

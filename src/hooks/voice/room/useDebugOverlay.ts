@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { readVoiceDebugSnapshot } from '@/services/voice/debug-snapshot';
-
-/** How often the overlay re-reads the debug bag. */
-export const VOICE_DEBUG_REFRESH_MS = 500;
+import { VOICE_DEBUG_REFRESH_MS } from '@/constants/voice/room';
 
 /**
  * The voice debug overlay's view model: a render tick every 500 ms (no

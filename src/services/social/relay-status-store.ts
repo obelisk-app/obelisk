@@ -4,7 +4,7 @@
  * the pending-failure soak timers. No network here; the probing and
  * reconciling that move rows live in `relay-status.ts`.
  */
-import { normalizeRelayUrl } from './relays';
+import { normalizeRelayUrl } from '@/utils/social/relay-url';
 
 export type RelayState =
   | 'unknown'

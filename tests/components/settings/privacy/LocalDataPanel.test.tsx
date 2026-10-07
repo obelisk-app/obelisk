@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { LocaleProvider, translator } from '@tests/support/intl';
 import { ConfirmDialogHost } from '@/components/ui/overlays/ConfirmDialog';
 import LocalDataPanel from '@/components/settings/privacy/LocalDataPanel';
-import { LOCAL_DATA_CATEGORIES } from '@/services/local-data';
+import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
 
 function renderPanel(locale: 'en' | 'es' | 'pt' = 'en', mobile = false) {
   return render(

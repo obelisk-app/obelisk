@@ -1,7 +1,7 @@
 import type { GameSession } from '@/lib/games/session/session';
 import { standingsFor, type Score, type ScoreDetail } from '@/lib/games/core/standings';
-import { SEAT_COLORS } from '../chain-reaction/seat-colors';
-import { VESTA_PLAYER_COLORS } from '../vesta/palette';
+import { SEAT_COLORS } from '@/constants/games/chain-reaction';
+import { VESTA_PLAYER_COLORS } from '@/constants/games/vesta';
 
 export interface Row {
   seat: string;

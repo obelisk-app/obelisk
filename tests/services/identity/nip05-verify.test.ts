@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NIP05_CACHE_MAX, NIP05_UNVERIFIED_TTL_MS, NIP05_VERIFIED_TTL_MS, nip05CacheSize, parseNip05, peekNip05, recordNip05Resolution, resetNip05Cache, verifyNip05 } from '@/services/identity/nip05-verify';
+import { nip05CacheSize, parseNip05, peekNip05, recordNip05Resolution, resetNip05Cache, verifyNip05 } from '@/services/identity/nip05-verify';
+import { NIP05_CACHE_MAX, NIP05_UNVERIFIED_TTL_MS, NIP05_VERIFIED_TTL_MS } from '@/constants/identity/nip05-verify';
 
 const PUBKEY = 'a'.repeat(64);
 const OTHER = 'b'.repeat(64);

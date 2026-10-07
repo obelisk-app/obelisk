@@ -44,7 +44,7 @@ vi.mock('@/components/feedback/MobileSigningIndicator', () => ({
 import { MobileServerRail } from '@/app/[locale]/app/mobile/rail/MobileServerRail';
 import { MobileServerBanner } from '@/app/[locale]/app/mobile/rail/MobileServerBanner';
 import { RelayTile } from '@/app/[locale]/app/mobile/rail/RelayTile';
-import { OPEN_SETTINGS_EVENT } from '@/utils/settings/open-settings';
+import { OPEN_SETTINGS_EVENT } from '@/constants/settings/open-settings';
 
 const renderLocalized = (ui: ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
 const flush = () => act(async () => { await Promise.resolve(); });

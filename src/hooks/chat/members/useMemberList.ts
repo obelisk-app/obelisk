@@ -5,7 +5,9 @@ import { useTranslations } from 'next-intl';
 import { useChatStore } from '@/store/chat';
 import { useCurrentRelayUrl, useGroupMemberInfo } from '@/services/nostr-bridge';
 import { groupMembers } from '@/utils/chat/members/member-groups';
-import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from './useNostrPresence';
+import { useNostrPresence } from './useNostrPresence';
+import { PRESENCE_WINDOW_MS } from '@/constants/chat/members';
+import { presenceActivityKey } from '@/utils/chat/members/presence';
 
 /**
  * The member list's view model: the channel's members split into online

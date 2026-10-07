@@ -22,7 +22,7 @@ import { Table, mulberry32 } from './fixture-table';
 
 /* ── Chain Reaction ─────────────────────────────────────────────────────── */
 
-export const CR_SEATS: SeatSpec[] = [
+const CR_SEATS: SeatSpec[] = [
   { id: 'seat-ana', by: 'pk-ana', label: 'Ana' },
   { id: 'seat-bruno', by: 'pk-bruno', label: 'Bruno' },
   { id: 'seat-cami', by: 'pk-cami', label: 'Cami' },
@@ -59,7 +59,7 @@ export function chainReactionFixture(turns = 52): GameSession {
 
 /* ── Vesta ──────────────────────────────────────────────────────────────── */
 
-export const VESTA_SEATS: SeatSpec[] = [
+const VESTA_SEATS: SeatSpec[] = [
   { id: 'seat-ana', by: 'pk-ana', label: 'Ana' },
   { id: 'seat-bruno', by: 'pk-bruno', label: 'Bruno' },
   { id: 'seat-cami', by: 'pk-cami', label: 'Cami' },
@@ -116,7 +116,7 @@ function vestaTable(salt: string, acceptSeven = false): GameSession | null {
 
 /* ── Stacker ────────────────────────────────────────────────────────────── */
 
-export const STACKER_SEATS: SeatSpec[] = [
+const STACKER_SEATS: SeatSpec[] = [
   { id: 'seat-ana', by: 'pk-ana', label: 'Ana' },
   { id: 'seat-bruno', by: 'pk-bruno', label: 'Bruno' },
   { id: 'seat-cami', by: 'pk-cami', label: 'Cami' },

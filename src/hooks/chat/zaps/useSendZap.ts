@@ -7,12 +7,12 @@ import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import {
   checkZap,
-  MARKER_NO_BRIDGE,
   sendZap,
   ZapError,
   type ZapErrorCode,
   type ZapRecipient,
 } from '@/services/wallet/send-zap';
+import { MARKER_NO_BRIDGE } from '@/constants/wallet/zap';
 import { errorText } from '@/utils/errors/error-text';
 import { mayHavePaid } from '@/lib/nwc';
 

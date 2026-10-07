@@ -10,7 +10,6 @@ import {
   startMusic, stopMusic, setMusicIntensity, type AudioPrefs,
 } from '@/lib/games/stacker/audio';
 
-export { STACKER_KEYS };
 
 /**
  * Owns one `StackerRunner` and wires it to the browser: keyboard in, sound

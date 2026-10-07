@@ -11,7 +11,8 @@ import type { MessageKey } from '@/i18n/keys';
 import { parseIdentifier } from '@/services/social/identifier';
 import { displayNameFor, fetchAuthorForViewer, fetchEventForViewer } from '@/services/server/viewer/nostr-fetch';
 import { buildNotePreview } from '@/services/server/viewer/note-preview';
-import { PAGE_CARDS, cardFooter, type OgCardProps, type PageCard } from '@/utils/seo/cards';
+import { cardFooter, type OgCardProps, type PageCard } from '@/utils/seo/cards';
+import { PAGE_CARDS } from '@/constants/seo/cards';
 import { excerpt } from '@/utils/seo/og';
 import { hashtagFromSegment } from '@/utils/social/hashtag-segment';
 

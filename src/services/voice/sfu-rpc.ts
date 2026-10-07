@@ -16,15 +16,11 @@
  * caller can decide what to do (newProducer → consume, producerClosed →
  * stop the consumer, etc).
  */
-import { KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
+import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
 import { connectDirectRpc } from './sfu-rpc-direct';
 import { subscribeRelayRpc } from './sfu-rpc-relay';
 import {
   bridge,
-  DEFAULT_RETRY_ATTEMPTS,
-  DEFAULT_RETRY_DELAY_MS,
-  DEFAULT_RETRY_TIMEOUT_MS,
-  DEFAULT_TIMEOUT_MS,
   DirectRpcError,
   isRpcTimeout,
   mintClientId,
@@ -34,6 +30,7 @@ import {
   type RpcRequestEnvelope,
   type RpcResponse,
 } from './sfu-rpc-support';
+import { DEFAULT_RETRY_ATTEMPTS, DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_TIMEOUT_MS, DEFAULT_TIMEOUT_MS } from '@/constants/voice/sfu-rpc-support';
 
 export type {
   RpcNotification,

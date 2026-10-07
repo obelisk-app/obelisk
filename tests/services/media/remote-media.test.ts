@@ -1,14 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  REMOTE_MEDIA_DEFAULTS,
   _resetRemoteMediaForTest,
   getRemoteMediaSettings,
-  isSameOriginMediaUrl,
   mayAutoLoadRemoteMedia,
   normalizeRemoteMediaSettings,
   setRemoteMediaMode,
   subscribeRemoteMedia,
 } from '@/services/media/remote-media';
+import { REMOTE_MEDIA_DEFAULTS } from '@/constants/media/remote-media';
 
 const alice = 'a'.repeat(64);
 const bob = 'b'.repeat(64);
@@ -65,13 +64,3 @@ describe('mayAutoLoadRemoteMedia', () => {
   });
 });
 
-describe('isSameOriginMediaUrl', () => {
-  it('accepts relative and same-origin URLs and nothing else', () => {
-    expect(isSameOriginMediaUrl('/api/welcome-banner?x=1')).toBe(true);
-    expect(isSameOriginMediaUrl(`${window.location.origin}/uploads/a.png`)).toBe(true);
-    expect(isSameOriginMediaUrl('https://attacker.example/api/welcome-banner')).toBe(false);
-    // An opaque scheme has a null origin; a bare word would resolve as a
-    // relative path, which is same-origin and correctly allowed.
-    expect(isSameOriginMediaUrl('data:image/png;base64,AAAA')).toBe(false);
-  });
-});

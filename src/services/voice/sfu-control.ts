@@ -34,7 +34,7 @@
  * topology switch in `client.ts` takes over.
  */
 import { getBridge, getBridgeImpl } from '@/services/nostr-bridge';
-import { KIND_SFU_CONTROL } from '@/utils/nostr/nip-kinds';
+import { KIND_SFU_CONTROL } from '@/constants/nostr/nip-kinds';
 import { resolveSfuPin } from './sfu-pin';
 import {
   advertisementCount,

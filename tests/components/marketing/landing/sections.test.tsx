@@ -12,7 +12,7 @@ import LearnSection from '@/components/marketing/landing/LearnSection';
 import StackSection from '@/components/marketing/landing/StackSection';
 import FaqSection from '@/components/marketing/landing/FaqSection';
 import RelayPulse from '@/assets/illustrations/marketing/RelayPulse';
-import { FAQ_IDS, FEATURE_KEYS, LEARN_GUIDES, ROADMAP_PHASES, TECH_STACK } from '@/components/marketing/landing/landing-data';
+import { FAQ_IDS, FEATURE_KEYS, LEARN_GUIDES, ROADMAP_PHASES, TECH_STACK } from '@/constants/marketing/landing';
 
 vi.mock('next/image', () => ({
   default: ({ src, alt, priority, sizes, ...props }: ImgHTMLAttributes<HTMLImageElement> & { src: string; priority?: boolean }) => {

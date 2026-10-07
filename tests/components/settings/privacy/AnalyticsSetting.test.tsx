@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { LocaleProvider, translator } from '@tests/support/intl';
 import AnalyticsSetting from '@/components/settings/privacy/AnalyticsSetting';
 import LocalDataPanel from '@/components/settings/privacy/LocalDataPanel';
-import { ANALYTICS_CONSENT_KEY } from '@/services/analytics/consent';
+import { ANALYTICS_CONSENT_KEY } from '@/constants/analytics/consent';
 import { googleScripts, optedOut, resetAnalyticsPage, simulateGtagCookies } from '@tests/support/analytics';
 
 beforeEach(resetAnalyticsPage);

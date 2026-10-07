@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import ForumTagsEditor from '@/components/chat/forum/ForumTagsEditor';
-import { MAX_FORUM_TAGS } from '@/utils/chat/forum/forum-tags';
+import { MAX_FORUM_TAGS } from '@/constants/chat/forum';
 
 function mount(value = [{ id: 'a1', name: 'news', emoji: null, color: null }]) {
   const onChange = vi.fn();

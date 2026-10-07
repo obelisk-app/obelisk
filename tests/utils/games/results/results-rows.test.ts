@@ -9,8 +9,8 @@ vi.mock('@/lib/games/core/standings', () => ({
 }));
 
 import { rowsFor } from '@/utils/games/results/results-rows';
-import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
-import { VESTA_PLAYER_COLORS } from '@/utils/games/vesta/palette';
+import { SEAT_COLORS } from '@/constants/games/chain-reaction';
+import { VESTA_PLAYER_COLORS } from '@/constants/games/vesta';
 import type { GameSession } from '@/lib/games/session/session';
 
 const session = (game: string) => ({ game, participants: ['a', 'b'] }) as unknown as GameSession;

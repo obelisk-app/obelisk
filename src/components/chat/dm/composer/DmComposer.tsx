@@ -25,7 +25,7 @@
 
 import { useRef, type InputHTMLAttributes } from 'react';
 import { useTranslations } from 'next-intl';
-import { MESSAGE_INPUT_PROPS } from '@/utils/chat/composer/message-input-props';
+import { MESSAGE_INPUT_PROPS } from '@/constants/chat/composer';
 import Input from '@/components/ui/forms/Input';
 import MessageMediaPicker from '../../picker/MessageMediaPicker';
 import { FileDropZone } from '../../composer/FileDropZone';

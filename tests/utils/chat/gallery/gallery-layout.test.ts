@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FEATURE_EVERY, galleryLayout, mediaGridTiles } from '@/utils/chat/gallery/gallery-layout';
+import { galleryLayout, mediaGridTiles } from '@/utils/chat/gallery/gallery-layout';
+import { FEATURE_EVERY } from '@/constants/chat/gallery';
 
 const urls = (n: number) => Array.from({ length: n }, (_, i) => `https://x/${i}.jpg`);
 

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-import { pageLocale } from '@/i18n/page-locale';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { MessageKey } from '@/i18n/keys';
 import { decodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
@@ -12,7 +11,7 @@ const RELAY_BRANDING: Record<string, 'laCrypta'> = {
   'wss://lacrypta-relay.obelisk.ar': 'laCrypta',
 };
 
-type Params = { params: Promise<{ code: string; locale: string }> };
+type Params = { params: Promise<{ code: string }> };
 
 /**
  * A share link adds a relay and forwards to the app: a doorway, not a page
@@ -21,7 +20,7 @@ type Params = { params: Promise<{ code: string; locale: string }> };
  * it from the internal route, `/en/r/...`, which only redirects.
  */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const locale = await pageLocale(params);
+  const locale = await getLocale();
   const { code } = await params;
   const t = await getTranslations({ locale });
   const relayUrl = decodeRelayShareCode(code);
@@ -38,7 +37,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function Page({ params }: Params) {
-  await pageLocale(params);
   const { code } = await params;
   return <RelayShareLanding code={code} />;
 }

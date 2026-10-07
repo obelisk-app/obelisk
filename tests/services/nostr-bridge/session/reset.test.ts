@@ -10,12 +10,12 @@ import type { Identity } from '@/lib/relay-hub';
 import type { LifecycleTargets, MessagesLifecycle } from '@/services/nostr-bridge/session/lifecycle';
 import { ConnectionModule } from '@/services/nostr-bridge/session/connection';
 import {
-  ANONYMOUS_IDENTITY,
   clearForLogout,
   disposeSession,
   resetRelayScopedState,
   resetSubscriptionState,
 } from '@/services/nostr-bridge/session/reset';
+import { ANONYMOUS_IDENTITY } from '@/constants/nostr-bridge/session';
 import { SessionState } from '@/services/nostr-bridge/session/state';
 import { StateStore } from '@/services/nostr-bridge/common/state-store';
 import type { JsDirectMessage } from '@/services/nostr-bridge/common/types';

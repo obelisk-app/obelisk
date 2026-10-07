@@ -18,11 +18,10 @@ const bridgeState = {
 const switchRelay = vi.fn();
 
 import {
-  classifyDeepLinkRelay,
-  normalizeDeepLinkRelay,
-  switchToDeepLinkedRelay,
   useRelayDeepLink,
 } from '@/hooks/relay/deep-link/useRelayDeepLink';
+import { switchToDeepLinkedRelay } from '@/services/relay/deep-link';
+import { classifyDeepLinkRelay, normalizeDeepLinkRelay } from '@/utils/relay/deep-link';
 
 function mountShell() {
   render(<LocaleProvider initialLocale="en"><ConfirmDialogHost /></LocaleProvider>);

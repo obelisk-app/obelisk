@@ -6,10 +6,11 @@
  */
 import type { MessagesContext, MessagesDeps, MessagesParts } from './module';
 import type { Filter } from 'nostr-tools';
-import { KIND_EVENT_DELETION, KIND_GROUP_CHAT_MESSAGE, KIND_GROUP_DELETE_EVENT } from '@/utils/nostr/nip-kinds';
+import { KIND_EVENT_DELETION, KIND_GROUP_CHAT_MESSAGE, KIND_GROUP_DELETE_EVENT } from '@/constants/nostr/nip-kinds';
 import type { MessagesStatus } from '../../common/types';
 import { seedCachedMessagesForGroup } from './seed';
-import { BACKGROUND_MESSAGE_LIMIT, type MessagesState } from './state';
+import type { MessagesState } from './state';
+import { BACKGROUND_MESSAGE_LIMIT } from '@/constants/nostr-bridge/groups';
 
 export class MessageStream {
   constructor(

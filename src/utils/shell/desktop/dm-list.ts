@@ -2,7 +2,6 @@ import type { JsDirectMessage } from '@/services/nostr-bridge';
 
 /** The DM list's two tabs. */
 export type DmListTab = 'follows' | 'others';
-export const DM_LIST_TABS: ReadonlyArray<DmListTab> = ['follows', 'others'];
 
 /** One conversation in the list: the peer and the last message. */
 export interface DmPeer {

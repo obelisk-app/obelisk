@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
-import { LONG_NOTE_CHARS } from '@/utils/social/note-card';
+import { LONG_NOTE_CHARS } from '@/constants/social/note-card';
 import { useNoteBody } from '@/hooks/social/note/useNoteBody';
 
 const note = (patch: Partial<NostrEvent>): NostrEvent => ({

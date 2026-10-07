@@ -3,30 +3,14 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { finalizeEvent, generateSecretKey } from 'nostr-tools/pure';
-import { KIND_BLOSSOM_AUTH } from '@/utils/nostr/nip-kinds';
+import { KIND_BLOSSOM_AUTH } from '@/constants/nostr/nip-kinds';
 import { nostrActions } from '@/services/nostr-bridge';
+import { ENCRYPTED_BLOSSOM_SERVERS } from '@/constants/media/blossom';
 
 const BLOSSOM_SERVERS = [
   'https://blossom.primal.net',
   'https://nostr.build',
   'https://blossom.band',
-];
-
-/**
- * Servers for encrypted DM attachments, a separate list on purpose.
- *
- * Every server above sniffs the upload and only stores recognisable media:
- * measured 2026-09-26, primal and blossom.band answer 415 to
- * `application/octet-stream` (and 400 "does not match the file content" if
- * the ciphertext is labelled as an image), and nostr.build returns an HTML
- * page. AES-GCM ciphertext is indistinguishable from random bytes, so it can
- * never pass that check. These two store arbitrary blobs from a key they have
- * never seen, serve them back byte-for-byte with `Access-Control-Allow-Origin:
- * *`, and were verified with 4 KB and 3 MB round trips the same day.
- */
-export const ENCRYPTED_BLOSSOM_SERVERS = [
-  'https://nostr.download',
-  'https://blossom.yakihonne.com',
 ];
 
 async function createAuthEvent(fileHash: string, secretKey?: Uint8Array, server?: string): Promise<string> {

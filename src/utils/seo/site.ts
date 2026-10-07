@@ -13,9 +13,11 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@/i18n';
 import type { Translate } from '@/i18n/keys';
-import { SITE_URL, ogLocales } from './alternates';
-import { SCHEMA, organizationNode, websiteNode } from './jsonld';
-import { SITE_NAME, X_HANDLE } from './page';
+import { ogLocales } from './alternates';
+import { SITE_URL } from '@/constants/seo/alternates';
+import { organizationNode, websiteNode } from './jsonld';
+import { SCHEMA } from '@/constants/seo/jsonld';
+import { SITE_NAME, X_HANDLE } from '@/constants/seo/page';
 
 const KEYWORDS = [
   'Discord alternative', 'Nostr login', 'Nostr chat', 'Nostr Discord', 'no email no password chat',
@@ -77,9 +79,3 @@ export function siteJsonLd(t: Translate, locale: Locale) {
   };
 }
 
-/**
- * PWA route guard: an installed app opened on the landing page (`/`,
- * `/es`, `/pt`) jumps straight to the chat shell in the same language, so
- * the marketing hero does not flash before the shell mounts.
- */
-export const PWA_ROUTE_GUARD = `(function(){try{var s=(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;var m=location.pathname.match(/^\\/(es|pt)?\\/?$/);if(s&&m){location.replace((m[1]?'/'+m[1]:'')+'/app'+location.search+location.hash);}}catch(e){}})();`;

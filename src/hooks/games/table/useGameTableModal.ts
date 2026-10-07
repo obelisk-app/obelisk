@@ -13,9 +13,7 @@ import { useResultSplash } from '@/hooks/games/table/useResultSplash';
 import { useTableNames } from '@/hooks/games/table/useTableNames';
 import { useGameActions } from '@/hooks/games/table/useGameActions';
 import { opensFullscreen } from '@/utils/games/table/fullscreen-default';
-
-/** Board width when the table is a dialog rather than fullscreen. */
-export const DIALOG_BOARD_WIDTH = 420;
+import { DIALOG_BOARD_WIDTH } from '@/constants/games/table';
 
 /**
  * The table's view model: the replayed session and who is looking, the

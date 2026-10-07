@@ -13,6 +13,7 @@ export type ProfileFeedTab = 'posts' | 'replies' | 'media' | 'articles';
  * replies.
  */
 import { isReplyNote } from './feed';
+import { KIND_LONG_FORM } from '@/constants/nostr/nip-kinds';
 
 export { isReplyNote as isReply };
 
@@ -34,11 +35,8 @@ export function hashtagTags(content: string): string[][] {
   return [...hashtags].map((hashtag) => ['t', hashtag]);
 }
 
-/** Long-form. Its own tab because it reads nothing like a short note. */
-export const ARTICLE_KIND = 30023;
-
 export function isArticle(note: Pick<NostrEvent, 'kind'>): boolean {
-  return note.kind === ARTICLE_KIND;
+  return note.kind === KIND_LONG_FORM;
 }
 
 export function filterProfileFeed(notes: readonly NostrEvent[], tab: ProfileFeedTab): NostrEvent[] {

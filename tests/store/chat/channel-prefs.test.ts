@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   CHANNEL_PREFS_STORE_VERSION,
-  MUTED_FOREVER,
   ensureChannelPrefsStoreForAccount,
   getChannelPref,
   isChannelMuted,
   notifyLevel,
   useChannelPrefsStore,
 } from '@/store/chat/channel-prefs';
+import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 import { CORRUPT_STATES, freshPubkey, readBlob, seedBlob } from '../persist-blob';
 
 const R = 'wss://r.example';

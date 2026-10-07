@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  ANALYTICS_CONSENT_KEY,
   applyStoredAnalyticsConsent,
   forgetAnalyticsConsent,
   getAnalyticsConsent,
@@ -8,6 +7,7 @@ import {
   setAnalyticsConsent,
   subscribeAnalyticsConsent,
 } from '@/services/analytics/consent';
+import { ANALYTICS_CONSENT_KEY } from '@/constants/analytics/consent';
 import { entryForKey } from '@/services/local-data';
 import { googleScripts, optedOut, resetAnalyticsPage, simulateGtagCookies } from '@tests/support/analytics';
 

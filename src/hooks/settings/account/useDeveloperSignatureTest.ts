@@ -6,7 +6,7 @@ import { useSignerReady } from '@/services/nostr-bridge';
 import { setPreference } from '@/services/preferences/preferences';
 import { requestMockSignatures } from '@/services/settings/signature-test';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
-import { OBELISK_SIGNING_KINDS } from '@/utils/nostr/nostr-signing-kinds';
+import { OBELISK_SIGNING_KINDS } from '@/constants/nostr/nostr-signing-kinds';
 import {
   mockSignatureTemplate, pendingSignatures, signatureTally, type SignatureResult,
 } from '@/utils/settings/signature-test';

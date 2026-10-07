@@ -4,7 +4,7 @@
  * channel asks for, the signer, the owner's listeners and the UI sink.
  */
 import type { VoiceClientEvents } from './room-state';
-import type { VoiceSigner } from './constants';
+import type { VoiceSigner } from '@/constants/voice/client';
 import type { VoiceUiSink } from './ui-sink';
 
 export interface VoiceClientOptions {

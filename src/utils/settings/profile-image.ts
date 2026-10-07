@@ -1,4 +1,5 @@
-export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+import { MAX_IMAGE_BYTES } from '@/constants/settings/profile-image';
 
 export type ProfileImageProblem = 'not-image' | 'too-large';
 

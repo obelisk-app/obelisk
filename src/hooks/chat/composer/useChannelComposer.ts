@@ -33,15 +33,15 @@ import {
   removeUrlLine,
   slashQueryOf,
   withPickedMedia,
-} from './draft-text';
-import { navigatePicker } from './picker-keys';
-import { MAX_COMPOSER_ATTACHMENTS, type ChannelComposer, type ChannelComposerOptions } from './types';
+} from '@/utils/chat/composer/draft-text';
+import { navigatePicker } from '@/utils/chat/composer/picker-keys';
+import { type ChannelComposer, type ChannelComposerOptions } from './types';
+import { MAX_COMPOSER_ATTACHMENTS } from '@/constants/chat/composer';
 import { useComposerMetadata, useMentionCandidates } from './useComposerPeople';
 import { useComposerSend } from './useComposerSend';
 import { useComposerUploads } from './useComposerUploads';
 import { useSlashCatalog } from './useSlashCatalog';
 
-export { MAX_COMPOSER_ATTACHMENTS } from './types';
 export type { ChannelComposer, ChannelComposerOptions, ComposerHandle } from './types';
 
 /**

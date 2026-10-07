@@ -3,7 +3,7 @@
  * nothing here throws and every number goes through `finite`. Re-exported
  * from `protocol.ts`.
  */
-import { KIND_GAME } from '@/utils/nostr/nip-kinds';
+import { KIND_GAME } from '@/constants/nostr/nip-kinds';
 import { MAX_GARBAGE_LINES } from '../stacker/dimensions';
 import type { GameEvent, GameOp, ParsedGameEvent, SeatSpec } from './protocol-types';
 

@@ -3,8 +3,9 @@
  * is in storage (old keys, hand-edited values, other versions) into a valid
  * `Preferences`. The store and the hook live in `preferences.ts`.
  */
-import { DEFAULT_SOCIAL_RELAYS, normalizeSocialRelays } from '../social/relays';
-import { DEFAULT_FEED_WIDGETS, normalizeFeedWidgets } from '../social/widgets';
+import { normalizeSocialRelays } from '../social/relays';
+import { normalizeFeedWidgets } from '../social/widgets';
+import { DEFAULT_CALL_RELAYS, CALL_RELAY_MAX, DEFAULTS } from '@/constants/preferences/preferences-schema';
 
 export type NotificationRingtone = 'crystal' | 'marimba' | 'aurora' | 'bubble';
 const RINGTONE_VALUES = new Set<NotificationRingtone>(['crystal', 'marimba', 'aurora', 'bubble']);
@@ -23,15 +24,6 @@ const CALLS_FROM_VALUES = new Set<CallsFrom>(['contacts', 'anyone']);
  */
 export type CallIpProtection = 'auto' | 'always' | 'never';
 const CALL_IP_VALUES = new Set<CallIpProtection>(['auto', 'always', 'never']);
-
-/**
- * Relays that carry DM call negotiation. They must accept ephemeral events
- * from keys they have never seen, because the negotiation is signed by a
- * throwaway key per call - a whitelist relay (like the group relays) cannot
- * carry a call. See docs/voice/dm-calls.md.
- */
-export const DEFAULT_CALL_RELAYS: readonly string[] = ['wss://relay.damus.io', 'wss://nos.lol'];
-export const CALL_RELAY_MAX = 4;
 
 export interface Preferences {
   showActivityIndicator: boolean;
@@ -78,42 +70,6 @@ export interface Preferences {
   callsFrom: CallsFrom;
   callIpProtection: CallIpProtection;
 }
-
-export const DEFAULTS: Preferences = {
-  showActivityIndicator: true,
-  developerRelayDebug: false,
-  directMessagesEnabled: false,
-  // On by default. The toggle gates both post-quantum sending *and* the two
-  // provenance surfaces (the conversation notice and the per-message marks),
-  // and the indicators are the feature: defaulting off meant a user saw
-  // nothing at all - no notice, no marks, no guide link - so the detection
-  // work was invisible to everyone who never opened settings. Sending stays
-  // conservative on its own (`resolvePqSend` only seals post-quantum when the
-  // signer advertises it), so this default cannot cause a false claim.
-  postQuantumEnabled: true,
-  notificationSounds: true,
-  notificationRingtone: 'crystal',
-  browserNotifications: true,
-  backgroundRelayWatch: true,
-  socialRelays: [...DEFAULT_SOCIAL_RELAYS],
-  feedWidgets: [...DEFAULT_FEED_WIDGETS],
-  accentColor: '#b4f953',
-  backgroundColor: '#0a0a0a',
-  buttonColor: '#b4f953',
-  bubbleColor: '#b4f953',
-  bubbleAnimation: 'float',
-  callRelays: [...DEFAULT_CALL_RELAYS],
-  callsFrom: 'contacts',
-  callIpProtection: 'auto',
-};
-
-export const APPEARANCE_DEFAULTS = {
-  accentColor: DEFAULTS.accentColor,
-  backgroundColor: DEFAULTS.backgroundColor,
-  buttonColor: DEFAULTS.buttonColor,
-  bubbleColor: DEFAULTS.bubbleColor,
-  bubbleAnimation: DEFAULTS.bubbleAnimation,
-} as const;
 
 const COLOR_KEYS = new Set<keyof Preferences>(['accentColor', 'backgroundColor', 'buttonColor', 'bubbleColor']);
 const BUBBLE_ANIMATION_VALUES = new Set<BubbleAnimationStyle>(['float', 'drift', 'orbit', 'still']);

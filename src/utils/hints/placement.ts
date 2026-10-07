@@ -1,7 +1,7 @@
+import { HINT_CARD_WIDTH } from '@/constants/hints/placement';
+
 /** Keeps the card off the viewport edges. */
 const MARGIN = 8;
-/** The card's width, in pixels. */
-export const HINT_CARD_WIDTH = 264;
 /** Breathing room between the card and the control it points at. */
 const GAP = 10;
 

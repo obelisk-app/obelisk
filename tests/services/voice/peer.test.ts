@@ -3,7 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { FakeMediaStreamTrack, installWebRtcMocks } from '@tests/support/mocks/webrtc';
 import type { VoiceSignalPayload } from '@/services/voice/types';
 import { emptyVoiceMetrics } from '@/services/voice/metrics';
-import { DEAD_PEER_TIMEOUT_MS } from '@/services/voice/control-channel';
+import { DEAD_PEER_TIMEOUT_MS } from '@/constants/voice/control-channel';
 
 const simplePeerFake = vi.hoisted(() => ({ instances: [] as MockSimplePeer[] }));
 

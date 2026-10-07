@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KIND_GAME } from '@/utils/nostr/nip-kinds';
+import { KIND_GAME } from '@/constants/nostr/nip-kinds';
 import { parseGameEvent, parseSeats } from '@/lib/games/protocol/protocol-parse';
 import { MAX_GARBAGE_LINES } from '@/lib/games/stacker/engine';
 import * as entry from '@/lib/games/protocol/protocol';

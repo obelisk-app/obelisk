@@ -3,9 +3,7 @@ import { inferMediaKind } from '@/utils/media/tags/media-kind';
 import type { JsMediaKind } from '@/services/nostr-bridge';
 import type { RecentEmoji } from '@/services/chat/picker/recent-emojis';
 import type { CustomEmojiEntry, PickedCustomEmoji } from './picker-types';
-
-/** Most results a search shows per section. */
-export const SEARCH_LIMIT = 80;
+import { SEARCH_LIMIT } from '@/constants/chat/picker';
 
 /**
  * The custom set as sorted entries with a kind each: the declared kind when

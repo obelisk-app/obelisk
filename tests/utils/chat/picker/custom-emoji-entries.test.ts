@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { customEntriesFrom, filterByName, resolveRecentEntries, SEARCH_LIMIT } from '@/utils/chat/picker/custom-emoji-entries';
+import { customEntriesFrom, filterByName, resolveRecentEntries } from '@/utils/chat/picker/custom-emoji-entries';
+import { SEARCH_LIMIT } from '@/constants/chat/picker';
 
 describe('custom emoji entries', () => {
   it('normalises names, prefers the declared kind, and sorts', () => {

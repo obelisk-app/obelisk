@@ -4,7 +4,7 @@
  * Unlike the caches, some of it exists nowhere else.
  */
 import { VAULT_DB } from '@/lib/crypto/session-vault';
-import { GA_COOKIE, GA_COOKIE_PREFIX } from '@/services/analytics/gtag';
+import { GA_COOKIE, GA_COOKIE_PREFIX } from '@/constants/analytics/gtag';
 import type { LocalDataEntry } from './types';
 
 const LS = 'localStorage' as const;
@@ -39,7 +39,7 @@ export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
   pref('recent-emojis', 'obelisk:recent-emojis', 'exact', 'Recently used emoji.', 'src/services/chat/picker/recent-emojis.ts'),
   pref('recent-media', 'obelisk:recent-media', 'exact', 'Recently used GIFs and stickers.', 'src/services/chat/picker/recent-media.ts'),
   pref('recent-slash-commands', 'obelisk:recent-slash-commands', 'exact', 'Recently used slash commands.', 'src/services/chat/slash/recent-slash-commands.ts'),
-  pref('search-history', 'obelisk-dex/search-history', 'exact', 'Recent relay searches.', 'src/hooks/chat/search/search-history.ts'),
+  pref('search-history', 'obelisk-dex/search-history', 'exact', 'Recent relay searches.', 'src/services/chat/search/search-history.ts'),
   pref('stacker-audio', 'obelisk-dex/stacker/audio', 'exact', 'Stacker game sound and music switches.', 'src/lib/games/stacker/audio.ts'),
   pref('stacker-keys', 'obelisk-dex/stacker/keys', 'exact', 'Stacker game key bindings.', 'src/lib/games/stacker/keymap.ts'),
   pref('claimed-admin', 'obelisk:claimed-admin:', 'prefix', 'Groups where this account already claimed creator admin rights, per relay.', 'src/hooks/shell/panes/channel/useChannelPanelState.ts'),

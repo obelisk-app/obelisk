@@ -1,27 +1,7 @@
 import type { SurfaceId } from '@/utils/hints/registry';
 import type { NavState, ScreenName } from './url-state';
-import { NAV_ORDER, resolveParent } from './swipe-nav';
-
-/**
- * Which hint each bottom-nav tab introduces.
- *
- * The tab is the only control that exists before you have been to the
- * screen, so it is where the dot goes: the app says "there is something
- * over there" before it explains what.
- */
-export const NAV_HINT_ANCHOR: Partial<Record<ScreenName, string>> = {
-  feed: 'nav-feed',
-  'dms-list': 'dm-list',
-  inbox: 'inbox-tabs',
-  'settings-profile': 'profile-button',
-};
-
-export const NAV_HINT_ID: Partial<Record<ScreenName, string>> = {
-  feed: 'feed-source',
-  'dms-list': 'dms',
-  inbox: 'inbox',
-  'settings-profile': 'identity',
-};
+import { resolveParent } from './swipe-nav';
+import { NAV_ORDER } from '@/constants/shell/mobile';
 
 /**
  * Screens that have something to explain. Anything else (a sheet, an

@@ -1,9 +1,8 @@
 import { parseMentions, MemberInfo, EVERYONE_REGEX_GLOBAL } from './mentions';
+import { EVERYONE_PLACEHOLDER } from '@/constants/message-text/markdown';
 
 const PLACEHOLDER_PREFIX = '\u3008MENTION:';
 const PLACEHOLDER_SUFFIX = '\u3009';
-
-export const EVERYONE_PLACEHOLDER = '\u3008EVERYONE\u3009';
 
 export interface MentionData {
   pubkey: string;
@@ -38,11 +37,6 @@ export function preprocessForMarkdown(content: string, members: MemberInfo[]): P
 
   return { text, mentions };
 }
-
-/**
- * Regex to find mention placeholders in rendered text.
- */
-export const MENTION_PLACEHOLDER_REGEX = /\u3008MENTION:(\d+)\u3009/g;
 
 /**
  * Extract all URLs from text content.

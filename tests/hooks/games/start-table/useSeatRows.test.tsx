@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { LocaleProvider } from '@tests/support/intl';
 import { describe, expect, it } from 'vitest';
 import type { GameSession } from '@/lib/games/session/session';
-import { seatSpecsFor, useSeatRows } from '@/hooks/games/start-table/useSeatRows';
+import { useSeatRows } from '@/hooks/games/start-table/useSeatRows';
+import { seatSpecsFor } from '@/utils/games/start-table/seat-specs';
 
 /** The hook words its defaults through next-intl, so it needs a provider. */
 const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;

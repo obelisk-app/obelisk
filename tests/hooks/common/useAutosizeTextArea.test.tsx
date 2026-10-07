@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { autosizeHeight, useAutosizeTextArea } from '@/hooks/common/useAutosizeTextArea';
+import { useAutosizeTextArea } from '@/hooks/common/useAutosizeTextArea';
+import { autosizeHeight } from '@/utils/common/autosize';
 
 describe('autosizeHeight', () => {
   it('without a cap the box is the content plus its borders', () => {

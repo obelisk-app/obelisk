@@ -32,10 +32,7 @@
  * The React side is `useRelayRoles` in `src/hooks/relay/`.
  */
 export {
-  DEFAULT_ROLE_COLOR,
   EMPTY_RELAY_ROLES,
-  MAX_ROLE_EMOJI_LENGTH,
-  MAX_ROLES,
   normalizeRoleColor,
   normalizeRoleEmoji,
   normalizeRoleId,
@@ -49,7 +46,8 @@ export {
   toRoleCatalogTags,
   toRoleHoldersTags,
   topRole,
-} from './relay-roles-model';
-export type { RelayRole, RelayRoles, RoleHolders } from './relay-roles-model';
+} from '@/utils/relay/relay-roles-model';
+export { DEFAULT_ROLE_COLOR, MAX_ROLE_EMOJI_LENGTH, MAX_ROLES } from '@/constants/relay/relay-roles-model';
+export type { RelayRole, RelayRoles, RoleHolders } from '@/utils/relay/relay-roles-model';
 export { publishRoleCatalog, publishRoleHolders, subscribeRelayRoles } from './relay-roles-sync';
 

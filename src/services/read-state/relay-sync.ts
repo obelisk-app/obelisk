@@ -40,20 +40,17 @@
 import { useReadStateStore, type RemoteReadState } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
 import {
-  D_TAG_DMS,
-  D_TAG_GROUPS,
-  DEBOUNCE_MS,
-  SCHEMA_VERSION,
   findInnerDTag,
   parsePayload,
   type DmsPayload,
   type GroupsPayload,
   type SyncOptions,
 } from './sync-options';
+import { D_TAG_DMS, D_TAG_GROUPS, DEBOUNCE_MS, SCHEMA_VERSION } from '@/constants/read-state/sync-options';
 import { subscribeAndIngest } from './sync-ingest';
 import { watchAndPublish } from './sync-publish';
 
-export { D_TAG_DMS, D_TAG_GROUPS, READ_STATE_WATCHDOG_MS } from './sync-options';
+export { D_TAG_DMS, D_TAG_GROUPS, READ_STATE_WATCHDOG_MS } from '@/constants/read-state/sync-options';
 
 /**
  * Start syncing groups-scope state with one relay. Returns a cleanup

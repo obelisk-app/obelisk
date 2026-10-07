@@ -5,7 +5,7 @@
  */
 import { getActiveVoiceClient } from '@/services/voice/active-client';
 import type { VoiceClient } from '@/services/voice/client';
-import { voiceErrorCode } from '@/services/voice/errors';
+import { voiceErrorCode } from '@/utils/voice/errors';
 import type { VideoQuality } from '@/services/voice/quality';
 import { useVoiceStore } from '@/store/voice';
 

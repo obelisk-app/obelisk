@@ -9,7 +9,7 @@
  */
 
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_REPOST, KIND_GENERIC_REPOST } from './kinds';
+import { KIND_REPOST, KIND_GENERIC_REPOST } from '@/constants/nostr/nip-kinds';
 
 export type FeedAuthor = {
   pubkey: string;

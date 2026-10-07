@@ -13,7 +13,8 @@
  * holding a reference to stop it).
  */
 import type { Peer } from '@/services/voice/peer';
-import { getPreset, MIC_CONSTRAINTS } from '@/services/voice/quality';
+import { getPreset } from '@/services/voice/quality';
+import { MIC_CONSTRAINTS } from '@/constants/voice/quality';
 
 export interface DmLocalMediaDeps {
   /** A video call: the camera is acquired with the microphone. */

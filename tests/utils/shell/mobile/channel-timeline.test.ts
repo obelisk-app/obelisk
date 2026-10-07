@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_REACTIONS, reactionsFor, replyParentOf } from '@/utils/shell/mobile/channel-timeline';
+import { reactionsFor, replyParentOf } from '@/utils/shell/mobile/channel-timeline';
+import { EMPTY_REACTIONS } from '@/constants/shell/mobile';
 import { replyPreviewText } from '@/utils/shell/mobile/labels';
 
 describe('the phone timeline row props', () => {

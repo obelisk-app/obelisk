@@ -1,16 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { PROFILE_SYNC_CACHE_KEY } from '@/services/nostr-bridge/profile/profile-sync-cache';
-import { LEGACY_STORAGE_KEY, STORAGE_KEY } from '@/services/nostr-bridge/session/session-storage';
-import {
-  LEGACY_SESSION_KEY,
-  PROFILE_CACHE_KEY,
-  SESSION_KEY,
-  notifySavedAccountChanged,
-  parseCachedProfile,
-  parseSessionPubkey,
-  useSavedAccount,
-} from '@/hooks/marketing/useSavedAccount';
+import { PROFILE_SYNC_CACHE_KEY } from '@/constants/nostr-bridge/profile';
+import { LEGACY_STORAGE_KEY, STORAGE_KEY } from '@/constants/nostr-bridge/session';
+import { LEGACY_SESSION_KEY, PROFILE_CACHE_KEY, SESSION_KEY } from '@/constants/marketing/saved-account';
+import { notifySavedAccountChanged } from '@/services/marketing/saved-account';
+import { parseCachedProfile, parseSessionPubkey } from '@/utils/marketing/saved-account';
+import { useSavedAccount } from '@/hooks/marketing/useSavedAccount';
 
 const ME = 'a'.repeat(64);
 

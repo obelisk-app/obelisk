@@ -1,4 +1,5 @@
-export const CHANNEL_SCROLL_NEAR_BOTTOM_PX = 120;
+
+import { CHANNEL_SCROLL_NEAR_BOTTOM_PX } from '@/constants/chat/timeline';
 
 export interface ChannelScrollSnapshot {
   readonly scrollTop: number;

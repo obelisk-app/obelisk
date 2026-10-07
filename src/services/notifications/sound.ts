@@ -31,8 +31,9 @@ import {
   RINGTONES,
   type NotificationSoundKind,
   type RingtoneId,
-} from './ringtone-defs';
+} from '@/constants/notifications/ringtone-defs';
 import { resetReverb, schedule } from './ringtone-synth';
+import { SOUND_MIN_GAP_MS, RESUME_DEADLINE_MS } from '@/constants/notifications/sound';
 
 export {
   DEFAULT_RINGTONE,
@@ -40,10 +41,7 @@ export {
   RINGTONES,
   type NotificationSoundKind,
   type RingtoneId,
-} from './ringtone-defs';
-
-/** Minimum gap between two chimes. Anything inside it is dropped. */
-export const SOUND_MIN_GAP_MS = 1200;
+} from '@/constants/notifications/ringtone-defs';
 
 let ctx: AudioContext | null = null;
 let lastPlayedAt = 0;
@@ -61,10 +59,6 @@ function getCtx(): AudioContext | null {
   }
   return ctx;
 }
-
-
-/** How long a suspended context gets to resume before the chime is dropped. */
-export const RESUME_DEADLINE_MS = 400;
 
 export type PlayResult = 'played' | 'blocked' | 'unavailable';
 

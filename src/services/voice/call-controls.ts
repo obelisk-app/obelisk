@@ -7,7 +7,7 @@
  */
 import { getActiveVoiceClient } from '@/services/voice/active-client';
 import type { VoiceClient } from '@/services/voice/client';
-import { voiceErrorCode, type VoiceErrorCode } from '@/services/voice/errors';
+import { voiceErrorCode, type VoiceErrorCode } from '@/utils/voice/errors';
 import { useVoiceStore } from '@/store/voice';
 
 function isDeclinedPrompt(err: unknown): boolean {

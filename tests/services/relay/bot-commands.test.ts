@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { SLASH_COMMANDS } from '@/utils/chat/slash/slash-commands';
-import { BOT_ALIVE_SECS, buildSlashSections, slashCommandId, filterSlashCommands, mergeSlashCommands, parseBotCommands, slashNameFor } from '@/services/relay/bot-commands';
+import { SLASH_COMMANDS } from '@/constants/chat/slash';
+import { buildSlashSections, slashCommandId, filterSlashCommands, mergeSlashCommands, parseBotCommands, slashNameFor } from '@/services/relay/bot-commands';
+import { BOT_ALIVE_SECS } from '@/constants/relay/bot-commands';
 
 const NOW = 1_800_000_000;
 

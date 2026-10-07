@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { FULLSCREEN_CHROME_PX, useFullscreenBoardBox } from '@/hooks/games/table/useFullscreenBoardBox';
+import { useFullscreenBoardBox } from '@/hooks/games/table/useFullscreenBoardBox';
+import { FULLSCREEN_CHROME_PX } from '@/constants/games/table';
 
 const original = { w: window.innerWidth, h: window.innerHeight };
 

@@ -1,6 +1,3 @@
-/** How many people the desktop "New message" search lists. */
-export const COMPOSE_DM_MAX_RESULTS = 8;
-
 /** The highlighted row, kept on the list as it shrinks under the cursor. */
 export function clampActiveIndex(active: number, count: number): number {
   return Math.min(active, Math.max(0, count - 1));

@@ -21,8 +21,8 @@ import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/chat/dm';
 import { useMessageZapStore } from '@/store/chat/message-zap';
-import { type ScreenName, type NavState, initialNav } from '@/utils/shell/mobile/url-state';
-import { NAV_ORDER } from '@/utils/shell/mobile/swipe-nav';
+import { type ScreenName, type NavState } from '@/utils/shell/mobile/url-state';
+import { initialNav, NAV_ORDER } from '@/constants/shell/mobile';
 
 export interface MobileNavActionInputs {
   readonly navRef: RefObject<NavState>;

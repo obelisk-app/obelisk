@@ -3,14 +3,12 @@
  * addresses to us on this channel. `SfuRpc.start()` uses it when there is no
  * direct WebSocket, or the direct one failed.
  */
-import { KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
+import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
 import {
   bridge,
-  SFU_RPC_MAX_SUBSCRIBE_ATTEMPTS,
-  SFU_RPC_WATCHDOG_MS,
   sleep,
-  SUBSCRIBE_SETTLE_MS,
 } from './sfu-rpc-support';
+import { SFU_RPC_MAX_SUBSCRIBE_ATTEMPTS, SFU_RPC_WATCHDOG_MS, SUBSCRIBE_SETTLE_MS } from '@/constants/voice/sfu-rpc-support';
 
 export interface RelayRpcHooks {
   channelId: string;

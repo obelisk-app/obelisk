@@ -9,7 +9,7 @@ import { categoryLabel } from '@/utils/relay/category-label';
 import Sheet from '@/components/ui/overlays/Sheet';
 import Input from '@/components/ui/forms/Input';
 import { CategoryChannelsBlock } from './CategoryChannelsBlock';
-import { NO_CATEGORY } from '@/utils/shell/mobile/category-options';
+import { NO_CATEGORY } from '@/constants/shell/mobile';
 import { CategoryListEditor } from './CategoryListEditor';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';

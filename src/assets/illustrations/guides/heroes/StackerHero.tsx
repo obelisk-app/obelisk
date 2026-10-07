@@ -6,9 +6,10 @@
 
 import { useTranslations } from 'next-intl';
 import {
-  STACKER_CELL as CELL, STACKER_COLS as COLS, STACKER_ROWS as ROWS, STACKER_TOP as TOP,
-  STACKER_LEFT as LEFT, STACKER_RIGHT as RIGHT,
+  STACKER_LEFT as LEFT,
+  STACKER_RIGHT as RIGHT,
 } from '@/utils/guides/stacker-art';
+import { STACKER_CELL as CELL, STACKER_COLS as COLS, STACKER_ROWS as ROWS, STACKER_TOP as TOP } from '@/constants/guides/stacker-art';
 import StackerWell from './StackerWell';
 
 export default function StackerHero() {

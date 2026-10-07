@@ -6,7 +6,7 @@
  */
 import type { MessagesContext, MessagesDeps, MessagesParts } from './module';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_GROUP_CHAT_MESSAGE } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_CHAT_MESSAGE } from '@/constants/nostr/nip-kinds';
 import { customEmojiMapFromTags } from '@/utils/media/tags/custom-emoji-tags';
 import { stickerFromTags } from '@/utils/media/tags/sticker-tags';
 import { voiceNoteFromTags } from '@/utils/media/tags/voice-note-tags';
@@ -16,7 +16,8 @@ import { isUserWatchingChannel } from '@/services/read-state/read-gates';
 import { cacheDelete, cacheSet } from '../../cache/cache';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { JsMessage, LoadMoreMessagesResult } from '../../common/types';
-import { CACHE_FLUSH_DELAY_MS, LOAD_MORE_PAGE_SIZE, MESSAGE_CACHE_LIMIT, type MessagesState } from './state';
+import type { MessagesState } from './state';
+import { CACHE_FLUSH_DELAY_MS, LOAD_MORE_PAGE_SIZE, MESSAGE_CACHE_LIMIT } from '@/constants/nostr-bridge/groups';
 
 export class MessageIngest {
   constructor(

@@ -10,7 +10,7 @@
  * across the user's configured relays.
  */
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_GAME } from '@/utils/nostr/nip-kinds';
+import { KIND_GAME } from '@/constants/nostr/nip-kinds';
 import {
   parseGameEvent,
   GAME_LOG_WINDOW_SECONDS,
@@ -18,7 +18,9 @@ import {
   type GameEvent,
   type ParsedGameEvent,
 } from '@/lib/games/protocol/protocol';
-import { bridge, GAME_SUB_WATCHDOG_MS } from './transport-bridge';
+import { bridge } from './transport-bridge';
+import { GAME_SUB_WATCHDOG_MS } from '@/constants/games/transport-bridge';
+import { CHANNEL_GAME_LIMIT, TAG_PROBE_MS } from '@/constants/games/transport';
 
 export {
   findCreateByNonce,
@@ -34,21 +36,6 @@ export {
   publishTimeout,
   publishTopOut,
 } from './transport-publish';
-
-/**
- * Tables fetched per channel. The relay returns the NEWEST n, so on a busy
- * Stacker channel a `create` can fall off the end of this - which is only
- * acceptable because a card resolves itself by id (`./resolve.ts`). This REQ is
- * for what is live in the channel, not for making a specific card render. Don't
- * lower it without checking that dependency still holds.
- */
-export const CHANNEL_GAME_LIMIT = 400;
-
-/**
- * How long the tagged REQ is given to produce something before we go looking
- * for a reason it hasn't.
- */
-export const TAG_PROBE_MS = 2500;
 
 /**
  * Per relay: does it index single-letter tags for kind 2390? `true` once we

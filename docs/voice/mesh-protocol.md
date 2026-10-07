@@ -189,7 +189,7 @@ type ControlMessage =
   | { type: 'pong'; ts: number; echoTs: number };
 ```
 
-Lifecycle (timing constants in `src/services/voice/control-channel.ts`):
+Lifecycle (timing constants in `src/constants/voice/control-channel.ts`):
 
 - **Connection timeout**: 9 s from peer construction to connection.
 - **Heartbeat**: ping every 2.5 s. Pong response carries `echoTs` →

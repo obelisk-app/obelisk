@@ -4,7 +4,7 @@ import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { BRIDGE_MOCK_PUBKEY, userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
 import { useSidebarMe } from '@/hooks/shell/panes/sidebar/useSidebarMe';
-import { openSettings } from '@/utils/settings/open-settings';
+import { openSettings } from '@/services/settings/open-settings';
 import { useChatStore } from '@/store/chat';
 
 function setup(seed: Record<string, unknown> = {}) {

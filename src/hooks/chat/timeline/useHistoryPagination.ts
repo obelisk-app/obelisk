@@ -13,10 +13,10 @@ export type HistoryLoadResult = 'added' | 'end' | 'unavailable' | null;
  * event is to scroll back down first. Starting a screenful early keeps the
  * load inside the region where the scroller can still move.
  */
-export const HISTORY_PREFETCH_PX = 600;
+const HISTORY_PREFETCH_PX = 600;
 
 /** How close to the top counts as "at the top" for the status pill. */
-export const HISTORY_AT_TOP_PX = 80;
+const HISTORY_AT_TOP_PX = 80;
 
 /**
  * Safety valve: if a page reports 'added' but never produces a rendered row

@@ -1,9 +1,10 @@
 'use client';
 
-import type { SettingsSection } from '@/utils/settings/open-settings';
+import type { SettingsSection } from '@/services/settings/open-settings';
 import { UserProfileCard } from './UserProfileCard';
 import { UserSettingsModal } from './UserSettingsModal';
-import { panelPositionStyle, useUserPanel, type PanelAnchor } from '@/hooks/shell/user-panel/useUserPanel';
+import { useUserPanel } from '@/hooks/shell/user-panel/useUserPanel';
+import { panelPositionStyle, type PanelAnchor } from '@/utils/shell/user-panel/panel-position';
 
 interface UserPanelProps {
   pubkey: string;

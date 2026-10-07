@@ -6,8 +6,7 @@ import { emojiTagsForContent } from '@/utils/media/tags/custom-emoji-tags';
 import { useChatStore } from '@/store/chat';
 import { useTranslations } from 'next-intl';
 import { errorText } from '@/utils/errors/error-text';
-
-export const MAX_THREAD_TAGS = 5;
+import { MAX_THREAD_TAGS } from '@/constants/chat/forum';
 
 export interface NewThreadAccess {
   readonly isPublic: boolean;

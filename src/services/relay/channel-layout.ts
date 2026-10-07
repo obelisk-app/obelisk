@@ -17,7 +17,8 @@
 import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
-import { KIND_NIP78_APP_DATA as KIND_LAYOUT } from '@/utils/nostr/nip-kinds';
+import { KIND_NIP78_APP_DATA as KIND_LAYOUT } from '@/constants/nostr/nip-kinds';
+import { EMPTY_LAYOUT } from '@/constants/relay/channel-layout';
 
 export interface ChannelLayoutCategory {
   readonly id: string;
@@ -37,8 +38,6 @@ export interface ChannelLayout {
   /** created_at of the source event, or 0 if none seen yet. */
   readonly updatedAt: number;
 }
-
-export const EMPTY_LAYOUT: ChannelLayout = { categories: [], channels: [], updatedAt: 0 };
 
 function dTag(relayUrl: string): string {
   return `obelisk:layout:${relayUrl}`;

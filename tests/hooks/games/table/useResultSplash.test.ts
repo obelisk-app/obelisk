@@ -1,10 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  RESULT_SPLASH_DELAY_MS,
-  RESULT_SPLASH_MAX_WAIT_MS,
   useResultSplash,
 } from '@/hooks/games/table/useResultSplash';
+import { RESULT_SPLASH_DELAY_MS, RESULT_SPLASH_MAX_WAIT_MS } from '@/constants/games/table';
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());

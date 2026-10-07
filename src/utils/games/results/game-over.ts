@@ -5,15 +5,9 @@
  */
 import type { GameSession } from '@/lib/games/session/session';
 import { isDraw, scoreFor, type Score } from '@/lib/games/core/standings';
-import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/constants/games/chain-reaction';
 import type { MessageKey } from '@/i18n/keys';
-
-/** The headline colour for a winner whose seat has no colour of its own. */
-export const FALLBACK_WINNER_HEX = '#b4f953';
-/** The headline colour with no winner. */
-export const NEUTRAL_HEX = '#a3a3a3';
-/** The headline colour for the people who lost. */
-export const LOSER_HEX = '#f87171';
+import { FALLBACK_WINNER_HEX, NEUTRAL_HEX, LOSER_HEX } from '@/constants/games/results';
 
 export interface GameOverView {
   winner: string | null;

@@ -8,7 +8,7 @@ import type { ActiveCallWatcher } from './active-call-watcher';
 import type { VoiceUiSink } from './ui-sink';
 import type { VoiceMetrics } from './metrics';
 import type { VoiceTransport } from './transport';
-import type { VoiceSigner } from './constants';
+import type { VoiceSigner } from '@/constants/voice/client';
 
 export interface MeshSessionDeps {
   channelId: string;

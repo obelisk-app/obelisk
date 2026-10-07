@@ -3,7 +3,8 @@
  * are evicted before current ones, and counts ignore lapsed entries.
  */
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MAX_CACHE_ENTRIES, VerdictCache } from '@/services/wot/verdict-cache';
+import { VerdictCache } from '@/services/wot/verdict-cache';
+import { DEFAULT_MAX_CACHE_ENTRIES } from '@/constants/wot/verdict-cache';
 
 const allow = (expiresAt: number) => ({ verdict: 'allow' as const, distance: 1, expiresAt });
 const deny = (expiresAt: number) => ({ verdict: 'deny' as const, distance: null, expiresAt });

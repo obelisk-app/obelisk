@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import IntlScope from '@/i18n/IntlScope';
-import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
 import { tourJsonLd, tourMetadata, type Tour } from '@/utils/seo/showcase';
 import JsonLd from '@/components/seo/JsonLd';
 import MobileShowcase from './MobileShowcase';
@@ -21,13 +20,13 @@ const TOUR: Tour = {
   ],
 };
 
-export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
-  const locale = await pageLocale(params);
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   return tourMetadata(TOUR, await getTranslations({ locale }), locale);
 }
 
-export default async function MobilePage({ params }: LocaleParams) {
-  const locale = await pageLocale(params);
+export default async function MobilePage() {
+  const locale = await getLocale();
   const jsonLd = tourJsonLd(TOUR, await getTranslations({ locale }), locale);
   return (
     <IntlScope scope="showcase">

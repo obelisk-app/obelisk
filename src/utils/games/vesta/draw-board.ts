@@ -5,7 +5,7 @@ import {
   type GameState,
 } from 'vesta';
 import { edgeAt, hexCenter, hexPolygon, vertexAt } from '@/lib/games/vesta/geometry';
-import { DOT_COUNTS, RESOURCE_COLORS, TILE_EMOJI, VESTA_PLAYER_COLORS } from './palette';
+import { DOT_COUNTS, RESOURCE_COLORS, TILE_EMOJI, VESTA_PLAYER_COLORS } from '@/constants/games/vesta';
 import type { PickMode } from './pick-mode';
 
 /**

@@ -13,7 +13,8 @@ vi.mock('@/services/games/transport', () => transport);
 vi.mock('@/services/games/resolve', () => ({ requestGameLoad: vi.fn() }));
 vi.mock('@/services/games/cache', () => ({ seedGameFromCache: vi.fn() }));
 
-import { DIALOG_BOARD_WIDTH, useGameTableModal } from '@/hooks/games/table/useGameTableModal';
+import { useGameTableModal } from '@/hooks/games/table/useGameTableModal';
+import { DIALOG_BOARD_WIDTH } from '@/constants/games/table';
 import { useGamesStore } from '@/store/games';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
 

@@ -1,23 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import * as limits from '@/utils/attachments/attachments-limits';
+import * as limitValues from '@/constants/attachments/attachments-limits';
 import * as entry from '@/utils/attachments/attachments';
 
 describe('attachments-limits', () => {
   it('clamps a server override to the absolute ceiling and ignores nonsense', () => {
     const parsed = limits.parseServerLimits({
-      maxImageBytes: 10 * limits.SERVER_MAX_CEILING,
+      maxImageBytes: 10 * limitValues.SERVER_MAX_CEILING,
       maxVideoBytes: -1,
       allowedMimeTypes: '{not json',
     });
-    expect(parsed.maxImageBytes).toBe(limits.SERVER_MAX_CEILING);
-    expect(parsed.maxVideoBytes).toBe(limits.MAX_VIDEO_BYTES);
+    expect(parsed.maxImageBytes).toBe(limitValues.SERVER_MAX_CEILING);
+    expect(parsed.maxVideoBytes).toBe(limitValues.MAX_VIDEO_BYTES);
     expect(parsed.allowedMimes).toBeNull();
   });
 
   it('picks the per-category cap, with overrides when given', () => {
-    expect(limits.maxBytesFor('image/png')).toBe(limits.MAX_IMAGE_BYTES);
-    expect(limits.maxBytesFor('application/x-unknown')).toBe(limits.MAX_UPLOAD_BYTES);
-    const custom = { ...limits.DEFAULT_UPLOAD_LIMITS, maxDocBytes: 7 };
+    expect(limits.maxBytesFor('image/png')).toBe(limitValues.MAX_IMAGE_BYTES);
+    expect(limits.maxBytesFor('application/x-unknown')).toBe(limitValues.MAX_UPLOAD_BYTES);
+    const custom = { ...limitValues.DEFAULT_UPLOAD_LIMITS, maxDocBytes: 7 };
     expect(limits.maxBytesForWithLimits('application/pdf', custom)).toBe(7);
   });
 
@@ -30,6 +31,6 @@ describe('attachments-limits', () => {
   it('is what the attachments entry point re-exports', () => {
     expect(entry.parseServerLimits).toBe(limits.parseServerLimits);
     expect(entry.isAllowedMime).toBe(limits.isAllowedMime);
-    expect(entry.DEFAULT_UPLOAD_LIMITS).toBe(limits.DEFAULT_UPLOAD_LIMITS);
+    expect(entry.DEFAULT_UPLOAD_LIMITS).toBe(limitValues.DEFAULT_UPLOAD_LIMITS);
   });
 });

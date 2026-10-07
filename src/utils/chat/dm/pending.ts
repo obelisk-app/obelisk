@@ -3,9 +3,6 @@ import { stickerTagsForContent, type MessageSticker } from '@/utils/media/tags/s
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 import type { MediaPickerTab } from '../picker/media-catalog';
 
-/** Most files a DM may hold pending at once. */
-export const MAX_PENDING = 4;
-
 export interface PendingFile {
   readonly id: string;
   readonly name: string;

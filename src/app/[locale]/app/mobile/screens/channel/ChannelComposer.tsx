@@ -10,7 +10,7 @@ import { VoiceNoteDraft } from '@/components/chat/composer/VoiceNoteDraft';
 import { type ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 import { usePhoneChannelComposer } from '@/hooks/shell/mobile/screens/channel/usePhoneChannelComposer';
 import { useTranslations } from 'next-intl';
-import { MESSAGE_INPUT_PROPS } from '@/utils/chat/composer/message-input-props';
+import { MESSAGE_INPUT_PROPS } from '@/constants/chat/composer';
 import { MobileMentionAutocomplete } from './MobileMentionAutocomplete';
 import Input from '@/components/ui/forms/Input';
 import EmojiSheet from '../../sheets/message/EmojiSheet';

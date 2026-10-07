@@ -1,5 +1,5 @@
 /** How many faces the pre-join roster shows before "+N more". */
-export const PASSIVE_ROSTER_FACES = 6;
+const PASSIVE_ROSTER_FACES = 6;
 
 /**
  * The pre-join roster: the first faces, how many more are in the call, and

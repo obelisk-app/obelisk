@@ -17,6 +17,7 @@
  */
 import type { JsDirectMessage, JsMessage } from '@/services/nostr-bridge';
 import { buildAuthorIndex, isReplyToMe } from './replies';
+import { EMPTY_HIGHLIGHTS } from '@/constants/read-state/selectors';
 
 const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -101,13 +102,6 @@ export interface ChannelHighlights {
   readonly replies: number;
   readonly eventIds: ReadonlyArray<string>;
 }
-
-export const EMPTY_HIGHLIGHTS: ChannelHighlights = {
-  unread: 0,
-  mentions: 0,
-  replies: 0,
-  eventIds: [],
-};
 
 export function computeChannelHighlights(
   messages: ReadonlyArray<JsMessage>,

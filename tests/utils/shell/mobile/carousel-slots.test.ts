@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { carouselSlots, hasScreenBody, overlayScreenKeyFor, rubberBandDx, showsOverlay, slideClassFor, slotRoleFor, swipeAxis } from '@/utils/shell/mobile/carousel-slots';
-import { initialNav, type NavState } from '@/utils/shell/mobile/url-state';
+import type { NavState } from '@/utils/shell/mobile/url-state';
+import { initialNav } from '@/constants/shell/mobile';
 import { neighborsFor } from '@/utils/shell/mobile/swipe-nav';
 
 const at = (patch: Partial<NavState>): NavState => ({ ...initialNav, ...patch });

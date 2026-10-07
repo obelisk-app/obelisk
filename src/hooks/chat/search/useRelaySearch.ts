@@ -47,13 +47,13 @@ import { isEmptyQuery, nameMatches, parseSearchQuery, type ParsedQuery } from '@
 import { fetchRelayInfo, supportsSearch } from '@/services/relay/relay-info';
 import { useChatStore } from '@/store/chat';
 import { parsePubkeyInput } from '@/utils/identity/parse-pubkey';
-import { loadHistory, pushHistory, wipeHistory } from './search-history';
+import { loadHistory, pushHistory, wipeHistory } from '@/services/chat/search/search-history';
 import type { RelaySearch, RelaySearchOptions } from './types';
 import { errorText } from '@/utils/errors/error-text';
+import { SEARCH_DEBOUNCE_MS } from '@/constants/chat/search';
 
 export type { RelaySearch, RelaySearchOptions } from './types';
 
-export const SEARCH_DEBOUNCE_MS = 250;
 const PAGE_SIZE = 30;
 
 export function useRelaySearch({ activeGroupId = null }: RelaySearchOptions = {}): RelaySearch {

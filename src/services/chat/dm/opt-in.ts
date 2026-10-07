@@ -2,9 +2,7 @@
 
 import { getBridgeImpl } from '@/services/nostr-bridge';
 import { getPreferences, setPreference } from '@/services/preferences/preferences';
-
-export const DM_OPT_IN_STORAGE_KEY = 'obelisk:preferences';
-export const DM_OPT_IN_PREFERENCE_KEY = 'directMessagesEnabled';
+import { DM_OPT_IN_PREFERENCE_KEY } from '@/constants/chat/dm';
 
 export function isDmOptInEnabled(): boolean {
   return getPreferences().directMessagesEnabled;

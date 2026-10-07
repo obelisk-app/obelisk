@@ -1,4 +1,5 @@
 import { shortHost } from '@/utils/relay-url/url-host';
+import { initialNav } from '@/constants/shell/mobile';
 
 export type ScreenName =
   | 'login'
@@ -41,17 +42,6 @@ export interface NavState {
   // search, msg-actions). See docs/mobile-navigation.md §3.
   parentScreen: ScreenName | null;
 }
-
-export const initialNav: NavState = {
-  screen: 'server',
-  groupId: null,
-  dmPeer: null,
-  profilePubkey: null,
-  forumGroupId: null,
-  baseScreen: null,
-  msgContext: null,
-  parentScreen: null,
-};
 
 const KNOWN_SCREENS: ReadonlySet<ScreenName> = new Set<ScreenName>([
   'server',

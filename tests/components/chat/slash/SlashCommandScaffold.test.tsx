@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import SlashCommandScaffold from '@/components/chat/slash/SlashCommandScaffold';
-import { SLASH_COMMANDS } from '@/utils/chat/slash/slash-commands';
+import { SLASH_COMMANDS } from '@/constants/chat/slash';
 
 const zap = SLASH_COMMANDS.find((c) => c.name === 'zap')!;
 const play = SLASH_COMMANDS.find((c) => c.name === 'play')!;

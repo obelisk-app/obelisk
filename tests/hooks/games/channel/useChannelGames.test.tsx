@@ -32,13 +32,8 @@ vi.mock('@/lib/games/session/session', async (importOriginal) => {
   };
 });
 
-const {
-  useTurnClockEnforcer,
-  useGameSession,
-  SESSION_CLOCK_MS,
-  RECONNECT_CLAIM_GRACE_S,
-  TIMEOUT_CLAIM_GRACE_S,
-} = await import('@/hooks/games/channel/useChannelGames');
+const { useTurnClockEnforcer, useGameSession } = await import('@/hooks/games/channel/useChannelGames');
+const { SESSION_CLOCK_MS, RECONNECT_CLAIM_GRACE_S, TIMEOUT_CLAIM_GRACE_S } = await import('@/constants/games/channel');
 const { useGamesStore } = await import('@/store/games');
 const { __resetGameClocks } = await import('@/lib/games/core/clock');
 const { parseGameEvent, buildCreate, buildGameOp } = await import('@/lib/games/protocol/protocol');

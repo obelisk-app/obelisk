@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { NOINDEX, X_HANDLE, noindexMetadata, pageMetadata, renderedTitle } from '@/utils/seo/page';
+import { noindexMetadata, pageMetadata, renderedTitle } from '@/utils/seo/page';
+import { NOINDEX, X_HANDLE } from '@/constants/seo/page';
 import { cardImage, excerpt } from '@/utils/seo/og';
 
 const image = cardImage('es', '/help', 'Tarjeta: Ayuda');

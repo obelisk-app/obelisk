@@ -2,8 +2,9 @@ import '@tests/support/game-engines';
 import { describe, expect, it } from 'vitest';
 import { deriveSession, type GameSession } from '@/lib/games/session/session';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
-import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
-import { gameOverView, LOSER_HEX, NEUTRAL_HEX, resultKeyOf } from '@/utils/games/results/game-over';
+import { SEAT_COLORS } from '@/constants/games/chain-reaction';
+import { gameOverView, resultKeyOf } from '@/utils/games/results/game-over';
+import { LOSER_HEX, NEUTRAL_HEX } from '@/constants/games/results';
 
 const CH = 'channel-1';
 const HOST = 'pk-host';

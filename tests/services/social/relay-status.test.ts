@@ -17,7 +17,6 @@ vi.mock('@/services/social/pool', () => ({
 }));
 
 import {
-  FAILURE_SOAK_MS,
   _resetRelayStatus,
   getRelayStatuses,
   markConnected,
@@ -28,6 +27,7 @@ import {
   relayStatusSummary,
   type RelayStatus,
 } from '@/services/social/relay-status';
+import { FAILURE_SOAK_MS } from '@/constants/social/relay-status';
 
 const A = 'wss://a.example';
 const B = 'wss://b.example';

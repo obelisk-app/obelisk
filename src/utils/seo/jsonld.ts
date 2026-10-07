@@ -9,10 +9,9 @@
  */
 
 import type { Locale } from '@/i18n';
-import { HREFLANG, SITE_URL, absoluteUrl } from './alternates';
-
-export const SCHEMA = 'https://schema.org';
-export const ORGANIZATION_ID = `${SITE_URL}/#organization`;
+import { absoluteUrl } from './alternates';
+import { SITE_URL, HREFLANG } from '@/constants/seo/alternates';
+import { SCHEMA, ORGANIZATION_ID } from '@/constants/seo/jsonld';
 
 type Node = Record<string, unknown>;
 

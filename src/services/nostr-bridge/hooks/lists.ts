@@ -4,7 +4,7 @@
  */
 import { useMemo } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { EMPTY_MEDIA_FAVORITES } from '@/utils/media/tags/media-packs';
+import { EMPTY_MEDIA_FAVORITES } from '@/constants/media/tags';
 import type { JsMediaFavorites, JsMediaPack } from '../common/types';
 import { useSubscription } from './subscription';
 

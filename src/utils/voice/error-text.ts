@@ -1,10 +1,10 @@
 /**
  * The text for a voice error at the UI boundary. The room and the voice
- * store hold a `VoiceErrorCode` (`src/services/voice/errors.ts`); a value
+ * store hold a `VoiceErrorCode` (`src/utils/voice/errors.ts`); a value
  * that is not a code is shown as it is.
  */
 import type { Translate } from '@/i18n/keys';
-import { VoiceError, isVoiceErrorCode, type VoiceErrorCode } from '@/services/voice/errors';
+import { VoiceError, isVoiceErrorCode, type VoiceErrorCode } from '@/utils/voice/errors';
 
 export function voiceErrorText(t: Translate, value: string | null): string | null {
   if (!value) return null;

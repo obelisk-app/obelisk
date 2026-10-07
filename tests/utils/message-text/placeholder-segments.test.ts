@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hasPlaceholder, placeholderSegments } from '@/utils/message-text/placeholder-segments';
-import { EVERYONE_PLACEHOLDER } from '@/utils/message-text/markdown';
+import { EVERYONE_PLACEHOLDER } from '@/constants/message-text/markdown';
 
 const mentions = new Map([['0', { pubkey: 'a'.repeat(64), displayName: 'Alice' }]]);
 const emojis = { party: 'https://x/party.png' };

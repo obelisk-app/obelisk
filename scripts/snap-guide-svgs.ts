@@ -23,11 +23,8 @@ import { DEFAULT_LOCALE, LOCALES, type Locale } from '@/i18n';
 import { MODULES } from '@/i18n/modules';
 
 import { HERO_REGISTRY, DIAGRAM_REGISTRY } from '../src/assets/illustrations/guides';
-import {
-  HERO_ASSET_META,
-  DIAGRAM_ASSET_META,
-  type GuideAssetMeta,
-} from '@/utils/guides/asset-meta';
+import type { GuideAssetMeta } from '@/utils/guides/asset-meta';
+import { HERO_ASSET_META, DIAGRAM_ASSET_META } from '@/constants/guides/asset-meta';
 
 const OUT_DIR = join(process.cwd(), 'public', 'og', 'guides');
 const MESSAGES_DIR = join(process.cwd(), 'src', 'i18n', 'messages');

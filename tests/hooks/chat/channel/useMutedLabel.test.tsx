@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import { useMutedLabel } from '@/hooks/chat/channel/useMutedLabel';
-import { MUTED_FOREVER } from '@/store/chat/channel-prefs';
+import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 import { formatDateTime } from '@/utils/format/format';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (

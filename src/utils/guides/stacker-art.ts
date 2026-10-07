@@ -5,12 +5,8 @@
  * hero's own, so its still frame under `public/og/guides/` does not change.
  */
 
-export const STACKER_PIECES = ['#22d3ee', '#3b82f6', '#f97316', '#facc15', '#b4f953', '#a855f7', '#ef4444'];
+import { STACKER_PIECES, STACKER_CELL, STACKER_COLS, STACKER_TOP } from '@/constants/guides/stacker-art';
 
-export const STACKER_CELL = 22;
-export const STACKER_COLS = 10;
-export const STACKER_ROWS = 9;
-export const STACKER_TOP = 116;
 const GARBAGE = '#4b5563';
 /** The column a garbage row leaves open: the attack's `hole`. */
 const HOLE = 6;

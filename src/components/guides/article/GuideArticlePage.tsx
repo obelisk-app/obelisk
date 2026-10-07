@@ -9,7 +9,7 @@ import { guideJsonLd } from '@/utils/seo/guide';
 import ArticleShell from '@/components/guides/article/ArticleShell';
 import { mdxComponents } from '@/components/guides/mdx/mdx-components';
 import RelatedGuides from '@/components/guides/article/RelatedGuides';
-import { SHOT_META } from '@/utils/guides/shots';
+import { SHOT_META } from '@/constants/guides/shots';
 import Navbar from '@/components/marketing/site/Navbar';
 import Footer from '@/components/marketing/site/Footer';
 import JsonLd from '@/components/seo/JsonLd';

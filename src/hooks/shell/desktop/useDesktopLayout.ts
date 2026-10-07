@@ -2,17 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import {
-  INITIAL_FEED_PANE,
   closeFeed,
   expandFeed,
   restoreFeed,
   toggleFeed,
   type FeedPaneState,
 } from '@/utils/shell/desktop/feed-pane';
+import { INITIAL_FEED_PANE, SHOW_MEMBERS_KEY, SIDEBAR_KEY } from '@/constants/shell/desktop';
 import type { View } from '@/utils/shell/desktop/view';
 import {
-  SHOW_MEMBERS_KEY,
-  SIDEBAR_KEY,
   feedHostFor,
   readSidebarWidth,
   viewForFeedPane,

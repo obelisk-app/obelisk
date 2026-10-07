@@ -15,7 +15,7 @@
  * It owns no topology: nothing here subscribes, dials, publishes or decides
  * whether the room is on mesh or on an SFU.
  */
-import type { VoiceErrorCode } from './errors';
+import type { VoiceErrorCode } from '@/utils/voice/errors';
 import type { Peer } from './peer';
 import { SpeakingDetector } from './speaking-detector';
 import type { VoiceUiSink } from './ui-sink';

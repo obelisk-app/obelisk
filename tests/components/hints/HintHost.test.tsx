@@ -10,7 +10,7 @@ vi.mock('@/utils/hints/registry', async (importOriginal) => {
     { id: 'second', surface: 'server', anchor: 'a-second', titleKey: 'shell.hints.replay', bodyKey: 'shell.hints.dismissAll', order: 20 },
     { id: 'desk', surface: 'server', anchor: 'a-desk', titleKey: 'shell.hints.gotIt', bodyKey: 'shell.hints.dismissAll', shell: 'desktop', order: 30 },
     { id: 'elsewhere', surface: 'feed', anchor: 'a-feed', titleKey: 'shell.hints.gotIt', bodyKey: 'shell.hints.dismissAll', order: 10 },
-  ] as typeof actual.HINTS;
+  ] as typeof import('@/constants/hints/registry').HINTS;
   return {
     ...actual,
     HINTS,

@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import { useProfileAppearanceEditor } from '@/hooks/settings/account/useProfileAppearanceEditor';
-import { MAX_IMAGE_BYTES } from '@/utils/settings/profile-image';
+import { MAX_IMAGE_BYTES } from '@/constants/settings/profile-image';
 
 const VALUE = { pictureUrl: 'https://x/p.png', bannerUrl: '', pictureFile: null, bannerFile: null };
 

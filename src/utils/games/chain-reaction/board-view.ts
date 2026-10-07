@@ -6,17 +6,14 @@
  */
 import type { GameSession } from '@/lib/games/session/session';
 import type { CRState } from '@/lib/games/chain-reaction/chain-reaction';
-import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/constants/games/chain-reaction';
 import type { CellSnapshot } from '@/utils/games/chain-reaction/cascade';
-
-/** Cell size for an inline board: the size this game has always been. */
-export const CELL_DEFAULT_MAX = 44;
-/** Ceiling when the board is given a height to fill. Past this it reads as a toy. */
-export const CELL_FULLSCREEN_MAX = 92;
-/** Orb diameter as a share of the cell, so the pieces grow with the board. */
-export const ORB_RATIO = 0.23;
-/** The matrix colour when nobody is on move: waiting or finished. */
-export const NEUTRAL_MATRIX_HEX = '#3f3f46';
+import {
+  CELL_DEFAULT_MAX,
+  CELL_FULLSCREEN_MAX,
+  ORB_RATIO,
+  NEUTRAL_MATRIX_HEX,
+} from '@/constants/games/chain-reaction';
 
 export interface BoardGrid {
   rows: number;

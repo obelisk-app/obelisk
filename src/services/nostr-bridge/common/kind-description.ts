@@ -13,7 +13,7 @@ import {
   KIND_NIP78_APP_DATA,
   KIND_REACTION,
   KIND_RELAY_LIST,
-} from '@/utils/nostr/nip-kinds';
+} from '@/constants/nostr/nip-kinds';
 
 export function eventKindDescription(kind: number): EventKindLabel {
   if (kind === KIND_CLIENT_AUTH) return 'relayAuth';

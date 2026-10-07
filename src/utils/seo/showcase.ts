@@ -8,8 +8,9 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@/i18n';
 import type { MessageKey, Translate } from '@/i18n/keys';
-import { HREFLANG, SITE_URL, absoluteUrl } from './alternates';
-import { SCHEMA } from './jsonld';
+import { absoluteUrl } from './alternates';
+import { SITE_URL, HREFLANG } from '@/constants/seo/alternates';
+import { SCHEMA } from '@/constants/seo/jsonld';
 import { standardPageMetadata } from './standard';
 
 export type Shot = { path: string; nameKey: MessageKey; width: number; height: number };

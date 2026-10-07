@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { translator } from '@tests/support/intl';
 import { validateJsonLd } from '../../../scripts/seo/lib/jsonld';
 import { guideHero, guideImages, guideJsonLd, guideMetadata, guideSeoText, type GuideSeoFields } from '@/utils/seo/guide';
-import { ORGANIZATION_ID } from '@/utils/seo/jsonld';
+import { ORGANIZATION_ID } from '@/constants/seo/jsonld';
 
 const fm: GuideSeoFields = {
   title: 'Vesta: settlements, trade, and dice nobody rolls',

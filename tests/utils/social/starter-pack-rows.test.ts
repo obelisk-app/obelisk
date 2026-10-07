@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { StarterPack } from '@/services/social/starter-packs';
-import { STARTER_PACK_FACES, starterPackFaces, starterPackRow } from '@/utils/social/starter-pack-rows';
+import { starterPackFaces, starterPackRow } from '@/utils/social/starter-pack-rows';
+import { STARTER_PACK_FACES } from '@/constants/social/starter-pack-rows';
 
 const pk = (n: number) => n.toString(16).padStart(64, '0');
 const pack = (members: string[], id = 'p'): StarterPack => ({

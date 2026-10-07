@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ingestGameEvent, ingestGameEvents, flushGameIngest, resetGameIngest, setGameIngestListener, INGEST_BATCH_MS } from '@/services/games/ingest';
+import { ingestGameEvent, ingestGameEvents, flushGameIngest, resetGameIngest, setGameIngestListener } from '@/services/games/ingest';
+import { INGEST_BATCH_MS } from '@/constants/games/ingest';
 import { useGamesStore } from '@/store/games';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
 import { chainReaction } from '@/lib/games/chain-reaction/chain-reaction';

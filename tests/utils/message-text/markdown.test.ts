@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { preprocessForMarkdown, EVERYONE_PLACEHOLDER, extractUrls, isImageUrl, extractYouTubeId } from '@/utils/message-text/markdown';
+import { preprocessForMarkdown, extractUrls, isImageUrl, extractYouTubeId, markdownCode, youtubeEmbeds } from '@/utils/message-text/markdown';
+import { EVERYONE_PLACEHOLDER } from '@/constants/message-text/markdown';
 import type { MemberInfo } from '@/utils/message-text/mentions';
-import { markdownCode, youtubeEmbeds } from '@/utils/message-text/markdown';
 
 const members: MemberInfo[] = [
   { pubkey: 'a'.repeat(64), displayName: 'Alice' },

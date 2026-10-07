@@ -10,22 +10,13 @@
  */
 import { VaultError, openSessionVault, type SealedBox } from '@/lib/crypto/session-vault';
 import { secretsOf, type PersistedSession, type SessionSecrets } from './session-storage';
+import { SDK_SIGNER_STORAGE_KEYS } from '@/constants/nostr-bridge/session';
 
 /**
  * What the session layer has to tell the person about storage. The first is
  * set at login, the other three when a reload could not restore a session.
  */
 export type SessionNotice = 'not-remembered' | 'vault-unavailable' | 'key-missing' | 'unlock-failed';
-
-/**
- * The keys `@nostr-wot/ui`'s login widget writes through its default,
- * plaintext `localStorageSignerStorage`: the NIP-46 pairing record (with the
- * client nsec the bunker authorised) and a "remembered" nsec. Copied rather
- * than imported so the bridge does not pull the UI package in;
- * `tests/services/nostr-bridge/session/vault.test.ts` pins them to the SDK's
- * own `SIGNER_STORAGE_KEY_*` exports.
- */
-export const SDK_SIGNER_STORAGE_KEYS = ['@nostr-wot/ui:nip46', '@nostr-wot/ui:nsec'] as const;
 
 let queue: Promise<unknown> = Promise.resolve();
 

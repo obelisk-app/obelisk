@@ -2,9 +2,9 @@ import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VAULT_DB, VAULT_STORE } from '@/lib/crypto/session-vault';
 import { openStore, putRecord } from '@/lib/crypto/vault-idb';
-import { DM_STORE_DB } from '@/services/nostr-bridge/dm/store-db';
+import { DM_STORE_DB } from '@/constants/nostr-bridge/dm';
+import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
 import {
-  LOCAL_DATA_CATEGORIES,
   lowerAllWriteFences,
   measureLocalData,
   removeEverything,

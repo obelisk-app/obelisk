@@ -25,14 +25,14 @@ import {
   setPool,
   sharedCoalescer,
 } from '@nostr-wot/data';
-import type { SimplePool } from 'nostr-tools';
-import type { Event as NostrEvent, Filter } from 'nostr-tools';
+import type { SimplePool, Event as NostrEvent, Filter } from 'nostr-tools';
 import { SESSION_IDENTITY_ID } from '@/lib/relay-hub';
 import { pageRelayHub } from '@/services/nostr-bridge/facade/page-hub';
-import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX, normalizeSocialRelays } from './relays';
+import { normalizeSocialRelays } from './relays';
+import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX } from '@/constants/social/relays';
 
 /** localStorage namespace for the SDK's own TTL cache. Listed in the local-data inventory (`sdk-data-cache`). */
-export const SOCIAL_SDK_CACHE_NAMESPACE = 'obelisk-social-sdk/';
+const SOCIAL_SDK_CACHE_NAMESPACE = 'obelisk-social-sdk/';
 
 const SDK_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 

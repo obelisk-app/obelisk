@@ -45,22 +45,6 @@ export function sectionTitle(sec: SlashCommandSection, recentLabel: string, prof
   return sec.bot ? botLabel(sec.bot, profiles) : sec.key;
 }
 
-export const SLASH_COMMANDS: SlashCommand[] = [
-  {
-    name: 'zap',
-    descriptionKey: 'chat.slash.zap',
-    params: [
-      { name: 'user', descriptionKey: 'chat.slash.zapUser', kind: 'mention', optional: true },
-      { name: 'amount', descriptionKey: 'chat.slash.zapAmount', kind: 'number', optional: true },
-    ],
-  },
-  // `/play` lists the games from the catalog (see `commandDescription`), so
-  // adding a game to the registry updates the command instead of leaving it
-  // stale, which is exactly what happened when Vesta arrived and this still
-  // said "Chain Reaction".
-  { name: 'play', descriptionKey: 'chat.slash.play' },
-];
-
 /** Every playable game, "⚛ Chain Reaction, 🏛 Vesta or 🧱 Stacker" in the reader's language. */
 export function playableGameNames(locale: string): string {
   const names = gameCatalog().map((g) => `${g.icon} ${g.displayName}`);

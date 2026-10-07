@@ -18,8 +18,8 @@ import Navbar from '@/components/marketing/site/Navbar';
 import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { warmBridgeFrontDoor } from '@tests/support/warm-bridge-modules';
-import { PROFILE_CACHE_KEY } from '@/hooks/marketing/useSavedAccount';
-import { STORAGE_KEY } from '@/services/nostr-bridge/session/session-storage';
+import { PROFILE_CACHE_KEY } from '@/constants/marketing/saved-account';
+import { STORAGE_KEY } from '@/constants/nostr-bridge/session';
 
 function saveSession() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ pubKeyHex: ME, loginMethod: 'nip07', relayUrl: 'wss://r.example' }));

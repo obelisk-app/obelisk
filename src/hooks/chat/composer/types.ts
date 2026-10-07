@@ -17,9 +17,6 @@ export interface ComposerHandle {
   readonly pickFiles: (files: File[]) => void;
 }
 
-/** Cap on inline attachments; matches the gallery's 2x2 matrix renderer. */
-export const MAX_COMPOSER_ATTACHMENTS = 4;
-
 export interface ChannelComposerOptions {
   readonly groupId: string;
   /** Raw lookup of the channel (may be null until kind 39000 lands). */

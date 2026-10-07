@@ -9,7 +9,8 @@ beforeEach(() => registerBridge(bridgeFake));
 afterEach(() => unregisterBridge());
 import type { Event as NostrEvent } from 'nostr-tools';
 import { publishLayout, relayOperatorAuthors } from '@/services/relay/channel-layout';
-import { parseBranding, publishBranding, toTags, EMPTY_BRANDING, type RelayBranding } from '@/services/relay/relay-branding';
+import { parseBranding, publishBranding, toTags, type RelayBranding } from '@/services/relay/relay-branding';
+import { EMPTY_BRANDING } from '@/constants/relay/relay-branding';
 
 const RELAY = 'wss://relay.example';
 

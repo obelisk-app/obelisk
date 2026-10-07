@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
-  AUTHORS_PER_FILTER,
   noteMatchesSource,
   chunkAuthors,
   isReplyNote,
@@ -10,6 +9,7 @@ import {
   oldestCreatedAt,
   applyModeration,
 } from '@/services/social/feed';
+import { AUTHORS_PER_FILTER } from '@/constants/social/feed';
 
 const note = (id: string, createdAt: number, over: Partial<NostrEvent> = {}): NostrEvent => ({
   id,

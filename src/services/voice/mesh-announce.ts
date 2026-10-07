@@ -20,7 +20,7 @@ import {
   BEACON_BRINGUP_DELAYS_MS,
   BEACON_REFRESH_DEBOUNCE_MS,
   CONTROL_SNAPSHOT_DEBOUNCE_MS,
-} from './constants';
+} from '@/constants/voice/client';
 
 export interface MeshAnnouncerDeps {
   channelId: string;

@@ -29,8 +29,9 @@ vi.mock('@/services/social/relay-status', () => ({
   watchRelays: (r: string[]) => watchRelays(r),
 }));
 
-import { relayKey, useSocialRelayDraft } from '@/hooks/settings/social-relays/useSocialRelayDraft';
-import { DEFAULT_SOCIAL_RELAYS } from '@/services/social/relays';
+import { useSocialRelayDraft } from '@/hooks/settings/social-relays/useSocialRelayDraft';
+import { relayKey } from '@/utils/settings/social-relays';
+import { DEFAULT_SOCIAL_RELAYS } from '@/constants/social/relays';
 
 describe('relayKey', () => {
   it('trims and drops one trailing slash', () => {

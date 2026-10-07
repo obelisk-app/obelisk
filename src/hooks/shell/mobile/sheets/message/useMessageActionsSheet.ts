@@ -3,10 +3,14 @@ import { useTranslations } from 'next-intl';
 import { useUserMetadata } from '@/services/nostr-bridge';
 import { displayNameFor } from '@/utils/identity/display-name';
 import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
-import { moderationLabelsFrom, useMessageModeration } from '@/hooks/chat/message/useMessageActions';
+import { useMessageModeration } from '@/hooks/chat/message/useMessageActions';
+import { moderationLabelsFrom } from '@/utils/chat/message/moderation-labels';
 import {
-  copyQuietly, emitMobileReaction, MORE_REACTIONS, requestMobileReply,
+  copyQuietly,
+  emitMobileReaction,
+  requestMobileReply,
 } from '@/services/shell/mobile/message-actions';
+import { MORE_REACTIONS } from '@/constants/shell/mobile';
 
 export interface MobileActionMessage {
   id: string;

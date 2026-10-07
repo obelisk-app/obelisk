@@ -1,9 +1,6 @@
 import type { MouseEvent } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 
-/** Above this many characters a note is collapsed behind "Show more". */
-export const LONG_NOTE_CHARS = 1000;
-
 /**
  * Turn a bare `onOpenNote` into a card-body click handler.
  *

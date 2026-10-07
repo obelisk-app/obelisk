@@ -13,24 +13,9 @@
  * load has negative value however interesting it is.
  */
 
-export const FEED_WIDGETS = [
-  'trending',
-  'who-to-follow',
-  'followed-tags',
-  'relays',
-] as const;
+import { FEED_WIDGETS, DEFAULT_FEED_WIDGETS, FEED_WIDGET_MAX } from '@/constants/social/widgets';
 
 export type FeedWidgetId = (typeof FEED_WIDGETS)[number];
-
-/**
- * Two, because that is roughly what fits above the fold at 900px tall, and a
- * reader who never opens the picker should still see a full column rather
- * than a scroll. Tags and people: what the feed is about, and who is in it.
- */
-export const DEFAULT_FEED_WIDGETS: readonly FeedWidgetId[] = ['trending', 'who-to-follow'];
-
-/** How many can be shown at once; past this the column stops being a sidebar. */
-export const FEED_WIDGET_MAX = 4;
 
 function isWidgetId(value: unknown): value is FeedWidgetId {
   return typeof value === 'string' && (FEED_WIDGETS as readonly string[]).includes(value);

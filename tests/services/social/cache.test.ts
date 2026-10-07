@@ -1,15 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
-  FEED_CACHE_LIMIT,
-  FOLLOWING_FEED_ID,
-  GLOBAL_FEED_ID,
   flushFeedCacheWrites,
   profileFeedId,
   readFeedCache,
   seedFromCache,
   writeFeedCache,
 } from '@/services/social/cache';
+import { FEED_CACHE_LIMIT, FOLLOWING_FEED_ID, GLOBAL_FEED_ID } from '@/constants/social/cache';
 
 const RELAYS = ['wss://a.example', 'wss://b.example'];
 

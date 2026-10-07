@@ -22,11 +22,11 @@ import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import { useToastStore } from '@/store/feedback/toast';
 import { useMessageZapStore } from '@/store/chat/message-zap';
 import {
-  moderationLabelsFrom,
   useMessageModeration,
   useMessageReactions,
   type MessageReactionInput,
 } from '@/hooks/chat/message/useMessageActions';
+import { moderationLabelsFrom } from '@/utils/chat/message/moderation-labels';
 import { useTranslations } from 'next-intl';
 import { messageLink } from '@/utils/chat/channel/channel-link';
 import { errorReason } from '@/utils/errors/error-text';

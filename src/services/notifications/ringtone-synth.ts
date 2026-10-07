@@ -8,7 +8,7 @@ import {
   RINGTONE_DEFS,
   type NotificationSoundKind,
   type RingtoneId,
-} from './ringtone-defs';
+} from '@/constants/notifications/ringtone-defs';
 
 let reverb: { ctx: AudioContext; input: AudioNode } | null = null;
 

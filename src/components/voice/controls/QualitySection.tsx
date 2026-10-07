@@ -1,6 +1,7 @@
 'use client';
 
-import { VIDEO_QUALITIES, type VideoQuality } from '@/services/voice/quality';
+import type { VideoQuality } from '@/services/voice/quality';
+import { VIDEO_QUALITIES } from '@/constants/voice/quality';
 
 /** One quality setting: its label over a three-way segmented choice. */
 export default function QualitySection({

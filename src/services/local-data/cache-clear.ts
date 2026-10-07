@@ -17,7 +17,8 @@
  */
 // Not the folder's index: that would pull the categories (and their
 // message keys) onto the error page, which ships `common` only.
-import { CACHE_CATEGORIES, removeWebStorageKeys } from './web-storage';
+import { removeWebStorageKeys } from './web-storage';
+import { CACHE_CATEGORIES } from '@/constants/local-data/web-storage';
 
 export function clearAllClientCacheExceptSession(): number {
   return removeWebStorageKeys(CACHE_CATEGORIES);

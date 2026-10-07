@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
 import { BottomNav } from '@/app/[locale]/app/mobile/chrome/BottomNav';
-import { initialNav, type NavState } from '@/utils/shell/mobile/url-state';
+import type { NavState } from '@/utils/shell/mobile/url-state';
+import { initialNav } from '@/constants/shell/mobile';
 
 const nav = (over: Partial<NavState>): NavState => ({ ...initialNav, ...over });
 const renderNav = (props: Partial<React.ComponentProps<typeof BottomNav>> = {}) => render(

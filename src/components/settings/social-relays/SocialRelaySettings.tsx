@@ -13,7 +13,7 @@
  * suggestion chips are in `./social-relays/`.
  */
 
-import { RELAY_SETTINGS_ANCHOR } from '@/utils/settings/open-settings';
+import { RELAY_SETTINGS_ANCHOR } from '@/constants/settings/open-settings';
 import { useTranslations } from 'next-intl';
 import { useSocialRelayDraft, type SocialRelayDraftStatus } from '@/hooks/settings/social-relays/useSocialRelayDraft';
 import SocialRelayPresets from './SocialRelayPresets';

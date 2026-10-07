@@ -3,12 +3,12 @@ import { useTranslations } from 'next-intl';
 import { useUserMetadata, type JsMessage } from '@/services/nostr-bridge';
 import { displayNameFor } from '@/utils/identity/display-name';
 import {
-  moderationLabelsFrom,
   useMessageModeration,
   useMessageReactions,
   type GroupedReaction,
   type MessageReactionInput,
 } from '@/hooks/chat/message/useMessageActions';
+import { moderationLabelsFrom } from '@/utils/chat/message/moderation-labels';
 import { flashMobileMessage } from '@/services/shell/mobile/message-flash';
 
 /** A touch held this long opens the message's action sheet. */

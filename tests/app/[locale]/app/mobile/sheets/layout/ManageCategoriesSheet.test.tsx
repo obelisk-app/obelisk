@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
-import { EMPTY_LAYOUT } from '@/services/relay/channel-layout';
+import { EMPTY_LAYOUT } from '@/constants/relay/channel-layout';
 
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');

@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { useChatStore } from '@/store/chat';
-import { presenceActivityKey } from '@/hooks/chat/members/useNostrPresence';
+import { presenceActivityKey } from '@/utils/chat/members/presence';
 import { useMemberListScreen } from '@/hooks/shell/mobile/screens/channel/useMemberListScreen';
 import { group } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 

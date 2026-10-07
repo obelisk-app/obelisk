@@ -16,7 +16,7 @@ import {
   resetDiscovery,
   snapshotAdvertisements,
 } from '@/services/voice/sfu-discovery';
-import { KIND_SFU_ADVERTISE } from '@/utils/nostr/nip-kinds';
+import { KIND_SFU_ADVERTISE } from '@/constants/nostr/nip-kinds';
 
 function ad(pubkey: string, createdAt: number, tags: string[][] = []): NostrEvent {
   return { id: `${pubkey}-${createdAt}`, pubkey, created_at: createdAt, kind: KIND_SFU_ADVERTISE, content: '', sig: 's', tags };

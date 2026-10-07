@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { COLORS } from '@/utils/media-kit/content';
+import { COLORS } from '@/constants/media-kit/content';
 import { CopyButton } from './CopyButton';
 import { Section } from './Section';
 

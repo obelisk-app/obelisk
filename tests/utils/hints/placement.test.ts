@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { HINT_CARD_WIDTH, placeHintCard } from '@/utils/hints/placement';
+import { placeHintCard } from '@/utils/hints/placement';
+import { HINT_CARD_WIDTH } from '@/constants/hints/placement';
 
 const viewport = { width: 1000, height: 800 };
 

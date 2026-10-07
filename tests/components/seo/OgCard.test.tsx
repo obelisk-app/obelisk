@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import OgCard from '@/components/seo/OgCard';
 import OgArt from '@/assets/illustrations/seo/OgArt';
-import { PAGE_CARDS, type OgIconName } from '@/utils/seo/cards';
+import type { OgIconName } from '@/utils/seo/cards';
+import { PAGE_CARDS } from '@/constants/seo/cards';
 
 const ICONS: OgIconName[] = [...(Object.keys(PAGE_CARDS) as OgIconName[]), 'note', 'profile', 'tag'];
 

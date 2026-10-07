@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { DM_OPT_IN_PREFERENCE_KEY, DM_OPT_IN_STORAGE_KEY, setDmOptInEnabled } from '@/services/chat/dm/opt-in';
+import { setDmOptInEnabled } from '@/services/chat/dm/opt-in';
+import { DM_OPT_IN_PREFERENCE_KEY, DM_OPT_IN_STORAGE_KEY } from '@/constants/chat/dm';
 import { LocaleProvider } from '@tests/support/intl';
 import { DMOptInBoundary } from '@/app/[locale]/app/dm/DmOptInBoundary';
 

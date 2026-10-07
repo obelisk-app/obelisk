@@ -14,7 +14,7 @@ import {
   SFU_START_SETTLE_MS,
   SFU_BOOTSTRAP_ATTEMPT_DELAYS_MS,
   SFU_BOOTSTRAP_MAX_ATTEMPTS,
-} from './constants';
+} from '@/constants/voice/client';
 
 /** The two `SfuSession` fields the bootstrap sets and clears. */
 export interface SfuBootstrapTarget {

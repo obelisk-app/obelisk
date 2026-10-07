@@ -1,7 +1,5 @@
 import type { JsForumTag } from '@/services/nostr-bridge';
-
-/** Most tags one publications channel may curate. */
-export const MAX_FORUM_TAGS = 20;
+import { MAX_FORUM_TAGS } from '@/constants/chat/forum';
 
 export function newForumTagId(): string {
   // 8-char URL-safe slug. Only needs uniqueness within one forum's tag set;

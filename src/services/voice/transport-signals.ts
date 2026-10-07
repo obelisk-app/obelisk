@@ -2,7 +2,7 @@
  * Directed signaling (kind 25050): publishing one payload to one peer, and
  * the subscription that receives what is addressed to us.
  */
-import { KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
+import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
 import type { VoiceSignalPayload } from './types';
 import { pushVoiceDebug } from './debug';
 import { bridge, publishViaBridge, subscribeVoice, type VoiceTransportOptions } from './transport-core';

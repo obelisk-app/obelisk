@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_RELAY,
-  DEFAULT_RELAYS,
-  LACRYPTA_RELAY,
-  RETIRED_RELAY,
   isImportableRelayUrl,
   normalizeConfiguredRelayUrl,
   uniqueRelayUrls,
   validateRelayUrl,
 } from '@/services/nostr-bridge/relay/relay-list';
+import { DEFAULT_RELAY, DEFAULT_RELAYS, LACRYPTA_RELAY, RETIRED_RELAY } from '@/constants/nostr-bridge/relay';
 
 describe('isImportableRelayUrl', () => {
   it('accepts a public wss relay, with or without a path', () => {

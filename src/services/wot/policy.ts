@@ -3,20 +3,6 @@
  * that are never gated, and the rule that turns one batch answer into a
  * verdict. Pure; the engine (`engine.ts`) applies it.
  */
-import {
-  KIND_GROUP_CREATE,
-  KIND_GROUP_METADATA,
-  KIND_GROUP_ADMINS,
-  KIND_GROUP_MEMBERS,
-  // Voice signaling: mesh voice is gated by NIP-29 membership inside the
-  // channel; layering WoT on top means a participant whose follow graph is
-  // sparse can fail to talk to half the room. The room is small (cap 8),
-  // the participants are already vetted by the channel admin's member
-  // list, and the events are short-lived ephemeral kinds.
-  KIND_VOICE_PRESENCE,
-  KIND_VOICE_SIGNAL,
-} from '@/utils/nostr/nip-kinds';
-
 export interface WotEngineConfig {
   enabled: boolean;
   maxHops: number;
@@ -28,18 +14,6 @@ export interface WotEngineConfig {
    */
   minPaths: number;
 }
-
-export const DEFAULT_WOT_CONFIG: Readonly<WotEngineConfig> = { enabled: false, maxHops: 2, minPaths: 1 };
-
-/** Group structure and voice signaling: never gated, or the room cannot render or talk. */
-export const ALWAYS_ALLOW_KINDS = new Set<number>([
-  KIND_GROUP_METADATA,
-  KIND_GROUP_ADMINS,
-  KIND_GROUP_MEMBERS,
-  KIND_GROUP_CREATE,
-  KIND_VOICE_PRESENCE,
-  KIND_VOICE_SIGNAL,
-]);
 
 /** Any change that alters what a verdict means: graph depth, path threshold or the enable bit. */
 export function verdictsInvalidated(prev: WotEngineConfig, next: WotEngineConfig): boolean {

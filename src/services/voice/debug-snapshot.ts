@@ -4,9 +4,7 @@
  */
 import type { VoiceDebugEvent } from '@/services/voice/debug';
 import type { VoiceMetrics } from '@/services/voice/metrics';
-
-/** How many of the newest events the overlay lists. */
-export const VOICE_DEBUG_SHOWN_EVENTS = 50;
+import { VOICE_DEBUG_SHOWN_EVENTS } from '@/constants/voice/debug-snapshot';
 
 export interface VoiceDebugSnapshot {
   metrics: VoiceMetrics | null;

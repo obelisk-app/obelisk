@@ -2,7 +2,7 @@
 
 import type { GameState } from 'vesta';
 import { useTranslations } from 'next-intl';
-import { RESOURCE_EMOJI } from '@/utils/games/vesta/resources';
+import { RESOURCE_EMOJI } from '@/constants/games/vesta';
 import ResourceCounter from './ResourceCounter';
 import type { VestaTurn } from '@/hooks/games/vesta/useVestaTurn';
 import { useVestaPrompts } from '@/hooks/games/vesta/useVestaPrompts';

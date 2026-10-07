@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import MessageMediaPicker from '../../picker/MessageMediaPicker';
 import { AttachmentMenu } from '../../composer/AttachmentMenu';
 import { useDismiss } from '@/hooks/common/useDismiss';
-import { MAX_PENDING } from '@/utils/chat/dm/pending';
+import { MAX_PENDING } from '@/constants/chat/dm';
 import type { DmComposerState } from '@/hooks/chat/dm/composer/useDmComposer';
 import IconButton from '@/components/ui/buttons/IconButton';
 import { StickerIcon } from '@/assets/icons';

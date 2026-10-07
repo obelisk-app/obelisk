@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type MouseEvent } from 'react';
 import { useMyPubkey, useUserMetadata as useProfile } from '@/services/nostr-bridge';
-import { onOpenSettings, revealSettingsSection, type SettingsSection } from '@/utils/settings/open-settings';
+import { onOpenSettings, revealSettingsSection, type SettingsSection } from '@/services/settings/open-settings';
 import { useChatStore } from '@/store/chat';
 import { profileHandle, profileName } from '@/utils/shell/panes/sidebar/sidebar-me';
 

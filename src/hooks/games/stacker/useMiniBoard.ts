@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { PIECE_COLORS } from '@/utils/games/stacker/piece-colors';
+import { PIECE_COLORS } from '@/constants/games/stacker';
 import { canvasDpr } from '@/utils/games/stacker/block-paint';
 import { miniBoardRects, miniBoardSize } from '@/utils/games/stacker/mini-board-rects';
 

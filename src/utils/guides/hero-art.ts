@@ -9,6 +9,7 @@
  */
 
 import { axialCenter, hexCorner, hexPoints, polarPoint, staggerDelay } from './art-geometry';
+import { VESTA_R } from '@/constants/guides/hero-art';
 
 /* Chain Reaction */
 
@@ -147,8 +148,6 @@ export function wotEdges(byId: Readonly<Record<string, WotNode>>, edges: Readonl
 
 /* Vesta */
 
-/** Hex radius and the island's centre. */
-export const VESTA_R = 58;
 const VESTA_CX = 300;
 const VESTA_CY = 200;
 

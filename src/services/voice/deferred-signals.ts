@@ -16,7 +16,7 @@ import {
   DEFERRED_SIGNAL_SWEEP_MS,
   DEFERRED_SIGNAL_TOTAL_CAP,
   DEFERRED_SIGNAL_TTL_MS,
-} from './constants';
+} from '@/constants/voice/client';
 
 interface Entry {
   payload: VoiceSignalPayload;

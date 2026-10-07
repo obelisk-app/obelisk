@@ -17,7 +17,7 @@ import { DesktopMain } from './DesktopMain';
 import { FeedSplitPane } from './FeedSplitPane';
 import { LoggedOutScreen } from './LoggedOutScreen';
 import { ReaderPaneSlot } from './ReaderPaneSlot';
-import { PROFILE_PANE_KEY } from '@/utils/shell/desktop/desktop-layout';
+import { PROFILE_PANE_KEY } from '@/constants/shell/desktop';
 import { useDesktopShell } from '@/hooks/shell/desktop/useDesktopShell';
 
 /**

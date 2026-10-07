@@ -8,7 +8,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { OTHER_PROFILE_LOOKUP_TTL_MS } from '@/services/nostr-bridge/profile/profile-sync-cache';
+import { OTHER_PROFILE_LOOKUP_TTL_MS } from '@/constants/nostr-bridge/profile';
 import { ProfilesModule, type ProfilesContext } from '@/services/nostr-bridge/profile/profiles';
 import { StateStore } from '@/services/nostr-bridge/common/state-store';
 import type { TrackedSub } from '@/services/nostr-bridge/facade/context';

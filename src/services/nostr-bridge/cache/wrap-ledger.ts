@@ -59,7 +59,7 @@
  * them exactly as before.
  */
 
-import { createLocalStore, type LocalStore } from '@/utils/storage/local-store';
+import { createLocalStore, type LocalStore } from '@/services/common/local-store';
 
 const KEY_PREFIX = 'obelisk-wrap-ledger:';
 

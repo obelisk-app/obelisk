@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
-import { SHOT_META, shotPath } from '@/utils/guides/shots';
+import { shotPath } from '@/utils/guides/shots';
+import { SHOT_META } from '@/constants/guides/shots';
 
 /**
  * A screenshot of the running app in a guide: one of `SHOT_META`

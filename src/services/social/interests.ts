@@ -21,9 +21,7 @@
 import type { Event as NostrEvent } from 'nostr-tools';
 import { getBridge } from '@/services/nostr-bridge';
 import { querySocial, socialRelays } from './pool';
-
-/** NIP-51 interests list. Replaceable, one per author. */
-export const KIND_INTERESTS = 10015;
+import { KIND_INTERESTS } from '@/constants/nostr/nip-kinds';
 
 /**
  * Hashtags are compared and stored lowercase and without the leading `#`.

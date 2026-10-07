@@ -5,7 +5,7 @@
  */
 
 /** How long the tint stays on the message a reply quote jumped to. */
-export const REPLY_FLASH_MS = 1200;
+const REPLY_FLASH_MS = 1200;
 
 export function flashMobileMessage(messageId: string, ms: number = REPLY_FLASH_MS): boolean {
   const el = document.querySelector(`[data-msg-id="${messageId}"]`);

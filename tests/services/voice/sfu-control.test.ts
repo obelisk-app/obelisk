@@ -7,7 +7,7 @@
  * `transport.test.ts`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { KIND_SFU_ADVERTISE, KIND_SFU_CONTROL } from '@/utils/nostr/nip-kinds';
+import { KIND_SFU_ADVERTISE, KIND_SFU_CONTROL } from '@/constants/nostr/nip-kinds';
 
 interface FakeEvent {
   pubkey: string;

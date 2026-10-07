@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
-import { ZAP_LANE_X as LANE_X, zapArrows, type ZapLane as Lane } from '@/utils/guides/diagram-art';
+import { zapArrows, type ZapLane as Lane } from '@/utils/guides/diagram-art';
+import { ZAP_LANE_X as LANE_X } from '@/constants/guides/diagram-art';
 
 /**
  * A NIP-57 zap as Obelisk sends it. The sender's client signs the zap

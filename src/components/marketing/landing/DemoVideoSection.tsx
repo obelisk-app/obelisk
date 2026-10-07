@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import YouTubeEmbed from '@/components/common/YouTubeEmbed';
 import Reveal from '@/components/ui/animations/Reveal';
-import { DEMO_VIDEO_ID } from './landing-data';
+import { DEMO_VIDEO_ID } from '@/constants/marketing/landing';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 

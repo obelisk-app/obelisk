@@ -10,9 +10,9 @@
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/chat/dm';
-import { type ScreenName, type NavState, initialNav, urlFor } from '@/utils/shell/mobile/url-state';
-import { decideTabPress, isAdjacentTabSwitch, NAV_ORDER, resolveParent } from '@/utils/shell/mobile/swipe-nav';
-import { CAROUSEL_TRANSITION } from '@/utils/shell/mobile/carousel-slots';
+import { type ScreenName, type NavState, urlFor } from '@/utils/shell/mobile/url-state';
+import { initialNav, NAV_ORDER, CAROUSEL_TRANSITION } from '@/constants/shell/mobile';
+import { decideTabPress, isAdjacentTabSwitch, resolveParent } from '@/utils/shell/mobile/swipe-nav';
 import type { SlideDir } from './useScreenCarousel';
 
 export interface CarouselTabsInputs {

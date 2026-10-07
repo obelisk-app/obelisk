@@ -12,7 +12,7 @@
 import { CodedError, type ActivityCode, type ErrorCode } from '@/utils/errors/codes';
 import type { Event as NostrEvent } from 'nostr-tools';
 import type { PublishAuthMode, RelayHub } from '@/lib/relay-hub';
-import { KIND_CONTACT_LIST, KIND_EMOJI_FAVORITES, KIND_EMOJI_SET } from '@/utils/nostr/nip-kinds';
+import { KIND_CONTACT_LIST, KIND_EMOJI_FAVORITES, KIND_EMOJI_SET } from '@/constants/nostr/nip-kinds';
 import { failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
 import { pushRelayDebug } from '../relay/relay-debug';
 import { eventKindDescription } from '../common/kind-description';
@@ -46,7 +46,7 @@ export interface PublishSignedOpts {
  * publish waits this long and no longer; the round itself carries on in
  * the background.
  */
-export const EPHEMERAL_CALLER_WAIT_MS = 750;
+const EPHEMERAL_CALLER_WAIT_MS = 750;
 
 /**
  * The hub's per-relay wait for an ephemeral round: a fresh socket gets this
@@ -54,7 +54,7 @@ export const EPHEMERAL_CALLER_WAIT_MS = 750;
  * the caller's wait on purpose, so a beacon on a socket still handshaking
  * is sent rather than dropped.
  */
-export const EPHEMERAL_ROUND_WAIT_MS = 4000;
+const EPHEMERAL_ROUND_WAIT_MS = 4000;
 
 export interface PublishDeps extends SignDeps {
   readonly hub: Pick<RelayHub, 'publish' | 'acquireAuthLease'>;

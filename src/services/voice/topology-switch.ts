@@ -6,7 +6,7 @@
  * the work.
  */
 import { pickSfu } from './sfu-control';
-import { VoiceError } from './errors';
+import { VoiceError } from '@/utils/voice/errors';
 import type { MeshSession } from './mesh-session';
 import type { SfuSession } from './sfu-session';
 import type { RoomState } from './room-state';

@@ -23,7 +23,7 @@ beforeEach(() => registerBridge(bridgeFake));
 afterEach(() => unregisterBridge());
 
 import { publishRoleHolders, subscribeRelayRoles } from '@/services/relay/relay-roles-sync';
-import { roleCatalogDTag, roleHoldersDTag, type RelayRoles } from '@/services/relay/relay-roles-model';
+import { roleCatalogDTag, roleHoldersDTag, type RelayRoles } from '@/utils/relay/relay-roles-model';
 
 const RELAY = 'wss://relay.test';
 const OPERATOR = 'f'.repeat(64);

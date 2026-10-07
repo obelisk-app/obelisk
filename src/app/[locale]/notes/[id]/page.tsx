@@ -15,8 +15,7 @@
 
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
-import { pageLocale } from '@/i18n/page-locale';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
 import { cardAlt, cardImage } from '@/utils/seo/og';
 import { parseIdentifier } from '@/services/social/identifier';
@@ -45,7 +44,7 @@ export const runtime = 'nodejs';
  */
 export const revalidate = 60;
 
-type Params = { params: Promise<{ id: string; locale: string }> };
+type Params = { params: Promise<{ id: string }> };
 
 /**
  * Someone else's note, read from relays: kept out of search (`noindex,
@@ -54,7 +53,7 @@ type Params = { params: Promise<{ id: string; locale: string }> };
  * What this page is for is the card a chat app shows for a pasted link.
  */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const locale = await pageLocale(params);
+  const locale = await getLocale();
   const t = await getTranslations({ locale });
   const { id } = await params;
   const target = parseIdentifier(id);

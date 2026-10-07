@@ -43,6 +43,8 @@ export default defineConfig({
       'server-only': path.resolve(__dirname, './tests/support/server-only-stub.ts'),
       // The real module needs React's `react-server` condition; see the stub.
       'next-intl/server': path.resolve(__dirname, './tests/support/next-intl-server.ts'),
+      // Root params exist only inside a Next.js render; a test names the segment.
+      'next/root-params': path.resolve(__dirname, './tests/support/root-params.ts'),
       // Dedupe React across the symlinked SDK packages. Without these,
       // `@nostr-wot/data/react` (loaded as raw TS via file: deps) imports
       // its own copy of React from nostr-wot-sdk/node_modules, breaking

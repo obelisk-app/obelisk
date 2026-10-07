@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { clearVoiceDebug, pushVoiceDebug, setVoiceMetricsRef } from '@/services/voice/debug';
 import { emptyVoiceMetrics } from '@/services/voice/metrics';
-import { readVoiceDebugSnapshot, VOICE_DEBUG_SHOWN_EVENTS } from '@/services/voice/debug-snapshot';
+import { readVoiceDebugSnapshot } from '@/services/voice/debug-snapshot';
+import { VOICE_DEBUG_SHOWN_EVENTS } from '@/constants/voice/debug-snapshot';
 
 const w = window as unknown as { __obeliskVoiceDebug?: unknown };
 afterEach(() => { clearVoiceDebug(); delete w.__obeliskVoiceDebug; });

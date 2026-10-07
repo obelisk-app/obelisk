@@ -11,8 +11,8 @@ vi.mock('@/services/social/pool', () => ({
   socialRelays: mocks.socialRelays,
 }));
 
+const { SEARCH_RELAYS } = await import('@/constants/social/search');
 const {
-  SEARCH_RELAYS,
   noteMatchesQuery,
   parseQuery,
   relatedHashtags,

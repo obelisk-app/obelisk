@@ -6,7 +6,7 @@
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
 import { getBridge, getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
-import { KIND_SFU_ADVERTISE } from '@/utils/nostr/nip-kinds';
+import { KIND_SFU_ADVERTISE } from '@/constants/nostr/nip-kinds';
 
 export interface SfuAdvertisement {
   pubkey: string;

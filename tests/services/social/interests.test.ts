@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
-  KIND_INTERESTS,
   buildInterestsEvent,
   interestsFrom,
   normalizeTag,
   toggleInterest,
 } from '@/services/social/interests';
+import { KIND_INTERESTS } from '@/constants/nostr/nip-kinds';
 
 const event = (tags: string[][], extra: Partial<NostrEvent> = {}): NostrEvent => ({
   id: 'x', pubkey: 'a'.repeat(64), kind: KIND_INTERESTS, content: '',

@@ -2,7 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import { useRelaysWidget } from '@/hooks/social/widgets/useRelaysWidget';
-import { RELAY_STATE_DOT, relayLatencyLabel } from '@/utils/social/relay-status-rows';
+import { relayLatencyLabel } from '@/utils/social/relay-status-rows';
+import { RELAY_STATE_DOT } from '@/constants/social/relay-status-rows';
 import { shortHost } from '@/utils/relay-url/url-host';
 import TextButton from '@/components/ui/buttons/TextButton';
 import WidgetCard from './WidgetCard';

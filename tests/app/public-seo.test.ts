@@ -15,11 +15,16 @@ import { generateMetadata as voiceMetadata } from '@/app/[locale]/voice/page';
 import { generateMetadata as relayShareMetadata } from '@/app/[locale]/r/[code]/page';
 import { generateMetadata as notFoundMetadata } from '@/app/[locale]/not-found';
 import type { Locale } from '@/i18n';
+import { setRootLocale } from '@tests/support/root-params';
 
 const SITE = 'https://obelisk.ar';
-const at = (locale: Locale) => ({ params: Promise.resolve({ locale }) });
+type Load = () => Promise<Metadata>;
 
-type Load = (p: ReturnType<typeof at>) => Promise<Metadata>;
+/** A page's metadata for a request whose `[locale]` segment is `locale`. */
+const at = (locale: Locale, load: Load) => {
+  setRootLocale(locale);
+  return load();
+};
 
 /** Every indexed page and its locale-free path. */
 const PAGES: Array<[string, Load, string]> = [
@@ -31,7 +36,7 @@ const PAGES: Array<[string, Load, string]> = [
   ['mobile', mobileMetadata, '/mobile'],
   ['media kit', mediaKitMetadata, '/media-kit'],
   ['guides', guidesMetadata, '/guides'],
-  ['a guide', (p) => guideMetadata({ params: p.params.then((x) => ({ ...x, slug: 'vesta' })) }), '/guides/vesta'],
+  ['a guide', () => guideMetadata({ params: Promise.resolve({ slug: 'vesta' }) }), '/guides/vesta'],
 ];
 
 const local = (locale: Locale, path: string) =>
@@ -42,7 +47,7 @@ const og = (m: Metadata) => m.openGraph as Record<string, unknown>;
 describe('indexed pages: one complete set of tags each', () => {
   it.each(PAGES)('%s: canonical in its own language, plain-language hreflang plus x-default', async (_n, load, path) => {
     for (const locale of ['en', 'es', 'pt'] as const) {
-      const metadata = await load(at(locale));
+      const metadata = await at(locale, load);
       expect(metadata.alternates?.canonical, locale).toBe(local(locale, path));
       expect(metadata.alternates?.languages).toEqual({
         en: local('en', path),
@@ -56,7 +61,7 @@ describe('indexed pages: one complete set of tags each', () => {
 
   it.each(PAGES)('%s: og:url is the canonical, with site name, image and Twitter card', async (_n, load) => {
     for (const locale of ['en', 'es', 'pt'] as const) {
-      const metadata = await load(at(locale));
+      const metadata = await at(locale, load);
       expect(og(metadata).url).toBe(metadata.alternates?.canonical);
       expect(og(metadata).siteName).toBe('Obelisk');
       const [image] = og(metadata).images as Array<{ url: string; width: number; height: number; alt: string }>;
@@ -70,7 +75,7 @@ describe('indexed pages: one complete set of tags each', () => {
 
   it.each(PAGES)('%s: title 45-57 and description 145-157 characters as rendered, the same on the card', async (_n, load) => {
     for (const locale of ['en', 'es', 'pt'] as const) {
-      const m = await load(at(locale));
+      const m = await at(locale, load);
       const rendered = typeof m.title === 'string' ? `${m.title} · Obelisk` : (m.title as { absolute: string }).absolute;
       expect(rendered.length, `${locale}: ${rendered}`).toBeGreaterThanOrEqual(45);
       expect(rendered.length, `${locale}: ${rendered}`).toBeLessThanOrEqual(57);
@@ -88,20 +93,20 @@ describe('indexed pages: one complete set of tags each', () => {
   it('reads every title and description from the seo module, in the page language', async () => {
     for (const locale of ['en', 'es', 'pt'] as const) {
       const t = translator(locale);
-      expect((await featuresMetadata(at(locale))).title).toBe(t('seo.features.title'));
-      expect((await helpMetadata(at(locale))).description).toBe(t('seo.help.description'));
-      expect((await localDataHelpMetadata(at(locale))).title).toBe(t('seo.helpLocalData.title'));
-      expect((await desktopMetadata(at(locale))).title).toBe(t('seo.desktop.title'));
-      expect((await mobileMetadata(at(locale))).description).toBe(t('seo.mobile.description'));
-      expect((await mediaKitMetadata(at(locale))).title).toBe(t('seo.mediaKit.title'));
-      expect((await guidesMetadata(at(locale))).title).toBe(t('seo.guides.title'));
-      expect((await landingMetadata(at(locale))).title).toEqual({ absolute: t('seo.site.title') });
+      expect((await at(locale, featuresMetadata)).title).toBe(t('seo.features.title'));
+      expect((await at(locale, helpMetadata)).description).toBe(t('seo.help.description'));
+      expect((await at(locale, localDataHelpMetadata)).title).toBe(t('seo.helpLocalData.title'));
+      expect((await at(locale, desktopMetadata)).title).toBe(t('seo.desktop.title'));
+      expect((await at(locale, mobileMetadata)).description).toBe(t('seo.mobile.description'));
+      expect((await at(locale, mediaKitMetadata)).title).toBe(t('seo.mediaKit.title'));
+      expect((await at(locale, guidesMetadata)).title).toBe(t('seo.guides.title'));
+      expect((await at(locale, landingMetadata)).title).toEqual({ absolute: t('seo.site.title') });
     }
-    expect((await helpMetadata(at('es'))).title).not.toBe((await helpMetadata(at('en'))).title);
+    expect((await at('es', helpMetadata)).title).not.toBe((await at('en', helpMetadata)).title);
   });
 
   it('names the page language in og:locale and the other two as alternates', async () => {
-    const graph = og(await featuresMetadata(at('pt')));
+    const graph = og(await at('pt', featuresMetadata));
     expect(graph.locale).toBe('pt_BR');
     expect(graph.alternateLocale).toEqual(['en_US', 'es_AR']);
   });
@@ -109,7 +114,7 @@ describe('indexed pages: one complete set of tags each', () => {
 
 describe('pages kept out of search: noindex, follow, and still a card', () => {
   it('the app shell', async () => {
-    const metadata = await appMetadata(at('es'));
+    const metadata = await at('es', appMetadata);
     expect(metadata.robots).toEqual({ index: false, follow: true });
     expect(metadata.alternates).toBeUndefined();
     expect(og(metadata).url).toBe(`${SITE}/es/app`);
@@ -117,14 +122,15 @@ describe('pages kept out of search: noindex, follow, and still a card', () => {
   });
 
   it('the voice room and its form', async () => {
-    const metadata = await voiceMetadata(at('pt'));
+    const metadata = await at('pt', voiceMetadata);
     expect(metadata.robots).toEqual({ index: false, follow: true });
     expect(metadata.title).toBe(translator('pt')('seo.voice.title'));
   });
 
   it('a relay share link: its card image at the public URL, never the internal /en/ one', async () => {
     for (const locale of ['en', 'es'] as const) {
-      const metadata = await relayShareMetadata({ params: Promise.resolve({ locale, code: 'lacrypta' }) });
+      setRootLocale(locale);
+      const metadata = await relayShareMetadata({ params: Promise.resolve({ code: 'lacrypta' }) });
       expect(metadata.robots).toEqual({ index: false, follow: true });
       const [image] = og(metadata).images as Array<{ url: string }>;
       expect(image.url).toBe(`${local(locale, '/r/lacrypta')}/opengraph-image`);
@@ -134,15 +140,18 @@ describe('pages kept out of search: noindex, follow, and still a card', () => {
   });
 
   it('an unbranded share link gets its own title, not the home page title', async () => {
-    const metadata = await relayShareMetadata({ params: Promise.resolve({ locale: 'en', code: 'nonsense' }) });
+    setRootLocale('en');
+    const metadata = await relayShareMetadata({ params: Promise.resolve({ code: 'nonsense' }) });
     expect(metadata.title).toBe(translator('en')('seo.relay.pageTitle'));
   });
 
   it('the 404 names itself in the URL language and says noindex', async () => {
-    const es = await notFoundMetadata({ params: Promise.resolve({ locale: 'es' }) });
+    setRootLocale('es');
+    const es = await notFoundMetadata();
     expect(es.title).toBe(translator('es')('seo.notFound.title'));
     expect(es.robots).toEqual({ index: false, follow: true });
-    const unknown = await notFoundMetadata({ params: Promise.resolve({ locale: 'fr' }) });
+    setRootLocale('fr');
+    const unknown = await notFoundMetadata();
     expect(unknown.title).toBe(translator('en')('seo.notFound.title'));
   });
 });

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { copyQuietly, emitMobileReaction, REACT_EVENT, REPLY_EVENT, requestMobileReply } from '@/services/shell/mobile/message-actions';
+import { copyQuietly, emitMobileReaction, requestMobileReply } from '@/services/shell/mobile/message-actions';
+import { REACT_EVENT, REPLY_EVENT } from '@/constants/shell/mobile';
 
 function listen(name: string) {
   const listener = vi.fn();

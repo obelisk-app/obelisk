@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, type RefObject } from 'react';
 import { useNostrUserSearch } from '@/hooks/identity/useNostrUserSearch';
 import { recordNip05Resolution } from '@/services/identity/nip05-verify';
-import { COMPOSE_DM_MAX_RESULTS, clampActiveIndex, composeDmKeyAction } from '@/utils/shell/desktop/compose-dm';
+import { clampActiveIndex, composeDmKeyAction } from '@/utils/shell/desktop/compose-dm';
+import { COMPOSE_DM_MAX_RESULTS } from '@/constants/shell/desktop';
 import { mergeUserHits } from '@/utils/identity/user-hits';
 
 /**

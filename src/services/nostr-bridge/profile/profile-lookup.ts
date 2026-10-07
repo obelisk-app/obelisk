@@ -6,20 +6,16 @@
  * negative cooldown for a confirmed miss, and an in-flight guard.
  */
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_METADATA } from '@/constants/nostr/nip-kinds';
 import { BoundedMap } from '@/lib/relay-hub';
 import type { BridgeContext } from '../facade/context';
 import {
-  DEFAULT_PROFILE_LOOKUP_RELAYS,
-  OTHER_PROFILE_LOOKUP_TTL_MS,
-  OWN_PROFILE_LOOKUP_TTL_MS,
-  PROFILE_LOOKUP_MAX_WAIT_MS,
-  PROFILE_LOOKUP_RELAYS_KEY,
   loadProfileSyncState,
   newestEvent,
   saveProfileSyncState,
   setCachedKind0,
 } from './profile-sync-cache';
+import { DEFAULT_PROFILE_LOOKUP_RELAYS, OTHER_PROFILE_LOOKUP_TTL_MS, OWN_PROFILE_LOOKUP_TTL_MS, PROFILE_LOOKUP_MAX_WAIT_MS, PROFILE_LOOKUP_RELAYS_KEY } from '@/constants/nostr-bridge/profile';
 import { isImportableRelayUrl, uniqueRelayUrls } from '../relay/relay-list';
 
 /** Revisions per author; the hub's batching sums them, so one chatty author cannot starve the batch on a relay that keeps old kind 0s. */

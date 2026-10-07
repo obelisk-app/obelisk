@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  DEFAULT_FORUM_PREFS,
   forumPrefsKey,
   legacyMobileForumPrefsKey,
   loadForumPrefs,
   saveForumPrefs,
 } from '@/services/chat/forum/forum-prefs';
+import { DEFAULT_FORUM_PREFS } from '@/constants/chat/forum';
 
 describe('forum prefs', () => {
   beforeEach(() => localStorage.clear());

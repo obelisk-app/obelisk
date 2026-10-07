@@ -4,7 +4,7 @@
  * the two, and the fixed Opus ceiling for audio.
  */
 import type { VoiceQualityHint } from './types';
-import { AUDIO_MAX_BITRATE } from './quality';
+import { AUDIO_MAX_BITRATE } from '@/constants/voice/quality';
 
 export interface VideoCap {
   maxBitrate: number | null;

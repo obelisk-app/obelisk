@@ -25,8 +25,8 @@ import {
   putRecord,
 } from '@/lib/crypto/vault-idb';
 import type { WrappedDmKey } from './store-key';
+import { DM_STORE_DB } from '@/constants/nostr-bridge/dm';
 
-export const DM_STORE_DB = 'obelisk-dms';
 const STORE = 'records';
 
 const keySlot = (pubkey: string) => `key:${pubkey}`;

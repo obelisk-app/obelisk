@@ -18,7 +18,7 @@
  */
 
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_HIGHLIGHT } from './kinds';
+import { KIND_HIGHLIGHT } from '@/constants/nostr/nip-kinds';
 import { querySocial } from './pool';
 
 export type HighlightSource =

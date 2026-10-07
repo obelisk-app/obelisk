@@ -6,7 +6,7 @@
  * stay in `publish.ts`.
  */
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_GROUP_JOIN_REQUEST } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_JOIN_REQUEST } from '@/constants/nostr/nip-kinds';
 import type { BridgeContext } from '../facade/context';
 import { pushRelayDebug } from '../relay/relay-debug';
 import { isWhitelistRefusal, parseRelayRejection } from './relay-rejection';

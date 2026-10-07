@@ -9,7 +9,7 @@ import {
   type Cell,
   type GameState,
 } from '@/lib/games/stacker/engine';
-import { PIECE_COLORS } from './piece-colors';
+import { PIECE_COLORS } from '@/constants/games/stacker';
 import { drawConnected, roundRect } from './block-paint';
 
 /**

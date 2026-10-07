@@ -21,7 +21,7 @@ import {
   KIND_GROUP_METADATA,
   KIND_METADATA,
   KIND_REACTION,
-} from '@/utils/nostr/nip-kinds';
+} from '@/constants/nostr/nip-kinds';
 import { cacheListIdsByKind } from './cache';
 
 type IdsFor = (kind: number) => string[];

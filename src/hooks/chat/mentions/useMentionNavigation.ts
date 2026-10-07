@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { isTypingTarget, NEAR_BOTTOM_PX, scrollToId } from '@/utils/chat/timeline/message-flash';
+import { isTypingTarget, scrollToId } from '@/services/chat/timeline/message-flash';
+import { NEAR_BOTTOM_PX } from '@/constants/chat/timeline';
 
 /**
  * Stepping through a channel's unread mentions and replies, and whether the

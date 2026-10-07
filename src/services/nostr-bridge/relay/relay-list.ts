@@ -5,11 +5,7 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-
-export const DEFAULT_RELAY = 'wss://public.obelisk.ar';
-export const LACRYPTA_RELAY = 'wss://lacrypta-relay.obelisk.ar';
-export const RETIRED_RELAY = 'wss://relay.obelisk.ar';
-export const DEFAULT_RELAYS = [DEFAULT_RELAY, LACRYPTA_RELAY];
+import { LACRYPTA_RELAY, RETIRED_RELAY } from '@/constants/nostr-bridge/relay';
 
 /**
  * Strict client-side filter for relay URLs imported from remote events

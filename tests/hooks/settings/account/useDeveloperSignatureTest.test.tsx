@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
-import { OBELISK_SIGNING_KINDS } from '@/utils/nostr/nostr-signing-kinds';
+import { OBELISK_SIGNING_KINDS } from '@/constants/nostr/nostr-signing-kinds';
 import { useDeveloperSignatureTest } from '@/hooks/settings/account/useDeveloperSignatureTest';
 
 describe('useDeveloperSignatureTest', () => {

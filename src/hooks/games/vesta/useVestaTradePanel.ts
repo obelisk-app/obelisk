@@ -4,7 +4,8 @@ import type { GameState, TradeResource } from 'vesta';
 import { tradeAction } from '@/utils/games/vesta/resources';
 import type { VestaTurn } from '@/hooks/games/vesta/useVestaTurn';
 import { withCount } from '@/utils/games/vesta/vesta-actions';
-import { TRADE_TAKE_MAX, bankRatesText, tradePartners } from '@/utils/games/vesta/vesta-trade';
+import { bankRatesText, tradePartners } from '@/utils/games/vesta/vesta-trade';
+import { TRADE_TAKE_MAX } from '@/constants/games/vesta';
 
 /**
  * The trade panel: open on this seat's turn once the dice are rolled, outside

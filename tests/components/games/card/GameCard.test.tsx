@@ -30,7 +30,7 @@ vi.mock('@/services/nostr-bridge', async (importOriginal) => {
 });
 
 import GameCard from '@/components/games/card/GameCard';
-import { RESOLVE_GRACE_MS } from '@/hooks/games/card/useGameCard';
+import { RESOLVE_GRACE_MS } from '@/constants/games/card';
 import ChainReactionBoard from '@/components/games/chain-reaction/ChainReactionBoard';
 import MessageContent from '@/components/chat/message/MessageContent';
 import { useGamesStore } from '@/store/games';

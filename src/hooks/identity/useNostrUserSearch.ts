@@ -38,7 +38,7 @@ const SEARCH_DEBOUNCE_MS = 250;
  * answered in ~900ms, `relay.noswhere.com` EOSE'd instantly with an empty
  * index, and `relay.nostr.band` errored after ~10s.
  */
-export const NIP50_RELAYS = [
+const NIP50_RELAYS = [
   'wss://relay.nostr.band',
   'wss://relay.noswhere.com',
   'wss://search.nos.today',

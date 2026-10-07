@@ -24,12 +24,7 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@/i18n';
 import { absoluteUrl, localizedAlternates, ogLocales } from './alternates';
-
-export const SITE_NAME = 'Obelisk';
-/** What the layout's title template appends; `%s · Obelisk`. */
-export const TITLE_SUFFIX = ' · Obelisk';
-/** The X account behind the site: La Crypta, Obelisk's publisher (the only handle the project names). */
-export const X_HANDLE = '@lacryptaar';
+import { SITE_NAME, TITLE_SUFFIX, X_HANDLE, NOINDEX } from '@/constants/seo/page';
 
 export type PageImage = { url: string; width: number; height: number; alt: string; type: string };
 
@@ -105,9 +100,6 @@ export type NoindexSeo = {
   image: PageImage;
   type?: 'website' | 'article' | 'profile';
 };
-
-/** `noindex, follow`: links on the page still count, the page itself stays out of results. */
-export const NOINDEX: NonNullable<Metadata['robots']> = { index: false, follow: true };
 
 export function noindexMetadata(p: NoindexSeo): Metadata {
   const full = renderedTitle(p.title);

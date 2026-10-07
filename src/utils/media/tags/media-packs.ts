@@ -11,12 +11,6 @@ import type {
 } from '@/services/nostr-bridge';
 import { inferMediaKind } from './media-kind';
 
-export const EMPTY_MEDIA_FAVORITES: JsMediaFavorites = {
-  items: [],
-  packAddresses: [],
-  createdAt: 0,
-};
-
 const PACK_ADDRESS_RE = /^30030:[0-9a-f]{64}:.+$/;
 
 function validUrl(value: string | undefined): string {

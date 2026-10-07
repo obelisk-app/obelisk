@@ -8,7 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const lookup = vi.fn();
 vi.mock('node:dns/promises', () => ({ default: { lookup: (...a: unknown[]) => lookup(...a) } }));
 
-import { MAX_BYTES, MAX_REDIRECTS, assertPublicHost, safeFetch } from '@/services/server/link-preview/safe-fetch';
+import { assertPublicHost, safeFetch } from '@/services/server/link-preview/safe-fetch';
+import { MAX_BYTES, MAX_REDIRECTS } from '@/constants/server/link-preview';
 
 function html(body: string | Uint8Array[], init: { status?: number; type?: string } = {}) {
   const chunks = typeof body === 'string' ? [new TextEncoder().encode(body)] : body;

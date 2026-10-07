@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { RAIL_HORIZONTAL_QUERY, railScrollBy, railScrollState } from '@/utils/voice/rail-scroll';
+import { railScrollBy, railScrollState } from '@/utils/voice/rail-scroll';
+import { RAIL_HORIZONTAL_QUERY } from '@/constants/voice/rail-scroll';
 
 const isHorizontal = () => window.matchMedia(RAIL_HORIZONTAL_QUERY).matches;
 

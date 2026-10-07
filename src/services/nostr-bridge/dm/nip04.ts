@@ -5,7 +5,7 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import { nip04, type Event as NostrEvent } from 'nostr-tools';
-import { KIND_ENCRYPTED_DM } from '@/utils/nostr/nip-kinds';
+import { KIND_ENCRYPTED_DM } from '@/constants/nostr/nip-kinds';
 import type { BridgeContext } from '../facade/context';
 import { memoizeDecrypt } from '../cache/decrypt-cache';
 import { getTag } from '../common/event-tags';

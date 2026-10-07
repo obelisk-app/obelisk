@@ -13,13 +13,16 @@ vi.mock('@/services/nostr-bridge/facade/client', () => ({
 }));
 
 import {
-  seedGameFromCache, scheduleGameCacheFlush, flushGameCache, resetGameCacheWriter,
-  GAME_CACHE_EVENT_LIMIT, GAME_CACHE_FLUSH_MS,
+  seedGameFromCache,
+  scheduleGameCacheFlush,
+  flushGameCache,
+  resetGameCacheWriter,
 } from '@/services/games/cache';
+import { GAME_CACHE_EVENT_LIMIT, GAME_CACHE_FLUSH_MS } from '@/constants/games/cache';
 import { flushGameIngest, resetGameIngest, ingestGameEvents } from '@/services/games/ingest';
 import { useGamesStore } from '@/store/games';
 import { cacheGet, cacheSet, cacheClearAll } from '@/services/nostr-bridge/cache/cache';
-import { KIND_GAME } from '@/utils/nostr/nip-kinds';
+import { KIND_GAME } from '@/constants/nostr/nip-kinds';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
 import { chainReaction } from '@/lib/games/chain-reaction/chain-reaction';
 

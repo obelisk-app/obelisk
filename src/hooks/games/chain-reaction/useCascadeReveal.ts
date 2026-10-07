@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/constants/games/chain-reaction';
 import { boardChanged, cascadeFrames, findClickedCell, type CellSnapshot } from '@/utils/games/chain-reaction/cascade';
 
 // Fast enough to feel like a reaction rather than a wait. The original
 // timings (520/420) meant a long chain locked the board for several seconds,
 // which reads as the game lagging rather than as an animation.
-export const EXPLOSION_MS = 260;
-export const STEP_MS = 150; // delay between BFS rounds: still readable, far snappier
+const EXPLOSION_MS = 260;
+const STEP_MS = 150; // delay between BFS rounds: still readable, far snappier
 
 export type Burst = { hex: string; id: number };
 

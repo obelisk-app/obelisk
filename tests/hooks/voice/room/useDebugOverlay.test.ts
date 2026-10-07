@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useDebugOverlay, VOICE_DEBUG_REFRESH_MS } from '@/hooks/voice/room/useDebugOverlay';
+import { useDebugOverlay } from '@/hooks/voice/room/useDebugOverlay';
+import { VOICE_DEBUG_REFRESH_MS } from '@/constants/voice/room';
 import { clearVoiceDebug, pushVoiceDebug } from '@/services/voice/debug';
 
 afterEach(() => { vi.useRealTimers(); clearVoiceDebug(); });

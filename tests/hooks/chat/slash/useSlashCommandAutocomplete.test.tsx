@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useSlashCommandAutocomplete } from '@/hooks/chat/slash/useSlashCommandAutocomplete';
-import { SLASH_COMMANDS } from '@/utils/chat/slash/slash-commands';
+import { SLASH_COMMANDS } from '@/constants/chat/slash';
 
 const bot = { pubkey: 'b'.repeat(64), name: 'ranks' };
 const sections = [

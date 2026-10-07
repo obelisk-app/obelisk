@@ -1,5 +1,5 @@
 import { useTranslations } from 'next-intl';
-import { BRAND_NAME, GLOW_GRADIENT, GRID_OVERLAY } from '@/utils/media-kit/content';
+import { BRAND_NAME, GLOW_GRADIENT, GRID_OVERLAY } from '@/constants/media-kit/content';
 import ObeliskTwoToneMark from '@/assets/brand/ObeliskTwoToneMark';
 import Text from '@/components/ui/layout/Text';
 

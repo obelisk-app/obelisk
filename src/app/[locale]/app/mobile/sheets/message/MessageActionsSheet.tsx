@@ -3,7 +3,7 @@
 import EmojiPicker from '@/components/chat/picker/EmojiPicker';
 import { useTranslations } from 'next-intl';
 import { useMessageActionsSheet, type MobileActionMessage } from '@/hooks/shell/mobile/sheets/message/useMessageActionsSheet';
-import { QUICK_REACTIONS } from '@/services/shell/mobile/message-actions';
+import { QUICK_REACTIONS } from '@/constants/shell/mobile';
 import EmojiSheet from './EmojiSheet';
 import { BoltAltIcon, CopyLargeIcon, CornerUpLeftIcon, TrashFlatIcon } from '@/assets/icons';
 

@@ -473,7 +473,7 @@ flush.
 
 The error panel's **Clear cache** (`clearAllClientCacheExceptSession()`,
 `src/services/local-data/cache-clear.ts`) removes the categories the relays can rebuild
-(`CACHE_CATEGORIES`: channels, profiles, readState, dms) and reloads; it
+(`CACHE_CATEGORIES` in `src/constants/local-data/web-storage.ts`: channels, profiles, readState, dms) and reloads; it
 keeps the login, preferences and the device-only `personal` data.
 
 `tests/services/local-data/inventory-guard.test.ts` reads the source and

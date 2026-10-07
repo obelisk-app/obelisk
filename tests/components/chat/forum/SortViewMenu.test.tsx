@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
-import { DEFAULT_FORUM_PREFS } from '@/services/chat/forum/forum-prefs';
+import { DEFAULT_FORUM_PREFS } from '@/constants/chat/forum';
 import { SortViewMenu } from '@/components/chat/forum/SortViewMenu';
 
 const renderLocalized = (ui: React.ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);

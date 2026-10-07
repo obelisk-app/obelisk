@@ -48,9 +48,7 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { querySocial } from './pool';
-
-export const KIND_STARTER_PACK = 39089;
-export const KIND_FOLLOW_SET = 30000;
+import { KIND_FOLLOW_SET, KIND_STARTER_PACK } from '@/constants/nostr/nip-kinds';
 
 /**
  * NIP-51 `d` values that are categories, not curation. A kind-30000 event
@@ -204,11 +202,3 @@ export function mergedFollowTags(
   return tags;
 }
 
-/** How many of a pack's members you already follow. */
-export function followedCount(
-  pack: StarterPack,
-  follows: readonly string[],
-): number {
-  const set = new Set(follows.map((pubkey) => pubkey.toLowerCase()));
-  return pack.members.filter((member) => set.has(member)).length;
-}

@@ -2,10 +2,11 @@
  * The roster subscription: every live presence beacon in a channel, parsed
  * into `VoicePresence` and swept as beacons expire.
  */
-import { KIND_VOICE_PRESENCE } from '@/utils/nostr/nip-kinds';
+import { KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
 import type { VoicePresence, VideoSlotKind } from './types';
 import { pushVoiceDebug } from './debug';
-import { PRESENCE_TTL_SECONDS, bridge, subscribeVoice, type VoiceTransportOptions } from './transport-core';
+import { bridge, subscribeVoice, type VoiceTransportOptions } from './transport-core';
+import { PRESENCE_TTL_SECONDS } from '@/constants/voice/transport-core';
 
 /**
  * Subscribe to presence beacons for a channel.

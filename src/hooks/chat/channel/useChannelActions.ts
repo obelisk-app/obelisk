@@ -7,13 +7,13 @@
  */
 
 import {
-  MUTED_FOREVER,
   isChannelMuted,
   notifyLevel,
   useChannelPref,
   useChannelPrefsStore,
   type ChannelNotifyLevel,
 } from '@/store/chat/channel-prefs';
+import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 import { useNotificationsStore } from '@/store/notifications';
 import { useReadStateStore } from '@/store/read-state';
 import { channelLink } from '@/utils/chat/channel/channel-link';

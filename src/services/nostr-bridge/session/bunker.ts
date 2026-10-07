@@ -18,8 +18,6 @@ export type RemoteSigner = Pick<
   'getPublicKey' | 'signEvent' | 'nip04Encrypt' | 'nip04Decrypt' | 'nip44Encrypt' | 'nip44Decrypt' | 'close'
 >;
 
-export const BUNKER_AUTH_SIGNATURE_TIMEOUT_MS = 45_000;
-
 /** Options of {@link BunkerModule.run}. */
 export interface BunkerRunOpts {
   lane?: SignerLane;

@@ -4,13 +4,7 @@
  * `{relay}/{kind}/{id}`.
  */
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-
-// v4, evicts metadata and message cache entries written before hidden NIP-29
-// groups were privacy-gated. Relays repopulate visible groups after login.
-//
-// Older cache namespaces are orphaned and evicted on module load.
-export const KEY_PREFIX = 'obelisk-cache-v4/';
-export const LEGACY_KEY_PREFIXES = ['obelisk-cache/', 'obelisk-cache-v2/', 'obelisk-cache-v3/'] as const;
+import { KEY_PREFIX } from '@/constants/nostr-bridge/cache';
 
 export function buildKey(relay: string, kind: number, id: string): string {
   // The relay URL can contain `:` and `/` which are fine in localStorage keys.

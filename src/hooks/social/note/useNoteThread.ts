@@ -3,21 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { fetchNote, fetchThread, type NoteEntry } from '@nostr-wot/data';
-import { KIND_NOTE } from '@/services/social/kinds';
 import { parentIdOf } from '@/services/social/feed';
-
-/** The SDK returns a lighter NoteEntry; the UI wants real events. */
-export function toEvent(entry: NoteEntry): NostrEvent {
-  return {
-    id: entry.id,
-    pubkey: entry.pubkey,
-    content: entry.content,
-    created_at: entry.createdAt,
-    tags: entry.tags,
-    kind: KIND_NOTE,
-    sig: '',
-  };
-}
+import { toEvent } from '@/utils/social/note-event';
 
 /** Walk up the reply chain, bounded so a malicious chain can't spin forever. */
 const MAX_ANCESTORS = 8;

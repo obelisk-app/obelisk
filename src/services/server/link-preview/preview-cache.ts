@@ -5,9 +5,9 @@
 
 import type { LinkPreview } from '@/utils/link-preview/link-preview';
 
-export const CACHE_TTL_MS = 60 * 60 * 1000;
-export const FAILURE_TTL_MS = 5 * 60 * 1000;
-export const MAX_CACHE_ENTRIES = 500;
+const CACHE_TTL_MS = 60 * 60 * 1000;
+const FAILURE_TTL_MS = 5 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 500;
 
 const cache = new Map<string, { at: number; ttl: number; value: LinkPreview | null }>();
 

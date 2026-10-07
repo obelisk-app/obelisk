@@ -8,7 +8,9 @@ import {
   useMembershipReady,
 } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
-import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/members/useNostrPresence';
+import { useNostrPresence } from '@/hooks/chat/members/useNostrPresence';
+import { PRESENCE_WINDOW_MS } from '@/constants/chat/members';
+import { presenceActivityKey } from '@/utils/chat/members/presence';
 import { channelHeaderLabel } from '@/utils/shell/mobile/labels';
 import { everyoneIn, isRecentlyActive, nonAdminMembers, rankMemberSections } from '@/utils/shell/mobile/member-sections';
 

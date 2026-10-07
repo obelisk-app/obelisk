@@ -51,17 +51,14 @@
  */
 
 import { NIP05_REGEX } from 'nostr-tools/nip05';
+import {
+  NIP05_CACHE_MAX,
+  NIP05_VERIFIED_TTL_MS,
+  NIP05_UNVERIFIED_TTL_MS,
+  NIP05_FETCH_TIMEOUT_MS,
+} from '@/constants/identity/nip05-verify';
 
 export type Nip05State = 'unchecked' | 'checking' | 'verified' | 'unverified';
-
-/** Upper bound on cached (pubkey, identifier) pairs. */
-export const NIP05_CACHE_MAX = 500;
-/** How long a positive result is trusted before re-checking. */
-export const NIP05_VERIFIED_TTL_MS = 60 * 60 * 1000;
-/** How long a negative result is remembered. Shorter: outages are transient. */
-export const NIP05_UNVERIFIED_TTL_MS = 10 * 60 * 1000;
-/** A domain that never answers must not pin the UI in `checking`. */
-export const NIP05_FETCH_TIMEOUT_MS = 5000;
 
 type Settled = Exclude<Nip05State, 'unchecked' | 'checking'>;
 type Entry = { state: Settled; at: number };

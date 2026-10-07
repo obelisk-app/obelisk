@@ -3,7 +3,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { useCurrentRelayUrl } from '@/services/nostr-bridge';
 import type { renderModeFor } from '@/services/social/kinds';
 import { groupNoteUrl } from '@/services/social/note-links';
-import { LONG_NOTE_CHARS } from '@/utils/social/note-card';
+import { LONG_NOTE_CHARS } from '@/constants/social/note-card';
 import { tagValue } from '@/utils/social/note-tags';
 
 /**

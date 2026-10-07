@@ -4,10 +4,7 @@
  * sides touch another cell of the same piece so the painter can join them.
  */
 import { cellsOf, PIECES, type PieceKind } from '@/lib/games/stacker/engine';
-
-/** A chip is four cells wide and two tall, whatever the piece. */
-export const CHIP_COLUMNS = 4;
-export const CHIP_ROWS = 2;
+import { CHIP_COLUMNS, CHIP_ROWS } from '@/constants/games/stacker';
 
 export interface ChipCell {
   x: number;

@@ -5,7 +5,7 @@ import { LocaleProvider } from '@tests/support/intl';
 import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { warmBridgeFrontDoor } from '@tests/support/warm-bridge-modules';
-import { PROFILE_CACHE_KEY, SESSION_KEY } from '@/hooks/marketing/useSavedAccount';
+import { PROFILE_CACHE_KEY, SESSION_KEY } from '@/constants/marketing/saved-account';
 
 const push = vi.fn();
 vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({

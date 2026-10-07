@@ -15,7 +15,7 @@ import type { LocalMedia } from './local-media';
 import type { ActiveCallWatcher } from './active-call-watcher';
 import type { VoiceMetrics } from './metrics';
 import { startSfuClient } from './sfu-bootstrap';
-import { SFU_REJOIN_DELAY_MS } from './constants';
+import { SFU_REJOIN_DELAY_MS } from '@/constants/voice/client';
 
 export interface SfuSessionDeps {
   room: RoomState;

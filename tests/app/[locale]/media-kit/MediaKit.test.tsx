@@ -6,7 +6,7 @@ vi.mock('next/image', () => ({ default: () => null }));
 import { render, screen } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
 import MediaKit from '@/app/[locale]/media-kit/MediaKit';
-import { ASSETS } from '@/utils/media-kit/content';
+import { ASSETS } from '@/constants/media-kit/content';
 
 describe('media kit assets', () => {
   it('no longer offers the deprecated /obelisk.png artwork', () => {

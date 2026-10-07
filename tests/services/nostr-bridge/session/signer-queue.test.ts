@@ -3,9 +3,9 @@ import {
   enqueueSignerOp,
   signerQueueStats,
   resetSignerQueue,
-  MAX_IN_FLIGHT,
   SignerQueueTimeoutError,
 } from '@/services/nostr-bridge/session/signer-queue';
+import { MAX_IN_FLIGHT } from '@/constants/nostr-bridge/session';
 
 /** A promise plus the handles to settle it from the test body. */
 function deferred<T = void>() {

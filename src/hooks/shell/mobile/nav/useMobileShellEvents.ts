@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect } from 'react';
 import { nostrActions, useBridge } from '@/services/nostr-bridge';
 import { subscribeVoiceJump } from '@/services/voice/jump-to-voice';
 import { emojiTagsForContent, mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
-import { onOpenSettings, revealSettingsSection } from '@/utils/settings/open-settings';
+import { onOpenSettings, revealSettingsSection } from '@/services/settings/open-settings';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/chat/dm';
 import type { NavState, ScreenName } from '@/utils/shell/mobile/url-state';

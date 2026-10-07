@@ -22,25 +22,10 @@
  */
 
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_LONG_FORM, KIND_NOTE } from './kinds';
+import { KIND_LONG_FORM, KIND_TEXT_NOTE } from '@/constants/nostr/nip-kinds';
 import { querySocial, socialRelays } from './pool';
 import { parseIdentifier, type ViewerTarget } from './identifier';
-
-/**
- * Indexers that actually implement NIP-50. Kept alongside the user's own
- * relays because most general relays don't index full text, and a search that
- * only queries the user's four relays usually returns nothing.
- *
- * Deliberately the same list as `useNostrUserSearch.NIP50_RELAYS`; see the
- * measured health notes there.
- */
-export const SEARCH_RELAYS = [
-  'wss://relay.nostr.band',
-  'wss://relay.noswhere.com',
-  'wss://search.nos.today',
-];
-
-export const SEARCH_LIMIT = 40;
+import { SEARCH_RELAYS, SEARCH_LIMIT } from '@/constants/social/search';
 
 export type SearchKind = 'notes' | 'hashtag' | 'identifier';
 
@@ -129,7 +114,7 @@ export async function searchNotes(
   const limit = opts.limit ?? SEARCH_LIMIT;
 
   const events = await querySocial(
-    [{ kinds: [KIND_NOTE, KIND_LONG_FORM], search: query, limit } as never],
+    [{ kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM], search: query, limit } as never],
     { relays: textSearchRelays() },
   );
 
@@ -152,7 +137,7 @@ export async function searchHashtag(
   const limit = opts.limit ?? SEARCH_LIMIT;
 
   const events = await querySocial(
-    [{ kinds: [KIND_NOTE, KIND_LONG_FORM], '#t': [clean], limit }],
+    [{ kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM], '#t': [clean], limit }],
     { relays: textSearchRelays() },
   );
 

@@ -10,58 +10,6 @@ import type { TrackedSub } from '../../facade/context';
 import { StateStore } from '../../common/state-store';
 import type { JsMessage, MessagesStatus } from '../../common/types';
 
-// Per-channel message backfill cap. Only this many of the most recent kind 9
-// events are pulled into `messagesByGroup` on the live REQ; older messages
-// are paged in on demand via `loadMoreMessages`. Keeps the initial fan-out
-// cheap when the user belongs to many channels and trims memory growth on
-// long-lived sessions. See docs/data-system.md.
-export const BACKGROUND_MESSAGE_LIMIT = 50;
-export const LOAD_MORE_PAGE_SIZE = 50;
-// How many of the most recent confirmed messages per channel get persisted to
-// `bridgeCache`. Matched to BACKGROUND_MESSAGE_LIMIT so a cold load paints the
-// same window the live REQ is about to request, stale-while-revalidate, with
-// no visible "jump" when the relay echo lands.
-export const MESSAGE_CACHE_LIMIT = 50;
-// Debounce delay for message cache flushes. A backfill burst from the relay
-// (kind 9 limit:50) lands as N synchronous ingest calls in the same tick; the
-// debounce coalesces them into a single localStorage.setItem at the end.
-// Short enough that a steady-state message arriving on its own still reaches
-// disk well before the next reload window.
-export const CACHE_FLUSH_DELAY_MS = 200;
-
-/**
- * Upper bound on how long the background message-queue drain stays
- * paused waiting for the active channel's first EOSE / event. Without
- * this, an active channel that never responds (silent socket,
- * auth-gated relay that never delivers, watchdog-thrashing sub) would
- * starve every other channel's kind 9 sub indefinitely, and since
- * `ingestMessage` is where `ensureUserMetadata` is fanned out, that
- * also starves the profile-picture lookups for those channels'
- * authors. {@link ACTIVE_PRIORITY_MAX_PAUSE_MS} caps the pause; after
- * it elapses, the queue drains even if the active sub is still
- * `loading`. Tuned to give the watched channel a healthy head start
- * without leaving background data stranded for noticeably long.
- */
-export const ACTIVE_PRIORITY_MAX_PAUSE_MS = 3000;
-
-/**
- * Passive background message streams are useful for unread badges, but every
- * open group consumes a relay subscription. Keep a hard ceiling well under
- * public.obelisk.ar's 50-sub limit so global REQs, voice signaling, and the
- * currently-open channel have room. Active channels bypass this cap.
- */
-export const MAX_BACKGROUND_MESSAGE_STREAMS = 8;
-
-/**
- * Backoff schedule for empty-EOSE retries. Tuned so the worst-case time
- * before declaring a channel empty is the sum of all delays plus the
- * relay's own response time (≈9.5s + EOSE latency). Auth-gated relays
- * that send EOSE-empty before AUTH completes typically deliver real
- * events within the first 1500ms; the longer tail covers slow relays
- * and transient network hiccups.
- */
-export const EMPTY_RETRY_DELAYS = [1500, 3000, 5000] as const;
-
 export class MessagesState {
   /** The channel in view; its REQ goes first and pauses the background drain. */
   activeGroupId: string | null = null;

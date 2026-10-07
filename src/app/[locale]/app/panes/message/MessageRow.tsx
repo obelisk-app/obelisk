@@ -16,7 +16,7 @@ import { MessageMenu } from './MessageMenu';
 import { MessageToolbar } from './MessageToolbar';
 import { ReactionPills } from './ReactionPills';
 import { ReplyPreviewRow } from './ReplyPreviewRow';
-import { flashMessage } from '@/utils/chat/timeline/message-flash';
+import { flashMessage } from '@/services/chat/timeline/message-flash';
 import { useMessageRow } from '@/hooks/shell/panes/message/useMessageRow';
 import Button from '@/components/ui/buttons/Button';
 import CloseButton from '@/components/ui/buttons/CloseButton';

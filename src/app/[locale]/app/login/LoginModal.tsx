@@ -34,7 +34,7 @@ import { GeneratedNpubStep } from './GeneratedNpubStep';
 import { PastedKeyNoticeStep } from './PastedKeyNoticeStep';
 import { SessionNoticeBanner } from './SessionNoticeBanner';
 import { loginSignerStorage } from '@/services/login/signer-storage';
-import { Nip46SignerDeepLink } from '@/hooks/shell/login/useNip46SignerDeepLink';
+import { Nip46SignerDeepLink } from './Nip46SignerDeepLink';
 import { useLoginFlow } from '@/hooks/shell/login/useLoginFlow';
 import { KeyAltIcon, LockLargeIcon, ShieldIcon, SparklePairIcon } from '@/assets/icons';
 

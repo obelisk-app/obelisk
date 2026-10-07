@@ -1,6 +1,6 @@
 // Most-recently-used slash commands, like recent-emojis does for reactions.
 // Stores command ids (see slashCommandId), MRU-ordered, capped at MAX.
-import { createLocalStore } from '@/utils/storage/local-store';
+import { createLocalStore } from '@/services/common/local-store';
 
 const MAX = 8;
 const store = createLocalStore<string[]>('obelisk:recent-slash-commands', []);

@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MOBILE_QUERY, useIsMobile } from '@/hooks/common/useIsMobile';
+import { useIsMobile } from '@/hooks/common/useIsMobile';
+import { MOBILE_QUERY } from '@/constants/common/breakpoints';
 
 function installMatchMedia(matches: boolean) {
   const listeners = new Set<() => void>();

@@ -19,7 +19,7 @@ vi.mock('@/services/server/viewer/nostr-fetch', async (orig) => ({ ...(await ori
 
 import ProfileViewerPage, { generateMetadata } from '@/app/[locale]/p/[id]/page';
 
-const params = (id: string) => Promise.resolve({ id, locale: 'en' });
+const params = (id: string) => Promise.resolve({ id });
 
 beforeEach(() => {
   vi.clearAllMocks();

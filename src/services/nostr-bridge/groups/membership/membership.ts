@@ -5,13 +5,13 @@
  * gate reads. Pure move from `client.ts` (round 4 plan, step 12).
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_GROUP_ADMINS, KIND_GROUP_CREATE, KIND_GROUP_MEMBERS } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_ADMINS, KIND_GROUP_CREATE, KIND_GROUP_MEMBERS } from '@/constants/nostr/nip-kinds';
 import { cacheGet, cacheSet } from '../../cache/cache';
 import { getAllTags, getTag } from '../../common/event-tags';
 import { arraysEqualStrict } from '../metadata/group-metadata';
 import { StateStore } from '../../common/state-store';
 import type { BridgeContext, TrackedSub } from '../../facade/context';
-import { GROUP_SUB_WATCHDOG_MS } from '../metadata/watchdog';
+import { GROUP_SUB_WATCHDOG_MS } from '@/constants/nostr-bridge/groups';
 import { MembershipCommands } from './membership-commands';
 import { readMembershipSeed } from './membership-seed';
 

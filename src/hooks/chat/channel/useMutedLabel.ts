@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
-import { MUTED_FOREVER } from '@/store/chat/channel-prefs';
+import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 
 /**
  * The hint under "Unmute": when the mute ends, in the reader's language, or

@@ -13,7 +13,8 @@ vi.mock('@/hooks/notifications/useNotificationSelectors', () => ({
   useUnreadMentionCount: (relay: string | null) => (relay ? unread.count : 0),
 }));
 
-import { RELAY_TILE_LONG_PRESS_MS, useMobileRelayTile } from '@/hooks/shell/mobile/rail/useMobileRelayTile';
+import { useMobileRelayTile } from '@/hooks/shell/mobile/rail/useMobileRelayTile';
+import { RELAY_TILE_LONG_PRESS_MS } from '@/constants/shell/mobile';
 
 const URL_ = 'wss://relay.example';
 

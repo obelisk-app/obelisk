@@ -6,14 +6,14 @@
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridgeImpl, hasSeenWrap, markWrapSeen, cacheGet, cacheSet } from '@/services/nostr-bridge';
 import { unwrapForSelf } from '@/lib/nip-59';
-import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/utils/nostr/nip-kinds';
+import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/constants/nostr/nip-kinds';
 import {
-  READ_STATE_WATCHDOG_MS,
   cacheKindFor,
   findInnerDTag,
   parsePayload,
   type SyncOptions,
 } from './sync-options';
+import { READ_STATE_WATCHDOG_MS } from '@/constants/read-state/sync-options';
 
 /**
  * Subscribe to this scope's state events on `relays`, decode matching ones,

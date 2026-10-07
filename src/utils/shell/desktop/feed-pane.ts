@@ -69,4 +69,3 @@ export function closeFeed(state: FeedPaneState): FeedPaneState {
   return { ...state, open: false };
 }
 
-export const INITIAL_FEED_PANE: FeedPaneState = { open: false, mode: 'split' };

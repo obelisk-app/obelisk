@@ -1,6 +1,6 @@
 'use client';
 
-import { openSettings } from '@/utils/settings/open-settings';
+import { openSettings } from '@/services/settings/open-settings';
 
 /** The profile card's action buttons: each closes the card, then goes where it says. */
 export function usePopoverActions(

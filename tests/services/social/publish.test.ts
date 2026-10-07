@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
-  CLIENT_TAG,
   buildNoteTags,
   buildReactionTags,
   buildReplyTags,
@@ -9,6 +8,7 @@ import {
   imetaTag,
   reactionTargetId,
 } from '@/services/social/publish';
+import { CLIENT_TAG } from '@/constants/social/publish';
 
 /**
  * These assert wire shapes, not behaviour, because a malformed tag is

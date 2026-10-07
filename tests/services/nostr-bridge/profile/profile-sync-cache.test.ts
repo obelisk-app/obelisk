@@ -12,10 +12,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   setCachedKind0,
   getCachedKind0,
-  PROFILE_SYNC_CACHE_KEY,
-  PROFILE_SYNC_CACHE_LIMIT,
   type CachedKind0Event,
 } from '@/services/nostr-bridge/profile/profile-sync-cache';
+import { PROFILE_SYNC_CACHE_KEY, PROFILE_SYNC_CACHE_LIMIT } from '@/constants/nostr-bridge/profile';
 
 function makeEvent(pubkey: string, created_at: number): CachedKind0Event {
   return {

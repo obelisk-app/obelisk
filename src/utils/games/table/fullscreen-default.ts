@@ -1,5 +1,4 @@
-/** Below this window width a table opens fullscreen. */
-export const FULLSCREEN_BELOW_PX = 768;
+import { FULLSCREEN_BELOW_PX } from '@/constants/games/table';
 
 /**
  * Whether a table opens fullscreen. Phones get it by default: a 20-row well

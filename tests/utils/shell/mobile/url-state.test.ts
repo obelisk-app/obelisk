@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { initialNav, parseUrl, restoredNav, urlFor, type NavState } from '@/utils/shell/mobile/url-state';
+import { parseUrl, restoredNav, urlFor, type NavState } from '@/utils/shell/mobile/url-state';
+import { initialNav } from '@/constants/shell/mobile';
 
 const make = (over: Partial<NavState>): NavState => ({ ...initialNav, ...over });
 

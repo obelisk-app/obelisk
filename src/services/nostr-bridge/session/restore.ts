@@ -7,8 +7,10 @@
  */
 import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/store/notifications';
 import { ensureChannelPrefsStoreForAccount } from '@/store/chat/channel-prefs';
-import { DEFAULT_RELAY, isImportableRelayUrl, normalizeConfiguredRelayUrl } from '../relay/relay-list';
-import { LEGACY_STORAGE_KEY, STORAGE_KEY, readMigrated } from './session-storage';
+import { isImportableRelayUrl, normalizeConfiguredRelayUrl } from '../relay/relay-list';
+import { DEFAULT_RELAY } from '@/constants/nostr-bridge/relay';
+import { readMigrated } from './session-storage';
+import { LEGACY_STORAGE_KEY, STORAGE_KEY } from '@/constants/nostr-bridge/session';
 import { resetWrapLedger } from '../cache/wrap-ledger';
 import type { LifecycleTargets } from './lifecycle';
 import type { LoginDeps } from './login';

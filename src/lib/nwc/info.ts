@@ -10,7 +10,7 @@
  */
 import type { Event as NostrEvent } from 'nostr-tools';
 
-/** NIP-47's event kinds. The app's `src/utils/nostr/nip-kinds.ts` names the same numbers; a test pins them equal. */
+/** NIP-47's event kinds. The app's `src/constants/nostr/nip-kinds.ts` names the same numbers; a test pins them equal. */
 export const NWC_KINDS = { info: 13194, request: 23194, response: 23195 } as const;
 
 export type NwcEncryption = 'nip44_v2' | 'nip04';

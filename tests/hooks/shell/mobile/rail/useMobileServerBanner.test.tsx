@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useMobileServerBanner } from '@/hooks/shell/mobile/rail/useMobileServerBanner';
 import { getPreferences } from '@/services/preferences/preferences';
-import { OPEN_SETTINGS_EVENT, type OpenSettingsDetail } from '@/utils/settings/open-settings';
+import type { OpenSettingsDetail } from '@/services/settings/open-settings';
+import { OPEN_SETTINGS_EVENT } from '@/constants/settings/open-settings';
 
 describe('useMobileServerBanner', () => {
   it('reads host, letter and website from the relay URL, and the social relays from preferences', () => {

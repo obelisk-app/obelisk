@@ -38,7 +38,7 @@ const FETCH_TIMEOUT_MS = 6000;
  * this (profile lookup). A visitor has no configured relay set (they may
  * never have opened the app), so the server has to guess well.
  */
-export const VIEWER_RELAYS = [
+const VIEWER_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
   'wss://relay.primal.net',

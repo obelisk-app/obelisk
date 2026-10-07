@@ -12,10 +12,11 @@
  * pubkey ever messaged and never expired an entry on their own.
  */
 import { BoundedMap } from '@/lib/relay-hub';
-
-export const RELAY_LIST_CACHE_MAX = 1000;
-export const RELAY_LIST_TTL_MS = 6 * 3600 * 1000;
-export const RELAY_LIST_NEGATIVE_TTL_MS = 15 * 60 * 1000;
+import {
+  RELAY_LIST_CACHE_MAX,
+  RELAY_LIST_TTL_MS,
+  RELAY_LIST_NEGATIVE_TTL_MS,
+} from '@/constants/nostr-bridge/dm';
 
 export class RelayListCache {
   private readonly map: BoundedMap<string, readonly string[]>;

@@ -1,6 +1,7 @@
 'use client';
 
-import { EMPTY_LAYOUT, subscribeLayout, type ChannelLayout } from '@/services/relay/channel-layout';
+import { subscribeLayout, type ChannelLayout } from '@/services/relay/channel-layout';
+import { EMPTY_LAYOUT } from '@/constants/relay/channel-layout';
 import { useRelayScopedValue } from '../operator/useRelayScopedValue';
 
 /** The operator's channel layout for `relayUrl` (NIP-78), or the empty layout until one arrives. */

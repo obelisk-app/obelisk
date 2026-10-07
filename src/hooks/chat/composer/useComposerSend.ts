@@ -8,7 +8,7 @@ import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import { parseZapCommand } from '@/services/wallet/parse-zap-command';
 import { zapCommandErrorKey } from '@/utils/chat/slash/zap-command-error';
 import { useMessageZapStore } from '@/store/chat/message-zap';
-import { outgoingTags } from './draft-text';
+import { outgoingTags } from '@/utils/chat/composer/draft-text';
 import { errorText } from '@/utils/errors/error-text';
 
 /** The draft state `send` reads and clears. */

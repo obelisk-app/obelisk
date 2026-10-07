@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { GIPHY_KEY, fetchGiphyEntries } from '@/services/chat/picker/giphy';
+import { fetchGiphyEntries } from '@/services/chat/picker/giphy';
+import { GIPHY_KEY } from '@/constants/chat/picker';
 import type { MediaCategory, MediaEntry, MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 
 /**

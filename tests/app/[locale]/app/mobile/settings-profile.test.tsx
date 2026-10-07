@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, act } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { DM_OPT_IN_STORAGE_KEY, setDmOptInEnabled } from '@/services/chat/dm/opt-in';
+import { setDmOptInEnabled } from '@/services/chat/dm/opt-in';
+import { DM_OPT_IN_STORAGE_KEY } from '@/constants/chat/dm';
 
 // Bridge identity hooks back the profile screen - mock them so the test can
 // drive the rendered values without a real relay connection.

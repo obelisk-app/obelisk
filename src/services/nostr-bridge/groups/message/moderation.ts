@@ -8,19 +8,10 @@
  * writing into their stores.
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_EVENT_DELETION, KIND_GROUP_DELETE_EVENT } from '@/utils/nostr/nip-kinds';
+import { KIND_EVENT_DELETION, KIND_GROUP_DELETE_EVENT } from '@/constants/nostr/nip-kinds';
 import { BoundedMap, BoundedSet } from '@/lib/relay-hub';
 import type { BridgeContext, TrackedSub } from '../../facade/context';
-
-/**
- * Tombstones held per class, across every group on the relay. FIFO: the
- * oldest deletion goes first. A tombstone is ~200 bytes (two 64-char ids, a
- * group id, Map overhead), so 5,000 is about 1 MB at worst. Evicting one is
- * safe: the per-group deletion REQs re-deliver up to 500 deletions each time
- * they reopen, and a deleted message only comes back if an older history
- * page is loaded after its tombstone aged out.
- */
-export const MAX_TOMBSTONES = 5000;
+import { MAX_TOMBSTONES } from '@/constants/nostr-bridge/groups';
 
 const tombstoneKey = (groupId: string, eventId: string): string => `${groupId}|${eventId}`;
 

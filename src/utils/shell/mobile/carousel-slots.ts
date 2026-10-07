@@ -1,5 +1,6 @@
 import type { NavState, ScreenName } from './url-state';
-import { NAV_ORDER, resolveParent } from './swipe-nav';
+import { resolveParent } from './swipe-nav';
+import { NAV_ORDER } from '@/constants/shell/mobile';
 
 export type SlotRole = 'drag-curr' | 'drag-prev' | 'drag-next' | 'drag-hidden';
 
@@ -74,9 +75,6 @@ export function slideClassFor(suppress: boolean, slideDir: 'forward' | 'back' | 
     ? ''
     : slideDir === 'forward' ? 'slide-forward' : slideDir === 'back' ? 'slide-back' : '';
 }
-
-/** The carousel's slide: 180ms, eased out. */
-export const CAROUSEL_TRANSITION = 'transform 180ms cubic-bezier(0.2, 0.85, 0.25, 1)';
 
 /**
  * Which way a touch is going once it has moved far enough to tell: under

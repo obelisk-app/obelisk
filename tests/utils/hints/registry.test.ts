@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { flatMessages } from '@tests/support/messages';
-import { HINTS, hintForAnchor, hintsForSurface } from '@/utils/hints/registry';
+import { hintForAnchor, hintsForSurface } from '@/utils/hints/registry';
+import { HINTS } from '@/constants/hints/registry';
 
 const EN = flatMessages('en');
 

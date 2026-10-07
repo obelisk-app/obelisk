@@ -13,13 +13,12 @@
 import { VaultError, isVaultAvailable, type SealedBox } from '@/lib/crypto/session-vault';
 import { cacheFreeSpaceForQuota } from '../cache/cache';
 import {
-  LEGACY_STORAGE_KEY,
-  STORAGE_KEY,
   parseStoredSession,
   sessionHasSecrets,
   storedRecordFor,
   type PersistedSession,
 } from './session-storage';
+import { LEGACY_STORAGE_KEY, STORAGE_KEY } from '@/constants/nostr-bridge/session';
 import type { StateStore } from '../common/state-store';
 import {
   destroySessionVault,

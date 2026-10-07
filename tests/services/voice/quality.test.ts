@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { getPreset, VIDEO_QUALITIES, MIC_CONSTRAINTS, AUDIO_MAX_BITRATE } from '@/services/voice/quality';
+import { getPreset } from '@/services/voice/quality';
+import { VIDEO_QUALITIES, MIC_CONSTRAINTS, AUDIO_MAX_BITRATE } from '@/constants/voice/quality';
 
 describe('quality presets', () => {
   it('exposes auto + 30 fps + 60 fps tiers', () => {

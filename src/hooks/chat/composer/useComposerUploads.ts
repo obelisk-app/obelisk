@@ -2,8 +2,8 @@ import { useState, type Dispatch, type SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
 import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
 import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
-import { appendMediaUrls } from './draft-text';
-import { MAX_COMPOSER_ATTACHMENTS } from './types';
+import { appendMediaUrls } from '@/utils/chat/composer/draft-text';
+import { MAX_COMPOSER_ATTACHMENTS } from '@/constants/chat/composer';
 import { errorText } from '@/utils/errors/error-text';
 
 export interface ComposerUploadTargets {

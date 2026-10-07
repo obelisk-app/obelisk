@@ -1,13 +1,12 @@
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { LOCALES } from '@/i18n';
 import IntlScope from '@/i18n/IntlScope';
-import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
 import GuideArticlePage from '@/components/guides/article/GuideArticlePage';
 import { listSlugs, readGuideOrNull } from '@/services/guides/guides';
 import { guideMetadata } from '@/utils/seo/guide';
 
-type Params = LocaleParams<{ slug: string }>;
+type Params = { params: Promise<{ slug: string }> };
 
 /** Slugs are shared across languages, so every locale gets every slug. */
 export async function generateStaticParams() {
@@ -16,7 +15,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const locale = await pageLocale(params);
+  const locale = await getLocale();
   const { slug } = await params;
   const guide = await readGuideOrNull(locale, slug);
   // No guide: the page answers 404 and the not-found page names itself.
@@ -25,7 +24,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function Page({ params }: Params) {
-  const locale = await pageLocale(params);
+  const locale = await getLocale();
   const { slug } = await params;
   return (
     <IntlScope scope="guides">

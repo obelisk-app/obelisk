@@ -2,7 +2,9 @@
 
 import { useTranslations } from 'next-intl';
 import { GlobeIcon, ZapIcon } from '@/assets/icons';
-import { BASE_ROLE, websiteHref, type PopoverMember } from '@/hooks/chat/profile/usePopoverMember';
+import type { PopoverMember } from '@/hooks/chat/profile/usePopoverMember';
+import { BASE_ROLE } from '@/constants/chat/profile';
+import { websiteHref } from '@/utils/chat/profile/profile-links';
 
 /** Roles + links, recessed so they read as details, not actions. */
 export function PopoverDetails({ member }: { member: PopoverMember | undefined }) {

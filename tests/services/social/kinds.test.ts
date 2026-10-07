@@ -1,17 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FEED_KINDS,
-  KIND_FILE_METADATA,
-  KIND_GROUP_CHAT,
   kindsForFilter,
   renderModeFor,
 } from '@/services/social/kinds';
+import { FEED_KINDS } from '@/constants/social/kinds';
+import { KIND_FILE_METADATA, KIND_GROUP_CHAT_MESSAGE } from '@/constants/nostr/nip-kinds';
 
 describe('renderModeFor', () => {
   it('renders a NIP-29 chat message rather than calling it unsupported', () => {
     // "This client can't display kind 9" is a silly thing for *this* client
     // to say about its own chat messages.
-    expect(renderModeFor(KIND_GROUP_CHAT)).toBe('group');
+    expect(renderModeFor(KIND_GROUP_CHAT_MESSAGE)).toBe('group');
   });
 
   it('renders NIP-94 file metadata, whose media lives in tags', () => {
@@ -37,9 +36,9 @@ describe('kindsForFilter', () => {
   it('keeps group chat out of the feed', () => {
     // A group's messages belong to that group. The viewer can open one by
     // link; the open feed must not request them.
-    expect(FEED_KINDS).not.toContain(KIND_GROUP_CHAT);
+    expect(FEED_KINDS).not.toContain(KIND_GROUP_CHAT_MESSAGE);
     for (const filter of ['all', 'notes', 'articles', 'media'] as const) {
-      expect(kindsForFilter(filter)).not.toContain(KIND_GROUP_CHAT);
+      expect(kindsForFilter(filter)).not.toContain(KIND_GROUP_CHAT_MESSAGE);
     }
   });
 

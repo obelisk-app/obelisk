@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RelayRail } from '@/services/nostr-bridge/session/relays';
 import type { LifecycleTargets } from '@/services/nostr-bridge/session/lifecycle';
 import { SessionState } from '@/services/nostr-bridge/session/state';
-import { DEFAULT_RELAYS } from '@/services/nostr-bridge/relay/relay-list';
-import { RELAYS_KEY } from '@/services/nostr-bridge/session/session-storage';
+import { DEFAULT_RELAYS } from '@/constants/nostr-bridge/relay';
+import { RELAYS_KEY } from '@/constants/nostr-bridge/session';
 
 function rail() {
   const state = new SessionState();

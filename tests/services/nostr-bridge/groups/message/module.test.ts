@@ -8,7 +8,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { MessagesModule, type MessagesContext } from '@/services/nostr-bridge/groups/message/module';
-import { MAX_BACKGROUND_MESSAGE_STREAMS, MessagesState } from '@/services/nostr-bridge/groups/message/state';
+import { MessagesState } from '@/services/nostr-bridge/groups/message/state';
+import { MAX_BACKGROUND_MESSAGE_STREAMS } from '@/constants/nostr-bridge/groups';
 import { StateStore } from '@/services/nostr-bridge/common/state-store';
 import type { TrackedSub } from '@/services/nostr-bridge/facade/context';
 import type { JsGroup, RelayAccessState } from '@/services/nostr-bridge/common/types';

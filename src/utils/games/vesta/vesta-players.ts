@@ -3,7 +3,7 @@
  * status line under them.
  */
 import type { GameState } from 'vesta';
-import { RESOURCES, RESOURCE_EMOJI } from '@/utils/games/vesta/resources';
+import { RESOURCES, RESOURCE_EMOJI } from '@/constants/games/vesta';
 
 export interface PlayerTile {
   seat: string;

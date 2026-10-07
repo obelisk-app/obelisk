@@ -3,8 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 
 const form = vi.hoisted(() => ({ selectedTagIds: [] as string[], toggleTag: (() => {}) as (id: string) => void }));
-vi.mock('@/hooks/chat/forum/useNewThreadForm', () => ({
+vi.mock('@/constants/chat/forum', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/constants/chat/forum')>()),
   MAX_THREAD_TAGS: 3,
+}));
+vi.mock('@/hooks/chat/forum/useNewThreadForm', () => ({
   useNewThreadForm: () => ({
     title: 'Hello', body: '', selectedTagIds: form.selectedTagIds, submitting: false, error: null, canSubmit: true,
     setTitle: vi.fn(), setBody: vi.fn(), toggleTag: form.toggleTag, submit: vi.fn(),

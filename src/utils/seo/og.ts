@@ -12,8 +12,7 @@ import type { Locale } from '@/i18n';
 import type { Translate } from '@/i18n/keys';
 import { absoluteUrl } from './alternates';
 import type { PageImage } from './page';
-
-export const OG_SIZE = { width: 1200, height: 630 } as const;
+import { OG_SIZE } from '@/constants/seo/og';
 
 /** The card of the page at `path` (locale-free), with its alt text. */
 export function cardImage(locale: Locale, path: string, alt: string): PageImage {

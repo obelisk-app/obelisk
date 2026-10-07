@@ -5,8 +5,8 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_EMOJI_FAVORITES, KIND_EMOJI_SET } from '@/utils/nostr/nip-kinds';
-import { PROFILE_RELAYS } from '../profile/profile-sync-cache';
+import { KIND_EMOJI_FAVORITES, KIND_EMOJI_SET } from '@/constants/nostr/nip-kinds';
+import { PROFILE_RELAYS } from '@/constants/nostr-bridge/profile';
 import { uniqueRelayUrls } from '../relay/relay-list';
 import type { BridgeContext } from './context';
 

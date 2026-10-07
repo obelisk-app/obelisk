@@ -22,7 +22,7 @@ import {
 } from '@/assets/icons';
 import { EditProfileForm } from '../settings/EditProfileForm';
 import { LocalDataSection } from '../settings/LocalDataSection';
-import type { SettingsSection } from '@/utils/settings/open-settings';
+import type { SettingsSection } from '@/services/settings/open-settings';
 import { AdvancedSettingsSection } from '../settings/AdvancedSettingsSection';
 import { AppearanceSettingsSection } from '../settings/AppearanceSettingsSection';
 import { GeneralSettingsSection } from '../settings/GeneralSettingsSection';

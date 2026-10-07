@@ -3,7 +3,8 @@ import { finalizeEvent, generateSecretKey, getPublicKey, verifyEvent } from 'nos
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { bytesToHex } from '@/services/nostr-bridge/common/hex';
 import { SessionSigner } from '@/services/nostr-bridge/session/signer';
-import { BUNKER_AUTH_SIGNATURE_TIMEOUT_MS, type BunkerRunOpts, type RemoteSigner } from '@/services/nostr-bridge/session/bunker';
+import { type BunkerRunOpts, type RemoteSigner } from '@/services/nostr-bridge/session/bunker';
+import { BUNKER_AUTH_SIGNATURE_TIMEOUT_MS } from '@/constants/nostr-bridge/session';
 import { buildNipSigner } from '@/services/nostr-bridge/session/nip-signer';
 import { buildDmSigner } from '@/services/nostr-bridge/session/dm-signer';
 import type { PersistedSession } from '@/services/nostr-bridge/session/session-storage';

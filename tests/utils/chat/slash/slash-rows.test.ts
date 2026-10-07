@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { keepingFocus, slashRailItems, slashSectionRows } from '@/utils/chat/slash/slash-rows';
-import { SLASH_COMMANDS } from '@/utils/chat/slash/slash-commands';
+import { SLASH_COMMANDS } from '@/constants/chat/slash';
 
 const bot = { pubkey: 'b'.repeat(64), name: 'ranks' };
 const botCmd = { name: 'x', insert: '!x', bot };

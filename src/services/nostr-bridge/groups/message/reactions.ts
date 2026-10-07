@@ -5,7 +5,7 @@
  * it before ingesting and removes what it says is gone (`removeDeleted`).
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_EVENT_DELETION, KIND_REACTION } from '@/utils/nostr/nip-kinds';
+import { KIND_EVENT_DELETION, KIND_REACTION } from '@/constants/nostr/nip-kinds';
 import { customEmojiMapFromTags } from '@/utils/media/tags/custom-emoji-tags';
 import { cacheDelete, cacheGet, cacheSet } from '../../cache/cache';
 import { getTag } from '../../common/event-tags';
@@ -14,7 +14,7 @@ import type { BridgeContext, TrackedSub } from '../../facade/context';
 import type { JsReaction } from '../../common/types';
 
 /** Reactions kept on disk per channel, oldest dropped first. */
-export const REACTION_CACHE_LIMIT = 500;
+const REACTION_CACHE_LIMIT = 500;
 /** How long a burst of ingests waits before one localStorage write; see the messages flush. */
 const CACHE_FLUSH_DELAY_MS = 200;
 

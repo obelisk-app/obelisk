@@ -22,11 +22,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { quotaSafeLocalStorage } from '@/services/common/quota-safe-storage';
 import { createEnsureForAccount } from '../common/multi-account';
 import { asRecord, finiteOrUndefined, oneOf, recordOf, versionedPersist } from '../common/persist-version';
+import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 
 export type ChannelNotifyLevel = 'all' | 'mentions' | 'nothing';
-
-/** JSON has no Infinity; -1 means "until I turn it back on". */
-export const MUTED_FOREVER = -1;
 
 export interface ChannelPref {
   readonly unfollowed?: boolean;

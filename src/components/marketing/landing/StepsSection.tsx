@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import Reveal from '@/components/ui/animations/Reveal';
-import { STEP_ICONS } from './landing-data';
+import StepGlyph from './StepGlyph';
 import { ArrowDownIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
@@ -31,7 +31,7 @@ export default function StepsSection() {
                   {String(num).padStart(2, '0')}
                 </div>
                 <div className="w-9 h-9 rounded-lg bg-lc-olive/30 flex items-center justify-center text-lc-green">
-                  {STEP_ICONS[i]}
+                  <StepGlyph step={num} />
                 </div>
               </div>
               <Heading as="h3" variant="card" className="mb-2">{t(`marketing.steps.${num}.title`)}</Heading>

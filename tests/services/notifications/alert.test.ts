@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const playNotificationSound = vi.fn<(...args: unknown[]) => string>(() => 'played');
 vi.mock('@/services/notifications/sound', () => ({ playNotificationSound: (...a: unknown[]) => playNotificationSound(...a) }));
 
-import { __resetAlertsForTests, ALERT_FRESH_WINDOW_MS, announceIncoming } from '@/services/notifications/alert';
+import { __resetAlertsForTests, announceIncoming } from '@/services/notifications/alert';
+import { ALERT_FRESH_WINDOW_MS } from '@/constants/notifications/alert';
 import { useToastStore } from '@/store/feedback/toast';
 import { setPreference } from '@/services/preferences/preferences';
 

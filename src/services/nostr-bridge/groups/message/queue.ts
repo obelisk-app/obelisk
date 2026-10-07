@@ -7,7 +7,8 @@
  */
 import type { MessagesContext, MessagesParts } from './module';
 import { seedCachedMessagesForGroup } from './seed';
-import { ACTIVE_PRIORITY_MAX_PAUSE_MS, MAX_BACKGROUND_MESSAGE_STREAMS, type MessagesState } from './state';
+import type { MessagesState } from './state';
+import { ACTIVE_PRIORITY_MAX_PAUSE_MS, MAX_BACKGROUND_MESSAGE_STREAMS } from '@/constants/nostr-bridge/groups';
 
 export class MessageQueue {
   constructor(

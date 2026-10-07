@@ -54,7 +54,8 @@
  * its echoes overwrite the in-memory store; the cache exists purely to
  * give the chat pane something to paint before the relay round-trips.
  */
-import { KEY_PREFIX, LEGACY_KEY_PREFIXES, buildKey, isAvailable } from './cache-keys';
+import { buildKey, isAvailable } from './cache-keys';
+import { KEY_PREFIX, LEGACY_KEY_PREFIXES } from '@/constants/nostr-bridge/cache';
 import { cacheFreeSpaceForQuota } from './cache-sweep';
 
 export { cacheClearAll, cacheDelete, cacheFreeSpaceForQuota, cacheListIds, cacheListIdsByKind } from './cache-sweep';

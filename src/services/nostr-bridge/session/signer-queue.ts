@@ -55,15 +55,9 @@
 
 import { CodedError } from '@/utils/errors/codes';
 import { pushRelayDebug } from '../relay/relay-debug';
+import { MAX_IN_FLIGHT } from '@/constants/nostr-bridge/session';
 
 export type SignerLane = 'interactive' | 'background';
-
-/**
- * How many signer requests may be outstanding at once. See the module doc:
- * this is the bound on how long an interactive request waits behind
- * background work, not a throughput knob.
- */
-export const MAX_IN_FLIGHT = 1;
 
 interface QueueEntry {
   readonly lane: SignerLane;

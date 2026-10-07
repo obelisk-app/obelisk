@@ -25,7 +25,7 @@ export type RelayInfo = {
 };
 
 /** NIP-50 (`search` filter field). */
-export const NIP_SEARCH = 50;
+const NIP_SEARCH = 50;
 
 /**
  * Whether a relay advertises NIP-50. `null` info (fetch failed, or not yet
@@ -47,7 +47,7 @@ export function suggestedRelaysFromEnv(value?: string): ReadonlyArray<{ url: str
 
 export const SUGGESTED_RELAYS = suggestedRelaysFromEnv(process.env.NEXT_PUBLIC_RECOMMENDED_RELAYS);
 
-import { createLocalStore } from '@/utils/storage/local-store';
+import { createLocalStore } from '@/services/common/local-store';
 
 const TTL_MS = 24 * 60 * 60 * 1000; // 24h
 const FETCH_TIMEOUT_MS = 5000;

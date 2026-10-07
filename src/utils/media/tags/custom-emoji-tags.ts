@@ -1,6 +1,6 @@
 export type CustomEmojiMap = Record<string, string>;
 
-export const CUSTOM_EMOJI_NAME_RE = /^[a-z0-9_]{1,64}$/;
+const CUSTOM_EMOJI_NAME_RE = /^[a-z0-9_]{1,64}$/;
 
 const SHORTCODE_TOKEN_REGEX =
   /(^|[\s>(])(:([a-z0-9_]{1,64}):)(?=$|[\s.,!?;:)])/gi;

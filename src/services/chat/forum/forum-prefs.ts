@@ -9,6 +9,8 @@
  * migrates a leftover mobile entry on first read and removes it.
  */
 
+import { DEFAULT_FORUM_PREFS } from '@/constants/chat/forum';
+
 export type ForumSortBy = 'recent' | 'created';
 export type ForumViewMode = 'list' | 'gallery';
 export type ForumTagMatch = 'any' | 'all';
@@ -18,8 +20,6 @@ export interface ForumPrefs {
   readonly viewMode: ForumViewMode;
   readonly tagMatch: ForumTagMatch;
 }
-
-export const DEFAULT_FORUM_PREFS: ForumPrefs = { sortBy: 'recent', viewMode: 'list', tagMatch: 'any' };
 
 export function forumPrefsKey(forumGroupId: string): string {
   return `obelisk-dex/forum-prefs/${forumGroupId}`;

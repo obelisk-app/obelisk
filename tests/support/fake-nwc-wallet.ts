@@ -23,7 +23,7 @@ import { normalizeURL } from 'nostr-tools/utils';
 import type { Filter } from 'nostr-tools';
 import { FakeRelay, FakeRelayFactory } from '@/lib/relay-hub';
 import type { Identity } from '@/lib/relay-hub';
-import { KIND_NWC_INFO, KIND_NWC_REQUEST, KIND_NWC_RESPONSE } from '@/utils/nostr/nip-kinds';
+import { KIND_NWC_INFO, KIND_NWC_REQUEST, KIND_NWC_RESPONSE } from '@/constants/nostr/nip-kinds';
 
 export type WalletReply =
   | { result: Record<string, unknown> }

@@ -22,7 +22,7 @@ export function relayHostLabel(url: string): string {
   }
 }
 
-export const RENEWAL_PERIODS = ['daily', 'weekly', 'monthly', 'yearly'] as const;
+const RENEWAL_PERIODS = ['daily', 'weekly', 'monthly', 'yearly'] as const;
 export type RenewalPeriod = (typeof RENEWAL_PERIODS)[number];
 
 /** A NIP-47 `renewal_period` this app can name, or null (`never`, unknown words). */

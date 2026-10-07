@@ -2,7 +2,8 @@
 
 import { useId } from 'react';
 import { type JsForumTag } from '@/services/nostr-bridge';
-import { MAX_THREAD_TAGS, useNewThreadForm } from '@/hooks/chat/forum/useNewThreadForm';
+import { useNewThreadForm } from '@/hooks/chat/forum/useNewThreadForm';
+import { MAX_THREAD_TAGS } from '@/constants/chat/forum';
 import { useTranslations } from 'next-intl';
 import { NewThreadTagChip } from './NewThreadTagChip';
 import Sheet from '@/components/ui/overlays/Sheet';

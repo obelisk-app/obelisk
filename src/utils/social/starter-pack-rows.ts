@@ -1,13 +1,5 @@
-import { followedCount, type StarterPack } from '@/services/social/starter-packs';
-
-/**
- * How many members to name per pack.
- *
- * Six was too few to tell packs apart at a glance, but this also bounds a
- * profile fan-out on a discovery surface: every face is a kind-0 lookup
- * across the social relays, for every pack on screen.
- */
-export const STARTER_PACK_FACES = 12;
+import { type StarterPack } from '@/services/social/starter-packs';
+import { STARTER_PACK_FACES } from '@/constants/social/starter-pack-rows';
 
 export interface StarterPackRow {
   pack: StarterPack;
@@ -36,4 +28,13 @@ export function starterPackRow(pack: StarterPack, follows: readonly string[]): S
 /** Every member shown as a face, across packs: the profiles worth fetching in one query. */
 export function starterPackFaces(packs: readonly StarterPack[]): string[] {
   return packs.flatMap((pack) => pack.members.slice(0, STARTER_PACK_FACES));
+}
+
+/** How many of a pack's members you already follow. */
+export function followedCount(
+  pack: StarterPack,
+  follows: readonly string[],
+): number {
+  const set = new Set(follows.map((pubkey) => pubkey.toLowerCase()));
+  return pack.members.filter((member) => set.has(member)).length;
 }

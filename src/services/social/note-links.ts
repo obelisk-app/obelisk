@@ -14,8 +14,7 @@
 
 import { nip19 } from 'nostr-tools';
 import type { Event as NostrEvent } from 'nostr-tools';
-
-export const NOTE_VIEWER_PATH = '/notes';
+import { NOTE_VIEWER_PATH } from '@/constants/social/note-links';
 
 /**
  * Prefer an `nevent` over a bare id: it carries the author and relay hints,

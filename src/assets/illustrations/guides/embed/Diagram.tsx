@@ -1,4 +1,4 @@
-import { DIAGRAM_ASSET_META } from '@/utils/guides/asset-meta';
+import { DIAGRAM_ASSET_META } from '@/constants/guides/asset-meta';
 import { DIAGRAM_REGISTRY } from '../index';
 import IndexableSvg from './IndexableSvg';
 

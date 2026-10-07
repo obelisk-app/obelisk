@@ -29,7 +29,8 @@
 
 import { getBridge, getBridgeImpl } from '@/services/nostr-bridge';
 import { ringIncomingCall } from '@/services/notifications/alert';
-import { CALL_RING_TIMEOUT_MS, type IncomingDmCallMessage } from '@/services/call/protocol';
+import type { IncomingDmCallMessage } from '@/services/call/protocol';
+import { CALL_RING_TIMEOUT_MS } from '@/constants/call/protocol';
 import { prefetchDmCallSession } from '@/services/call/load-session';
 import { lost, mayRing, send, tr } from './dm-call-policy';
 import { clearRinging, rt } from './dm-call-runtime';

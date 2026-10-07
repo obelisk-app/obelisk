@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  STACKER_CELL, STACKER_COLS, STACKER_LEFT, STACKER_PIECES, STACKER_TOP, stackerRow, wellBlocks, wellGarbage,
+  STACKER_LEFT,
+  stackerRow,
+  wellBlocks,
+  wellGarbage,
 } from '@/utils/guides/stacker-art';
+import { STACKER_CELL, STACKER_COLS, STACKER_PIECES, STACKER_TOP } from '@/constants/guides/stacker-art';
 
 describe('stacker hero wells', () => {
   it('colours a row by cycling the pieces from its offset', () => {

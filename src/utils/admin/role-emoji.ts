@@ -1,7 +1,5 @@
-import { normalizeRoleEmoji } from '@/services/relay/relay-roles';
-
-export const EMOJI_POPOVER_W = 360;
-export const EMOJI_POPOVER_H = 430;
+import { normalizeRoleEmoji } from '@/utils/relay/relay-roles-model';
+import { EMOJI_POPOVER_W, EMOJI_POPOVER_H } from '@/constants/admin/role-emoji';
 
 export interface PopoverAnchor { left: number; top: number }
 

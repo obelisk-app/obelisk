@@ -4,7 +4,8 @@ import { LocaleProvider } from '@tests/support/intl';
 import { ChannelContextMenu } from '@/components/chat/channel/ChannelContextMenu';
 import { ChannelActionSheet } from '@/components/chat/channel/ChannelActionSheet';
 import { channelLink } from '@/utils/chat/channel/channel-link';
-import { MUTED_FOREVER, getChannelPref, isChannelMuted, notifyLevel, useChannelPrefsStore } from '@/store/chat/channel-prefs';
+import { getChannelPref, isChannelMuted, notifyLevel, useChannelPrefsStore } from '@/store/chat/channel-prefs';
+import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 import { NOTIFICATIONS_INITIAL, getUnreadMentionCount, useNotificationsStore } from '@/store/notifications';
 import { READ_STATE_INITIAL, useReadStateStore } from '@/store/read-state';
 

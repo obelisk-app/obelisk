@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { useMessageZapForm } from '@/hooks/chat/zaps/useMessageZapForm';
-import { DEFAULT_ZAP_AMOUNT_SATS } from '@/services/wallet/zap-constants';
+import { DEFAULT_ZAP_AMOUNT_SATS } from '@/constants/wallet/zap';
 
 const R = 'c'.repeat(64);
 

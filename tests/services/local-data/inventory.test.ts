@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { VAULT_DB } from '@/lib/crypto/session-vault';
-import { DM_STORE_DB } from '@/services/nostr-bridge/dm/store-db';
+import { DM_STORE_DB } from '@/constants/nostr-bridge/dm';
 import { LOCALE_COOKIE } from '@/i18n';
-import { D_TAG_DMS, D_TAG_GROUPS } from '@/services/read-state/sync-options';
+import { D_TAG_DMS, D_TAG_GROUPS } from '@/constants/read-state/sync-options';
+import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
 import {
   LOCAL_DATA,
   CONFIRM_KEYS,
-  LOCAL_DATA_CATEGORIES,
   categoryOfKey,
   entriesIn,
   entryForKey,

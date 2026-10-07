@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { clampMenuPosition, subMenuShift, MUTE_OPTIONS, NOTIFY_OPTIONS } from '@/utils/chat/channel/channel-menu-options';
-import { MUTED_FOREVER } from '@/store/chat/channel-prefs';
+import { clampMenuPosition, subMenuShift } from '@/utils/chat/channel/channel-menu-options';
+import { MUTE_OPTIONS, NOTIFY_OPTIONS } from '@/constants/chat/channel';
+import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 
 describe('clampMenuPosition', () => {
   it('leaves a menu that fits where it was opened', () => {

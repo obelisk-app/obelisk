@@ -4,7 +4,7 @@ import FeedScreen from '@/components/social/FeedScreen';
 import { canRestore } from '@/utils/shell/desktop/feed-pane';
 import { FeedPaneActions } from '../panes/reader/FeedPaneActions';
 import { ResizablePane } from './ResizablePane';
-import { FEED_PANE_KEY } from '@/utils/shell/desktop/desktop-layout';
+import { FEED_PANE_KEY } from '@/constants/shell/desktop';
 import type { FeedPaneControls } from '@/hooks/shell/desktop/useDesktopLayout';
 
 /** The feed as a resizable column beside a group chat. */

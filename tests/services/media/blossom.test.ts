@@ -2,7 +2,8 @@ import { getPublicKey } from 'nostr-tools/pure';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { BlossomUploadError, ENCRYPTED_BLOSSOM_SERVERS, uploadEncryptedBlob, uploadToBlossom } from '@/services/media/blossom';
+import { BlossomUploadError, uploadEncryptedBlob, uploadToBlossom } from '@/services/media/blossom';
+import { ENCRYPTED_BLOSSOM_SERVERS } from '@/constants/media/blossom';
 
 const { signEventTemplate } = vi.hoisted(() => ({ signEventTemplate: vi.fn() }));
 vi.mock('@/services/nostr-bridge', () => ({ nostrActions: { signEventTemplate } }));

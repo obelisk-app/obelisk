@@ -7,13 +7,7 @@ import { useGameSession } from '@/hooks/games/channel/useChannelGames';
 import { seedGameFromCache } from '@/services/games/cache';
 import { requestGameLoad } from '@/services/games/resolve';
 import { cardSeatDots } from '@/utils/games/card/card-labels';
-
-/**
- * How long a card without a session waits before asking the relay for its own
- * table. Long enough that a card the channel backfill is about to resolve
- * anyway doesn't cost a REQ; short enough that nobody reads it as a delay.
- */
-export const RESOLVE_GRACE_MS = 400;
+import { RESOLVE_GRACE_MS } from '@/constants/games/card';
 
 /**
  * The in-channel card's view model: the table's replayed session, who is

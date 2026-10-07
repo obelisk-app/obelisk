@@ -1,7 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChannelActions } from '@/hooks/chat/channel/useChannelActions';
-import { MUTED_FOREVER, getChannelPref, useChannelPrefsStore } from '@/store/chat/channel-prefs';
+import { getChannelPref, useChannelPrefsStore } from '@/store/chat/channel-prefs';
+import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 import { NOTIFICATIONS_INITIAL, getUnreadMentionCount, useNotificationsStore } from '@/store/notifications';
 import { READ_STATE_INITIAL, useReadStateStore } from '@/store/read-state';
 import { channelLink } from '@/utils/chat/channel/channel-link';

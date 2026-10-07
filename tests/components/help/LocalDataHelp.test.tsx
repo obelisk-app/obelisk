@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider, translator } from '@tests/support/intl';
 import LocalDataHelp from '@/components/help/LocalDataHelp';
 import FaqSection from '@/components/marketing/landing/FaqSection';
-import { FAQ_IDS } from '@/components/marketing/landing/landing-data';
-import { LOCAL_DATA_CATEGORIES } from '@/services/local-data';
+import { FAQ_IDS } from '@/constants/marketing/landing';
+import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
 
 vi.mock('@/components/marketing/site/Navbar', () => ({ default: () => <nav /> }));
 vi.mock('@/components/marketing/site/Footer', () => ({ default: () => <footer /> }));

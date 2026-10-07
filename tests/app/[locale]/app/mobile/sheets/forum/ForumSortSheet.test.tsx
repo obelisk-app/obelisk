@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
-import { DEFAULT_FORUM_PREFS } from '@/services/chat/forum/forum-prefs';
+import { DEFAULT_FORUM_PREFS } from '@/constants/chat/forum';
 import { ForumSortSheet } from '@/app/[locale]/app/mobile/sheets/forum/ForumSortSheet';
 
 const prefs = DEFAULT_FORUM_PREFS;

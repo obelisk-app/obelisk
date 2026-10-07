@@ -7,7 +7,7 @@
 // and the recents grid would then print `:party_cat:` as text instead of
 // rendering the media. Legacy string-only entries still load.
 
-import { createLocalStore } from '@/utils/storage/local-store';
+import { createLocalStore } from '@/services/common/local-store';
 
 const MAX = 24;
 
@@ -72,7 +72,7 @@ export function subscribeRecentEmojis(listener: () => void): () => void {
 }
 
 /** Default quick reactions, used to fill the bar until the user has recents. */
-export const DEFAULT_QUICK_REACTIONS: ReadonlyArray<RecentEmoji> = [
+const DEFAULT_QUICK_REACTIONS: ReadonlyArray<RecentEmoji> = [
   { char: '🔥' }, { char: '⚡' }, { char: '😂' }, { char: '🤔' },
 ];
 

@@ -15,13 +15,7 @@
 import { useGamesStore } from '@/store/games';
 import { registerClientResetHook } from '@/services/common/reset';
 import type { ParsedGameEvent } from '@/lib/games/protocol/protocol';
-
-/**
- * How long a burst is allowed to accumulate. Roughly two frames: long enough
- * to swallow a socket drain, short enough that the local echo of your own move
- * is still imperceptible.
- */
-export const INGEST_BATCH_MS = 32;
+import { INGEST_BATCH_MS } from '@/constants/games/ingest';
 
 let queue: ParsedGameEvent[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;

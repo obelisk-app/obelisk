@@ -13,7 +13,8 @@ vi.mock('@nostr-wot/data', async (importOriginal) => ({
   fetchThread: async () => sdk.thread,
 }));
 
-import { toEvent, useNoteThread } from '@/hooks/social/note/useNoteThread';
+import { useNoteThread } from '@/hooks/social/note/useNoteThread';
+import { toEvent } from '@/utils/social/note-event';
 
 const entry = (id: string, tags: string[][] = []): NoteEntry => ({
   id, pubkey: 'p'.repeat(64), content: id, createdAt: 1, tags,

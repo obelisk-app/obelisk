@@ -36,7 +36,7 @@
  * Bandcamp, Mixcloud, Loom, CodePen, CodeSandbox, GitHub Gist, Google
  * Maps/Docs).
  */
-export const CSP_FRAME_SRC: readonly string[] = [
+const CSP_FRAME_SRC: readonly string[] = [
   "'self'",
   'https://www.youtube.com',
   'https://www.youtube-nocookie.com',

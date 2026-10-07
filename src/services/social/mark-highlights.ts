@@ -19,13 +19,13 @@
  * an exact match would find nothing most of the time.
  */
 
+import { MARK_CLASS } from '@/constants/social/mark-highlights';
+
 export type MarkRun = {
   text: string;
   /** Who highlighted it, surfaced as the mark's tooltip. */
   pubkeys: readonly string[];
 };
-
-export const MARK_CLASS = 'article-highlight';
 
 /** Elements whose text is not prose and must not be marked. */
 const SKIP = new Set(['CODE', 'PRE', 'SCRIPT', 'STYLE', 'MARK', 'TEXTAREA']);

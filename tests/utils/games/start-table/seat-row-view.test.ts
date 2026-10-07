@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { translator } from '@tests/support/intl';
-import type { Row } from '@/hooks/games/start-table/useSeatRows';
+import type { Row } from '@/utils/games/start-table/seat-specs';
 import { seatFooterMeta, seatModeLabel, seatRowViews } from '@/utils/games/start-table/seat-row-view';
 
 const t = translator('en');

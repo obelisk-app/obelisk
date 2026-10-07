@@ -9,7 +9,7 @@
  * roles) with relay A's operator as the trusted author, and showed the
  * operator-only settings to relay A's operator on relay B.
  */
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useMemo } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChannelLayout } from '@/services/relay/channel-layout';
@@ -53,9 +53,9 @@ vi.mock('@/services/relay/relay-roles', async (orig) => ({
   subscribeRelayRoles: fakeSubscribe('roles'),
 }));
 
-import { act } from '@testing-library/react';
-import { EMPTY_LAYOUT, relayOperatorAuthors } from '@/services/relay/channel-layout';
-import { EMPTY_BRANDING } from '@/services/relay/relay-branding';
+import { relayOperatorAuthors } from '@/services/relay/channel-layout';
+import { EMPTY_LAYOUT } from '@/constants/relay/channel-layout';
+import { EMPTY_BRANDING } from '@/constants/relay/relay-branding';
 import { EMPTY_RELAY_ROLES } from '@/services/relay/relay-roles';
 import { useChannelLayout } from '@/hooks/relay/channel-layout/useChannelLayout';
 import { useRelayBranding } from '@/hooks/relay/branding/useRelayBranding';

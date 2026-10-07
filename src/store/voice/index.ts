@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { quotaSafeLocalStorage } from '@/services/common/quota-safe-storage';
-import { VIDEO_QUALITIES, type VideoQuality } from '@/services/voice/quality';
+import type { VideoQuality } from '@/services/voice/quality';
+import { VIDEO_QUALITIES } from '@/constants/voice/quality';
 import type { QualitySample } from '@/services/voice/stats';
 import { oneOf, versionedPersist } from '../common/persist-version';
 

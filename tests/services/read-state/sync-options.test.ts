@@ -3,8 +3,9 @@
  * under, and the rumor parsers both halves use.
  */
 import { describe, expect, it } from 'vitest';
-import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA } from '@/utils/nostr/nip-kinds';
-import { D_TAG_GROUPS, cacheKindFor, findInnerDTag, parsePayload } from '@/services/read-state/sync-options';
+import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA } from '@/constants/nostr/nip-kinds';
+import { cacheKindFor, findInnerDTag, parsePayload } from '@/services/read-state/sync-options';
+import { D_TAG_GROUPS } from '@/constants/read-state/sync-options';
 import * as relaySync from '@/services/read-state/relay-sync';
 import type { Rumor } from '@/lib/nip-59';
 

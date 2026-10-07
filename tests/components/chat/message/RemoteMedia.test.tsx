@@ -10,7 +10,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
 import { DmMessageBody } from '@/components/chat/dm/message/DmMessageBody';
 import MessageContent from '@/components/chat/message/MessageContent';
-import { preloadMarkdownBody } from '@/hooks/chat/message/useMarkdownBody';
+import { preloadMarkdownBody } from '@/services/chat/message/markdown-body';
 
 // The markdown renderer loads on demand; load it first so every render below is the real one.
 beforeAll(async () => { await preloadMarkdownBody(); });

@@ -6,7 +6,8 @@ import { loadRecentEmojis, pushRecentEmoji, type RecentEmoji } from '@/services/
 import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import type { JsMediaKind } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
-import { customEntriesFrom, filterByName, resolveRecentEntries, SEARCH_LIMIT } from '@/utils/chat/picker/custom-emoji-entries';
+import { customEntriesFrom, filterByName, resolveRecentEntries } from '@/utils/chat/picker/custom-emoji-entries';
+import { SEARCH_LIMIT } from '@/constants/chat/picker';
 import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
 import type { RecentPickerEntry } from '@/utils/chat/picker/custom-emoji-entries';
 

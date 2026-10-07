@@ -6,7 +6,7 @@ import { readGuideOrNull } from '@/services/guides/guides';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { localizedPath } from '@/utils/seo/alternates';
 import { guideCardContent, guideCardText } from '@/utils/seo/card-layout';
-import { OG_SIZE } from '@/utils/seo/og';
+import { OG_SIZE } from '@/constants/seo/og';
 
 export const runtime = 'nodejs';
 export const size = OG_SIZE;

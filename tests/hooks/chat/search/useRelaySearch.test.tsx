@@ -28,7 +28,8 @@ vi.mock('@/services/relay/relay-info', () => ({
     !info?.supportedNips ? true : info.supportedNips.includes(50),
 }));
 
-import { useRelaySearch, SEARCH_DEBOUNCE_MS } from '@/hooks/chat/search/useRelaySearch';
+import { useRelaySearch } from '@/hooks/chat/search/useRelaySearch';
+import { SEARCH_DEBOUNCE_MS } from '@/constants/chat/search';
 import { LocaleProvider } from '@tests/support/intl';
 import type { ReactNode } from 'react';
 

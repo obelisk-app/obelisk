@@ -15,7 +15,8 @@
 import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
-import { KIND_NIP78_APP_DATA as KIND_BRANDING } from '@/utils/nostr/nip-kinds';
+import { KIND_NIP78_APP_DATA as KIND_BRANDING } from '@/constants/nostr/nip-kinds';
+import { EMPTY_BRANDING } from '@/constants/relay/relay-branding';
 
 export interface RelayBranding {
   readonly icon: string;
@@ -25,14 +26,6 @@ export interface RelayBranding {
   /** created_at of the source event, or 0 if none seen yet. */
   readonly updatedAt: number;
 }
-
-export const EMPTY_BRANDING: RelayBranding = {
-  icon: '',
-  banner: '',
-  name: '',
-  description: '',
-  updatedAt: 0,
-};
 
 function dTag(relayUrl: string): string {
   return `obelisk:branding:${relayUrl}`;

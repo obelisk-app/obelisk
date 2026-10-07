@@ -15,7 +15,7 @@
 import { type Event as NostrEvent, getEventHash, finalizeEvent } from 'nostr-tools';
 import { generateSecretKey } from 'nostr-tools/pure';
 import { v2 as nip44 } from 'nostr-tools/nip44';
-import { KIND_SEAL, KIND_GIFT_WRAP } from '@/utils/nostr/nip-kinds';
+import { KIND_SEAL, KIND_GIFT_WRAP } from '@/constants/nostr/nip-kinds';
 
 export interface NipSigner {
   readonly pubkey: string;

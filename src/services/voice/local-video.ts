@@ -11,8 +11,8 @@
 import type { RoomState } from './room-state';
 import type { VideoSlotKind, VoicePresence } from './types';
 import { getPreset } from './quality';
-import { MAX_CAMERAS } from './constants';
-import { VoiceError } from './errors';
+import { MAX_CAMERAS } from '@/constants/voice/client';
+import { VoiceError } from '@/utils/voice/errors';
 import type { SfuPublisher } from './local-media-publish';
 import {
   buildVideoSlotList,

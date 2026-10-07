@@ -21,6 +21,7 @@
  */
 
 import type { Event as NostrEvent } from 'nostr-tools';
+import { RECENCY_HALF_LIFE_S } from '@/constants/social/rank';
 
 export type FeedSort = 'recent' | 'top';
 
@@ -44,9 +45,6 @@ export type RankSignals = {
   /** Injectable for deterministic tests. */
   now?: number;
 };
-
-/** Newer wins, but not so hard that nothing else can move a note. */
-export const RECENCY_HALF_LIFE_S = 6 * 60 * 60;
 
 /**
  * Zaps outrank likes because a zap costs money and a like costs nothing;

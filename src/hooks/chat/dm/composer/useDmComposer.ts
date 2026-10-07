@@ -12,7 +12,6 @@ import { dmFileCategory } from '@/utils/attachments/dm-file';
 import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 import { usePreviewUrls } from './usePreviewUrls';
 import {
-  MAX_PENDING,
   draftAfterPick,
   dmTextTags,
   filesFromClipboard,
@@ -20,6 +19,7 @@ import {
   type PendingFile,
   type PendingVoice,
 } from '@/utils/chat/dm/pending';
+import { MAX_PENDING } from '@/constants/chat/dm';
 import { errorText } from '@/utils/errors/error-text';
 
 /**

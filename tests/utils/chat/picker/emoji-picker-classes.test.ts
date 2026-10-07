@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { emojiPickerClasses } from '@/utils/chat/picker/emoji-picker-classes';
-import { EMOJI_SECTIONS, sectionEmojis } from '@/utils/chat/picker/emoji-sections';
+import { sectionEmojis } from '@/utils/chat/picker/emoji-sections';
+import { EMOJI_SECTIONS } from '@/constants/chat/picker';
 import { EMOJI_CATEGORIES } from '@/lib/emoji';
 
 describe('emojiPickerClasses', () => {

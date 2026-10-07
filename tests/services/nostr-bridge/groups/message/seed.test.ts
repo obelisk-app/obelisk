@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { KIND_GROUP_CHAT_MESSAGE, KIND_GROUP_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_CHAT_MESSAGE, KIND_GROUP_METADATA } from '@/constants/nostr/nip-kinds';
 import { cacheClearAll, cacheSet } from '@/services/nostr-bridge/cache/cache';
 import { seedCachedMessagesForGroup, seedMessagesFromCache, type MessageSeedStores } from '@/services/nostr-bridge/groups/message/seed';
 import { StateStore } from '@/services/nostr-bridge/common/state-store';

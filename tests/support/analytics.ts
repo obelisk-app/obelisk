@@ -4,7 +4,7 @@
  * consent module's memory forgotten.
  */
 import { _resetAnalyticsConsentForTest } from '@/services/analytics/consent';
-import { GA_MEASUREMENT_ID, GTAG_SCRIPT_ID } from '@/services/analytics/gtag';
+import { GA_MEASUREMENT_ID, GTAG_SCRIPT_ID } from '@/constants/analytics/gtag';
 
 export const DISABLE_FLAG = `ga-disable-${GA_MEASUREMENT_ID}`;
 

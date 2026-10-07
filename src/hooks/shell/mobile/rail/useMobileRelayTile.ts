@@ -7,6 +7,7 @@ import { useRelayInfo } from '@/hooks/relay/info/useRelayInfo';
 import { useUnreadMentionCount } from '@/hooks/notifications/useNotificationSelectors';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { relayTileLabel, relayTileLetter, unreadBadgeText } from '@/utils/shell/mobile/rail';
+import { RELAY_TILE_LONG_PRESS_MS } from '@/constants/shell/mobile';
 
 /** What a long press (or a right-click) on a phone relay tile hands over. */
 export interface RelayLongPressInfo {
@@ -14,9 +15,6 @@ export interface RelayLongPressInfo {
   label: string;
   iconUrl: string | null;
 }
-
-/** How long a touch has to stay down to count as a long press. */
-export const RELAY_TILE_LONG_PRESS_MS = 500;
 
 /**
  * One tile in the phone's relay rail (`mobile/rail/RelayTile.tsx`): its

@@ -6,7 +6,7 @@
  * exposes the stores as properties; the modules' `BridgeContext` closures
  * read `session` and `relays` from it live.
  */
-import { DEFAULT_RELAY, DEFAULT_RELAYS } from '../relay/relay-list';
+import { DEFAULT_RELAY, DEFAULT_RELAYS } from '@/constants/nostr-bridge/relay';
 import type { PersistedSession } from './session-storage';
 import { StateStore } from '../common/state-store';
 import type { RelayAccessState } from '../common/types';

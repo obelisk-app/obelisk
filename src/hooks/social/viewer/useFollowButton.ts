@@ -9,7 +9,7 @@ import {
 } from '@/services/nostr-bridge';
 import { toggledFollowTags } from '@/services/social/profile-feed';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
-import { KIND_CONTACT_LIST } from '@/utils/nostr/nip-kinds';
+import { KIND_CONTACT_LIST } from '@/constants/nostr/nip-kinds';
 import type { MessageKey } from '@/i18n/keys';
 
 /**

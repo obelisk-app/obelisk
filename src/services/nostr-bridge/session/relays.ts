@@ -10,15 +10,16 @@
 import { CodedError } from '@/utils/errors/codes';
 import { useNotificationsStore } from '@/store/notifications';
 import {
-  DEFAULT_RELAYS,
   isImportableRelayUrl,
   normalizeConfiguredRelayUrl,
   uniqueRelayUrls,
   validateRelayUrl,
 } from '../relay/relay-list';
+import { DEFAULT_RELAYS } from '@/constants/nostr-bridge/relay';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-import { LEGACY_RELAYS_KEY, RELAYS_KEY, readMigrated } from './session-storage';
-import { RELAY_SWITCH_GRACE_MS } from '../subscriptions/pinned';
+import { readMigrated } from './session-storage';
+import { LEGACY_RELAYS_KEY, RELAYS_KEY } from '@/constants/nostr-bridge/session';
+import { RELAY_SWITCH_GRACE_MS } from '@/constants/nostr-bridge/subscriptions';
 import type { PerGroupReqs } from './fanout';
 import type { LifecycleTargets } from './lifecycle';
 import { resetRelayScopedState } from './reset';

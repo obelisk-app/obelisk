@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { relayGroupClients, SWAP_COL_X, SWAP_TOP, swapMatrixHeight, swapMatrixRows, zapArrows, ZAP_LANE_X } from '@/utils/guides/diagram-art';
+import { relayGroupClients, swapMatrixHeight, swapMatrixRows, zapArrows } from '@/utils/guides/diagram-art';
+import { SWAP_COL_X, SWAP_TOP, ZAP_LANE_X } from '@/constants/guides/diagram-art';
 
 describe('relay groups diagram', () => {
   it('links each client from its inner side to the near edge of the relay box', () => {

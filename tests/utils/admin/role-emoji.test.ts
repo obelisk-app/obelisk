@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { EMOJI_POPOVER_H, EMOJI_POPOVER_W, roleBadgeGlyph, roleEmojiPopoverAnchor } from '@/utils/admin/role-emoji';
+import { roleBadgeGlyph, roleEmojiPopoverAnchor } from '@/utils/admin/role-emoji';
+import { EMOJI_POPOVER_H, EMOJI_POPOVER_W } from '@/constants/admin/role-emoji';
 
 const VIEW = { width: 1200, height: 900 };
 

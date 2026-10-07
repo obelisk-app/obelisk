@@ -1,10 +1,10 @@
 # Code conventions
 
-Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../AGENTS.md#where-code-goes); this page is the detail behind six of its rules: where a file goes, component files are markup, every picture lives in `src/assets/`, text goes through the type pieces, shared animations live in `ui/animations/`, and every modal and sheet uses the shared header and footer.
+Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../AGENTS.md#where-code-goes); this page is the detail behind seven of its rules: where a file goes, what each layer holds, component files are markup, every picture lives in `src/assets/`, text goes through the type pieces, shared animations live in `ui/animations/`, and every modal and sheet uses the shared header and footer.
 
 ## Where a file goes
 
-The layers are `src/components`, `src/hooks`, `src/services`, `src/utils`, `src/store` and `src/lib`. All of them are split the same way (round 28), and `tests/structure/module-layout.test.ts` holds them to it. `src/assets` (round 31) is a layer too, split by kind of picture rather than by feature ([Assets](#assets)).
+The layers are `src/components`, `src/hooks`, `src/services`, `src/utils`, `src/constants`, `src/store` and `src/lib`. All of them are split the same way (round 28; `src/constants` since round 32), and `tests/structure/module-layout.test.ts` holds them to it. `src/assets` (round 31) is a layer too, split by kind of picture rather than by feature ([Assets](#assets)).
 
 1. **Nothing loose at a layer's root.** Every file sits in a module folder. Code used across features goes in `common/` (`hooks/common/useDismiss.ts`, `services/common/clipboard.ts`, `components/common/AnchoredMenu.tsx`, `store/common/multi-account.ts`) or, in `utils`, in a named shared topic (`format/`, `identity/`, `message-text/`, `relay-url/`, `nostr/`, ...).
 2. **The same feature names in every layer.** A layer's top-level folders come from one module map (below; `MODULES` in the guard). A feature that has code in several layers uses the same path in each: `components/chat/dm/thread/DmThreadMenu.tsx`, `hooks/chat/dm/thread/useDmThread.ts`, `services/chat/dm/opt-in.ts`, `utils/chat/dm/pending.ts`, `store/chat/dm.ts`. A small layer may stop a level higher (`services/chat/dm/` is flat), but never renames: one folder name is spelled one way everywhere (no `dm-call` beside `call`, no `messages` beside `message`).
@@ -42,6 +42,24 @@ The route tree follows rule 3: Next.js files (`page.tsx`, `layout.tsx`, `opengra
 | `marketing`, `guides`, `help`, `media-kit`, `seo` | The public site | `marketing`: `landing`, `site`, `showcase`; `guides`: `article`, `listing`, `mdx` (the guide artwork is in `src/assets/illustrations/guides/`) |
 
 Folders one layer has and the others do not: `services/nostr-bridge/` (the bridge, behind its front door), `services/server/` (server-only code) and the `utils` shared topics; each is listed with its reason in `LAYER_ONLY`.
+
+## What each layer holds
+
+Round 32. The folders say where a feature's code is; this rule says what kind of code each layer may hold, so a reader knows a file's shape from its path. `tests/structure/layer-contents.test.ts` reads every file with the TypeScript parser (`scripts/layers/analyze.ts`) and has no exception list; `npx tsx scripts/layers/scan.ts [folder]` prints what breaks it.
+
+| Layer | Holds | The guard fails on |
+|---|---|---|
+| `src/constants/<module>/` | Values and types: event kinds, timings, caps, storage keys, option lists, fixed page content | a function, arrow, method or class; JSX; a value imported from an app layer (a constant reads only other constants, `src/lib/` packages and npm packages; types from anywhere) |
+| `src/hooks/<module>/` | Hooks (`use*`) and their own types | an exported value that is not a hook: a helper, a constant, a component, a re-export |
+| `src/utils/<module or topic>/` | Pure functions (and the error classes and types they work with) | an import of React, Next.js or zustand, or of a value from `src/hooks`, `src/services`, `src/store`, `src/components` or `src/app`; JSX; a storage, network or timer global (`localStorage`, `sessionStorage`, `indexedDB`, `fetch`, `WebSocket`, `setTimeout`, `requestAnimationFrame`, ...) |
+| `src/services/<module>/` | Business logic and side effects: relays, the bridge, stores, storage, `fetch`, timers, the DOM's events, WebRTC | |
+| `src/components/`, `src/app/` | Components ([Component files](#component-files)) | (`components-only` and `markup-only`) |
+
+**Constants: one rule.** A constant another file reads, a test included, lives in `src/constants/<module>/`; a constant only its own file reads stays in that file, unexported. So no file in hooks, utils or services exports a constant, and a file that would hold nothing but constants is a constants file in the wrong layer. When some constants of a file are read elsewhere, the file's whole family of exported constants moves together (the SFU's timeouts, the mention-seen thresholds), so a family is never split between two places. A value built from a service's own values (`LOCAL_DATA`, the inventory assembled from the inventory files) is not a constant in this sense and stays with its service; neither is mutable state (`new Map()`, a `{}` filled in later) or a computed object (`createHub()`).
+
+**Where a constant goes.** `src/constants/<module>/<name>.ts`, named after the file or sub-feature that owns the values: a flat service's file keeps its name (`services/voice/sfu-rpc-support.ts` -> `constants/voice/sfu-rpc-support.ts`), a sub-feature's code shares one file (`hooks/chat/timeline/*` and `utils/chat/timeline/*` -> `constants/chat/timeline.ts`). A constants file never has sub-folders beside it, so rule 3 above never splits one. The utils' shared topics, the bridge (`nostr-bridge/`) and the server code (`server/`) keep their folder names here (`LAYER_ONLY` in the module-layout guard). Event kinds are `constants/nostr/nip-kinds.ts`, the one source of truth (`tests/constants/nostr/nip-kinds.test.ts`).
+
+**What moved in round 32** (audits/obelisk/round32/layers.md): `nip-kinds.ts` and the other constants-only utils and services; about 340 exported constants out of hooks, utils and services (and 37 that only their own file read are no longer exported); the social tier's local `KIND_*` constants into nip-kinds; the pure helpers hooks exported to utils and their side effects to services; `localStorage`, the open-settings event and the message flash out of utils into services; the landing page's content out of a component folder (`constants/marketing/landing.ts`, its icons picked by `FeatureGlyph` and `StepGlyph`).
 
 ## Component files
 

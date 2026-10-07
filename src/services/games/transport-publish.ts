@@ -4,7 +4,7 @@
  * of a table whose confirmation was lost. Re-exported from `transport.ts`.
  */
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_GAME } from '@/utils/nostr/nip-kinds';
+import { KIND_GAME } from '@/constants/nostr/nip-kinds';
 import { CodedError } from '@/utils/errors/codes';
 import { ingestGameEvent } from './ingest';
 import {
@@ -14,7 +14,8 @@ import {
   type GameEvent,
   type SeatSpec,
 } from '@/lib/games/protocol/protocol';
-import { bridge, GAME_SUB_WATCHDOG_MS } from './transport-bridge';
+import { bridge } from './transport-bridge';
+import { GAME_SUB_WATCHDOG_MS } from '@/constants/games/transport-bridge';
 
 /**
  * Publish, and try once more if the confirmation never came back.

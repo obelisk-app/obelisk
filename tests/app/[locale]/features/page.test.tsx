@@ -9,7 +9,7 @@ vi.mock('@/components/ui/animations/ShootingStars', () => ({ default: () => null
 
 describe('FeaturesPage', () => {
   it('shows every comeback feature with a screenshot and working calls to action', async () => {
-    render(await FeaturesPage({ params: Promise.resolve({ locale: 'en' }) }));
+    render(await FeaturesPage());
     for (const title of ['Nostr relay-based groups', 'Voice messages', 'Sticker marketplace', 'Games in the channel', 'Mobile PWA', 'Peer-to-peer video calls', 'Big calls with SFU', 'Nostr profile explorer']) {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
     }

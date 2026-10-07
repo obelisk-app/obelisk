@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-/** Phones and portrait tablets; the desktop shell starts at Tailwind's `lg`. */
-export const MOBILE_QUERY = '(max-width: 1023px)';
+import { MOBILE_QUERY } from '@/constants/common/breakpoints';
 
 /**
  * Whether the viewport is a phone-sized one, or `null` before the client

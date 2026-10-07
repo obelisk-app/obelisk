@@ -39,5 +39,3 @@ export function parseBolt11(invoice: string): ParsedInvoice {
   };
 }
 
-/** Matches BOLT11 mainnet/testnet/regtest invoices inside a message body. */
-export const INVOICE_REGEX = /\b(lnbc|lntb|lnbcrt)[0-9a-z]{50,}\b/gi;

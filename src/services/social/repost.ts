@@ -16,7 +16,7 @@
 import type { Event as NostrEvent } from 'nostr-tools';
 import { validateEvent, verifyEvent } from 'nostr-tools/pure';
 import { fetchNote } from '@nostr-wot/data';
-import { KIND_GENERIC_REPOST, KIND_NOTE, KIND_REPOST } from './kinds';
+import { KIND_GENERIC_REPOST, KIND_TEXT_NOTE, KIND_REPOST } from '@/constants/nostr/nip-kinds';
 
 export function isRepost(note: Pick<NostrEvent, 'kind'>): boolean {
   return note.kind === KIND_REPOST || note.kind === KIND_GENERIC_REPOST;
@@ -38,7 +38,7 @@ export function repostTarget(
  * network.
  */
 export function repostInnerKind(note: Pick<NostrEvent, 'kind' | 'tags'>): number | null {
-  if (note.kind === KIND_REPOST) return KIND_NOTE;
+  if (note.kind === KIND_REPOST) return KIND_TEXT_NOTE;
   const k = note.tags.find((t) => t[0] === 'k' && !!t[1])?.[1];
   const parsed = k ? Number.parseInt(k, 10) : Number.NaN;
   return Number.isFinite(parsed) ? parsed : null;
@@ -142,7 +142,7 @@ export async function resolveRepost(note: NostrEvent): Promise<NostrEvent | null
     content: fetched.content,
     created_at: fetched.createdAt,
     tags: fetched.tags,
-    kind: KIND_NOTE,
+    kind: KIND_TEXT_NOTE,
     sig: '',
   };
 }

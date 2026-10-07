@@ -21,10 +21,13 @@ vi.mock('@/services/nostr-bridge/facade/client', () => ({
 }));
 
 import {
-  publishJoin, publishCreate, looksLikeLostConfirmation,
-  subscribeChannelGames, __resetTagIndexProbe,
-  CHANNEL_GAME_LIMIT, TAG_PROBE_MS,
+  publishJoin,
+  publishCreate,
+  looksLikeLostConfirmation,
+  subscribeChannelGames,
+  __resetTagIndexProbe,
 } from '@/services/games/transport';
+import { CHANNEL_GAME_LIMIT, TAG_PROBE_MS } from '@/constants/games/transport';
 import { flushGameIngest, resetGameIngest } from '@/services/games/ingest';
 import { useGamesStore } from '@/store/games';
 import { buildCreate, buildGameOp, GAME_TAG } from '@/lib/games/protocol/protocol';

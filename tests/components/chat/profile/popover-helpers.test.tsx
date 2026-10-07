@@ -1,7 +1,8 @@
 import { render, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EmojiText } from '@/components/chat/profile/EmojiText';
-import { requestZapPrefill, websiteHref } from '@/hooks/chat/profile/usePopoverMember';
+import { websiteHref } from '@/utils/chat/profile/profile-links';
+import { requestZapPrefill } from '@/services/chat/profile/zap-prefill';
 import { usePopoverPlacement } from '@/hooks/chat/profile/usePopoverPlacement';
 import { useChatStore } from '@/store/chat';
 

@@ -1,7 +1,8 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { TRENDING_WIDGET_LIMIT, useTrendingWidget } from '@/hooks/social/widgets/useTrendingWidget';
+import { useTrendingWidget } from '@/hooks/social/widgets/useTrendingWidget';
+import { TRENDING_WIDGET_LIMIT } from '@/constants/social/widgets';
 
 const note = (id: string, pubkey: string, tag: string): NostrEvent => ({
   id, pubkey, kind: 1, content: '', created_at: 1, sig: '', tags: [['t', tag]],

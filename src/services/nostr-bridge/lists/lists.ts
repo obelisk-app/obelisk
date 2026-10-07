@@ -5,13 +5,14 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_CONTACT_LIST, KIND_MUTE_LIST } from '@/utils/nostr/nip-kinds';
+import { KIND_CONTACT_LIST, KIND_MUTE_LIST } from '@/constants/nostr/nip-kinds';
 import { getPreferences } from '@/services/preferences/preferences';
 import { wotEngine } from '@/services/wot/engine';
 import { useModerationStore } from '@/store/moderation';
 import { cacheGet, cacheSet } from '../cache/cache';
 import { getAllTags } from '../common/event-tags';
-import { PROFILE_RELAYS, newestEvent } from '../profile/profile-sync-cache';
+import { newestEvent } from '../profile/profile-sync-cache';
+import { PROFILE_RELAYS } from '@/constants/nostr-bridge/profile';
 import { StateStore } from '../common/state-store';
 import type { BridgeContext } from '../facade/context';
 

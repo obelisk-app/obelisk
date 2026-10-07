@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import type { ROADMAP_PHASES } from './landing-data';
+import type { ROADMAP_PHASES } from '@/constants/marketing/landing';
 import Heading from '@/components/ui/layout/Heading';
 
 type Phase = (typeof ROADMAP_PHASES)[number];

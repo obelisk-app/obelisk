@@ -3,7 +3,7 @@
  * up, the reconnect window for one that dropped, and the caller's rebuild
  * budget. Owned by `DmCallSession`; it only keeps time, the session decides.
  */
-import { CONNECT_DEADLINE_MS, MAX_REBUILDS, RECONNECT_GIVE_UP_MS } from './session-config';
+import { CONNECT_DEADLINE_MS, MAX_REBUILDS, RECONNECT_GIVE_UP_MS } from '@/constants/call/session-config';
 
 export class CallLiveness {
   everConnected = false;

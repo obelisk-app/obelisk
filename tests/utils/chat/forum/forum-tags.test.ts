@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_FORUM_TAGS, newForumTagId, removeTagAt, tagEmojiValue, threadTagChoice, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
+import { newForumTagId, removeTagAt, tagEmojiValue, threadTagChoice, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
+import { MAX_FORUM_TAGS } from '@/constants/chat/forum';
 
 const tag = (id: string) => ({ id, name: id, emoji: null, color: null });
 

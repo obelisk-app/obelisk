@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { VOICE_CHAT_MIN, VOICE_CHAT_MAX } from '@/constants/shell/panes';
 
-export const VOICE_CHAT_MIN = 280;
-export const VOICE_CHAT_MAX = 720;
 const DEFAULT_WIDTH = 400;
 const WIDTH_KEY = 'obelisk:voice-chat-width';
 

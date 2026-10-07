@@ -10,7 +10,7 @@
 import { useEffect, useState, type MutableRefObject } from 'react';
 import { useBridge } from '@/services/nostr-bridge';
 import type { VoiceClient } from '@/services/voice/client';
-import { voiceErrorCode, type VoiceErrorCode } from '@/services/voice/errors';
+import { voiceErrorCode, type VoiceErrorCode } from '@/utils/voice/errors';
 
 export type AuthGate =
   | { phase: 'init' }

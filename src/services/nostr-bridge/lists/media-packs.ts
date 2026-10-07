@@ -5,11 +5,12 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_EMOJI_FAVORITES, KIND_EMOJI_SET, KIND_EVENT_DELETION } from '@/utils/nostr/nip-kinds';
-import { EMPTY_MEDIA_FAVORITES, mediaFavoriteTags, mediaPackTags, parseMediaFavorites, parseMediaPack } from '@/utils/media/tags/media-packs';
+import { KIND_EMOJI_FAVORITES, KIND_EMOJI_SET, KIND_EVENT_DELETION } from '@/constants/nostr/nip-kinds';
+import { mediaFavoriteTags, mediaPackTags, parseMediaFavorites, parseMediaPack } from '@/utils/media/tags/media-packs';
+import { EMPTY_MEDIA_FAVORITES } from '@/constants/media/tags';
 import { getPreferences } from '@/services/preferences/preferences';
 import { cacheDelete, cacheGet, cacheSet } from '../cache/cache';
-import { PROFILE_RELAYS } from '../profile/profile-sync-cache';
+import { PROFILE_RELAYS } from '@/constants/nostr-bridge/profile';
 import { StateStore } from '../common/state-store';
 import type { BridgeContext } from '../facade/context';
 import type { JsMediaFavorites, JsMediaPack } from '../common/types';

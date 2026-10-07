@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
-  RECENCY_HALF_LIFE_S,
   applySort,
   authorPenalty,
   engagementScore,
@@ -11,6 +10,7 @@ import {
   repostBoost,
   wotBoost,
 } from '@/services/social/rank';
+import { RECENCY_HALF_LIFE_S } from '@/constants/social/rank';
 
 const NOW = 1_700_000_000;
 

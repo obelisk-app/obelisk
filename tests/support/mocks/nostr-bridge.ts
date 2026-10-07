@@ -33,7 +33,7 @@ import type {
   JsUserMetadata,
 } from '@/services/nostr-bridge';
 import { isImportableRelayUrl } from '@/services/nostr-bridge/relay/relay-list';
-import { DEFAULT_PROFILE_LOOKUP_RELAYS } from '@/services/nostr-bridge/profile/profile-sync-cache';
+import { DEFAULT_PROFILE_LOOKUP_RELAYS } from '@/constants/nostr-bridge/profile';
 import { cacheDelete, cacheGet, cacheSet } from '@/services/nostr-bridge/cache/cache';
 import { resubscribeOnQuotaClose } from '@/services/nostr-bridge/relay/quota-resubscribe';
 import { hasSeenWrap, markWrapSeen } from '@/services/nostr-bridge/cache/wrap-ledger';

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameCatalog, type GameInfo } from '@/lib/games/core/catalog';
-import { gameCreateOptions, localPlayerChoices, TIMEOUTS } from '@/utils/games/new-game/game-options';
+import { gameCreateOptions, localPlayerChoices } from '@/utils/games/new-game/game-options';
+import { TIMEOUTS } from '@/constants/games/new-game';
 
 const info = (type: string): GameInfo => gameCatalog().find((g) => g.type === type)!;
 

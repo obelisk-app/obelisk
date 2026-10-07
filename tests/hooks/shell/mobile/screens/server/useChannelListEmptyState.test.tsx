@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import { ChannelListEmptyState } from '@/app/[locale]/app/mobile/screens/server/ChannelListEmptyState';
 import {
-  channelListEmptyReason,
   useChannelListEmptyReason,
 } from '@/hooks/shell/mobile/screens/server/useChannelListEmptyState';
+import { channelListEmptyReason } from '@/utils/shell/mobile/channel-list-empty';
 
 describe('channelListEmptyReason', () => {
   it('puts offline first, then a whitelist rejection, then a network failure', () => {

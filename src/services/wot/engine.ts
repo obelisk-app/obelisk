@@ -22,14 +22,14 @@
 import { wotBatch } from './extension';
 import { BatchQueue } from './batch-queue';
 import {
-  ALWAYS_ALLOW_KINDS,
-  DEFAULT_WOT_CONFIG,
   batchVerdict,
   verdictsInvalidated,
   type BatchAnswer,
   type WotEngineConfig,
 } from './policy';
-import { DEFAULT_MAX_CACHE_ENTRIES, VERDICT_TTL_MS, VerdictCache, type Verdict } from './verdict-cache';
+import { ALWAYS_ALLOW_KINDS, DEFAULT_WOT_CONFIG } from '@/constants/wot/policy';
+import { VerdictCache, type Verdict } from './verdict-cache';
+import { DEFAULT_MAX_CACHE_ENTRIES, VERDICT_TTL_MS } from '@/constants/wot/verdict-cache';
 import { WotEvents, type ChangeListener, type DenyListener, type WotEngineEvent } from './engine-events';
 
 export type { WotEngineConfig } from './policy';
@@ -289,6 +289,3 @@ export const wotEngine = new WotEngine();
 export function isAllowed(pubkey: string, kind?: number): boolean {
   return wotEngine.isAllowed(pubkey, kind);
 }
-
-export const KINDS_ALWAYS_ALLOW = ALWAYS_ALLOW_KINDS;
-export const _internals = { VERDICT_TTL_MS, BATCH_DEBOUNCE_MS, DEFAULT_MAX_CACHE_ENTRIES };

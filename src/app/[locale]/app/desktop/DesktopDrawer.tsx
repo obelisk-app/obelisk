@@ -7,7 +7,8 @@ import { DMOptInBoundary } from '../dm/DmOptInBoundary';
 import { ResizablePane } from './ResizablePane';
 import { Sidebar } from '../panes/sidebar/Sidebar';
 import type { View } from '@/utils/shell/desktop/view';
-import { SIDEBAR_KEY, type RailMode } from '@/utils/shell/desktop/desktop-layout';
+import type { RailMode } from '@/utils/shell/desktop/desktop-layout';
+import { SIDEBAR_KEY } from '@/constants/shell/desktop';
 import { useDesktopDrawer } from '@/hooks/shell/desktop/useDesktopDrawer';
 
 type Props = {

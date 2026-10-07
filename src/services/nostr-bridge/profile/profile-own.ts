@@ -9,12 +9,9 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_METADATA } from '@/constants/nostr/nip-kinds';
 import type { BridgeContext } from '../facade/context';
 import {
-  DEFAULT_PROFILE_LOOKUP_RELAYS,
-  OWN_PROFILE_LOOKUP_TTL_MS,
-  PROFILE_LOOKUP_MAX_WAIT_MS,
   cachedKind0ToEvent,
   getCachedKind0,
   loadProfileSyncState,
@@ -24,6 +21,7 @@ import {
   setCachedKind0,
   toCachedKind0,
 } from './profile-sync-cache';
+import { DEFAULT_PROFILE_LOOKUP_RELAYS, OWN_PROFILE_LOOKUP_TTL_MS, PROFILE_LOOKUP_MAX_WAIT_MS } from '@/constants/nostr-bridge/profile';
 import { uniqueRelayUrls } from '../relay/relay-list';
 
 export type OwnProfileContext = Pick<BridgeContext, 'session' | 'relays' | 'currentRelayUrl' | 'queryRelaysWithConfidence' | 'signAndPublish'>;

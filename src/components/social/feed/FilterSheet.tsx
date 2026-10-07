@@ -4,7 +4,8 @@ import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import SegmentedControl from '@/components/ui/forms/SegmentedControl';
 import Heading from '@/components/ui/layout/Heading';
-import { CONTENT_FILTERS, type ContentFilter } from '@/services/social/kinds';
+import type { ContentFilter } from '@/services/social/kinds';
+import { CONTENT_FILTERS } from '@/constants/social/kinds';
 import type { FeedSort } from '@/services/social/rank';
 import { useHistoryDismiss } from '@/hooks/common/useHistoryDismiss';
 

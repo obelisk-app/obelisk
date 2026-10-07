@@ -2,11 +2,11 @@
 
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import {
-  CHANNEL_SCROLL_NEAR_BOTTOM_PX,
   getChannelScrollPosition,
   rememberChannelScrollPosition,
   restoreChannelScrollPosition,
 } from '@/utils/chat/timeline/channel-scroll-position';
+import { CHANNEL_SCROLL_NEAR_BOTTOM_PX } from '@/constants/chat/timeline';
 
 interface UseChannelScrollPositionOptions {
   readonly scrollKey: string | null;

@@ -7,7 +7,7 @@
  * makes the mesh converge on flaky relays.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { KIND_VOICE_PRESENCE } from '@/utils/nostr/nip-kinds';
+import { KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
 
 interface FakeEvent {
   pubkey: string;

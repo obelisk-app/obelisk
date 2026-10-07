@@ -5,7 +5,7 @@
  * records; the vault key and the language cookie are a few bytes each and
  * are reported as present or not, not sized.
  */
-import { LOCAL_DATA_CATEGORIES } from './categories';
+import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
 import { cookiesIn, databasesBytes, offlineFilesBytes } from './browser-stores';
 import { keysIn, localStorageBytes } from './web-storage';
 import type { LocalDataCategoryId } from './types';

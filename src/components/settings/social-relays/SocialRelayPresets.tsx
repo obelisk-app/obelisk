@@ -1,5 +1,5 @@
 import Text from '@/components/ui/layout/Text';
-import { SOCIAL_RELAY_PRESETS } from '@/services/social/relays';
+import { SOCIAL_RELAY_PRESETS } from '@/constants/social/relays';
 import { socialRelayPresetChips } from '@/utils/settings/social-relays';
 import type { Translate } from '@/i18n/keys';
 

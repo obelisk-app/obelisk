@@ -30,7 +30,8 @@
  * exists, not loading is the only option that does not leak.
  */
 
-import { createLocalStore } from '@/utils/storage/local-store';
+import { createLocalStore } from '@/services/common/local-store';
+import { REMOTE_MEDIA_DEFAULTS } from '@/constants/media/remote-media';
 
 export type RemoteMediaSurface = 'channel' | 'dm';
 export type RemoteMediaMode = 'always' | 'contacts' | 'ask';
@@ -41,11 +42,6 @@ export interface RemoteMediaSettings {
 }
 
 const MODES = new Set<RemoteMediaMode>(['always', 'contacts', 'ask']);
-
-export const REMOTE_MEDIA_DEFAULTS: Readonly<RemoteMediaSettings> = Object.freeze({
-  channel: 'contacts',
-  dm: 'ask',
-});
 
 export function normalizeRemoteMediaSettings(raw: unknown): RemoteMediaSettings {
   const obj = (raw && typeof raw === 'object') ? (raw as Record<string, unknown>) : {};
@@ -122,15 +118,3 @@ export function mayAutoLoadRemoteMedia(
   return distance !== null;
 }
 
-/**
- * A URL this origin serves itself (relative, or absolute on our own host).
- * Loading it tells nobody anything they do not already know.
- */
-export function isSameOriginMediaUrl(url: string): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    return new URL(url, window.location.href).origin === window.location.origin;
-  } catch {
-    return false;
-  }
-}

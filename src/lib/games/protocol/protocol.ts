@@ -26,7 +26,7 @@
  * publish its own losing move; the turn clock (`timeout`) is the answer to
  * that, and it is enforced by every player, not by a referee.
  */
-import { KIND_GAME } from '@/utils/nostr/nip-kinds';
+import { KIND_GAME } from '@/constants/nostr/nip-kinds';
 import type { GameOp } from './protocol-types';
 
 export type { GameEvent, GameOp, ParsedGameEvent, SeatSpec } from './protocol-types';

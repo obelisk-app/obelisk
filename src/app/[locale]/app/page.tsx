@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { standardNoindexMetadata } from '@/utils/seo/standard';
 import AppGate from './AppGate';
 
@@ -10,8 +9,8 @@ import AppGate from './AppGate';
  * (`noindex, follow`); the landing page is the one that ranks for Obelisk.
  * Its card still shows when someone pastes the link.
  */
-export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
-  const locale = await pageLocale(params);
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const t = await getTranslations({ locale });
   return standardNoindexMetadata(t, locale, 'app', '/app');
 }

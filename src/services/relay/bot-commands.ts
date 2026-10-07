@@ -16,11 +16,9 @@
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridge, getBridgeImpl } from '@/services/nostr-bridge';
-import { KIND_NIP78_APP_DATA } from '@/utils/nostr/nip-kinds';
+import { KIND_NIP78_APP_DATA } from '@/constants/nostr/nip-kinds';
 import type { SlashCommand } from '@/utils/chat/slash/slash-commands';
-
-export const BOT_ALIVE_SECS = 60 * 60;
-
+import { BOT_ALIVE_SECS } from '@/constants/relay/bot-commands';
 
 export interface BotCommand {
   /** What the bot actually parses, e.g. `!milugar`. */

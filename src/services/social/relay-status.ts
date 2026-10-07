@@ -27,7 +27,7 @@
  * stays the one import.
  */
 
-import { normalizeRelayUrl } from './relays';
+import { normalizeRelayUrl } from '@/utils/social/relay-url';
 import { poolEvents, socialPool } from './pool';
 import {
   addListener,
@@ -41,12 +41,11 @@ import {
   type RelayStatus,
   type RelayStatusListener,
 } from './relay-status-store';
+import { FAILURE_SOAK_MS } from '@/constants/social/relay-status';
 
 export type { RelayState, RelayStatus } from './relay-status-store';
 export { relayStatusSummary, type RelaySummary } from './relay-summary';
 
-/** Long enough to ride out a reconnect, short enough to still feel live. */
-export const FAILURE_SOAK_MS = 4000;
 const PROBE_TIMEOUT_MS = 6000;
 const RECONCILE_MS = 5000;
 

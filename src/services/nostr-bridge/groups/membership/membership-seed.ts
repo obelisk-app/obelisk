@@ -4,7 +4,7 @@
  * skipping hidden groups. Read-only; `MembershipModule.seedFromCache`
  * merges the result under whatever the relay already delivered.
  */
-import { KIND_GROUP_ADMINS, KIND_GROUP_CREATE, KIND_GROUP_MEMBERS } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_ADMINS, KIND_GROUP_CREATE, KIND_GROUP_MEMBERS } from '@/constants/nostr/nip-kinds';
 import { cacheGet } from '../../cache/cache';
 
 export interface MembershipSeed {

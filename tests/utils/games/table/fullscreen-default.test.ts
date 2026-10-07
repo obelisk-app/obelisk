@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FULLSCREEN_BELOW_PX, opensFullscreen } from '@/utils/games/table/fullscreen-default';
+import { opensFullscreen } from '@/utils/games/table/fullscreen-default';
+import { FULLSCREEN_BELOW_PX } from '@/constants/games/table';
 
 describe('opensFullscreen', () => {
   afterEach(() => { vi.unstubAllGlobals(); });

@@ -7,7 +7,7 @@
  * spinning up a real relay.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
+import { KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
 
 interface FakeEvent {
   pubkey: string;

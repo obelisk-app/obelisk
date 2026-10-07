@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import { ASSETS, PITCHES } from '@/utils/media-kit/content';
+import { ASSETS, PITCHES } from '@/constants/media-kit/content';
 import { CopyButton } from './CopyButton';
 import { Section } from './Section';
 import Text from '@/components/ui/layout/Text';

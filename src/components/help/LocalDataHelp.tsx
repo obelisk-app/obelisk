@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Footer from '@/components/marketing/site/Footer';
 import Navbar from '@/components/marketing/site/Navbar';
-import { LOCAL_DATA_CATEGORIES } from '@/services/local-data/categories';
+import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
 import type { MessageKey } from '@/i18n/keys';
 import LocalDataHelpSection from './LocalDataHelpSection';
 import Heading from '@/components/ui/layout/Heading';

@@ -1,4 +1,4 @@
-import { DEFAULT_SOCIAL_RELAYS } from '@/services/social/relays';
+import { DEFAULT_SOCIAL_RELAYS } from '@/constants/social/relays';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('preferences store', () => {
@@ -56,7 +56,8 @@ describe('preferences store', () => {
   });
 
   it('stores DM opt-in as a non-secret boolean preference', async () => {
-    const { DM_OPT_IN_PREFERENCE_KEY, DM_OPT_IN_STORAGE_KEY, setDmOptInEnabled } = await import('@/services/chat/dm/opt-in');
+    const { setDmOptInEnabled } = await import('@/services/chat/dm/opt-in');
+    const { DM_OPT_IN_PREFERENCE_KEY, DM_OPT_IN_STORAGE_KEY } = await import('@/constants/chat/dm');
 
     expect(DM_OPT_IN_STORAGE_KEY).toBe('obelisk:preferences');
     expect(DM_OPT_IN_PREFERENCE_KEY).toBe('directMessagesEnabled');

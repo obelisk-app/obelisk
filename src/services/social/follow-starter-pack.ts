@@ -3,7 +3,7 @@ import type { BridgeImpl } from '@/services/nostr-bridge';
 import { mergedFollowTags, type StarterPack } from '@/services/social/starter-packs';
 import { useToastStore } from '@/store/feedback/toast';
 import type { Translate } from '@/i18n/keys';
-import { KIND_CONTACT_LIST } from '@/utils/nostr/nip-kinds';
+import { KIND_CONTACT_LIST } from '@/constants/nostr/nip-kinds';
 
 /**
  * Follow everyone in a pack with one kind 3, then say how it went.

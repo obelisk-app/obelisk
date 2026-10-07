@@ -10,8 +10,7 @@
  * first, then the oldest.
  */
 
-export const VERDICT_TTL_MS = 30 * 60 * 1000;
-export const DEFAULT_MAX_CACHE_ENTRIES = 10_000;
+import { DEFAULT_MAX_CACHE_ENTRIES } from '@/constants/wot/verdict-cache';
 
 export type Verdict = 'allow' | 'deny';
 

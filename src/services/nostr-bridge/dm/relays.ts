@@ -12,9 +12,10 @@
 import type { Event as NostrEvent } from 'nostr-tools';
 import { parseInboxRelayList, parseRelayList } from '@nostr-wot/data';
 import type { NostrSigner as DmNostrSigner } from '@nostr-wot/signers';
-import { KIND_DM_INBOX_RELAYS, KIND_RELAY_LIST } from '@/utils/nostr/nip-kinds';
+import { KIND_DM_INBOX_RELAYS, KIND_RELAY_LIST } from '@/constants/nostr/nip-kinds';
 import type { BridgeContext } from '../facade/context';
-import { PROFILE_RELAYS, newestEvent } from '../profile/profile-sync-cache';
+import { newestEvent } from '../profile/profile-sync-cache';
+import { PROFILE_RELAYS } from '@/constants/nostr-bridge/profile';
 import type { PublishSignedOpts } from '../publish/publish';
 import { isImportableRelayUrl, uniqueRelayUrls } from '../relay/relay-list';
 import { RelayListCache } from './relay-cache';

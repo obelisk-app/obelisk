@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { voiceErrorMessage, voiceErrorText } from '@/utils/voice/error-text';
-import { VoiceError } from '@/services/voice/errors';
+import { VoiceError } from '@/utils/voice/errors';
 import { translator } from '@tests/support/intl';
 
 describe('voiceErrorText', () => {

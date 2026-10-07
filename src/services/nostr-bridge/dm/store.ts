@@ -44,6 +44,7 @@ import { dmStoreDb, pageIndexedDb, type DmStoreDb } from './store-db';
 import { isWrappedDmKey, unwrapDmKey, wrapDmKey, type WrappedDmKey } from './store-key';
 import { decodeRecord, encodeRecord, recordAad } from './store-record';
 import type { IngestDmParams } from './thread';
+import { MAX_HELD, MAX_DEFERRED } from '@/constants/nostr-bridge/dm';
 
 export type DmLockStatus = 'locked' | 'unlocking' | 'unlocked' | 'failed';
 
@@ -54,11 +55,6 @@ export interface DmLockState {
 }
 
 export type HeldKind = 'wrap' | 'nip04';
-
-/** Events held while locked, oldest dropped first: the relays send them again on the next load. */
-export const MAX_HELD = 1000;
-/** Read-state callbacks waiting for the unlock, oldest dropped first, for the same reason. */
-export const MAX_DEFERRED = 1000;
 
 const LOCKED: DmLockState = { status: 'locked', unopened: [] };
 

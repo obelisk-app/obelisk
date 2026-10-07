@@ -7,7 +7,7 @@
  */
 import { translate } from '@/i18n/runtime';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_GROUP_CHAT_MESSAGE, KIND_GROUP_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_CHAT_MESSAGE, KIND_GROUP_METADATA } from '@/constants/nostr/nip-kinds';
 import { getPreferences } from '@/services/preferences/preferences';
 import { extractMentionPubkeysFromMessage } from '@/utils/message-text/mentions';
 import { announceIncoming } from '@/services/notifications/alert';

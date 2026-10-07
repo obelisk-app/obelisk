@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetReverb, schedule } from '@/services/notifications/ringtone-synth';
-import { RINGTONE_DEFS } from '@/services/notifications/ringtone-defs';
+import { RINGTONE_DEFS } from '@/constants/notifications/ringtone-defs';
 
 function fakeContext() {
   const node = () => ({ connect: vi.fn((n: unknown) => n) });

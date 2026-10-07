@@ -1,7 +1,7 @@
 'use client';
 
 import { usePreferences } from '@/hooks/preferences/usePreferences';
-import { openSettings } from '@/utils/settings/open-settings';
+import { openSettings } from '@/services/settings/open-settings';
 import { serverBannerParts } from '@/utils/shell/mobile/rail';
 
 /**

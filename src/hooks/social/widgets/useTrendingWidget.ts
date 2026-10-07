@@ -1,9 +1,7 @@
 import { useMemo } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { trendingTags } from '@/services/social/trending';
-
-/** How many tags the side column lists. */
-export const TRENDING_WIDGET_LIMIT = 8;
+import { TRENDING_WIDGET_LIMIT } from '@/constants/social/widgets';
 
 /** The trending widget's view model: the loaded window's top hashtags. */
 export function useTrendingWidget(notes: readonly NostrEvent[]) {

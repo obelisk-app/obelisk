@@ -8,13 +8,7 @@
 import { isBlockedAddress } from '@/utils/link-preview/link-preview';
 import dns from 'node:dns/promises';
 import net from 'node:net';
-
-/** Stop reading a page after this. OG tags live in <head>; nothing past this is useful. */
-export const MAX_BYTES = 512 * 1024;
-export const FETCH_TIMEOUT_MS = 6_000;
-export const MAX_REDIRECTS = 3;
-
-export const UA = 'Mozilla/5.0 (compatible; ObeliskBot/1.0; +https://obelisk.ar)';
+import { MAX_BYTES, FETCH_TIMEOUT_MS, MAX_REDIRECTS, UA } from '@/constants/server/link-preview';
 
 export async function assertPublicHost(hostname: string): Promise<void> {
   if (net.isIP(hostname)) {

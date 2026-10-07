@@ -1,32 +1,9 @@
-import { initialNav, urlFor, type NavState, type ScreenName } from './url-state';
-
-// Top-level bottom-nav screens, left-to-right. Swipe-left advances; swipe-right
-// retreats.
-export const NAV_ORDER: ScreenName[] = ['server', 'feed', 'dms-list', 'inbox', 'settings-profile'];
+import { urlFor, type NavState, type ScreenName } from './url-state';
+import { initialNav, NAV_ORDER, SUB_TO_NAV } from '@/constants/shell/mobile';
 
 export function isAdjacentTabSwitch(from: ScreenName, to: ScreenName): boolean {
   return Math.abs(NAV_ORDER.indexOf(from) - NAV_ORDER.indexOf(to)) === 1;
 }
-
-// Sub-screens map back to the top-level tab they belong to. This lets us treat
-// a horizontal swipe on a sub-screen as if the user were on its parent - both
-// directions skip the parent and switch tabs (swipe-left → next top-level,
-// swipe-right → previous top-level), so a horizontal gesture is always a tab
-// switch and never a within-tab pop. To go back inside a tab the user uses the
-// header back-button or re-taps the active bottom-nav item.
-export const SUB_TO_NAV: Partial<Record<ScreenName, ScreenName>> = {
-  channel: 'server',
-  'voice-room': 'server',
-  forum: 'server',
-  'member-list': 'server',
-  search: 'server',
-  'dm-thread': 'dms-list',
-  'compose-dm': 'dms-list',
-  'profile-view': 'server',
-  'settings-prefs': 'settings-profile',
-  'profile-edit': 'settings-profile',
-  'msg-actions': 'server',
-};
 
 export type SwipeNavAction =
   | { kind: 'top-level'; target: ScreenName; dir: 'forward' | 'back' }

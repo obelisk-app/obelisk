@@ -70,8 +70,9 @@
   `VideoSlotKind`).
 - **`stats.ts`** - `startStatsMonitor` for periodic
   `getStats()`-derived `QualitySample` events.
-- **`quality.ts`** - `VIDEO_QUALITIES`, `MIC_CONSTRAINTS`,
-  `AUDIO_MAX_BITRATE`.
+- **`quality.ts`** - the quality presets' helpers; the presets themselves
+  (`VIDEO_QUALITIES`, `MIC_CONSTRAINTS`, `AUDIO_MAX_BITRATE`) are in
+  `src/constants/voice/quality.ts`.
 - **`speaking-detector.ts`** - RMS threshold + holdoff for
   speaking-orb pulses. Shared AudioContext to avoid per-peer
   allocation.

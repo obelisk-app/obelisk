@@ -9,7 +9,7 @@ import {
   PEER_SNAPSHOT_INTERVAL_MS,
   PING_INTERVAL_MS,
   type ControlMessage,
-} from './control-channel';
+} from '@/constants/voice/control-channel';
 import type { PeerEvents, PeerOptions } from './peer-types';
 
 export function decodeControl(data: unknown): ControlMessage | null {

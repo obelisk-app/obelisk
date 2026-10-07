@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useVoiceChatPane, VOICE_CHAT_MAX } from '@/hooks/shell/panes/channel/useVoiceChatPane';
+import { useVoiceChatPane } from '@/hooks/shell/panes/channel/useVoiceChatPane';
+import { VOICE_CHAT_MAX } from '@/constants/shell/panes';
 
 const KEY = 'obelisk:voice-chat-width';
 

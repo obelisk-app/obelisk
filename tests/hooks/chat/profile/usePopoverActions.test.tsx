@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { usePopoverActions } from '@/hooks/chat/profile/usePopoverActions';
-import { OPEN_SETTINGS_EVENT } from '@/utils/settings/open-settings';
+import { OPEN_SETTINGS_EVENT } from '@/constants/settings/open-settings';
 
 describe('usePopoverActions', () => {
   it('each action closes the card first, then acts', () => {

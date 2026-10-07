@@ -5,7 +5,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import type { PublishResult, PublishSpec } from '@/lib/relay-hub';
-import { PUBLISH_TIMED_OUT, publishRound, settledFor } from '@/services/nostr-bridge/publish/publish-round';
+import { publishRound, settledFor } from '@/services/nostr-bridge/publish/publish-round';
+import { PUBLISH_TIMED_OUT } from '@/constants/nostr-bridge/publish';
 import { timedOutEverywhere, acceptedOf } from '@/services/nostr-bridge/publish/publish-results';
 
 const A = 'wss://a.example';

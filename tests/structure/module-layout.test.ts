@@ -18,6 +18,10 @@ import { describe, expect, it } from 'vitest';
  *    sub-feature.
  * 4. Every `src/lib/` mini-package is a folder with an `index.ts`.
  *
+ * `src/constants/` (round 32) is a layer split like the others: the same
+ * module names, plus the bridge, the server code and the utils topics whose
+ * constants it holds (its `LAYER_ONLY` list).
+ *
  * `src/assets/` (round 31) is a layer too: nothing loose at its root, and its
  * top-level folders are the asset kinds in its `LAYER_ONLY` list (`icons`,
  * `brand`, `illustrations`, `textures`), never feature names. Inside a kind,
@@ -31,7 +35,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const ROOT = process.cwd();
-const LAYERS = ['src/components', 'src/hooks', 'src/services', 'src/utils', 'src/store', 'src/lib', 'src/assets'] as const;
+const LAYERS = ['src/components', 'src/hooks', 'src/services', 'src/utils', 'src/store', 'src/lib', 'src/assets', 'src/constants'] as const;
 /** Layers whose top-level folders are their own kinds, not features: lib packages and asset kinds. */
 const OWN_LIST_ONLY = new Set<string>(['src/lib', 'src/assets']);
 /** Rule 3 also covers the route tree, where only its non-route files are held to it. */
@@ -64,9 +68,17 @@ export const LAYER_ONLY: Readonly<Record<string, Readonly<Record<string, string>
     nostr: 'shared topic: event kinds and the kinds a signer may be asked to sign',
     'relay-url': 'shared topic: normalising, sharing and styling relay URLs',
     security: 'shared topic: the Content-Security-Policy the proxy sends',
-    storage: 'shared topic: safe JSON and localStorage reads and writes',
+    storage: 'shared topic: safe JSON parsing of the strings storage hands back',
     style: 'shared topic: class-name joining',
     url: 'shared topic: http(s) URL checks',
+  },
+  'src/constants': {
+    'nostr-bridge': 'the bridge\'s tunables and storage keys, named like its folder in services',
+    server: 'the server-only code\'s limits: link-preview fetch and rate limits',
+    attachments: 'shared topic: file-attachment types and size limits',
+    errors: 'shared topic: the error codes and the activity codes the UI turns into sentences',
+    'message-text': 'shared topic: the placeholders the markdown pipeline swaps in and out',
+    nostr: 'shared topic: event kinds (nip-kinds.ts) and the kinds a signer may be asked to sign',
   },
   'src/assets': {
     icons: 'every UI icon, one file per icon, drawn on IconSvg; the index.ts barrel lists them',

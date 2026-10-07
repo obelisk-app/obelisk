@@ -12,7 +12,8 @@ import type { BridgeContext } from '../facade/context';
 import { hexToBytes } from '../common/hex';
 import { eventKindDescription } from '../common/kind-description';
 import { enqueueSignerOp } from './signer-queue';
-import { BUNKER_AUTH_SIGNATURE_TIMEOUT_MS, type BunkerModule } from './bunker';
+import type { BunkerModule } from './bunker';
+import { BUNKER_AUTH_SIGNATURE_TIMEOUT_MS } from '@/constants/nostr-bridge/session';
 
 export type SessionSignerContext = Pick<BridgeContext, 'session'>;
 

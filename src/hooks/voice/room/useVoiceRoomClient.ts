@@ -16,15 +16,21 @@
 import { useCallback, useEffect, useMemo, useState, type MutableRefObject } from 'react';
 import { VoiceClient, type RemoteTrack } from '@/services/voice/client';
 import { setActiveVoiceClient, getActiveVoiceClient } from '@/services/voice/active-client';
-import type { VoiceSigner } from '@/services/voice/constants';
+import type { VoiceSigner } from '@/constants/voice/client';
 import type { ActiveCallInfo } from '@/services/nostr-bridge';
 import { useVoiceStore } from '@/store/voice';
-import { voiceErrorCode, type VoiceErrorCode } from '@/services/voice/errors';
+import { voiceErrorCode, type VoiceErrorCode } from '@/utils/voice/errors';
 import type { AuthGate } from './useVoiceRoomGate';
 import { useSfuSupervisor } from './useSfuSupervisor';
 import {
-  hydrateFromClient, makeRoomEvents, resetRoomState, NO_LOCAL, NO_LOCAL_VIDEO, type LocalTrackFlags, type LocalVideoTracks, type SfuStatus,
+  hydrateFromClient,
+  makeRoomEvents,
+  resetRoomState,
+  type LocalTrackFlags,
+  type LocalVideoTracks,
+  type SfuStatus,
 } from '@/services/voice/room-events';
+import { NO_LOCAL, NO_LOCAL_VIDEO } from '@/constants/voice/room-events';
 
 export type { LocalTrackFlags, LocalVideoTracks } from '@/services/voice/room-events';
 

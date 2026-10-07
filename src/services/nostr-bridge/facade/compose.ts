@@ -7,7 +7,7 @@
  * the constructor's; the closures read the other modules at call time.
  */
 import type { RelayHub } from '@/lib/relay-hub';
-import { KIND_CONTACT_LIST, KIND_EMOJI_FAVORITES, KIND_EMOJI_SET } from '@/utils/nostr/nip-kinds';
+import { KIND_CONTACT_LIST, KIND_EMOJI_FAVORITES, KIND_EMOJI_SET } from '@/constants/nostr/nip-kinds';
 import type { NostrSigner as DmNostrSigner } from '@nostr-wot/signers';
 import { subscribePreferences } from '@/services/preferences/preferences';
 import type { BridgeContext } from './context';

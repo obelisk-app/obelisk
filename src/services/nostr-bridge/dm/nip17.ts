@@ -7,7 +7,7 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import { getEventHash, type Event as NostrEvent, type UnsignedEvent } from 'nostr-tools';
-import { KIND_DM_FILE_RUMOR } from '@/utils/nostr/nip-kinds';
+import { KIND_DM_FILE_RUMOR } from '@/constants/nostr/nip-kinds';
 import { KIND_GIFT_WRAP, buildChatMessage, sealAndGiftWrap } from '@nostr-wot/dm';
 import type { NostrSigner as DmNostrSigner } from '@nostr-wot/signers';
 import { resolvePqSend } from '@/services/chat/pq/send';

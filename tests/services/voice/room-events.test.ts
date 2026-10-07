@@ -8,8 +8,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useVoiceStore } from '@/store/voice';
 import type { VoiceClient } from '@/services/voice/client';
 import {
-  hydrateFromClient, makeRoomEvents, resetRoomState, NO_LOCAL, NO_LOCAL_VIDEO, type LocalVideoTracks,
+  hydrateFromClient,
+  makeRoomEvents,
+  resetRoomState,
+  type LocalVideoTracks,
 } from '@/services/voice/room-events';
+import { NO_LOCAL, NO_LOCAL_VIDEO } from '@/constants/voice/room-events';
 
 function sinks() {
   return {

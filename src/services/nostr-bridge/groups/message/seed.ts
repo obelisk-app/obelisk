@@ -4,7 +4,7 @@
  * the one-channel paint a channel open or a restart runs. Pure move from
  * `client.ts` (`seedCacheForRelay`'s message block, `seedCachedMessagesForGroup`).
  */
-import { KIND_GROUP_CHAT_MESSAGE, KIND_GROUP_METADATA } from '@/utils/nostr/nip-kinds';
+import { KIND_GROUP_CHAT_MESSAGE, KIND_GROUP_METADATA } from '@/constants/nostr/nip-kinds';
 import { cacheGet } from '../../cache/cache';
 import type { StateStore } from '../../common/state-store';
 import type { JsGroup, JsMessage, MessagesStatus } from '../../common/types';

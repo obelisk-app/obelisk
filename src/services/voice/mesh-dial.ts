@@ -10,7 +10,7 @@
  */
 import { openMeshPeer, type MeshPeerHost } from './mesh-peer';
 import { pushVoiceDebug } from './debug';
-import { MAX_PARTICIPANTS } from './constants';
+import { MAX_PARTICIPANTS } from '@/constants/voice/client';
 
 /** What the dial loop needs from the session that owns it. */
 export interface MeshDialHost extends MeshPeerHost {

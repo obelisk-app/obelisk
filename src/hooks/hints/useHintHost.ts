@@ -8,8 +8,8 @@ import { useHintsStore } from '@/store/hints';
  * answers, a pane after its width is read. Re-look on a short interval
  * rather than once, and give up quietly if it never appears.
  */
-export const HINT_LOOKUP_INTERVAL_MS = 400;
-export const HINT_LOOKUP_ATTEMPTS = 6;
+const HINT_LOOKUP_INTERVAL_MS = 400;
+const HINT_LOOKUP_ATTEMPTS = 6;
 
 /**
  * The hint host's view model: the first unseen hint for the surface whose

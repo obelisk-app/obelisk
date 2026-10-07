@@ -17,7 +17,8 @@ import { bridgeSlot } from './bridge-slot';
 export { registerBridge, unregisterBridge } from './bridge-slot';
 import { type RemoteSigner } from '../session/bunker';
 import { type PerGroupReqs } from '../session/fanout';
-import { ANONYMOUS_IDENTITY, disposeSession } from '../session/reset';
+import { disposeSession } from '../session/reset';
+import { ANONYMOUS_IDENTITY } from '@/constants/nostr-bridge/session';
 import { buildNipSigner } from '../session/nip-signer';
 import { BridgeModules } from './compose';
 import { BridgeCommands } from './facade-commands';
@@ -27,21 +28,17 @@ import type { VoiceReqOptions } from '../subscriptions/pinned';
 // Re-exported for existing importers (index.ts, tests, read-state, voice);
 // new code imports these modules directly.
 export { isImportableRelayUrl } from '../relay/relay-list';
-export { RELAYS_KEY, STORAGE_KEY } from '../session/session-storage';
+export { RELAYS_KEY, STORAGE_KEY } from '@/constants/nostr-bridge/session';
 export { classifyAccessClose } from '../publish/relay-rejection';
 export {
-  DEFAULT_PROFILE_LOOKUP_RELAYS,
-  PROFILE_LOOKUP_RELAYS_KEY,
-  PROFILE_SYNC_CACHE_KEY,
-  PROFILE_SYNC_CACHE_LIMIT,
-  PROFILE_SYNC_STATE_KEY,
   getCachedKind0,
   setCachedKind0,
   type CachedKind0Event,
 } from '../profile/profile-sync-cache';
+export { DEFAULT_PROFILE_LOOKUP_RELAYS, PROFILE_LOOKUP_RELAYS_KEY, PROFILE_SYNC_CACHE_KEY, PROFILE_SYNC_CACHE_LIMIT, PROFILE_SYNC_STATE_KEY } from '@/constants/nostr-bridge/profile';
 
 export type { RemoteSigner } from '../session/bunker';
-export { BUNKER_AUTH_SIGNATURE_TIMEOUT_MS } from '../session/bunker';
+export { BUNKER_AUTH_SIGNATURE_TIMEOUT_MS } from '@/constants/nostr-bridge/session';
 
 export type { PublishOpts } from '../publish/publish';
 

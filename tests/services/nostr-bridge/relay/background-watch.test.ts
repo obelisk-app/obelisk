@@ -1,15 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import {
-  BACKGROUND_LOOKBACK_S,
-  BACKGROUND_RETRY_MS,
   BackgroundRelayWatcher,
-  RECENT_RELAY_CAP,
   backgroundTargets,
   loadRecentRelays,
   touchRecentRelay,
   type WatchStreamCallbacks,
 } from '@/services/nostr-bridge/relay/background-watch';
+import { BACKGROUND_LOOKBACK_S, BACKGROUND_RETRY_MS, RECENT_RELAY_CAP } from '@/constants/nostr-bridge/relay';
 
 const ME = 'a'.repeat(64);
 const A = 'wss://a.example';

@@ -2,7 +2,7 @@ export { getBridge, getBridgeImpl, type BridgeImpl } from './facade/client';
 export { isImportableRelayUrl } from './relay/relay-list';
 // The page's relay hub, for a service that rides it under its own identity (a wallet connection).
 export { pageRelayHub } from './facade/page-hub';
-export { DEFAULT_PROFILE_LOOKUP_RELAYS } from './profile/profile-sync-cache';
+export { DEFAULT_PROFILE_LOOKUP_RELAYS } from '@/constants/nostr-bridge/profile';
 export { cacheGet, cacheSet, cacheDelete } from './cache/cache';
 export { resubscribeOnQuotaClose } from './relay/quota-resubscribe';
 export { hasSeenWrap, markWrapSeen, type WrapLedgerScope } from './cache/wrap-ledger';

@@ -71,7 +71,7 @@ for (const [alias, char] of Object.entries(ALIASES)) {
 // it for consistency. This const stays private; callers should use the
 // resolver functions below to avoid accidental mutation.
 
-export const UNICODE_SHORTCODES: Readonly<Record<string, string>> = MAP;
+const UNICODE_SHORTCODES: Readonly<Record<string, string>> = MAP;
 
 /**
  * Resolve a bare shortcode name (without colons) to a unicode emoji char,
@@ -144,8 +144,8 @@ export function searchShortcodes(
  * inline backtick spans are preserved by splitting on them and only
  * running the replacement on the text-between-code segments.
  */
-export const CUSTOM_EMOJI_PLACEHOLDER_PREFIX = '\u3008EMOJI:';
-export const CUSTOM_EMOJI_PLACEHOLDER_SUFFIX = '\u3009';
+const CUSTOM_EMOJI_PLACEHOLDER_PREFIX = '\u3008EMOJI:';
+const CUSTOM_EMOJI_PLACEHOLDER_SUFFIX = '\u3009';
 /**
  * A fresh placeholder matcher, per call.
  *

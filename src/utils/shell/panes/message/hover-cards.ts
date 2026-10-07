@@ -5,8 +5,7 @@
  * `ZapperHoverCard.tsx`.
  */
 
-/** How many names a hover card lists before "and N more". */
-export const HOVER_CARD_LIMIT = 20;
+import { HOVER_CARD_LIMIT } from '@/constants/shell/panes';
 
 export interface HoverCardList<T> {
   readonly shown: ReadonlyArray<T>;

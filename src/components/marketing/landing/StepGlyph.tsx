@@ -1,0 +1,9 @@
+import type { LandingStep } from '@/constants/marketing/landing';
+import { ChatIcon, KeyAltIcon, LayersIcon } from '@/assets/icons';
+
+/** The icon beside one "how it works" step: the key, the relay, the chat. */
+export default function StepGlyph({ step }: { step: LandingStep }) {
+  if (step === 1) return <KeyAltIcon size={24} strokeWidth={1.5} />;
+  if (step === 2) return <LayersIcon size={24} strokeWidth={1.5} />;
+  return <ChatIcon size={24} strokeWidth={1.5} />;
+}

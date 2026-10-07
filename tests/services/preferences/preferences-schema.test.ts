@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULTS,
   normalizePreferenceValue,
   normalizePreferences,
   sanitizeHexColor,
 } from '@/services/preferences/preferences-schema';
+import { DEFAULTS } from '@/constants/preferences/preferences-schema';
 
 describe('preferences-schema', () => {
   it('fills every field from defaults when storage is empty', () => {

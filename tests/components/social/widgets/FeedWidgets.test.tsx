@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LocaleProvider } from '@tests/support/intl';
-import { DEFAULT_FEED_WIDGETS } from '@/services/social/widgets';
+import { DEFAULT_FEED_WIDGETS } from '@/constants/social/widgets';
 
 const prefs: { feedWidgets: string[]; socialRelays: string[] } = {
   feedWidgets: [...DEFAULT_FEED_WIDGETS],

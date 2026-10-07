@@ -3,8 +3,9 @@
  * never gated, and how one batch answer becomes a verdict.
  */
 import { describe, expect, it } from 'vitest';
-import { ALWAYS_ALLOW_KINDS, DEFAULT_WOT_CONFIG, batchVerdict, verdictsInvalidated } from '@/services/wot/policy';
-import { KINDS_ALWAYS_ALLOW } from '@/services/wot/engine';
+import { batchVerdict, verdictsInvalidated } from '@/services/wot/policy';
+import { ALWAYS_ALLOW_KINDS, DEFAULT_WOT_CONFIG } from '@/constants/wot/policy';
+import { KINDS_ALWAYS_ALLOW } from '@/constants/wot/engine';
 
 const cfg = { enabled: true, maxHops: 2, minPaths: 2 };
 

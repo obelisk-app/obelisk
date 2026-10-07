@@ -1,5 +1,3 @@
-import { MUTED_FOREVER, type ChannelNotifyLevel } from '@/store/chat/channel-prefs';
-import type { MessageKey } from '@/i18n/keys';
 
 export interface ChannelMenuTarget {
   readonly relay: string;
@@ -8,20 +6,6 @@ export interface ChannelMenuTarget {
   /** Unread messages or unseen mention cards: "Mark as read" is greyed without. */
   readonly hasUnread: boolean;
 }
-
-export const MUTE_OPTIONS: ReadonlyArray<{ key: MessageKey; ms: number }> = [
-  { key: 'chat.channelMenu.mute.15m', ms: 15 * 60_000 },
-  { key: 'chat.channelMenu.mute.1h', ms: 60 * 60_000 },
-  { key: 'chat.channelMenu.mute.8h', ms: 8 * 60 * 60_000 },
-  { key: 'chat.channelMenu.mute.24h', ms: 24 * 60 * 60_000 },
-  { key: 'chat.channelMenu.mute.forever', ms: MUTED_FOREVER },
-];
-
-export const NOTIFY_OPTIONS: ReadonlyArray<{ level: ChannelNotifyLevel; key: MessageKey }> = [
-  { level: 'all', key: 'chat.channelMenu.notify.all' },
-  { level: 'mentions', key: 'chat.channelMenu.notify.mentions' },
-  { level: 'nothing', key: 'chat.channelMenu.notify.nothing' },
-];
 
 /** Room a submenu needs beside the menu before it opens to the left instead. */
 const SUBMENU_ROOM = 240;

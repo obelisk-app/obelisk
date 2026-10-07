@@ -89,7 +89,7 @@ matters for animation direction.
 
 "Dynamic" parents track the screen the user came from at navigation
 time (stored in `nav.parentScreen`). Static parents fall back to
-`SUB_TO_NAV` in `swipe-nav.ts` when the dynamic field is null (e.g.,
+`SUB_TO_NAV` (`src/constants/shell/mobile.ts`) when the dynamic field is null (e.g.,
 cold deep-link reload of `/app?u=<pubkey>`).
 
 ### Modal sheets (top layer)
@@ -124,7 +124,7 @@ track it in two places:
    opener (`selectGroup`, `selectPeer`, `openProfile`, `openMembers`,
    `openMsgActions`, `openZap`). This is the truthful answer for the
    current session.
-2. **Static**: `SUB_TO_NAV` in `swipe-nav.ts:13-26`, a fallback for
+2. **Static**: `SUB_TO_NAV` in `src/constants/shell/mobile.ts`, a fallback for
    the cold-deep-link case where the user lands on `/app?u=<pubkey>`
    directly. `urlFor` does encode the parent under `pr`, but a
    bookmark from an old build won't have it.

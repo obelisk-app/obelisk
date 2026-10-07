@@ -3,7 +3,8 @@
  * quota error, deleting by prefix, the logout wipe, and the id listings the
  * cold-load seed reads. Moved from `cache.ts`, which re-exports them.
  */
-import { KEY_PREFIX, LEGACY_KEY_PREFIXES, buildKey, isAvailable } from './cache-keys';
+import { buildKey, isAvailable } from './cache-keys';
+import { KEY_PREFIX, LEGACY_KEY_PREFIXES } from '@/constants/nostr-bridge/cache';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 
 /**

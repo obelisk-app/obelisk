@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { HOVER_CARD_LIMIT, topReactors, topZappers } from '@/utils/shell/panes/message/hover-cards';
+import { topReactors, topZappers } from '@/utils/shell/panes/message/hover-cards';
+import { HOVER_CARD_LIMIT } from '@/constants/shell/panes';
 
 describe('topReactors', () => {
   it('keeps the reaction order and counts what it leaves out', () => {

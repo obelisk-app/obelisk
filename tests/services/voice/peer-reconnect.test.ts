@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installWebRtcMocks } from '@tests/support/mocks/webrtc';
-import { INITIAL_CONNECT_TIMEOUT_MS, Peer } from '@/services/voice/peer';
+import { Peer } from '@/services/voice/peer';
+import { INITIAL_CONNECT_TIMEOUT_MS } from '@/constants/voice/peer';
 
 let webrtc: ReturnType<typeof installWebRtcMocks>;
 

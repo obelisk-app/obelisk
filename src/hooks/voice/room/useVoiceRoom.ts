@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import type { VoiceClient } from '@/services/voice/client';
-import type { VoiceErrorCode } from '@/services/voice/errors';
+import type { VoiceErrorCode } from '@/utils/voice/errors';
 import { useVoiceStore } from '@/store/voice';
 import { useActiveCall, useGroups, useCurrentRelayUrl, useMyLoginMethod } from '@/services/nostr-bridge';
 import { shouldUseSfuTopology } from '@/services/voice/topology';

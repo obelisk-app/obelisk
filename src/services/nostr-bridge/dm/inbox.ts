@@ -6,7 +6,7 @@
  * `disableDirectMessages`, `ingestIncomingGiftWrap`).
  */
 import type { Event as NostrEvent, Filter, UnsignedEvent } from 'nostr-tools';
-import { KIND_DM_CALL_RUMOR, KIND_DM_FILE_RUMOR, KIND_ENCRYPTED_DM } from '@/utils/nostr/nip-kinds';
+import { KIND_DM_CALL_RUMOR, KIND_DM_FILE_RUMOR, KIND_ENCRYPTED_DM } from '@/constants/nostr/nip-kinds';
 import type { AuthLease } from '@/lib/relay-hub';
 import { KIND_GIFT_WRAP, KIND_NIP44_DM, unwrapGiftWrap } from '@nostr-wot/dm';
 import type { NostrSigner as DmNostrSigner } from '@nostr-wot/signers';

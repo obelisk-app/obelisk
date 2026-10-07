@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameSession } from '@/lib/games/session/session';
 import { translator } from '@tests/support/intl';
-import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/constants/games/chain-reaction';
 import { cardActionLabel, cardSeatDots, cardStatus, winnerName } from '@/utils/games/card/card-labels';
 
 const t = translator('en');

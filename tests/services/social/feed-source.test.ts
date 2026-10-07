@@ -2,7 +2,8 @@
  * The plain feed-source helpers `useFeed` keys, caches and tails by.
  */
 import { describe, expect, it } from 'vitest';
-import { FOLLOWING_FEED_ID, GLOBAL_FEED_ID, profileFeedId } from '@/services/social/cache';
+import { profileFeedId } from '@/services/social/cache';
+import { FOLLOWING_FEED_ID, GLOBAL_FEED_ID } from '@/constants/social/cache';
 import { kindsForFilter } from '@/services/social/kinds';
 import { authorsFingerprint, cacheIdFor, liveTailFilters, sourceKey } from '@/services/social/feed-source';
 

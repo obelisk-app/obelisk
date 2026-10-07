@@ -15,23 +15,12 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { getBridge } from '@/services/nostr-bridge';
-import { KIND_TEXT_NOTE } from '@/utils/nostr/nip-kinds';
+import { KIND_TEXT_NOTE, KIND_REPOST, KIND_REACTION, KIND_EVENT_DELETION } from '@/constants/nostr/nip-kinds';
 import { hashtagTags } from './profile-feed';
 import { encodeEventRef, mentionedPubkeys, referencedEvents } from './nip27';
 import { socialRelays } from './pool';
 import { contentWarningTags } from './sensitive';
-
-/**
- * NIP-89 client attribution. Every event we publish says who made it, which
- * is what lets other clients show "via Obelisk" and gives readers a route
- * back to the app. One tag, on everything we sign: a reaction published
- * without it is just as anonymous as a note.
- */
-export const CLIENT_TAG: string[] = ['client', 'Obelisk'];
-
-export const KIND_REPOST = 6;
-export const KIND_REACTION = 7;
-export const KIND_DELETE = 5;
+import { CLIENT_TAG } from '@/constants/social/publish';
 
 export type Attachment = {
   url: string;
@@ -286,7 +275,7 @@ export function publishDelete(
   reason = '',
 ): Promise<NostrEvent> {
   return publish({
-    kind: KIND_DELETE,
+    kind: KIND_EVENT_DELETION,
     content: reason,
     tags: [['e', note.id], ['k', String(note.kind ?? KIND_TEXT_NOTE)]],
   });

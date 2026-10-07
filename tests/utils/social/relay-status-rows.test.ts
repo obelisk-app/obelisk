@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RelayStatus } from '@/services/social/relay-status';
-import { RELAY_STATE_DOT, relayLatencyLabel, relayStatusRows } from '@/utils/social/relay-status-rows';
+import { relayLatencyLabel, relayStatusRows } from '@/utils/social/relay-status-rows';
+import { RELAY_STATE_DOT } from '@/constants/social/relay-status-rows';
 
 const status = (url: string, patch: Partial<RelayStatus> = {}): RelayStatus => ({
   url, state: 'connected', latencyMs: null, notes: 0, lastChange: 0, ...patch,

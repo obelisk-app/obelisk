@@ -2,12 +2,12 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 import {
-  UNKNOWN_CONSENT,
   applyStoredAnalyticsConsent,
   getAnalyticsConsent,
   subscribeAnalyticsConsent,
   type AnalyticsConsentState,
 } from '@/services/analytics/consent';
+import { UNKNOWN_CONSENT } from '@/constants/analytics/consent';
 
 /**
  * The Analytics answer, re-rendering on every change. On the server and

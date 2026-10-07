@@ -1,9 +1,6 @@
 import { normalizeCustomEmojiName } from '@/utils/media/tags/custom-emoji-tags';
 import type { MediaCategory, MediaEntry } from '@/utils/chat/picker/media-catalog';
 
-/** GIPHY's API key; without one the picker shows only the built-in catalog. */
-export const GIPHY_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY;
-
 /**
  * The GIPHY request for a tab, category and query: `search` when there is a
  * term (the query, or the category name), `trending` otherwise.

@@ -1,7 +1,8 @@
 'use client';
 
 import type { JsForumTag } from '@/services/nostr-bridge';
-import { MAX_FORUM_TAGS, removeTagAt, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
+import { removeTagAt, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
+import { MAX_FORUM_TAGS } from '@/constants/chat/forum';
 
 /** The forum tag editor's edits on the tag list it is given: change, remove, and add up to `MAX_FORUM_TAGS`. */
 export function useForumTagsEditor(value: ReadonlyArray<JsForumTag>, onChange: (next: ReadonlyArray<JsForumTag>) => void) {

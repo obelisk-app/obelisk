@@ -5,7 +5,7 @@ import { categoryLabel } from '@/utils/relay/category-label';
 import type { JsGroup } from '@/services/nostr-bridge';
 import type { LaidOutSidebar } from '@/services/relay/channel-layout';
 import type { View } from '@/utils/shell/desktop/view';
-import { UNCATEGORIZED_ID } from '@/utils/shell/panes/sidebar/channel-tree';
+import { UNCATEGORIZED_ID } from '@/constants/shell/panes';
 import { useChannelTree } from '@/hooks/shell/panes/sidebar/useChannelTree';
 import { CategorySection } from './CategorySection';
 import { GroupNode } from './GroupNode';

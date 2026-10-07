@@ -10,7 +10,8 @@ import { copyWithToast } from '@/services/common/clipboard';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { popoverShortNpub } from '@/utils/identity/profile-labels';
 import { safeNpub } from '@/utils/identity/short-npub';
-import { requestZapPrefill, usePopoverMember } from './usePopoverMember';
+import { usePopoverMember } from './usePopoverMember';
+import { requestZapPrefill } from '@/services/chat/profile/zap-prefill';
 import { usePopoverPlacement } from './usePopoverPlacement';
 
 /**

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { MouseEvent } from 'react';
 import { useToastStack } from '@/hooks/feedback/useToastStack';
-import { TOAST_AUTO_DISMISS_MS } from '@/utils/feedback/toast';
+import { TOAST_AUTO_DISMISS_MS } from '@/constants/feedback/toast';
 import { useToastStore } from '@/store/feedback/toast';
 
 beforeEach(() => {

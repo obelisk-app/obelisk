@@ -4,16 +4,6 @@ import { useMemo } from 'react';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useGroupMemberInfo, useUserMetadata } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
-import type { MessageKey } from '@/i18n/keys';
-
-/** Colour per base role; the label is a key, resolved at render. */
-export const BASE_ROLE: Record<string, { key: MessageKey; color: string }> = {
-  owner: { key: 'admin.roles.base.owner', color: '#f59e0b' },
-  admin: { key: 'admin.roles.base.admin', color: '#ef4444' },
-  mod: { key: 'admin.roles.base.mod', color: '#3b82f6' },
-  member: { key: 'admin.roles.base.member', color: '#737373' },
-};
-
 
 /**
  * Who the popover shows: the active channel's member entry merged with the
@@ -44,18 +34,3 @@ export function usePopoverMember(pubkey: string) {
 
 export type PopoverMember = NonNullable<ReturnType<typeof usePopoverMember>>;
 
-/**
- * Ask the open channel's composer to prefill a zap to this person. Returns
- * false (and does nothing) when no channel is open to zap in.
- */
-export function requestZapPrefill(pubkey: string, displayName: string): boolean {
-  const channelId = useChatStore.getState().activeChannelId;
-  if (!channelId) return false;
-  window.dispatchEvent(new CustomEvent('obelisk:zap-prefill', { detail: { pubkey, displayName } }));
-  return true;
-}
-
-/** `https://` in front of a bare website, so the link leaves the app. */
-export function websiteHref(website: string): string {
-  return /^https?:\/\//i.test(website) ? website : `https://${website}`;
-}

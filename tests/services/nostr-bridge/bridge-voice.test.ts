@@ -9,7 +9,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, finalizeEvent, type Event as NostrEvent, type Filter } from 'nostr-tools';
-import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
+import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
 import {
   deliver,
   flush,

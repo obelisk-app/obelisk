@@ -18,75 +18,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { nostrActions, useAwaitBridge, type BridgeImpl } from '@/services/nostr-bridge';
 import { confirmDialog } from '@/services/common/confirm-dialog';
-import { shortHost } from '@/utils/relay-url/url-host';
 import { useTranslations } from 'next-intl';
-
-export type DeepLinkRelayOutcome = 'unchanged' | 'switched' | 'declined' | 'failed';
-
-export type DeepLinkRelayClass = 'current' | 'known' | 'unknown';
-
-/** `relay.example`, `wss://relay.example/` and `WSS://Relay.Example` are one relay. */
-export function normalizeDeepLinkRelay(raw: string): string {
-  const withScheme = /^wss?:\/\//i.test(raw) ? raw : `wss://${raw}`;
-  return withScheme.replace(/\/+$/, '').toLowerCase();
-}
-
-function sameRelay(a: string | null | undefined, b: string): boolean {
-  return !!a && normalizeDeepLinkRelay(a) === b;
-}
-
-/**
- * What a deep link to `requested` may do, given what the user already has.
- * Pure, so the shells can also use it for the one synchronous decision they
- * need (which relay to stamp into the seeded history) without reaching for
- * the bridge.
- */
-export function classifyDeepLinkRelay(
-  requested: string,
-  current: string | null | undefined,
-  configured: ReadonlyArray<string>,
-): DeepLinkRelayClass {
-  const target = normalizeDeepLinkRelay(requested);
-  if (sameRelay(current, target)) return 'current';
-  if (configured.some((url) => sameRelay(url, target))) return 'known';
-  return 'unknown';
-}
-
-export interface RelayState {
-  readonly current: string;
-  readonly configured: ReadonlyArray<string>;
-}
-
-export interface DeepLinkRelayDeps {
-  readonly requested: string;
-  readonly readRelayState: () => Promise<RelayState>;
-  /** Asks the user. Resolves `false` to leave everything as it was. */
-  readonly confirm: (host: string) => Promise<boolean>;
-  readonly switchRelay: (url: string) => Promise<void>;
-}
-
-/**
- * The gate itself, with its collaborators injected so a test can prove the
- * ordering: `switchRelay` is never called before `confirm` has resolved
- * `true` for a relay outside the list.
- */
-export async function switchToDeepLinkedRelay(deps: DeepLinkRelayDeps): Promise<DeepLinkRelayOutcome> {
-  const target = normalizeDeepLinkRelay(deps.requested);
-  const state = await deps.readRelayState();
-  const kind = classifyDeepLinkRelay(target, state.current, state.configured);
-  if (kind === 'current') return 'unchanged';
-  if (kind === 'unknown') {
-    const accepted = await deps.confirm(shortHost(target));
-    if (!accepted) return 'declined';
-  }
-  try {
-    await deps.switchRelay(target);
-    return 'switched';
-  } catch (err) {
-    console.warn('[deep-link] switchRelay failed', err);
-    return 'failed';
-  }
-}
+import { type DeepLinkRelayOutcome, type RelayState, switchToDeepLinkedRelay } from '@/services/relay/deep-link';
 
 /**
  * The first value a bridge subscription emits. The bridge's stores call

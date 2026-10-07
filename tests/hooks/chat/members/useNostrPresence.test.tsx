@@ -1,7 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChatStore } from '@/store/chat';
-import { presenceActivityKey, useNostrPresence } from '@/hooks/chat/members/useNostrPresence';
+import { useNostrPresence } from '@/hooks/chat/members/useNostrPresence';
+import { presenceActivityKey } from '@/utils/chat/members/presence';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 

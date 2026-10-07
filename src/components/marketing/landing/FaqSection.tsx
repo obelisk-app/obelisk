@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import FaqItem from './FaqItem';
 import Reveal from '@/components/ui/animations/Reveal';
-import { FAQ_IDS } from './landing-data';
+import { FAQ_IDS } from '@/constants/marketing/landing';
 import JsonLd from '@/components/seo/JsonLd';
 import { faqJsonLd } from '@/utils/seo/jsonld';
 import Heading from '@/components/ui/layout/Heading';

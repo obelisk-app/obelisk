@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
-import { EMPTY_LAYOUT } from '@/services/relay/channel-layout';
+import { EMPTY_LAYOUT } from '@/constants/relay/channel-layout';
 import { ManageCategoriesSheet } from '@/app/[locale]/app/mobile/sheets/layout/ManageCategoriesSheet';
 import { group } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 

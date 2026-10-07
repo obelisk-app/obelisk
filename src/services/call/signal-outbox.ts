@@ -6,13 +6,8 @@
  * subscriptions open at that instant.
  */
 import type { VoiceSignalPayload } from '@/services/voice/types';
+import { FLUSH_MS, RESEND_MS, MAX_ATTEMPTS } from '@/constants/call/signal-outbox';
 
-/** Coalescing window for outbound messages and acks. */
-export const FLUSH_MS = 40;
-/** Re-send an unacknowledged message after this long. */
-export const RESEND_MS = 1200;
-/** Give up on a message after this many sends (~12 s). */
-export const MAX_ATTEMPTS = 10;
 /** NIP-44 caps plaintext at 64 KiB; stay well clear of it. */
 const MAX_BATCH_CHARS = 40_000;
 

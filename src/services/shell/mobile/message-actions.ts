@@ -5,13 +5,7 @@
  * `useMobileReactionSender`; `obelisk-mobile:reply`, by `useReplyTarget`).
  */
 import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
-
-export const REACT_EVENT = 'obelisk-mobile:react';
-export const REPLY_EVENT = 'obelisk-mobile:reply';
-
-/** The emoji row at the top of the sheet; `+` opens the full picker. */
-export const QUICK_REACTIONS = ['👍', '❤️', '🚀', '🔥', '👀', '+'] as const;
-export const MORE_REACTIONS = '+';
+import { REACT_EVENT, REPLY_EVENT } from '@/constants/shell/mobile';
 
 /** Ask the shell to react to `msg` with `emoji` (a custom one carries its image). */
 export function emitMobileReaction(msg: object, emoji: string, custom?: PickedCustomEmoji): void {

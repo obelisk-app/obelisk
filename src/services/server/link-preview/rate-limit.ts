@@ -3,8 +3,7 @@
  * become an open proxy.
  */
 
-export const RATE_LIMIT = 30;
-export const RATE_WINDOW_MS = 60_000;
+import { RATE_LIMIT, RATE_WINDOW_MS } from '@/constants/server/link-preview';
 
 const hits = new Map<string, { count: number; resetAt: number }>();
 

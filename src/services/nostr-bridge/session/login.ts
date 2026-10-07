@@ -17,7 +17,8 @@ import { resetWrapLedger } from '../cache/wrap-ledger';
 import type { PerGroupReqs } from './fanout';
 import type { LifecycleTargets } from './lifecycle';
 import { SessionPersistence } from './persistence';
-import { ANONYMOUS_IDENTITY, clearForLogout, resetSubscriptionState } from './reset';
+import { clearForLogout, resetSubscriptionState } from './reset';
+import { ANONYMOUS_IDENTITY } from '@/constants/nostr-bridge/session';
 import { restoreSession } from './restore';
 
 export interface LoginDeps {

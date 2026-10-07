@@ -6,8 +6,9 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import { fetchNote } from '@nostr-wot/data';
 import { initSocial, querySocial } from '@/services/social/pool';
-import { DEFAULT_SOCIAL_RELAYS } from '@/services/social/relays';
-import { KIND_NOTE, renderModeFor } from '@/services/social/kinds';
+import { DEFAULT_SOCIAL_RELAYS } from '@/constants/social/relays';
+import { renderModeFor } from '@/services/social/kinds';
+import { KIND_TEXT_NOTE } from '@/constants/nostr/nip-kinds';
 import { getPreferences } from '@/services/preferences/preferences';
 import type { ViewerTarget } from '@/services/social/identifier';
 import { localizedPath } from '@/utils/seo/alternates';
@@ -48,7 +49,7 @@ async function loadNote(target: ViewerTarget): Promise<NostrEvent | null> {
     content: entry.content,
     created_at: entry.createdAt,
     tags: entry.tags,
-    kind: KIND_NOTE,
+    kind: KIND_TEXT_NOTE,
     sig: '',
   };
 }

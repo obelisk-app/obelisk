@@ -1,10 +1,11 @@
 import { requestZapInvoice } from '@nostr-wot/wallet';
 import { getDefaultRelays } from '@nostr-wot/data';
 import { getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
-import { KIND_REACTION } from '@/utils/nostr/nip-kinds';
+import { KIND_REACTION } from '@/constants/nostr/nip-kinds';
 import type { NipSigner } from '@/lib/nip-59';
 import { codeOrMessage } from '@/utils/errors/codes';
 import { connectWallet, isWalletAvailable } from './wallet';
+import { MARKER_NO_BRIDGE } from '@/constants/wallet/zap';
 
 /**
  * Sending a zap from a channel: pay through the user's wallet (`./wallet`, the
@@ -60,9 +61,6 @@ export function checkZap(draft: ZapDraft): ZapCheck {
   if (!draft.signer) return { ok: false, reason: 'noSigner' };
   return { ok: true, zap: { ...draft, lud16: draft.lud16, signer: draft.signer } };
 }
-
-/** `markerError` when there was no bridge to post the marker with; the UI words it. */
-export const MARKER_NO_BRIDGE = 'no-bridge';
 
 export interface ZapResult {
   /**

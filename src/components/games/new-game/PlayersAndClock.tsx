@@ -4,7 +4,8 @@ import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import Chip from '@/components/ui/data/Chip';
 import Text from '@/components/ui/layout/Text';
-import { TIMEOUTS, localPlayerChoices } from '@/utils/games/new-game/game-options';
+import { localPlayerChoices } from '@/utils/games/new-game/game-options';
+import { TIMEOUTS } from '@/constants/games/new-game';
 import type { NewGameForm } from '@/hooks/games/new-game/useNewGameForm';
 
 /** Who plays (people in the channel, or N on this machine) and the turn clock. */

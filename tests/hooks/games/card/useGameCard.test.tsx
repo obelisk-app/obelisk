@@ -9,10 +9,11 @@ vi.mock('@/services/games/resolve', () => ({ requestGameLoad }));
 const seedGameFromCache = vi.hoisted(() => vi.fn());
 vi.mock('@/services/games/cache', () => ({ seedGameFromCache }));
 
-import { RESOLVE_GRACE_MS, useGameCard } from '@/hooks/games/card/useGameCard';
+import { useGameCard } from '@/hooks/games/card/useGameCard';
+import { RESOLVE_GRACE_MS } from '@/constants/games/card';
 import { useGamesStore } from '@/store/games';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
-import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/constants/games/chain-reaction';
 
 const CH = 'channel-1';
 const ID = 'a'.repeat(64);

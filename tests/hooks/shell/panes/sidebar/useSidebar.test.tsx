@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { BRIDGE_MOCK_RELAY, groupFixture } from '@tests/support/mocks/nostr-bridge';
-import { EMPTY_LAYOUT } from '@/services/relay/channel-layout';
+import { EMPTY_LAYOUT } from '@/constants/relay/channel-layout';
 
 vi.mock('@/hooks/shell/panes/sidebar/useSidebarData', () => ({
   useSidebarOperatorData: () => ({ layout: EMPTY_LAYOUT, isRelayOperator: false }),
