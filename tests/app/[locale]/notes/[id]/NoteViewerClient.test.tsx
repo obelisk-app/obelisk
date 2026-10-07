@@ -15,7 +15,7 @@ vi.mock('@/services/social/pool', () => ({ initSocial: mocks.initSocial, querySo
 vi.mock('@/components/social/note/NoteCard', () => ({
   default: ({ note }: { note: NostrEvent }) => <div data-testid="note-card">{note.id}:{note.content}</div>,
 }));
-vi.mock('@/components/social/article/ArticleCard', () => ({
+vi.mock('@/components/social/article/ArticleReader', () => ({
   default: ({ note, onOpenProfile }: { note: NostrEvent; onOpenProfile: (pubkey: string) => void }) => (
     <button type="button" data-testid="article" onClick={() => onOpenProfile(note.pubkey)}>{note.id}</button>
   ),

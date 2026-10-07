@@ -5,7 +5,7 @@ import { usePlainNoteCard } from '@/hooks/social/note/usePlainNoteCard';
 import NoteHeader from './NoteHeader';
 import NoteBody from './NoteBody';
 import NoteActionRow from './NoteActionRow';
-import type { NoteCardProps } from './NoteCard';
+import type { NoteCardProps } from '../../../utils/social/note-card';
 
 /** A note that is not a repost wrapper: header, body (or content warning), actions. */
 export default function PlainNoteCard({

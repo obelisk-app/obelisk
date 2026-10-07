@@ -6,8 +6,8 @@
  */
 import type { GameSession } from '@/lib/games/session/session';
 import type { CRState } from '@/lib/games/chain-reaction/chain-reaction';
-import { SEAT_COLORS } from '@/components/games/chain-reaction/seat-colors';
-import type { CellSnapshot } from '@/components/games/chain-reaction/cascade';
+import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
+import type { CellSnapshot } from '@/utils/games/chain-reaction/cascade';
 
 /** Cell size for an inline board: the size this game has always been. */
 export const CELL_DEFAULT_MAX = 44;

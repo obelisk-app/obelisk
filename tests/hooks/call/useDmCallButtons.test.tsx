@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { dmCallBusy, useDmCallButtons } from '@/hooks/call/useDmCallButtons';
+import { useDmCallButtons } from '@/hooks/call/useDmCallButtons';
 import { useDmCallStore } from '@/store/call/dm-call';
 import { setPreference } from '@/services/preferences/preferences';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
@@ -15,15 +15,6 @@ beforeEach(() => {
   useDmCallStore.setState({ status: 'idle', startCall });
 });
 afterEach(() => { vi.clearAllMocks(); });
-
-describe('dmCallBusy', () => {
-  it('is busy from the first ring until the call has ended', () => {
-    expect(dmCallBusy('idle')).toBe(false);
-    expect(dmCallBusy('ended')).toBe(false);
-    expect(dmCallBusy('incoming')).toBe(true);
-    expect(dmCallBusy('active')).toBe(true);
-  });
-});
 
 describe('useDmCallButtons', () => {
   it('starts a voice or a video call with the peer', () => {

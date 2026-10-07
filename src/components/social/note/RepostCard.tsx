@@ -15,7 +15,7 @@ import { useRepostCard } from '@/hooks/social/note/useRepostCard';
 import PlainNoteCard from './PlainNoteCard';
 import NoteIcon from './NoteIcon';
 import RepostersLine from './RepostersLine';
-import type { NoteCardProps } from './NoteCard';
+import type { NoteCardProps } from '../../../utils/social/note-card';
 
 export default function RepostCard(props: NoteCardProps) {
   const t = useTranslations();
@@ -67,4 +67,3 @@ export default function RepostCard(props: NoteCardProps) {
     </article>
   );
 }
-

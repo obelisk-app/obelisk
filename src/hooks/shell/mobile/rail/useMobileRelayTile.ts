@@ -2,8 +2,8 @@
 
 import { useRef, useState, type MouseEvent } from 'react';
 import { faviconFor } from '@/services/relay/relay-info';
-import { useRelayBranding } from '@/hooks/relay/useRelayBranding';
-import { useRelayInfo } from '@/hooks/shell/rail/useRelayInfo';
+import { useRelayBranding } from '@/hooks/relay/branding/useRelayBranding';
+import { useRelayInfo } from '@/hooks/relay/info/useRelayInfo';
 import { useUnreadMentionCount } from '@/hooks/notifications/useNotificationSelectors';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { relayTileLabel, relayTileLetter, unreadBadgeText } from '@/utils/shell/mobile/rail';

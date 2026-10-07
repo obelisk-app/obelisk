@@ -2,7 +2,7 @@
 
 import type { TradeResource } from 'vesta';
 import Text from '@/components/ui/layout/Text';
-import { RESOURCES, RESOURCE_EMOJI, type ResourceCounts } from './resources';
+import { RESOURCES, RESOURCE_EMOJI, type ResourceCounts } from '@/utils/games/vesta/resources';
 import ResourceCounter from './ResourceCounter';
 
 /** One side of a trade (give or take): a counter per resource. */

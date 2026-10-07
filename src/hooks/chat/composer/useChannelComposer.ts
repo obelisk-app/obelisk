@@ -23,10 +23,10 @@ import { extractUrls, isImageUrl } from '@/utils/message-text/markdown';
 import { useChatStore } from '@/store/chat';
 import { slashCommandId, type SlashFilter } from '@/services/relay/bot-commands';
 import { pushRecentSlashCommand } from '@/services/chat/slash/recent-slash-commands';
-import type { SlashCommand } from '@/components/chat/slash/SlashCommandAutocomplete';
-import { scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/components/chat/slash/SlashCommandScaffold';
-import type { MediaPickerTab } from '@/components/chat/picker/MessageMediaPicker';
-import type { PickedCustomEmoji } from '@/components/chat/picker/EmojiPicker';
+import type { SlashCommand } from '@/utils/chat/slash/slash-commands';
+import { scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/utils/chat/slash/slash-scaffold';
+import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
+import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
 import {
   builtinCommandOf,
   pastedMediaFiles,

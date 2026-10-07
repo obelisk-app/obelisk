@@ -5,10 +5,6 @@ import { useTranslations } from 'next-intl';
 import type { DMProtocol } from '@/store/chat/dm';
 import type { DmProtocolChoice } from '@/hooks/shell/dm/useDmProtocolChoice';
 
-// The notice moved to its own file; re-exported so the DM headers keep
-// importing both from here until their waves have merged.
-export { DmProtocolNotice } from './DmProtocolNotice';
-
 /**
  * The NIP-17 / NIP-04 switch. Both DM headers render it and the
  * `DmProtocolNotice` over one `useDmProtocolChoice`; where they sit is the

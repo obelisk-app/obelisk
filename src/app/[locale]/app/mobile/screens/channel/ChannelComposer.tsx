@@ -4,12 +4,10 @@ import { forwardRef, type InputHTMLAttributes } from 'react';
 import { type JsGroup, type JsMessage } from '@/services/nostr-bridge';
 import { MentionText } from '@/components/chat/mentions/MentionText';
 import MessageMediaPicker from '@/components/chat/picker/MessageMediaPicker';
-import {
-  AttachmentMenu,
-  StickerIcon,
-  VoiceNoteButton,
-  VoiceNoteDraft,
-} from '@/components/chat/composer/ComposerActions';
+import { AttachmentMenu } from '@/components/chat/composer/AttachmentMenu';
+import { StickerIcon } from '@/components/chat/composer/composer-icons';
+import { VoiceNoteButton } from '@/components/chat/composer/VoiceNoteButton';
+import { VoiceNoteDraft } from '@/components/chat/composer/VoiceNoteDraft';
 import { type ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 import { usePhoneChannelComposer } from '@/hooks/shell/mobile/screens/channel/usePhoneChannelComposer';
 import { useTranslations } from 'next-intl';

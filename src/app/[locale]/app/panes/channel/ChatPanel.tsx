@@ -1,7 +1,7 @@
 'use client';
 
 import ForumView from '@/components/chat/forum/ForumView';
-import { FileDropZone } from '@/components/chat/composer/ComposerActions';
+import { FileDropZone } from '@/components/chat/composer/FileDropZone';
 import { useChatPanel } from '@/hooks/shell/panes/channel/useChatPanel';
 import { LazyVoiceRoom } from '../../mounts/lazy-mounts';
 import { ChannelSettingsModal } from '../../modals/channel-settings/ChannelSettingsModal';

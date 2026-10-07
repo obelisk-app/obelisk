@@ -2,7 +2,7 @@
 
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import type { GameSession } from '@/lib/games/session/session';
-import { SEAT_COLORS } from '../chain-reaction/ChainReactionBoard';
+import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
 import { useTranslations } from 'next-intl';
 
 /** Who is at a table that has not started: colour, avatar, name, you, host. */

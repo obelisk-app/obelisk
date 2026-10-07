@@ -48,6 +48,7 @@ Folders one layer has and the others do not: `services/nostr-bridge/` (the bridg
 A component file is markup. Reading one should tell you what is on the screen, not how the data behind it was worked out.
 
 - **One exported component per file.** It reads its state and handlers from one view-model hook, `src/hooks/<module>/use<Component>.ts`, and its data from bridge and store hooks. Purely visual local state (an open/closed toggle, a hover, a ref to focus) may stay in the component as up to two `useState` / `useRef` calls. Everything else lives in the hook: effects, memos, callbacks, reducers, derived data, handlers with logic.
+- **No re-exports.** A component file does not hand on another component (`export { Panel } from './Panel'`, `export { default } from ...`), nor, outside the ui kit, a helper: when a piece moves to its own file, its importers move with it. An `index.ts` barrel is the one file made of re-exports. `tests/components/components-only.test.ts` holds this.
 - **Pure data shaping** (build rows, filter, sort, format) goes to `src/utils/<topic>/`, tested on its own.
 - **Actions with side effects** (publishing, removing users, a confirm-then-act flow) go to `src/services/<topic>/`, tested on its own.
 - **Tables.** Column definitions live in their own `columns.tsx` next to the component; every non-trivial cell is its own small component file. Toolbars, footers and similar regions are their own components. A feature with several parts gets a folder named after it.

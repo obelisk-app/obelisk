@@ -17,8 +17,6 @@ import { PaletteSection } from './kit/PaletteSection';
 import { ShortCopySection } from './kit/ShortCopySection';
 import { GuidelinesSection } from './kit/GuidelinesSection';
 
-export { ASSETS } from '@/utils/media-kit/content';
-
 export default function MediaKit() {
   const t = useTranslations();
   return (

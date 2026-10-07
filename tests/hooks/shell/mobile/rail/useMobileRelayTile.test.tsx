@@ -7,7 +7,7 @@ vi.mock('@/services/relay/relay-info', () => ({
   faviconFor: (url: string) => (url.startsWith('wss://') ? `https://favicon/${url}` : null),
   fetchRelayInfo: (url: string) => relayInfo.fetch(url),
 }));
-vi.mock('@/hooks/relay/useRelayBranding', () => ({ useRelayBranding: () => ({}) }));
+vi.mock('@/hooks/relay/branding/useRelayBranding', () => ({ useRelayBranding: () => ({}) }));
 const unread = vi.hoisted(() => ({ count: 0 }));
 vi.mock('@/hooks/notifications/useNotificationSelectors', () => ({
   useUnreadMentionCount: (relay: string | null) => (relay ? unread.count : 0),

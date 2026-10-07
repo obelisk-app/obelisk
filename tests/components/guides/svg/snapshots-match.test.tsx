@@ -9,8 +9,8 @@
  * `npm run snap-guides`, which would leave search and link previews showing
  * the old one.
  *
- * The four project marks are left out: their committed frames predate the
- * translated screen-reader label (38e1b64c) and were not re-snapped.
+ * The four project marks are in it too: their frames were re-snapped in
+ * round 30, after the screen-reader label was translated (38e1b64c).
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -37,14 +37,13 @@ function stillFrame(Component: React.ComponentType, locale: Locale): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n${stripAnimateClasses(raw)}`;
 }
 
-const DRAWINGS = {
-  ...HERO_REGISTRY,
-  ...Object.fromEntries(Object.entries(DIAGRAM_REGISTRY).filter(([name]) => !name.startsWith('mark-'))),
-};
+const DRAWINGS = { ...HERO_REGISTRY, ...DIAGRAM_REGISTRY };
 
 describe('guide drawings match their committed still frames', () => {
-  it('covers every hero and the four diagrams', () => {
-    expect(Object.keys(DRAWINGS)).toHaveLength(Object.keys(HERO_REGISTRY).length + 4);
+  it('covers every hero, the four diagrams and the four project marks', () => {
+    const marks = Object.keys(DRAWINGS).filter((name) => name.startsWith('mark-'));
+    expect(marks).toHaveLength(4);
+    expect(Object.keys(DRAWINGS)).toHaveLength(Object.keys(HERO_REGISTRY).length + 8);
   });
 
   for (const locale of LOCALES) {

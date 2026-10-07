@@ -26,10 +26,10 @@
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import AnchoredMenu from '../common/AnchoredMenu';
-import { useRelayStatusPill } from '@/hooks/social/common/useRelayStatusPill';
+import { useRelayStatusPill } from '@/hooks/relay/status/useRelayStatusPill';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { RELAY_STATE_DOT, relayLatencyLabel } from '@/utils/social/relay-status-rows';
-import { accessDotClass } from '@/utils/social/relay-status-pill';
+import { accessDotClass } from '@/utils/relay/relay-status-pill';
 import Text from '@/components/ui/layout/Text';
 import { MenuDivider } from '@/components/ui/overlays/menu';
 import TextButton from '@/components/ui/buttons/TextButton';

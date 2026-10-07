@@ -4,9 +4,9 @@
  */
 import type { HexCoord, TradeResource } from 'vesta';
 import type { VestaAction } from '@/lib/games/vesta/definition';
-import type { PickMode } from '@/components/games/vesta/pick-mode';
-import type { EdgePick, VertexPick } from '@/components/games/vesta/board-pick';
-import type { ResourceCounts } from '@/components/games/vesta/resources';
+import type { PickMode } from '@/utils/games/vesta/pick-mode';
+import type { EdgePick, VertexPick } from '@/utils/games/vesta/board-pick';
+import type { ResourceCounts } from '@/utils/games/vesta/resources';
 
 /** A click on a corner: a city in city mode, a settlement in every other mode that asks for a corner. */
 export function vertexAction(mode: PickMode, spot: VertexPick): VestaAction {

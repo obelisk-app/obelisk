@@ -1,4 +1,4 @@
-import type { CSSVars } from './css-vars';
+import type { CSSVars } from '@/utils/games/chain-reaction/css-vars';
 
 /** The burst a critical cell leaves behind as it splits into its neighbours. */
 export default function Explosion({ hex }: { hex: string }) {

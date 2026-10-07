@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
  * a crafted link AUTHs the user to a stranger's relay and pins it to the rail.
  *
  * Source-level on purpose: the behaviour is tested in
- * `tests/hooks/relay/useRelayDeepLink.test.tsx`; this pins that the shells
+ * `tests/hooks/relay/deep-link/useRelayDeepLink.test.tsx`; this pins that the shells
  * actually route through it, so the gate cannot be bypassed by a second copy
  * drifting in one shell (how the SFU guard drifted).
  */
@@ -34,7 +34,7 @@ describe('deep-link relay gate', () => {
     expect(read('desktop/DesktopShell.tsx')).toContain('useDesktopShell(');
     expect(read('../../../hooks/shell/desktop/useDesktopShell.ts')).toContain('useDesktopNavigation(relay');
     const shell = read('../../../hooks/shell/desktop/useDesktopNavigation.ts');
-    expect(shell).toContain("import { useRelayDeepLink } from '@/hooks/relay/useRelayDeepLink'");
+    expect(shell).toContain("import { useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink'");
     const effect = deepLinkEffect(shell, "const r = params.get('relay')", "params.get('s') === 'feed'");
     expect(effect).toContain('switchFromDeepLink(r)');
     expect(effect).not.toContain('switchRelay');
@@ -46,7 +46,7 @@ describe('deep-link relay gate', () => {
     expect(read('mobile/PhoneShell.tsx')).toContain('usePhoneShell(');
     expect(read('../../../hooks/shell/mobile/nav/usePhoneShell.ts')).toContain('useMobileHistorySync(');
     const shell = read('../../../hooks/shell/mobile/nav/useMobileHistorySync.ts');
-    expect(shell).toContain("from '@/hooks/relay/useRelayDeepLink'");
+    expect(shell).toContain("from '@/hooks/relay/deep-link/useRelayDeepLink'");
     const effect = deepLinkEffect(shell, 'parseUrl(window.location.search)', 'buildSeedHistory(');
     expect(effect).toContain('switchFromDeepLink(relay)');
     expect(effect).not.toContain('switchRelay');

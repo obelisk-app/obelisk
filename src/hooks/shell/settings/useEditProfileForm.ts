@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useProfileEditorForm, type ProfileEditorInitial } from '@/hooks/chat/profile/useProfileEditorForm';
-import type { ProfileAppearanceValue } from '@/components/settings/account/ProfileAppearanceEditor';
+import type { ProfileAppearanceValue } from '@/utils/settings/profile-image';
 
 /**
  * The desktop profile editor: the shared profile form, the name field

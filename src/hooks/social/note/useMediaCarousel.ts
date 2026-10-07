@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
-import { carouselStills, slideAt, wrapIndex, type CarouselItem } from '@/utils/social/media-carousel';
+import { useLightboxIndex } from '@/hooks/chat/gallery/useLightboxIndex';
+import { carouselStills, slideAt, type CarouselItem } from '@/utils/social/media-carousel';
 
 /**
  * The media carousel's view model: the scroll-snap track's ref, the slide
@@ -12,8 +13,9 @@ import { carouselStills, slideAt, wrapIndex, type CarouselItem } from '@/utils/s
 export function useMediaCarousel(items: readonly CarouselItem[]) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
-  const [zoom, setZoom] = useState<number | null>(null);
   const stills = carouselStills(items);
+  // The chat gallery's lightbox state, keyboard included: Escape closes, the arrows step.
+  const lightbox = useLightboxIndex(stills.length);
 
   const onScroll = useCallback(() => {
     const track = trackRef.current;
@@ -31,13 +33,13 @@ export function useMediaCarousel(items: readonly CarouselItem[]) {
       track?.scrollTo({ left: target * track.clientWidth, behavior: 'smooth' });
     },
     stills,
-    zoom,
+    zoom: lightbox.lightboxIndex,
     openAt: (url: string) => {
       const at = stills.indexOf(url);
-      if (at >= 0) setZoom(at);
+      if (at >= 0) lightbox.setLightboxIndex(at);
     },
-    closeZoom: () => setZoom(null),
-    prevZoom: () => setZoom((at) => wrapIndex(at, -1, stills.length)),
-    nextZoom: () => setZoom((at) => wrapIndex(at, 1, stills.length)),
+    closeZoom: lightbox.close,
+    prevZoom: lightbox.prev,
+    nextZoom: lightbox.next,
   };
 }

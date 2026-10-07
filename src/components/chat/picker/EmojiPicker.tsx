@@ -20,10 +20,6 @@ import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import type { JsMediaKind } from '@/services/nostr-bridge';
 import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
 
-export type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
-export { RecentIcon } from './RecentIcon';
-export { MediaPickerSearch } from './MediaPickerSearch';
-
 export interface EmojiPickerProps {
   onPick: (emoji: string, custom?: PickedCustomEmoji) => void;
   onClose: () => void;

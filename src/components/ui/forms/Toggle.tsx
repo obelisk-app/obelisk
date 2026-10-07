@@ -13,7 +13,7 @@ export interface ToggleProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
 
 /**
  * The pill switch: `role="switch"`, `aria-checked`, a real `<button>`.
- * Classes are the string WotSettings and SettingsSections both carried.
+ * Classes are the string WotSettings and the settings sections both carried.
  */
 export default function Toggle({ checked, onChange, className, disabled, status = 'idle', ...rest }: ToggleProps) {
   const loading = status === 'loading';

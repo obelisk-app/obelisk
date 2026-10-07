@@ -23,7 +23,7 @@ describe('useImageGallery', () => {
   it('hideImage hides the image that failed', () => {
     const { result } = renderHook(() => useImageGallery(urls), { wrapper: bridgeWrapper(fakeBridge()) });
     const img = document.createElement('img');
-    result.current.hideImage({ target: img } as unknown as React.SyntheticEvent<HTMLImageElement>);
+    result.current.hideImage({ currentTarget: img } as unknown as React.SyntheticEvent<HTMLImageElement>);
     expect(img.style.display).toBe('none');
   });
 });

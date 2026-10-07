@@ -11,6 +11,12 @@
  * wait too (`defer`). The bell learns only what is visible without a key
  * (`lock.unopened`, the held wraps the store does not already have).
  *
+ * That count waits for the store's index (`loadIndex`, the stored wire ids,
+ * read from IndexedDB when the account is attached). The relays replay every
+ * wrap on load, often before the index is read; counted then, each message
+ * already stored would show as new until the read landed. So nothing is
+ * counted until the index is in, and `unlock()` waits for it too.
+ *
  * `unlock()` runs when a DM surface opens (`DmUnlock`). It costs one signer
  * call: unwrapping the DM key (`store-key.ts`), or wrapping a new one the
  * first time on this device. The stored messages are then decrypted here,
@@ -77,6 +83,9 @@ export class DmStoreModule {
   /** Set by a removal from Settings: nothing is written again until the reload. */
   private disabled = false;
   private readonly known = new Set<string>();
+  /** The stored wire ids are in `known`: until then a held wrap may be one the store already has. */
+  private indexed = false;
+  private indexing: Promise<void> = Promise.resolve();
   private readonly held = new Map<string, { ev: NostrEvent; kind: HeldKind }>();
   private deferred: Array<() => void> = [];
   private unlocking: Promise<void> | null = null;
@@ -92,11 +101,12 @@ export class DmStoreModule {
     this.key = null;
     this.memoryOnly = false;
     this.known.clear();
+    this.indexed = false;
     this.held.clear();
     this.deferred = [];
     this.unlocking = null;
     this.lock.set(LOCKED);
-    if (pubkey) void this.loadIndex(pubkey, this.epoch);
+    this.indexing = pubkey ? this.loadIndex(pubkey, this.epoch) : Promise.resolve();
   }
 
   isUnlocked(): boolean {
@@ -190,6 +200,7 @@ export class DmStoreModule {
   }
 
   private recount(): void {
+    if (!this.indexed) return;
     const unopened: number[] = [];
     for (const { ev, kind } of this.held.values()) {
       if (kind === 'wrap' && !this.known.has(ev.id)) unopened.push(ev.created_at * 1000);
@@ -197,22 +208,30 @@ export class DmStoreModule {
     this.lock.set({ ...this.lock.get(), unopened });
   }
 
-  /** The stored wire ids, so the bell counts only wraps the store does not have. */
+  /**
+   * The stored wire ids, so the bell counts only wraps the store does not
+   * have. Never throws: an index that cannot be read counts as empty (every
+   * held wrap is new to this visit, as it will be opened from the relay).
+   */
   private async loadIndex(pubkey: string, epoch: number): Promise<void> {
     const db = this.db();
-    if (!db) return;
-    let ids: string[];
+    let ids: string[] = [];
     try {
-      ids = await db.wireIds(pubkey);
-    } catch {
-      return;
-    }
-    if (epoch !== this.epoch || this.isUnlocked()) return;
+      if (db) ids = await db.wireIds(pubkey);
+    } catch { /* unreadable: nothing is known to be stored */ }
+    if (epoch !== this.epoch) return;
+    this.indexed = true;
+    if (this.isUnlocked()) return;
     for (const id of ids) this.known.add(id);
     this.recount();
   }
 
   private async runUnlock(pubkey: string, epoch: number): Promise<void> {
+    // Start from a read index: the count a refusal leaves is then right, and
+    // a late read cannot refill `known` after `replayStored` rebuilt it
+    // (putting back the id of a box it deleted as unreadable).
+    await this.indexing;
+    if (epoch !== this.epoch) return;
     const signer = this.deps.nipSigner();
     if (!signer || signer.pubkey !== pubkey) return this.fail(epoch);
     const db = this.db();

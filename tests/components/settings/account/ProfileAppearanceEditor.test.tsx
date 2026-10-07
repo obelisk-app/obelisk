@@ -1,11 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
-import ProfileAppearanceEditor, {
-  MAX_IMAGE_BYTES,
-  validateImage,
-  type ProfileAppearanceValue,
-} from '@/components/settings/account/ProfileAppearanceEditor';
+import ProfileAppearanceEditor from '@/components/settings/account/ProfileAppearanceEditor';
+import { MAX_IMAGE_BYTES, validateImage, type ProfileAppearanceValue } from '@/utils/settings/profile-image';
 
 const PUBKEY = 'a'.repeat(64);
 

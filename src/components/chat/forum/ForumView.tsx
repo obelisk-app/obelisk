@@ -30,13 +30,11 @@
 import { useForumView } from '@/hooks/chat/forum/useForumView';
 import { ForumChrome } from './ForumChrome';
 import { NewThreadModal } from './NewThreadModal';
-import {
-  EmptyForum,
-  LoadingThreads,
-  NoMatchingThreads,
-  ThreadCard,
-  ThreadGallery,
-} from './ThreadCards';
+import { ThreadCard } from './ThreadCards';
+import { EmptyForum } from './EmptyForum';
+import { LoadingThreads } from './LoadingThreads';
+import { NoMatchingThreads } from './NoMatchingThreads';
+import { ThreadGallery } from './ThreadGallery';
 
 interface Props {
   groupId: string;

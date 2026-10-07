@@ -10,7 +10,9 @@ import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
 import { useTranslations } from 'next-intl';
 import EmptyState from '@/components/ui/feedback/EmptyState';
-import EmojiPicker, { MediaPickerSearch, type PickedCustomEmoji } from './EmojiPicker';
+import EmojiPicker from './EmojiPicker';
+import { MediaPickerSearch } from './MediaPickerSearch';
+import { type PickedCustomEmoji } from '../../../utils/chat/picker/picker-types';
 import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 import { useMediaPicker } from '@/hooks/chat/picker/useMediaPicker';
 import { CreateMediaControl } from './CreateMediaControl';
@@ -18,8 +20,6 @@ import { MediaCategoryNav } from './MediaCategoryNav';
 import { MediaSection } from './MediaSection';
 import { PickerTabs } from './PickerTabs';
 import TextButton from '@/components/ui/buttons/TextButton';
-
-export type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 
 const NO_CUSTOM_EMOJIS: CustomEmojiMap = {};
 

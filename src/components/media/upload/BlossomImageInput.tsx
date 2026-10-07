@@ -18,9 +18,6 @@ import Input from '@/components/ui/forms/Input';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useBlossomImageInput } from '@/hooks/media/upload/useBlossomImageInput';
 
-/** The channel picture-and-banner field lives in its own file; importers keep this path. */
-export { default as ChannelAppearanceInput } from './ChannelAppearanceInput';
-
 interface Props {
   label: string;
   value: string;

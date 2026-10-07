@@ -3,7 +3,7 @@
 import type { GameState, HexCoord } from 'vesta';
 import type { GameSession } from '@/lib/games/session/session';
 import type { VestaAction } from '@/lib/games/vesta/definition';
-import type { EdgePick, VertexPick } from '@/components/games/vesta/board-pick';
+import type { EdgePick, VertexPick } from '@/utils/games/vesta/board-pick';
 import { useVestaTurn } from '@/hooks/games/vesta/useVestaTurn';
 import { roadAction, robberAction, vertexAction } from '@/utils/games/vesta/vesta-actions';
 

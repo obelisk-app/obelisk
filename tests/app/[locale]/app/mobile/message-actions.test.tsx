@@ -35,7 +35,7 @@ vi.mock('@/services/relay/relay-info', () => ({
 vi.mock('@/services/relay/relay-branding', () => ({
   publishBranding: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('@/hooks/relay/useRelayBranding', () => ({
+vi.mock('@/hooks/relay/branding/useRelayBranding', () => ({
   useRelayBranding: () => ({}),
 }));
 
@@ -44,10 +44,10 @@ vi.mock('@/services/relay/channel-layout', () => ({
   publishLayout: vi.fn().mockResolvedValue(undefined),
   newCategoryId: () => 'cat-test',
 }));
-vi.mock('@/hooks/relay/useChannelLayout', () => ({
+vi.mock('@/hooks/relay/channel-layout/useChannelLayout', () => ({
   useChannelLayout: () => ({ categories: [], channels: [], updatedAt: 0 }),
 }));
-vi.mock('@/hooks/relay/useRelayOperatorPubkey', () => ({
+vi.mock('@/hooks/relay/operator/useRelayOperatorPubkey', () => ({
   useRelayOperatorPubkey: () => null,
 }));
 

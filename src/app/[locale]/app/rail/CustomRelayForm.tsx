@@ -2,7 +2,7 @@
 
 import { useId } from 'react';
 import { useTranslations } from 'next-intl';
-import { useAddRelayForm } from '@/hooks/relay/useAddRelayForm';
+import { useAddRelayForm } from '@/hooks/relay/rail/useAddRelayForm';
 import Button from '@/components/ui/buttons/Button';
 import Input from '@/components/ui/forms/Input';
 

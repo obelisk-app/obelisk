@@ -5,7 +5,7 @@
  */
 import type { DevCard } from 'vesta';
 import type { MessageKey } from '@/i18n/keys';
-import { DEV_CARD_KEY, DEV_EMOJI } from '@/components/games/vesta/resources';
+import { DEV_CARD_KEY, DEV_EMOJI } from '@/utils/games/vesta/resources';
 
 export interface HandCard {
   key: string;

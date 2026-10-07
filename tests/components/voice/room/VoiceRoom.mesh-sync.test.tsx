@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MeshSyncStatusPill } from '@/components/voice/room/VoiceRoom';
+import MeshSyncStatusPill from '@/components/voice/room/MeshSyncStatusPill';
 import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */

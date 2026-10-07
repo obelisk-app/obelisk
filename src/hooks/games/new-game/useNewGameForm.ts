@@ -9,7 +9,7 @@ import { publishCreate, publishStart } from '@/services/games/transport';
 import { localSeatId, gameMarker } from '@/lib/games/protocol/protocol';
 import { useGamesStore } from '@/store/games';
 import { useMyPubkey } from '@/services/nostr-bridge';
-import { gameCreateOptions, type ResumeSave } from '@/components/games/new-game/game-options';
+import { gameCreateOptions, type ResumeSave } from '@/utils/games/new-game/game-options';
 import { errorText } from '@/utils/errors/error-text';
 
 /**

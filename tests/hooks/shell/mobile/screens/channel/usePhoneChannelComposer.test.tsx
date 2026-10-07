@@ -7,7 +7,7 @@ import type { ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 import { usePhoneChannelComposer } from '@/hooks/shell/mobile/screens/channel/usePhoneChannelComposer';
 import { group } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 
-vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
+vi.mock('@/hooks/relay/operator/useBotCommands', () => ({ useBotCommands: () => [] }));
 
 const input = (value: string, selectionStart: number | null) => ({ value, selectionStart }) as HTMLInputElement;
 

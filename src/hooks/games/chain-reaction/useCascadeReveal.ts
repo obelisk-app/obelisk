@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { SEAT_COLORS } from '@/components/games/chain-reaction/seat-colors';
-import { boardChanged, cascadeFrames, findClickedCell, type CellSnapshot } from '@/components/games/chain-reaction/cascade';
+import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
+import { boardChanged, cascadeFrames, findClickedCell, type CellSnapshot } from '@/utils/games/chain-reaction/cascade';
 
 // Fast enough to feel like a reaction rather than a wait. The original
 // timings (520/420) meant a long chain locked the board for several seconds,

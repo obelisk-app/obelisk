@@ -4,7 +4,7 @@
  */
 import { canJoin, controllerOf, type GameSession } from '@/lib/games/session/session';
 import { seatDisplayLabel } from '@/lib/games/core/seat-label';
-import { SEAT_COLORS } from '@/components/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
 import type { Translate } from '@/i18n/keys';
 
 /** The pill on the right: join an open table, else open it or read its result. */

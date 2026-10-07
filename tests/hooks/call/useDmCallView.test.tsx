@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { callStatusKey, useDmCallView } from '@/hooks/call/useDmCallView';
+import { useDmCallView } from '@/hooks/call/useDmCallView';
 import { useIncomingCallBanner } from '@/hooks/call/useIncomingCallBanner';
 import { useDmCallStore } from '@/store/call/dm-call';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
@@ -16,15 +16,6 @@ beforeEach(() => {
   useDmCallStore.setState({ status: 'outgoing', peer: BOB, video: false, relayOnly: false, media, connectedAt: null, endReason: null, error: null, ...actions });
 });
 afterEach(() => { vi.clearAllMocks(); });
-
-describe('callStatusKey', () => {
-  it('names the set-up stages and nothing once the call is up', () => {
-    expect(callStatusKey('outgoing')).toBe('calls.call.calling');
-    expect(callStatusKey('connecting')).toBe('calls.call.connecting');
-    expect(callStatusKey('reconnecting')).toBe('calls.call.reconnecting');
-    expect(callStatusKey('active')).toBeNull();
-  });
-});
 
 describe('useDmCallView', () => {
   it('names the peer and reads the status line and the end reason', () => {

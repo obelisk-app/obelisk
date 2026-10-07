@@ -22,21 +22,19 @@ import {
 } from '@/components/ui/icons/icons';
 import { EditProfileForm } from '../settings/EditProfileForm';
 import { LocalDataSection } from '../settings/LocalDataSection';
-import {
-  AdvancedSettingsSection,
-  AppearanceSettingsSection,
-  GeneralSettingsSection,
-  NotificationsSettingsSection,
-  PrivacySettingsSection,
-  RelaysSettingsSection,
-  WalletSettingsSection,
-  type SettingsTab,
-} from '../settings/SettingsSections';
+import type { SettingsSection } from '@/utils/settings/open-settings';
+import { AdvancedSettingsSection } from '../settings/AdvancedSettingsSection';
+import { AppearanceSettingsSection } from '../settings/AppearanceSettingsSection';
+import { GeneralSettingsSection } from '../settings/GeneralSettingsSection';
+import { NotificationsSettingsSection } from '../settings/NotificationsSettingsSection';
+import { PrivacySettingsSection } from '../settings/PrivacySettingsSection';
+import { RelaysSettingsSection } from '../settings/RelaysSettingsSection';
+import { WalletSettingsSection } from '../settings/WalletSettingsSection';
 import type { MessageKey } from '@/i18n/keys';
 
 const SETTINGS_NAV: ReadonlyArray<{
   label: MessageKey;
-  items: ReadonlyArray<{ id: SettingsTab; Icon: (p: { size?: number }) => React.ReactElement }>;
+  items: ReadonlyArray<{ id: SettingsSection; Icon: (p: { size?: number }) => React.ReactElement }>;
 }> = [
   { label: 'settings.group.user', items: [{ id: 'profile', Icon: UserIcon }] },
   {
@@ -59,8 +57,8 @@ type Props = {
   pubkey: string;
   meta: JsUserMetadata | null;
   displayName: string;
-  settingsTab: SettingsTab;
-  setSettingsTab: (tab: SettingsTab) => void;
+  settingsTab: SettingsSection;
+  setSettingsTab: (tab: SettingsSection) => void;
   /** Leave the settings (and the panel). */
   onDone: () => void;
   onLogout: () => void;

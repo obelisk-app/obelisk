@@ -6,7 +6,7 @@ import { BRIDGE_MOCK_RELAY } from '@tests/support/mocks/nostr-bridge';
 import { useServerScreen } from '@/hooks/shell/mobile/screens/server/useServerScreen';
 import { group } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 
-vi.mock('@/hooks/relay/useRelayOperatorData', () => ({
+vi.mock('@/hooks/relay/operator/useRelayOperatorData', () => ({
   useRelayOperatorData: () => ({
     operatorPubkey: null, isRelayOperator: false,
     layout: { categories: [], channels: [], updatedAt: 0 },
@@ -15,7 +15,7 @@ vi.mock('@/hooks/relay/useRelayOperatorData', () => ({
     relayRoles: { roles: [], assignments: [], updatedAt: 0 },
   }),
 }));
-vi.mock('@/hooks/relay/useRelayHeaderInfo', () => ({ useRelayHeaderInfo: () => ({ name: 'Doc', icon: null }) }));
+vi.mock('@/hooks/relay/info/useRelayHeaderInfo', () => ({ useRelayHeaderInfo: () => ({ name: 'Doc', icon: null }) }));
 
 function setup(seed: Parameters<typeof fakeBridge>[0] = {}) {
   const selectGroup = vi.fn();

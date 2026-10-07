@@ -25,8 +25,6 @@ import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/overlay
 import { CopyIcon, HashIcon, KeyIcon, LinkIcon, MoreIcon, TerminalIcon } from '@/components/ui/icons/icons';
 import { DmRawEventDialog } from './DmRawEventDialog';
 
-export { DmRawEventDialog } from './DmRawEventDialog';
-
 /** Right padding a bubble needs so its text never runs under the ⋯ chip. */
 export const DM_BUBBLE_MENU_GUTTER = 'pr-11';
 

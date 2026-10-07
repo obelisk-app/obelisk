@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
+vi.mock('@/hooks/relay/operator/useBotCommands', () => ({ useBotCommands: () => [] }));
 import { useSlashCatalog } from '@/hooks/chat/composer/useSlashCatalog';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';

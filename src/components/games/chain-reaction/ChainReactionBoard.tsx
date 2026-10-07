@@ -2,12 +2,10 @@
 
 import type { GameSession } from '@/lib/games/session/session';
 import { useTranslations } from 'next-intl';
-import type { CSSVars } from './css-vars';
+import type { CSSVars } from '@/utils/games/chain-reaction/css-vars';
 import { useChainReactionBoard } from '@/hooks/games/chain-reaction/useChainReactionBoard';
 import Orbs from './Orbs';
 import Explosion from './Explosion';
-
-export { SEAT_COLORS } from './seat-colors';
 
 interface Props {
   game: GameSession;

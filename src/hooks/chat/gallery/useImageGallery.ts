@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { GifSelection } from '@/utils/media/library/gif-selections';
 import { galleryLayout } from '@/utils/chat/gallery/gallery-layout';
-import { hideBrokenImage } from '@/utils/chat/message/hide-broken-image';
+import { hideBrokenImage } from '@/utils/media/remote/hide-broken-image';
 import { useGifSelections } from './useGifSelections';
 import { useLightboxIndex } from './useLightboxIndex';
 

@@ -13,12 +13,10 @@
  * is no transform state to get out of sync with the DOM.
  */
 
-import { Lightbox } from '@/components/chat/gallery/ImageGallery';
+import { Lightbox } from '@/components/chat/gallery/Lightbox';
 import { useMediaCarousel } from '@/hooks/social/note/useMediaCarousel';
 import type { CarouselItem } from '@/utils/social/media-carousel';
 import CarouselSlide from './CarouselSlide';
-
-export type { CarouselItem } from '@/utils/social/media-carousel';
 
 export default function MediaCarousel({ items }: { items: readonly CarouselItem[] }) {
   const {

@@ -3,7 +3,7 @@
 import { useMemo, type KeyboardEvent } from 'react';
 import type { JsGroup } from '@/services/nostr-bridge';
 import type { ChannelLayout } from '@/services/relay/channel-layout';
-import { useChannelLayoutEditor } from '@/hooks/relay/useChannelLayoutEditor';
+import { useChannelLayoutEditor } from '@/hooks/relay/channel-layout/useChannelLayoutEditor';
 import { useLayoutDrag } from '@/hooks/shell/modals/layout/useLayoutDrag';
 
 /**

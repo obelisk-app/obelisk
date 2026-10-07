@@ -23,4 +23,17 @@ describe('useForwardedRef', () => {
     result.current.setRef(node);
     expect(caller).toHaveBeenCalledWith(node);
   });
+
+  it('clears both refs on unmount and works with no forwarded ref', () => {
+    const caller = createRef<HTMLInputElement>();
+    const { result } = renderHook(() => useForwardedRef(caller));
+    const node = document.createElement('input');
+    result.current.setRef(node);
+    result.current.setRef(null);
+    expect(result.current.own.current).toBeNull();
+    expect(caller.current).toBeNull();
+    const bare = renderHook(() => useForwardedRef<HTMLInputElement>(undefined));
+    bare.result.current.setRef(node);
+    expect(bare.result.current.own.current).toBe(node);
+  });
 });

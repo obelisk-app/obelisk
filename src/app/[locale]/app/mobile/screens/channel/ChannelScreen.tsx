@@ -2,7 +2,7 @@
 
 import MentionNavigator from '@/components/chat/mentions/MentionNavigator';
 import HistoryPaginationStatus from '@/components/chat/timeline/HistoryPaginationStatus';
-import { FileDropZone } from '@/components/chat/composer/ComposerActions';
+import { FileDropZone } from '@/components/chat/composer/FileDropZone';
 import { useTranslations } from 'next-intl';
 import { LazyNewGameModal } from '../../../mounts/lazy-mounts';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';

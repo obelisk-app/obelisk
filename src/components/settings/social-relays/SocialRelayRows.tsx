@@ -3,7 +3,8 @@ import { CloseIcon } from '@/components/ui/icons/icons';
 import Input from '@/components/ui/forms/Input';
 import { probeRelay, type RelayStatus } from '@/services/social/relay-status';
 import { relayKey } from '@/utils/settings/social-relays';
-import { RelayDot, RelayStats } from './RelayIndicators';
+import { RelayDot } from './RelayIndicators';
+import RelayStats from './RelayStats';
 import type { Translate } from '@/i18n/keys';
 
 /** One editable row per draft relay: status dot, URL field, stats, remove. */

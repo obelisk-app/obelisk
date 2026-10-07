@@ -6,7 +6,7 @@ import { initializeWot } from '@/services/wot';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { subscribeVoiceJump } from '@/services/voice/jump-to-voice';
 import { useChatStore } from '@/store/chat';
-import { useRelayDeepLink } from '@/hooks/relay/useRelayDeepLink';
+import { useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink';
 import type { View } from '@/utils/shell/desktop/view';
 
 /**

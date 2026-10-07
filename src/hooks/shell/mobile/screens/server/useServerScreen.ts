@@ -13,8 +13,8 @@ import {
 } from '@/services/nostr-bridge';
 import { applyLayout } from '@/services/relay/channel-layout';
 import { useScreenScrollMemo } from '@/hooks/shell/mobile/carousel/useScreenScrollMemo';
-import { useRelayOperatorData } from '@/hooks/relay/useRelayOperatorData';
-import { useRelayHeaderInfo } from '@/hooks/relay/useRelayHeaderInfo';
+import { useRelayOperatorData } from '@/hooks/relay/operator/useRelayOperatorData';
+import { useRelayHeaderInfo } from '@/hooks/relay/info/useRelayHeaderInfo';
 import { useForumCollapsed } from './useForumCollapsed';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { channelsFromIds, indexById, rootChannels, spaceLabel, toggleKey } from '@/utils/shell/mobile/channel-list';

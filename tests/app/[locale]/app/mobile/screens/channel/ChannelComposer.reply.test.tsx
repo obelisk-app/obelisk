@@ -7,7 +7,7 @@ import type { ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 import { ChannelComposer } from '@/app/[locale]/app/mobile/screens/channel/ChannelComposer';
 import { group, message } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 
-vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
+vi.mock('@/hooks/relay/operator/useBotCommands', () => ({ useBotCommands: () => [] }));
 
 const ALICE = 'a'.repeat(64);
 const GROUP = group({ id: 'g', name: 'general' });

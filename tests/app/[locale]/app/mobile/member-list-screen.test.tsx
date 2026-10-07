@@ -18,7 +18,7 @@ vi.mock('@/services/relay/relay-info', () => ({ faviconFor: () => '', fetchRelay
 vi.mock('@/services/relay/relay-branding', () => ({
   publishBranding: vi.fn(),
 }));
-vi.mock('@/hooks/relay/useRelayBranding', () => ({
+vi.mock('@/hooks/relay/branding/useRelayBranding', () => ({
   useRelayBranding: () => ({}),
 }));
 vi.mock('@/services/relay/relay-emojis', () => ({
@@ -27,7 +27,7 @@ vi.mock('@/services/relay/relay-emojis', () => ({
   resolveRelayEmojiSet: (set: unknown) => set,
   publishRelayEmojiSet: vi.fn(),
 }));
-vi.mock('@/hooks/relay/useRelayEmojiSet', () => ({
+vi.mock('@/hooks/relay/operator/useRelayEmojiSet', () => ({
   useRelayEmojiSet: () => ({ title: '', emojis: [], updatedAt: 0 }),
 }));
 vi.mock('@/services/relay/channel-layout', () => ({
@@ -35,22 +35,22 @@ vi.mock('@/services/relay/channel-layout', () => ({
   publishLayout: vi.fn(),
   newCategoryId: () => 'cat-test',
 }));
-vi.mock('@/hooks/relay/useChannelLayout', () => ({
+vi.mock('@/hooks/relay/channel-layout/useChannelLayout', () => ({
   useChannelLayout: () => ({ categories: [], channels: [], updatedAt: 0 }),
 }));
-vi.mock('@/hooks/relay/useRelayOperatorPubkey', () => ({
+vi.mock('@/hooks/relay/operator/useRelayOperatorPubkey', () => ({
   useRelayOperatorPubkey: () => null,
 }));
 vi.mock('@/services/relay/relay-roles', () => ({
   rolesByPubkey: () => ({}),
 }));
-vi.mock('@/hooks/relay/useRelayRoles', () => ({
+vi.mock('@/hooks/relay/operator/useRelayRoles', () => ({
   useRelayRoles: () => ({ roles: [], holders: {}, updatedAt: 0 }),
 }));
 vi.mock('@/components/media/upload/BlossomImageInput', () => ({
   default: () => null,
-  ChannelAppearanceInput: () => null,
 }));
+vi.mock('@/components/media/upload/ChannelAppearanceInput', () => ({ default: () => null }));
 vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({ default: () => null }));
 vi.mock('@/components/admin/relay-emoji/RelayEmojiAdminModal', () => ({ default: () => null }));
 vi.mock('@/components/admin/relay-roles/RelayRolesAdminModal', () => ({ default: () => null }));

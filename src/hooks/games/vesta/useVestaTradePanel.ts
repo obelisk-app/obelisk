@@ -1,7 +1,7 @@
 'use client';
 
 import type { GameState, TradeResource } from 'vesta';
-import { tradeAction } from '@/components/games/vesta/resources';
+import { tradeAction } from '@/utils/games/vesta/resources';
 import type { VestaTurn } from '@/hooks/games/vesta/useVestaTurn';
 import { withCount } from '@/utils/games/vesta/vesta-actions';
 import { TRADE_TAKE_MAX, bankRatesText, tradePartners } from '@/utils/games/vesta/vesta-trade';

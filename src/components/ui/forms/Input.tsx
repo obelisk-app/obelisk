@@ -9,7 +9,7 @@ import {
   type InputSize,
   type InputTone,
   type InputVariant,
-} from './input-surface';
+} from '@/utils/style/input-surface';
 import { useInputControl } from '@/hooks/common/useInputControl';
 
 export {
@@ -21,7 +21,7 @@ export {
   type InputSurfaceOptions,
   type InputTone,
   type InputVariant,
-} from './input-surface';
+} from '@/utils/style/input-surface';
 export type { InputClear, InputSecret, InputSecretKind, InputStatus } from './InputEnd';
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix'> {

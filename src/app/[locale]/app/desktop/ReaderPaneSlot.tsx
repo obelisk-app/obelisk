@@ -2,7 +2,8 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
-import { ReaderPaneContent, ReaderPaneHeader } from '../panes/reader/ReaderPane';
+import { ReaderPaneHeader } from '../panes/reader/ReaderPane';
+import { ReaderPaneContent } from '../panes/reader/ReaderPaneContent';
 import { ResizablePane } from './ResizablePane';
 import { THREAD_PANE_KEY } from '@/utils/shell/desktop/desktop-layout';
 

@@ -16,8 +16,6 @@ import { sameNoteCardProps, type NoteCardProps } from '@/utils/social/note-card'
 import RepostCard from './RepostCard';
 import PlainNoteCard from './PlainNoteCard';
 
-export type { NoteCardProps } from '@/utils/social/note-card';
-
 /**
  * Memoised on the note identity and the handlers.
  *

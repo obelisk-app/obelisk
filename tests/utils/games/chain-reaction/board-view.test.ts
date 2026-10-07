@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameSession } from '@/lib/games/session/session';
-import { SEAT_COLORS } from '@/components/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
 import {
   boardSizing,
   boardTurn,

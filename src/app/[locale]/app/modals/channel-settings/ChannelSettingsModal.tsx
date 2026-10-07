@@ -10,7 +10,7 @@ import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import { useChannelSettingsForm } from '@/hooks/chat/channel/useChannelSettingsForm';
 import ForumTagsEditor from '@/components/chat/forum/ForumTagsEditor';
-import { ChannelAppearanceInput } from '@/components/media/upload/BlossomImageInput';
+import ChannelAppearanceInput from '@/components/media/upload/ChannelAppearanceInput';
 import { useTranslations } from 'next-intl';
 import { ManageMemberRow } from './ManageMemberRow';
 import { Field } from '../common/Field';

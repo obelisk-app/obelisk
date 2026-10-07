@@ -9,7 +9,8 @@ import { DmCallButtons } from '@/components/call/DmCallButtons';
 import { useTranslations } from 'next-intl';
 import { useDmPanel } from '@/hooks/shell/panes/dm/useDmPanel';
 import { Avatar } from '../../desktop/Avatar';
-import { DmProtocolNotice, DmProtocolSwitch } from '../../dm/DmProtocolSwitch';
+import { DmProtocolSwitch } from '../../dm/DmProtocolSwitch';
+import { DmProtocolNotice } from '../../dm/DmProtocolNotice';
 import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
 import { DmThreadItem } from './DmThreadItem';
 

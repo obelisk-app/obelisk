@@ -2,7 +2,8 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nip19 } from 'nostr-tools';
 import { Nip46Signer } from '@nostr-wot/signers';
-import LoginModal, { isTransientNip46Error, signerAppHref } from '@/app/[locale]/app/login/LoginModal';
+import LoginModal from '@/app/[locale]/app/login/LoginModal';
+import { isTransientNip46Error, signerAppHref } from '@/utils/nip46/signer-link';
 import { copyText } from '@/services/common/clipboard';
 import { LocaleProvider } from '@tests/support/intl';
 

@@ -6,7 +6,7 @@ import { BRIDGE_MOCK_PUBKEY } from '@tests/support/mocks/nostr-bridge';
 import { ChannelScreen } from '@/app/[locale]/app/mobile/screens/channel/ChannelScreen';
 import { group, message } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 
-vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
+vi.mock('@/hooks/relay/operator/useBotCommands', () => ({ useBotCommands: () => [] }));
 vi.mock('@/components/chat/message/MessageContent', () => ({
   default: ({ content }: { content: string }) => <span>{content}</span>,
 }));

@@ -9,7 +9,7 @@ import {
 } from '@/services/nostr-bridge';
 import { wotEngine } from '@/services/wot';
 import { useWotEnabled } from '@/hooks/wot/useWot';
-import { useRelayOperatorData } from '@/hooks/relay/useRelayOperatorData';
+import { useRelayOperatorData } from '@/hooks/relay/operator/useRelayOperatorData';
 import { groupDistances } from '@/utils/chat/channel/group-distance';
 
 /**

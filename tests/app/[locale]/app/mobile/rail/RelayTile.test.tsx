@@ -7,7 +7,7 @@ vi.mock('@/services/relay/relay-info', () => ({
   fetchRelayInfo: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('@/hooks/relay/useRelayBranding', () => ({
+vi.mock('@/hooks/relay/branding/useRelayBranding', () => ({
   useRelayBranding: () => ({}),
 }));
 

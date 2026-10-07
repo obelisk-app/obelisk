@@ -16,7 +16,7 @@ vi.mock('@/services/relay/relay-info', () => ({
 }));
 
 const branding = vi.hoisted(() => ({ use: vi.fn() }));
-vi.mock('@/hooks/relay/useRelayBranding', () => ({
+vi.mock('@/hooks/relay/branding/useRelayBranding', () => ({
   useRelayBranding: (url: string, operators: string[]) => branding.use(url, operators),
 }));
 

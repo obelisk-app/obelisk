@@ -47,7 +47,7 @@ vi.mock('@/services/nostr-bridge', async () => {
 
 const uploadToBlossom = vi.fn();
 vi.mock('@/services/media/blossom', () => ({ uploadToBlossom: (...a: unknown[]) => uploadToBlossom(...a) }));
-vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
+vi.mock('@/hooks/relay/operator/useBotCommands', () => ({ useBotCommands: () => [] }));
 
 import { useChannelComposer } from '@/hooks/chat/composer/useChannelComposer';
 import { useMessageZapStore } from '@/store/chat/message-zap';

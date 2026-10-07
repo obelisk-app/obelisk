@@ -3,7 +3,8 @@
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import MessageMediaPicker from '../../picker/MessageMediaPicker';
-import { AttachmentMenu, StickerIcon } from '../../composer/ComposerActions';
+import { AttachmentMenu } from '../../composer/AttachmentMenu';
+import { StickerIcon } from '../../composer/composer-icons';
 import { useDismiss } from '@/hooks/common/useDismiss';
 import { MAX_PENDING } from '@/utils/chat/dm/pending';
 import type { DmComposerState } from '@/hooks/chat/dm/composer/useDmComposer';

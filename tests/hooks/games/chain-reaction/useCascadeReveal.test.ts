@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useCascadeReveal } from '@/hooks/games/chain-reaction/useCascadeReveal';
-import type { CellSnapshot } from '@/components/games/chain-reaction/cascade';
+import type { CellSnapshot } from '@/utils/games/chain-reaction/cascade';
 
 const grid = (): CellSnapshot[] => Array.from({ length: 4 }, () => ({ count: 0, owner: null }));
 

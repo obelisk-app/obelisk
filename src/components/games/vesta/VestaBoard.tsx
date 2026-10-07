@@ -4,9 +4,6 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT } from 'vesta';
 import { useTranslations } from 'next-intl';
 import { useVestaBoard, type VestaBoardInput } from '@/hooks/games/vesta/useVestaBoard';
 
-export { VESTA_PLAYER_COLORS } from './palette';
-export type { PickMode } from './pick-mode';
-
 export type VestaBoardProps = VestaBoardInput;
 
 /**

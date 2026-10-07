@@ -1,20 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampActiveIndex, composeDmKeyAction, mergeUserHits } from '@/utils/shell/desktop/compose-dm';
-
-const hit = (c: string) => ({ pubkey: c.repeat(64), displayName: c, picture: null, nip05: null });
-
-describe('mergeUserHits', () => {
-  it('puts the decoded key first, then the NIP-05 hit, then name matches, each once', () => {
-    const merged = mergeUserHits(hit('a'), hit('b'), [hit('b'), hit('c'), hit('a')]);
-    expect(merged.map((h) => h.displayName)).toEqual(['a', 'b', 'c']);
-  });
-
-  it('skips missing hits and keeps at most the limit', () => {
-    const many = 'cdefghijklmn'.split('').map(hit);
-    expect(mergeUserHits(null, undefined, many)).toHaveLength(8);
-    expect(mergeUserHits(null, null, many, 3).map((h) => h.displayName)).toEqual(['c', 'd', 'e']);
-  });
-});
+import { clampActiveIndex, composeDmKeyAction } from '@/utils/shell/desktop/compose-dm';
 
 describe('clampActiveIndex', () => {
   it('keeps the highlight on the list', () => {

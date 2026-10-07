@@ -5,21 +5,8 @@ import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { useCallFullscreen } from '@/hooks/call/useCallFullscreen';
 import { useStreamRef } from '@/hooks/call/useStreamRef';
 import { displayNameFor } from '@/utils/identity/display-name';
-import { useDmCallStore, type DmCallStatus } from '@/store/call/dm-call';
-import type { MessageKey } from '@/i18n/keys';
-
-/** The status line under the name while a call is being set up, or null once it is up. */
-export function callStatusKey(status: DmCallStatus): MessageKey | null {
-  if (status === 'outgoing') return 'calls.call.calling';
-  if (status === 'connecting') return 'calls.call.connecting';
-  if (status === 'reconnecting') return 'calls.call.reconnecting';
-  return null;
-}
-
-/** Screen sharing is offered only where the browser can capture a screen. */
-export function canShareScreen(): boolean {
-  return typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getDisplayMedia);
-}
+import { useDmCallStore } from '@/store/call/dm-call';
+import { callStatusKey, canShareScreen } from '@/utils/call/call-status';
 
 /**
  * The DM call view's view model: the call store, the peer's name and

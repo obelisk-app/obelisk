@@ -3,8 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { HEIGHT, WIDTH } from '@/lib/games/stacker/engine';
 import type { StackerRunner } from '@/lib/games/stacker/runner';
-import { canvasDpr } from '@/components/games/stacker/block-paint';
-import { drawWell } from '@/components/games/stacker/draw-well';
+import { canvasDpr } from '@/utils/games/stacker/block-paint';
+import { drawWell } from '@/utils/games/stacker/draw-well';
 
 /**
  * The playfield paints itself: this subscribes to the runner's frame

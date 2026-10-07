@@ -130,7 +130,7 @@ describe('PreferencesPanel appearance controls', () => {
   });
 
   it('includes shared app appearance controls', async () => {
-    const { PreferencesPanel } = await import('@/app/[locale]/app/user-panel/UserPanel');
+    const { PreferencesPanel } = await import('@/app/[locale]/app/settings/PreferencesPanel');
 
     render(
       <LocaleProvider initialLocale="en">
@@ -150,7 +150,7 @@ describe('PreferencesPanel appearance controls', () => {
   });
 
   it('includes a direct-message opt-in reset toggle', async () => {
-    const { PreferencesPanel } = await import('@/app/[locale]/app/user-panel/UserPanel');
+    const { PreferencesPanel } = await import('@/app/[locale]/app/settings/PreferencesPanel');
 
     render(
       <LocaleProvider initialLocale="en">
@@ -170,7 +170,7 @@ describe('PreferencesPanel appearance controls', () => {
 
   it('saves an arbitrary number of feed relays, not exactly three', async () => {
     // The old panel had three fixed slots and rejected any other count.
-    const { PreferencesPanel } = await import('@/app/[locale]/app/user-panel/UserPanel');
+    const { PreferencesPanel } = await import('@/app/[locale]/app/settings/PreferencesPanel');
 
     render(
       <LocaleProvider initialLocale="en">
@@ -192,7 +192,7 @@ describe('PreferencesPanel appearance controls', () => {
   });
 
   it('adds a fourth feed relay', async () => {
-    const { PreferencesPanel } = await import('@/app/[locale]/app/user-panel/UserPanel');
+    const { PreferencesPanel } = await import('@/app/[locale]/app/settings/PreferencesPanel');
 
     render(
       <LocaleProvider initialLocale="en">
@@ -215,7 +215,7 @@ describe('PreferencesPanel appearance controls', () => {
   });
 
   it('renders preference labels from the configured language', async () => {
-    const { PreferencesPanel } = await import('@/app/[locale]/app/user-panel/UserPanel');
+    const { PreferencesPanel } = await import('@/app/[locale]/app/settings/PreferencesPanel');
 
     render(
       <LocaleProvider initialLocale="es">
@@ -233,7 +233,7 @@ describe('post-quantum status row', () => {
   it('shows a checking state before selfPqState resolves', async () => {
     let resolve!: (v: unknown) => void;
     mockSelfPqState.mockReturnValue(new Promise((r) => { resolve = r; }));
-    const { PreferencesPanel } = await import('@/app/[locale]/app/user-panel/UserPanel');
+    const { PreferencesPanel } = await import('@/app/[locale]/app/settings/PreferencesPanel');
 
     render(
       <LocaleProvider initialLocale="en">
@@ -249,7 +249,7 @@ describe('post-quantum status row', () => {
     mockSelfPqState.mockResolvedValue({
       canSend: false, capabilityUnknown: true, hasKeys: true, attestationPublished: true,
     });
-    const { PreferencesPanel } = await import('@/app/[locale]/app/user-panel/UserPanel');
+    const { PreferencesPanel } = await import('@/app/[locale]/app/settings/PreferencesPanel');
 
     render(
       <LocaleProvider initialLocale="en">
@@ -269,7 +269,7 @@ describe('post-quantum status row', () => {
     mockSelfPqState.mockResolvedValue({
       canSend: true, capabilityUnknown: false, hasKeys: true, attestationPublished: true,
     });
-    const { PreferencesPanel } = await import('@/app/[locale]/app/user-panel/UserPanel');
+    const { PreferencesPanel } = await import('@/app/[locale]/app/settings/PreferencesPanel');
 
     render(
       <LocaleProvider initialLocale="en">
@@ -285,7 +285,7 @@ describe('post-quantum status row', () => {
     mockSelfPqState.mockResolvedValue({
       canSend: false, capabilityUnknown: false, hasKeys: false, attestationPublished: false,
     });
-    const { PreferencesPanel } = await import('@/app/[locale]/app/user-panel/UserPanel');
+    const { PreferencesPanel } = await import('@/app/[locale]/app/settings/PreferencesPanel');
 
     render(
       <LocaleProvider initialLocale="en">

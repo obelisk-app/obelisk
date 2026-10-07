@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
-import { useRelayShareLanding } from '@/hooks/relay/useRelayShareLanding';
+import { useRelayShareLanding } from '@/hooks/relay/deep-link/useRelayShareLanding';
 
 const RELAY_BRANDING: Record<string, { logo: string; alt: string }> = {
   'wss://lacrypta-relay.obelisk.ar': { logo: '/lacrypta-logo.png', alt: 'La Crypta' }, // i18n-exempt: the relay's brand name

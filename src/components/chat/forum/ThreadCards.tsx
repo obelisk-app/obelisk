@@ -17,11 +17,6 @@ import { posterName } from '@/utils/chat/forum/forum-threads';
 import { relativeTime } from '@/utils/format/relative-time';
 import { useThreadCardData } from '@/hooks/chat/forum/useThreadCardData';
 
-export { ThreadGallery } from './ThreadGallery';
-export { LoadingThreads } from './LoadingThreads';
-export { EmptyForum } from './EmptyForum';
-export { NoMatchingThreads } from './NoMatchingThreads';
-
 /**
  * Thread card (list view). Three states:
  *   - messages.length > 0                             → full render (OP + last + counts)

@@ -9,6 +9,7 @@ import type { JsMediaItem, JsMediaKind } from '@/services/nostr-bridge';
 import { uniqueName } from '@/utils/media/library/pack-utils';
 import { isHttpUrl } from '@/utils/url/http-url';
 import type { EditablePack } from '@/utils/media/library/types';
+import { takePickedFiles } from '@/utils/media/upload/picked-file';
 
 /**
  * The draft behind the pack editor: uploads become items with unique
@@ -26,7 +27,7 @@ export function usePackEditor(
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const addFiles = async (files: FileList | null) => {
+  const addFiles = async (files: ArrayLike<File> | null) => {
     const images = Array.from(files ?? []).filter((file) => file.type.startsWith('image/'));
     if (images.length === 0) return;
     setBusy(true);
@@ -83,8 +84,7 @@ export function usePackEditor(
 
   /** A file input's change: add its images, then clear it so the same files can be picked again. */
   const filesPicked = (input: HTMLInputElement) => {
-    void addFiles(input.files);
-    input.value = '';
+    void addFiles(takePickedFiles(input));
   };
 
   return { draft, setDraft, newItemKind, setNewItemKind, busy, error, addFiles, filesPicked, save, updateItem, removeItem, addUrlItem };

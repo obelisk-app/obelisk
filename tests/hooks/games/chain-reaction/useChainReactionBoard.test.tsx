@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { deriveSession, type GameSession } from '@/lib/games/session/session';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
-import { SEAT_COLORS } from '@/components/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
 import { useChainReactionBoard } from '@/hooks/games/chain-reaction/useChainReactionBoard';
 
 const CH = 'channel-1';

@@ -1,7 +1,7 @@
 'use client';
 
 import type { GameState } from 'vesta';
-import { VESTA_PLAYER_COLORS } from './palette';
+import { VESTA_PLAYER_COLORS } from '@/utils/games/vesta/palette';
 import type { VestaTurn } from '@/hooks/games/vesta/useVestaTurn';
 import { useVestaPlayers } from '@/hooks/games/vesta/useVestaPlayers';
 import { useTranslations } from 'next-intl';

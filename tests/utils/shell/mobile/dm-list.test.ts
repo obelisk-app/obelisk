@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dmBubbleClass, dmPeersByLatest, markAt, splitByFollows, uniqueHits } from '@/utils/shell/mobile/dm-list';
+import { dmBubbleClass, dmPeersByLatest, markAt, splitByFollows } from '@/utils/shell/mobile/dm-list';
 
 describe('dmPeersByLatest', () => {
   it('keeps each conversation with a message, with its latest, newest conversation first', () => {
@@ -11,13 +11,6 @@ describe('dmPeersByLatest', () => {
 describe('splitByFollows', () => {
   it('splits the conversations by whether you follow the peer', () => {
     expect(splitByFollows([{ peer: 'a' }, { peer: 'b' }], new Set(['b']))).toEqual({ follows: [{ peer: 'b' }], others: [{ peer: 'a' }] });
-  });
-});
-
-describe('uniqueHits', () => {
-  it('drops the missing hits and keeps the first of each pubkey', () => {
-    expect(uniqueHits([null, { pubkey: 'a', n: 1 }, undefined, { pubkey: 'a', n: 2 }, { pubkey: 'b', n: 3 }]))
-      .toEqual([{ pubkey: 'a', n: 1 }, { pubkey: 'b', n: 3 }]);
   });
 });
 

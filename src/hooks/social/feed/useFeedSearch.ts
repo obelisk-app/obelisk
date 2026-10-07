@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useNostrUserSearch, type UserHit } from '@/hooks/identity/useNostrUserSearch';
+import { useNostrUserSearch } from '@/hooks/identity/useNostrUserSearch';
 import { parseQuery, searchHashtag, searchNotes, relatedHashtags, type ParsedQuery } from '@/services/social/search';
 import { ensureSocialProfiles } from '@/services/social/profiles';
+import { mergeUserHits } from '@/utils/identity/user-hits';
 
 const DEBOUNCE_MS = 300;
+/** How many people the feed search lists above the notes. */
+const FEED_SEARCH_MAX_PEOPLE = 8;
 /** One shared empty list, so an idle search keeps a stable identity. */
 const EMPTY_NOTES: NostrEvent[] = [];
 
@@ -67,16 +70,10 @@ export function useFeedSearch(initialQuery: string, onOpenProfile?: (pubkey: str
     return () => { cancelled = true; };
   }, [parsed]);
 
-  const userHits = useMemo(() => {
-    const seen = new Set<string>();
-    const out: UserHit[] = [];
-    for (const hit of [people.directHit, people.nip05Hit, ...people.nostrResults]) {
-      if (!hit || seen.has(hit.pubkey)) continue;
-      seen.add(hit.pubkey);
-      out.push(hit);
-    }
-    return out.slice(0, 8);
-  }, [people.directHit, people.nip05Hit, people.nostrResults]);
+  const userHits = useMemo(
+    () => mergeUserHits(people.directHit, people.nip05Hit, people.nostrResults, FEED_SEARCH_MAX_PEOPLE),
+    [people.directHit, people.nip05Hit, people.nostrResults],
+  );
 
   const tags = useMemo(() => relatedHashtags(notes), [notes]);
   const busy = loading || people.loading;

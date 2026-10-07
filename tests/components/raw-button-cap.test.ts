@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest';
  * `src/hooks/`. Each one re-decides the focus ring, the disabled look and
  * `type="button"`; the primitives in `src/components/ui/` decide them once.
  *
- * The cap is the count when round 16 finished (188 at its start). It may
+ * The cap was the count when round 16 finished (188 at its start), 100
+ * after round 30 set it to the count of the day. It may
  * only go down: when you move a button onto a primitive, lower `CAP` to the
  * new count in the same commit. If you truly need a new hand-written one,
  * the failure message lists the files so you can migrate another instead.
@@ -16,7 +17,7 @@ import { describe, expect, it } from 'vitest';
  * each no more often than it does now.
  */
 
-const CAP = 102;
+const CAP = 100;
 
 const UI_PRIMITIVE_BUTTONS: Record<string, number> = {
   'src/components/ui/buttons/Button.tsx': 1,
@@ -88,6 +89,10 @@ describe('raw <button> ratchet', () => {
   it(`stays at or below ${CAP} outside src/components/ui/`, () => {
     const listing = outsideUi.sort((a, b) => b[1] - a[1]).map(([f, n]) => `${n} ${f}`).join('\n');
     expect(total, `raw <button> count rose to ${total} (cap ${CAP}):\n${listing}`).toBeLessThanOrEqual(CAP);
+  });
+
+  it('has its cap lowered when a button moves onto a primitive', () => {
+    expect(CAP, `only ${total} raw <button>s outside src/components/ui/ now: set CAP to ${total}`).toBe(total);
   });
 
   it('inside ui/ only the primitives render a raw <button>', () => {

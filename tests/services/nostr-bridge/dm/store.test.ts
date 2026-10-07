@@ -183,17 +183,27 @@ describe('encrypted DM store: the bell', () => {
     await unlockAndRead(first.bridge, first.read, first.alice);
     await waitForBoxes(3);
     const { bridge } = await reload();
+    // The reload has already replayed the two stored wraps, most likely before
+    // the store read its index. Every count published from here on is kept.
+    const counts: number[] = [];
+    const stop = bridge.dmLock.subscribe((s) => { counts.push(s.unopened.length); });
     const ext = installExtension(first.bob);
     await watchDms(bridge);
     const later = Math.floor(Date.now() / 1000) + 60;
     const wrap = await giftWrapFrom(first.alice, first.bob.pkHex, 'unopened text');
     deliver({ ...wrap });
     deliver(kind4From(first.alice, first.bob.pkHex, 'locked nip-04 text', later));
-    await new Promise((r) => setTimeout(r, 30));
+    const cardFor = async () => (await notifications()).dmNotifications.find((d) => d.createdAt === later * 1000);
+    await vi.waitFor(async () => {
+      expect(bridge.dmLock.get().unopened).toEqual([wrap.created_at * 1000]);
+      expect(await cardFor()).toBeDefined();
+    }, { timeout: 5000, interval: 10 });
+    stop();
 
-    // The stored wraps are not counted; the new one is.
-    expect(bridge.dmLock.get().unopened).toHaveLength(1);
-    const card = (await notifications()).dmNotifications.find((d) => d.createdAt === later * 1000);
+    // The new wrap is counted, and the stored ones never were, not even for
+    // the moment before the index was read.
+    expect(Math.max(...counts)).toBeLessThanOrEqual(1);
+    const card = await cardFor();
     expect(card).toMatchObject({ senderPubkey: first.alice.pkHex });
     expect(card?.preview).toBeUndefined();
     expect(ext.nip44.decrypt).not.toHaveBeenCalled();

@@ -2,7 +2,7 @@
 
 import { useId } from 'react';
 import { useTranslations } from 'next-intl';
-import { useAddRelayForm } from '@/hooks/relay/useAddRelayForm';
+import { useAddRelayForm } from '@/hooks/relay/rail/useAddRelayForm';
 import Input from '@/components/ui/forms/Input';
 
 /** The add-relay sheet's custom tab: a relay URL field and the add button. */

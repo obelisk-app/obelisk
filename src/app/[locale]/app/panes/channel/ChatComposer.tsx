@@ -3,12 +3,10 @@
 import { forwardRef, type InputHTMLAttributes } from 'react';
 import { MESSAGE_INPUT_PROPS } from '@/utils/chat/composer/message-input-props';
 import MessageMediaPicker from '@/components/chat/picker/MessageMediaPicker';
-import {
-  AttachmentMenu,
-  StickerIcon,
-  VoiceNoteButton,
-  VoiceNoteDraft,
-} from '@/components/chat/composer/ComposerActions';
+import { AttachmentMenu } from '@/components/chat/composer/AttachmentMenu';
+import { StickerIcon } from '@/components/chat/composer/composer-icons';
+import { VoiceNoteButton } from '@/components/chat/composer/VoiceNoteButton';
+import { VoiceNoteDraft } from '@/components/chat/composer/VoiceNoteDraft';
 import MentionAutocomplete from '@/components/chat/mentions/MentionAutocomplete';
 import SlashCommandAutocomplete from '@/components/chat/slash/SlashCommandAutocomplete';
 import SlashCommandScaffold from '@/components/chat/slash/SlashCommandScaffold';

@@ -1,4 +1,4 @@
-/** Shaping the phone DM screens' lists: conversations by their latest message, search hits once each. */
+/** Shaping the phone DM screens' lists: conversations by their latest message, bubbles and marks. */
 
 interface DmLike { readonly createdAt: number; readonly outgoing?: boolean }
 
@@ -25,12 +25,6 @@ export function splitByFollows<T extends { peer: string }>(
     follows: peers.filter((p) => follows.has(p.peer)),
     others: peers.filter((p) => !follows.has(p.peer)),
   };
-}
-
-/** The present hits, each pubkey once, first one wins. */
-export function uniqueHits<H extends { pubkey: string }>(hits: ReadonlyArray<H | null | undefined>): H[] {
-  const seen = new Set<string>();
-  return hits.filter((hit): hit is H => !!hit && !seen.has(hit.pubkey) && !!seen.add(hit.pubkey));
 }
 
 /** A DM bubble's classes: its direction, then pending and failed. */

@@ -6,8 +6,6 @@ import { Lightbox } from './Lightbox';
 import { useImageGallery } from '@/hooks/chat/gallery/useImageGallery';
 import { GalleryTile } from './GalleryTile';
 
-export { Lightbox, type LightboxProps } from './Lightbox';
-
 interface ImageGalleryProps {
   urls: string[];
   wide?: boolean;

@@ -2,12 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
-import { useDmCallStore, type DmCallStatus } from '@/store/call/dm-call';
-
-/** A call is in progress from the first ring until it has ended. */
-export function dmCallBusy(status: DmCallStatus): boolean {
-  return status !== 'idle' && status !== 'ended';
-}
+import { useDmCallStore } from '@/store/call/dm-call';
+import { dmCallBusy } from '@/utils/call/call-status';
 
 /**
  * The DM header's call buttons' view model: disabled with DMs off or while

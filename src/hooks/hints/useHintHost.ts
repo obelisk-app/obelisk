@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { hintForAnchor, hintsForSurface, type Shell, type SurfaceId } from '@/utils/hints/registry';
+import { hintsForSurface, type Shell, type SurfaceId } from '@/utils/hints/registry';
+import { findHintAnchor, hintTaughtBy } from '@/utils/hints/anchors';
 import { useHintsStore } from '@/store/hints';
 
 /**
@@ -9,23 +10,6 @@ import { useHintsStore } from '@/store/hints';
  */
 export const HINT_LOOKUP_INTERVAL_MS = 400;
 export const HINT_LOOKUP_ATTEMPTS = 6;
-
-/**
- * The mounted, laid-out element a hint points at, or null. `offsetParent
- * === null` catches `display: none` and the responsive variants that hide a
- * control on one shell but not the other.
- */
-export function findHintAnchor(anchor: string): HTMLElement | null {
-  const found = document.querySelector<HTMLElement>(`[data-tour="${anchor}"]`);
-  return found && found.offsetParent !== null ? found : null;
-}
-
-/** The hint id taught by a press on `target`: the one for its nearest `[data-tour]`. */
-export function hintTaughtBy(target: EventTarget | null): string | undefined {
-  const tour = (target as HTMLElement | null)?.closest?.('[data-tour]');
-  const anchor = tour?.getAttribute('data-tour');
-  return anchor ? hintForAnchor(anchor)?.id : undefined;
-}
 
 /**
  * The hint host's view model: the first unseen hint for the surface whose

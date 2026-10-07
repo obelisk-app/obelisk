@@ -8,11 +8,7 @@ import {
 } from '@/services/nostr-bridge';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { relayStatus } from '@/utils/relay/relay-status';
-
-/** The e2e selector for a status: lost sockets and offline are one banner, relay access the other. */
-export function relayBannerTestId(state: string): 'connection-loss-banner' | 'relay-access-banner' {
-  return state === 'disconnected' || state === 'offline' ? 'connection-loss-banner' : 'relay-access-banner';
-}
+import { relayBannerTestId } from '@/utils/feedback/relay-banner';
 
 /**
  * The relay status row's view model: the active relay's status for a

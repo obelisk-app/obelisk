@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { faviconFor } from '@/services/relay/relay-info';
-import { useRelayInfo } from '@/hooks/shell/rail/useRelayInfo';
-import { useSuggestedRelayAdd } from '@/hooks/relay/useAddRelayForm';
+import { useRelayInfo } from '@/hooks/relay/info/useRelayInfo';
+import { useSuggestedRelayAdd } from '@/hooks/relay/rail/useAddRelayForm';
 import { shortHost } from '@/utils/relay-url/url-host';
 
 /**

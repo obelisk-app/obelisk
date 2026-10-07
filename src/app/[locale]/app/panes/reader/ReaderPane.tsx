@@ -4,15 +4,6 @@ import { useTranslations } from 'next-intl';
 import { ChevronLeftIcon } from '@/components/ui/icons/icons';
 import { PaneIconButton } from './PaneIconButton';
 
-/*
- * The pane's other parts live in their own files. They are re-exported here
- * because the desktop frame (`desktop/DesktopMain.tsx`, `FeedSplitPane.tsx`,
- * `ReaderPaneSlot.tsx`) imports them from this path; point those imports at
- * the new files and drop these lines once that frame's own refactor lands.
- */
-export { FeedPaneActions } from './FeedPaneActions';
-export { ReaderPaneContent } from './ReaderPaneContent';
-
 /**
  * Header for the thread / article reader.
  *

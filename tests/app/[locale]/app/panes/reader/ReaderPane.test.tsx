@@ -2,14 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
 
-vi.mock('@/components/social/article/ArticleCard', () => ({
+vi.mock('@/components/social/article/ArticleReader', () => ({
   default: ({ note }: { note: { id: string } }) => <div data-testid="article-reader">{note.id}</div>,
 }));
 vi.mock('@/components/social/note/NoteThread', () => ({
   default: ({ noteId }: { noteId: string }) => <div data-testid="note-thread">{noteId}</div>,
 }));
 
-import { FeedPaneActions, ReaderPaneContent, ReaderPaneHeader } from '@/app/[locale]/app/panes/reader/ReaderPane';
+import { ReaderPaneHeader } from '@/app/[locale]/app/panes/reader/ReaderPane';
+import { FeedPaneActions } from '@/app/[locale]/app/panes/reader/FeedPaneActions';
+import { ReaderPaneContent } from '@/app/[locale]/app/panes/reader/ReaderPaneContent';
 
 const wrap = (ui: React.ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
 

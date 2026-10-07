@@ -8,7 +8,7 @@ import { useUnreadMentionCount } from '@/hooks/notifications/useNotificationSele
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { useTranslations } from 'next-intl';
 import { relayShareLink } from '@/utils/relay-url/relay-share-link';
-import { useRelayInfo } from '@/hooks/shell/rail/useRelayInfo';
+import { useRelayInfo } from '@/hooks/relay/info/useRelayInfo';
 import { useCopyToClipboard } from '@/hooks/common/useCopyToClipboard';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { colorFor, letterFor } from '@/utils/relay-url/relay-tile-style';

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { findHintAnchor, hintTaughtBy, useHintHost } from '@/hooks/hints/useHintHost';
-import { HINTS, hintsForSurface } from '@/utils/hints/registry';
+import { useHintHost } from '@/hooks/hints/useHintHost';
+import { hintsForSurface } from '@/utils/hints/registry';
 import { useHintsStore } from '@/store/hints';
 
 /** A laid-out element: jsdom has no layout, so offsetParent is stubbed. */
@@ -15,25 +15,6 @@ function mount(anchor: string, visible = true) {
 
 beforeEach(() => { useHintsStore.getState().resetHints(); });
 afterEach(() => { document.body.innerHTML = ''; });
-
-describe('hint anchor helpers', () => {
-  it('finds only an anchor that is laid out', () => {
-    const el = mount('x-shown');
-    mount('x-hidden', false);
-    expect(findHintAnchor('x-shown')).toBe(el);
-    expect(findHintAnchor('x-hidden')).toBeNull();
-    expect(findHintAnchor('x-missing')).toBeNull();
-  });
-
-  it('names the hint a press inside an anchor teaches', () => {
-    const hint = HINTS[0];
-    const el = mount(hint.anchor);
-    const inner = document.createElement('span');
-    el.appendChild(inner);
-    expect(hintTaughtBy(inner)).toBe(hint.id);
-    expect(hintTaughtBy(document.body)).toBeUndefined();
-  });
-});
 
 describe('useHintHost', () => {
   const surface = 'server' as const;

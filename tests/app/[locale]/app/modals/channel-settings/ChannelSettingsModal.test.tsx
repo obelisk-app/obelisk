@@ -8,8 +8,8 @@ vi.mock('@/services/nostr-bridge', async () => {
   return bridgeMock({ getBridge: async () => ({}) as never });
 });
 
-vi.mock('@/components/media/upload/BlossomImageInput', () => ({
-  ChannelAppearanceInput: () => <div data-testid="channel-appearance-preview" />,
+vi.mock('@/components/media/upload/ChannelAppearanceInput', () => ({
+  default: () => <div data-testid="channel-appearance-preview" />,
 }));
 
 import { ChannelSettingsModal } from '@/app/[locale]/app/modals/channel-settings/ChannelSettingsModal';

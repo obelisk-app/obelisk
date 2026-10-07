@@ -34,11 +34,6 @@ export function carouselStills(items: readonly CarouselItem[]): string[] {
   return items.filter((item) => !isVideo(item)).map((item) => item.url);
 }
 
-/** `at` moved by `step`, wrapping around a set of `length`; null stays null (closed). */
-export function wrapIndex(at: number | null, step: number, length: number): number | null {
-  return at === null ? null : (at + step + length) % length;
-}
-
 /** The CSS aspect ratio `imeta` dimensions reserve, so the feed doesn't jump as media lands. */
 export function slideAspectRatio(item: Pick<CarouselItem, 'width' | 'height'>): string | undefined {
   return item.width && item.height ? `${item.width}/${item.height}` : undefined;

@@ -4,7 +4,7 @@
  * seats marked.
  */
 import type { GameSession } from '@/lib/games/session/session';
-import { rowsFor, type Row } from '@/components/games/results/results-rows';
+import { rowsFor, type Row } from '@/utils/games/results/results-rows';
 
 export interface ResultRow extends Row {
   isWinner: boolean;

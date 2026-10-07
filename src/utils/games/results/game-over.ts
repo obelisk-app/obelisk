@@ -5,7 +5,7 @@
  */
 import type { GameSession } from '@/lib/games/session/session';
 import { isDraw, scoreFor, type Score } from '@/lib/games/core/standings';
-import { SEAT_COLORS } from '@/components/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
 import type { MessageKey } from '@/i18n/keys';
 
 /** The headline colour for a winner whose seat has no colour of its own. */

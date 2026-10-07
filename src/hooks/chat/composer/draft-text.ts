@@ -1,8 +1,8 @@
 import { emojiTagsForContent, mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import { stickerTagsForContent, type MessageSticker } from '@/utils/media/tags/sticker-tags';
 import { voiceNoteTagForContent, type MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
-import { SLASH_COMMANDS, type SlashCommand } from '@/components/chat/slash/SlashCommandAutocomplete';
-import type { MediaPickerTab } from '@/components/chat/picker/MessageMediaPicker';
+import { SLASH_COMMANDS, type SlashCommand } from '@/utils/chat/slash/slash-commands';
+import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 
 /**
  * The composer's pure text rules: what a draft looks like after an upload,

@@ -19,13 +19,6 @@ import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import Text from '@/components/ui/layout/Text';
 import { useArticleCard } from '@/hooks/social/article/useArticleCard';
-export { articleMeta, readingMinutes, type ArticleMeta } from '@/utils/social/article-meta';
-/**
- * The reader lives in `ArticleReader.tsx`; it stays this module's default
- * export because the reader pane, the note viewer and the profile import it
- * from here.
- */
-export { default } from './ArticleReader';
 
 /** Compact card for a feed row. */
 export function ArticleCard({

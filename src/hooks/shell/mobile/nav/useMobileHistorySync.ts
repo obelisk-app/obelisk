@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useConfiguredRelays } from '@/services/nostr-bridge';
-import { classifyDeepLinkRelay, useRelayDeepLink } from '@/hooks/relay/useRelayDeepLink';
+import { classifyDeepLinkRelay, useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/chat/dm';
 import { type NavState, urlFor, parseUrl, restoredNav } from '@/utils/shell/mobile/url-state';

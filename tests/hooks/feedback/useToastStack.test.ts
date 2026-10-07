@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { MouseEvent } from 'react';
-import { TOAST_AUTO_DISMISS_MS, toastRemainingMs, useToastStack } from '@/hooks/feedback/useToastStack';
+import { useToastStack } from '@/hooks/feedback/useToastStack';
+import { TOAST_AUTO_DISMISS_MS } from '@/utils/feedback/toast';
 import { useToastStore } from '@/store/feedback/toast';
 
 beforeEach(() => {
@@ -9,14 +10,6 @@ beforeEach(() => {
   useToastStore.getState().clearToasts();
 });
 afterEach(() => { vi.useRealTimers(); });
-
-describe('toastRemainingMs', () => {
-  it('counts down from when the toast was pushed and never goes below zero', () => {
-    expect(toastRemainingMs(1000, 1000)).toBe(TOAST_AUTO_DISMISS_MS);
-    expect(toastRemainingMs(1000, 3000)).toBe(TOAST_AUTO_DISMISS_MS - 2000);
-    expect(toastRemainingMs(0, TOAST_AUTO_DISMISS_MS * 3)).toBe(0);
-  });
-});
 
 describe('useToastStack', () => {
   it('opens a toast by running its action and closing it', () => {

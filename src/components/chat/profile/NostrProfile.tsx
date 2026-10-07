@@ -19,7 +19,7 @@ import { ComposeButton } from '@/components/social/feed/FeedControls';
 import NoteComposer from '@/components/social/composer/NoteComposer';
 import MobileComposer from '@/components/social/composer/MobileComposer';
 import NoteThread from '@/components/social/note/NoteThread';
-import ArticleReader from '@/components/social/article/ArticleCard';
+import ArticleReader from '@/components/social/article/ArticleReader';
 import Modal from '@/components/ui/overlays/Modal';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import InlineReader from '@/components/social/article/InlineReader';

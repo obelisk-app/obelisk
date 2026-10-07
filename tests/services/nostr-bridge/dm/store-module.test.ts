@@ -1,7 +1,8 @@
 /**
  * `DmStoreModule` on its own, with a fake signer and a fake IndexedDB: what
- * a refused unlock leaves behind, the retry, the read-state wait, and a
- * wrapped key that no longer opens into a key.
+ * a refused unlock leaves behind, the retry, the read-state wait, a wrapped
+ * key that no longer opens into a key, and the locked count waiting for the
+ * store's index.
  */
 import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -98,6 +99,27 @@ describe('DmStoreModule', () => {
     expect(store.lock.get().status).toBe('unlocked');
     expect(garbling.nip44Encrypt).toHaveBeenCalledTimes(1);
     expect(await db.wireIds(ME)).toEqual([]);
+  });
+
+  it('counts no held wrap until the stored ids are read, so a replayed stored message never shows as new', async () => {
+    await dmStoreDb(idb).put(ME, 'stored', { v: 1, iv: 'x', ct: 'y' });
+    const store = new DmStoreModule({ nipSigner: () => fakeSigner(), replay: vi.fn(), reingest: vi.fn(), dmsEnabled: () => true });
+    const seen: number[][] = [];
+    store.lock.subscribe((s) => { seen.push([...s.unopened]); });
+    store.attach(ME);
+    // The relays replay the stored wrap and send a new one before IndexedDB answers.
+    store.hold(wrap('stored', 1), 'wrap');
+    store.hold(wrap('new', 2), 'wrap');
+    expect(store.lock.get().unopened).toEqual([]);
+    await vi.waitFor(() => expect(store.lock.get().unopened).toEqual([2_000]));
+    expect(seen.filter((u) => u.includes(1_000))).toEqual([]);
+  });
+
+  it('with no IndexedDB there is no index to wait for: a held wrap counts at once', () => {
+    vi.stubGlobal('indexedDB', undefined);
+    const { store } = build(fakeSigner());
+    store.hold(wrap('w', 3), 'wrap');
+    expect(store.lock.get().unopened).toEqual([3_000]);
   });
 
   it('logout forgets the key in memory and deletes the account on disk', async () => {

@@ -7,7 +7,7 @@ import { DMOptInBoundary } from '../dm/DmOptInBoundary';
 import { canRestore } from '@/utils/shell/desktop/feed-pane';
 import { ChatLayout } from '../panes/channel/ChatPanel';
 import { DmPanel } from '../panes/dm/DmPanel';
-import { FeedPaneActions } from '../panes/reader/ReaderPane';
+import { FeedPaneActions } from '../panes/reader/FeedPaneActions';
 import { EmptyState } from './EmptyState';
 import type { View } from '@/utils/shell/desktop/view';
 import type { FeedPaneControls } from '@/hooks/shell/desktop/useDesktopLayout';

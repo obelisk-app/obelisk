@@ -68,7 +68,7 @@ For compatibility with voice notes published before the `voice` marker existed, 
 Code map:
 
 ~~~text
-src/components/chat/composer/ComposerActions.tsx  recorder and live timer
+src/components/chat/composer/VoiceNoteButton.tsx  recorder and live timer
 src/utils/media/tags/voice-note-tags.ts              marker validation
 src/services/nostr-bridge/facade/client.ts          event parsing and optimistic state
 src/components/chat/message/MessageContent.tsx  compact audio player

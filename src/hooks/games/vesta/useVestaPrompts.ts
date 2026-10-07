@@ -2,7 +2,7 @@
 
 import type { GameState, TradeResource } from 'vesta';
 import type { VestaAction } from '@/lib/games/vesta/definition';
-import { RESOURCES, describe, filled, sum } from '@/components/games/vesta/resources';
+import { RESOURCES, describe, filled, sum } from '@/utils/games/vesta/resources';
 import type { VestaTurn } from '@/hooks/games/vesta/useVestaTurn';
 import { withCount } from '@/utils/games/vesta/vesta-actions';
 

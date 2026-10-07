@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useBridge, type JsUserMetadata } from '@/services/nostr-bridge';
 import { buildSlashSections, mergeSlashCommands, type SlashFilter } from '@/services/relay/bot-commands';
-import { useBotCommands } from '@/hooks/relay/useBotCommands';
+import { useBotCommands } from '@/hooks/relay/operator/useBotCommands';
 import { loadRecentSlashCommands } from '@/services/chat/slash/recent-slash-commands';
-import { SLASH_COMMANDS, type BotProfiles, type SlashCommand } from '@/components/chat/slash/SlashCommandAutocomplete';
+import { SLASH_COMMANDS, type BotProfiles, type SlashCommand } from '@/utils/chat/slash/slash-commands';
 
 /**
  * What the slash picker shows for `slashQuery`: built-ins (/zap, /play)

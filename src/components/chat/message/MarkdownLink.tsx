@@ -5,7 +5,7 @@ import { isImageUrl } from '@/utils/message-text/markdown';
 import { isUploadUrl, filenameFromUrl } from '@/utils/attachments/attachments';
 import { autolinkLabel } from '@/utils/message-text/autolink-label';
 import { chatLinkTarget } from '@/utils/message-text/chat-link';
-import { hideBrokenImage } from '@/utils/chat/message/hide-broken-image';
+import { hideBrokenImage } from '@/utils/media/remote/hide-broken-image';
 import { followInAppLink } from '@/services/chat/message/in-app-link';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import ChannelLinkPill from './ChannelLinkPill';

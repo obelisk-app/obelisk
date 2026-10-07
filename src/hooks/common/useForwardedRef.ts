@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useRef, type Ref } from 'react';
-import { mergeRefs } from '@/components/ui/forms/merge-refs';
+
+/** Hand `node` to a ref, whether it is a callback or an object ref. */
+function assignRef<T>(ref: Ref<T> | undefined, node: T | null): void {
+  if (typeof ref === 'function') ref(node);
+  else if (ref) ref.current = node;
+}
 
 /**
  * A primitive's own handle on its element (to refocus or measure it) plus
@@ -9,6 +14,9 @@ import { mergeRefs } from '@/components/ui/forms/merge-refs';
  */
 export function useForwardedRef<T>(forwarded: Ref<T> | undefined) {
   const own = useRef<T | null>(null);
-  const setRef = useCallback((node: T | null) => mergeRefs(forwarded, own)(node), [forwarded]);
+  const setRef = useCallback((node: T | null) => {
+    assignRef(forwarded, node);
+    own.current = node;
+  }, [forwarded]);
   return { own, setRef };
 }

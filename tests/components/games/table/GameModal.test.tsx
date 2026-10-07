@@ -49,7 +49,6 @@ vi.mock('@/components/games/chain-reaction/ChainReactionBoard', () => ({
     revealListener = onRevealChange ?? null;
     return <div data-testid="cr-board" />;
   },
-  SEAT_COLORS: [{ hex: '#ff4d5e', dot: '' }, { hex: '#b4f953', dot: '' }],
 }));
 
 const GameModal = (await import('@/components/games/table/GameTableModal')).default;

@@ -17,8 +17,8 @@ const operator = vi.hoisted(() => ({
     relayRoles: { roles: [], assignments: [], updatedAt: 0 },
   },
 }));
-vi.mock('@/hooks/relay/useRelayOperatorData', () => ({ useRelayOperatorData: () => operator.value }));
-vi.mock('@/hooks/relay/useRelayHeaderInfo', () => ({ useRelayHeaderInfo: () => ({ name: 'Info Name', icon: null }) }));
+vi.mock('@/hooks/relay/operator/useRelayOperatorData', () => ({ useRelayOperatorData: () => operator.value }));
+vi.mock('@/hooks/relay/info/useRelayHeaderInfo', () => ({ useRelayHeaderInfo: () => ({ name: 'Info Name', icon: null }) }));
 vi.mock('@/app/[locale]/app/mobile/rail/MobileServerRail', () => ({
   MobileServerRail: (p: { onSelectRelay: (u: string) => void; onAddRelay: () => void; onLongPress: (i: { url: string; label: string; iconUrl: string | null }) => void }) => (
     <div>

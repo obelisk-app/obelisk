@@ -20,14 +20,10 @@ import Button from '@/components/ui/buttons/Button';
 import CenteredPanel from './CenteredPanel';
 import Spinner from './RoomSpinner';
 import StageBackdrop from './StageBackdrop';
-import MeshSyncStatusPill from './MeshSyncStatusPill';
 import RoomHeader from './RoomHeader';
 import { JoinLanding } from './JoinLanding';
 import { StageArea } from './StageArea';
 import { useVoiceRoom } from '@/hooks/voice/room/useVoiceRoom';
-
-// `MeshSyncStatusPill` keeps its historical import path.
-export { MeshSyncStatusPill };
 
 interface Props {
   channelId: string;

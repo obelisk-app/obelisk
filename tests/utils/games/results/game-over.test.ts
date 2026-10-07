@@ -2,7 +2,7 @@ import '@tests/support/game-engines';
 import { describe, expect, it } from 'vitest';
 import { deriveSession, type GameSession } from '@/lib/games/session/session';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
-import { SEAT_COLORS } from '@/components/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
 import { gameOverView, LOSER_HEX, NEUTRAL_HEX, resultKeyOf } from '@/utils/games/results/game-over';
 
 const CH = 'channel-1';

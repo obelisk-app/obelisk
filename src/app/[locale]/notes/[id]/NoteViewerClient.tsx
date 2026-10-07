@@ -14,7 +14,7 @@ import { Link } from '@/i18n/navigation';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
 import NoteCard from '@/components/social/note/NoteCard';
-import ArticleReader from '@/components/social/article/ArticleCard';
+import ArticleReader from '@/components/social/article/ArticleReader';
 import type { ViewerTarget } from '@/services/social/identifier';
 import { useNoteViewer } from '@/hooks/social/viewer/useNoteViewer';
 

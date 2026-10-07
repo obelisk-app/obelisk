@@ -3,6 +3,7 @@
 import type { ChangeEvent } from 'react';
 import { CR_SIZES, type CRSizeKey } from '@/lib/games/chain-reaction/chain-reaction';
 import type { NewGameForm } from '@/hooks/games/new-game/useNewGameForm';
+import { takePickedFile } from '@/utils/media/upload/picked-file';
 
 /** Board sizes in the order the engine lists them. */
 const SIZE_KEYS = Object.keys(CR_SIZES) as CRSizeKey[];
@@ -14,9 +15,8 @@ const SIZE_KEYS = Object.keys(CR_SIZES) as CRSizeKey[];
  */
 export function useGameSetupOptions(form: NewGameForm) {
   const pickSave = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const file = takePickedFile(e.target);
     if (file) void form.loadSave(file);
-    e.target.value = '';
   };
   return { ...form, sizes: SIZE_KEYS, pickSave };
 }

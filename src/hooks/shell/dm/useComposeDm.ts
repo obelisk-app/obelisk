@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, type RefObject } from 'react';
 import { useNostrUserSearch } from '@/hooks/identity/useNostrUserSearch';
 import { recordNip05Resolution } from '@/services/identity/nip05-verify';
-import { clampActiveIndex, composeDmKeyAction, mergeUserHits } from '@/utils/shell/desktop/compose-dm';
+import { COMPOSE_DM_MAX_RESULTS, clampActiveIndex, composeDmKeyAction } from '@/utils/shell/desktop/compose-dm';
+import { mergeUserHits } from '@/utils/identity/user-hits';
 
 /**
  * The desktop "New message" search: the query, the merged people results,
@@ -30,7 +31,7 @@ export function useComposeDm({ onClose, onPicked, inputRef }: {
 
   useEffect(() => { inputRef.current?.focus(); }, [inputRef]);
 
-  const results = useMemo(() => mergeUserHits(directHit, nip05Hit, nostrResults), [directHit, nip05Hit, nostrResults]);
+  const results = useMemo(() => mergeUserHits(directHit, nip05Hit, nostrResults, COMPOSE_DM_MAX_RESULTS), [directHit, nip05Hit, nostrResults]);
   const selected = clampActiveIndex(active, results.length);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

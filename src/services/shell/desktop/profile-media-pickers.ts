@@ -1,5 +1,6 @@
 import type { Translate } from '@/i18n/keys';
 import { errorText } from '@/utils/errors/error-text';
+import { takePickedFile } from '@/utils/media/upload/picked-file';
 
 /**
  * The picture and banner pickers the generated-profile step gains in place
@@ -27,8 +28,7 @@ export function createFilePicker(
   input.accept = 'image/*';
   input.hidden = true;
   input.addEventListener('change', () => {
-    const file = input.files?.[0];
-    input.value = '';
+    const file = takePickedFile(input);
     if (file) onPick(file, label);
   });
   label.append(prompt, input);

@@ -8,7 +8,7 @@ import { ChannelRow } from '@/app/[locale]/app/mobile/screens/server/ChannelRow'
 import { ForumThreadChildRow } from '@/app/[locale]/app/mobile/screens/server/ForumThreadChildRow';
 import { group, message } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 
-vi.mock('@/components/chat/channel/ChannelContextMenu', () => ({
+vi.mock('@/components/chat/channel/ChannelActionSheet', () => ({
   ChannelActionSheet: ({ target, onClose }: { target: { name: string; hasUnread: boolean }; onClose: () => void }) => (
     <button data-testid="channel-sheet" data-name={target.name} data-unread={String(target.hasUnread)} onClick={onClose} />
   ),

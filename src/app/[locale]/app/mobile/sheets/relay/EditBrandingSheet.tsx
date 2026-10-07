@@ -2,7 +2,7 @@
 
 import { useId } from 'react';
 import { shortHost } from '@/utils/relay-url/url-host';
-import { useRelayBrandingForm } from '@/hooks/relay/useRelayBrandingForm';
+import { useRelayBrandingForm } from '@/hooks/relay/branding/useRelayBrandingForm';
 import { type RelayBranding } from '@/services/relay/relay-branding';
 import BlossomImageInput from '@/components/media/upload/BlossomImageInput';
 import { useTranslations } from 'next-intl';

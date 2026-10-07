@@ -1,7 +1,7 @@
 'use client';
 
 import type { Event as NostrEvent } from 'nostr-tools';
-import ArticleReader from '@/components/social/article/ArticleCard';
+import ArticleReader from '@/components/social/article/ArticleReader';
 import NoteThread from '@/components/social/note/NoteThread';
 
 /**

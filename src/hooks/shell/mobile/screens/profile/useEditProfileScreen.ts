@@ -6,6 +6,7 @@ import { useMyPubkey, useUserMetadata } from '@/services/nostr-bridge';
 import { useProfileEditorForm } from '@/hooks/chat/profile/useProfileEditorForm';
 import type { ScreenName } from '@/utils/shell/mobile/url-state';
 import { profileImageProblem } from '@/utils/identity/profile-image';
+import { takePickedFile } from '@/utils/media/upload/picked-file';
 
 type Go = (s: ScreenName, dir?: 'forward' | 'back') => void;
 type FileSetter = (file: File | null) => void;
@@ -42,9 +43,8 @@ export function useEditProfileScreen(go: Go) {
     setPreview(URL.createObjectURL(file));
   };
   const fromInput = (onFile: (file: File) => void) => (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const file = takePickedFile(e.target);
     if (file) onFile(file);
-    e.target.value = '';
   };
   const typed = (setFile: FileSetter, setPreview: PreviewSetter, setUrl: (v: string) => void) =>
     (value: string) => {

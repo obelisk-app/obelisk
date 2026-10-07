@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { RelayDot, RelayStats } from '@/components/settings/social-relays/RelayIndicators';
+import { RelayDot } from '@/components/settings/social-relays/RelayIndicators';
+import RelayStats from '@/components/settings/social-relays/RelayStats';
 import type { RelayStatus } from '@/services/social/relay-status';
 
 const status = (over: Partial<RelayStatus>): RelayStatus => ({ state: 'connected', latencyMs: 42, notes: 3, ...over } as RelayStatus);

@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import type { GameState } from 'vesta';
 import type { VestaAction } from '@/lib/games/vesta/definition';
-import type { PickMode } from '@/components/games/vesta/pick-mode';
+import type { PickMode } from '@/utils/games/vesta/pick-mode';
 import type { VestaTurn } from '@/hooks/games/vesta/useVestaTurn';
 import { togglePickMode } from '@/utils/games/vesta/vesta-actions';
 import { handCards } from '@/utils/games/vesta/vesta-hand';

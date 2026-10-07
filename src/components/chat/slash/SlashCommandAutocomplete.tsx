@@ -6,14 +6,6 @@ import { useSlashCommandAutocomplete } from '@/hooks/chat/slash/useSlashCommandA
 import { SlashRailItem } from './SlashRailItem';
 import { SlashSectionGroup } from './SlashSectionGroup';
 
-export {
-  SLASH_COMMANDS,
-  type BotProfiles,
-  type SlashCommand,
-  type SlashCommandParam,
-  type SlashCommandSection,
-} from '@/utils/chat/slash/slash-commands';
-
 interface Props {
   /** Sections to list (already narrowed by `filter`). */
   sections: SlashCommandSection[];

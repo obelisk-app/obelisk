@@ -25,9 +25,6 @@ import { StickerImg } from './StickerImg';
 import { WelcomeBanner } from './WelcomeBanner';
 import { useMessageContent } from '@/hooks/chat/message/useMessageContent';
 
-export { autolinkLabel } from '@/utils/message-text/autolink-label';
-export { VoiceMessage } from './VoiceMessage';
-
 export default function MessageContent({
   content,
   messageId,

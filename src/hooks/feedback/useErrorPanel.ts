@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { createTranslator } from 'next-intl';
 import { clearAllClientCacheExceptSession } from '@/services/local-data/cache-clear';
 import { errorCodeOf } from '@/utils/errors/codes';
+import { errorPanelDetail, errorPanelHome, readPanelLocale, type PanelLocale } from '@/utils/feedback/error-panel';
 import en from '@/i18n/messages/en/errors.json';
 import es from '@/i18n/messages/es/errors.json';
 import pt from '@/i18n/messages/pt/errors.json';
@@ -14,26 +15,7 @@ import pt from '@/i18n/messages/pt/errors.json';
  * provider, a store or the bridge.
  */
 
-export type PanelLocale = 'en' | 'es' | 'pt';
-
 const MESSAGES = { en, es, pt } satisfies Record<PanelLocale, typeof en>;
-
-/** Locale off `<html lang>`, set by the root layout, no provider needed. */
-export function readPanelLocale(): PanelLocale {
-  if (typeof document === 'undefined') return 'en';
-  const lang = document.documentElement.lang;
-  return lang === 'es' || lang === 'pt' ? lang : 'en';
-}
-
-/** The message and digest, one per line, for the details block. */
-export function errorPanelDetail(error: (Error & { digest?: string }) | undefined): string {
-  return [error?.message, error?.digest && `digest: ${error.digest}`].filter(Boolean).join('\n');
-}
-
-/** Where "home" goes: the bare landing for English, the locale prefix otherwise. */
-export function errorPanelHome(locale: PanelLocale): string {
-  return locale === 'en' ? '/' : `/${locale}`;
-}
 
 /** `<html lang>` is fixed for the life of the document: nothing to watch. */
 const subscribeToNothing = () => () => {};

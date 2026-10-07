@@ -1,6 +1,6 @@
 'use client';
 
-import { ChannelActionSheet } from '@/components/chat/channel/ChannelContextMenu';
+import { ChannelActionSheet } from '@/components/chat/channel/ChannelActionSheet';
 import { useChannelRow } from '@/hooks/shell/mobile/screens/server/useChannelRow';
 import { ChannelRowBody, type ChannelRowProps } from './ChannelRowBody';
 

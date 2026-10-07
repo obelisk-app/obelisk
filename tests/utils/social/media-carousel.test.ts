@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { carouselStills, slideAspectRatio, slideAt, wrapIndex } from '@/utils/social/media-carousel';
+import { carouselStills, slideAspectRatio, slideAt } from '@/utils/social/media-carousel';
 
 describe('slideAt', () => {
   it('rounds to the nearest slide and survives a zero-width track', () => {
@@ -19,15 +19,6 @@ describe('carouselStills', () => {
 
   it('drops a video known only by its extension, as the slide does', () => {
     expect(carouselStills([{ url: 'https://x/clip.mp4' }, { url: 'https://x/a.jpg' }])).toEqual(['https://x/a.jpg']);
-  });
-});
-
-describe('wrapIndex', () => {
-  it('wraps both ways and keeps a closed lightbox closed', () => {
-    expect(wrapIndex(2, 1, 3)).toBe(0);
-    expect(wrapIndex(0, -1, 3)).toBe(2);
-    expect(wrapIndex(1, 1, 3)).toBe(2);
-    expect(wrapIndex(null, 1, 3)).toBeNull();
   });
 });
 

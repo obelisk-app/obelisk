@@ -1,8 +1,5 @@
 import type { RelayState, RelayStatus } from '@/services/social/relay-status';
 
-/** The latency and note count beside the dot live in their own file; importers keep this path. */
-export { default as RelayStats } from './RelayStats';
-
 const DOT_CLASS: Record<RelayState, string> = {
   connected: 'bg-lc-green',
   connecting: 'bg-amber-400 animate-pulse',

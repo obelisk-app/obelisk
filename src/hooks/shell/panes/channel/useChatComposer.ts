@@ -2,8 +2,8 @@
 
 import { useImperativeHandle, useRef, type ChangeEvent, type ForwardedRef, type SyntheticEvent } from 'react';
 import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
-import type { MediaPickerTab } from '@/components/chat/picker/MessageMediaPicker';
-import type { PickedCustomEmoji } from '@/components/chat/picker/EmojiPicker';
+import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
+import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
 import { useChannelComposer, type ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 import { useDismiss } from '@/hooks/common/useDismiss';
 

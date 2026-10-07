@@ -3,7 +3,7 @@
  * rates read, and the most of a resource a trade may ask for.
  */
 import type { TradeResource } from 'vesta';
-import { RESOURCES, RESOURCE_EMOJI } from '@/components/games/vesta/resources';
+import { RESOURCES, RESOURCE_EMOJI } from '@/utils/games/vesta/resources';
 
 /** The take side of a trade is capped here (the bank's whole stock of one resource). */
 export const TRADE_TAKE_MAX = 19;

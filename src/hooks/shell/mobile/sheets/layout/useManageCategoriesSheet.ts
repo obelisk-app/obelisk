@@ -2,7 +2,7 @@ import { useMemo, type KeyboardEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { type ChannelLayout } from '@/services/relay/channel-layout';
-import { useChannelLayoutEditor } from '@/hooks/relay/useChannelLayoutEditor';
+import { useChannelLayoutEditor } from '@/hooks/relay/channel-layout/useChannelLayoutEditor';
 import { categoryLabel } from '@/utils/relay/category-label';
 import { categoryOptions } from '@/utils/shell/mobile/category-options';
 import { indexById } from '@/utils/shell/mobile/channel-list';

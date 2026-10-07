@@ -23,8 +23,6 @@ import { useNoteDraft, type ComposerMode } from '@/hooks/social/composer/useNote
 import ErrorState from '@/components/ui/feedback/ErrorState';
 import FileInput from '@/components/ui/forms/FileInput';
 
-export type { ComposerMode };
-
 export default function NoteComposer({
   mode = { kind: 'note' },
   onPublished,

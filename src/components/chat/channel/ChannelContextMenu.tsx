@@ -21,9 +21,6 @@ import { AtIcon, BellIcon, BellOffIcon, CheckCircleIcon, ChevronRightIcon, Clock
 import { MUTE_OPTIONS, NOTIFY_OPTIONS, type ChannelMenuTarget } from '@/utils/chat/channel/channel-menu-options';
 import { SubMenu } from './SubMenu';
 
-export type { ChannelMenuTarget } from '@/utils/chat/channel/channel-menu-options';
-export { ChannelActionSheet } from './ChannelActionSheet';
-
 export function ChannelContextMenu({
   target,
   x,

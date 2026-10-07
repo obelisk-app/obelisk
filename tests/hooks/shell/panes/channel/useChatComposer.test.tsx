@@ -7,7 +7,7 @@ import { groupFixture } from '@tests/support/mocks/nostr-bridge';
 import { useChatComposer, type ChatComposerProps } from '@/hooks/shell/panes/channel/useChatComposer';
 import type { ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 
-vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
+vi.mock('@/hooks/relay/operator/useBotCommands', () => ({ useBotCommands: () => [] }));
 
 const GROUP = groupFixture({ id: 'g', name: 'general' });
 

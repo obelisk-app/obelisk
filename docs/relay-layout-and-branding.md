@@ -54,10 +54,10 @@ src/services/relay/channel-layout.ts         subscribeLayout(relay, authors[], c
                                   publishLayout, applyLayout, relayOperatorAuthors
 src/services/relay/relay-branding.ts         subscribeBranding(relay, authors[], cb)
                                   publishBranding
-src/hooks/relay/                  useChannelLayout(relay, authors[]),
-                                  useRelayBranding(relay, authors[]),
-                                  useRelayRoles, useRelayEmojiSet,
-                                  useRelayOperatorPubkey(relay)
+src/hooks/relay/channel-layout/   useChannelLayout(relay, authors[]), the editor
+src/hooks/relay/branding/         useRelayBranding(relay, authors[]), the form
+src/hooks/relay/operator/         useRelayRoles, useRelayEmojiSet,
+                                  useRelayOperatorPubkey(relay), useRelayOperatorData
 src/app/[locale]/app/desktop/DesktopShell.tsx      Sidebar - gates the server settings gear
                                   and relay-wide modals
 ```

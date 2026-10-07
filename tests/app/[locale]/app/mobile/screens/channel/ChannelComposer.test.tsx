@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 
 vi.mock('@/services/nostr-bridge', async () => (await import('@tests/support/composer-mount')).composerBridgeMock());
-vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
+vi.mock('@/hooks/relay/operator/useBotCommands', () => ({ useBotCommands: () => [] }));
 
 import { ChannelComposer } from '@/app/[locale]/app/mobile/screens/channel/ChannelComposer';
 import { GROUP } from '@tests/support/composer-mount';

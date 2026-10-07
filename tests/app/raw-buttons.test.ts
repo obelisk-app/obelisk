@@ -39,5 +39,6 @@ describe('raw <button> in the desktop routes', () => {
     const total = perFile.reduce((n, r) => n + r.count, 0);
     expect(perFile.length).toBeGreaterThan(0);
     expect(total, JSON.stringify(perFile, null, 1)).toBeLessThanOrEqual(CEILING);
+    expect(CEILING, `only ${total} raw <button>s in the desktop routes now: set CEILING to ${total}`).toBe(total);
   });
 });

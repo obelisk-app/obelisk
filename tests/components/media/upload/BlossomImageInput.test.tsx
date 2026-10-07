@@ -5,7 +5,7 @@ const uploadToBlossom = vi.fn();
 
 vi.mock('@/services/media/blossom', () => ({ uploadToBlossom }));
 
-import { ChannelAppearanceInput } from '@/components/media/upload/BlossomImageInput';
+import ChannelAppearanceInput from '@/components/media/upload/ChannelAppearanceInput';
 import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */

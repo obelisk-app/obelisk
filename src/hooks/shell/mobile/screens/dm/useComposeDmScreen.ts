@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { npubToHex } from '@nostr-wot/data';
 import { useDirectMessages } from '@/services/nostr-bridge';
 import { useNostrUserSearch } from '@/hooks/identity/useNostrUserSearch';
-import { uniqueHits } from '@/utils/shell/mobile/dm-list';
+import { mergeUserHits } from '@/utils/identity/user-hits';
 
 /**
  * The phone new-message screen: recent conversations until two characters
@@ -14,7 +14,7 @@ export function useComposeDmScreen(selectPeer: (peer: string) => void) {
   const dms = useDirectMessages();
   const { directHit, nip05Hit, nostrResults, loading } = useNostrUserSearch(query);
   const recent = useMemo(() => Object.keys(dms).slice(0, 20), [dms]);
-  const results = useMemo(() => uniqueHits([directHit, nip05Hit, ...nostrResults]), [directHit, nip05Hit, nostrResults]);
+  const results = useMemo(() => mergeUserHits(directHit, nip05Hit, nostrResults), [directHit, nip05Hit, nostrResults]);
   const decoded = npubToHex(query);
   return {
     query,

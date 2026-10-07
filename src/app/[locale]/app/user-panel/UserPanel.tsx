@@ -1,22 +1,9 @@
 'use client';
 
-import type { SettingsTab } from '../settings/SettingsSections';
+import type { SettingsSection } from '@/utils/settings/open-settings';
 import { UserProfileCard } from './UserProfileCard';
 import { UserSettingsModal } from './UserSettingsModal';
 import { panelPositionStyle, useUserPanel, type PanelAnchor } from '@/hooks/shell/user-panel/useUserPanel';
-
-// The sections live in `./settings`; re-exported so existing importers of
-// this module keep working.
-export {
-  AdvancedSettingsSection,
-  AppearanceSettingsSection,
-  GeneralSettingsSection,
-  NotificationsSettingsSection,
-  PreferencesPanel,
-  PrivacySettingsSection,
-  RelaysSettingsSection,
-  type SettingsTab,
-} from '../settings/SettingsSections';
 
 interface UserPanelProps {
   pubkey: string;
@@ -32,7 +19,7 @@ interface UserPanelProps {
    * wants - the relay block lives there, and the panel otherwise always
    * opens on the profile tab.
    */
-  initialTab?: SettingsTab | 'preferences';
+  initialTab?: SettingsSection | 'preferences';
 }
 
 export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, initialEditing = false, initialTab = 'profile' }: UserPanelProps) {

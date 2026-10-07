@@ -37,35 +37,17 @@ const NEXT_CONVENTIONS = new Set([
   'sitemap', 'robots', 'manifest', 'opengraph-image', 'twitter-image', 'icon', 'apple-icon',
 ]);
 
-const GAMES_BRANCH = 'owned by another branch in round 18 (on-demand loading of the games registry and game components); move it once that lands';
-
 /**
  * Non-component modules allowed to stay, and why. Shrink-only: an entry that
  * gets moved (or turns into a component) fails the "still needed" test until
- * it is deleted here, and `ALLOWED_CEILING` only ever goes down.
+ * it is deleted here, and `ALLOWED_CEILING` only ever goes down. Empty since
+ * round 30: the games' drawing and rule modules went to `src/utils/games/`,
+ * the input surface table to `src/utils/style/`.
  */
-const ALLOWED: Readonly<Record<string, string>> = {
-  'src/components/ui/forms/input-surface.ts':
-    "the ui kit's own variant table: the Tailwind class strings Input and TextArea share; pure style data, private to the kit (nothing outside src/components/ui imports it)",
-  'src/components/ui/forms/merge-refs.ts':
-    "a private building block of the ui kit: only the Input and TextArea primitives use it; it moves to src/utils the day anything outside the kit needs it",
-  'src/components/games/chain-reaction/cascade.ts': GAMES_BRANCH,
-  'src/components/games/chain-reaction/css-vars.ts': GAMES_BRANCH,
-  'src/components/games/chain-reaction/seat-colors.ts': GAMES_BRANCH,
-  'src/components/games/new-game/game-options.ts': GAMES_BRANCH,
-  'src/components/games/results/results-rows.ts': GAMES_BRANCH,
-  'src/components/games/stacker/block-paint.ts': GAMES_BRANCH,
-  'src/components/games/stacker/draw-well.ts': GAMES_BRANCH,
-  'src/components/games/stacker/piece-colors.ts': GAMES_BRANCH,
-  'src/components/games/vesta/board-pick.ts': GAMES_BRANCH,
-  'src/components/games/vesta/draw-board.ts': GAMES_BRANCH,
-  'src/components/games/vesta/palette.ts': GAMES_BRANCH,
-  'src/components/games/vesta/pick-mode.ts': GAMES_BRANCH,
-  'src/components/games/vesta/resources.ts': GAMES_BRANCH,
-};
+const ALLOWED: Readonly<Record<string, string>> = {};
 
 /** Lower this when an entry leaves `ALLOWED`; never raise it. */
-const ALLOWED_CEILING = 15;
+const ALLOWED_CEILING = 0;
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -122,6 +104,53 @@ export function exportsComponent(source: string, fileName = 'module.tsx'): boole
   return false;
 }
 
+/**
+ * What a module re-exports from another module, by name: `export { Panel }
+ * from './Panel'`, `export { default } from './Panel'`, `export * from
+ * './x'` (named `*`), and `export { Panel }` of an imported `Panel`. Type-only
+ * re-exports are left out: a component's props type may travel with it.
+ */
+export function reexportedValues(source: string, fileName = 'module.tsx'): string[] {
+  const file = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TSX);
+  const imported = new Set<string>();
+  for (const node of file.statements) {
+    if (!ts.isImportDeclaration(node) || !node.importClause || node.importClause.isTypeOnly) continue;
+    if (node.importClause.name) imported.add(node.importClause.name.text);
+    const bindings = node.importClause.namedBindings;
+    if (bindings && ts.isNamedImports(bindings)) {
+      for (const e of bindings.elements) if (!e.isTypeOnly) imported.add(e.name.text);
+    }
+  }
+  const names: string[] = [];
+  for (const node of file.statements) {
+    if (!ts.isExportDeclaration(node) || node.isTypeOnly) continue;
+    if (!node.exportClause) {
+      names.push('*');
+      continue;
+    }
+    if (!ts.isNamedExports(node.exportClause)) {
+      names.push(node.exportClause.name.text);
+      continue;
+    }
+    for (const e of node.exportClause.elements) {
+      if (e.isTypeOnly) continue;
+      const local = (e.propertyName ?? e.name).text;
+      if (node.moduleSpecifier || imported.has(local)) names.push(e.name.text === 'default' ? local : e.name.text);
+    }
+  }
+  return names;
+}
+
+/**
+ * True when the module hands on a component it did not write: a PascalCase
+ * name, a default or a `*` re-exported from another module. Importers then
+ * reach the component through a second path, which is how the temporary
+ * re-exports of round 29 outlived the waves that needed them.
+ */
+export function reexportsComponent(source: string, fileName = 'module.tsx'): boolean {
+  return reexportedValues(source, fileName).some((name) => name === '*' || name === 'default' || PASCAL.test(name));
+}
+
 /** A `.tsx` file that renders or exports a component; never a `.ts` file. */
 export function isComponentModule(source: string, fileName: string): boolean {
   if (!/\.(tsx|jsx)$/.test(fileName)) return false;
@@ -155,6 +184,29 @@ function nonComponentModules(): string[] {
   return out.sort();
 }
 
+/**
+ * Component files (not an `index.ts` barrel) that re-export: any component
+ * anywhere, and outside the ui kit any value at all. A helper or constant is
+ * imported from its own module in `src/utils/` or `src/services/`. The ui
+ * kit keeps the helpers that were moved out of its primitives
+ * (`buttonClass`, `fieldNoteId`, ...) on their old paths, part of the kit's
+ * public surface.
+ */
+function reexportingFiles(): string[] {
+  const out: string[] = [];
+  for (const dir of GUARDED) {
+    for (const path of sourceFiles(join(ROOT, dir))) {
+      const file = relative(ROOT, path).split(sep).join('/');
+      if (/\/index\.tsx?$/.test(file)) continue;
+      const source = readFileSync(path, 'utf8');
+      const names = reexportedValues(source, file);
+      if (names.length === 0) continue;
+      if (reexportsComponent(source, file) || !file.startsWith('src/components/ui/')) out.push(`${file}: ${names.join(', ')}`);
+    }
+  }
+  return out.sort();
+}
+
 describe('component folders hold components only', () => {
   const found = nonComponentModules();
 
@@ -172,6 +224,23 @@ describe('component folders hold components only', () => {
     expect(stale).toEqual([]);
     expect(Object.keys(ALLOWED).length).toBeLessThanOrEqual(ALLOWED_CEILING);
     for (const reason of Object.values(ALLOWED)) expect(reason.length).toBeGreaterThan(20);
+  });
+
+  it('has no component file that re-exports another component, nor a helper outside the ui kit', () => {
+    expect(reexportingFiles()).toEqual([]);
+  });
+
+  it('tells a re-export from a component of its own', () => {
+    expect(reexportsComponent("export { Panel } from './Panel';")).toBe(true);
+    expect(reexportsComponent("export { default } from './ArticleReader';")).toBe(true);
+    expect(reexportsComponent("export { default as RelayStats } from './RelayStats';")).toBe(true);
+    expect(reexportsComponent("export * from './Panel';")).toBe(true);
+    expect(reexportsComponent("import Pill from './Pill';\nexport { Pill };\nexport default function Room() { return null; }")).toBe(true);
+    expect(reexportsComponent("function Inner() { return null; }\nexport { Inner };")).toBe(false);
+    expect(reexportsComponent("export type { CarouselItem } from './carousel';")).toBe(false);
+    expect(reexportsComponent("export { type Props } from './x';\nexport default function Panel() { return null; }")).toBe(false);
+    expect(reexportedValues("export { buttonClass, type ButtonSize } from './button-class';")).toEqual(['buttonClass']);
+    expect(reexportsComponent("export { buttonClass } from './button-class';")).toBe(false);
   });
 
   it('knows a component from a helper, and a generic from an element', () => {

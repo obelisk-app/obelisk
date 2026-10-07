@@ -7,3 +7,10 @@ export function takePickedFile(input: HTMLInputElement): File | undefined {
   input.value = '';
   return file;
 }
+
+/** Every file a multiple-file input just handed over, then the input cleared, as `takePickedFile` does. */
+export function takePickedFiles(input: HTMLInputElement): File[] {
+  const files = Array.from(input.files ?? []);
+  input.value = '';
+  return files;
+}

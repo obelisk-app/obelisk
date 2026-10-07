@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { CANVAS_WIDTH, CANVAS_HEIGHT, type GameState, type HexCoord } from 'vesta';
-import { drawVestaBoard } from '@/components/games/vesta/draw-board';
-import { resolveBoardPick, validPositionKeys, type EdgePick, type VertexPick } from '@/components/games/vesta/board-pick';
-import type { PickMode } from '@/components/games/vesta/pick-mode';
+import { drawVestaBoard } from '@/utils/games/vesta/draw-board';
+import { resolveBoardPick, validPositionKeys, type EdgePick, type VertexPick } from '@/utils/games/vesta/board-pick';
+import type { PickMode } from '@/utils/games/vesta/pick-mode';
 import { boardPointFromClick } from '@/utils/games/vesta/board-click';
 
 export interface VestaBoardInput {

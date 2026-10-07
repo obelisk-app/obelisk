@@ -5,8 +5,8 @@ import type { GameState } from 'vesta';
 import { getRobbableVertices, computeRates } from 'vesta';
 import type { GameSession } from '@/lib/games/session/session';
 import { vesta, isRobberPending, isStealPending, type VestaAction } from '@/lib/games/vesta/definition';
-import type { PickMode } from '@/components/games/vesta/pick-mode';
-import { RESOURCES, type ResourceCounts } from '@/components/games/vesta/resources';
+import type { PickMode } from '@/utils/games/vesta/pick-mode';
+import { RESOURCES, type ResourceCounts } from '@/utils/games/vesta/resources';
 
 /**
  * Everything the Vesta table derives from the state for the seat acting at

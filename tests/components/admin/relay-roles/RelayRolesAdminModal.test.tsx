@@ -103,7 +103,10 @@ describe('RelayRolesAdminModal', () => {
   });
 
   it('grants and revokes a role for one member', async () => {
-    const publish = vi.spyOn(roles, 'publishRoleHolders').mockResolvedValue(undefined);
+    // Each publish settles only when the test says so, so the order is fixed.
+    let settle = () => {};
+    const publish = vi.spyOn(roles, 'publishRoleHolders')
+      .mockImplementation(() => new Promise<void>((resolve) => { settle = resolve; }));
     renderLocalized(<RelayRolesAdminModal relayUrl={RELAY} roles={SAVED} onClose={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: '1 member' }));
@@ -112,7 +115,14 @@ describe('RelayRolesAdminModal', () => {
 
     await waitFor(() => expect(publish).toHaveBeenCalledWith(RELAY, 'mod', [ALICE, BOB]));
 
-    fireEvent.click(within(panel).getByRole('button', { name: /^Revoke Moderator from/ }));
+    // The grant's publish keeps every holder button disabled until it settles,
+    // and a click before that is dropped: wait for the button to come back.
+    const revoke = within(panel).getByRole('button', { name: /^Revoke Moderator from/ });
+    expect(revoke).toBeDisabled();
+    settle();
+    await waitFor(() => expect(revoke).toBeEnabled());
+    fireEvent.click(revoke);
+    settle();
 
     await waitFor(() => expect(publish).toHaveBeenLastCalledWith(RELAY, 'mod', []));
   });

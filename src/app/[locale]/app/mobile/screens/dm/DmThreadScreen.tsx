@@ -14,7 +14,8 @@ import { markAt } from '@/utils/shell/mobile/dm-list';
 import { DmThreadEntry } from './DmThreadEntry';
 import BackButton from '../../chrome/BackButton';
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { DmProtocolNotice, DmProtocolSwitch } from '../../../dm/DmProtocolSwitch';
+import { DmProtocolSwitch } from '../../../dm/DmProtocolSwitch';
+import { DmProtocolNotice } from '../../../dm/DmProtocolNotice';
 import { useDmProtocolChoice } from '@/hooks/shell/dm/useDmProtocolChoice';
 import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
 

@@ -4,8 +4,6 @@ import { useTranslations } from 'next-intl';
 import type { SlashCommand } from '@/utils/chat/slash/slash-commands';
 import { scaffoldSlots } from '@/utils/chat/slash/slash-scaffold';
 
-export { activeParamIndex, scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/utils/chat/slash/slash-scaffold';
-
 interface Props {
   command: SlashCommand;
   content: string;

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 
 vi.mock('@/services/nostr-bridge', async () => (await import('@tests/support/composer-mount')).composerBridgeMock());
-vi.mock('@/hooks/relay/useBotCommands', () => ({ useBotCommands: () => [] }));
+vi.mock('@/hooks/relay/operator/useBotCommands', () => ({ useBotCommands: () => [] }));
 
 import { ChatComposer } from '@/app/[locale]/app/panes/channel/ChatComposer';
 import { COMPOSER_ALICE, GROUP } from '@tests/support/composer-mount';

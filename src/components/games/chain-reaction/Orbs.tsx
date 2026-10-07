@@ -1,4 +1,4 @@
-import type { CSSVars } from './css-vars';
+import type { CSSVars } from '@/utils/games/chain-reaction/css-vars';
 
 /** One to three glowing spheres in a cell; two or more orbit when the cell is close to bursting. */
 export default function Orbs({ count, hex, orbit, orb }: { count: number; hex: string; orbit: boolean; orb: number }) {

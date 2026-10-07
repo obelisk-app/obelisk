@@ -4,9 +4,9 @@ import type { MemberInfo } from '@/utils/message-text/mentions';
 import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import type { SlashFilter, SlashSection } from '@/services/relay/bot-commands';
-import type { BotProfiles, SlashCommand } from '@/components/chat/slash/SlashCommandAutocomplete';
-import type { MediaPickerTab } from '@/components/chat/picker/MessageMediaPicker';
-import type { PickedCustomEmoji } from '@/components/chat/picker/EmojiPicker';
+import type { BotProfiles, SlashCommand } from '@/utils/chat/slash/slash-commands';
+import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
+import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
 
 /**
  * What a panel-level drop zone needs from the composer it wraps: the drop

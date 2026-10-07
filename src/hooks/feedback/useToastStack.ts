@@ -1,13 +1,6 @@
 import { useEffect, type MouseEvent } from 'react';
 import { useToastStore, type Toast } from '@/store/feedback/toast';
-
-/** How long a toast stays up. */
-export const TOAST_AUTO_DISMISS_MS = 5000;
-
-/** The time a toast has left, counted from when it was pushed, never negative. */
-export function toastRemainingMs(createdAt: number, now: number): number {
-  return Math.max(0, TOAST_AUTO_DISMISS_MS - (now - createdAt));
-}
+import { toastRemainingMs } from '@/utils/feedback/toast';
 
 /**
  * The toast stack's view model: the toasts, each dismissed on its own

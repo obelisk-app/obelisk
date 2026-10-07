@@ -28,7 +28,7 @@ import { useTranslations } from 'next-intl';
 import { MESSAGE_INPUT_PROPS } from '@/utils/chat/composer/message-input-props';
 import Input from '@/components/ui/forms/Input';
 import MessageMediaPicker from '../../picker/MessageMediaPicker';
-import { FileDropZone } from '../../composer/ComposerActions';
+import { FileDropZone } from '../../composer/FileDropZone';
 import { useDmComposer } from '@/hooks/chat/dm/composer/useDmComposer';
 import { DmPendingFiles } from './DmPendingFiles';
 import { DmVoiceDraft } from './DmVoiceDraft';

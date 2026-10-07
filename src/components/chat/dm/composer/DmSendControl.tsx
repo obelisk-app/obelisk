@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { VoiceNoteButton } from '../../composer/ComposerActions';
+import { VoiceNoteButton } from '../../composer/VoiceNoteButton';
 import type { DmComposerState } from '@/hooks/chat/dm/composer/useDmComposer';
 import IconButton from '@/components/ui/buttons/IconButton';
 

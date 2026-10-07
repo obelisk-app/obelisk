@@ -1,7 +1,8 @@
 'use client';
 
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { avatarHue, avatarInitials, hideBrokenImage } from '@/utils/shell/desktop/avatar';
+import { avatarHue, avatarInitials } from '@/utils/shell/desktop/avatar';
+import { hideBrokenImage } from '@/utils/media/remote/hide-broken-image';
 
 export function Avatar({ pubkey, size, picture }: { pubkey: string; size: number; picture: string | null }) {
   const px = `${size * 4}px`;

@@ -31,8 +31,6 @@ import type { ProfileAppearanceValue } from '@/utils/settings/profile-image';
 import ProfileUrlField from './ProfileUrlField';
 import PencilIcon from './PencilIcon';
 
-export { MAX_IMAGE_BYTES, validateImage, type ProfileAppearanceValue } from '@/utils/settings/profile-image';
-
 export type ImagePick = {
   /** The chosen file, or null when the user typed a URL instead. */
   file: File | null;
@@ -140,4 +138,3 @@ export default function ProfileAppearanceEditor({
     </div>
   );
 }
-

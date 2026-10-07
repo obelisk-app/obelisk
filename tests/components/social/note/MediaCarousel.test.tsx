@@ -161,6 +161,20 @@ describe('video slides', () => {
     expect(screen.getByText('2 / 3')).toBeInTheDocument();
   });
 
+  it('works the lightbox from the keyboard, as chat images do: arrows step, Escape closes', () => {
+    // The same Lightbox in chat closes on Escape and steps on the arrows; in
+    // the feed it ignored the keyboard, so a keyboard user could not leave it.
+    renderLocalized(<MediaCarousel items={[image(1), image(2), image(3)]} />);
+    fireEvent.click(screen.getAllByTestId('carousel-image')[0]);
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('lightbox')).not.toBeInTheDocument();
+  });
+
   it('zooms a lone image too, and closes', () => {
     renderLocalized(<MediaCarousel items={[image(1)]} />);
     fireEvent.click(screen.getByTestId('carousel-image'));

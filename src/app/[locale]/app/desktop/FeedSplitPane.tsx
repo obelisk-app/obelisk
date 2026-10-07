@@ -2,7 +2,7 @@
 
 import FeedScreen from '@/components/social/FeedScreen';
 import { canRestore } from '@/utils/shell/desktop/feed-pane';
-import { FeedPaneActions } from '../panes/reader/ReaderPane';
+import { FeedPaneActions } from '../panes/reader/FeedPaneActions';
 import { ResizablePane } from './ResizablePane';
 import { FEED_PANE_KEY } from '@/utils/shell/desktop/desktop-layout';
 import type { FeedPaneControls } from '@/hooks/shell/desktop/useDesktopLayout';

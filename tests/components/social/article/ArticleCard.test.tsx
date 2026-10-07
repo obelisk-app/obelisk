@@ -40,7 +40,9 @@ beforeEach(() => {
   highlightMocks.fetchArticleHighlights.mockResolvedValue([]);
 });
 
-import ArticleReader, { ArticleCard, articleMeta, readingMinutes } from '@/components/social/article/ArticleCard';
+import { ArticleCard } from '@/components/social/article/ArticleCard';
+import ArticleReader from '@/components/social/article/ArticleReader';
+import { articleMeta, readingMinutes } from '@/utils/social/article-meta';
 
 const article = (over: Partial<NostrEvent> = {}): NostrEvent => ({
   id: 'a'.repeat(64),

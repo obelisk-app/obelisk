@@ -38,8 +38,6 @@ import { loginSignerStorage } from '@/services/login/signer-storage';
 import { Nip46SignerDeepLink } from '@/hooks/shell/login/useNip46SignerDeepLink';
 import { useLoginFlow } from '@/hooks/shell/login/useLoginFlow';
 
-export { isTransientNip46Error, signerAppHref } from '@/utils/nip46/signer-link';
-
 const NIP46_PERMS = OBELISK_NIP46_PERMISSIONS;
 
 const NIP46_METADATA = {

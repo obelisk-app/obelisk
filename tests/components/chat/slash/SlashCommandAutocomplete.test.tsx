@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import SlashCommandAutocomplete, { SLASH_COMMANDS } from '@/components/chat/slash/SlashCommandAutocomplete';
+import SlashCommandAutocomplete from '@/components/chat/slash/SlashCommandAutocomplete';
+import { SLASH_COMMANDS } from '@/utils/chat/slash/slash-commands';
 import { gameCatalog } from '@/lib/games/core/catalog';
 import { LocaleProvider, translator } from '@tests/support/intl';
 import { commandDescription } from '@/utils/chat/slash/slash-commands';

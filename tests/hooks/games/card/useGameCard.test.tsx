@@ -12,7 +12,7 @@ vi.mock('@/services/games/cache', () => ({ seedGameFromCache }));
 import { RESOLVE_GRACE_MS, useGameCard } from '@/hooks/games/card/useGameCard';
 import { useGamesStore } from '@/store/games';
 import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
-import { SEAT_COLORS } from '@/components/games/chain-reaction/seat-colors';
+import { SEAT_COLORS } from '@/utils/games/chain-reaction/seat-colors';
 
 const CH = 'channel-1';
 const ID = 'a'.repeat(64);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useShootingStars } from '@/hooks/marketing/useShootingStars';
+import { useShootingStars } from '@/hooks/common/useShootingStars';
 
 interface ShootingStarsProps {
   /**
@@ -13,7 +13,7 @@ interface ShootingStarsProps {
   count?: number;
 }
 
-/** Lime streaks crossing the background; the animation is `src/hooks/marketing/shooting-stars-canvas.ts`. */
+/** Lime streaks crossing the background; the animation is `src/services/common/shooting-stars.ts`. */
 export default function ShootingStars({ contained = false, count = 5 }: ShootingStarsProps = {}) {
   const { canvasRef, mounted } = useShootingStars({ contained, count });
 

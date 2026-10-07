@@ -5,7 +5,7 @@ import { type JsGroup } from '@/services/nostr-bridge';
 import type { MessageKey } from '@/i18n/keys';
 import { useChannelSettingsForm } from '@/hooks/chat/channel/useChannelSettingsForm';
 import ForumTagsEditor from '@/components/chat/forum/ForumTagsEditor';
-import { ChannelAppearanceInput } from '@/components/media/upload/BlossomImageInput';
+import ChannelAppearanceInput from '@/components/media/upload/ChannelAppearanceInput';
 import { useTranslations } from 'next-intl';
 import { ManageMemberRowMobile } from './ManageMemberRowMobile';
 import Sheet from '@/components/ui/overlays/Sheet';

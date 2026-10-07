@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  scaffoldMentionSlotQuery,
-  scaffoldMentionSlotRange,
-} from '@/components/chat/slash/SlashCommandScaffold';
+import { scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/utils/chat/slash/slash-scaffold';
 import { scaffoldSlots } from '@/utils/chat/slash/slash-scaffold';
 import { SLASH_COMMANDS as COMMANDS } from '@/utils/chat/slash/slash-commands';
 
