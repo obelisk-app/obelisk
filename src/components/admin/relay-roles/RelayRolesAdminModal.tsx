@@ -11,7 +11,6 @@ import type { RelayRoles } from '@/services/relay/relay-roles';
 import { useRelayRolesDraft } from '@/hooks/admin/relay-roles/useRelayRolesDraft';
 import RoleRow from './RoleRow';
 
-
 /**
  * Operator-only editor for the relay's role ladder (NIP-78 kind 30078). The
  * draft and its actions live in `useRelayRolesDraft`; each role row, its
@@ -42,7 +41,7 @@ export default function RelayRolesAdminModal({
           <Input
             value={draft.newName}
             onChange={(event) => draft.setNewName(event.target.value)}
-            onKeyDown={(event) => { if (event.key === 'Enter') draft.addRole(); }}
+            onKeyDown={(event) => draft.addRoleOnEnter(event.key)}
             placeholder={t('admin.roles.newPlaceholder')}
             aria-label={t('admin.roles.newLabel')}
             maxLength={32}

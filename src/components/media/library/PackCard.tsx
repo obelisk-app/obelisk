@@ -7,6 +7,7 @@ import Card from '@/components/ui/layout/Card';
 import Chip from '@/components/ui/data/Chip';
 import Text from '@/components/ui/layout/Text';
 import { useTranslations } from 'next-intl';
+import { isFavoriteItem } from '@/utils/media/library/library-view';
 
 /** One pack in the library grid: a strip of its first items and its actions. */
 export default function PackCard({ pack, mine, favorite, itemFavorites, busy, server, serverSelected, onView, onOpenItem, onEdit, onDelete, onFavorite, onServer }: {
@@ -32,7 +33,7 @@ export default function PackCard({ pack, mine, favorite, itemFavorites, busy, se
         {pack.items.slice(0, 5).map((item) => (
           <button key={item.url} type="button" onClick={() => onOpenItem(item)} title={t('media.openActions')} aria-label={t('media.item.open', { name: item.name })} className="group relative flex h-14 min-w-0 flex-1 items-center justify-center rounded-lg bg-lc-dark p-1">
             <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
-            {!server && itemFavorites.some((saved) => saved.url === item.url) && <span className="absolute right-1 top-1 text-xs text-lc-green">★</span>}
+            {!server && isFavoriteItem(itemFavorites, item) && <span className="absolute right-1 top-1 text-xs text-lc-green">★</span>}
           </button>
         ))}
       </div>

@@ -94,4 +94,16 @@ describe('usePackEditor', () => {
     act(() => result.current.removeItem(0));
     expect(result.current.draft.items).toEqual([]);
   });
+
+  it('a picked file list is added, then the input is cleared to allow the same pick again', async () => {
+    mocks.uploadToBlossom.mockResolvedValueOnce('https://cdn/a.png');
+    const { result } = renderHook(() => usePackEditor(PACK, 'gif', vi.fn()), { wrapper: LocaleProvider });
+    const input = document.createElement('input');
+    input.type = 'file';
+    Object.defineProperty(input, 'files', { configurable: true, value: fileList([new File(['a'], 'a.png', { type: 'image/png' })]) });
+    const cleared = vi.spyOn(input, 'value', 'set');
+    await act(async () => { result.current.filesPicked(input); });
+    expect(cleared).toHaveBeenCalledWith('');
+    expect(result.current.draft.items.map((item) => item.url)).toEqual(['https://cdn/a.png']);
+  });
 });

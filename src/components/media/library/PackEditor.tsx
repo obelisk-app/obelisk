@@ -14,15 +14,7 @@ import Select from '@/components/ui/forms/Select';
 import { useTranslations } from 'next-intl';
 import { usePackEditor } from '@/hooks/media/library/usePackEditor';
 import type { EditablePack } from '@/utils/media/library/types';
-
-function KindOptions() {
-  const t = useTranslations();
-  return (
-    <>
-      <option value="emoji">{t('media.kind.emoji')}</option><option value="gif">{t('media.kind.gif')}</option><option value="sticker">{t('media.kind.sticker')}</option>
-    </>
-  );
-}
+import PackKindOptions from './PackKindOptions';
 
 /** Create or edit a pack: name, description, and one row per item. */
 export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
@@ -35,7 +27,7 @@ export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
   const inputRef = useRef<HTMLInputElement>(null);
   const {
     draft, setDraft, newItemKind, setNewItemKind, busy, error,
-    addFiles, save, updateItem, removeItem, addUrlItem,
+    filesPicked, save, updateItem, removeItem, addUrlItem,
   } = usePackEditor(pack, initialKind, onSaved);
 
   return (
@@ -47,7 +39,7 @@ export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
           <Input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder={t('mobile.field.description')} aria-label={t('media.packDescription')} />
         </div>
         <div className="my-4 flex flex-wrap items-end gap-2">
-          <FileInput ref={inputRef} multiple accept="image/*" aria-label={t('media.upload')} onChange={(event) => { void addFiles(event.target.files); event.target.value = ''; }} />
+          <FileInput ref={inputRef} multiple accept="image/*" aria-label={t('media.upload')} onChange={(event) => filesPicked(event.target)} />
           <Select
             size="md"
             value={newItemKind}
@@ -55,7 +47,7 @@ export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
             label={t('media.newItemsAre')}
             aria-label={t('media.newItemType')}
           >
-            <KindOptions />
+            <PackKindOptions />
           </Select>
           <Button variant="outline" tone="accent" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>{t('media.upload')}</Button>
           <Button variant="secondary" size="lg" onClick={addUrlItem}>{t('media.addUrl')}</Button>
@@ -66,7 +58,7 @@ export default function PackEditor({ pack, initialKind, onClose, onSaved }: {
               <div className="flex h-12 w-12 items-center justify-center rounded bg-lc-black p-1">{item.url && <MediaThumb src={item.url} alt="" className="max-h-full max-w-full object-contain" />}</div>
               <Input value={item.name} onChange={(event) => updateItem(index, { name: event.target.value })} placeholder={t('media.pack.shortcodePlaceholder')} aria-label={t('media.itemShortcode', { n: String(index + 1) })} />
               <Select size="md" className="w-full" value={item.kind} onChange={(event) => updateItem(index, { kind: event.target.value as JsMediaKind })} aria-label={t('media.itemType', { n: String(index + 1) })}>
-                <KindOptions />
+                <PackKindOptions />
               </Select>
               <Input value={item.url} onChange={(event) => updateItem(index, { url: event.target.value })} placeholder="https://…" aria-label={t('media.itemUrl', { n: String(index + 1) })} />
               <Button variant="ghost" tone="danger" size="xs" onClick={() => removeItem(index)}>{t('media.remove')}</Button>

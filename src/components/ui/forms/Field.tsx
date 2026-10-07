@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/utils/style/cn';
 
+export { fieldNoteId } from '@/utils/style/field-note';
+
 export interface FieldProps {
   /** The `id` of the control this label describes. */
   htmlFor: string;
@@ -35,9 +37,4 @@ export default function Field({ htmlFor, label, error, hint, className, children
       ) : null}
     </div>
   );
-}
-
-/** `aria-describedby` for a control wrapped by a Field that shows a note. */
-export function fieldNoteId(id: string, hasNote: boolean): string | undefined {
-  return hasNote ? `${id}-note` : undefined;
 }

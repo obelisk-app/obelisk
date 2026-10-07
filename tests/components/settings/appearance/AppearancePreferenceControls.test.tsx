@@ -73,4 +73,25 @@ describe('AppearancePreferenceControls', () => {
     expect(screen.getByTestId('appearance-bubble-animation').className).toBe('appearance-select');
     expect(screen.getByTestId('appearance-bubble-animation')).toHaveAccessibleName();
   });
+
+  it('keeps a half-typed colour as a draft, stores a whole one lowercased, and shows a reset', async () => {
+    const user = userEvent.setup();
+    const { default: AppearancePreferenceControls } = await import('@/components/settings/appearance/AppearancePreferenceControls');
+    const { getPreferences } = await import('@/services/preferences/preferences');
+    const { LocaleProvider } = await import('@tests/support/intl');
+    render(<LocaleProvider initialLocale="en"><AppearancePreferenceControls /></LocaleProvider>);
+
+    const before = getPreferences().accentColor;
+    const field = screen.getByTestId('appearance-accent-color');
+    await user.clear(field);
+    await user.type(field, '#12');
+    expect(field).toHaveValue('#12');
+    expect(getPreferences().accentColor).toBe(before);
+    await user.type(field, 'ABCD');
+    expect(getPreferences().accentColor).toBe('#12abcd');
+    expect(field).toHaveValue('#12abcd');
+
+    await user.click(screen.getByRole('button', { name: /reset appearance/i }));
+    expect(field).toHaveValue('#b4f953');
+  });
 });

@@ -44,4 +44,35 @@ describe('CallSettings', () => {
     expect(first).toHaveAttribute('aria-invalid', 'true');
     expect(first).toHaveClass('border-red-500');
   });
+
+  it('adds rows up to the cap, removes them down to one, resets to the defaults, and saves', () => {
+    renderLocalized(<CallSettings mobile />);
+    expect(screen.getByTestId('call-settings')).toHaveClass('settings-section');
+    const add = screen.getByRole('button', { name: 'Add relay' });
+    while (screen.getAllByTestId('call-relay-input').length < 4) fireEvent.click(add);
+    expect(add).toBeDisabled();
+    const removes = () => screen.getAllByRole('button', { name: /^Remove / });
+    while (screen.getAllByTestId('call-relay-input').length > 1) fireEvent.click(removes()[0]);
+    expect(removes()[0]).toBeDisabled();
+    fireEvent.change(screen.getByTestId('call-relay-input'), { target: { value: 'wss://only.example' } });
+    fireEvent.click(screen.getByTestId('call-relay-save'));
+    expect(getPreferences().callRelays).toEqual(['wss://only.example']);
+    expect(screen.getByRole('status')).toHaveTextContent('Saved');
+    fireEvent.click(screen.getByRole('button', { name: 'Reset to defaults' }));
+    expect(screen.getAllByTestId('call-relay-input').map((i) => (i as HTMLInputElement).value)).toEqual([...DEFAULT_CALL_RELAYS]);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('refuses an empty list and a relay with credentials', () => {
+    renderLocalized(<CallSettings />);
+    const inputs = screen.getAllByTestId('call-relay-input');
+    for (const input of inputs) fireEvent.change(input, { target: { value: '  ' } });
+    fireEvent.click(screen.getByTestId('call-relay-save'));
+    expect(screen.getByRole('status')).toHaveTextContent('Only wss://');
+    fireEvent.change(inputs[0], { target: { value: 'wss://user:pw@relay.example' } });
+    expect(screen.queryByRole('status')).toBeNull();
+    fireEvent.click(screen.getByTestId('call-relay-save'));
+    expect(screen.getByRole('status')).toHaveTextContent('Only wss://');
+    expect(getPreferences().callRelays).toEqual([...DEFAULT_CALL_RELAYS]);
+  });
 });

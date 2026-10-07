@@ -1,9 +1,9 @@
-import { forwardRef, useId, useMemo, useRef, type ReactNode, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useId, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { useAutosizeTextArea, type TextAreaHeight } from '@/hooks/common/useAutosizeTextArea';
+import { useForwardedRef } from '@/hooks/common/useForwardedRef';
 import { cn } from '@/utils/style/cn';
 import Field, { fieldNoteId } from './Field';
 import { inputSurfaceClass, type InputSize } from './Input';
-import { mergeRefs } from './merge-refs';
 
 export type { TextAreaHeight } from '@/hooks/common/useAutosizeTextArea';
 
@@ -54,8 +54,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextAre
   ref,
 ) {
   const generated = useId();
-  const own = useRef<HTMLTextAreaElement | null>(null);
-  const setRef = useMemo(() => mergeRefs(ref, own), [ref]);
+  const { own, setRef } = useForwardedRef(ref);
   const handleInput = useAutosizeTextArea(own, height, rest.value, maxRows, onInput);
   const id = idProp ?? generated;
   const wrapped = label !== undefined || error !== undefined || hint !== undefined;

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, type ReactEventHandler } from 'react';
+import type { ReactEventHandler } from 'react';
+import { useMediaThumb } from '@/hooks/media/library/useMediaThumb';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 
 /**
@@ -19,9 +20,9 @@ export default function MediaThumb({ src, alt, className, onLoad, onError }: {
   onLoad?: ReactEventHandler<HTMLImageElement>;
   onError?: () => void;
 }) {
-  const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
+  const { broken, failed } = useMediaThumb(src, onError);
 
-  if (brokenSrc === src) {
+  if (broken) {
     return (
       <span
         data-testid="media-thumb-fallback"
@@ -43,10 +44,7 @@ export default function MediaThumb({ src, alt, className, onLoad, onError }: {
       alt={alt}
       className={className}
       onLoad={onLoad}
-      onError={() => {
-        setBrokenSrc(src);
-        onError?.();
-      }}
+      onError={failed}
     />
   );
 }

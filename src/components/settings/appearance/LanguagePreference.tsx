@@ -23,23 +23,20 @@ export default function LanguagePreference({ variant = 'desktop' }: Props) {
 
   const controls = (
     <div className="flex shrink-0 overflow-hidden rounded-full border border-lc-border bg-lc-black/60 p-0.5" data-testid="language-preference-control">
-      {OPTIONS.map((option) => {
-        const active = option.locale === locale;
-        return (
-          <button
-            key={option.locale}
-            type="button"
-            onClick={() => switchLocale(option.locale)}
-            aria-pressed={active}
-            data-testid={`language-option-${option.locale}`}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-              active ? 'bg-lc-green text-lc-black' : 'text-lc-muted hover:text-lc-white'
-            }`}
-          >
-            {option.label}
-          </button>
-        );
-      })}
+      {OPTIONS.map((option) => (
+        <button
+          key={option.locale}
+          type="button"
+          onClick={() => switchLocale(option.locale)}
+          aria-pressed={option.locale === locale}
+          data-testid={`language-option-${option.locale}`}
+          className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+            option.locale === locale ? 'bg-lc-green text-lc-black' : 'text-lc-muted hover:text-lc-white'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   );
 

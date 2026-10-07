@@ -1,30 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { downloadAccountBackup } from '@/services/settings/account-backup';
 import { useTranslations } from 'next-intl';
-import { errorText } from '@/utils/errors/error-text';
+import { useAccountBackupExport } from '@/hooks/settings/account/useAccountBackupExport';
 
 export default function AccountBackupExport({ mobile = false }: { mobile?: boolean }) {
   const t = useTranslations();
-  const [status, setStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
-  const [message, setMessage] = useState('');
-
-  const download = async () => {
-    setStatus('working');
-    setMessage('');
-    try {
-      const backup = await downloadAccountBackup();
-      const failed = backup.media.filter((item) => item.error).length;
-      setStatus('done');
-      setMessage(failed
-        ? t('settings.preferences.backup.partial', { count: String(failed) })
-        : t('settings.preferences.backup.done'));
-    } catch (error) {
-      setStatus('error');
-      setMessage(errorText(t, error, 'settings.preferences.backup.error'));
-    }
-  };
+  const { status, message, working, download } = useAccountBackupExport();
 
   return (
     <div>
@@ -33,13 +14,13 @@ export default function AccountBackupExport({ mobile = false }: { mobile?: boole
         className={mobile
           ? 'settings-row action'
           : 'flex w-full items-center justify-between rounded-lg border border-lc-border bg-lc-black p-4 text-left hover:border-lc-green/50 disabled:opacity-60'}
-        onClick={() => void download()}
-        disabled={status === 'working'}
+        onClick={download}
+        disabled={working}
         data-testid={mobile ? 'mobile-download-backup' : 'desktop-download-backup'}
       >
         <span style={{ minWidth: 0, flex: 1 }}>
           <span className={mobile ? '' : 'block text-sm font-semibold text-lc-white'}>
-            {status === 'working' ? t('settings.preferences.backup.working') : t('settings.preferences.backup.action')}
+            {working ? t('settings.preferences.backup.working') : t('settings.preferences.backup.action')}
           </span>
           <span className={mobile ? 'settings-row-meta muted' : 'mt-1 block text-xs text-lc-muted'} style={mobile ? { display: 'block', maxWidth: '100%', marginTop: 3 } : undefined}>
             {t('settings.preferences.backup.description')}

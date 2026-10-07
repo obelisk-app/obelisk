@@ -1,7 +1,7 @@
 'use client';
 
 import type { ButtonHTMLAttributes } from 'react';
-import { useCopyToClipboard } from '@/hooks/common/useCopyToClipboard';
+import { useCopyButton } from '@/hooks/common/useCopyButton';
 import Button from './Button';
 import { CheckIcon, CopyIcon } from '../icons/icons';
 
@@ -31,18 +31,15 @@ export interface CopyButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
  * place rather than claiming success.
  */
 export default function CopyButton({ text, label, copiedLabel, size = 'sm', onCopied, className, ...rest }: CopyButtonProps) {
-  const { copied, copy } = useCopyToClipboard();
+  const { done, copy } = useCopyButton(text, onCopied);
   const spec = SIZE[size];
-  const done = copied !== null;
   return (
     <Button
       variant="ghost"
       size={spec.button}
       aria-label={done ? copiedLabel : label}
       title={done ? copiedLabel : label}
-      onClick={() => {
-        void copy(text).then((ok) => { if (ok) onCopied?.(); });
-      }}
+      onClick={copy}
       className={className}
       {...rest}
     >

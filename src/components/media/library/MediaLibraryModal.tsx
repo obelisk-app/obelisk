@@ -2,30 +2,28 @@
 
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/buttons/Button';
-import Card from '@/components/ui/layout/Card';
-import Chip from '@/components/ui/data/Chip';
-import EmptyState from '@/components/ui/feedback/EmptyState';
 import FileInput from '@/components/ui/forms/FileInput';
 import Input from '@/components/ui/forms/Input';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import MediaLibraryShell from './MediaLibraryShell';
 import LibraryTabs from './LibraryTabs';
-import PackCard from './PackCard';
-import PackViewer from './PackViewer';
-import MediaItemMenu from './MediaItemMenu';
-import MediaItemGrid from './MediaItemGrid';
-import PackEditor from './PackEditor';
-import { newPack } from '@/utils/media/library/pack-utils';
-import { useMediaLibrary, type LibraryServer } from '@/hooks/media/library/useMediaLibrary';
+import LibraryActions from './LibraryActions';
+import MediaKindFilter from './MediaKindFilter';
+import ServerPackSummary from './ServerPackSummary';
+import FavoriteItemsSection from './FavoriteItemsSection';
+import PackGrid from './PackGrid';
+import MediaLibraryOverlays from './MediaLibraryOverlays';
+import LibraryPackViewer from './LibraryPackViewer';
+import LibraryItemMenu from './LibraryItemMenu';
+import { useMediaLibraryModal } from '@/hooks/media/library/useMediaLibraryModal';
+import type { LibraryServer } from '@/hooks/media/library/useMediaLibrary';
 import type { LibraryTab, MediaFilter, SelectedMedia } from '@/utils/media/library/types';
-
-const MEDIA_FILTERS: readonly MediaFilter[] = ['all', 'emoji', 'gif', 'sticker'];
 
 /**
  * Media packs: browse the marketplace, your own packs and favourites, or
  * (with `server`) pick the packs a relay offers. Opened with
- * `initialSelection`, it is just the item menu for that one item.
+ * `initialSelection`, it is just the item menu for that one item. State and
+ * actions come from `useMediaLibraryModal`.
  */
 export default function MediaLibraryModal({
   onClose,
@@ -43,75 +41,26 @@ export default function MediaLibraryModal({
   initialSelection?: SelectedMedia;
 }) {
   const t = useTranslations();
+  const vm = useMediaLibraryModal({ onClose, server, initialTab, initialKind, initialSelection });
   const uploadRef = useRef<HTMLInputElement>(null);
-  const launchedFromItem = !!initialSelection;
-  const {
-    myPubkey, packsByAddress, favorites, packs, visiblePacks,
-    tab, setTab, kindFilter, setKindFilter, query, setQuery,
-    editing, setEditing, viewingPack, setViewingPack, selectedMedia, setSelectedMedia,
-    busy, message, uploadFavorite, togglePack, toggleItem, deletePack, toggleServerPack,
-  } = useMediaLibrary({ server, initialTab, initialKind, initialSelection });
 
-  if (launchedFromItem && selectedMedia) {
-    return <MediaItemMenu
-      selection={selectedMedia}
-      favorite={favorites.items.some((item) => item.url === selectedMedia.item.url)}
-      busy={busy}
-      server={!!server}
-      onClose={onClose}
-      onViewPack={() => {
-        if (selectedMedia.pack) setViewingPack(selectedMedia.pack);
-        setSelectedMedia(null);
-      }}
-      onFavorite={() => {
-        toggleItem(selectedMedia.item);
-        onClose();
-      }}
-      onCreatePack={() => {
-        const draft = newPack(t('media.pack.newTitle'));
-        setEditing({ ...draft, title: t('media.pack.itemTitle', { name: selectedMedia.item.name }), items: [selectedMedia.item] });
-        setSelectedMedia(null);
-      }}
-    />;
-  }
-
-  if (launchedFromItem && viewingPack) {
-    return <PackViewer
-      pack={viewingPack}
-      favorite={favorites.packAddresses.includes(viewingPack.address)}
-      itemFavorites={favorites.items}
-      busy={busy}
-      server={!!server}
-      serverSelected={server?.emojiSet.packAddresses?.includes(viewingPack.address) ?? false}
-      closeOnEscape
-      onClose={onClose}
-      onOpenItem={(item) => setSelectedMedia({ pack: viewingPack, item })}
-      onFavorite={() => togglePack(viewingPack)}
-      onServer={() => void toggleServerPack(viewingPack).catch(() => {})}
-    />;
-  }
+  if (vm.mode === 'item' && vm.selectedMedia) return <LibraryItemMenu vm={vm} selection={vm.selectedMedia} />;
+  if (vm.mode === 'pack' && vm.viewingPack) return <LibraryPackViewer vm={vm} pack={vm.viewingPack} closeOnEscape />;
 
   return (
-    <MediaLibraryShell
-      embedded={embedded}
-      onClose={onClose}
-      closeOnEscape={!editing && !viewingPack && !selectedMedia}
-    >
-      {!server && <FileInput ref={uploadRef} accept="image/png,image/jpeg,image/webp,image/gif" aria-label={t('media.upload')} onChange={(event) => { void uploadFavorite(event.target.files?.[0]); event.target.value = ""; }} />}
+    <MediaLibraryShell embedded={embedded} onClose={onClose} closeOnEscape={vm.closeOnEscape}>
+      {!vm.isServer && <FileInput ref={uploadRef} accept="image/png,image/jpeg,image/webp,image/gif" aria-label={t('media.upload')} onChange={(event) => vm.uploadPicked(event.target)} />}
       <aside className="hidden w-52 shrink-0 flex-col border-r border-lc-border bg-lc-black/40 p-3 sm:flex">
-        <LibraryTabs tab={tab} setTab={setTab} server={!!server} />
-        {!server && <div className="mt-auto grid gap-2">
-          <Button variant="outline" tone="accent" size="sm" disabled={busy} onClick={() => uploadRef.current?.click()}>{t('media.upload')}</Button>
-          <Button size="lg" onClick={() => setEditing(newPack(t('media.pack.newTitle')))}>{t('media.createPack')}</Button>
-        </div>}
+        <LibraryTabs tab={vm.tab} setTab={vm.setTab} server={vm.isServer} />
+        {!vm.isServer && <LibraryActions busy={vm.busy} onUpload={() => uploadRef.current?.click()} onCreate={vm.createPack} className="mt-auto grid gap-2" />}
       </aside>
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
         <ModalHeader title={t('media.title')} subtitle={t('media.subtitle')} onClose={onClose} closeLabel={t('media.close')}>
           <Input
             type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            value={vm.query}
+            onChange={(event) => vm.setQuery(event.target.value)}
             placeholder={t('media.searchPlaceholder')}
             aria-label={t('media.searchPlaceholder')}
             className="w-36 sm:w-72"
@@ -119,119 +68,22 @@ export default function MediaLibraryModal({
         </ModalHeader>
 
         <div className="shrink-0 overflow-x-auto border-b border-lc-border p-2 sm:hidden">
-          <div className="flex min-w-max gap-1"><LibraryTabs tab={tab} setTab={setTab} server={!!server} mobile /></div>
+          <div className="flex min-w-max gap-1"><LibraryTabs tab={vm.tab} setTab={vm.setTab} server={vm.isServer} mobile /></div>
         </div>
 
-        {!server && <div className="grid shrink-0 grid-cols-2 gap-2 border-b border-lc-border p-2 sm:hidden">
-          <Button variant="outline" tone="accent" size="sm" disabled={busy} onClick={() => uploadRef.current?.click()}>{t('media.upload')}</Button>
-          <Button size="lg" onClick={() => setEditing(newPack(t('media.pack.newTitle')))}>{t('media.createPack')}</Button>
-        </div>}
+        {!vm.isServer && <LibraryActions busy={vm.busy} onUpload={() => uploadRef.current?.click()} onCreate={vm.createPack} className="grid shrink-0 grid-cols-2 gap-2 border-b border-lc-border p-2 sm:hidden" />}
 
-        <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-lc-border px-4 py-2" role="group" aria-label={t('media.filterByType')}>
-          {MEDIA_FILTERS.map((value) => (
-            <Chip key={value} onClick={() => setKindFilter(value)} state={kindFilter === value ? 'selected' : 'idle'}>
-              {t(`media.filter.${value}`)}
-            </Chip>
-          ))}
-        </div>
+        <MediaKindFilter value={vm.kindFilter} onChange={vm.setKindFilter} />
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {tab === "server" && server && (
-            <Card as="section" surface="translucent" padding="lg" data-testid="server-pack-summary" className="mb-5">
-              <h3 className="font-semibold text-lc-white">{t('media.serverPacks')}</h3>
-              <p className="mt-1 text-xs text-lc-muted">{t('media.serverPacksSelected', { count: (server.emojiSet.packAddresses ?? []).length })}</p>
-              <p className="mt-2 text-xs text-lc-muted">{t('media.serverPacksHelp')}</p>
-              {server.emojiSet.emojis.length > 0 && <p className="mt-2 text-xs text-amber-300">{t('media.legacyHelp')}</p>}
-            </Card>
-          )}
-
-          {tab === "favorites" && favorites.items.length > 0 && (
-            <section className="mb-5">
-              <h3 className="mb-2 text-sm font-semibold text-lc-white">{t('media.individualFavorites')}</h3>
-              <MediaItemGrid
-                items={favorites.items.filter((item) => kindFilter === "all" || item.kind === kindFilter)}
-                favorites={favorites.items}
-                onOpen={(item) => {
-                  const source = item.packAddress ? packsByAddress[item.packAddress] : packs.find((pack) => pack.items.some((value) => value.url === item.url));
-                  setSelectedMedia({ ...(source ? { pack: source } : {}), item });
-                }}
-                onFavorite={toggleItem}
-              />
-            </section>
-          )}
-
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {visiblePacks.map((pack) => (
-              <PackCard
-                key={pack.address}
-                pack={pack}
-                mine={pack.author === myPubkey}
-                favorite={favorites.packAddresses.includes(pack.address)}
-                itemFavorites={favorites.items}
-                busy={busy}
-                server={!!server}
-                serverSelected={server?.emojiSet.packAddresses?.includes(pack.address) ?? false}
-                onView={() => setViewingPack(pack)}
-                onOpenItem={(item) => setSelectedMedia({ pack, item })}
-                onEdit={() => setEditing(pack)}
-                onDelete={() => void deletePack(pack)}
-                onFavorite={() => togglePack(pack)}
-                onServer={() => void toggleServerPack(pack).catch(() => {})}
-              />
-            ))}
-          </div>
-          {visiblePacks.length === 0 && (
-            <EmptyState padding="none" className="py-16">
-              {t(tab === 'mine' ? 'media.empty.mine' : tab === 'favorites' ? 'media.empty.favorites' : 'media.empty.none')}
-            </EmptyState>
-          )}
+          {vm.tab === 'server' && vm.isServer && <ServerPackSummary count={vm.serverPackCount} legacyItems={vm.hasLegacyServerItems} />}
+          {vm.tab === 'favorites' && vm.favorites.items.length > 0 && <FavoriteItemsSection vm={vm} />}
+          <PackGrid vm={vm} />
         </div>
-        {message && <div className="shrink-0 border-t border-lc-border px-4 py-2 text-xs text-lc-green">{message}</div>}
+        {vm.message && <div className="shrink-0 border-t border-lc-border px-4 py-2 text-xs text-lc-green">{vm.message}</div>}
       </main>
 
-      {editing && !server && <PackEditor
-        pack={editing}
-        initialKind={kindFilter === "all" ? "sticker" : kindFilter}
-        onClose={() => setEditing(null)}
-        onSaved={async () => {
-          setEditing(null);
-          setTab("mine");
-        }}
-      />}
-      {viewingPack && <PackViewer
-        pack={viewingPack}
-        favorite={favorites.packAddresses.includes(viewingPack.address)}
-        itemFavorites={favorites.items}
-        busy={busy}
-        server={!!server}
-        serverSelected={server?.emojiSet.packAddresses?.includes(viewingPack.address) ?? false}
-        closeOnEscape={!selectedMedia}
-        onClose={launchedFromItem ? onClose : () => setViewingPack(null)}
-        onOpenItem={(item) => setSelectedMedia({ pack: viewingPack, item })}
-        onFavorite={() => togglePack(viewingPack)}
-        onServer={() => void toggleServerPack(viewingPack).catch(() => {})}
-      />}
-      {selectedMedia && <MediaItemMenu
-        selection={selectedMedia}
-        favorite={favorites.items.some((item) => item.url === selectedMedia.item.url)}
-        busy={busy}
-        server={!!server}
-        onClose={launchedFromItem ? onClose : () => setSelectedMedia(null)}
-        onViewPack={() => {
-          if (selectedMedia.pack) setViewingPack(selectedMedia.pack);
-          setSelectedMedia(null);
-        }}
-        onFavorite={() => {
-          toggleItem(selectedMedia.item);
-          if (launchedFromItem) onClose();
-          else setSelectedMedia(null);
-        }}
-        onCreatePack={() => {
-          const draft = newPack(t('media.pack.newTitle'));
-          setEditing({ ...draft, title: t('media.pack.itemTitle', { name: selectedMedia.item.name }), items: [selectedMedia.item] });
-          setSelectedMedia(null);
-        }}
-      />}
+      <MediaLibraryOverlays vm={vm} />
     </MediaLibraryShell>
   );
 }

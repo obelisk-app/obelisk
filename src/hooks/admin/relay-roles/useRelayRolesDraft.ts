@@ -109,6 +109,11 @@ export function useRelayRolesDraft(relayUrl: string, roles: RelayRoles) {
 
   const toggleExpanded = (id: string) => setExpanded(expanded === id ? null : id);
 
+  /** The new-role field adds the role on Enter. */
+  const addRoleOnEnter = (key: string) => {
+    if (key === 'Enter') addRole();
+  };
+
   return {
     draft,
     newName,
@@ -121,6 +126,7 @@ export function useRelayRolesDraft(relayUrl: string, roles: RelayRoles) {
     savedIds,
     dirty,
     addRole,
+    addRoleOnEnter,
     updateRole,
     move,
     removeRole,

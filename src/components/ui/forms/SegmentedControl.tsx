@@ -1,4 +1,5 @@
-import { useRef, type KeyboardEvent, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { useSegmentedControl } from '@/hooks/common/useSegmentedControl';
 import { cn } from '@/utils/style/cn';
 
 /** `content` sizes the bar to its options; `fill` stretches it and shares the width equally. */
@@ -22,15 +23,6 @@ export interface SegmentedControlProps<V extends string> {
   className?: string;
 }
 
-const NEXT_KEY: Record<string, (i: number, n: number) => number> = {
-  ArrowRight: (i, n) => (i + 1) % n,
-  ArrowDown: (i, n) => (i + 1) % n,
-  ArrowLeft: (i, n) => (i - 1 + n) % n,
-  ArrowUp: (i, n) => (i - 1 + n) % n,
-  Home: () => 0,
-  End: (_i, n) => n - 1,
-};
-
 /**
  * One switcher for the six tab bars that drew three different selected
  * looks. It is the stylesheet's `.lc-segment` pill (selected state keyed off
@@ -45,16 +37,7 @@ export default function SegmentedControl<V extends string>({
   fit = 'content',
   className,
 }: SegmentedControlProps<V>) {
-  const tabs = useRef<Array<HTMLButtonElement | null>>([]);
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const step = NEXT_KEY[e.key];
-    if (!step || options.length === 0) return;
-    e.preventDefault();
-    const current = Math.max(0, options.findIndex((o) => o.value === value));
-    const next = step(current, options.length);
-    onChange(options[next].value);
-    tabs.current[next]?.focus();
-  };
+  const { onKeyDown, tabRef } = useSegmentedControl(options, value, onChange);
   return (
     <div
       role="tablist"
@@ -62,25 +45,22 @@ export default function SegmentedControl<V extends string>({
       onKeyDown={onKeyDown}
       className={cn('lc-segment', fit === 'fill' && 'w-full', className)}
     >
-      {options.map((option, i) => {
-        const selected = option.value === value;
-        return (
-          <button
-            key={option.value}
-            ref={(node) => { tabs.current[i] = node; }}
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            tabIndex={selected ? 0 : -1}
-            title={option.title}
-            onClick={() => onChange(option.value)}
-            className={cn('lc-segment-item focus:outline-none focus-visible:ring-2 focus-visible:ring-lc-green/60', fit === 'fill' && 'flex-1 justify-center')}
-            data-testid={option.testId}
-          >
-            {option.label}
-          </button>
-        );
-      })}
+      {options.map((option, i) => (
+        <button
+          key={option.value}
+          ref={tabRef(i)}
+          type="button"
+          role="tab"
+          aria-selected={option.value === value}
+          tabIndex={option.value === value ? 0 : -1}
+          title={option.title}
+          onClick={() => onChange(option.value)}
+          className={cn('lc-segment-item focus:outline-none focus-visible:ring-2 focus-visible:ring-lc-green/60', fit === 'fill' && 'flex-1 justify-center')}
+          data-testid={option.testId}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   );
 }

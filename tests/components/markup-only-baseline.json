@@ -339,20 +339,6 @@
     "functions": 1,
     "components": 1
   },
-  "src/components/admin/relay-roles/RelayRolesAdminModal.tsx": {
-    "functions": 1
-  },
-  "src/components/admin/relay-roles/RoleEmojiField.tsx": {
-    "functions": 3
-  },
-  "src/components/admin/relay-roles/RoleMembers.tsx": {
-    "memos": 2,
-    "functions": 4,
-    "components": 2
-  },
-  "src/components/admin/relay-roles/RoleRow.tsx": {
-    "components": 1
-  },
   "src/components/call/DmCallButtons.tsx": {
     "functions": 1
   },
@@ -695,26 +681,6 @@
     "state": 3,
     "functions": 2
   },
-  "src/components/media/library/MediaItemGrid.tsx": {
-    "functions": 1
-  },
-  "src/components/media/library/MediaLibraryModal.tsx": {
-    "functions": 12
-  },
-  "src/components/media/library/MediaThumb.tsx": {
-    "functions": 1
-  },
-  "src/components/media/library/PackCard.tsx": {
-    "functions": 1
-  },
-  "src/components/media/library/PackEditor.tsx": {
-    "functions": 1,
-    "components": 1
-  },
-  "src/components/media/upload/BlossomImageInput.tsx": {
-    "functions": 3,
-    "components": 1
-  },
   "src/components/relay/RelayStatusPill.tsx": {
     "effects": 1,
     "memos": 1,
@@ -724,53 +690,6 @@
     "functions": 2
   },
   "src/components/seo/OgIcon.tsx": {
-    "functions": 1
-  },
-  "src/components/settings/account/AccountBackupExport.tsx": {
-    "functions": 1
-  },
-  "src/components/settings/account/DeveloperSignatureTest.tsx": {
-    "functions": 3
-  },
-  "src/components/settings/account/ProfileAppearanceEditor.tsx": {
-    "effects": 1,
-    "state": 2,
-    "functions": 5,
-    "components": 2
-  },
-  "src/components/settings/appearance/AppearancePreferenceControls.tsx": {
-    "functions": 1,
-    "components": 2
-  },
-  "src/components/settings/appearance/AppearancePreferencesRoot.tsx": {
-    "effects": 1
-  },
-  "src/components/settings/appearance/LanguagePreference.tsx": {
-    "functions": 1
-  },
-  "src/components/settings/notifications/CallSettings.tsx": {
-    "functions": 6,
-    "components": 2
-  },
-  "src/components/settings/notifications/NotificationSettings.tsx": {
-    "effects": 1,
-    "functions": 4
-  },
-  "src/components/settings/privacy/LocalDataPanel.tsx": {
-    "components": 2
-  },
-  "src/components/settings/privacy/MutedAndBlocked.tsx": {
-    "memos": 1,
-    "functions": 1,
-    "components": 1
-  },
-  "src/components/settings/privacy/WotSettings.tsx": {
-    "effects": 2
-  },
-  "src/components/settings/social-relays/RelayIndicators.tsx": {
-    "components": 1
-  },
-  "src/components/settings/social-relays/SocialRelayPresets.tsx": {
     "functions": 1
   },
   "src/components/social/article/ArticleCard.tsx": {
@@ -866,48 +785,6 @@
   },
   "src/components/social/widgets/WidgetCard.tsx": {
     "components": 1
-  },
-  "src/components/ui/buttons/Button.tsx": {
-    "functions": 4
-  },
-  "src/components/ui/buttons/CopyButton.tsx": {
-    "functions": 1
-  },
-  "src/components/ui/data/Table.tsx": {
-    "functions": 1
-  },
-  "src/components/ui/forms/Field.tsx": {
-    "functions": 1
-  },
-  "src/components/ui/forms/Input.tsx": {
-    "memos": 1,
-    "functions": 1
-  },
-  "src/components/ui/forms/InputEnd.tsx": {
-    "functions": 1
-  },
-  "src/components/ui/forms/SegmentedControl.tsx": {
-    "functions": 7
-  },
-  "src/components/ui/forms/Select.tsx": {
-    "functions": 1
-  },
-  "src/components/ui/forms/TextArea.tsx": {
-    "memos": 1
-  },
-  "src/components/ui/media/UserAvatar.tsx": {
-    "functions": 1
-  },
-  "src/components/ui/overlays/ConfirmDialog.tsx": {
-    "effects": 2,
-    "functions": 1,
-    "components": 1
-  },
-  "src/components/ui/overlays/PopoverPanel.tsx": {
-    "effects": 1
-  },
-  "src/components/ui/overlays/menu.tsx": {
-    "functions": 1
   },
   "src/components/voice/audio/BackgroundVoiceAudio.tsx": {
     "effects": 3,

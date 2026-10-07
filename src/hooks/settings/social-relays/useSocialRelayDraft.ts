@@ -13,10 +13,8 @@ import { getRelayStatuses, subscribeRelayStatus, watchRelays } from '@/services/
 
 export type SocialRelayDraftStatus = 'idle' | 'saved' | 'invalid' | 'importing' | 'import-empty';
 
-/** A draft row's key into the status map: trimmed, without a trailing slash. */
-export function relayKey(entry: string): string {
-  return entry.trim().replace(/\/$/, '');
-}
+import { relayKey } from '@/utils/settings/social-relays';
+export { relayKey } from '@/utils/settings/social-relays';
 
 /**
  * The editable copy of `preferences.socialRelays` behind SocialRelaySettings:

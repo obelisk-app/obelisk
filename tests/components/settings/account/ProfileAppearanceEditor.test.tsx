@@ -119,4 +119,35 @@ describe('ProfileAppearanceEditor', () => {
       expect(el).toHaveAttribute('aria-label');
     });
   });
+
+  it('previews a picked banner, and frees each preview when it is replaced, typed over or unmounted', () => {
+    let n = 0;
+    const create = vi.fn(() => `blob:preview-${++n}`);
+    const revoke = vi.fn();
+    const created = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
+    const revoked = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: create });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revoke });
+    try {
+      const { unmount } = render(
+        <LocaleProvider initialLocale="en">
+          <ProfileAppearanceEditor pubkey={PUBKEY} displayName="Alice" value={baseValue} onChange={vi.fn()} />
+        </LocaleProvider>,
+      );
+      const input = screen.getByLabelText('Change banner', { selector: 'input[type="file"]' });
+      fireEvent.change(input, { target: { files: [imageFile('a.png')] } });
+      expect(screen.getByTestId('edit-banner-tap').querySelector('img')).toHaveAttribute('src', 'blob:preview-1');
+      fireEvent.change(input, { target: { files: [imageFile('b.png')] } });
+      expect(revoke).toHaveBeenCalledWith('blob:preview-1');
+      expect(screen.getByTestId('edit-banner-tap').querySelector('img')).toHaveAttribute('src', 'blob:preview-2');
+      fireEvent.change(screen.getByTestId('banner-url'), { target: { value: 'https://example.com/b.png' } });
+      expect(revoke).toHaveBeenCalledWith('blob:preview-2');
+      fireEvent.change(screen.getByLabelText('Change profile picture', { selector: 'input[type="file"]' }), { target: { files: [imageFile('c.png')] } });
+      unmount();
+      expect(revoke).toHaveBeenCalledWith('blob:preview-3');
+    } finally {
+      if (created) Object.defineProperty(URL, 'createObjectURL', created); else delete (URL as { createObjectURL?: unknown }).createObjectURL;
+      if (revoked) Object.defineProperty(URL, 'revokeObjectURL', revoked); else delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
+    }
+  });
 });

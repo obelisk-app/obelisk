@@ -1,5 +1,8 @@
 import type { RelayState, RelayStatus } from '@/services/social/relay-status';
 
+/** The latency and note count beside the dot live in their own file; importers keep this path. */
+export { default as RelayStats } from './RelayStats';
+
 const DOT_CLASS: Record<RelayState, string> = {
   connected: 'bg-lc-green',
   connecting: 'bg-amber-400 animate-pulse',
@@ -43,24 +46,5 @@ export function RelayDot({ status, onRetry }: { status?: RelayStatus; onRetry?: 
       data-testid="relay-dot"
       data-state={state}
     />
-  );
-}
-
-/**
- * Latency and delivered-note count.
- *
- * The count is the number that actually answers "is this relay earning its
- * slot": a relay can be connected and contribute nothing.
- */
-export function RelayStats({ status }: { status?: RelayStatus }) {
-  if (!status) return null;
-  return (
-    <span
-      className="hidden shrink-0 items-center gap-2 font-mono text-[10px] text-lc-muted sm:flex"
-      data-testid="relay-stats"
-    >
-      {status.latencyMs !== null && <span>{status.latencyMs}ms</span>}
-      {status.notes > 0 && <span>{status.notes}</span>}
-    </span>
   );
 }

@@ -3,6 +3,8 @@ import Button from '../buttons/Button';
 import Spinner from '../feedback/Spinner';
 import { CloseIcon, EyeIcon, EyeOffIcon } from '../icons/icons';
 
+export { endSlotCount } from '@/utils/style/input-end-slots';
+
 /** `loading` shows a spinner at the end of the control and marks it busy. */
 export type InputStatus = 'idle' | 'loading';
 
@@ -40,11 +42,6 @@ export interface InputEndProps {
   onToggleReveal: () => void;
   onClear: () => void;
   suffix?: ReactNode;
-}
-
-/** How many controls the end slot will hold, so the input can pad for them. */
-export function endSlotCount(parts: { loading: boolean; clear: boolean; secret: boolean; suffix: boolean }): number {
-  return Number(parts.loading) + Number(parts.clear) + Number(parts.secret) + Number(parts.suffix);
 }
 
 /**

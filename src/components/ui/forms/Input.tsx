@@ -1,4 +1,4 @@
-import { forwardRef, useId, useMemo, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/utils/style/cn';
 import Field, { fieldNoteId } from './Field';
 import InputEnd, { endSlotCount, type InputClear, type InputSecret, type InputStatus } from './InputEnd';
@@ -10,7 +10,7 @@ import {
   type InputTone,
   type InputVariant,
 } from './input-surface';
-import { mergeRefs } from './merge-refs';
+import { useInputControl } from '@/hooks/common/useInputControl';
 
 export {
   inputSurfaceClass,
@@ -83,9 +83,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   ref,
 ) {
   const generated = useId();
-  const own = useRef<HTMLInputElement | null>(null);
-  const [revealed, setRevealed] = useState(false);
-  const setRef = useMemo(() => mergeRefs(ref, own), [ref]);
+  const { setRef, revealed, toggleReveal, onClear } = useInputControl(ref, clear);
   const id = idProp ?? generated;
   const wrapped = label !== undefined || error !== undefined || hint !== undefined;
   const isInvalid = Boolean(invalid) || Boolean(error);
@@ -137,11 +135,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
             clear={showClear ? clear : undefined}
             secret={secret}
             revealed={revealed}
-            onToggleReveal={() => setRevealed((v) => !v)}
-            onClear={() => {
-              clear?.onClear();
-              own.current?.focus();
-            }}
+            onToggleReveal={toggleReveal}
+            onClear={onClear}
             suffix={suffix}
           />
         )}

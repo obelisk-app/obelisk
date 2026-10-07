@@ -42,6 +42,7 @@ vi.mock('@/services/wot', async () => {
       on: () => () => {},
     },
     __wotState: state,
+    __store: store,
   };
 });
 
@@ -104,5 +105,37 @@ describe('WotSettings', () => {
     expect(screen.getByText('Lejos / sin resolver')).toBeInTheDocument();
     expect(screen.getByText('pendientes')).toBeInTheDocument();
     expect(screen.queryByText('Direct follow')).not.toBeInTheDocument();
+  });
+
+  it('starts the WoT probe on mount, rechecks on demand, and cannot be enabled without the extension', async () => {
+    const user = userEvent.setup();
+    const mod = await import('@/services/wot') as unknown as {
+      initializeWot: ReturnType<typeof vi.fn>; __store: { status: string; refreshStatus: ReturnType<typeof vi.fn> };
+    };
+    mod.__store.status = 'error';
+    const { default: WotSettings } = await import('@/components/settings/privacy/WotSettings');
+    renderLocalized(<WotSettings />);
+    expect(mod.initializeWot).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('switch')).toBeDisabled();
+    expect(screen.getByText(/Extension error/)).toHaveClass('text-red-400');
+    await user.click(screen.getByRole('button', { name: 're-check' }));
+    expect(mod.__store.refreshStatus).toHaveBeenCalledTimes(1);
+    mod.__store.status = 'configured';
+  });
+
+  it('moves the sliders through the store setters and shows the engine counts', async () => {
+    const mod = await import('@/services/wot') as unknown as {
+      __store: { enabled: boolean; setMaxHops: ReturnType<typeof vi.fn>; setMinPaths: ReturnType<typeof vi.fn> };
+    };
+    mod.__store.enabled = true;
+    const { default: WotSettings } = await import('@/components/settings/privacy/WotSettings');
+    const { fireEvent } = await import('@testing-library/react');
+    renderLocalized(<WotSettings />);
+    fireEvent.change(screen.getByRole('slider', { name: /Max hops/i }), { target: { value: '3' } });
+    fireEvent.change(screen.getByRole('slider', { name: /Min trust paths/i }), { target: { value: '2' } });
+    expect(mod.__store.setMaxHops).toHaveBeenCalledWith(3);
+    expect(mod.__store.setMinPaths).toHaveBeenCalledWith(2);
+    expect(screen.getByText(/Extension detected/)).toHaveClass('text-lc-green');
+    expect(screen.getByText('resolved allow').nextSibling).toHaveTextContent('3');
   });
 });

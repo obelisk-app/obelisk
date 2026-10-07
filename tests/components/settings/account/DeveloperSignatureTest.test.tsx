@@ -21,7 +21,9 @@ vi.mock('@/services/nostr-bridge', async () => {
 });
 
 describe('DeveloperSignatureTest', () => {
-  beforeEach(() => signEventTemplate.mockReset().mockResolvedValue({ id: 'signed' }));
+  beforeEach(() => {
+    signEventTemplate.mockReset().mockResolvedValue({ id: 'signed' });
+  });
 
   it('requests every required signature without publishing anything', async () => {
     renderLocalized(<DeveloperSignatureTest />);
@@ -37,5 +39,29 @@ describe('DeveloperSignatureTest', () => {
       ]),
     });
     expect(await screen.findByRole('status')).toHaveTextContent(`${OBELISK_SIGNING_KINDS.length} accepted · 0 rejected`);
+  });
+
+  it('counts a refused signature as rejected and shows the message template for ordinary kinds', async () => {
+    signEventTemplate.mockImplementation(async (template: { kind: number }) => {
+      if (template.kind === OBELISK_SIGNING_KINDS[0]) throw new Error('refused');
+      return { id: 'signed' };
+    });
+    renderLocalized(<DeveloperSignatureTest />);
+    fireEvent.click(screen.getByTestId('request-mock-signatures'));
+    expect(await screen.findByRole('status')).toHaveTextContent(`${OBELISK_SIGNING_KINDS.length - 1} accepted · 1 rejected`);
+    const ordinary = signEventTemplate.mock.calls.find(([template]) => template.kind !== 22242)?.[0];
+    expect(ordinary.tags[0]).toEqual(['client', 'Obelisk']);
+    expect(ordinary.tags[1][0]).toBe('alt');
+    expect(ordinary.content).not.toBe('');
+  });
+
+  it('on the phone, the relay-log row flips the developer preference', () => {
+    renderLocalized(<DeveloperSignatureTest mobile />);
+    const toggle = screen.getByTestId('mobile-developer-relay-debug-toggle');
+    const before = toggle.getAttribute('aria-checked');
+    fireEvent.click(toggle);
+    expect(screen.getByTestId('mobile-developer-relay-debug-toggle').getAttribute('aria-checked')).not.toBe(before);
+    fireEvent.click(screen.getByTestId('mobile-developer-relay-debug-toggle'));
+    expect(screen.getByTestId('mobile-developer-relay-debug-toggle').getAttribute('aria-checked')).toBe(before);
   });
 });

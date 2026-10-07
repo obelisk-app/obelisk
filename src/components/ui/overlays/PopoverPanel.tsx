@@ -1,9 +1,9 @@
 'use client';
 
-import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { useAnchoredPosition, type PopoverFollow } from '@/hooks/common/useAnchoredPosition';
-import { useDismiss } from '@/hooks/common/useDismiss';
+import type { PopoverFollow } from '@/hooks/common/useAnchoredPosition';
+import { usePopoverPanel } from '@/hooks/common/usePopoverPanel';
 import { cn } from '@/utils/style/cn';
 import { MENU_PANEL_CLASS } from './menu';
 import type { PopoverAlign, PopoverSide } from '@/utils/layout/popover-position';
@@ -78,20 +78,9 @@ export default function PopoverPanel({
   panelRef: externalRef,
   dataAttributes,
 }: PopoverPanelProps) {
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const pos = useAnchoredPosition({ anchorRef, panelRef, open, onClose, prefer, align, follow });
-  useDismiss({
-    refs: [panelRef, anchorRef],
-    onDismiss: onClose,
-    enabled: open && dismiss === 'outside-and-escape',
+  const { panelRef, pos } = usePopoverPanel({
+    anchorRef, onClose, open, follow, prefer, align, dismissOutside: dismiss === 'outside-and-escape', externalRef,
   });
-
-  useLayoutEffect(() => {
-    if (!externalRef) return;
-    externalRef.current = open ? panelRef.current : null;
-    return () => { externalRef.current = null; };
-  }, [externalRef, open]);
-
   if (!open || typeof document === 'undefined') return null;
   return createPortal(
     <div

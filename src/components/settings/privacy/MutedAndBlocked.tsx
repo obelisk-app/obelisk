@@ -17,25 +17,15 @@
  * destroyed by another app.
  */
 
-import { useMemo } from 'react';
-import { useUserMetadata } from '@/services/nostr-bridge';
-import { useModerationStore } from '@/store/moderation';
 import { useTranslations } from 'next-intl';
-import UserAvatar from '@/components/ui/media/UserAvatar';
-import Button from '@/components/ui/buttons/Button';
-import Card from '@/components/ui/layout/Card';
 import Text from '@/components/ui/layout/Text';
-import { shortNpubLabel } from '@/utils/identity/short-npub';
+import { useMutedAndBlocked } from '@/hooks/settings/privacy/useMutedAndBlocked';
+import { moderationEntryKey } from '@/utils/settings/moderation-entries';
+import ModerationRow from './ModerationRow';
 
 export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }) {
   const t = useTranslations();
-  const muted = useModerationStore((state) => state.mutedPubkeys);
-  const blocked = useModerationStore((state) => state.blockedPubkeys);
-
-  const entries = useMemo(() => [
-    ...muted.map((pubkey) => ({ pubkey, kind: 'mute' as const })),
-    ...blocked.map((pubkey) => ({ pubkey, kind: 'block' as const })),
-  ], [muted, blocked]);
+  const entries = useMutedAndBlocked();
 
   const body = entries.length === 0 ? (
     <p className="text-xs text-lc-muted" data-testid="moderation-empty">
@@ -44,7 +34,7 @@ export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }
   ) : (
     <ul className="space-y-1">
       {entries.map((entry) => (
-        <ModerationRow key={`${entry.kind}:${entry.pubkey}`} pubkey={entry.pubkey} kind={entry.kind} />
+        <ModerationRow key={moderationEntryKey(entry)} pubkey={entry.pubkey} kind={entry.kind} />
       ))}
     </ul>
   );
@@ -61,35 +51,5 @@ export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }
       </Text>
       {body}
     </div>
-  );
-}
-
-function ModerationRow({ pubkey, kind }: { pubkey: string; kind: 'mute' | 'block' }) {
-  const t = useTranslations();
-  const meta = useUserMetadata(pubkey);
-  const toggleMute = useModerationStore((state) => state.toggleMute);
-  const toggleBlock = useModerationStore((state) => state.toggleBlock);
-
-  const name = meta?.displayName || meta?.name || shortNpubLabel(pubkey);
-
-  return (
-    <Card as="li" surface="black" radius="lg" padding="row" className="flex items-center gap-2">
-      <UserAvatar pubkey={pubkey} picture={meta?.picture} size={6} name={name} alt={name} />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-xs text-lc-white">{name}</div>
-        <Text as="div" size="10" tone="muted">
-          {t(kind === 'mute' ? 'settings.moderation.muted' : 'settings.moderation.blocked')}
-        </Text>
-      </div>
-      <Button
-        variant="outline"
-        size="xs"
-        className="shrink-0"
-        onClick={() => (kind === 'mute' ? toggleMute(pubkey) : toggleBlock(pubkey))}
-        data-testid={`moderation-undo-${kind}`}
-      >
-        {t(kind === 'mute' ? 'social.profileFeed.unmute' : 'social.profileFeed.unblock')}
-      </Button>
-    </Card>
   );
 }

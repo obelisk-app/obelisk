@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import { avatarInitials, petnameFor } from '@/utils/identity/display-name';
@@ -18,6 +18,13 @@ describe('UserAvatar', () => {
     const img = container.querySelector('img');
     expect(img).toHaveAttribute('referrerpolicy', 'no-referrer');
     expect(img).toHaveAttribute('loading', 'lazy');
+  });
+
+  it('hides a picture that fails to load', () => {
+    const { container } = render(<UserAvatar pubkey={HEX} picture="https://x.example/broken.png" size={8} />);
+    const img = container.querySelector('img')!;
+    fireEvent.error(img);
+    expect(img.style.display).toBe('none');
   });
 
   it('a named fallback shows the first letter of the name', () => {

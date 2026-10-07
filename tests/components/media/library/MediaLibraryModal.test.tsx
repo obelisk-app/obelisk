@@ -238,4 +238,64 @@ describe('MediaLibraryModal', () => {
       expect.objectContaining({ emojis: [], packAddresses: [] }),
     ));
   });
+
+  it('launched from an item: favouriting it saves and closes the whole library', async () => {
+    const onClose = vi.fn();
+    renderLocalized(<MediaLibraryModal onClose={onClose} initialSelection={{ pack, item: pack.items[0] }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add item to favorites' }));
+    expect(mocks.saveMediaFavorites).toHaveBeenCalledWith({ items: [pack.items[0]], packAddresses: [] });
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('launched from an item: starting a pack with it opens the editor named after it', () => {
+    renderLocalized(<MediaLibraryModal onClose={() => {}} initialSelection={{ pack, item: pack.items[0] }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Create pack with this item' }));
+    const editor = screen.getByTestId('media-pack-editor');
+    expect(within(editor).getByRole('textbox', { name: 'Pack name' })).toHaveValue('party_cat pack');
+    expect(screen.queryByTestId('media-item-menu')).toBeNull();
+  });
+
+  it('in the library, favouriting from the item menu closes only the menu', async () => {
+    renderLocalized(<MediaLibraryModal onClose={() => {}} />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open :party_cat: actions' })[0]);
+    const menu = screen.getByTestId('media-item-menu');
+    fireEvent.click(within(menu).getByRole('button', { name: 'View Cat pack' }));
+    expect(screen.queryByTestId('media-item-menu')).toBeNull();
+    expect(screen.getByTestId('media-pack-viewer')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('media-pack-viewer')).getByRole('button', { name: 'Open :cat_2: actions' }));
+    await waitFor(() => expect(within(screen.getByTestId('media-item-menu')).getByRole('button', { name: 'Add item to favorites' })).not.toBeDisabled());
+    fireEvent.click(within(screen.getByTestId('media-item-menu')).getByRole('button', { name: 'Add item to favorites' }));
+    expect(screen.queryByTestId('media-item-menu')).toBeNull();
+    expect(screen.getByTestId('media-library-modal')).toBeInTheDocument();
+  });
+
+  it('a favourite saved without its pack address still finds its pack; the kind chips filter favourites', () => {
+    mocks.favoriteItems = [pack.items[0], { name: 'dance', url: 'https://cdn.example/dance.gif', kind: 'gif' }];
+    renderLocalized(<MediaLibraryModal onClose={() => {}} initialTab="favorites" />);
+    expect(screen.getByText('Favorite a pack or individual item to keep it across servers.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open :dance: actions' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'GIFs' }));
+    expect(screen.queryByRole('button', { name: 'Open :party_cat: actions' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open :party_cat: actions' }));
+    expect(within(screen.getByTestId('media-item-menu')).getByRole('button', { name: 'View Cat pack' })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('media-item-menu')).getByRole('button', { name: 'Close media actions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open :dance: actions' }));
+    expect(within(screen.getByTestId('media-item-menu')).queryByRole('button', { name: /^View / })).toBeNull();
+  });
+
+  it('shows the empty copy for a search that finds nothing', () => {
+    renderLocalized(<MediaLibraryModal onClose={() => {}} />);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search packs and media' }), { target: { value: 'zzzz' } });
+    expect(screen.getByText('No packs found.')).toBeInTheDocument();
+  });
+
+  it('launched from an item: a pack started from another item of its pack opens the editor', () => {
+    renderLocalized(<MediaLibraryModal onClose={() => {}} initialSelection={{ pack, item: pack.items[0] }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'View Cat pack' }));
+    fireEvent.click(within(screen.getByTestId('media-pack-viewer')).getByRole('button', { name: 'Open :cat_2: actions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create pack with this item' }));
+    const editor = screen.getByTestId('media-pack-editor');
+    expect(within(editor).getByRole('textbox', { name: 'Pack name' })).toHaveValue('cat_2 pack');
+  });
 });

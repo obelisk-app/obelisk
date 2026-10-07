@@ -115,4 +115,30 @@ describe('NotificationSettings', () => {
     expect(sounds.getAttribute('aria-describedby')).toBeTruthy();
     expect(sounds).toHaveAccessibleDescription(/./);
   });
+
+  it('follows a permission granted elsewhere when the window regains focus', async () => {
+    const N = Object.assign(vi.fn(), { permission: 'default', requestPermission: vi.fn() });
+    vi.stubGlobal('Notification', N);
+    renderLocalized(<NotificationSettings />);
+    const toggle = screen.getByTestId('notif-toggle-browserNotifications');
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    (N as unknown as { permission: string }).permission = 'granted';
+    fireEvent.focus(window);
+    await waitFor(() => expect(toggle.getAttribute('aria-checked')).toBe('true'));
+  });
+
+  it('says notifications are unsupported where the browser has none', () => {
+    vi.stubGlobal('Notification', undefined);
+    renderLocalized(<NotificationSettings mobile />);
+    expect((screen.getByTestId('notif-toggle-browserNotifications').closest('button') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('picking a ringtone saves it and plays it', () => {
+    renderLocalized(<NotificationSettings mobile />);
+    fireEvent.click(screen.getByTestId('ringtone-marimba'));
+    expect(getPreferences().notificationRingtone).toBe('marimba');
+    expect(previewRingtone).toHaveBeenCalledWith('marimba', 'mention');
+    expect(screen.getByTestId('ringtone-marimba')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('ringtone-crystal')).toHaveAttribute('aria-checked', 'false');
+  });
 });

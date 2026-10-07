@@ -4,9 +4,8 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Button from '@/components/ui/buttons/Button';
 import AnalyticsSetting from './AnalyticsSetting';
+import LocalDataCategoryRow from './LocalDataCategoryRow';
 import { useClearLocalData } from '@/hooks/shell/settings/useClearLocalData';
-import type { CategoryUsage, LocalDataCategory } from '@/services/local-data';
-import { formatBytes } from '@/utils/format/format-bytes';
 
 /**
  * Settings > Data on this device, on both shells: every category of local
@@ -25,7 +24,7 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
       <AnalyticsSetting />
       <ul className="divide-y divide-lc-border overflow-hidden rounded-lg border border-lc-border">
         {categories.map((category) => (
-          <CategoryRow
+          <LocalDataCategoryRow
             key={category.id}
             category={category}
             usage={usage ? usage[category.id] : null}
@@ -57,46 +56,4 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
       </Link>
     </div>
   );
-}
-
-function CategoryRow({ category, usage, busy, onRemove }: {
-  category: LocalDataCategory;
-  usage: CategoryUsage | null;
-  busy: string | null;
-  onRemove: () => void;
-}) {
-  const t = useTranslations();
-  return (
-    <li className="flex items-start justify-between gap-4 p-3" data-testid={`local-data-row-${category.id}`}>
-      <div className="min-w-0">
-        <div className="text-sm font-medium text-lc-white">{t(category.titleKey)}</div>
-        <p className="mt-0.5 text-xs leading-5 text-lc-muted">{t(category.purposeKey)}</p>
-        <UsageLine usage={usage} id={category.id} />
-      </div>
-      <Button
-        variant="outline"
-        tone="danger"
-        size="sm"
-        className="shrink-0 px-3 py-1"
-        onClick={onRemove}
-        disabled={busy !== null || !usage?.present}
-        data-testid={`local-data-remove-${category.id}`}
-      >
-        {busy === category.id ? t('settings.localData.removing') : t('settings.localData.remove')}
-      </Button>
-    </li>
-  );
-}
-
-function UsageLine({ usage, id }: { usage: CategoryUsage | null; id: string }) {
-  const t = useTranslations();
-  if (!usage) {
-    return <div className="mt-1.5 h-3 w-16 animate-pulse rounded bg-lc-border" data-testid={`local-data-size-${id}`} />;
-  }
-  const text = !usage.present
-    ? t('settings.localData.empty')
-    : usage.bytes
-      ? t('settings.localData.size', { size: formatBytes(usage.bytes) })
-      : t('settings.localData.present');
-  return <div className="mt-1 text-xs text-lc-white/80" data-testid={`local-data-size-${id}`}>{text}</div>;
 }

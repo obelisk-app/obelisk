@@ -11,14 +11,9 @@
  * and genuinely disabled rows are muted.
  */
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { menuRowClass } from '@/utils/style/menu-row-class';
 
 export const MENU_PANEL_CLASS = 'rounded-lg border border-lc-border bg-lc-dark p-1.5 shadow-2xl';
-
-const ROW = 'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors disabled:cursor-default disabled:opacity-45 disabled:hover:bg-transparent';
-
-function rowClass(danger?: boolean): string {
-  return `${ROW} ${danger ? 'text-red-400 hover:bg-red-500/15' : 'text-lc-white hover:bg-lc-green/15'}`;
-}
 
 function Body({ icon, label, hint, trailing }: { icon?: ReactNode; label: ReactNode; hint?: ReactNode; trailing?: ReactNode }) {
   return (
@@ -60,7 +55,7 @@ export function MenuItem({
     & { [dataAttribute: `data-${string}`]: string | boolean | undefined };
 }) {
   return (
-    <button {...buttonProps} type="button" role={role} className={rowClass(danger)} onClick={onClick} disabled={disabled} data-testid={testId}>
+    <button {...buttonProps} type="button" role={role} className={menuRowClass(danger)} onClick={onClick} disabled={disabled} data-testid={testId}>
       <Body icon={icon} label={label} hint={hint} trailing={trailing} />
     </button>
   );
@@ -84,7 +79,7 @@ export function MenuLink({
 }) {
   const external = newTab ? { target: '_blank', rel: 'noreferrer noopener' } : {};
   return (
-    <a role="menuitem" href={href} {...external} className={rowClass()} data-testid={testId}>
+    <a role="menuitem" href={href} {...external} className={menuRowClass()} data-testid={testId}>
       <Body icon={icon} label={label} hint={hint} />
     </a>
   );

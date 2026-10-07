@@ -1,139 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { setPreference, type Preferences } from '@/services/preferences/preferences';
-import { usePreferences } from '@/hooks/preferences/usePreferences';
-import {
-  desktopNotificationPermission,
-  requestDesktopNotificationPermission,
-} from '@/services/notifications/alert';
-import { previewRingtone, RINGTONES } from '@/services/notifications/sound';
 import { useTranslations } from 'next-intl';
 import SettingRow from '@/components/ui/forms/SettingRow';
 import Toggle from '@/components/ui/forms/Toggle';
 import Button from '@/components/ui/buttons/Button';
 import Text from '@/components/ui/layout/Text';
-
-type BoolPref = 'notificationSounds' | 'browserNotifications' | 'backgroundRelayWatch';
+import { useNotificationSettings } from '@/hooks/settings/notifications/useNotificationSettings';
+import RingtonePicker from './RingtonePicker';
 
 /**
  * Sounds, OS popups, and the background relay watch. One component for both
  * shells: `mobile` switches to the phone's `settings-*` classes, same as
- * `SocialRelaySettings`.
+ * `SocialRelaySettings`. State and actions come from `useNotificationSettings`.
  */
 export default function NotificationSettings({ mobile = false }: { mobile?: boolean }) {
   const t = useTranslations();
-  const prefs = usePreferences();
-  const [permission, setPermission] = useState<ReturnType<typeof desktopNotificationPermission>>('default');
-
-  useEffect(() => {
-    const update = () => setPermission(desktopNotificationPermission());
-    update();
-    // The first-click popup (permission-prompt.ts) can resolve while this
-    // panel is open; follow the browser's answer.
-    let status: PermissionStatus | null = null;
-    void navigator.permissions?.query({ name: 'notifications' as PermissionName })
-      .then((s) => { status = s; s.onchange = update; })
-      .catch(() => {});
-    window.addEventListener('focus', update);
-    return () => {
-      window.removeEventListener('focus', update);
-      if (status) status.onchange = null;
-    };
-  }, []);
-
-  // On = the user wants them AND the browser allows them.
-  const browserOn = prefs.browserNotifications && permission === 'granted';
-
-  const toggleDesktop = async () => {
-    if (browserOn) {
-      setPreference('browserNotifications', false);
-      return;
-    }
-    // Asks with the browser popup when undecided; a no-op when already granted.
-    const granted = await requestDesktopNotificationPermission();
-    setPermission(desktopNotificationPermission());
-    setPreference('browserNotifications', granted);
-  };
-
-  const desktopHint = permission === 'unsupported'
-    ? t('settings.preferences.notifications.desktop.unsupported')
-    : permission === 'denied'
-      ? t('settings.preferences.notifications.desktop.denied')
-      : t('settings.preferences.notifications.desktop.description');
-
-  const rows: Array<{
-    key: BoolPref;
-    label: string;
-    description: string;
-    onToggle: () => void;
-    disabled?: boolean;
-  }> = [
-    {
-      key: 'notificationSounds',
-      label: t('settings.preferences.notifications.sounds.label'),
-      description: t('settings.preferences.notifications.sounds.description'),
-      onToggle: () => setPreference('notificationSounds', !prefs.notificationSounds),
-    },
-    {
-      key: 'browserNotifications',
-      label: t('settings.preferences.notifications.desktop.label'),
-      description: desktopHint,
-      onToggle: () => { void toggleDesktop(); },
-      disabled: permission === 'unsupported' || permission === 'denied',
-    },
-    {
-      key: 'backgroundRelayWatch',
-      label: t('settings.preferences.notifications.background.label'),
-      description: t('settings.preferences.notifications.background.description'),
-      onToggle: () => setPreference('backgroundRelayWatch', !prefs.backgroundRelayWatch),
-    },
-  ];
-
-  const isOn = (key: BoolPref) => (key === 'browserNotifications' ? browserOn : (prefs as Preferences)[key]);
-
-  // Picking a ringtone previews it: hearing is the only way to choose one.
-  const pickRingtone = (id: Preferences['notificationRingtone']) => {
-    setPreference('notificationRingtone', id);
-    previewRingtone(id, 'mention');
-  };
-  const ringtonePicker = (
-    <div data-testid="ringtone-picker" role="radiogroup" aria-label={t('settings.preferences.notifications.ringtone.label')}>
-      <div className={mobile ? 'settings-row-meta muted' : 'text-xs text-lc-muted'} style={mobile ? { marginBottom: 8 } : undefined}>
-        {t('settings.preferences.notifications.ringtone.label')}
-      </div>
-      <div className={mobile ? '' : 'mt-1.5 grid grid-cols-2 gap-2'} style={mobile ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } : undefined}>
-        {RINGTONES.map((id) => {
-          const selected = prefs.notificationRingtone === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => pickRingtone(id)}
-              data-testid={`ringtone-${id}`}
-              className={mobile
-                ? `settings-btn-secondary ${selected ? 'on' : ''}`
-                : `rounded-lg border px-3 py-2 text-left text-sm transition-colors ${selected ? 'border-lc-green bg-lc-green/10 text-lc-white' : 'border-lc-border bg-lc-card/40 text-lc-white hover:border-lc-green/50 hover:bg-lc-green/5'}`}
-              style={mobile && selected ? { borderColor: 'var(--app-accent)', color: 'var(--app-accent)' } : undefined}
-            >
-              <span className="block font-semibold">{t(`settings.preferences.notifications.ringtone.${id}.label`)}</span>
-              <span className={mobile ? 'settings-row-meta muted' : 'block text-[11px] text-lc-muted'}>
-                {t(`settings.preferences.notifications.ringtone.${id}.hint`)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+  const vm = useNotificationSettings();
 
   if (mobile) {
     return (
       <div className="settings-section" data-testid="notification-settings">
         <div className="settings-section-title">{t('settings.preferences.notifications.title')}</div>
-        {rows.map((row) => (
+        {vm.rows.map((row) => (
           <button
             key={row.key}
             type="button"
@@ -148,20 +36,20 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
               </span>
             </span>
             <span
-              className={`toggle ${isOn(row.key) ? 'on' : ''}`}
+              className={`toggle ${row.on ? 'on' : ''}`}
               role="switch"
-              aria-checked={isOn(row.key)}
+              aria-checked={row.on}
               data-testid={`notif-toggle-${row.key}`}
             />
           </button>
         ))}
-        {prefs.notificationSounds && (
-          <div className="settings-row !block">{ringtonePicker}</div>
+        {vm.soundsOn && (
+          <div className="settings-row !block"><RingtonePicker value={vm.ringtone} onPick={vm.pickRingtone} mobile /></div>
         )}
         <button
           type="button"
           className="settings-row action"
-          onClick={() => previewRingtone(prefs.notificationRingtone, 'dm')}
+          onClick={vm.testSound}
           data-testid="notif-test-sound"
         >
           <span>{t('settings.preferences.notifications.test')}</span>
@@ -179,20 +67,20 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
         <Button
           variant="outlinePill"
           size="xs"
-          onClick={() => previewRingtone(prefs.notificationRingtone, 'dm')}
+          onClick={vm.testSound}
           data-testid="notif-test-sound"
         >
           {t('settings.preferences.notifications.test')}
         </Button>
       </div>
-      {rows.map((row) => (
+      {vm.rows.map((row) => (
         <div key={row.key}>
         <SettingRow
           label={row.label}
           description={row.description}
           control={({ descriptionId }) => (
             <Toggle
-              checked={isOn(row.key)}
+              checked={row.on}
               onChange={() => row.onToggle()}
               aria-label={row.label}
               aria-describedby={descriptionId}
@@ -201,8 +89,8 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
             />
           )}
         />
-        {row.key === 'notificationSounds' && prefs.notificationSounds && (
-          <div className="mt-3">{ringtonePicker}</div>
+        {row.key === 'notificationSounds' && vm.soundsOn && (
+          <div className="mt-3"><RingtonePicker value={vm.ringtone} onPick={vm.pickRingtone} mobile={false} /></div>
         )}
         </div>
       ))}

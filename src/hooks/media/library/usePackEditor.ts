@@ -81,5 +81,11 @@ export function usePackEditor(
     setDraft({ ...draft, items: [...draft.items, { name: '', url: '', kind: newItemKind }] });
   };
 
-  return { draft, setDraft, newItemKind, setNewItemKind, busy, error, addFiles, save, updateItem, removeItem, addUrlItem };
+  /** A file input's change: add its images, then clear it so the same files can be picked again. */
+  const filesPicked = (input: HTMLInputElement) => {
+    void addFiles(input.files);
+    input.value = '';
+  };
+
+  return { draft, setDraft, newItemKind, setNewItemKind, busy, error, addFiles, filesPicked, save, updateItem, removeItem, addUrlItem };
 }

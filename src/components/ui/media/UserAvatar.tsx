@@ -14,6 +14,7 @@
  */
 import type { CSSProperties } from 'react';
 import { avatarInitials } from '@/utils/identity/display-name';
+import { hideBrokenImage } from '@/utils/media/remote/hide-broken-image';
 import RemoteImage from './RemoteImage';
 
 /**
@@ -64,9 +65,7 @@ export default function UserAvatar({
         alt={alt}
         style={style}
         className={`shrink-0 rounded-full bg-lc-olive object-cover ${className}`}
-        onError={(e) => {
-          (e.currentTarget as HTMLImageElement).style.display = 'none';
-        }}
+        onError={hideBrokenImage}
       />
     );
   }
