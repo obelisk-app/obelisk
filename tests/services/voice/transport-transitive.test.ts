@@ -7,7 +7,7 @@
  * makes the mesh converge on flaky relays.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { KIND_VOICE_PRESENCE } from '@/utils/nip-kinds';
+import { KIND_VOICE_PRESENCE } from '@/utils/nostr/nip-kinds';
 
 interface FakeEvent {
   pubkey: string;
@@ -69,7 +69,7 @@ const bridgeFake = vi.hoisted(() => {
   };
 });
 
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: vi.fn(async () => bridgeFake.impl),
   getBridgeImpl: vi.fn(() => bridgeFake.impl),
 }));

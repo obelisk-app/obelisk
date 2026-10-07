@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { createTranslator } from 'next-intl';
-import { clearAllClientCacheExceptSession } from '@/services/cache-clear';
+import { clearAllClientCacheExceptSession } from '@/services/local-data/cache-clear';
 import { errorCodeOf } from '@/utils/errors/codes';
-import Button from '@/components/ui/Button';
-import TextButton from '@/components/ui/TextButton';
+import Button from '@/components/ui/buttons/Button';
+import TextButton from '@/components/ui/buttons/TextButton';
 import en from '@/i18n/messages/en/errors.json';
 import es from '@/i18n/messages/es/errors.json';
 import pt from '@/i18n/messages/pt/errors.json';

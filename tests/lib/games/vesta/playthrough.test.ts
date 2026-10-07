@@ -1,7 +1,7 @@
 import '@tests/support/game-engines';
 import { describe, it, expect } from 'vitest';
 import { getValidPositions, type GameState } from 'vesta';
-import { deriveSession, type GameSession } from '@/lib/games/session';
+import { deriveSession, type GameSession } from '@/lib/games/session/session';
 import {
   buildCreate,
   buildGameOp,
@@ -9,7 +9,7 @@ import {
   type GameEvent,
   type ParsedGameEvent,
   type SeatSpec,
-} from '@/lib/games/protocol';
+} from '@/lib/games/protocol/protocol';
 import { vertices, edges } from '@/lib/games/vesta/geometry';
 
 /**

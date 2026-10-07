@@ -8,8 +8,8 @@
  * sequence the shells always saw (`reset.test.ts` pins it).
  */
 import { SESSION_IDENTITY_ID, type Identity } from '@/lib/relay-hub';
-import { dismissActivity } from '@/services/activity-log';
-import { resetAllClientState } from '@/services/reset';
+import { dismissActivity } from '@/services/feedback/activity-log';
+import { resetAllClientState } from '@/services/common/reset';
 import type { PerGroupReqs } from './fanout';
 import type { LifecycleTargets } from './lifecycle';
 
@@ -143,7 +143,7 @@ export function resetRelayScopedState(t: LifecycleTargets): void {
 /**
  * The stores a logout empties after the teardown, so the next account on
  * this browser inherits nothing: the bridge's own and, last, every client
- * store (`src/services/reset.ts` has the full list).
+ * store (`src/services/common/reset.ts` has the full list).
  */
 export function clearForLogout(t: LifecycleTargets): void {
   const { state } = t;

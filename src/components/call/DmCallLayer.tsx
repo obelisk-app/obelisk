@@ -11,19 +11,19 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useAuthor } from '@/hooks/social/useAuthor';
+import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useTranslations } from 'next-intl';
-import { useCallFullscreen } from '@/hooks/useCallFullscreen';
-import { useStreamRef } from '@/hooks/useStreamRef';
+import { useCallFullscreen } from '@/hooks/call/useCallFullscreen';
+import { useStreamRef } from '@/hooks/call/useStreamRef';
 import { formatElapsed } from '@/utils/format/format-elapsed';
-import UserAvatar from '@/components/ui/UserAvatar';
-import { useDmCallStore, type DmCallStatus } from '@/store/dm-call';
+import UserAvatar from '@/components/ui/media/UserAvatar';
+import { useDmCallStore, type DmCallStatus } from '@/store/call/dm-call';
 import {
   CloseIcon, FlipCameraIcon, LockIcon, MaximizeIcon, MicIcon, MicOffIcon, MinimizeIcon, PhoneIcon, PhoneOffIcon,
   ScreenShareIcon, ShieldIcon, VideoIcon, VideoOffIcon,
-} from '@/components/ui/icons';
-import IconButton from '@/components/ui/IconButton';
+} from '@/components/ui/icons/icons';
+import IconButton from '@/components/ui/buttons/IconButton';
 import type { Translate } from '@/i18n/keys';
 
 function CallTimer({ since }: { since: number }) {

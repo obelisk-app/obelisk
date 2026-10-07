@@ -33,7 +33,7 @@ vi.mock('@/services/voice/transport', async (importOriginal) => {
   };
 });
 vi.mock('@/services/voice/sfu-control', () => ({ pickSfu: async () => null, publishSfuStart: async () => true }));
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: async () => ({
     subscribeActiveCallByChannel: () => () => {},
     waitForRelayAuth: async () => 'ok',

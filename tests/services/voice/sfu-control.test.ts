@@ -1,13 +1,13 @@
 /**
  * Tests for the SFU control + discovery surface.
  *
- * The bridge (`@/services/nostr-bridge/client`) is mocked with a thin in-memory
+ * The bridge (`@/services/nostr-bridge/facade/client`) is mocked with a thin in-memory
  * version that captures `publishEvent` calls and feeds back any events
  * "delivered" through `bridgeFake.inject`. This mirrors the pattern in
  * `transport.test.ts`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { KIND_SFU_ADVERTISE, KIND_SFU_CONTROL } from '@/utils/nip-kinds';
+import { KIND_SFU_ADVERTISE, KIND_SFU_CONTROL } from '@/utils/nostr/nip-kinds';
 
 interface FakeEvent {
   pubkey: string;
@@ -73,7 +73,7 @@ const bridgeFake = vi.hoisted(() => {
   };
 });
 
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: vi.fn(async () => bridgeFake.impl),
   getBridgeImpl: vi.fn(() => bridgeFake.impl),
   // Test mock: accept anything that looks like a wss URL. The real

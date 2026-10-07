@@ -6,7 +6,7 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InboxPopover } from '@/app/[locale]/app/panes/topbar/InboxPopover';
-import { useInboxStreams } from '@/hooks/app/panes/topbar/useTopBarPopovers';
+import { useInboxStreams } from '@/hooks/shell/panes/topbar/useTopBarPopovers';
 import { useNotificationsStore } from '@/store/notifications';
 import { useReadStateStore } from '@/store/read-state';
 import type { DmLockState } from '@/services/nostr-bridge';

@@ -7,13 +7,13 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import { SESSION_IDENTITY_ID, type Identity } from '@/lib/relay-hub';
-import { resetAllClientState } from '@/services/reset';
+import { resetAllClientState } from '@/services/common/reset';
 import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/store/notifications';
-import { ensureChannelPrefsStoreForAccount } from '@/store/channel-prefs';
-import { cacheClearAll } from '../cache';
-import { clearDecryptCache } from '../decrypt-cache';
-import { resetSignerQueue } from '../signer-queue';
-import { resetWrapLedger } from '../wrap-ledger';
+import { ensureChannelPrefsStoreForAccount } from '@/store/chat/channel-prefs';
+import { cacheClearAll } from '../cache/cache';
+import { clearDecryptCache } from '../cache/decrypt-cache';
+import { resetSignerQueue } from './signer-queue';
+import { resetWrapLedger } from '../cache/wrap-ledger';
 import type { PerGroupReqs } from './fanout';
 import type { LifecycleTargets } from './lifecycle';
 import { SessionPersistence } from './persistence';

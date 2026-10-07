@@ -5,7 +5,7 @@
  */
 
 import { nostrActions } from '@/services/nostr-bridge';
-import { confirmDialog } from '@/services/confirm-dialog';
+import { confirmDialog } from '@/services/common/confirm-dialog';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import type { Translate } from '@/i18n/keys';
 import type { RelayAdminRow } from '@/utils/admin/relay-admin-rows';

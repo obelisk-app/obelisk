@@ -1,7 +1,7 @@
 'use client';
 
 import { Modal } from '@nostr-wot/ui';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 
 type Props = {

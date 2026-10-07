@@ -1,8 +1,8 @@
-import Button from '@/components/ui/Button';
-import { CloseIcon } from '@/components/ui/icons';
-import Input from '@/components/ui/Input';
+import Button from '@/components/ui/buttons/Button';
+import { CloseIcon } from '@/components/ui/icons/icons';
+import Input from '@/components/ui/forms/Input';
 import { probeRelay, type RelayStatus } from '@/services/social/relay-status';
-import { relayKey } from '@/hooks/settings/useSocialRelayDraft';
+import { relayKey } from '@/hooks/settings/social-relays/useSocialRelayDraft';
 import { RelayDot, RelayStats } from './RelayIndicators';
 import type { Translate } from '@/i18n/keys';
 

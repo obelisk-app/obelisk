@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { type ActivityEntry } from '@/services/activity-log';
-import { useActivityLog } from '@/hooks/useActivityLog';
+import { type ActivityEntry } from '@/services/feedback/activity-log';
+import { useActivityLog } from '@/hooks/feedback/useActivityLog';
 import { useTranslations } from 'next-intl';
-import CloseButton from '@/components/ui/CloseButton';
-import Overlay from '@/components/ui/Overlay';
+import CloseButton from '@/components/ui/buttons/CloseButton';
+import Overlay from '@/components/ui/overlays/Overlay';
 import type { MessageKey } from '@/i18n/keys';
 import { activityDetail, activityTitle } from '@/utils/errors/activity-text';
 

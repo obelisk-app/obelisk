@@ -1,9 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import RemoteImage from '@/components/ui/RemoteImage';
-import { useMobileRelayTile, type RelayLongPressInfo } from '@/hooks/app/mobile/rail/useMobileRelayTile';
-import { avatarStyle } from '../avatar';
+import RemoteImage from '@/components/ui/media/RemoteImage';
+import { useMobileRelayTile, type RelayLongPressInfo } from '@/hooks/shell/mobile/rail/useMobileRelayTile';
+import { avatarStyle } from '../common/avatar';
 
 /**
  * Relay tile in the spaces strip: the domain favicon, falling back to a

@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { finalizeEvent, generateSecretKey, getPublicKey, verifyEvent } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
-import { bytesToHex } from '@/services/nostr-bridge/hex';
+import { bytesToHex } from '@/services/nostr-bridge/common/hex';
 import { SessionSigner } from '@/services/nostr-bridge/session/signer';
 import { BUNKER_AUTH_SIGNATURE_TIMEOUT_MS, type BunkerRunOpts, type RemoteSigner } from '@/services/nostr-bridge/session/bunker';
 import { buildNipSigner } from '@/services/nostr-bridge/session/nip-signer';
 import { buildDmSigner } from '@/services/nostr-bridge/session/dm-signer';
-import type { PersistedSession } from '@/services/nostr-bridge/session-storage';
+import type { PersistedSession } from '@/services/nostr-bridge/session/session-storage';
 
 const sk = generateSecretKey();
 const pk = getPublicKey(sk);

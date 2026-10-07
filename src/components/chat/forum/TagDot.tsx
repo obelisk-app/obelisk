@@ -1,7 +1,7 @@
 'use client';
 
 import type { JsForumTag } from '@/services/nostr-bridge';
-import { paletteForTag } from '@/utils/forum-tag-colors';
+import { paletteForTag } from '@/utils/chat/forum/forum-tag-colors';
 
 /** Leading color dot, used when a tag has no emoji of its own. */
 export function TagDot({ tag }: { tag: JsForumTag }) {

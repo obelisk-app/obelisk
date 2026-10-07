@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DmThreadModule, type IngestDmParams } from '@/services/nostr-bridge/dm/thread';
-import { StateStore } from '@/services/nostr-bridge/state-store';
-import type { JsDirectMessage } from '@/services/nostr-bridge/types';
+import { StateStore } from '@/services/nostr-bridge/common/state-store';
+import type { JsDirectMessage } from '@/services/nostr-bridge/common/types';
 import { useNotificationsStore } from '@/store/notifications';
 
 const PEER = 'b'.repeat(64);

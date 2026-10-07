@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Button, { buttonClass } from '@/components/ui/Button';
+import Button, { buttonClass } from '@/components/ui/buttons/Button';
 import LandingHeroAnimation from './LandingHeroAnimation';
 import HeroProductPreview from './HeroProductPreview';
 

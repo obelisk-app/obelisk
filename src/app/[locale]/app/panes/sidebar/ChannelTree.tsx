@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { categoryLabel } from '@/utils/chat/category-label';
+import { categoryLabel } from '@/utils/relay/category-label';
 import type { JsGroup } from '@/services/nostr-bridge';
-import type { LaidOutSidebar } from '@/services/channel-layout';
-import type { View } from '@/utils/shell/view';
-import { GroupNode } from '../GroupNode';
+import type { LaidOutSidebar } from '@/services/relay/channel-layout';
+import type { View } from '@/utils/shell/desktop/view';
+import { GroupNode } from './GroupNode';
 
 type Props = {
   laidOut: LaidOutSidebar;

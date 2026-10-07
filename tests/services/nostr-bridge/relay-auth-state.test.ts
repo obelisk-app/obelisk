@@ -22,7 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { finalizeEvent, generateSecretKey, getPublicKey, type Event as NostrEvent } from 'nostr-tools';
 import { normalizeURL } from 'nostr-tools/utils';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 const fake = vi.hoisted(() => {
   const state = {
@@ -167,7 +167,7 @@ afterEach(() => {
 
 describe('relay-access "authenticating" state', () => {
   it('flips to "authenticating" the moment the relay challenges AUTH', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -201,7 +201,7 @@ describe('relay-access "authenticating" state', () => {
   });
 
   it('deduplicates identical NIP-42 signature requests', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const sk = Uint8Array.from(skHex.match(/../g)!.map((byte) => parseInt(byte, 16)));
     const signEvent = vi.fn(async (template) => finalizeEvent({ ...template }, sk));
@@ -233,7 +233,7 @@ describe('relay-access "authenticating" state', () => {
   });
 
   it('flips from "authenticating" to "ok" when the relay starts delivering events', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -273,7 +273,7 @@ describe('relay-access "authenticating" state', () => {
   });
 
   it('sticky-OK: once the relay is "ok", a later AUTH challenge does not downgrade', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -307,7 +307,7 @@ describe('relay-access "authenticating" state', () => {
   });
 
   it('CLOSED auth-required during "authenticating" flips to "auth-required" after the soak elapses', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -352,7 +352,7 @@ describe('relay-access "authenticating" state', () => {
 
 
   it('a later ensureRelay (new REQ) does not overwrite "restricted" with "authenticating"', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -387,7 +387,7 @@ describe('relay-access "authenticating" state', () => {
   });
 
   it('"restricted" still clears to "ok" when the relay starts serving us', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -419,7 +419,7 @@ describe('relay-access "authenticating" state', () => {
   });
 
   it('a publish refused with a whitelist reason flips to "restricted" without the soak', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -439,7 +439,7 @@ describe('relay-access "authenticating" state', () => {
   });
 
   it('a group-level "restricted:" publish refusal keeps the soak', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -459,7 +459,7 @@ describe('relay-access "authenticating" state', () => {
   });
 
   it('the preflight watchdog waits out a slow NIP-42 approval started by automaticallyAuth', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const sk = Uint8Array.from(skHex.match(/../g)!.map((b) => parseInt(b, 16)));
     let approve!: () => void;
@@ -507,7 +507,7 @@ describe('relay-access "authenticating" state', () => {
     'auth-required: Authentication required: this relay only accepts whitelisted pubkeys',
   ]) {
     it(`stays "restricted" through the pool's EOSE-then-CLOSED on every sub (${reason.split(':')[0]})`, async () => {
-      const clientMod = await import('@/services/nostr-bridge/client');
+      const clientMod = await import('@/services/nostr-bridge/facade/client');
       const { skHex, pkHex } = makeKeypair();
       const bridge = await clientMod.getBridge();
       await bridge.loginWithNsec(skHex, pkHex);
@@ -545,7 +545,7 @@ describe('relay-access "authenticating" state', () => {
   }
 
   it('classifyAccessClose separates post-AUTH refusals from AUTH failures', async () => {
-    const { classifyAccessClose } = await import('@/services/nostr-bridge/client');
+    const { classifyAccessClose } = await import('@/services/nostr-bridge/facade/client');
     const refusal = 'auth-required: Authentication required: this relay only accepts whitelisted pubkeys';
     expect(classifyAccessClose(refusal, true)).toBe('restricted');
     expect(classifyAccessClose(refusal, false)).toBe('auth-required');
@@ -560,7 +560,7 @@ describe('relay-access "authenticating" state', () => {
   });
 
   it('does not AUTH an override relay used by a watched subscription', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -588,7 +588,7 @@ describe('relay-access "authenticating" state', () => {
 
 
   it('does not enter "authenticating" for an auxiliary (non-active) relay', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);

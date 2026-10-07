@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 
 const subs = vi.hoisted(() => ({ count: 0, unsub: vi.fn() }));
-vi.mock('@/services/nostr-bridge/client', async (importOriginal) => {
-  const real = await importOriginal<typeof import('@/services/nostr-bridge/client')>();
+vi.mock('@/services/nostr-bridge/facade/client', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/services/nostr-bridge/facade/client')>();
   const impl = { subscribeFilter: () => { subs.count += 1; return subs.unsub; } };
   return { ...real, getBridge: async () => impl, getBridgeImpl: () => impl };
 });
@@ -16,7 +16,7 @@ import {
   resetDiscovery,
   snapshotAdvertisements,
 } from '@/services/voice/sfu-discovery';
-import { KIND_SFU_ADVERTISE } from '@/utils/nip-kinds';
+import { KIND_SFU_ADVERTISE } from '@/utils/nostr/nip-kinds';
 
 function ad(pubkey: string, createdAt: number, tags: string[][] = []): NostrEvent {
   return { id: `${pubkey}-${createdAt}`, pubkey, created_at: createdAt, kind: KIND_SFU_ADVERTISE, content: '', sig: 's', tags };

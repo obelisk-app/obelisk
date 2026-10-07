@@ -13,7 +13,7 @@ import { openMeshPeer, randomId, type MeshPeerHost } from './mesh-peer';
 import { DeferredSignalQueue } from './deferred-signals';
 import { pushVoiceDebug } from './debug';
 import { wotEngine } from '@/services/wot/engine';
-import { KIND_VOICE_SIGNAL } from '@/utils/nip-kinds';
+import { KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
 import { MAX_PARTICIPANTS } from './constants';
 import type { VoiceSignalPayload } from './types';
 

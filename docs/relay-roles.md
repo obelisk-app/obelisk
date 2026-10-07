@@ -8,7 +8,7 @@ operator** (the NIP-11 `pubkey`). A channel admin does not gain relay-wide role
 authority, and readers filter on the operator as author, so a roles event
 published by anyone else is never parsed.
 
-Code: [`src/services/relay-roles.ts`](../src/services/relay-roles.ts) ·
+Code: [`src/services/relay/relay-roles.ts`](../src/services/relay/relay-roles.ts) ·
 UI: `RoleBadge.tsx`, `RelayRolesAdminModal.tsx`.
 
 ## Wire format

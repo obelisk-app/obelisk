@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAdminsByGroup, useGroups } from '@/services/nostr-bridge';
-import { useMembersByGroupBulk } from '@/hooks/useMembersByGroupBulk';
+import { useMembersByGroupBulk } from '@/hooks/chat/members/useMembersByGroupBulk';
 import {
   buildRelayAdminRows, filterRelayAdminRows, relayAdminGroupName, relayAdminRowKey, selectedRelayAdminRows, toggleKey,
   type RelayAdminRoleFilter, type RelayAdminRow,

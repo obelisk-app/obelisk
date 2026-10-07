@@ -1,7 +1,7 @@
 import type { Viewport } from 'next';
 import type { ReactNode } from 'react';
 import IntlScope from '@/i18n/IntlScope';
-import AppProviders from './AppProviders';
+import AppProviders from './mounts/AppProviders';
 
 /**
  * The chat shell manages its own gestures (swipes, pinch on media, the

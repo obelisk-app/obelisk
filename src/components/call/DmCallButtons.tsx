@@ -9,10 +9,10 @@
  */
 
 import { useTranslations } from 'next-intl';
-import { usePreferences } from '@/hooks/usePreferences';
-import { useDmCallStore } from '@/store/dm-call';
-import { PhoneIcon, VideoIcon } from '@/components/ui/icons';
-import { prefetchDmCallSession } from '@/services/dm-call/load-session';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
+import { useDmCallStore } from '@/store/call/dm-call';
+import { PhoneIcon, VideoIcon } from '@/components/ui/icons/icons';
+import { prefetchDmCallSession } from '@/services/call/load-session';
 
 export function DmCallButtons({ peer, variant = 'desktop' }: { peer: string; variant?: 'desktop' | 'mobile' }) {
   const t = useTranslations();

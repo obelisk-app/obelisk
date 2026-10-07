@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { filterProfileFeed, mediaUrls, type ProfileFeedTab } from '@/services/social/profile-feed';
-import { useFeed } from '@/hooks/social/useFeed';
+import { useFeed } from '@/hooks/social/feed/useFeed';
 import type { MediaItem } from '@/services/social/feed-media';
 
 /**

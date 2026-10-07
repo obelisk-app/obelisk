@@ -3,8 +3,8 @@
 import { useMemo } from 'react';
 import type { Components } from 'react-markdown';
 import { useChatStore } from '@/store/chat';
-import { useRemoteMediaGate, type RemoteMediaGate } from '@/services/remote-media-gate';
-import { mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
+import { useRemoteMediaGate, type RemoteMediaGate } from '@/services/media/remote-media-gate';
+import { mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import { buildMarkdownComponents } from '@/components/chat/message/markdown-components';
 import type { MentionMap } from '@/components/chat/message/placeholders';
 
@@ -13,7 +13,7 @@ import type { MentionMap } from '@/components/chat/message/placeholders';
  *
  * Passing `authorPubkey` (even as `null`, "unknown") turns the gate on;
  * omitting it keeps everything loading, which is right only for content the
- * reader wrote themselves. See `src/services/remote-media.ts`.
+ * reader wrote themselves. See `src/services/media/remote-media.ts`.
  */
 export function useMessageMediaGate(authorPubkey: string | null | undefined, customEmojis?: CustomEmojiMap) {
   const serverEmojis = useChatStore((s) => s.serverEmojis);

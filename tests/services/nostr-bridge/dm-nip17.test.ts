@@ -25,7 +25,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { generateSecretKey, getPublicKey, finalizeEvent, nip04, type Event as NostrEvent } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 const fake = vi.hoisted(() => {
   const state = {
@@ -258,7 +258,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  const { getBridgeImpl } = await import('@/services/nostr-bridge/client');
+  const { getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
   getBridgeImpl()?.dispose();
   fake.state.published = [];
   fake.state.publishAttempts = [];
@@ -280,8 +280,8 @@ async function waitForWraps(n: number): Promise<Array<NostrEvent & { relays?: st
 
 describe('NIP-17 send/receive', () => {
   it('sends NIP-17 by default and routes to the recipient\'s published inbox relays', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const alice = makeKeypair();
     const bob = makeKeypair();
     const bobInboxRelay = 'wss://bob-inbox.example';
@@ -320,8 +320,8 @@ describe('NIP-17 send/receive', () => {
   });
 
   it('ingests a received gift wrap with protocol: nip17', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
     const alice = makeKeypair();
@@ -355,8 +355,8 @@ describe('NIP-17 send/receive', () => {
   });
 
   it('rejects a gift wrap whose rumor pubkey does not match the seal signer (forged authorship)', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
     const alice = makeKeypair();
@@ -385,8 +385,8 @@ describe('NIP-17 send/receive', () => {
 
 describe('DM subscription survives a relay switch', () => {
   it('reopens the kind-1059 REQ after switchRelay without a remount', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const me = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(me.skHex, me.pkHex);
@@ -412,8 +412,8 @@ describe('NIP-17 history across a real page reload', () => {
     fake.state.published.push(await sealAndGiftWrap(new PrivateKeySigner(alice.sk), bob.pkHex, buildChatMessage(alice.pkHex, bob.pkHex, 'before the reload')));
 
     const load = async () => {
-      const { getBridge } = await import('@/services/nostr-bridge/client');
-      const { setPreference } = await import('@/services/preferences');
+      const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+      const { setPreference } = await import('@/services/preferences/preferences');
       const bridge = await getBridge();
       await bridge.loginWithNsec(bob.skHex, bob.pkHex);
       await bridge.unlockDirectMessages();
@@ -432,9 +432,9 @@ describe('NIP-17 history across a real page reload', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {
       expect((await load())[0].content).toBe('before the reload');
-      const { __INTERNAL } = await import('@/services/nostr-bridge/wrap-ledger');
+      const { __INTERNAL } = await import('@/services/nostr-bridge/cache/wrap-ledger');
       await vi.advanceTimersByTimeAsync(__INTERNAL.PERSIST_DEBOUNCE_MS);
-      const { getBridgeImpl } = await import('@/services/nostr-bridge/client');
+      const { getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
       getBridgeImpl()?.dispose();
     } finally {
       vi.useRealTimers();
@@ -459,8 +459,8 @@ describe('NIP-17 kind-15 file messages', () => {
   };
 
   it('sends a kind-15 rumor carrying the decryption tags, sealed and wrapped', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { unwrapGiftWrap } = await import('@nostr-wot/dm');
     const alice = makeKeypair();
@@ -500,9 +500,9 @@ describe('NIP-17 kind-15 file messages', () => {
   });
 
   it('refuses to send a file on a thread pinned to NIP-04', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
-    const { useDMStore } = await import('@/store/dm');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
+    const { useDMStore } = await import('@/store/chat/dm');
     const alice = makeKeypair();
     const bob = makeKeypair();
     const bridge = await getBridge();
@@ -515,8 +515,8 @@ describe('NIP-17 kind-15 file messages', () => {
   });
 
   it('ingests a received kind-15 with its file metadata and a filename-only notification', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
     const { buildDmFileTags } = await import('@/utils/attachments/dm-file');
@@ -544,8 +544,8 @@ describe('NIP-17 kind-15 file messages', () => {
   });
 
   it('drops a kind-15 it could not decrypt', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
     const alice = makeKeypair();
@@ -569,8 +569,8 @@ describe('DM call control messages', () => {
   const eph = 'e'.repeat(64);
 
   it('gift-wraps an invite with an expiration and never renders it as a message', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { unwrapGiftWrap } = await import('@nostr-wot/dm');
     const alice = makeKeypair();
@@ -600,8 +600,8 @@ describe('DM call control messages', () => {
   });
 
   it('delivers a fresh inbound control message to call listeners, and drops stale ones', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { sealAndGiftWrap } = await import('@nostr-wot/dm');
     const alice = makeKeypair();
@@ -631,8 +631,8 @@ describe('DM call control messages', () => {
   });
 
   it('wraps an accept to ourselves too, so other devices stop ringing', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const bob = makeKeypair();
     const alice = makeKeypair();
     const bridge = await getBridge();
@@ -653,8 +653,8 @@ describe('DM call control messages', () => {
 
 describe('NIP-17 signer adapter: all three login methods', () => {
   it('nsec: sends a well-formed, independently-decryptable gift wrap', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { unwrapGiftWrap } = await import('@nostr-wot/dm');
     const alice = makeKeypair();
@@ -674,8 +674,8 @@ describe('NIP-17 signer adapter: all three login methods', () => {
   });
 
   it('nip07: sends a well-formed, independently-decryptable gift wrap', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { unwrapGiftWrap } = await import('@nostr-wot/dm');
     const alice = makeKeypair();
@@ -715,8 +715,8 @@ describe('NIP-17 signer adapter: all three login methods', () => {
   });
 
   it('bunker: sends a well-formed, independently-decryptable gift wrap', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { unwrapGiftWrap } = await import('@nostr-wot/dm');
     const alice = makeKeypair();
@@ -747,8 +747,8 @@ describe('NIP-17 signer adapter: all three login methods', () => {
  */
 describe('NIP-17 self-copy', () => {
   async function loginAlice(alice: ReturnType<typeof makeKeypair>) {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const bridge = await getBridge();
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
     await bridge.unlockDirectMessages();
@@ -838,7 +838,7 @@ describe('NIP-17 self-copy', () => {
 
     await bridge.logout();
 
-    const { setPreference } = await import('@/services/preferences');
+    const { setPreference } = await import('@/services/preferences/preferences');
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
     await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
@@ -898,7 +898,7 @@ describe('NIP-17 self-copy', () => {
   });
 
   it('does not publish a self-copy for a NIP-04 thread', async () => {
-    const { useDMStore } = await import('@/store/dm');
+    const { useDMStore } = await import('@/store/chat/dm');
     const alice = makeKeypair();
     const bob = makeKeypair();
 
@@ -924,8 +924,8 @@ describe('NIP-17 self-copy', () => {
 
 describe('kind-10050 inbox-list publish on login', () => {
   it('publishes an inbox list on login when DMs are enabled and none exists yet', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     setPreference('directMessagesEnabled', true);
     const alice = makeKeypair();
 
@@ -940,7 +940,7 @@ describe('kind-10050 inbox-list publish on login', () => {
   });
 
   it('does not publish an inbox list on login when DMs are disabled (the default)', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const alice = makeKeypair();
 
     const bridge = await getBridge();
@@ -967,8 +967,8 @@ describe('NIP-17 gift-wrap relay routing', () => {
   const ACTIVE_RELAY = 'wss://public.obelisk.ar';
 
   async function loginAlice(alice: ReturnType<typeof makeKeypair>) {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     setPreference('directMessagesEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
@@ -1150,8 +1150,8 @@ describe('kind-10050 inbox-list publish scope', () => {
   const PROFILE_RELAY = 'wss://purplepag.es';
 
   async function loginAlice(alice: ReturnType<typeof makeKeypair>) {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     setPreference('directMessagesEnabled', true);
     const bridge = await getBridge();
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
@@ -1278,8 +1278,8 @@ describe('signer load under an inbound gift-wrap backlog', () => {
   }
 
   it('opens each wrap ~twice even with all three kind-1059 consumers mounted', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { startGroupsRelaySync, startDMRelaySync } = await import('@/services/read-state/relay-sync');
 
     const alice = makeKeypair();
@@ -1319,9 +1319,9 @@ describe('signer load under an inbound gift-wrap backlog', () => {
   });
 
   it('lets a signature jump a queued decrypt backlog', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
-    const { signerQueueStats } = await import('@/services/nostr-bridge/signer-queue');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
+    const { signerQueueStats } = await import('@/services/nostr-bridge/session/signer-queue');
 
     const alice = makeKeypair();
     const bob = makeKeypair();

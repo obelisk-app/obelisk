@@ -4,7 +4,7 @@
  * sender. Shared by the definition, the rules and the sequencing.
  */
 import type { GameMove } from 'vesta';
-import type { MoveContext } from '../types';
+import type { MoveContext } from '../core/types';
 import { diceFromEntropy } from './dice';
 
 /** A move as it travels on the wire: upstream's move minus `player`. */

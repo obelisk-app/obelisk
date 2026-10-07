@@ -9,12 +9,12 @@
  */
 import { CodedError, codeOrMessage, type ActivityCode } from '@/utils/errors/codes';
 import { SESSION_IDENTITY_ID, type AuthLease, type RelayHub, type RelayStatus } from '@/lib/relay-hub';
-import { failActivity, pushActivity, resolveActivity } from '@/services/activity-log';
-import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '../page-hub';
-import { pushRelayDebug } from '../relay-debug';
-import { validateRelayUrl } from '../relay-list';
+import { failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
+import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '../facade/page-hub';
+import { pushRelayDebug } from '../relay/relay-debug';
+import { validateRelayUrl } from '../relay/relay-list';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-import type { RelayAccessState } from '../types';
+import type { RelayAccessState } from '../common/types';
 import { isBrowserOffline } from './browser-events';
 import type { PerGroupReqs } from './fanout';
 import type { SessionState } from './state';

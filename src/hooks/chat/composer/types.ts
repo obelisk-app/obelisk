@@ -1,12 +1,12 @@
 import type { ClipboardEvent, FormEvent, KeyboardEvent, RefObject } from 'react';
 import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
 import type { MemberInfo } from '@/utils/message-text/mentions';
-import type { CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
-import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
-import type { SlashFilter, SlashSection } from '@/services/bot-commands';
-import type { BotProfiles, SlashCommand } from '@/components/chat/SlashCommandAutocomplete';
-import type { MediaPickerTab } from '@/components/chat/MessageMediaPicker';
-import type { PickedCustomEmoji } from '@/components/chat/EmojiPicker';
+import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
+import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
+import type { SlashFilter, SlashSection } from '@/services/relay/bot-commands';
+import type { BotProfiles, SlashCommand } from '@/components/chat/slash/SlashCommandAutocomplete';
+import type { MediaPickerTab } from '@/components/chat/picker/MessageMediaPicker';
+import type { PickedCustomEmoji } from '@/components/chat/picker/EmojiPicker';
 
 /**
  * What a panel-level drop zone needs from the composer it wraps: the drop

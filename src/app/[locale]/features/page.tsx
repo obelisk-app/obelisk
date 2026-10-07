@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
-import Footer from '@/components/marketing/Footer';
-import Navbar from '@/components/marketing/Navbar';
-import ShootingStars from '@/components/marketing/ShootingStars';
+import Footer from '@/components/marketing/site/Footer';
+import Navbar from '@/components/marketing/site/Navbar';
+import ShootingStars from '@/components/common/ShootingStars';
 import { getTranslations } from 'next-intl/server';
 import IntlScope from '@/i18n/IntlScope';
 import { pageLocale, type LocaleParams } from '@/i18n/page-locale';

@@ -116,7 +116,7 @@ together can still guess they are a pair.
 (that part is fixed), but the event rides the session's socket, which
 answers AUTH as the user. Closing this needs the
 publish to go out under a separate, never-authenticating identity on the
-relay hub (the mechanism DM calls already use, `src/services/dm-call/call-pool.ts`).
+relay hub (the mechanism DM calls already use, `src/services/call/call-pool.ts`).
 
 These are worth stating plainly rather than implying the fix is total.
 

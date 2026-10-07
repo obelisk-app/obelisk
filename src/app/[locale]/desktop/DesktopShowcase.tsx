@@ -2,12 +2,12 @@
 
 import { Link } from '@/i18n/navigation';
 import { useRouter } from '@/i18n/navigation';
-import Navbar from '@/components/marketing/Navbar';
-import Footer from '@/components/marketing/Footer';
-import ShootingStars from '@/components/marketing/ShootingStars';
-import { ShowcaseRow, type ShowcaseItem } from '@/components/marketing/Showcase';
+import Navbar from '@/components/marketing/site/Navbar';
+import Footer from '@/components/marketing/site/Footer';
+import ShootingStars from '@/components/common/ShootingStars';
+import { ShowcaseRow, type ShowcaseItem } from '@/components/marketing/showcase/Showcase';
 import { useTranslations } from 'next-intl';
-import Button, { buttonClass } from '@/components/ui/Button';
+import Button, { buttonClass } from '@/components/ui/buttons/Button';
 
 export default function DesktopShowcase() {
   const t = useTranslations();

@@ -97,7 +97,7 @@ describe('the hooks layer', () => {
   it('sees every form of hook definition, and nothing that only calls or mentions one', () => {
     const source = [
       "import { useState } from 'react';",
-      "import { useDismiss } from '@/hooks/useDismiss';",
+      "import { useDismiss } from '@/hooks/common/useDismiss';",
       'export function useAlpha() {}',
       'function useBeta() {}',
       'export default function useGamma() {}',

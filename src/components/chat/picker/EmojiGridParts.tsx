@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import MediaThumb from '@/components/media/MediaThumb';
+import MediaThumb from '@/components/media/library/MediaThumb';
 import type { RecentPickerEntry } from '@/utils/chat/picker/custom-emoji-entries';
 import type { CustomEmojiEntry, PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
 

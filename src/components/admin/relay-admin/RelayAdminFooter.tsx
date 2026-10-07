@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import ModalFooter from '@/components/ui/ModalFooter';
+import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import type { RelayAdminPanelModel } from '@/hooks/admin/relay-admin/useRelayAdminPanel';
 
 /** The counts on the left, demote and kick on the right. */

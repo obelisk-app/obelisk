@@ -1,9 +1,9 @@
 'use client';
 
-import { useInterests } from '@/hooks/social/useInterests';
+import { useInterests } from '@/hooks/social/tags/useInterests';
 import { useTranslations } from 'next-intl';
 import WidgetCard, { WidgetEmpty } from './WidgetCard';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 
 /**
  * The hashtags this account follows: NIP-51 kind 10015.

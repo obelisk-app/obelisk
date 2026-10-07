@@ -2,18 +2,18 @@
 
 import { useRef } from 'react';
 import type { JsMediaKind } from '@/services/nostr-bridge';
-import MediaThumb from '@/components/media/MediaThumb';
-import Button from '@/components/ui/Button';
-import Modal from '@/components/ui/Modal';
-import ModalHeader from '@/components/ui/ModalHeader';
-import ModalFooter from '@/components/ui/ModalFooter';
-import EmptyState from '@/components/ui/EmptyState';
-import FileInput from '@/components/ui/FileInput';
-import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
+import MediaThumb from '@/components/media/library/MediaThumb';
+import Button from '@/components/ui/buttons/Button';
+import Modal from '@/components/ui/overlays/Modal';
+import ModalHeader from '@/components/ui/overlays/ModalHeader';
+import ModalFooter from '@/components/ui/overlays/ModalFooter';
+import EmptyState from '@/components/ui/feedback/EmptyState';
+import FileInput from '@/components/ui/forms/FileInput';
+import Input from '@/components/ui/forms/Input';
+import Select from '@/components/ui/forms/Select';
 import { useTranslations } from 'next-intl';
 import { usePackEditor } from '@/hooks/media/library/usePackEditor';
-import type { EditablePack } from '@/utils/media-library/types';
+import type { EditablePack } from '@/utils/media/library/types';
 
 function KindOptions() {
   const t = useTranslations();

@@ -5,21 +5,21 @@
  * desktop `UserPanel` shows one at a time; `PreferencesPanel` stacks them
  * for surfaces with no sidebar (the phone's preferences screen).
  */
-import { setPreference } from '@/services/preferences';
-import { usePreferences } from '@/hooks/usePreferences';
-import { setDmOptInEnabled } from '@/services/dm/opt-in';
-import WotSettings from '@/components/settings/WotSettings';
-import LanguagePreference from '@/components/settings/LanguagePreference';
-import AppearancePreferenceControls from '@/components/settings/AppearancePreferenceControls';
-import NotificationSettings from '@/components/settings/NotificationSettings';
-import SocialRelaySettings from '@/components/settings/SocialRelaySettings';
-import CallSettings from '@/components/settings/CallSettings';
-import WalletSettings from '@/components/settings/WalletSettings';
-import MutedAndBlocked from '@/components/settings/MutedAndBlocked';
-import AccountBackupExport from '@/components/settings/AccountBackupExport';
-import DeveloperSignatureTest from '@/components/settings/DeveloperSignatureTest';
+import { setPreference } from '@/services/preferences/preferences';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
+import { setDmOptInEnabled } from '@/services/chat/dm/opt-in';
+import WotSettings from '@/components/settings/privacy/WotSettings';
+import LanguagePreference from '@/components/settings/appearance/LanguagePreference';
+import AppearancePreferenceControls from '@/components/settings/appearance/AppearancePreferenceControls';
+import NotificationSettings from '@/components/settings/notifications/NotificationSettings';
+import SocialRelaySettings from '@/components/settings/social-relays/SocialRelaySettings';
+import CallSettings from '@/components/settings/notifications/CallSettings';
+import WalletSettings from '@/components/settings/wallet/WalletSettings';
+import MutedAndBlocked from '@/components/settings/privacy/MutedAndBlocked';
+import AccountBackupExport from '@/components/settings/account/AccountBackupExport';
+import DeveloperSignatureTest from '@/components/settings/account/DeveloperSignatureTest';
 import { useTranslations } from 'next-intl';
-import type { SettingsSection } from '@/utils/open-settings';
+import type { SettingsSection } from '@/utils/settings/open-settings';
 import { LocalDataSection } from './LocalDataSection';
 import { PostQuantumStatusRow } from './PostQuantumStatusRow';
 import { ToggleRow } from './ToggleRow';

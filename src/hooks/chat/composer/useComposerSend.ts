@@ -2,12 +2,12 @@ import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
 import { nostrActions, useAdmins, useMembers, useMyPubkey, useRelayAccess, type JsGroup, type JsMessage } from '@/services/nostr-bridge';
 import { resolveDraftMentions, type DraftMention } from '@/utils/message-text/mentions';
-import type { CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
-import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
-import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
+import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
+import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
+import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import { parseZapCommand } from '@/services/wallet/parse-zap-command';
 import { zapCommandErrorKey } from '@/utils/chat/slash/zap-command-error';
-import { useMessageZapStore } from '@/store/messageZap';
+import { useMessageZapStore } from '@/store/chat/message-zap';
 import { outgoingTags } from './draft-text';
 import { errorText } from '@/utils/errors/error-text';
 

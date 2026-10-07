@@ -9,7 +9,7 @@
  * would be under a key that no longer exists.
  */
 import { VaultError, openSessionVault, type SealedBox } from '@/lib/crypto/session-vault';
-import { secretsOf, type PersistedSession, type SessionSecrets } from '../session-storage';
+import { secretsOf, type PersistedSession, type SessionSecrets } from './session-storage';
 
 /**
  * What the session layer has to tell the person about storage. The first is

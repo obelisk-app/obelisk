@@ -17,7 +17,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { generateSecretKey, getPublicKey, type Event as NostrEvent } from 'nostr-tools';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 const fake = vi.hoisted(() => {
   const state = {
@@ -101,8 +101,8 @@ type Thread = ReadonlyArray<{ content: string; outgoing: boolean }>;
 
 /** Log `me` in, enable DMs and start watching `peer`'s thread. */
 async function loginWatching(me: ReturnType<typeof makeKeypair>, peer: string) {
-  const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-  const { setPreference } = await import('@/services/preferences');
+  const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+  const { setPreference } = await import('@/services/preferences/preferences');
   const { useModerationStore } = await import('@/store/moderation');
   const { useNotificationsStore } = await import('@/store/notifications');
   const alert = await import('@/services/notifications/alert');
@@ -133,7 +133,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  const { getBridgeImpl } = await import('@/services/nostr-bridge/client');
+  const { getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
   getBridgeImpl()?.dispose();
   vi.restoreAllMocks();
   fake.state.published = [];
@@ -158,7 +158,7 @@ describe('NIP-17 gift wraps from blocked and muted senders', () => {
     expect(announce).not.toHaveBeenCalled();
     // Recoverable: the wrap was not written off as inert, so unblocking and
     // reconnecting replays it. See the comment in `ingestIncomingGiftWrap`.
-    const { hasSeenWrap } = await import('@/services/nostr-bridge/wrap-ledger');
+    const { hasSeenWrap } = await import('@/services/nostr-bridge/cache/wrap-ledger');
     expect(hasSeenWrap('dm:inert', wrap.id)).toBe(false);
   });
 

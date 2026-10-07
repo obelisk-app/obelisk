@@ -11,7 +11,7 @@
  * the clear and never describes a session other than the current one.
  */
 import { VaultError, isVaultAvailable, type SealedBox } from '@/lib/crypto/session-vault';
-import { cacheFreeSpaceForQuota } from '../cache';
+import { cacheFreeSpaceForQuota } from '../cache/cache';
 import {
   LEGACY_STORAGE_KEY,
   STORAGE_KEY,
@@ -19,8 +19,8 @@ import {
   sessionHasSecrets,
   storedRecordFor,
   type PersistedSession,
-} from '../session-storage';
-import type { StateStore } from '../state-store';
+} from './session-storage';
+import type { StateStore } from '../common/state-store';
 import {
   destroySessionVault,
   forgetSdkSignerStorage,

@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { wotEngine } from '@/services/wot/engine';
 import { useWotEnabled } from '@/hooks/wot/useWot';
-import type { JsGroup } from '../types';
+import type { JsGroup } from '../common/types';
 import { useMyPubkey } from './session';
 import { useSubscription } from './subscription';
 

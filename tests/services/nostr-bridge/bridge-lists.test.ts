@@ -28,7 +28,7 @@ installBridgeHarness(fake);
 describe('nostr-bridge', () => {
 
   it("exports authored events and resolves favorited media-pack events", async () => {
-    const { getBridge } = await import("@/services/nostr-bridge/client");
+    const { getBridge } = await import("@/services/nostr-bridge/facade/client");
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -52,9 +52,9 @@ describe('nostr-bridge', () => {
 
 
   it('subscribes, caches, and publishes NIP-51 media packs and favorites', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { cacheGet } = await import('@/services/nostr-bridge/cache');
-    const { mediaPackAddress } = await import('@/utils/media-tags/media-packs');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheGet } = await import('@/services/nostr-bridge/cache/cache');
+    const { mediaPackAddress } = await import('@/utils/media/tags/media-packs');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -98,8 +98,8 @@ describe('nostr-bridge', () => {
 
 
   it("blacklists abusive media-pack publishers from relay events and cache", async () => {
-    const { getBridge } = await import("@/services/nostr-bridge/client");
-    const { cacheGet, cacheSet } = await import("@/services/nostr-bridge/cache");
+    const { getBridge } = await import("@/services/nostr-bridge/facade/client");
+    const { cacheGet, cacheSet } = await import("@/services/nostr-bridge/cache/cache");
     const { skHex, pkHex } = makeKeypair();
     const blockedAuthor = "43fabde62ffea1aa0ddae7c0ac03b7017e2d864f8665784b00bbfa2f9114c06a";
     const address = "30030:" + blockedAuthor + ":niggaemotes";
@@ -138,8 +138,8 @@ describe('nostr-bridge', () => {
 
 
   it('deletes only an owned media pack with a NIP-09 address request', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { mediaPackAddress } = await import('@/utils/media-tags/media-packs');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { mediaPackAddress } = await import('@/utils/media/tags/media-packs');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -177,7 +177,7 @@ describe('nostr-bridge', () => {
 
 
   it('caches the newest contact list and updates it immediately after edits', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const first = makeKeypair().pkHex;
     const second = makeKeypair().pkHex;
@@ -214,7 +214,7 @@ describe('nostr-bridge', () => {
 
 
   it('subscribeMyMutes parses NIP-51 kind 10000 p-tags for the local user', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const muted1 = makeKeypair();
     const muted2 = makeKeypair();
@@ -244,7 +244,7 @@ describe('nostr-bridge', () => {
 
 
   it('does not overwrite the mute list when the preservation read times out', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);

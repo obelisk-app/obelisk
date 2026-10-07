@@ -3,8 +3,8 @@
 /** Per-tile controls: mute-for-me (local only, via the voice store) and fullscreen. */
 import { useTranslations } from 'next-intl';
 import { useVoiceStore } from '@/store/voice';
-import { toggleFullscreen } from '@/utils/fullscreen';
-import { useFullscreenState } from '@/hooks/voice/useFullscreenState';
+import { toggleFullscreen } from '@/utils/voice/fullscreen';
+import { useFullscreenState } from '@/hooks/voice/room/useFullscreenState';
 
 export function MuteForMeButton({ pubkey, compact = false }: { pubkey: string; compact?: boolean }) {
   const t = useTranslations();

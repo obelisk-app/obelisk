@@ -9,10 +9,10 @@ import { finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { isPqEnvelope } from '@nostr-wot/pq';
 import type { NostrSigner as DmNostrSigner } from '@nostr-wot/signers';
-import { memoizeDecrypt } from '../decrypt-cache';
-import { hexToBytes } from '../hex';
-import type { PersistedSession } from '../session-storage';
-import { enqueueSignerOp, type SignerLane } from '../signer-queue';
+import { memoizeDecrypt } from '../cache/decrypt-cache';
+import { hexToBytes } from '../common/hex';
+import type { PersistedSession } from './session-storage';
+import { enqueueSignerOp, type SignerLane } from './signer-queue';
 import type { BunkerModule } from './bunker';
 
 export interface DmSignerDeps {
@@ -76,7 +76,7 @@ export function buildDmSigner(
       if (opts?.scheme === 'pq') {
         // Only the extension path can carry the third argument today:
         // `window.nostr.nip44.encrypt` has a channel for it.  nsec has no
-        // ML-KEM key material in this build (that's `src/services/pq/`'s job,
+        // ML-KEM key material in this build (that's `src/services/chat/pq/`'s job,
         // out of scope here), and bunker's NIP-46 `nip44_encrypt` request
         // has no field for `recipientKemKey` (see
         // `@nostr-wot/signers`' `Nip46Signer.nip44Encrypt` doc). Both

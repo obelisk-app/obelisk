@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import YouTubeEmbed from '../YouTubeEmbed';
+import YouTubeEmbed from '../../common/YouTubeEmbed';
 
 /**
  * A video linked in a chat message, titled in the reader's language. Kept

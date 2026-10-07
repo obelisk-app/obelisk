@@ -21,7 +21,7 @@ describe('MobileSigningIndicator', () => {
   });
 
   it('changes color state and explains the event being signed', async () => {
-    const { pushActivity, resolveActivity } = await import('@/services/activity-log');
+    const { pushActivity, resolveActivity } = await import('@/services/feedback/activity-log');
     const { default: MobileSigningIndicator } = await import('@/components/feedback/MobileSigningIndicator');
     const { LocaleProvider } = await import('@tests/support/intl');
     const id = pushActivity('signBunker', undefined, {

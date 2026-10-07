@@ -29,9 +29,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
-import Text from '@/components/ui/Text';
-import { useDismiss } from '@/hooks/useDismiss';
+import Button from '@/components/ui/buttons/Button';
+import Text from '@/components/ui/layout/Text';
+import { useDismiss } from '@/hooks/common/useDismiss';
 
 /** Keeps the card off the viewport edges. */
 const MARGIN = 8;

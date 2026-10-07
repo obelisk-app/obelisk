@@ -1,8 +1,8 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
-import Footer from '@/components/marketing/Footer';
-import Navbar from '@/components/marketing/Navbar';
+import Footer from '@/components/marketing/site/Footer';
+import Navbar from '@/components/marketing/site/Navbar';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { HELP_TOPICS, helpTopicPath } from '@/utils/guides/help-topics';
 import { useTranslations } from 'next-intl';

@@ -19,7 +19,7 @@
 import type { Page, BrowserContext, ConsoleMessage } from '@playwright/test';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 
-// Mirror of `src/services/nostr-bridge/client.ts` constants. Duplicated rather
+// Mirror of `src/services/nostr-bridge/facade/client.ts` constants. Duplicated rather
 // than imported because the harness runs under Node and the bridge module
 // pulls a chain of browser-only deps.
 export const STORAGE_KEY = 'obelisk-dex/session';

@@ -18,11 +18,11 @@ import { fetchNote } from '@nostr-wot/data';
 import { initSocial, querySocial } from '@/services/social/pool';
 import { DEFAULT_SOCIAL_RELAYS } from '@/services/social/relays';
 import { KIND_NOTE, renderModeFor } from '@/services/social/kinds';
-import { getPreferences } from '@/services/preferences';
+import { getPreferences } from '@/services/preferences/preferences';
 import { useLocale, useTranslations } from 'next-intl';
 import { localizedPath } from '@/utils/seo/alternates';
-import NoteCard from '@/components/social/NoteCard';
-import ArticleReader from '@/components/social/ArticleCard';
+import NoteCard from '@/components/social/note/NoteCard';
+import ArticleReader from '@/components/social/article/ArticleCard';
 import type { ViewerTarget } from '@/services/social/identifier';
 
 export default function NoteViewerClient({

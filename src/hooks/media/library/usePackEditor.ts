@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { uploadToBlossom } from '@/services/blossom';
-import { isValidCustomEmojiName, normalizeCustomEmojiName } from '@/utils/media-tags/custom-emoji-tags';
+import { uploadToBlossom } from '@/services/media/blossom';
+import { isValidCustomEmojiName, normalizeCustomEmojiName } from '@/utils/media/tags/custom-emoji-tags';
 import { nostrActions } from '@/services/nostr-bridge';
 import type { JsMediaItem, JsMediaKind } from '@/services/nostr-bridge';
-import { uniqueName } from '@/utils/media-library/pack-utils';
+import { uniqueName } from '@/utils/media/library/pack-utils';
 import { isHttpUrl } from '@/utils/url/http-url';
-import type { EditablePack } from '@/utils/media-library/types';
+import type { EditablePack } from '@/utils/media/library/types';
 
 /**
  * The draft behind the pack editor: uploads become items with unique

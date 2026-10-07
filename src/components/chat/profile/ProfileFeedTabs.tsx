@@ -2,7 +2,7 @@
 
 import type { ProfileFeedTab } from '@/services/social/profile-feed';
 import { useTranslations } from 'next-intl';
-import SegmentedControl from '@/components/ui/SegmentedControl';
+import SegmentedControl from '@/components/ui/forms/SegmentedControl';
 
 const TABS = ['posts', 'replies', 'articles', 'media'] as const;
 

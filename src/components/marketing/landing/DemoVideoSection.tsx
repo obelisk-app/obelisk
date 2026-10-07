@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import YouTubeEmbed from '@/components/chat/YouTubeEmbed';
+import YouTubeEmbed from '@/components/common/YouTubeEmbed';
 import RevealSection from './RevealSection';
 import { DEMO_VIDEO_ID } from './landing-data';
 

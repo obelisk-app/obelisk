@@ -11,7 +11,7 @@
  * directly rather than through `safeFetch`.
  */
 
-import { decodeEntities, syndicationToken, tweetIdFrom, type LinkPreview } from '@/utils/link-preview';
+import { decodeEntities, syndicationToken, tweetIdFrom, type LinkPreview } from '@/utils/link-preview/link-preview';
 import { FETCH_TIMEOUT_MS, UA } from './safe-fetch';
 
 interface SyndicationMedia {

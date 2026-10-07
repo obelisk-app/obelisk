@@ -10,7 +10,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { BridgeImpl } from '@/services/nostr-bridge/client';
+import type { BridgeImpl } from '@/services/nostr-bridge/facade/client';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 
 const SESSION_KEY = 'obelisk-dex/session';
@@ -58,7 +58,7 @@ const bridge = {
 } as unknown as BridgeImpl;
 const wrapper = bridgeWrapper(bridge);
 
-import { setPreference } from '@/services/preferences';
+import { setPreference } from '@/services/preferences/preferences';
 import { useDirectMessages, useLoadEarlier } from '@/services/nostr-bridge/hooks/messages';
 // Rides along with the message hooks because it shares this file's fake bridge.
 import { useIsRehydrating } from '@/services/nostr-bridge/hooks/session';

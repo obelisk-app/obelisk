@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LOCALES } from '@/i18n';
-import { listSlugs, readGuide } from '@/services/guides';
+import { listSlugs, readGuide } from '@/services/guides/guides';
 import { guideSeoText } from '@/utils/seo/guide';
 
 /**

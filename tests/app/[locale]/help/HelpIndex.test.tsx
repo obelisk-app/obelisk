@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import HelpPage from '@/app/[locale]/help/HelpIndex';
 
-vi.mock('@/components/marketing/Navbar', () => ({ default: () => <nav>Obelisk</nav> }));
-vi.mock('@/components/marketing/Footer', () => ({ default: () => <footer /> }));
+vi.mock('@/components/marketing/site/Navbar', () => ({ default: () => <nav>Obelisk</nav> }));
+vi.mock('@/components/marketing/site/Footer', () => ({ default: () => <footer /> }));
 
 describe('HelpPage', () => {
   it('links each help topic and the guide index in the active locale', () => {

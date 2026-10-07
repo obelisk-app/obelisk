@@ -7,11 +7,11 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import { BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
-import type { BridgeContext } from '../context';
-import { hexToBytes } from '../hex';
-import { enqueueSignerOp, type SignerLane } from '../signer-queue';
-import { StateStore } from '../state-store';
-import { withDeadline } from '../with-deadline';
+import type { BridgeContext } from '../facade/context';
+import { hexToBytes } from '../common/hex';
+import { enqueueSignerOp, type SignerLane } from './signer-queue';
+import { StateStore } from '../common/state-store';
+import { withDeadline } from '../common/with-deadline';
 
 export type RemoteSigner = Pick<
   BunkerSigner,

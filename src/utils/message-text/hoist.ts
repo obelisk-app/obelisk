@@ -6,9 +6,9 @@
  */
 import { isImageUrl, extractYouTubeId, extractUrls } from '@/utils/message-text/markdown';
 import { isVideoUrl, isAudioUrl } from '@/utils/attachments/attachments';
-import { isSameOriginMediaUrl } from '@/services/remote-media';
-import { INVOICE_REGEX } from '@/utils/bolt11';
-import { GAME_MARKER_REGEX } from '@/lib/games/protocol';
+import { isSameOriginMediaUrl } from '@/services/media/remote-media';
+import { INVOICE_REGEX } from '@/utils/wallet/bolt11';
+import { GAME_MARKER_REGEX } from '@/lib/games/protocol/protocol';
 
 export interface HoistedUrls {
   imageUrls: string[];

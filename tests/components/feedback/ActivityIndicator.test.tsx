@@ -12,7 +12,7 @@ const renderLocalized = async (ui: React.ReactElement) => {
 };
 
 
-vi.mock('@/app/[locale]/app/RelayStatusBanner', () => ({ default: () => 'relay status' }));
+vi.mock('@/components/feedback/RelayStatusBanner', () => ({ default: () => 'relay status' }));
 
 describe('ActivityIndicator', () => {
   beforeEach(() => {
@@ -21,7 +21,7 @@ describe('ActivityIndicator', () => {
   });
 
   it('prioritizes typed signing waits and renders the event kind description', async () => {
-    const { pushActivity } = await import('@/services/activity-log');
+    const { pushActivity } = await import('@/services/feedback/activity-log');
     const { default: ActivityIndicator } = await import('@/components/feedback/ActivityIndicator');
 
     pushActivity('publish', undefined, { operation: 'publish', eventKind: 9 });
@@ -41,7 +41,7 @@ describe('ActivityIndicator', () => {
   });
 
   it('dismisses a failed activity from an icon, not a glyph', async () => {
-    const { pushActivity, failActivity } = await import('@/services/activity-log');
+    const { pushActivity, failActivity } = await import('@/services/feedback/activity-log');
     const { default: ActivityIndicator } = await import('@/components/feedback/ActivityIndicator');
     const id = pushActivity('publish', undefined, { operation: 'publish', eventKind: 9 });
     failActivity(id, 'publish-rejected');
@@ -55,7 +55,7 @@ describe('ActivityIndicator', () => {
   });
 
   it('hides the signing and publishing lifecycle on mobile', async () => {
-    const { pushActivity } = await import('@/services/activity-log');
+    const { pushActivity } = await import('@/services/feedback/activity-log');
     const { default: ActivityIndicator } = await import('@/components/feedback/ActivityIndicator');
     pushActivity('signExtension', undefined, { operation: 'sign' });
     pushActivity('publish', undefined, { operation: 'publish' });
@@ -68,7 +68,7 @@ describe('ActivityIndicator', () => {
   });
 
   it('reads a coded entry in the reader\'s language: title by status, failure by code', async () => {
-    const { pushActivity, failActivity } = await import('@/services/activity-log');
+    const { pushActivity, failActivity } = await import('@/services/feedback/activity-log');
     const { default: ActivityIndicator } = await import('@/components/feedback/ActivityIndicator');
     const { LocaleProvider } = await import('@tests/support/intl');
     const id = pushActivity('publish', undefined, { operation: 'publish', eventKind: 9, description: 'message' });
@@ -81,7 +81,7 @@ describe('ActivityIndicator', () => {
   });
 
   it('puts the relay host into the authenticating title and keeps an uncoded label as it is', async () => {
-    const { pushActivity } = await import('@/services/activity-log');
+    const { pushActivity } = await import('@/services/feedback/activity-log');
     const { default: ActivityIndicator } = await import('@/components/feedback/ActivityIndicator');
     const { LocaleProvider } = await import('@tests/support/intl');
     const id = pushActivity('relayAuth', 'relay.example', { operation: 'sign', description: 'relayAuth' });
@@ -91,7 +91,7 @@ describe('ActivityIndicator', () => {
     expect(screen.getByText('Autenticação NIP-42 com o relay')).toBeInTheDocument();
     view.unmount();
 
-    const { dismissActivity } = await import('@/services/activity-log');
+    const { dismissActivity } = await import('@/services/feedback/activity-log');
     dismissActivity(id);
     pushActivity('Legacy label', 'raw detail', { operation: 'connect' });
     render(<LocaleProvider initialLocale="en"><ActivityIndicator /></LocaleProvider>);

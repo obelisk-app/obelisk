@@ -6,7 +6,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({ useSignerReady: () => true });
 });
-vi.mock('@/services/blossom', () => ({ uploadToBlossom: vi.fn(), BlossomUploadError: class extends Error {} }));
+vi.mock('@/services/media/blossom', () => ({ uploadToBlossom: vi.fn(), BlossomUploadError: class extends Error {} }));
 
 import { EditProfileForm } from '@/app/[locale]/app/settings/EditProfileForm';
 

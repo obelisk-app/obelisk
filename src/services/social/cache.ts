@@ -15,7 +15,7 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { cacheGet, cacheSet } from '@/services/nostr-bridge';
-import { KIND_TEXT_NOTE } from '@/utils/nip-kinds';
+import { KIND_TEXT_NOTE } from '@/utils/nostr/nip-kinds';
 import { mergeNotes } from './feed';
 import { socialRelayKey } from './relays';
 

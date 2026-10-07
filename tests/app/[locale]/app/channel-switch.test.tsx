@@ -44,14 +44,14 @@ function StalePane({ groupId }: { groupId: string }) {
   return <div data-testid="pane">{shown.join('|')}</div>;
 }
 
-vi.mock('@/app/[locale]/app/panes/ChatPanel', () => ({ ChatLayout: StalePane }));
-vi.mock('@/app/[locale]/app/mobile/screens/ChannelScreen', () => ({ ChannelScreen: StalePane }));
+vi.mock('@/app/[locale]/app/panes/channel/ChatPanel', () => ({ ChatLayout: StalePane }));
+vi.mock('@/app/[locale]/app/mobile/screens/channel/ChannelScreen', () => ({ ChannelScreen: StalePane }));
 
-import { DesktopMain } from '@/app/[locale]/app/shell/DesktopMain';
-import { renderScreenBody, type MobileScreenProps } from '@/app/[locale]/app/mobile/MobileScreens';
+import { DesktopMain } from '@/app/[locale]/app/desktop/DesktopMain';
+import { renderScreenBody, type MobileScreenProps } from '@/app/[locale]/app/mobile/carousel/MobileScreens';
 import type { NavState } from '@/utils/shell/mobile/url-state';
-import type { FeedPaneControls } from '@/hooks/app/shell/useDesktopLayout';
-import type { View } from '@/utils/shell/view';
+import type { FeedPaneControls } from '@/hooks/shell/desktop/useDesktopLayout';
+import type { View } from '@/utils/shell/desktop/view';
 import { LocaleProvider } from '@tests/support/intl';
 
 /** Every render that showed a message belonging to another channel. */

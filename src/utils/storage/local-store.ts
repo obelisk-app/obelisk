@@ -8,7 +8,7 @@
  * throwing, and every save degrades silently on failure.
  *
  * For per-account isolation, prefer the Zustand `persist` middleware with
- * `createEnsureForAccount` (see `src/store/multi-account.ts`).
+ * `createEnsureForAccount` (see `src/store/common/multi-account.ts`).
  */
 import { safeJsonParse } from './json-safe';
 

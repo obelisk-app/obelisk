@@ -59,7 +59,7 @@ describe('whole-module mocks of the bridge', () => {
   it('is looking at real tests (the pattern still matches the mocks that exist)', () => {
     expect(files.length).toBeGreaterThan(50);
     expect(MODULE_MOCK.test("vi.mock('@/services/nostr-bridge', async () => ({}))")).toBe(true);
-    expect(MODULE_MOCK.test("vi.mock('@/services/nostr-bridge/client', () => ({}))")).toBe(false);
+    expect(MODULE_MOCK.test("vi.mock('@/services/nostr-bridge/facade/client', () => ({}))")).toBe(false);
   });
 
   it(`do not grow past ${BUDGET}: write a new test with fakeBridge and renderWithBridge instead`, () => {

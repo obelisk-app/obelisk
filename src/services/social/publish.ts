@@ -15,7 +15,7 @@
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import { getBridge } from '@/services/nostr-bridge';
-import { KIND_TEXT_NOTE } from '@/utils/nip-kinds';
+import { KIND_TEXT_NOTE } from '@/utils/nostr/nip-kinds';
 import { hashtagTags } from './profile-feed';
 import { encodeEventRef, mentionedPubkeys, referencedEvents } from './nip27';
 import { socialRelays } from './pool';

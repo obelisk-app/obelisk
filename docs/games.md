@@ -22,7 +22,7 @@ log.
 | socket.io rooms (`channel:`, `server:`, `pubkey:`) | one REQ per channel on the active relay |
 | server assigns seats | the host's `start` event freezes the seat order |
 
-The engine (`src/lib/games/chain-reaction.ts`) came over unmodified. That is
+The engine (`src/lib/games/chain-reaction/chain-reaction.ts`) came over unmodified. That is
 the point of the port: the game rules were already pure, so they moved without
 a rewrite, and the only new code is the part that used to be a server.
 
@@ -60,7 +60,7 @@ worthless a second later; a game log is the game.
 
 ## Determinism
 
-`deriveSession` (`src/lib/games/session.ts`) is the whole trust model. Rules:
+`deriveSession` (`src/lib/games/session/session.ts`) is the whole trust model. Rules:
 
 1. Events sort by `(created_at, id)`. The id is a hash, so the tiebreak is
    total and identical on every client, never "whoever the relay echoed
@@ -273,9 +273,9 @@ of a fresh board (a serialized state is ~4 KB, comfortably inside one event).
 range, and its default clock), then that game's own options (board size for
 Chain Reaction, seed or a loaded save for Vesta).
 
-Names and icons come from `src/lib/games/catalog.ts`, keyed by game type,
-which reads `src/lib/games/game-meta.ts` and never an engine. Each rules
-engine is its own download, fetched by `src/lib/games/registry.ts` the first
+Names and icons come from `src/lib/games/core/catalog.ts`, keyed by game type,
+which reads `src/lib/games/core/game-meta.ts` and never an engine. Each rules
+engine is its own download, fetched by `src/lib/games/core/registry.ts` the first
 time a table of that game is replayed; until it lands the card shows its
 skeleton.
 Nothing user-facing hardcodes a game's name: the card and the modal both used
@@ -406,15 +406,15 @@ played live with scripted keystrokes. A rules change that alters a board
 alters the guides the next time the script runs.
 
 Guides reference the output with `<Shot name="…" />`, whose alt text and
-intrinsic sizes live in `src/components/guides/Shot.tsx`; a shot named there
+intrinsic sizes live in `src/components/guides/mdx/Shot.tsx`; a shot named there
 with no file on disk fails `Shot.test.tsx`.
 
 ## Adding another game
 
 The runtime is game-agnostic. Port the engine from classic (its chess and
 tic-tac-toe engines are both already pure), make sure it obeys the contract in
-`src/lib/games/types.ts` (no wall clock, no randomness, no mutation), give it
-an entry in `src/lib/games/game-meta.ts` (which the definition spreads) and a
-loader in `src/lib/games/registry.ts`. Never import the engine from anything the
-chat shell loads: `tests/app/[locale]/app/lazy-mounts.test.tsx` fails if you do. Everything in `session.ts`, `transport.ts`,
+`src/lib/games/core/types.ts` (no wall clock, no randomness, no mutation), give it
+an entry in `src/lib/games/core/game-meta.ts` (which the definition spreads) and a
+loader in `src/lib/games/core/registry.ts`. Never import the engine from anything the
+chat shell loads: `tests/app/[locale]/app/mounts/lazy-mounts.test.tsx` fails if you do. Everything in `session.ts`, `transport.ts`,
 and the store works unchanged; only the board component is new.

@@ -1,13 +1,13 @@
 'use client';
 
 import { resolveReactionEmoji } from '@/utils/message-text/emoji-shortcodes';
-import type { MessageZapTotal } from '@/hooks/chat/useMessageZaps';
+import type { MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
-import { ZapIcon } from '@/components/ui/icons';
-import { ReactorHoverCard, ZapperHoverCard } from '../MessageHoverCards';
-import type { MessageRowActions } from '@/hooks/app/panes/message/useMessageRowActions';
-import RemoteImage from '@/components/ui/RemoteImage';
+import { ZapIcon } from '@/components/ui/icons/icons';
+import { ReactorHoverCard, ZapperHoverCard } from './MessageHoverCards';
+import type { MessageRowActions } from '@/hooks/shell/panes/message/useMessageRowActions';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 
 /** The zap total and one pill per reaction emoji under a message. */
 export function ReactionPills({ actions, zapTotal, isAdmin }: {

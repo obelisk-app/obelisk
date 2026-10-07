@@ -1,5 +1,5 @@
 import type { JsForumTag, JsGroup } from '@/services/nostr-bridge';
-import type { ForumPrefs } from '@/services/forum-prefs';
+import type { ForumPrefs } from '@/services/chat/forum/forum-prefs';
 
 type MessagesByGroup = Readonly<Record<string, ReadonlyArray<{ readonly createdAt: number }>>>;
 

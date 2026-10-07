@@ -13,7 +13,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { generateSecretKey, getPublicKey, type Event as NostrEvent } from 'nostr-tools';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 const fake = vi.hoisted(() => {
   interface FakeRelay {
@@ -110,7 +110,7 @@ vi.mock('nostr-tools', async (orig) => {
 const VOICE_RELAY = 'wss://voice.example';
 
 async function loggedInBridge() {
-  const clientMod = await import('@/services/nostr-bridge/client');
+  const clientMod = await import('@/services/nostr-bridge/facade/client');
   const sk = generateSecretKey();
   const skHex = Array.from(sk).map((x) => x.toString(16).padStart(2, '0')).join('');
   const bridge = await clientMod.getBridge();

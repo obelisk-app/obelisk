@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { BridgeImpl } from '@/services/nostr-bridge/client';
-import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import type { BridgeImpl } from '@/services/nostr-bridge/facade/client';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { finalizeEvent, type Event as NostrEvent } from 'nostr-tools';

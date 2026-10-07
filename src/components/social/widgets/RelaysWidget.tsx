@@ -8,12 +8,12 @@ import {
   type RelayState,
 } from '@/services/social/relay-status';
 import { normalizeRelayUrl } from '@/services/social/relays';
-import { usePreferences } from '@/hooks/usePreferences';
-import { openSettings } from '@/utils/open-settings';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
+import { openSettings } from '@/utils/settings/open-settings';
 import { useTranslations } from 'next-intl';
 import WidgetCard from './WidgetCard';
 import { shortHost } from '@/utils/relay-url/url-host';
-import TextButton from '@/components/ui/TextButton';
+import TextButton from '@/components/ui/buttons/TextButton';
 
 /**
  * Where the feed's notes are coming from, and whether it is working.

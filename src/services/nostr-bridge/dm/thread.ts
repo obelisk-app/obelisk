@@ -5,14 +5,14 @@
  * paths end here. Pure move from `client.ts` (`ingestDM`).
  */
 import { translate } from '@/i18n/runtime';
-import type { DMProtocol } from '@/store/dm';
+import type { DMProtocol } from '@/store/chat/dm';
 import { useNotificationsStore } from '@/store/notifications';
-import { isUserWatchingDM } from '@/services/read-gates';
+import { isUserWatchingDM } from '@/services/read-state/read-gates';
 import { announceIncoming } from '@/services/notifications/alert';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
-import type { BridgeContext } from '../context';
-import { dmTagExtras } from '../event-tags';
-import type { JsDirectMessage } from '../types';
+import type { BridgeContext } from '../facade/context';
+import { dmTagExtras } from '../common/event-tags';
+import type { JsDirectMessage } from '../common/types';
 
 export interface IngestDmParams {
   id: string;

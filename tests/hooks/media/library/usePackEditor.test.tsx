@@ -6,12 +6,12 @@ const mocks = vi.hoisted(() => ({
   saveMediaPack: vi.fn(),
 }));
 
-vi.mock('@/services/blossom', () => ({ uploadToBlossom: mocks.uploadToBlossom }));
+vi.mock('@/services/media/blossom', () => ({ uploadToBlossom: mocks.uploadToBlossom }));
 vi.mock('@/services/nostr-bridge', () => ({ nostrActions: { saveMediaPack: mocks.saveMediaPack } }));
 
 import { usePackEditor } from '@/hooks/media/library/usePackEditor';
 import { LocaleProvider } from '@tests/support/intl';
-import type { EditablePack } from '@/utils/media-library/types';
+import type { EditablePack } from '@/utils/media/library/types';
 
 const PACK: EditablePack = { identifier: 'p1', title: ' Cats ', description: '', image: '', items: [] };
 

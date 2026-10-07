@@ -1,10 +1,10 @@
 'use client';
 
-import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
+import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import { useTranslations } from 'next-intl';
 import { VoiceMessage } from '../message/VoiceMessage';
 import { TrashIcon } from './composer-icons';
-import IconButton from '@/components/ui/IconButton';
+import IconButton from '@/components/ui/buttons/IconButton';
 
 export function VoiceNoteDraft({
   note,

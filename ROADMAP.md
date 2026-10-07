@@ -139,7 +139,7 @@ mirror the pieces each repo owns.
 - [ ] **Account and data deletion**: settings action, cascade or tombstone user's messages, membership and moderation records.
 
 ### Fase 3 - Advanced features
-- [ ] **Mute / Block sync via NIP-51 (kind 10000)**: today mute / block is client-side in `localStorage` (`src/store/moderation.ts`); sync via relays with NIP-44 encryption, import existing mute lists from other clients.
+- [ ] **Mute / Block sync via NIP-51 (kind 10000)**: today mute / block is client-side in `localStorage` (`src/store/moderation/index.ts`); sync via relays with NIP-44 encryption, import existing mute lists from other clients.
 - [ ] **Nostr relay-based groups (NIP-29)**: promoted to its own phase, see **Fase 9** below. Working prototype already exists (fiatjaf-style relay groups).
 - [ ] **App profiles + Nostr kind-0 editor**: overlay over Nostr, plus a safe kind-0 editor with read → merge → diff preview → confirm → publish.
 - [ ] **Export conversations** (JSON / plain text).

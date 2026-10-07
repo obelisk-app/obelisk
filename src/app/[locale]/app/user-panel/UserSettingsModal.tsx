@@ -2,10 +2,10 @@
 
 import { createPortal } from 'react-dom';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
-import UserAvatar from '@/components/ui/UserAvatar';
-import MediaLibraryModal from '@/components/media/MediaLibraryModal';
+import UserAvatar from '@/components/ui/media/UserAvatar';
+import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 import {
   BellIcon,
   CloseIcon,
@@ -19,7 +19,7 @@ import {
   UserIcon,
   WrenchIcon,
   ZapIcon,
-} from '@/components/ui/icons';
+} from '@/components/ui/icons/icons';
 import { EditProfileForm } from '../settings/EditProfileForm';
 import { LocalDataSection } from '../settings/LocalDataSection';
 import {

@@ -6,17 +6,17 @@
  * `disableDirectMessages`, `ingestIncomingGiftWrap`).
  */
 import type { Event as NostrEvent, Filter, UnsignedEvent } from 'nostr-tools';
-import { KIND_DM_CALL_RUMOR, KIND_DM_FILE_RUMOR, KIND_ENCRYPTED_DM } from '@/utils/nip-kinds';
+import { KIND_DM_CALL_RUMOR, KIND_DM_FILE_RUMOR, KIND_ENCRYPTED_DM } from '@/utils/nostr/nip-kinds';
 import type { AuthLease } from '@/lib/relay-hub';
 import { KIND_GIFT_WRAP, KIND_NIP44_DM, unwrapGiftWrap } from '@nostr-wot/dm';
 import type { NostrSigner as DmNostrSigner } from '@nostr-wot/signers';
-import { getPreferences } from '@/services/preferences';
+import { getPreferences } from '@/services/preferences/preferences';
 import { wotEngine } from '@/services/wot/engine';
 import { parseDmFileRumor, type JsDmFile } from '@/utils/attachments/dm-file';
-import type { BridgeContext, TrackedSub } from '../context';
+import type { BridgeContext, TrackedSub } from '../facade/context';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-import type { SignerLane } from '../signer-queue';
-import { hasSeenWrap, markWrapSeen } from '../wrap-ledger';
+import type { SignerLane } from '../session/signer-queue';
+import { hasSeenWrap, markWrapSeen } from '../cache/wrap-ledger';
 import type { IngestDmParams } from './thread';
 
 export type { IngestDmParams } from './thread';

@@ -2,10 +2,10 @@
 
 import { useRef, useState, type RefObject } from 'react';
 import { useTranslations } from 'next-intl';
-import FileInput from '@/components/ui/FileInput';
-import { useDismiss } from '@/hooks/useDismiss';
+import FileInput from '@/components/ui/forms/FileInput';
+import { useDismiss } from '@/hooks/common/useDismiss';
 import { MenuIcon, type MenuIconKind } from './composer-icons';
-import IconButton from '@/components/ui/IconButton';
+import IconButton from '@/components/ui/buttons/IconButton';
 
 function MenuItem({ label, icon, onClick, disabled }: { label: string; icon: MenuIconKind; onClick?: () => void; disabled?: boolean }) {
   const t = useTranslations();

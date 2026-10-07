@@ -10,7 +10,7 @@
  */
 import { useUserMetadata, type JsForumTag, type JsGroup } from '@/services/nostr-bridge';
 import { useLocale, useTranslations } from 'next-intl';
-import RemoteImage from '@/components/ui/RemoteImage';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 import { InlineTagChip } from './InlineTagChip';
 import { ThreadCardSkeleton } from './ThreadCardSkeletons';
 import { posterName } from '@/utils/chat/forum/forum-threads';

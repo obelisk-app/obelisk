@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 import { cn } from '@/utils/style/cn';
 
 /** Follow and message buttons under someone else's bio, plus the follow error. */

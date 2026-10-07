@@ -2,8 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import MediaThumb from '@/components/media/MediaThumb';
-import { StarIcon } from '@/components/ui/icons';
+import MediaThumb from '@/components/media/library/MediaThumb';
+import { StarIcon } from '@/components/ui/icons/icons';
 import type { MediaEntry } from '@/utils/chat/picker/media-catalog';
 
 /**

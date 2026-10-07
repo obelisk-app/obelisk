@@ -8,10 +8,10 @@
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { queryAuthorsBatched, type RelayHub } from '@/lib/relay-hub';
-import type { WatchHold, WatchStreamCallbacks } from '../background-watch';
-import type { QueryOpts, TrackedSub, WatchedSubOptions } from '../context';
-import { uniqueRelayUrls } from '../relay-list';
-import type { StateStore } from '../state-store';
+import type { WatchHold, WatchStreamCallbacks } from '../relay/background-watch';
+import type { QueryOpts, TrackedSub, WatchedSubOptions } from '../facade/context';
+import { uniqueRelayUrls } from '../relay/relay-list';
+import type { StateStore } from '../common/state-store';
 import { PinnedRequests } from './pinned';
 import { openWatchedReq, type WatchedReqDeps } from './watched';
 

@@ -9,7 +9,7 @@ import { nip19 } from 'nostr-tools';
 import { VAULT_DB, VAULT_KEY_ID, VAULT_STORE } from '@/lib/crypto/session-vault';
 import { deleteRecord, getRecord, openStore } from '@/lib/crypto/vault-idb';
 import { hexToBytesForTest } from '@tests/services/nostr-bridge/support/bridge-harness';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 export const SESSION_KEY = 'obelisk-dex/session';
 export const SDK_NIP46_KEY = '@nostr-wot/ui:nip46';
@@ -45,13 +45,13 @@ export const deleteVaultKey = () => withVaultDb((db) => deleteRecord(db, VAULT_S
 
 /** Dispose this page's bridge and load a new one over the same storage, as a reload does. */
 export async function reload() {
-  const before = await import('@/services/nostr-bridge/client');
+  const before = await import('@/services/nostr-bridge/facade/client');
   before.getBridgeImpl()?.dispose();
   // The bridge lives in a globalThis slot that survives a module reset (so a
   // dev hot reload finds it); a real reload starts with that slot empty.
   unregisterBridge();
   vi.resetModules();
-  const client = await import('@/services/nostr-bridge/client');
+  const client = await import('@/services/nostr-bridge/facade/client');
   const bridge = await client.getBridge();
   return { bridge, impl: client.getBridgeImpl()! };
 }

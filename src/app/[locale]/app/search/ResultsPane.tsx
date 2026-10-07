@@ -3,17 +3,17 @@
 import { useEffect, useMemo } from 'react';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useUserMetadata as useProfile, type JsGroup, type JsSearchHit } from '@/services/nostr-bridge';
-import { useNostrUserSearch, type UserHit } from '@/hooks/useNostrUserSearch';
-import { isEmptyQuery, type ParsedQuery } from '@/utils/search-query';
-import { recordNip05Resolution } from '@/services/nip05-verify';
-import { useNip05Status } from '@/hooks/useNip05Status';
-import { CheckBadgeIcon } from '@/components/ui/icons';
+import { useNostrUserSearch, type UserHit } from '@/hooks/identity/useNostrUserSearch';
+import { isEmptyQuery, type ParsedQuery } from '@/utils/chat/search/search-query';
+import { recordNip05Resolution } from '@/services/identity/nip05-verify';
+import { useNip05Status } from '@/hooks/identity/useNip05Status';
+import { CheckBadgeIcon } from '@/components/ui/icons/icons';
 import { formatPubkey } from '@nostr-wot/data';
 import { useChatStore } from '@/store/chat';
 import { useFormat } from '@/i18n/useFormat';
-import Button from '@/components/ui/Button';
-import Chip from '@/components/ui/Chip';
-import RemoteImage from '@/components/ui/RemoteImage';
+import Button from '@/components/ui/buttons/Button';
+import Chip from '@/components/ui/data/Chip';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 import type { Translate } from '@/i18n/keys';
 
 /** The dropdown once something is typed: people, channels, then message hits. */

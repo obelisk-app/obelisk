@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { GameState as VestaState } from 'vesta';
-import type { CRState } from '@/lib/games/chain-reaction';
+import type { CRState } from '@/lib/games/chain-reaction/chain-reaction';
 import {
   chainReactionFixture,
   vestaFixture,

@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import type { GameState as VestaState } from 'vesta';
-import ChainReactionBoard from '@/components/chat/games/ChainReactionBoard';
-import VestaTable from '@/components/chat/games/vesta/VestaTable';
-import VestaBoard from '@/components/chat/games/vesta/VestaBoard';
-import StackerTable from '@/components/chat/games/stacker/StackerTable';
-import StackerBoard from '@/components/chat/games/stacker/StackerBoard';
+import ChainReactionBoard from '@/components/games/chain-reaction/ChainReactionBoard';
+import VestaTable from '@/components/games/vesta/VestaTable';
+import VestaBoard from '@/components/games/vesta/VestaBoard';
+import StackerTable from '@/components/games/stacker/StackerTable';
+import StackerBoard from '@/components/games/stacker/StackerBoard';
 import type { StackerRunner } from '@/lib/games/stacker/runner';
-import GameResults from '@/components/chat/games/GameResults';
-import NewGameModal from '@/components/chat/games/NewGameModal';
+import GameResults from '@/components/games/results/GameResults';
+import NewGameModal from '@/components/games/new-game/NewGameModal';
 import {
   chainReactionFixture,
   finishedChainReaction,

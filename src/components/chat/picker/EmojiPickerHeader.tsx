@@ -1,12 +1,12 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { CloseIcon } from '@/components/ui/icons';
-import CloseButton from '@/components/ui/CloseButton';
+import { CloseIcon } from '@/components/ui/icons/icons';
+import CloseButton from '@/components/ui/buttons/CloseButton';
 import { EMOJI_NAV } from '@/utils/chat/picker/emoji-sections';
 import { MediaPickerSearch } from './MediaPickerSearch';
 import { RecentIcon } from './RecentIcon';
-import IconButton from '@/components/ui/IconButton';
+import IconButton from '@/components/ui/buttons/IconButton';
 
 /** The category bar (hidden while searching). */
 export function EmojiCategoryNav({

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 
-vi.mock('@/components/chat/EmojiPicker', () => ({
+vi.mock('@/components/chat/picker/EmojiPicker', () => ({
   default: ({ onPick }: { onPick: (e: string) => void }) => (
     <div>
       <button type="button" onClick={() => onPick('🔥')}>fire</button>

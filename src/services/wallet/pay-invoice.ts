@@ -1,6 +1,6 @@
-import type { ParsedInvoice } from '@/utils/bolt11';
-import { useInvoicePaymentsStore } from '@/store/invoice-payments';
-import { registerClientResetHook } from '@/services/reset';
+import type { ParsedInvoice } from '@/utils/wallet/bolt11';
+import { useInvoicePaymentsStore } from '@/store/wallet/invoice-payments';
+import { registerClientResetHook } from '@/services/common/reset';
 import { connectWallet, isWalletAvailable } from './wallet';
 
 /**

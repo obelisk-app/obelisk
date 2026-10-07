@@ -1,7 +1,7 @@
 'use client';
 
 import type { JsForumTag } from '@/services/nostr-bridge';
-import { tagChipStyle } from '@/utils/forum-tag-colors';
+import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
 import { TagDot } from './TagDot';
 
 /** A filter chip for one curated tag; pressed while it filters the list. */

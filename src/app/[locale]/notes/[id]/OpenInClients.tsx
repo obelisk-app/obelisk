@@ -11,7 +11,7 @@
  */
 
 import { NOSTR_CLIENTS } from '@/services/social/clients';
-import { serverLocale } from '@/services/server/locale';
+import { serverLocale } from '@/services/server/i18n/locale';
 
 export default async function OpenInClients({ identifier }: { identifier: string }) {
   const { t } = await serverLocale();

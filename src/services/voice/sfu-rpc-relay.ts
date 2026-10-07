@@ -3,7 +3,7 @@
  * addresses to us on this channel. `SfuRpc.start()` uses it when there is no
  * direct WebSocket, or the direct one failed.
  */
-import { KIND_VOICE_SIGNAL } from '@/utils/nip-kinds';
+import { KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
 import {
   bridge,
   SFU_RPC_MAX_SUBSCRIBE_ATTEMPTS,

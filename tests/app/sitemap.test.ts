@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import sitemap from '@/app/sitemap';
 import robots from '@/app/robots';
 import { snapshotPaths } from '@/utils/guides/asset-meta';
-import { readGuide } from '@/services/guides';
+import { readGuide } from '@/services/guides/guides';
 
 let entries: Awaited<ReturnType<typeof sitemap>>;
 

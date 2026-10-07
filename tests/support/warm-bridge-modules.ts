@@ -16,7 +16,7 @@ import { beforeAll } from 'vitest';
  */
 export function warmBridgeModules(): void {
   beforeAll(async () => {
-    await import('@/services/nostr-bridge/client');
+    await import('@/services/nostr-bridge/facade/client');
   }, 120_000);
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import FAQItem from '../FAQItem';
+import FaqItem from './FaqItem';
 import RevealSection from './RevealSection';
 import { FAQ_IDS } from './landing-data';
 import JsonLd from '@/components/seo/JsonLd';
@@ -32,7 +32,7 @@ export default function FaqSection() {
         </div>
         <div className="space-y-3">
           {faqItems.map((item) => (
-            <FAQItem
+            <FaqItem
               key={item.id}
               id={item.id}
               question={item.question}

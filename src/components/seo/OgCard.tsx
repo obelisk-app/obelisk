@@ -5,7 +5,7 @@ import OgIcon from './OgIcon';
 
 /**
  * A page's 1200x630 preview card, in the look of the guide cards
- * (`src/components/guides/guide-og-image.tsx`): the dark-to-olive gradient,
+ * (`src/components/guides/article/guide-og-image.tsx`): the dark-to-olive gradient,
  * the green obelisk mark and wordmark, a green label, the page's title and
  * description, its address in the footer, and the page's own illustration.
  */

@@ -2,7 +2,7 @@
  * The direct-message shapes the UI reads: one message in a thread and the
  * raw events behind it. Moved from `types.ts`, which re-exports both.
  */
-import type { DMProtocol } from '@/store/dm';
+import type { DMProtocol } from '@/store/chat/dm';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 
 /** A Nostr event as shown by "View raw event", signed (`sig`) or not. */

@@ -12,9 +12,9 @@
 import { renderHook } from '@testing-library/react';
 import { useMemo } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ChannelLayout } from '@/services/channel-layout';
-import type { RelayBranding } from '@/services/relay-branding';
-import type { RelayRoles } from '@/services/relay-roles';
+import type { ChannelLayout } from '@/services/relay/channel-layout';
+import type { RelayBranding } from '@/services/relay/relay-branding';
+import type { RelayRoles } from '@/services/relay/relay-roles';
 
 const A = 'wss://a.example';
 const B = 'wss://b.example';
@@ -26,7 +26,7 @@ const t = vi.hoisted(() => ({
   values: {} as Record<string, unknown>,
 }));
 
-vi.mock('@/services/relay-info', () => ({
+vi.mock('@/services/relay/relay-info', () => ({
   fetchRelayInfo: (relay: string) => new Promise((resolve) => { t.pending[relay] = resolve; }),
   operatorPubkeyFromRelayInfo: (info: { op: string | null } | null) => info?.op ?? null,
 }));
@@ -40,23 +40,23 @@ function fakeSubscribe(kind: string) {
   };
 }
 
-vi.mock('@/services/channel-layout', async (orig) => ({
-  ...(await orig<typeof import('@/services/channel-layout')>()),
+vi.mock('@/services/relay/channel-layout', async (orig) => ({
+  ...(await orig<typeof import('@/services/relay/channel-layout')>()),
   subscribeLayout: fakeSubscribe('layout'),
 }));
-vi.mock('@/services/relay-branding', async (orig) => ({
-  ...(await orig<typeof import('@/services/relay-branding')>()),
+vi.mock('@/services/relay/relay-branding', async (orig) => ({
+  ...(await orig<typeof import('@/services/relay/relay-branding')>()),
   subscribeBranding: fakeSubscribe('branding'),
 }));
-vi.mock('@/services/relay-roles', async (orig) => ({
-  ...(await orig<typeof import('@/services/relay-roles')>()),
+vi.mock('@/services/relay/relay-roles', async (orig) => ({
+  ...(await orig<typeof import('@/services/relay/relay-roles')>()),
   subscribeRelayRoles: fakeSubscribe('roles'),
 }));
 
 import { act } from '@testing-library/react';
-import { EMPTY_LAYOUT, relayOperatorAuthors } from '@/services/channel-layout';
-import { EMPTY_BRANDING } from '@/services/relay-branding';
-import { EMPTY_RELAY_ROLES } from '@/services/relay-roles';
+import { EMPTY_LAYOUT, relayOperatorAuthors } from '@/services/relay/channel-layout';
+import { EMPTY_BRANDING } from '@/services/relay/relay-branding';
+import { EMPTY_RELAY_ROLES } from '@/services/relay/relay-roles';
 import { useChannelLayout } from '@/hooks/relay/useChannelLayout';
 import { useRelayBranding } from '@/hooks/relay/useRelayBranding';
 import { useRelayOperatorPubkey } from '@/hooks/relay/useRelayOperatorPubkey';

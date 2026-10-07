@@ -3,8 +3,8 @@
 import type { ReactNode } from 'react';
 import { useSignerReady } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
-import TextButton from '@/components/ui/TextButton';
+import Button from '@/components/ui/buttons/Button';
+import TextButton from '@/components/ui/buttons/TextButton';
 
 export function LoadingThreads() {
   const t = useTranslations();

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DmCallsModule } from '@/services/nostr-bridge/dm/calls';
-import type { PersistedSession } from '@/services/nostr-bridge/session-storage';
-import { encodeDmCallMessage } from '@/services/dm-call/protocol';
-import { setPreference } from '@/services/preferences';
+import type { PersistedSession } from '@/services/nostr-bridge/session/session-storage';
+import { encodeDmCallMessage } from '@/services/call/protocol';
+import { setPreference } from '@/services/preferences/preferences';
 
 const ME = 'a'.repeat(64);
 const PEER = 'b'.repeat(64);

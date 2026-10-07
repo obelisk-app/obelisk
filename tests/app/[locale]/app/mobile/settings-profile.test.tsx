@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, act } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { DM_OPT_IN_STORAGE_KEY, setDmOptInEnabled } from '@/services/dm/opt-in';
+import { DM_OPT_IN_STORAGE_KEY, setDmOptInEnabled } from '@/services/chat/dm/opt-in';
 
 // Bridge identity hooks back the profile screen - mock them so the test can
 // drive the rendered values without a real relay connection.
@@ -58,19 +58,19 @@ vi.mock('@/services/social/relay-status', () => ({
   watchRelays: vi.fn(),
 }));
 
-vi.mock('@/services/relay-info', () => ({
+vi.mock('@/services/relay/relay-info', () => ({
   faviconFor: (url: string) => `https://favicon/${url}`,
   fetchRelayInfo: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('@/services/relay-branding', () => ({
+vi.mock('@/services/relay/relay-branding', () => ({
   publishBranding: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@/hooks/relay/useRelayBranding', () => ({
   useRelayBranding: () => ({}),
 }));
 
-vi.mock('@/services/channel-layout', () => ({
+vi.mock('@/services/relay/channel-layout', () => ({
   applyLayout: () => ({ categories: [], uncategorized: [] }),
   publishLayout: vi.fn().mockResolvedValue(undefined),
   newCategoryId: () => 'cat-test',
@@ -82,11 +82,11 @@ vi.mock('@/hooks/relay/useRelayOperatorPubkey', () => ({
   useRelayOperatorPubkey: () => null,
 }));
 
-vi.mock('@/components/media/BlossomImageInput', () => ({
+vi.mock('@/components/media/upload/BlossomImageInput', () => ({
   default: ({ label }: { label: string }) => <div data-testid={`blossom-${label.toLowerCase()}`}>{label}</div>,
 }));
 
-vi.mock('@/services/blossom', () => ({
+vi.mock('@/services/media/blossom', () => ({
   uploadToBlossom: vi.fn().mockResolvedValue('https://blossom.example/img.jpg'),
   BlossomUploadError: class extends Error {},
 }));
@@ -95,11 +95,11 @@ vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({
   default: () => <div data-testid="relay-admin-panel-stub" />,
 }));
 
-vi.mock('@/components/media/MediaLibraryModal', () => ({
+vi.mock('@/components/media/library/MediaLibraryModal', () => ({
   default: () => <div data-testid="media-library-stub" />,
 }));
 
-vi.mock("@/components/chat/NostrProfile", () => ({
+vi.mock("@/components/chat/profile/NostrProfile", () => ({
   default: ({ pubkey, settingsMode, onEditProfile }: { pubkey: string; settingsMode?: boolean; onEditProfile?: () => void }) => (
     <div data-testid="settings-profile-explorer" data-pubkey={pubkey} data-settings-mode={settingsMode ? "true" : "false"}>
       <button data-testid="edit-profile-btn" onClick={onEditProfile}>Edit profile</button>
@@ -112,11 +112,11 @@ vi.mock("@/components/chat/NostrProfile", () => ({
 }));
 
 import { LocaleProvider } from '@tests/support/intl';
-import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
+import { ConfirmDialogHost } from '@/components/ui/overlays/ConfirmDialog';
 import type { Locale } from '@/i18n/index';
-import { EditProfileScreen } from '@/app/[locale]/app/mobile/screens/EditProfileScreen';
-import { SettingsPrefsScreen } from '@/app/[locale]/app/mobile/screens/SettingsPrefsScreen';
-import { SettingsProfileScreen } from '@/app/[locale]/app/mobile/screens/SettingsProfileScreen';
+import { EditProfileScreen } from '@/app/[locale]/app/mobile/screens/profile/EditProfileScreen';
+import { SettingsPrefsScreen } from '@/app/[locale]/app/mobile/screens/settings/SettingsPrefsScreen';
+import { SettingsProfileScreen } from '@/app/[locale]/app/mobile/screens/settings/SettingsProfileScreen';
 function renderWithLocale(ui: ReactElement, locale: Locale = 'en') {
   return render(<LocaleProvider initialLocale={locale}>{ui}</LocaleProvider>);
 }

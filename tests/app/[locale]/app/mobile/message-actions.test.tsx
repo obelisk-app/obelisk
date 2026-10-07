@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { LocaleProvider } from '@tests/support/intl';
-import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
+import { ConfirmDialogHost } from '@/components/ui/overlays/ConfirmDialog';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 // PhoneShell imports the whole bridge surface. The two components under
@@ -27,19 +27,19 @@ vi.mock('@/services/nostr-bridge', async () => {
   });
 });
 
-vi.mock('@/services/relay-info', () => ({
+vi.mock('@/services/relay/relay-info', () => ({
   faviconFor: (url: string) => `https://favicon/${url}`,
   fetchRelayInfo: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('@/services/relay-branding', () => ({
+vi.mock('@/services/relay/relay-branding', () => ({
   publishBranding: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@/hooks/relay/useRelayBranding', () => ({
   useRelayBranding: () => ({}),
 }));
 
-vi.mock('@/services/channel-layout', () => ({
+vi.mock('@/services/relay/channel-layout', () => ({
   applyLayout: () => ({ categories: [], uncategorized: [] }),
   publishLayout: vi.fn().mockResolvedValue(undefined),
   newCategoryId: () => 'cat-test',
@@ -51,7 +51,7 @@ vi.mock('@/hooks/relay/useRelayOperatorPubkey', () => ({
   useRelayOperatorPubkey: () => null,
 }));
 
-vi.mock('@/components/media/BlossomImageInput', () => ({
+vi.mock('@/components/media/upload/BlossomImageInput', () => ({
   default: () => <div />,
 }));
 
@@ -63,14 +63,14 @@ vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({
 // renders the raw text only. It also counts renders: the markdown pass is
 // what ChannelMessage's memo exists to spare.
 const contentRenders = vi.hoisted(() => ({ count: 0 }));
-vi.mock('@/components/chat/MessageContent', () => ({
+vi.mock('@/components/chat/message/MessageContent', () => ({
   default: ({ content }: { content: string }) => {
     contentRenders.count += 1;
     return <span>{content}</span>;
   },
 }));
 
-vi.mock('@/components/chat/EmojiPicker', () => ({
+vi.mock('@/components/chat/picker/EmojiPicker', () => ({
   default: ({
     onPick,
     onClose,
@@ -88,8 +88,8 @@ vi.mock('@/components/chat/EmojiPicker', () => ({
 }));
 
 import { nostrActions } from '@/services/nostr-bridge';
-import { ChannelMessage } from '@/app/[locale]/app/mobile/screens/ChannelMessage';
-import { MessageActionsSheet } from '@/app/[locale]/app/mobile/sheets/MessageActionsSheet';
+import { ChannelMessage } from '@/app/[locale]/app/mobile/screens/channel/ChannelMessage';
+import { MessageActionsSheet } from '@/app/[locale]/app/mobile/sheets/message/MessageActionsSheet';
 /** Every screen in the shell reads copy from the dictionary now. */
 const renderLocalized = (ui: React.ReactElement) => render(
   <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,

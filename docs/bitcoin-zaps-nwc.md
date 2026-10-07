@@ -129,12 +129,12 @@ The link is a spending credential (`src/services/wallet/nwc-storage.ts`):
   relay (inside signed, encrypted requests; the secret itself never leaves
   the page);
 - deleted on Disconnect (record and wallet key) and on logout, including a
-  login as another account over this one (`src/services/reset.ts` erases
+  login as another account over this one (`src/services/common/reset.ts` erases
   every record even on a page that never loaded the wallet module);
 - only one account is logged in per browser, so when an account loads, any
   other account's record is erased as left over.
 
-`useNwcWalletStore` (`src/store/nwc-wallet.ts`) holds what the UI may know:
+`useNwcWalletStore` (`src/store/wallet/nwc-wallet.ts`) holds what the UI may know:
 wallet key, relays, name, budget, whether it is stored. The secret stays in
 `nwc-wallet.ts`'s memory. Every entry point takes the account, and a wallet
 pays only for the account that connected it (`nwcPayerFor`).
@@ -146,7 +146,7 @@ close or reload: the same rule as an nsec login.
 ## Zaps
 
 `src/services/wallet/send-zap.ts`, driven by `useSendZap`
-(`src/hooks/chat/useSendZap.ts`) from `MessageZapModal`:
+(`src/hooks/chat/zaps/useSendZap.ts`) from `MessageZapModal`:
 
 1. `checkZap` refuses before anything leaves the browser: no Lightning
    address, no wallet, no amount, no signer.
@@ -179,7 +179,7 @@ Receipts (kind 9735) are checked with the SDK's `validateZapReceipt` in
   card asks for one **Confirm** click showing the amount, the description
   and which wallet will pay.
 - **Confirm** calls `payInvoice`, which claims the invoice in
-  `src/store/invoice-payments.ts` (keyed by payment hash) before the first
+  `src/store/wallet/invoice-payments.ts` (keyed by payment hash) before the first
   `await`. A second click, a re-render, or a second card for the same
   invoice finds it claimed. Over NWC this means one `pay_invoice` request.
 - If the wallet fails, the claim is given back and the card shows the

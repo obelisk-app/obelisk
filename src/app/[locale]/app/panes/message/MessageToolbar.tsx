@@ -2,11 +2,11 @@
 
 import type { RefObject } from 'react';
 import type { JsMessage } from '@/services/nostr-bridge';
-import { ForwardIcon, MoreIcon, ObeliskReactIcon, ReplyIcon } from '@/components/ui/icons';
+import { ForwardIcon, MoreIcon, ObeliskReactIcon, ReplyIcon } from '@/components/ui/icons/icons';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
-import type { MessageRowActions } from '@/hooks/app/panes/message/useMessageRowActions';
-import RemoteImage from '@/components/ui/RemoteImage';
+import Button from '@/components/ui/buttons/Button';
+import type { MessageRowActions } from '@/hooks/shell/panes/message/useMessageRowActions';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 
 /**
  * One slot of the message hover toolbar: a ghost icon Button at a fixed

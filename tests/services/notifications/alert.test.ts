@@ -4,8 +4,8 @@ const playNotificationSound = vi.fn<(...args: unknown[]) => string>(() => 'playe
 vi.mock('@/services/notifications/sound', () => ({ playNotificationSound: (...a: unknown[]) => playNotificationSound(...a) }));
 
 import { __resetAlertsForTests, ALERT_FRESH_WINDOW_MS, announceIncoming } from '@/services/notifications/alert';
-import { useToastStore } from '@/store/toast';
-import { setPreference } from '@/services/preferences';
+import { useToastStore } from '@/store/feedback/toast';
+import { setPreference } from '@/services/preferences/preferences';
 
 const NOW = 1_800_000_000_000;
 const alert = (over: Partial<Parameters<typeof announceIncoming>[0]> = {}) => ({
@@ -101,7 +101,7 @@ describe('announceIncoming', () => {
     toasts[0].onClick!();
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
     expect(requestPermission).toHaveBeenCalled();
-    const { getPreferences } = await import('@/services/preferences');
+    const { getPreferences } = await import('@/services/preferences/preferences');
     expect(getPreferences().browserNotifications).toBe(true);
   });
 });

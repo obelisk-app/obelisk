@@ -6,7 +6,7 @@
  * entry behind it; game tables did not, so `useGamesStore` started empty on
  * every page load and every card was a skeleton until the relay handshake, the
  * NIP-42 AUTH and the whole 24-hour channel backfill had finished. This is the
- * kind-9 pattern from `src/services/nostr-bridge/cache.ts` applied one level down:
+ * kind-9 pattern from `src/services/nostr-bridge/cache/cache.ts` applied one level down:
  * an ingest writer, debounced, and a seed reader.
  *
  * Two decisions worth the words:
@@ -27,11 +27,11 @@
  * still arrives fresh from the relay.
  */
 import { cacheGet, cacheSet, cacheDelete, getBridgeImpl } from '@/services/nostr-bridge';
-import { KIND_GAME } from '@/utils/nip-kinds';
+import { KIND_GAME } from '@/utils/nostr/nip-kinds';
 import { useGamesStore } from '@/store/games';
-import { registerClientResetHook } from '@/services/reset';
+import { registerClientResetHook } from '@/services/common/reset';
 import { setGameIngestListener } from './ingest';
-import type { GameOp, ParsedGameEvent } from '@/lib/games/protocol';
+import type { GameOp, ParsedGameEvent } from '@/lib/games/protocol/protocol';
 
 /**
  * Events cached per table. A table past this is skipped rather than truncated:

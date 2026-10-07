@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import Modal from '@/components/ui/Modal';
+import Modal from '@/components/ui/overlays/Modal';
 
 /** The library inside a modal, or bare when a settings screen embeds it. */
 export default function MediaLibraryShell({ embedded, onClose, closeOnEscape, children }: {

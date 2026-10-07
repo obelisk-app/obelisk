@@ -16,7 +16,7 @@
  * caller can decide what to do (newProducer → consume, producerClosed →
  * stop the consumer, etc).
  */
-import { KIND_VOICE_SIGNAL } from '@/utils/nip-kinds';
+import { KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
 import { connectDirectRpc } from './sfu-rpc-direct';
 import { subscribeRelayRpc } from './sfu-rpc-relay';
 import {

@@ -2,8 +2,8 @@
 
 import { useRef, useState } from 'react';
 import type { JsForumTag } from '@/services/nostr-bridge';
-import { paletteForTag, TAG_PALETTES } from '@/utils/forum-tag-colors';
-import { useDismiss } from '@/hooks/useDismiss';
+import { paletteForTag, TAG_PALETTES } from '@/utils/chat/forum/forum-tag-colors';
+import { useDismiss } from '@/hooks/common/useDismiss';
 import { useTranslations } from 'next-intl';
 
 /**

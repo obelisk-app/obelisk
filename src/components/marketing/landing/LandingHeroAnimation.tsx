@@ -1,4 +1,4 @@
-import ObeliskIcon from '@/components/ui/ObeliskIcon';
+import ObeliskIcon from '@/components/ui/icons/ObeliskIcon';
 
 /** The decorative relay animation beside the hero copy. */
 export default function LandingHeroAnimation() {

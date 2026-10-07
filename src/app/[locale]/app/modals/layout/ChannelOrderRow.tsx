@@ -2,10 +2,10 @@
 
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import { categoryLabel } from '@/utils/chat/category-label';
-import Select from '@/components/ui/Select';
-import Button from '@/components/ui/Button';
-import { ChevronRightIcon } from '@/components/ui/icons';
+import { categoryLabel } from '@/utils/relay/category-label';
+import Select from '@/components/ui/forms/Select';
+import Button from '@/components/ui/buttons/Button';
+import { ChevronRightIcon } from '@/components/ui/icons/icons';
 
 /** One channel in the layout editor: drag handle, category picker, up/down. */
 export function ChannelOrderRow({

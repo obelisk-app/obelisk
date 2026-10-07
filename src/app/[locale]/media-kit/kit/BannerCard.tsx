@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { CodeBlock } from './kit-ui';
 import { usePngDownload } from '@/hooks/media-kit/kit/usePngDownload';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 
 function DownloadPngButton({
   targetRef,

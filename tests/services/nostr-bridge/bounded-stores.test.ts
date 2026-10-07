@@ -6,13 +6,13 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { MAX_TOMBSTONES, ModerationModule } from '@/services/nostr-bridge/groups/moderation';
-import { MAX_PRESENCE_STAMPS, VoicePresenceModule } from '@/services/nostr-bridge/voice-presence';
-import { RelayAccessModule } from '@/services/nostr-bridge/relay-access';
+import { MAX_TOMBSTONES, ModerationModule } from '@/services/nostr-bridge/groups/message/moderation';
+import { MAX_PRESENCE_STAMPS, VoicePresenceModule } from '@/services/nostr-bridge/voice/voice-presence';
+import { RelayAccessModule } from '@/services/nostr-bridge/relay/relay-access';
 import { DmStoreModule, MAX_DEFERRED, MAX_HELD } from '@/services/nostr-bridge/dm/store';
-import { StateStore } from '@/services/nostr-bridge/state-store';
-import { KIND_EVENT_DELETION, KIND_GROUP_DELETE_EVENT, KIND_VOICE_PRESENCE } from '@/utils/nip-kinds';
-import type { RelayAccessState } from '@/services/nostr-bridge/types';
+import { StateStore } from '@/services/nostr-bridge/common/state-store';
+import { KIND_EVENT_DELETION, KIND_GROUP_DELETE_EVENT, KIND_VOICE_PRESENCE } from '@/utils/nostr/nip-kinds';
+import type { RelayAccessState } from '@/services/nostr-bridge/common/types';
 
 const hex = (n: number, width = 64): string => n.toString(16).padStart(width, '0');
 

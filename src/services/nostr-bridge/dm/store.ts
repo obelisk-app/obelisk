@@ -33,7 +33,7 @@
 import type { Event as NostrEvent } from 'nostr-tools';
 import type { NipSigner } from '@/lib/nip-59';
 import { importRecordKey, newRecordKeyBytes, openRecord, sealRecord } from '@/lib/crypto/record-cipher';
-import { StateStore } from '../state-store';
+import { StateStore } from '../common/state-store';
 import { dmStoreDb, pageIndexedDb, type DmStoreDb } from './store-db';
 import { isWrappedDmKey, unwrapDmKey, wrapDmKey, type WrappedDmKey } from './store-key';
 import { decodeRecord, encodeRecord, recordAad } from './store-record';

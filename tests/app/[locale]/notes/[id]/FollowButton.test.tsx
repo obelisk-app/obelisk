@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   ready: true,
 }));
 
-vi.mock('@/hooks/usePreferences', () => ({
+vi.mock('@/hooks/preferences/usePreferences', () => ({
   usePreferences: () => ({ socialRelays: ['wss://a.example'] }),
 }));
 

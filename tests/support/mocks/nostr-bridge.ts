@@ -32,11 +32,11 @@ import type {
   JsMessage,
   JsUserMetadata,
 } from '@/services/nostr-bridge';
-import { isImportableRelayUrl } from '@/services/nostr-bridge/relay-list';
-import { DEFAULT_PROFILE_LOOKUP_RELAYS } from '@/services/nostr-bridge/profile-sync-cache';
-import { cacheDelete, cacheGet, cacheSet } from '@/services/nostr-bridge/cache';
-import { resubscribeOnQuotaClose } from '@/services/nostr-bridge/quota-resubscribe';
-import { hasSeenWrap, markWrapSeen } from '@/services/nostr-bridge/wrap-ledger';
+import { isImportableRelayUrl } from '@/services/nostr-bridge/relay/relay-list';
+import { DEFAULT_PROFILE_LOOKUP_RELAYS } from '@/services/nostr-bridge/profile/profile-sync-cache';
+import { cacheDelete, cacheGet, cacheSet } from '@/services/nostr-bridge/cache/cache';
+import { resubscribeOnQuotaClose } from '@/services/nostr-bridge/relay/quota-resubscribe';
+import { hasSeenWrap, markWrapSeen } from '@/services/nostr-bridge/cache/wrap-ledger';
 
 type Bridge = typeof import('@/services/nostr-bridge');
 

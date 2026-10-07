@@ -9,9 +9,9 @@ vi.mock('@/services/nostr-bridge', async () => {
     useUserMetadata: () => null,
   });
 });
-vi.mock('@/components/chat/LinkPreview', () => ({ default: () => null }));
+vi.mock('@/components/chat/message/LinkPreview', () => ({ default: () => null }));
 
-import MessageContent from '@/components/chat/MessageContent';
+import MessageContent from '@/components/chat/message/MessageContent';
 
 /**
  * This file deliberately does not preload the markdown module: it checks the

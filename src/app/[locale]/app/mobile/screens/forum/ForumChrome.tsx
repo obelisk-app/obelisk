@@ -1,10 +1,10 @@
 'use client';
 
-import { tagChipStyle } from '@/utils/forum-tag-colors';
+import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
 import { useTranslations } from 'next-intl';
-import Input from '@/components/ui/Input';
+import Input from '@/components/ui/forms/Input';
 import { MobileTagDot } from './MobileTagDot';
-import type { ForumScreenState } from '@/hooks/app/mobile/screens/forum/useForumScreen';
+import type { ForumScreenState } from '@/hooks/shell/mobile/screens/forum/useForumScreen';
 
 /** Search-or-create, the + pill, the sort chip and the tag filter chips. */
 export function ForumChrome({ forum }: { forum: ForumScreenState }) {

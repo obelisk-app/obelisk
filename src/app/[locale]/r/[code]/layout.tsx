@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import IntlScope from '@/i18n/IntlScope';
-import BridgeRoute from '@/components/BridgeRoute';
+import BridgeRoute from '@/components/common/BridgeRoute';
 
 /** The share link joins a relay in the app, so it ships the app's modules and the bridge. */
 export default function RelayShareLayout({ children }: { children: ReactNode }) {

@@ -3,7 +3,7 @@
  * failures much shorter, so a site that was down is retried.
  */
 
-import type { LinkPreview } from '@/utils/link-preview';
+import type { LinkPreview } from '@/utils/link-preview/link-preview';
 
 export const CACHE_TTL_MS = 60 * 60 * 1000;
 export const FAILURE_TTL_MS = 5 * 60 * 1000;

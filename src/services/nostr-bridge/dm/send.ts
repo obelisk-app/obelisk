@@ -7,13 +7,13 @@
  * Pure move from `client.ts`.
  */
 import { CodedError } from '@/utils/errors/codes';
-import { useDMStore, type DMProtocol } from '@/store/dm';
+import { useDMStore, type DMProtocol } from '@/store/chat/dm';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
-import type { BridgeContext } from '../context';
-import { dmTagExtras } from '../event-tags';
-import { generateClientTag } from '../hex';
-import { updatePending } from '../state-store';
-import type { JsDirectMessage } from '../types';
+import type { BridgeContext } from '../facade/context';
+import { dmTagExtras } from '../common/event-tags';
+import { generateClientTag } from '../common/hex';
+import { updatePending } from '../common/state-store';
+import type { JsDirectMessage } from '../common/types';
 
 export type DmSendContext = Pick<BridgeContext, 'session' | 'dmsByPeer'>;
 
@@ -60,7 +60,7 @@ export interface DmSendDeps {
 
 /**
  * Which DM wire protocol to use for `recipientPubkey`: the per-thread
- * override from `useDMStore` (`src/store/dm.ts`) if the user has picked
+ * override from `useDMStore` (`src/store/chat/dm.ts`) if the user has picked
  * one, otherwise NIP-17 by default. NIP-04 is opt-in-per-thread now, not
  * the default, see `docs/superpowers/specs/2026-08-16-nip17-dms-design.md`.
  */
@@ -107,7 +107,7 @@ export class DmSendModule {
 
   /**
    * Send an already-encrypted, already-uploaded file as a NIP-17 kind-15
-   * rumor. The caller (`src/services/dm-attachments.ts`) does the AES-GCM
+   * rumor. The caller (`src/services/chat/dm/dm-attachments.ts`) does the AES-GCM
    * encryption and the anonymous Blossom upload; this only seals the
    * metadata, URL, key, nonce, hashes, into a gift wrap.
    *

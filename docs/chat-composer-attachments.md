@@ -2,7 +2,7 @@
 
 ## Flow
 
-The channel composer (`src/app/[locale]/app/panes/ChatComposer.tsx` on desktop, `mobile/screens/ChannelComposer.tsx` on the phone, both driven by `src/hooks/chat/useChannelComposer.ts`) accepts media three ways:
+The channel composer (`src/app/[locale]/app/panes/channel/ChatComposer.tsx` on desktop, `mobile/screens/channel/ChannelComposer.tsx` on the phone, both driven by `src/hooks/chat/composer/useChannelComposer.ts`) accepts media three ways:
 
 1. **Attach button**: opens the OS file picker (`<input type="file" multiple accept="image/*,video/*">`).
 2. **Paste**: `onPaste` on the message input scans `clipboardData.items` for files with an `image/*` or `video/*` MIME type.
@@ -11,7 +11,7 @@ The channel composer (`src/app/[locale]/app/panes/ChatComposer.tsx` on desktop, 
 The attach button and paste funnel through `onPickFiles(files: File[])` (`src/hooks/chat/composer/useComposerUploads.ts`), which:
 
 - Caps each batch at **4 files** (`MAX_COMPOSER_ATTACHMENTS`, matching the gallery's 2x2 matrix renderer).
-- Uploads in parallel via `uploadToBlossom` from `src/services/blossom.ts`.
+- Uploads in parallel via `uploadToBlossom` from `src/services/media/blossom.ts`.
 - Appends each returned URL on its own line at the end of the draft (NIP-92-style: bare image URLs in message content are auto-rendered as media on receive).
 
 Errors surface in `sendError` below the composer; partial-batch failures fail the whole batch (Promise.all). Re-sending after a failure is a manual retry.
@@ -24,7 +24,7 @@ The strip is purely a view over `draft`; there is no separate "pending attachmen
 
 ## Rendering on receive
 
-`src/components/chat/MessageContent.tsx` extracts image URLs from message content, strips them from the rendered markdown body, and hands the list to `ImageGallery`:
+`src/components/chat/message/MessageContent.tsx` extracts image URLs from message content, strips them from the rendered markdown body, and hands the list to `ImageGallery`:
 
 | Count | Layout |
 |-------|--------|
@@ -34,7 +34,7 @@ The strip is purely a view over `draft`; there is no separate "pending attachmen
 | 4 | 2x2 grid, square wrapper |
 | 5+ | 2x2 of first 4; last tile shows `+N` overlay; lightbox carousel paginates the rest |
 
-Tapping any tile opens the lightbox (zoom + pan + arrow-key navigation). See `src/components/chat/ImageGallery.tsx`.
+Tapping any tile opens the lightbox (zoom + pan + arrow-key navigation). See `src/components/chat/gallery/ImageGallery.tsx`.
 
 ## Limits & gotchas
 

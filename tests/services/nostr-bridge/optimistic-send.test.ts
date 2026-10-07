@@ -15,7 +15,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { finalizeEvent, generateSecretKey, getPublicKey, nip19, type Event as NostrEvent } from 'nostr-tools';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 type PublishOutcome = 'ok' | { reject: string };
 
@@ -154,7 +154,7 @@ afterEach(() => {
 
 describe('optimistic group messages', () => {
   it('serializes a NIP-07 join request before a pubkey-free kind-9 template', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const sk = Uint8Array.from(skHex.match(/../g)!.map((byte) => parseInt(byte, 16)));
     let signing = false;
@@ -188,7 +188,7 @@ describe('optimistic group messages', () => {
   });
 
   it('treats an already-member join rejection as success', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -198,7 +198,7 @@ describe('optimistic group messages', () => {
   });
 
   it('inserts a pending placeholder synchronously, then replaces it with the real event on publish-ack', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -240,7 +240,7 @@ describe('optimistic group messages', () => {
   });
 
   it('flips the placeholder to failed when the publish rejects, then retry republishes the same content', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -296,7 +296,7 @@ describe('optimistic group messages', () => {
   });
 
   it('cancelPendingMessage drops a failed placeholder from the store', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -326,7 +326,7 @@ describe('optimistic group messages', () => {
     // The fake reproduces this exactly: it queues sub.sink(event) before
     // resolving the publish promise. The test asserts no duplicate and the
     // bubble's id transitions cleanly from `pending:<tag>` to the real id.
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -347,12 +347,12 @@ describe('optimistic group messages', () => {
 
 describe('optimistic direct messages', () => {
   it('inserts a pending DM placeholder, then replaces it on publish-ack', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const me = makeKeypair();
     const peer = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(me.skHex, me.pkHex);
-    const { setPreference } = await import('@/services/preferences');
+    const { setPreference } = await import('@/services/preferences/preferences');
     setPreference('directMessagesEnabled', true);
 
     let last: Readonly<Record<string, ReadonlyArray<{ id: string; outgoing: boolean; pending?: boolean; failed?: boolean; content: string; clientTag?: string }>>> = {};
@@ -402,12 +402,12 @@ describe('optimistic direct messages', () => {
   });
 
   it('marks a DM as failed on publish reject and retryDirectMessage republishes', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const me = makeKeypair();
     const peer = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(me.skHex, me.pkHex);
-    const { setPreference } = await import('@/services/preferences');
+    const { setPreference } = await import('@/services/preferences/preferences');
     setPreference('directMessagesEnabled', true);
 
     let last: Readonly<Record<string, ReadonlyArray<{ pending?: boolean; failed?: boolean; clientTag?: string }>>> = {};

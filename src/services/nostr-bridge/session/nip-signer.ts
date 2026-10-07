@@ -7,10 +7,10 @@ import { CodedError } from '@/utils/errors/codes';
 import { finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import type { NipSigner } from '@/lib/nip-59';
-import { memoizeDecrypt } from '../decrypt-cache';
-import { hexToBytes } from '../hex';
-import type { PersistedSession } from '../session-storage';
-import { enqueueSignerOp, type SignerLane } from '../signer-queue';
+import { memoizeDecrypt } from '../cache/decrypt-cache';
+import { hexToBytes } from '../common/hex';
+import type { PersistedSession } from './session-storage';
+import { enqueueSignerOp, type SignerLane } from './signer-queue';
 import type { BunkerModule } from './bunker';
 
 /**

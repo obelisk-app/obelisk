@@ -1,8 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+import Button from '@/components/ui/buttons/Button';
+import { useCopyToClipboard } from '@/hooks/common/useCopyToClipboard';
 
 /**
  * The media kit's labelled copy pill. It keeps a text label, which the

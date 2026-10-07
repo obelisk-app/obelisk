@@ -2,8 +2,8 @@
 
 import type { JsMessage, JsReaction, MessagesStatus } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import { ChannelMessage, EMPTY_REACTIONS } from '../ChannelMessage';
-import type { TimelineItem } from '@/utils/chat/channel-timeline';
+import { ChannelMessage, EMPTY_REACTIONS } from './ChannelMessage';
+import type { TimelineItem } from '@/utils/chat/timeline/channel-timeline';
 
 type Props = {
   items: ReadonlyArray<TimelineItem>;

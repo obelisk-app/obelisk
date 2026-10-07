@@ -8,10 +8,10 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUserMetadata as useProfile } from '@/services/nostr-bridge';
-import ShootingStars from '@/components/marketing/ShootingStars';
+import ShootingStars from '@/components/common/ShootingStars';
 import { useTranslations } from 'next-intl';
 import { Avatar } from './tiles';
-import IconButton from '@/components/ui/IconButton';
+import IconButton from '@/components/ui/buttons/IconButton';
 
 export function PassiveCallRoster({ pubkeys, count, mode }: {
   pubkeys: readonly string[];

@@ -2,10 +2,10 @@
 
 import { useTranslations } from 'next-intl';
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
-import RelayStatusPill from '@/components/social/RelayStatusPill';
-import RemoteImage from '@/components/ui/RemoteImage';
-import { useMobileServerBanner } from '@/hooks/app/mobile/rail/useMobileServerBanner';
-import { avatarStyle } from '../avatar';
+import RelayStatusPill from '@/components/relay/RelayStatusPill';
+import RemoteImage from '@/components/ui/media/RemoteImage';
+import { useMobileServerBanner } from '@/hooks/shell/mobile/rail/useMobileServerBanner';
+import { avatarStyle } from '../common/avatar';
 
 /**
  * The active relay's banner above the phone's channel list: its banner

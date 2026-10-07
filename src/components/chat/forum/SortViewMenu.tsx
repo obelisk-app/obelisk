@@ -2,13 +2,13 @@
 
 import { useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { DEFAULT_FORUM_PREFS, type ForumPrefs } from '@/services/forum-prefs';
-import { useDismiss } from '@/hooks/useDismiss';
-import { MenuItem } from '@/components/ui/menu';
-import Text from '@/components/ui/Text';
+import { DEFAULT_FORUM_PREFS, type ForumPrefs } from '@/services/chat/forum/forum-prefs';
+import { useDismiss } from '@/hooks/common/useDismiss';
+import { MenuItem } from '@/components/ui/overlays/menu';
+import Text from '@/components/ui/layout/Text';
 import { ChevronDownIcon, SortIcon } from './forum-icons';
-import TextButton from '@/components/ui/TextButton';
-import Button from '@/components/ui/Button';
+import TextButton from '@/components/ui/buttons/TextButton';
+import Button from '@/components/ui/buttons/Button';
 
 /** The "Sort & view" pill and its popover: sort order, list vs gallery, any/all tag matching, reset. */
 export function SortViewMenu({

@@ -6,12 +6,12 @@
  * design in docs/wot-integration-plan.md.
  *
  * Every call here goes through the `background` lane of the signer queue
- * (`src/services/nostr-bridge/signer-queue.ts`). `window.nostr.wot` is the *same*
+ * (`src/services/nostr-bridge/session/signer-queue.ts`). `window.nostr.wot` is the *same*
  * extension object as `window.nostr.signEvent` and shares its single request
  * channel, so an unbounded graph traversal here delays the user's next
  * signature. Nobody is watching a spinner for a WoT verdict; signatures win.
  */
-import { enqueueSignerOp } from '@/services/nostr-bridge/signer-queue';
+import { enqueueSignerOp } from '@/services/nostr-bridge/session/signer-queue';
 
 export type WotStatus = 'absent' | 'configured' | 'error';
 

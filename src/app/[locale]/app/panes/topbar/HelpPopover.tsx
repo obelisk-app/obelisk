@@ -2,8 +2,8 @@
 
 import { createPortal } from 'react-dom';
 import { useHintsStore } from '@/store/hints';
-import Button from '@/components/ui/Button';
-import { BookIcon, LayersIcon, LockIcon, ShieldIcon, SparklesIcon, ZapIcon } from '@/components/ui/icons';
+import Button from '@/components/ui/buttons/Button';
+import { BookIcon, LayersIcon, LockIcon, ShieldIcon, SparklesIcon, ZapIcon } from '@/components/ui/icons/icons';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { localizedPath } from '@/utils/seo/alternates';
 import { HELP_TOPICS, helpTopicPath } from '@/utils/guides/help-topics';

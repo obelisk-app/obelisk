@@ -26,35 +26,34 @@ const read = (p: string) =>
     .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 /**
- * Every file of the desktop shell: the entry, the parts under `shell/`, and
- * the shell's hooks under `src/hooks/app/shell/`.
+ * Every file of the desktop shell: the entry and its parts under `desktop/`,
+ * and the shell's hooks under `src/hooks/shell/desktop/`.
  */
 const desktopShell = () =>
   [
-    'DesktopShell.tsx',
-    ...readdirSync(join(process.cwd(), 'src/app/[locale]/app/shell')).map((f) => `shell/${f}`),
-    ...readdirSync(join(process.cwd(), 'src/hooks/app/shell')).map((f) => `../../../hooks/app/shell/${f}`),
+    ...readdirSync(join(process.cwd(), 'src/app/[locale]/app/desktop')).map((f) => `desktop/${f}`),
+    ...readdirSync(join(process.cwd(), 'src/hooks/shell/desktop')).map((f) => `../../../hooks/shell/desktop/${f}`),
   ]
     .map(read)
     .join('\n');
 
 describe('desktop navigation invariants', () => {
   it('SearchBar never navigates via the bridge', () => {
-    expect(read('SearchBar.tsx')).not.toContain('setActiveGroup');
+    expect(read('search/SearchBar.tsx')).not.toContain('setActiveGroup');
   });
 
   it('SearchBar hands navigation to the shell instead', () => {
-    expect(read('SearchBar.tsx')).toContain('requestJump');
+    expect(read('search/SearchBar.tsx')).toContain('requestJump');
   });
 
   it('the search panes and the shared search hook never navigate via the bridge either', () => {
     // The bar's panes moved to their own files and the search itself to a
     // hook; the rule follows the code.
-    for (const file of ['search/ResultsPane.tsx', 'search/FilterAndHistoryPane.tsx', '../../../hooks/chat/useRelaySearch.ts']) {
+    for (const file of ['search/ResultsPane.tsx', 'search/FilterAndHistoryPane.tsx', '../../../hooks/chat/search/useRelaySearch.ts']) {
       expect(read(file), file).not.toContain('setActiveGroup');
     }
     expect(read('search/ResultsPane.tsx')).toContain('requestJump');
-    expect(read('../../../hooks/chat/useRelaySearch.ts')).toContain('requestJump');
+    expect(read('../../../hooks/chat/search/useRelaySearch.ts')).toContain('requestJump');
   });
 
   it('the feed panel rounds its top-left corner, since it has no sidebar', () => {
@@ -62,7 +61,7 @@ describe('desktop navigation invariants', () => {
     // `rounded-tl-xl`. The feed drops the sidebar, so `main` has to carry it
     // or the corner sits square against the rail.
     // The main column moved out of the shell into `shell/DesktopMain.tsx`.
-    const main = read('shell/DesktopMain.tsx');
+    const main = read('desktop/DesktopMain.tsx');
     expect(main).toContain("view.kind === 'feed' ? 'rounded-tl-xl border-l' : ''");
   });
 
@@ -72,13 +71,13 @@ describe('desktop navigation invariants', () => {
     // The shell's tree is split across `shell/`; the rule covers all of it.
     const shell = desktopShell();
     expect(shell).not.toContain('chat-pane-tab-');
-    expect(read('shell/FeedSplitPane.tsx')).toContain('desktop-feed-pane');
+    expect(read('desktop/FeedSplitPane.tsx')).toContain('desktop-feed-pane');
     // The rail button is a plain toggle; size lives on the pane itself,
     // because three states behind one control meant you had to press it to
     // find out what it would do.
-    expect(read('shell/DesktopDrawer.tsx')).toContain('onPickFeed={onToggleFeed}');
+    expect(read('desktop/DesktopDrawer.tsx')).toContain('onPickFeed={onToggleFeed}');
     expect(shell).not.toContain('cycleFeed');
-    const readerPane = read('panes/ReaderPane.tsx');
+    const readerPane = read('panes/reader/ReaderPane.tsx');
     expect(readerPane).toContain('feed-pane-expand');
     expect(readerPane).toContain('feed-pane-close');
   });
@@ -86,18 +85,18 @@ describe('desktop navigation invariants', () => {
   it('threads open in a side pane on desktop, not a modal', () => {
     // A modal hides the list you were reading, which is the context you need
     // while following a conversation.
-    // The pane is `shell/ReaderPaneSlot.tsx`, its state `src/hooks/app/shell/useShellPanes.ts`.
-    const slot = read('shell/ReaderPaneSlot.tsx');
+    // The pane is `shell/ReaderPaneSlot.tsx`, its state `src/hooks/shell/desktop/useShellPanes.ts`.
+    const slot = read('desktop/ReaderPaneSlot.tsx');
     expect(slot).toContain('desktop-thread-pane');
     expect(slot).toContain('THREAD_PANE_KEY');
-    expect(read('DesktopShell.tsx')).toContain('<ReaderPaneSlot');
+    expect(read('desktop/DesktopShell.tsx')).toContain('<ReaderPaneSlot');
     // The feed hands thread AND article opening to the shell rather than
     // falling back to its own modal.
-    const main = read('shell/DesktopMain.tsx');
+    const main = read('desktop/DesktopMain.tsx');
     expect(main).toContain('onOpenThread={');
     expect(main).toContain('onOpenArticle={');
     // One pane holds one thing: opening an article clears the thread stack.
-    const panes = read('../../../hooks/app/shell/useShellPanes.ts');
+    const panes = read('../../../hooks/shell/desktop/useShellPanes.ts');
     expect(panes).toContain('setThreadStack([]); setPaneArticle(note);');
     /*
      * Threads stack. Opening a note from inside a thread used to overwrite
@@ -114,16 +113,16 @@ describe('desktop navigation invariants', () => {
     // The public viewer's "Open in Obelisk" points at /app?s=feed. Mobile
     // already understands `?s=<screen>`; desktop had to learn it so one link
     // works whichever shell picks it up.
-    // The deep-link effect lives in `src/hooks/app/shell/useDesktopNavigation.ts`.
-    const nav = read('../../../hooks/app/shell/useDesktopNavigation.ts');
+    // The deep-link effect lives in `src/hooks/shell/desktop/useDesktopNavigation.ts`.
+    const nav = read('../../../hooks/shell/desktop/useDesktopNavigation.ts');
     expect(nav).toContain("params.get('s') === 'feed'");
     // A channel deep-link is more specific and must still win.
     expect(nav).toContain("if (!c && params.get('s') === 'feed')");
   });
 
   it('the shell answers a pendingJump by changing `view`, not the bridge', () => {
-    const shell = read('../../../hooks/app/shell/useDesktopNavigation.ts');
-    expect(read('DesktopShell.tsx')).toContain('useDesktopNavigation(');
+    const shell = read('../../../hooks/shell/desktop/useDesktopNavigation.ts');
+    expect(read('desktop/DesktopShell.tsx')).toContain('useDesktopNavigation(');
     const effect = shell.slice(
       shell.indexOf('const pendingJump ='),
       shell.indexOf('consumeJump()'),

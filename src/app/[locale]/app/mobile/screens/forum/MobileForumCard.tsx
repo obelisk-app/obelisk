@@ -9,12 +9,12 @@ import {
   type JsForumTag,
   type JsGroup,
 } from '@/services/nostr-bridge';
-import { tagChipStyle } from '@/utils/forum-tag-colors';
+import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
 import { useTranslations } from 'next-intl';
-import { avatarStyle } from '../../avatar';
+import { avatarStyle } from '../../common/avatar';
 import { resolveTopics } from '@/utils/chat/forum/forum-threads';
 import { MobileTagDot } from './MobileTagDot';
-import RemoteImage from '@/components/ui/RemoteImage';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 
 /** One publication in the phone forum list: title, opening post, tags, OP and last poster. */
 export function MobileForumCard({
@@ -29,7 +29,7 @@ export function MobileForumCard({
   const t = useTranslations();
   const messages = useMessages(group.id);
   // Bridge-owned retry ladder replaces the old UI dwell timer, see
-  // src/services/nostr-bridge/types.ts MessagesStatus.
+  // src/services/nostr-bridge/common/types.ts MessagesStatus.
   const messagesStatus = useMessagesStatus(group.id);
   const op = messages[0] ?? null;
   const lastMsg = messages[messages.length - 1] ?? null;

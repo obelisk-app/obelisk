@@ -1,6 +1,6 @@
 /**
  * The audible/OS half of a notification. The card half lives in
- * `src/store/notifications.ts`; this runs only after a card was actually
+ * `src/store/notifications/index.ts`; this runs only after a card was actually
  * added, so dedupe and read-cursor filtering have already happened.
  *
  * Two extra gates on top of the store's:
@@ -11,8 +11,8 @@
  *   • **Once per event id**, across both the active-relay path and the
  *     background watcher: the same kind 9 can arrive on both.
  */
-import { getPreferences, setPreference } from '@/services/preferences';
-import { useToastStore } from '@/store/toast';
+import { getPreferences, setPreference } from '@/services/preferences/preferences';
+import { useToastStore } from '@/store/feedback/toast';
 import { translate } from '@/i18n/runtime';
 import { playNotificationSound, startRingLoop, type NotificationSoundKind, type PlayResult } from './sound';
 

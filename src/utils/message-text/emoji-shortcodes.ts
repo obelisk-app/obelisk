@@ -15,7 +15,7 @@ import {
   mergeCustomEmojiMaps,
   normalizeCustomEmojiName,
   type CustomEmojiMap,
-} from '@/utils/media-tags/custom-emoji-tags';
+} from '@/utils/media/tags/custom-emoji-tags';
 
 export type { EmojiEntry };
 

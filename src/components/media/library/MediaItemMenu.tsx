@@ -1,11 +1,11 @@
 'use client';
 
-import MediaThumb from '@/components/media/MediaThumb';
-import Button from '@/components/ui/Button';
-import Modal from '@/components/ui/Modal';
-import ModalHeader from '@/components/ui/ModalHeader';
+import MediaThumb from '@/components/media/library/MediaThumb';
+import Button from '@/components/ui/buttons/Button';
+import Modal from '@/components/ui/overlays/Modal';
+import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import { useTranslations } from 'next-intl';
-import type { SelectedMedia } from '@/utils/media-library/types';
+import type { SelectedMedia } from '@/utils/media/library/types';
 
 /** What can be done with one item: view its pack, start a pack with it, favourite it. */
 export default function MediaItemMenu({ selection, favorite, busy, server, onClose, onViewPack, onFavorite, onCreatePack }: {

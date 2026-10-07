@@ -10,8 +10,8 @@ import {
   MAX_MATCH_ATTACKS,
 } from '@/lib/games/stacker/match';
 import { replay, type Input } from '@/lib/games/stacker/engine';
-import { deriveSession } from '@/lib/games/session';
-import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
+import { deriveSession } from '@/lib/games/session/session';
+import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
 
 const CH = 'channel-1';
 const A = 'pk-ana';

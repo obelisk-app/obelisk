@@ -9,7 +9,7 @@
  * `getBridge()` / `getBridgeImpl()` always see the same object.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { getBridge, getBridgeImpl, registerBridge, unregisterBridge, type BridgeImpl } from '../client';
+import { getBridge, getBridgeImpl, registerBridge, unregisterBridge, type BridgeImpl } from '../facade/client';
 
 export interface BridgeContextValue {
   /**

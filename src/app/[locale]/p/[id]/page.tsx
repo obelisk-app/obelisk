@@ -20,7 +20,7 @@ import { pageLocale } from '@/i18n/page-locale';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
 import { cardAlt, cardImage } from '@/utils/seo/og';
 import { Link } from '@/i18n/navigation';
-import { serverLocale } from '@/services/server/locale';
+import { serverLocale } from '@/services/server/i18n/locale';
 import { parseIdentifier } from '@/services/social/identifier';
 import {
   displayNameFor,
@@ -30,8 +30,8 @@ import {
   fetchAuthorRelays,
   fetchProfilesForViewer,
   topHashtags,
-} from '@/services/server/nostr-fetch';
-import ViewerHeader from '@/components/social/ViewerHeader';
+} from '@/services/server/viewer/nostr-fetch';
+import ViewerHeader from '@/components/social/viewer/ViewerHeader';
 import AuthorContext from '@/app/[locale]/notes/[id]/AuthorContext';
 import ProfileViewerClient from './ProfileViewerClient';
 

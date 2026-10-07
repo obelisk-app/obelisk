@@ -60,7 +60,7 @@ export function kind4From(from: TestKeys, toPk: string, text: string, createdAt 
 
 /** Turn DMs on and watch every thread, as the shell's DM anchor does. */
 export async function watchDms(bridge: BridgeImpl): Promise<() => Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>> {
-  const { setPreference } = await import('@/services/preferences');
+  const { setPreference } = await import('@/services/preferences/preferences');
   setPreference('directMessagesEnabled', true);
   let latest: Readonly<Record<string, ReadonlyArray<JsDirectMessage>>> = {};
   bridge.subscribeDirectMessages((byPeer) => { latest = byPeer; });

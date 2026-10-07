@@ -1,4 +1,4 @@
-import type { TableColumn } from '@/components/ui/Table';
+import type { TableColumn } from '@/components/ui/data/Table';
 import type { Translate } from '@/i18n/keys';
 import type { RelayAdminSelection } from '@/hooks/admin/relay-admin/useRelayAdminPanel';
 import type { RelayAdminRow } from '@/utils/admin/relay-admin-rows';

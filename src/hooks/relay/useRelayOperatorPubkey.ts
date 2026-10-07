@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchRelayInfo, operatorPubkeyFromRelayInfo } from '@/services/relay-info';
+import { fetchRelayInfo, operatorPubkeyFromRelayInfo } from '@/services/relay/relay-info';
 
 /**
  * Resolve the human operator from NIP-11 contact, falling back to pubkey. Returns

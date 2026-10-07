@@ -3,26 +3,26 @@
  * 25055 rumors, sealed and gift-wrapped like a chat message but short-lived,
  * carried over the same inbox ladder, and handed to whoever listens (the DM
  * call store) instead of a thread. The call's media signaling is
- * `src/services/dm-call/`, not this. Pure move from `client.ts`.
+ * `src/services/call/`, not this. Pure move from `client.ts`.
  */
 import { CodedError } from '@/utils/errors/codes';
 import { finalizeEvent, getEventHash, type Event as NostrEvent, type UnsignedEvent } from 'nostr-tools';
 import { generateSecretKey } from 'nostr-tools/pure';
 import { v2 as nip44 } from 'nostr-tools/nip44';
-import { KIND_DM_CALL_RUMOR, KIND_SEAL } from '@/utils/nip-kinds';
+import { KIND_DM_CALL_RUMOR, KIND_SEAL } from '@/utils/nostr/nip-kinds';
 import { KIND_GIFT_WRAP } from '@nostr-wot/dm';
 import type { NostrSigner as DmNostrSigner } from '@nostr-wot/signers';
-import { getPreferences } from '@/services/preferences';
+import { getPreferences } from '@/services/preferences/preferences';
 import {
   encodeDmCallMessage,
   isFreshCallMessage,
   parseDmCallMessage,
   type DmCallMessage,
   type IncomingDmCallMessage,
-} from '@/services/dm-call/protocol';
-import type { BridgeContext } from '../context';
-import type { PublishSignedOpts } from '../publish';
-import type { Unsubscribe } from '../types';
+} from '@/services/call/protocol';
+import type { BridgeContext } from '../facade/context';
+import type { PublishSignedOpts } from '../publish/publish';
+import type { Unsubscribe } from '../common/types';
 
 /** NIP-40 lifetime of a call-control gift wrap. */
 const CALL_WRAP_TTL_S = 5 * 60;

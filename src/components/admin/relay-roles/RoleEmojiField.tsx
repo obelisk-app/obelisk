@@ -1,11 +1,11 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import EmojiPicker from '@/components/chat/EmojiPicker';
-import { CloseIcon } from '@/components/ui/icons';
+import EmojiPicker from '@/components/chat/picker/EmojiPicker';
+import { CloseIcon } from '@/components/ui/icons/icons';
 import { useTranslations } from 'next-intl';
-import { normalizeRoleEmoji, type RelayRole } from '@/services/relay-roles';
-import IconButton from '@/components/ui/IconButton';
+import { normalizeRoleEmoji, type RelayRole } from '@/services/relay/relay-roles';
+import IconButton from '@/components/ui/buttons/IconButton';
 
 const EMOJI_POPOVER_W = 360;
 const EMOJI_POPOVER_H = 430;

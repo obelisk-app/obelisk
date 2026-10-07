@@ -8,11 +8,11 @@
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import type { RelayHub, SubscriptionHandle } from '@/lib/relay-hub';
 import { wotEngine } from '@/services/wot/engine';
-import type { SetRelayAccessOpts, TrackedSub, WatchedSubOptions } from '../context';
-import { pushRelayDebug } from '../relay-debug';
-import { classifyAccessClose, isRelayQuotaOrRateLimit, isWhitelistRefusal } from '../relay-rejection';
+import type { SetRelayAccessOpts, TrackedSub, WatchedSubOptions } from '../facade/context';
+import { pushRelayDebug } from '../relay/relay-debug';
+import { classifyAccessClose, isRelayQuotaOrRateLimit, isWhitelistRefusal } from '../publish/relay-rejection';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-import type { RelayAccessState } from '../types';
+import type { RelayAccessState } from '../common/types';
 
 export interface WatchedReqDeps {
   readonly hub: Pick<RelayHub, 'subscribe'>;

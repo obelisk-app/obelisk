@@ -3,8 +3,8 @@
  * older history, reactions, profiles, and the DM threads.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePreferences } from '@/hooks/usePreferences';
-import type { DmLockState, JsDirectMessage, JsMessage, JsReaction, JsUserMetadata, LoadMoreMessagesResult, MessagesStatus } from '../types';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
+import type { DmLockState, JsDirectMessage, JsMessage, JsReaction, JsUserMetadata, LoadMoreMessagesResult, MessagesStatus } from '../common/types';
 import { useBridge } from './provider';
 import { useSubscription } from './subscription';
 

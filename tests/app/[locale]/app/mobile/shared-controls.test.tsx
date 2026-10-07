@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
-import BackButton from '@/app/[locale]/app/mobile/BackButton';
-import EmojiSheet from '@/app/[locale]/app/mobile/EmojiSheet';
-import SheetActions from '@/app/[locale]/app/mobile/sheets/SheetActions';
+import BackButton from '@/app/[locale]/app/mobile/chrome/BackButton';
+import EmojiSheet from '@/app/[locale]/app/mobile/sheets/message/EmojiSheet';
+import SheetActions from '@/app/[locale]/app/mobile/sheets/chrome/SheetActions';
 
 const en = (node: React.ReactNode) => render(<LocaleProvider initialLocale="en">{node}</LocaleProvider>);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { EMPTY_RELAY_ROLES, subscribeRelayRoles, type RelayRoles } from '@/services/relay-roles';
+import { EMPTY_RELAY_ROLES, subscribeRelayRoles, type RelayRoles } from '@/services/relay/relay-roles';
 import { useRelayScopedValue } from './useRelayScopedValue';
 
 /** The operator's role catalog and holders for `relayUrl` (NIP-78), or no roles until they arrive. */

@@ -7,14 +7,14 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import { getEventHash, type Event as NostrEvent, type UnsignedEvent } from 'nostr-tools';
-import { KIND_DM_FILE_RUMOR } from '@/utils/nip-kinds';
+import { KIND_DM_FILE_RUMOR } from '@/utils/nostr/nip-kinds';
 import { KIND_GIFT_WRAP, buildChatMessage, sealAndGiftWrap } from '@nostr-wot/dm';
 import type { NostrSigner as DmNostrSigner } from '@nostr-wot/signers';
-import { resolvePqSend } from '@/services/pq/send';
+import { resolvePqSend } from '@/services/chat/pq/send';
 import { buildDmFileTags } from '@/utils/attachments/dm-file';
-import type { BridgeContext } from '../context';
-import type { PublishSignedOpts } from '../publish';
-import { pushRelayDebug } from '../relay-debug';
+import type { BridgeContext } from '../facade/context';
+import type { PublishSignedOpts } from '../publish/publish';
+import { pushRelayDebug } from '../relay/relay-debug';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { DmSend, DmSettle } from './send';
 import type { IngestDmParams } from './thread';

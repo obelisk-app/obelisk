@@ -20,7 +20,9 @@ import { describe, expect, it } from 'vitest';
  * file with no JSX and no component export is the same thing wearing a
  * component's extension. The exceptions are the Next.js file conventions (a
  * `route.ts` or a `sitemap.ts` has to live in `src/app/`) and the list
- * below, each entry with its reason.
+ * below, each entry with its reason. A group's `index.ts` that only
+ * re-exports its components (a barrel, such as `src/components/ui/buttons/index.ts`)
+ * holds no logic, so it is allowed too.
  *
  * Round 18 moved about 70 modules out of these folders (see
  * audits/obelisk/round18/logic.md).
@@ -43,23 +45,23 @@ const GAMES_BRANCH = 'owned by another branch in round 18 (on-demand loading of 
  * it is deleted here, and `ALLOWED_CEILING` only ever goes down.
  */
 const ALLOWED: Readonly<Record<string, string>> = {
-  'src/components/ui/input-surface.ts':
+  'src/components/ui/forms/input-surface.ts':
     "the ui kit's own variant table: the Tailwind class strings Input and TextArea share; pure style data, private to the kit (nothing outside src/components/ui imports it)",
-  'src/components/ui/merge-refs.ts':
+  'src/components/ui/forms/merge-refs.ts':
     "a private building block of the ui kit: only the Input and TextArea primitives use it; it moves to src/utils the day anything outside the kit needs it",
-  'src/components/chat/games/chain-reaction/cascade.ts': GAMES_BRANCH,
-  'src/components/chat/games/chain-reaction/css-vars.ts': GAMES_BRANCH,
-  'src/components/chat/games/chain-reaction/seat-colors.ts': GAMES_BRANCH,
-  'src/components/chat/games/new-game/game-options.ts': GAMES_BRANCH,
-  'src/components/chat/games/results-rows.ts': GAMES_BRANCH,
-  'src/components/chat/games/stacker/block-paint.ts': GAMES_BRANCH,
-  'src/components/chat/games/stacker/draw-well.ts': GAMES_BRANCH,
-  'src/components/chat/games/stacker/piece-colors.ts': GAMES_BRANCH,
-  'src/components/chat/games/vesta/board-pick.ts': GAMES_BRANCH,
-  'src/components/chat/games/vesta/draw-board.ts': GAMES_BRANCH,
-  'src/components/chat/games/vesta/palette.ts': GAMES_BRANCH,
-  'src/components/chat/games/vesta/pick-mode.ts': GAMES_BRANCH,
-  'src/components/chat/games/vesta/resources.ts': GAMES_BRANCH,
+  'src/components/games/chain-reaction/cascade.ts': GAMES_BRANCH,
+  'src/components/games/chain-reaction/css-vars.ts': GAMES_BRANCH,
+  'src/components/games/chain-reaction/seat-colors.ts': GAMES_BRANCH,
+  'src/components/games/new-game/game-options.ts': GAMES_BRANCH,
+  'src/components/games/results/results-rows.ts': GAMES_BRANCH,
+  'src/components/games/stacker/block-paint.ts': GAMES_BRANCH,
+  'src/components/games/stacker/draw-well.ts': GAMES_BRANCH,
+  'src/components/games/stacker/piece-colors.ts': GAMES_BRANCH,
+  'src/components/games/vesta/board-pick.ts': GAMES_BRANCH,
+  'src/components/games/vesta/draw-board.ts': GAMES_BRANCH,
+  'src/components/games/vesta/palette.ts': GAMES_BRANCH,
+  'src/components/games/vesta/pick-mode.ts': GAMES_BRANCH,
+  'src/components/games/vesta/resources.ts': GAMES_BRANCH,
 };
 
 /** Lower this when an entry leaves `ALLOWED`; never raise it. */
@@ -126,6 +128,13 @@ export function isComponentModule(source: string, fileName: string): boolean {
   return containsJsx(source, fileName) || exportsComponent(source, fileName);
 }
 
+/** An `index.ts` whose every statement re-exports from another module: no logic of its own. */
+export function isBarrel(source: string, fileName: string): boolean {
+  if (basename(fileName) !== 'index.ts') return false;
+  const file = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
+  return file.statements.length > 0 && file.statements.every((node) => ts.isExportDeclaration(node) && !!node.moduleSpecifier);
+}
+
 function isNextConvention(file: string): boolean {
   if (!file.startsWith('src/app/')) return false;
   return NEXT_CONVENTIONS.has(basename(file).replace(/\.(ts|tsx|js|jsx|mjs|mts)$/, ''));
@@ -138,7 +147,9 @@ function nonComponentModules(): string[] {
     for (const path of sourceFiles(join(ROOT, dir))) {
       const file = relative(ROOT, path).split(sep).join('/');
       if (isNextConvention(file)) continue;
-      if (!isComponentModule(readFileSync(path, 'utf8'), file)) out.push(file);
+      const source = readFileSync(path, 'utf8');
+      if (isBarrel(source, file)) continue;
+      if (!isComponentModule(source, file)) out.push(file);
     }
   }
   return out.sort();
@@ -177,6 +188,9 @@ describe('component folders hold components only', () => {
     expect(exportsComponent("export { type Props, helper } from './x';\nexport const LIMIT = 4;")).toBe(false);
     expect(isComponentModule('export default function Root() { return null; }', 'src/components/Root.tsx')).toBe(true);
     expect(isComponentModule('export default function Root() { return null; }', 'src/components/root.ts')).toBe(false);
+    expect(isBarrel("export { default as Button } from './Button';\nexport * from './IconButton';", 'src/components/ui/buttons/index.ts')).toBe(true);
+    expect(isBarrel("export * from './Button';\nexport const LIMIT = 4;", 'src/components/ui/buttons/index.ts')).toBe(false);
+    expect(isBarrel("export * from './Button';", 'src/components/ui/buttons/helpers.ts')).toBe(false);
     expect(isNextConvention('src/app/robots.ts')).toBe(true);
     expect(isNextConvention('src/app/[locale]/guides/[slug]/opengraph-image.tsx')).toBe(true);
     expect(isNextConvention('src/app/[locale]/app/feed-pane.ts')).toBe(false);

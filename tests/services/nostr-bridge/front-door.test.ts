@@ -1,7 +1,7 @@
 /**
  * The bridge has one public entrance, `@/services/nostr-bridge` (its `index.ts`),
  * and tests fake the bridge by mocking exactly that path. A module outside
- * the bridge that imports `@/services/nostr-bridge/client` (or any other file
+ * the bridge that imports `@/services/nostr-bridge/facade/client` (or any other file
  * inside the folder) walks past the fake: the real module loads inside a test
  * that believed the bridge was faked.
  *
@@ -30,22 +30,22 @@ const FRONT_DOOR = join(BRIDGE, 'index');
 const SIDE_ENTRANCE_ALLOW_LIST: Readonly<Record<string, { paths: readonly string[]; why: string }>> = {
   // Cycles: the bridge itself loads these files, so going through index.ts
   // would make them import the module that is halfway through loading them.
-  'src/services/quota-safe-storage.ts': {
-    paths: ['@/services/nostr-bridge/cache'],
+  'src/services/common/quota-safe-storage.ts': {
+    paths: ['@/services/nostr-bridge/cache/cache'],
     why: 'cycle: nostr-bridge/dm/send.ts -> store/dm.ts -> quota-safe-storage.ts',
   },
   'src/services/wot/extension.ts': {
-    paths: ['@/services/nostr-bridge/signer-queue'],
+    paths: ['@/services/nostr-bridge/session/signer-queue'],
     why: 'cycle: nostr-bridge/dm/inbox.ts -> wot/engine.ts -> wot/extension.ts',
   },
   // Deliberate light leaves.
   'src/services/social/pool.ts': {
-    paths: ['@/services/nostr-bridge/page-hub'],
+    paths: ['@/services/nostr-bridge/facade/page-hub'],
     why:
       'runs pageRelayHub() at import time and wants only the hub, not the index ' +
       '(which loads the whole client); untangle by giving the page hub its own public home',
   },
-  'src/services/remote-media-gate.ts': {
+  'src/services/media/remote-media-gate.ts': {
     paths: ['@/services/nostr-bridge/hooks/session', '@/services/nostr-bridge/hooks/lists'],
     why:
       'documented in the file: component suites partially mock the index for their own hooks ' +
@@ -139,23 +139,23 @@ describe('the bridge front door', () => {
   it('sees every form of side entrance, and lets the front door through', () => {
     const file = join(SRC, 'services', 'example.ts');
     const text = [
-      "import { getBridge } from '@/services/nostr-bridge/client';",
-      "import type { JsMessage } from '@/services/nostr-bridge/types';",
+      "import { getBridge } from '@/services/nostr-bridge/facade/client';",
+      "import type { JsMessage } from '@/services/nostr-bridge/common/types';",
       'import {',
       '  cacheGet,',
       "} from './nostr-bridge/cache';",
       "export { x } from '../services/nostr-bridge/relay-url';",
-      "const lazy = () => import('@/services/nostr-bridge/page-hub');",
+      "const lazy = () => import('@/services/nostr-bridge/facade/page-hub');",
       "import { nostrActions } from '@/services/nostr-bridge';",
       "import { y } from '@/services/nostr-bridge/index';",
       "import { z } from '@/services/nostr-bridge-adjacent';",
     ].join('\n');
     expect(sideEntrances(file, text)).toEqual([
-      '@/services/nostr-bridge/client',
-      '@/services/nostr-bridge/types',
+      '@/services/nostr-bridge/facade/client',
+      '@/services/nostr-bridge/common/types',
       './nostr-bridge/cache',
       '../services/nostr-bridge/relay-url',
-      '@/services/nostr-bridge/page-hub',
+      '@/services/nostr-bridge/facade/page-hub',
     ]);
   });
 });

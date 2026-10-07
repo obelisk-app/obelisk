@@ -1,9 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { CompassIcon, EditIcon, MessageIcon, SettingsIcon } from '@/components/ui/icons';
-import { openSettings } from '@/utils/open-settings';
-import Button from '@/components/ui/Button';
+import { CompassIcon, EditIcon, MessageIcon, SettingsIcon } from '@/components/ui/icons/icons';
+import { openSettings } from '@/utils/settings/open-settings';
+import Button from '@/components/ui/buttons/Button';
 
 
 /** Edit / preferences on your own card, message on anyone else's, explore on both. */

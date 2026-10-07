@@ -8,7 +8,7 @@ import { LocaleProvider } from '@tests/support/intl';
 // Count renders of the memoized row: the list must hand it identity-stable
 // props, or every keystroke in the composer re-renders every visible message.
 const rowRenders = vi.hoisted(() => ({ count: 0 }));
-vi.mock('@/app/[locale]/app/panes/MessageRow', () => ({
+vi.mock('@/app/[locale]/app/panes/message/MessageRow', () => ({
   MessageRow: memo(function MessageRow({ msg }: { msg: JsMessage }) {
     rowRenders.count += 1;
     return <div data-testid={`row-${msg.id}`} />;

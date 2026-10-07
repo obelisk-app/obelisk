@@ -4,9 +4,9 @@ import HintDot from '@/components/hints/HintDot';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { useTranslations } from 'next-intl';
 import { colorFor, letterFor } from '@/utils/relay-url/relay-tile-style';
-import { useRelayTile } from '@/hooks/app/rail/useRelayTile';
-import { MENU_PANEL_CLASS, MenuItem } from '@/components/ui/menu';
-import RemoteImage from '@/components/ui/RemoteImage';
+import { useRelayTile } from '@/hooks/shell/rail/useRelayTile';
+import { MENU_PANEL_CLASS, MenuItem } from '@/components/ui/overlays/menu';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 
 /** One configured relay: its icon (or letter), unread markers and right-click menu. */
 export function RelayTile({

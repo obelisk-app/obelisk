@@ -9,7 +9,7 @@
  * and `preferences.browserNotifications` is on. Deny or dismiss and it
  * stays quiet; Preferences is where it can be turned back on.
  */
-import { getPreferences } from '@/services/preferences';
+import { getPreferences } from '@/services/preferences/preferences';
 
 const GESTURES = ['pointerdown', 'keydown'] as const;
 

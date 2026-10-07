@@ -2,7 +2,7 @@
 
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useUserMetadata as useProfile, type JsMessage } from '@/services/nostr-bridge';
-import { MentionText } from '@/components/chat/MentionText';
+import { MentionText } from '@/components/chat/mentions/MentionText';
 import { useTranslations } from 'next-intl';
 
 /** The quoted parent above a reply; clicking it jumps to the parent. */

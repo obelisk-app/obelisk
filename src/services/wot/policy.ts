@@ -15,7 +15,7 @@ import {
   // list, and the events are short-lived ephemeral kinds.
   KIND_VOICE_PRESENCE,
   KIND_VOICE_SIGNAL,
-} from '@/utils/nip-kinds';
+} from '@/utils/nostr/nip-kinds';
 
 export interface WotEngineConfig {
   enabled: boolean;

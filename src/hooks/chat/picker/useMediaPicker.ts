@@ -1,20 +1,20 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { uploadToBlossom } from '@/services/blossom';
-import { loadPersonalStickers } from '@/services/personal-stickers';
-import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
+import { uploadToBlossom } from '@/services/media/blossom';
+import { loadPersonalStickers } from '@/services/chat/picker/personal-stickers';
+import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import { nostrActions, useMediaPacks, useMyMediaFavorites, useMyPubkey, type JsMediaItem, type JsMediaKind } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
-import { detectGifPresentation, inferMediaKind } from '@/utils/media-tags/media-kind';
+import { detectGifPresentation, inferMediaKind } from '@/utils/media/tags/media-kind';
 import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
 import type { MediaCategory, MediaEntry, MediaPickerTab, RecentMediaEntry } from '@/utils/chat/picker/media-catalog';
-import { loadRecentMedia, saveRecentMedia } from '@/services/recent-media';
+import { loadRecentMedia, saveRecentMedia } from '@/services/chat/picker/recent-media';
 import { useGiphyResults } from './useGiphyResults';
 import { emojiTabMaps, personalMediaEntries, serverMediaEntries, visibleMediaSections } from '@/utils/chat/picker/media-entries';
 import { useTranslations } from 'next-intl';
 import { errorReason } from '@/utils/errors/error-text';
-import { useToastStore } from '@/store/toast';
+import { useToastStore } from '@/store/feedback/toast';
 import { CodedError } from '@/utils/errors/codes';
 
 /**

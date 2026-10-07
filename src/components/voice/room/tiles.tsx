@@ -10,11 +10,11 @@ import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import { useUserMetadata as useProfile } from '@/services/nostr-bridge';
-import { useAutoplayVideo } from '@/hooks/useAutoplayVideo';
-import { useTileSpeaking } from '@/hooks/useTileSpeaking';
+import { useAutoplayVideo } from '@/hooks/voice/room/useAutoplayVideo';
+import { useTileSpeaking } from '@/hooks/voice/room/useTileSpeaking';
 import { useVoiceStore } from '@/store/voice';
 import { qualityColor, type QualitySample } from '@/services/voice/stats';
-import RemoteImage from '@/components/ui/RemoteImage';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 import { MuteForMeButton, FullscreenButton } from './controls';
 
 export function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTogglePin }: {

@@ -63,11 +63,11 @@ event:
 ## Client implementation in this repo
 
 - Type: `JsGroup.banner: string | null`; see
-  `src/services/nostr-bridge/types.ts`.
-- Parse: `parseGroupMetadataTags` in `src/services/nostr-bridge/group-metadata.ts`
+  `src/services/nostr-bridge/common/types.ts`.
+- Parse: `parseGroupMetadataTags` in `src/services/nostr-bridge/groups/metadata/group-metadata.ts`
   reads the first `banner` tag of kind 39000; `groups/metadata.ts` stores it.
 - Sign: `editGroupMetadata({ banner })` adds `["banner", url]` to the kind
-  9002 tag list (`src/services/nostr-bridge/groups/metadata-tags.ts`).
-- Render: `src/app/[locale]/app/panes/ChatPanel.tsx` renders the banner as a
+  9002 tag list (`src/services/nostr-bridge/groups/metadata/metadata-tags.ts`).
+- Render: `src/app/[locale]/app/panes/channel/ChatPanel.tsx` renders the banner as a
   thin strip directly below the channel header.
 - Edit: the channel settings modal (admin-only) exposes a "Banner URL" field.

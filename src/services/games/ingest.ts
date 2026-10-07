@@ -13,8 +13,8 @@
  * would flush between each one and coalesce nothing.
  */
 import { useGamesStore } from '@/store/games';
-import { registerClientResetHook } from '@/services/reset';
-import type { ParsedGameEvent } from '@/lib/games/protocol';
+import { registerClientResetHook } from '@/services/common/reset';
+import type { ParsedGameEvent } from '@/lib/games/protocol/protocol';
 
 /**
  * How long a burst is allowed to accumulate. Roughly two frames: long enough

@@ -8,7 +8,7 @@
  * code or the relay's own words. An entry from anywhere else, with English
  * in those fields, is printed as it is.
  */
-import type { ActivityEntry } from '@/services/activity-log';
+import type { ActivityEntry } from '@/services/feedback/activity-log';
 import type { Translate } from '@/i18n/keys';
 import { errorCodeOf, isActivityCode, isEventKindLabel } from './codes';
 

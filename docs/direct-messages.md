@@ -2,7 +2,7 @@
 
 Private 1:1 chat between Nostr identities. Like everything else in Obelisk, DMs are entirely client-driven over relays: there is no server in the data path.
 
-> **This document was rewritten on 2026-08-17.** The version before it described a local `src/services/dm/` subsystem that commit `5cbcec0` deleted on 2026-05-10, listing modules (`dm.ts`, `dm-cache.ts`, `cache-key.ts`, `coalescer.ts`, `pool.ts`, a `components/dm/` folder, `feature-flags.ts`) that no longer exist. That staleness cost a full spec-and-plan cycle on the post-quantum work, which was written against a system that was not there. If you change how DMs work, change this file in the same commit.
+> **This document was rewritten on 2026-08-17.** The version before it described a local `src/services/chat/dm/` subsystem that commit `5cbcec0` deleted on 2026-05-10, listing modules (`dm.ts`, `dm-cache.ts`, `cache-key.ts`, `coalescer.ts`, `pool.ts`, a `components/dm/` folder, `feature-flags.ts`) that no longer exist. That staleness cost a full spec-and-plan cycle on the post-quantum work, which was written against a system that was not there. If you change how DMs work, change this file in the same commit.
 
 ## Where the code actually is
 
@@ -12,20 +12,20 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 |---|---|
 | `src/services/nostr-bridge/dm/` | The DM modules, wired by `compose-dm.ts`: `send.ts` (optimistic placeholder, per-thread protocol choice, retry), `nip17.ts` (seal and gift-wrap to the recipient's inbox and to ourselves), `nip04.ts` (the opt-out path), `inbox.ts` (the kind 4 and kind 1059 REQs, the `'dm'` AUTH lease), `thread.ts` (dedupe and placeholder replacement into a thread, the bell card), `relays.ts` and `relay-cache.ts` (NIP-65 and kind-10050 lookups, the gift-wrap ladder), `inbox-list.ts` (publishing our own kind 10050), `calls.ts` (DM call control messages), and the encrypted store (below): `store.ts` (locked / unlocked, what is held, what is kept), `store-key.ts` (the DM key wrapped by the signer), `store-db.ts` (the IndexedDB layout), `store-record.ts` (what one stored message holds) |
 | `src/lib/crypto/record-cipher.ts` | AES-256-GCM boxes under a non-extractable key held in memory. |
-| `src/components/chat/DmUnlock.tsx`, `src/hooks/dm/useDmUnlock.ts` | Mounted on every DM surface: opening one opens the DMs, and says so while the signer is asked or after it said no. |
+| `src/components/chat/dm/unlock/DmUnlock.tsx`, `src/hooks/chat/dm/unlock/useDmUnlock.ts` | Mounted on every DM surface: opening one opens the DMs, and says so while the signer is asked or after it said no. |
 | `src/services/nostr-bridge/session/dm-signer.ts` | The signer the DM transport uses, adapted from the session's login method. |
 | `src/services/nostr-bridge/dm/types.ts` | `JsDirectMessage`: the only DM shape the UI ever sees (re-exported from `types.ts`). |
 | `src/services/nostr-bridge/hooks/messages.ts` | `useDirectMessages()` over the bridge's `dmsByPeer` store, exported from the front door. |
-| `src/services/dm/opt-in.ts` | The `directMessagesEnabled` preference gate. The only file under `src/services/dm/`. |
-| `src/store/dm.ts` | Zustand UI state: `activeDMPubkey`, `isDMMode`, and the persisted per-peer `protocolOverrides`. |
-| `src/services/pq/` | Post-quantum: attestation lookup, own-capability detection, status computation, send-plan resolution. |
-| `src/app/[locale]/app/DMList.tsx`, `DMComposer.tsx`, `DMOptInGate.tsx` | Shared DM UI. |
-| `src/app/[locale]/app/panes/DMPanel.tsx` | Desktop thread view. |
-| `src/app/[locale]/app/mobile/screens/DmThreadScreen.tsx` | Mobile thread view. |
-| `src/components/chat/PqMessageMark.tsx`, `src/hooks/pq/usePqConversationStatus.ts` | Post-quantum indicator and the thread's PQ status. |
-| `src/components/chat/DmComposer.tsx` (parts in `dm-composer/`, logic in `src/hooks/chat/dm-composer/`) | The thread's message bar: the channel bar's widgets (attach, voice note, emoji / GIF / sticker picker, drop, paste) with encrypted uploads. Both shells mount it with `key={peer}`. |
-| `src/components/chat/DmMessageBody.tsx`, `EncryptedDmAttachment.tsx` | What goes inside a bubble; the fetch → verify → decrypt path for file messages. |
-| `src/utils/attachments/dm-file.ts`, `src/services/dm-attachments.ts`, `src/lib/crypto/file-cipher.ts` | Kind-15 tag layout, encrypt + anonymous upload, AES-256-GCM. |
+| `src/services/chat/dm/opt-in.ts` | The `directMessagesEnabled` preference gate. The only file under `src/services/chat/dm/`. |
+| `src/store/chat/dm.ts` | Zustand UI state: `activeDMPubkey`, `isDMMode`, and the persisted per-peer `protocolOverrides`. |
+| `src/services/chat/pq/` | Post-quantum: attestation lookup, own-capability detection, status computation, send-plan resolution. |
+| `src/app/[locale]/app/dm/DmList.tsx`, `ComposeDm.tsx`, `DmOptInGate.tsx` | Shared DM UI. |
+| `src/app/[locale]/app/panes/dm/DmPanel.tsx` | Desktop thread view. |
+| `src/app/[locale]/app/mobile/screens/dm/DmThreadScreen.tsx` | Mobile thread view. |
+| `src/components/chat/pq/PqMessageMark.tsx`, `src/hooks/chat/pq/usePqConversationStatus.ts` | Post-quantum indicator and the thread's PQ status. |
+| `src/components/chat/dm/composer/DmComposer.tsx` (its parts beside it, logic in `src/hooks/chat/dm/composer/`) | The thread's message bar: the channel bar's widgets (attach, voice note, emoji / GIF / sticker picker, drop, paste) with encrypted uploads. Both shells mount it with `key={peer}`. |
+| `src/components/chat/dm/message/DmMessageBody.tsx`, `EncryptedDmAttachment.tsx` | What goes inside a bubble; the fetch → verify → decrypt path for file messages. |
+| `src/utils/attachments/dm-file.ts`, `src/services/chat/dm/dm-attachments.ts`, `src/lib/crypto/file-cipher.ts` | Kind-15 tag layout, encrypt + anonymous upload, AES-256-GCM. |
 
 `@nostr-wot/dm` types never leave `src/services/nostr-bridge/`. That boundary is deliberate: if the SDK integration turns out wrong, the blast radius is the bridge's DM methods rather than every component.
 
@@ -64,7 +64,7 @@ Bubbles render through `DmMessageBody`, not `MessageContent`: no link unfurls (t
 
 ## Opt-in
 
-DMs are off by default (`directMessagesEnabled`, `src/services/preferences.ts`). While off, the bridge opens no DM subscriptions and publishes no kind-10050. `DMOptInGate` renders the enable prompt; `setDmOptInEnabled(false)` calls `bridge.disableDirectMessages()` to tear the subscriptions down.
+DMs are off by default (`directMessagesEnabled`, `src/services/preferences/preferences.ts`). While off, the bridge opens no DM subscriptions and publishes no kind-10050. `DmOptInGate` renders the enable prompt; `setDmOptInEnabled(false)` calls `bridge.disableDirectMessages()` to tear the subscriptions down.
 
 ## Subscriptions
 
@@ -153,7 +153,7 @@ Full design: [`docs/superpowers/specs/2026-08-15-post-quantum-dms-design.md`](su
 
 The post-quantum envelope replaces the **seal's** ciphertext. Everything outside the seal is unchanged, so a relay or a client that has not implemented it still sees an ordinary kind-1059. `@nostr-wot/pq` owns the envelope; `@nostr-wot/dm` passes an opts bag through to the signer; the signer owns the key material. Obelisk holds no post-quantum secrets and cannot derive any: its logins are `nsec | nip07 | bunker` and it never sees a BIP-39 seed.
 
-**Sending.** `resolvePqSend` (`src/services/pq/send.ts`) returns the peer's ML-KEM key plus our own (for the self-copy), or `null` meaning "send classic". All three of these must hold:
+**Sending.** `resolvePqSend` (`src/services/chat/pq/send.ts`) returns the peer's ML-KEM key plus our own (for the self-copy), or `null` meaning "send classic". All three of these must hold:
 
 1. The `postQuantumEnabled` preference is on.
 2. `selfPqState().canSend`: the extension advertises `window.nostr.nip44.schemes` including `'pq'`.
@@ -174,7 +174,7 @@ Condition 2 is checked **locally first**, before any relay round trip, because i
 ## Who the thread says you are talking to
 
 DM surfaces resolve the peer's name and picture through **`useAuthor`**
-(`src/hooks/social/useAuthor.ts`), never the bridge's `useUserMetadata`
+(`src/hooks/social/profile/useAuthor.ts`), never the bridge's `useUserMetadata`
 directly.
 
 The bridge queries only `DEFAULT_PROFILE_LOOKUP_RELAYS` (lacrypta,
@@ -212,7 +212,7 @@ Three things sit at the top right, and they are not interchangeable:
   wrap. It is *state*, not a menu, and must stay visible.
 - **`PqMessageMark`**: per-message, aggregated to protocol transitions only.
   A pill per bubble is unreadable when all of pre-NIP-17 history is NIP-04.
-- **`DMThreadMenu`**: the `⋯` beside the shield: profile, copy npub, mute,
+- **`DmThreadMenu`**: the `⋯` beside the shield: profile, copy npub, mute,
   block. Added beside the indicators deliberately; folding them into a menu
   would hide the one thing the header says about safety.
 
@@ -288,9 +288,9 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - `tests/services/nostr-bridge/dm-pq-send.test.ts`: post-quantum send and receive, every negative case, the classic fallback.
 - `tests/services/nostr-bridge/optimistic-send.test.ts`: placeholder lifecycle.
 - `dm-nip17.test.ts` also covers kind-15 send and receive, the NIP-04 refusal, and the 1059 REQ reopening after `switchRelay`.
-- `tests/lib/crypto/file-cipher.test.ts`, `tests/utils/attachments/dm-file.test.ts`, `tests/services/dm-attachments.test.ts`, `tests/services/blossom.test.ts`: the file path end to end, without a relay.
-- `tests/components/chat/DmComposer.test.tsx`, `DmMessageBody.test.tsx`, `EncryptedDmAttachment.test.tsx`: the bar, the bubble body, decrypt / integrity failure / revoke.
-- `tests/services/pq/` (`attestations`, `capability`, `status`, `send`): attestations, capability, status lattice, send-plan resolution.
-- `tests/app/[locale]/app/DMPanel.pq.test.tsx`: indicator mounting, mark aggregation, on-accent contrast.
-- `tests/app/[locale]/app/DMList.identity.test.tsx`: the peer resolves through the social tier, and one batched lookup per list.
-- `tests/components/chat/DMThreadMenu.test.tsx`: the ⋯ actions, and that they close after acting.
+- `tests/lib/crypto/file-cipher.test.ts`, `tests/utils/attachments/dm-file.test.ts`, `tests/services/chat/dm/dm-attachments.test.ts`, `tests/services/media/blossom.test.ts`: the file path end to end, without a relay.
+- `tests/components/chat/dm/composer/DmComposer.test.tsx`, `DmMessageBody.test.tsx`, `EncryptedDmAttachment.test.tsx`: the bar, the bubble body, decrypt / integrity failure / revoke.
+- `tests/services/chat/pq/` (`attestations`, `capability`, `status`, `send`): attestations, capability, status lattice, send-plan resolution.
+- `tests/app/[locale]/app/panes/dm/DmPanel.pq.test.tsx`: indicator mounting, mark aggregation, on-accent contrast.
+- `tests/app/[locale]/app/dm/DmList.identity.test.tsx`: the peer resolves through the social tier, and one batched lookup per list.
+- `tests/components/chat/dm/thread/DmThreadMenu.test.tsx`: the ⋯ actions, and that they close after acting.

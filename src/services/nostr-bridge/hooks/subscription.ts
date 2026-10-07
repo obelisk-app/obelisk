@@ -16,7 +16,7 @@
  * and until the bridge is there it answers `initial`.
  */
 import { useEffect, useState } from 'react';
-import type { BridgeImpl } from '../client';
+import type { BridgeImpl } from '../facade/client';
 import { useBridgeContext } from './provider';
 
 interface Delivered<T> {

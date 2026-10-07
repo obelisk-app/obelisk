@@ -1,8 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
+import Input from '@/components/ui/forms/Input';
+import Select from '@/components/ui/forms/Select';
 import type { RelayAdminFilterState } from '@/hooks/admin/relay-admin/useRelayAdminPanel';
 import type { RelayAdminRoleFilter } from '@/utils/admin/relay-admin-rows';
 

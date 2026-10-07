@@ -3,8 +3,8 @@
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import Footer from '@/components/marketing/Footer';
-import Navbar from '@/components/marketing/Navbar';
+import Footer from '@/components/marketing/site/Footer';
+import Navbar from '@/components/marketing/site/Navbar';
 import { LOCAL_DATA_CATEGORIES } from '@/services/local-data/categories';
 import type { MessageKey } from '@/i18n/keys';
 

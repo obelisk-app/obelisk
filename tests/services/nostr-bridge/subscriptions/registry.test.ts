@@ -3,7 +3,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import type { AuthLease, AuthLeaseReason, QueryResult, SubscribeSpec } from '@/lib/relay-hub';
 import { RELAY_SWITCH_GRACE_MS, RequestsModule } from '@/services/nostr-bridge/subscriptions/registry';
 import { openWatchedReq, type WatchedReqDeps } from '@/services/nostr-bridge/subscriptions/watched';
-import { StateStore } from '@/services/nostr-bridge/state-store';
+import { StateStore } from '@/services/nostr-bridge/common/state-store';
 
 const ACTIVE = 'wss://active.example';
 const CALL = 'wss://call.example';

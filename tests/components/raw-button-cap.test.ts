@@ -19,15 +19,15 @@ import { describe, expect, it } from 'vitest';
 const CAP = 102;
 
 const UI_PRIMITIVE_BUTTONS: Record<string, number> = {
-  'src/components/ui/Button.tsx': 1,
-  'src/components/ui/Chip.tsx': 2,
-  'src/components/ui/IconButton.tsx': 1,
-  'src/components/ui/OptionRow.tsx': 1,
-  'src/components/ui/SegmentedControl.tsx': 1,
-  'src/components/ui/TextButton.tsx': 1,
-  'src/components/ui/Toggle.tsx': 1,
-  'src/components/ui/UserRow.tsx': 1,
-  'src/components/ui/menu.tsx': 1,
+  'src/components/ui/buttons/Button.tsx': 1,
+  'src/components/ui/data/Chip.tsx': 2,
+  'src/components/ui/buttons/IconButton.tsx': 1,
+  'src/components/ui/forms/OptionRow.tsx': 1,
+  'src/components/ui/forms/SegmentedControl.tsx': 1,
+  'src/components/ui/buttons/TextButton.tsx': 1,
+  'src/components/ui/forms/Toggle.tsx': 1,
+  'src/components/ui/data/UserRow.tsx': 1,
+  'src/components/ui/overlays/menu.tsx': 1,
 };
 
 const ROOT = process.cwd();

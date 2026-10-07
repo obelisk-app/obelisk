@@ -11,12 +11,12 @@
  */
 import { useSignerReady, type JsForumTag } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import type { ForumPrefs } from '@/services/forum-prefs';
-import Input from '@/components/ui/Input';
+import type { ForumPrefs } from '@/services/chat/forum/forum-prefs';
+import Input from '@/components/ui/forms/Input';
 import { NewPostIcon, SearchIcon } from './forum-icons';
 import { SortViewMenu } from './SortViewMenu';
 import { TagChip } from './TagChip';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 
 export function ForumChrome({
   searchQuery,

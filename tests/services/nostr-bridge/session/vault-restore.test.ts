@@ -60,7 +60,7 @@ function seedPlaintext(skHex: string, pkHex: string) {
 }
 
 async function loadPage() {
-  const { getBridge } = await import('@/services/nostr-bridge/client');
+  const { getBridge } = await import('@/services/nostr-bridge/facade/client');
   return getBridge();
 }
 

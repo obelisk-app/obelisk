@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import type { BridgeImpl } from '@/services/nostr-bridge/client';
+import type { BridgeImpl } from '@/services/nostr-bridge/facade/client';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 
 const A = 'a'.repeat(64);

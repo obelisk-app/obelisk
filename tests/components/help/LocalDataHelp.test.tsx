@@ -6,8 +6,8 @@ import FaqSection from '@/components/marketing/landing/FaqSection';
 import { FAQ_IDS } from '@/components/marketing/landing/landing-data';
 import { LOCAL_DATA_CATEGORIES } from '@/services/local-data';
 
-vi.mock('@/components/marketing/Navbar', () => ({ default: () => <nav /> }));
-vi.mock('@/components/marketing/Footer', () => ({ default: () => <footer /> }));
+vi.mock('@/components/marketing/site/Navbar', () => ({ default: () => <nav /> }));
+vi.mock('@/components/marketing/site/Footer', () => ({ default: () => <footer /> }));
 
 const LOCALES = ['en', 'es', 'pt'] as const;
 

@@ -10,8 +10,8 @@
  * added later is covered without anyone remembering this file.
  */
 import { describe, expect, it } from 'vitest';
-import { installFakeRelayPage, loginWithNip07Spy, settle } from '@/services/nostr-bridge/test-support';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { installFakeRelayPage, loginWithNip07Spy, settle } from '@/services/nostr-bridge/common/test-support';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 
 warmBridgeModules();
@@ -102,7 +102,7 @@ describe('logout', () => {
 
     bridge.dispose();
     unregisterBridge();
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const fresh = await getBridge();
     await settle();
     expect(fresh).not.toBe(bridge);

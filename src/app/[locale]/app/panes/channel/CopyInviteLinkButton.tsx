@@ -2,8 +2,8 @@
 
 import { useCurrentRelayUrl } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import CopyButton from '@/components/ui/CopyButton';
-import { channelInviteLink } from '@/utils/channel-link';
+import CopyButton from '@/components/ui/buttons/CopyButton';
+import { channelInviteLink } from '@/utils/chat/channel/channel-link';
 
 /**
  * Copies this channel's invite link. On `CopyButton`, so the tick holds for

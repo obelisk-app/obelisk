@@ -1,15 +1,15 @@
 'use client';
 
 import type { JsForumTag } from '@/services/nostr-bridge';
-import { tagChipStyle } from '@/utils/forum-tag-colors';
+import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
 import { useTranslations } from 'next-intl';
-import { MAX_THREAD_TAGS, useNewThreadForm } from '@/hooks/chat/useNewThreadForm';
+import { MAX_THREAD_TAGS, useNewThreadForm } from '@/hooks/chat/forum/useNewThreadForm';
 import { TagDot } from './TagDot';
-import Input from '@/components/ui/Input';
-import TextArea from '@/components/ui/TextArea';
-import Button from '@/components/ui/Button';
-import CloseButton from '@/components/ui/CloseButton';
-import Text from '@/components/ui/Text';
+import Input from '@/components/ui/forms/Input';
+import TextArea from '@/components/ui/forms/TextArea';
+import Button from '@/components/ui/buttons/Button';
+import CloseButton from '@/components/ui/buttons/CloseButton';
+import Text from '@/components/ui/layout/Text';
 
 export function NewThreadModal({
   forumGroupId,

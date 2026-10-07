@@ -1,5 +1,5 @@
 import { ogCardResponse } from '@/components/seo/OgCard';
-import { profileCard } from '@/services/server/og-cards';
+import { profileCard } from '@/services/server/og/og-cards';
 import { OG_SIZE } from '@/utils/seo/og';
 
 export const runtime = 'nodejs';

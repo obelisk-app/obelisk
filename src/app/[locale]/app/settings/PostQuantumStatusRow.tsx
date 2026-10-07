@@ -3,7 +3,7 @@
 import { Link } from '@/i18n/navigation';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { useTranslations } from 'next-intl';
-import { usePostQuantumProbe } from '@/hooks/app/settings/usePostQuantumProbe';
+import { usePostQuantumProbe } from '@/hooks/shell/settings/usePostQuantumProbe';
 
 /**
  * Read-only status line beneath the post-quantum toggle. Reports the three

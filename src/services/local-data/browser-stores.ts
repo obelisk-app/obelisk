@@ -5,7 +5,7 @@
  * Each removal is best effort and never throws; each takes its browser API
  * as an optional argument so tests can hand in a double.
  */
-import { cookieNamesOn, expireCookie } from '@/services/cookies';
+import { cookieNamesOn, expireCookie } from '@/services/common/cookies';
 import { LOCAL_DATA, entryMatches } from './inventory';
 import type { LocalDataCategoryId } from './types';
 

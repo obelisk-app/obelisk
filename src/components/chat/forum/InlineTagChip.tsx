@@ -1,5 +1,5 @@
 import type { JsForumTag } from '@/services/nostr-bridge';
-import { tagChipStyle } from '@/utils/forum-tag-colors';
+import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
 import { TagDot } from './TagDot';
 
 /** A thread's tag as a small coloured chip on its card. */

@@ -1,7 +1,7 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { MentionText } from '@/components/chat/MentionText';
+import { MentionText } from '@/components/chat/mentions/MentionText';
 import {
   isDmNotificationRead,
   isMentionRead,
@@ -10,8 +10,8 @@ import {
 } from '@/store/notifications';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
-import type { InboxStreams } from '@/hooks/app/panes/topbar/useTopBarPopovers';
-import SegmentedControl from '@/components/ui/SegmentedControl';
+import type { InboxStreams } from '@/hooks/shell/panes/topbar/useTopBarPopovers';
+import SegmentedControl from '@/components/ui/forms/SegmentedControl';
 
 /** The bell's popover: mentions on this relay and DMs, each with its own read cursor. */
 export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {

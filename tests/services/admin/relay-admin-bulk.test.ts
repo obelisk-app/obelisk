@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeBridge } from '@tests/support/fake-bridge';
-import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
-import * as confirm from '@/services/confirm-dialog';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
+import * as confirm from '@/services/common/confirm-dialog';
 import type { Translate } from '@/i18n/keys';
 import type { RelayAdminRow } from '@/utils/admin/relay-admin-rows';
 import { bulkConfirmMessage, confirmAndRunRelayAdminBulk, runRelayAdminBulk } from '@/services/admin/relay-admin-bulk';

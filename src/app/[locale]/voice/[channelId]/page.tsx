@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { pageLocale } from '@/i18n/page-locale';
-import { LazyVoiceRoom } from '@/app/[locale]/app/lazy-mounts';
-import BridgeRoute from '@/components/BridgeRoute';
+import { LazyVoiceRoom } from '@/app/[locale]/app/mounts/lazy-mounts';
+import BridgeRoute from '@/components/common/BridgeRoute';
 import { cardAlt, cardImage } from '@/utils/seo/og';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
 

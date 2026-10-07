@@ -8,7 +8,7 @@ import { getBridgeImpl, cacheSet } from '@/services/nostr-bridge';
 import { wrapForSelf } from '@/lib/nip-59';
 import { useReadStateStore } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
-import { KIND_NIP78_APP_DATA as KIND_INNER } from '@/utils/nip-kinds';
+import { KIND_NIP78_APP_DATA as KIND_INNER } from '@/utils/nostr/nip-kinds';
 import { DEBOUNCE_MS, cacheKindFor, type SyncOptions } from './sync-options';
 
 type BridgeImpl = NonNullable<ReturnType<typeof getBridgeImpl>>;

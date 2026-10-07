@@ -1,5 +1,5 @@
 import type { JsGroup } from '@/services/nostr-bridge';
-import type { ForumViewMode } from '@/services/forum-prefs';
+import type { ForumViewMode } from '@/services/chat/forum/forum-prefs';
 
 /** The child publications of a forum, in `childIds` order; ids with no known group are skipped. */
 export function resolveChildGroups(childIds: ReadonlyArray<string>, groups: ReadonlyArray<JsGroup>): JsGroup[] {

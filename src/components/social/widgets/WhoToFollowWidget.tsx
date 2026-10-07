@@ -5,9 +5,9 @@ import { useMemo } from 'react';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useMyFollows, useMyPubkey } from '@/services/nostr-bridge';
 import { suggestedAuthors } from '@/services/social/feed-people';
-import { useAuthor } from '@/hooks/social/useAuthor';
+import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { useTranslations } from 'next-intl';
-import UserAvatar from '@/components/ui/UserAvatar';
+import UserAvatar from '@/components/ui/media/UserAvatar';
 import FollowButton from '@/app/[locale]/notes/[id]/FollowButton';
 import WidgetCard, { WidgetEmpty } from './WidgetCard';
 

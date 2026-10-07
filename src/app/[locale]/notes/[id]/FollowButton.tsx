@@ -22,7 +22,7 @@ import {
   useMyPubkey,
 } from '@/services/nostr-bridge';
 import { toggledFollowTags } from '@/services/social/profile-feed';
-import { usePreferences } from '@/hooks/usePreferences';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { useTranslations } from 'next-intl';
 
 export default function FollowButton({

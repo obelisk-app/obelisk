@@ -320,8 +320,16 @@ src/app/[locale]/app/mobile/
 ├── PhoneShell.tsx       (the state machine: go, pushNav, BottomNav,
 │                         onTabPress, popstate handler, drag carousel,
 │                         openers, screen renderers, seed/init)
-└── mobile-shell.css     (.drag-layer, .drag-slot.*, .drag-overlay,
-                          .screen-anim slide keyframes, sheet keyframes)
+├── mobile-shell.css     (.drag-layer, .drag-slot.*, .drag-overlay,
+│                         .screen-anim slide keyframes, sheet keyframes)
+├── carousel/            (MobileScreens, MobileScreensHost: the screen slots)
+├── chrome/              (BottomNav, BackButton, the voice status slot)
+├── common/              (avatar.tsx, shared by screens and sheets)
+├── rail/                (the relay rail and server banner)
+├── screens/<screen>/    (one folder per screen: channel, dm, forum, inbox,
+│                         login, profile, search, server, settings, status, voice)
+└── sheets/<topic>/      (chrome/ holds SheetHeader and SheetActions; account,
+                          channel, forum, layout, message, relay)
 
 src/utils/shell/mobile/  (the pure navigation rules, no React)
 ├── url-state.ts         (NavState shape, urlFor/parseUrl, initialNav)
@@ -333,11 +341,12 @@ src/utils/shell/mobile/  (the pure navigation rules, no React)
 └── labels.ts            (channel header halves, time of day)
 ```
 
-The shell's hooks live in the hooks layer, `src/hooks/app/mobile/`
-(`useMobileNavState`, `useMobileNavActions`, `useMobileHistorySync`,
-`useScreenCarousel`, `useCarouselDrag`, `useKeyboardInset` for the
-visualViewport keyboard inset, ...). Their tests are under
-`tests/hooks/app/mobile/`; `tests/utils/shell/mobile/swipe-nav.test.ts` covers
+The shell's hooks live in the hooks layer, `src/hooks/shell/mobile/`, in the
+same sub-folders: `nav/` (`useMobileNavState`, `useMobileNavActions`,
+`useMobileHistorySync`, `useMobileShellEvents`), `carousel/`
+(`useScreenCarousel`, `useCarouselDrag`, ...), `chrome/` (`useKeyboardInset`
+for the visualViewport keyboard inset), `rail/` and `screens/`. Their tests
+are under `tests/hooks/shell/mobile/`; `tests/utils/shell/mobile/swipe-nav.test.ts` covers
 the swipe decisions.
 
 When you add a new screen or transition, the order of operations is:

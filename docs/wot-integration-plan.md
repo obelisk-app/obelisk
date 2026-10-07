@@ -4,7 +4,7 @@
 
 ## Context
 
-Today, Obelisk renders every event the relay sends, regardless of who authored it. The mute system (`src/store/moderation.ts` zustand + bridge NIP-51 kind 10000) only filters at React **render time**, so muted/unwanted authors' events still hit `messagesByGroup`, the localStorage cache (`cacheSet` calls in `ingestGroupMetadata`, `ingestAdminMember`, etc.), and trigger amplifying `ensureUserMetadata()` REQs for kind:0 lookups. That's spam-attack surface and a privacy leak (the user's relay history records exposure to authors they never wanted to see).
+Today, Obelisk renders every event the relay sends, regardless of who authored it. The mute system (`src/store/moderation/index.ts` zustand + bridge NIP-51 kind 10000) only filters at React **render time**, so muted/unwanted authors' events still hit `messagesByGroup`, the localStorage cache (`cacheSet` calls in `ingestGroupMetadata`, `ingestAdminMember`, etc.), and trigger amplifying `ensureUserMetadata()` REQs for kind:0 lookups. That's spam-attack surface and a privacy leak (the user's relay history records exposure to authors they never wanted to see).
 
 The user wants to plug in the **nostr-wot extension** (`window.nostr.wot`, exposes `getDistance`, `getDistanceBatch`, `isInMyWoT`, `getStatus`, etc.; all async, Promise-returning), drop events from out-of-WoT npubs **before they reach the cache or in-memory stores**, and avoid REQ'ing data tied to those pubkeys when feasible, the same way muted accounts *should* be treated. The mute system also needs revision: today there are two parallel mute lists (NIP-51 in the bridge + local zustand in `moderation.ts`) and neither stops events from reaching the cache.
 
@@ -13,7 +13,7 @@ The extension API is **async**, the ingest path is a hot **sync** loop, and WoT 
 ## Design decisions (locked with the user)
 
 - **Fail policy:** fail-open + WoT off when the extension is absent/unconfigured, AND fail-open while a verdict is pending. Only events for which we hold a *resolved* "out of WoT" verdict get dropped. Mutes still apply unconditionally.
-- **Mute consolidation:** keep BOTH systems (per user). NIP-51 kind 10000 = cross-device synced mutes. `src/store/moderation.ts` = device-local quick mute (re-purpose: actually wire it into the predicate so it stops being dead weight). `mutedPubkeys` is the union of both. `blockedPubkeys` (already in `moderation.ts`) becomes a hard local denylist that, unlike mutes, also bypasses always-allow exemptions.
+- **Mute consolidation:** keep BOTH systems (per user). NIP-51 kind 10000 = cross-device synced mutes. `src/store/moderation/index.ts` = device-local quick mute (re-purpose: actually wire it into the predicate so it stops being dead weight). `mutedPubkeys` is the union of both. `blockedPubkeys` (already in `moderation.ts`) becomes a hard local denylist that, unlike mutes, also bypasses always-allow exemptions.
 - **Exempt kinds (always pass, even if author untrusted):** own events; group metadata (kind 39000); group admins/members (kinds 39001/39002); group-create (kind 9007); DM counterparties for whom an outgoing DM exists in `dm-cache` (consensual conversation). Mute/block are NOT exempt: explicit user action overrides.
 - **Cache lifetime:** WoT verdicts cached in-memory only (per session). On extension status change or maxHops change, cache is wiped. TTL = 30min on the verdict itself so the graph staying live picks up new follows.
 
@@ -32,23 +32,23 @@ Single new module `src/services/wot/`. One sync predicate `isAllowed(pubkey, kin
 | `src/services/wot/store.ts` | Zustand store, persisted: `{ enabled, maxHops, status: 'absent'\|'configured'\|'error' }`. Wired to `wotProbe()` on app mount and on visibility change. |
 | `src/services/wot/index.ts` | Public re-exports: `isAllowed`, `wotEngine`, the store and `initializeWot`. The React hooks (`useWotStatus`, `useWotDistance(pubkey)`, `useWotEnabled`, `useBestWotDistance`) live in `src/hooks/wot/useWot.ts`. |
 | `tests/services/wot/engine.test.ts` | Vitest: cache hit/miss, batch coalescing, fail-open behavior, prune-on-verdict-change, TTL expiry, exemption matrix per kind, mute/block override path. Mocks `window.nostr.wot`. |
-| `src/components/settings/WotSettings.tsx` | Card with toggle, maxHops slider (1–4, default 2), live "extension status" indicator, "purge cached events from now-untrusted authors" button. Slots into wherever ProfileEditor is rendered (likely UserPanel-adjacent). |
-| `src/components/chat/WotBadge.tsx` | Tiny pill showing `1°/2°/…/-` next to display names in `MessageContent` and `ProfilePopover`. Reads `useWotDistance(pubkey)`. |
+| `src/components/settings/privacy/WotSettings.tsx` | Card with toggle, maxHops slider (1–4, default 2), live "extension status" indicator, "purge cached events from now-untrusted authors" button. Slots into wherever ProfileEditor is rendered (likely UserPanel-adjacent). |
+| `src/components/wot/WotBadge.tsx` | Tiny pill showing `1°/2°/…/-` next to display names in `MessageContent` and `ProfilePopover`. Reads `useWotDistance(pubkey)`. |
 
 ### EDIT
 
 | File | Change |
 |---|---|
-| `src/services/nostr-bridge/client.ts` line 1796–1805 (`subscribeWatched.onevent`) | Insert `if (!isAllowed(ev.pubkey, ev.kind)) { wot.markUnknown(ev.pubkey); return; }` before `onevent(ev)`. This single line gates ALL relay-derived events: groups, messages, reactions, DMs (kind:4 incoming sub), admin/member, contact list, mute list, profile, and voice signaling that flows through the bridge. |
-| `src/services/nostr-bridge/client.ts` `ensureUserMetadata(pk)` (~line 1959) | Skip the kind:0 REQ if `isAllowed(pk, 0) === false` AND verdict is resolved (not unknown). Prevents profile-fetch amplification for confirmed-out-of-WoT pubkeys. Unknown pubkeys still REQ; they may be allowed once verdict resolves. |
-| `src/services/nostr-bridge/client.ts` `ingestGroupMetadata`, `ingestAdminMember`, `ingestMessage`, `ingestReaction`, `ingestDM`, `ingestUserMetadata` | No code changes (the choke-point above gates them). Add a defensive `if (!isAllowed(...)) return;` only in `ingestDM` because it can also be called from the dm.ts path (belt-and-suspenders). |
-| `src/services/nostr-bridge/client.ts` `subscribeMyMuteList` (~line 2085) | When the mute list updates, call `wot.notifyMutesChanged()` so the engine can re-evaluate cached verdicts and the prune event fires for newly-muted pubkeys. |
+| `src/services/nostr-bridge/facade/client.ts` line 1796–1805 (`subscribeWatched.onevent`) | Insert `if (!isAllowed(ev.pubkey, ev.kind)) { wot.markUnknown(ev.pubkey); return; }` before `onevent(ev)`. This single line gates ALL relay-derived events: groups, messages, reactions, DMs (kind:4 incoming sub), admin/member, contact list, mute list, profile, and voice signaling that flows through the bridge. |
+| `src/services/nostr-bridge/facade/client.ts` `ensureUserMetadata(pk)` (~line 1959) | Skip the kind:0 REQ if `isAllowed(pk, 0) === false` AND verdict is resolved (not unknown). Prevents profile-fetch amplification for confirmed-out-of-WoT pubkeys. Unknown pubkeys still REQ; they may be allowed once verdict resolves. |
+| `src/services/nostr-bridge/facade/client.ts` `ingestGroupMetadata`, `ingestAdminMember`, `ingestMessage`, `ingestReaction`, `ingestDM`, `ingestUserMetadata` | No code changes (the choke-point above gates them). Add a defensive `if (!isAllowed(...)) return;` only in `ingestDM` because it can also be called from the dm.ts path (belt-and-suspenders). |
+| `src/services/nostr-bridge/facade/client.ts` `subscribeMyMuteList` (~line 2085) | When the mute list updates, call `wot.notifyMutesChanged()` so the engine can re-evaluate cached verdicts and the prune event fires for newly-muted pubkeys. |
 | the former `services/dm/dm.ts` `verifyAndIngest` (line 28; deleted) | After signature check, before `putEvent`, gate with `isAllowed(event.pubkey, event.kind)` AND check the consensual-DM exemption (does `dm-cache` have an outgoing event to this pubkey?). Prevents NIP-04 history loads, gift-wraps, and inbox-walker hits from caching untrusted authors. |
 | `src/services/voice/client.ts` lines 408–417 | Augment the existing `isMember(from)` gate: `if (!isMember(from) || !isAllowed(from, KIND_VOICE_SIGNAL)) return;`. Voice signaling from an untrusted author should never be routed even if they're nominally a "member". |
 | the bridge's former `stores.ts` `useMessages` (line 165) and `useDirectMessages` (line 201); now `hooks/messages.ts` | DELETE the render-time mute filter. Filtering happens at ingest now; if it didn't pass the predicate, it's not in the store at all. (Keep the `useMyMutes` hook itself: UI still uses it for "is this user muted?" toggles in `ProfilePopover`.) |
-| `src/store/moderation.ts` | KEEP, but actually use it. Subscribe to its `mutedPubkeys` and `blockedPubkeys` from inside `wot/engine.ts` so they participate in the predicate. Add a comment marking it as "device-local quick mutes, NOT synced; for cross-device use the bridge mute toggle." Remove unused `isMuted`/`isBlocked` selectors if nothing reads them. |
-| `src/components/chat/ProfilePopover.tsx` | Show WoT badge + distance, and surface the `moderation.toggleMute` / `moderation.toggleBlock` actions next to the existing NIP-51 mute toggle so the user can pick local-vs-synced. |
-| `src/components/chat/MessageContent.tsx` | Render `<WotBadge pubkey={...} />` next to author name. |
+| `src/store/moderation/index.ts` | KEEP, but actually use it. Subscribe to its `mutedPubkeys` and `blockedPubkeys` from inside `wot/engine.ts` so they participate in the predicate. Add a comment marking it as "device-local quick mutes, NOT synced; for cross-device use the bridge mute toggle." Remove unused `isMuted`/`isBlocked` selectors if nothing reads them. |
+| `src/components/chat/profile/ProfilePopover.tsx` | Show WoT badge + distance, and surface the `moderation.toggleMute` / `moderation.toggleBlock` actions next to the existing NIP-51 mute toggle so the user can pick local-vs-synced. |
+| `src/components/chat/message/MessageContent.tsx` | Render `<WotBadge pubkey={...} />` next to author name. |
 
 ### Pruning already-cached untrusted entries
 
@@ -65,7 +65,7 @@ This keeps the "events from untrusted npubs never persist" invariant *eventually
 ## How the choke point works (the load-bearing edit)
 
 ```
-src/services/nostr-bridge/client.ts:1796 (inside subscribeWatched > start > pool.subscribe)
+src/services/nostr-bridge/facade/client.ts:1796 (inside subscribeWatched > start > pool.subscribe)
 
   onevent: (ev) => {
     alive = true;

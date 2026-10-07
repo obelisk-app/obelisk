@@ -11,13 +11,13 @@ import {
   SmileIcon,
   TrashIcon,
   ZapIcon,
-} from '@/components/ui/icons';
-import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/menu';
-import FloatingPanel from '@/components/ui/FloatingPanel';
+} from '@/components/ui/icons/icons';
+import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/overlays/menu';
+import FloatingPanel from '@/components/ui/overlays/FloatingPanel';
 import { useTranslations } from 'next-intl';
-import type { MessageRowActions } from '@/hooks/app/panes/message/useMessageRowActions';
-import type { MessageRowMenus } from '@/hooks/app/panes/message/useMessageRowMenus';
-import RemoteImage from '@/components/ui/RemoteImage';
+import type { MessageRowActions } from '@/hooks/shell/panes/message/useMessageRowActions';
+import type { MessageRowMenus } from '@/hooks/shell/panes/message/useMessageRowMenus';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 
 /** The ⋯ menu: four quick reactions, then reply / forward / zap / copy / mute / delete. */
 export function MessageMenu({ msg, actions, menus, isAdmin, onReply }: {

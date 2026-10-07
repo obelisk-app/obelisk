@@ -17,30 +17,30 @@ import {
   useMyFollows,
   useCurrentRelayUrl,
 } from '@/services/nostr-bridge';
-import BackgroundVoiceAudio from '@/components/voice/BackgroundVoiceAudio';
-import ProfilePopover from '@/components/chat/ProfilePopover';
+import BackgroundVoiceAudio from '@/components/voice/audio/BackgroundVoiceAudio';
+import ProfilePopover from '@/components/chat/profile/ProfilePopover';
 import { useTranslations } from 'next-intl';
 
 import { useNotificationBadgeCount } from '@/hooks/notifications/useNotificationSelectors';
 import { useTotalDMUnread } from '@/hooks/read-state/useUnreadCounts';
 import { useChatStore } from '@/store/chat';
-import { useDmOptInEnabled } from '@/hooks/dm/useDmOptInEnabled';
+import { useDmOptInEnabled } from '@/hooks/chat/dm/unlock/useDmOptInEnabled';
 import HintHost from '@/components/hints/HintHost';
-import MessageZapModal from '@/components/chat/MessageZapModal';
-import { useScreenCarousel } from '@/hooks/app/mobile/useScreenCarousel';
-import { useMobileNavActions } from '@/hooks/app/mobile/useMobileNavActions';
-import { useMobileNavState } from '@/hooks/app/mobile/useMobileNavState';
-import { useMobileHistorySync } from '@/hooks/app/mobile/useMobileHistorySync';
-import { useActiveConversationMirror, useExternalNavigation, useMobileReactionSender } from '@/hooks/app/mobile/useMobileShellEvents';
-import { useKeyboardInset } from '@/hooks/app/mobile/useKeyboardInset';
-import { LazyDmCallLayer, LazyGameModalHost } from '../lazy-mounts';
-import { BottomNav, hintSurfaceFor, shouldHideMobileBottomNav } from './BottomNav';
-import { MobileVoiceStatusSlot } from './MobileVoiceStatusSlot';
-import { MobileScreensHost } from './MobileScreensHost';
+import MessageZapModal from '@/components/chat/zaps/MessageZapModal';
+import { useScreenCarousel } from '@/hooks/shell/mobile/carousel/useScreenCarousel';
+import { useMobileNavActions } from '@/hooks/shell/mobile/nav/useMobileNavActions';
+import { useMobileNavState } from '@/hooks/shell/mobile/nav/useMobileNavState';
+import { useMobileHistorySync } from '@/hooks/shell/mobile/nav/useMobileHistorySync';
+import { useActiveConversationMirror, useExternalNavigation, useMobileReactionSender } from '@/hooks/shell/mobile/nav/useMobileShellEvents';
+import { useKeyboardInset } from '@/hooks/shell/mobile/chrome/useKeyboardInset';
+import { LazyDmCallLayer, LazyGameModalHost } from '../mounts/lazy-mounts';
+import { BottomNav, hintSurfaceFor, shouldHideMobileBottomNav } from './chrome/BottomNav';
+import { MobileVoiceStatusSlot } from './chrome/MobileVoiceStatusSlot';
+import { MobileScreensHost } from './carousel/MobileScreensHost';
 import { slideClassFor } from '@/utils/shell/mobile/carousel-slots';
-import { LoginScreen } from './screens/LoginScreen';
-import { RehydratingScreen } from './screens/StatusScreens';
-import { renderScreenBody, type MobileScreenProps } from './MobileScreens';
+import { LoginScreen } from './screens/login/LoginScreen';
+import { RehydratingScreen } from './screens/status/StatusScreens';
+import { renderScreenBody, type MobileScreenProps } from './carousel/MobileScreens';
 // CSS is hoisted to AppGate.tsx so it lands in the route's eagerly-loaded
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
 
@@ -104,7 +104,7 @@ export default function MobileShell() {
   const dmBadge = useTotalDMUnread();
   // Bell badge = unread mentions on the ACTIVE relay + unread DMs. Mentions
   // from other relays are not counted because they are not scanned while
-  // that relay is inactive - see `src/store/notifications.ts`.
+  // that relay is inactive - see `src/store/notifications/index.ts`.
   const inboxBadge = useNotificationBadgeCount(currentRelayUrl);
 
   // ── render ──────────────────────────────────────────────────────────

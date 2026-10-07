@@ -5,7 +5,7 @@ const bridgeFake = vi.hoisted(() => ({
     ...template, created_at: 1, pubkey: 'b'.repeat(64), id: 'id', sig: 'sig',
   })),
 }));
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: vi.fn(async () => bridgeFake),
   getBridgeImpl: vi.fn(() => bridgeFake),
 }));

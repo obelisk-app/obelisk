@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import type { JsMediaKind } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import FileInput from '@/components/ui/FileInput';
+import FileInput from '@/components/ui/forms/FileInput';
 
 /** The dashed "+ Create" tile: opens a file picker and uploads the image as new media of `kind`. */
 export function CreateMediaControl({

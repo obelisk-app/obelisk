@@ -1,11 +1,11 @@
 'use client';
 
-import { dismissActivity, type ActivityEntry } from '@/services/activity-log';
-import { useActivityLog } from '@/hooks/useActivityLog';
-import { usePreferences } from '@/hooks/usePreferences';
-import RelayStatusBanner from '@/app/[locale]/app/RelayStatusBanner';
+import { dismissActivity, type ActivityEntry } from '@/services/feedback/activity-log';
+import { useActivityLog } from '@/hooks/feedback/useActivityLog';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
+import RelayStatusBanner from '@/components/feedback/RelayStatusBanner';
 import { useTranslations } from 'next-intl';
-import { CloseIcon } from '@/components/ui/icons';
+import { CloseIcon } from '@/components/ui/icons/icons';
 import { activityDetail, activityTitle } from '@/utils/errors/activity-text';
 
 export default function ActivityIndicator({ hideSigning = false }: { hideSigning?: boolean }) {

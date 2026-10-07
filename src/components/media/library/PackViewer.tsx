@@ -1,10 +1,10 @@
 'use client';
 
 import type { JsMediaItem, JsMediaPack } from '@/services/nostr-bridge';
-import Modal from '@/components/ui/Modal';
-import Chip from '@/components/ui/Chip';
-import ModalHeader from '@/components/ui/ModalHeader';
-import ModalFooter from '@/components/ui/ModalFooter';
+import Modal from '@/components/ui/overlays/Modal';
+import Chip from '@/components/ui/data/Chip';
+import ModalHeader from '@/components/ui/overlays/ModalHeader';
+import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import { useTranslations } from 'next-intl';
 import MediaItemGrid from './MediaItemGrid';
 

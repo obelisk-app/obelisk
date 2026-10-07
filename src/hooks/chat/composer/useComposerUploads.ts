@@ -1,7 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
-import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
-import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
+import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
+import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import { appendMediaUrls } from './draft-text';
 import { MAX_COMPOSER_ATTACHMENTS } from './types';
 import { errorText } from '@/utils/errors/error-text';
@@ -31,7 +31,7 @@ export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNot
     setUploading(true);
     setSendError(null);
     try {
-      const { uploadToBlossom } = await import('@/services/blossom');
+      const { uploadToBlossom } = await import('@/services/media/blossom');
       const urls = await Promise.all(batch.map((f) => uploadToBlossom(f)));
       setDraft((d) => appendMediaUrls(d, urls));
     } catch (err) {
@@ -46,7 +46,7 @@ export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNot
     setUploading(true);
     setSendError(null);
     try {
-      const { uploadToBlossom } = await import('@/services/blossom');
+      const { uploadToBlossom } = await import('@/services/media/blossom');
       const url = await uploadToBlossom(file);
       setDraft(url);
       setDraftSticker(null);

@@ -17,7 +17,7 @@ it for good.
 | File | Role |
 |---|---|
 | `src/utils/hints/registry.ts` | Every hint: id, surface, anchor, copy keys, order |
-| `src/store/hints.ts` | What this account has seen (`obelisk:hints:{pubkey}`) |
+| `src/store/hints/index.ts` | What this account has seen (`obelisk:hints:{pubkey}`) |
 | `src/components/hints/HintDot.tsx` | The "something here" marker on a control |
 | `src/components/hints/HintCallout.tsx` | The card, pinned to the control |
 | `src/components/hints/HintHost.tsx` | Picks which hint is showing, one at a time |

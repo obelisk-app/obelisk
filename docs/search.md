@@ -13,11 +13,11 @@ the client against the relay.
 
 | Surface | File | Searches |
 |---|---|---|
-| Desktop bar | `src/app/[locale]/app/SearchBar.tsx` | messages + users + channels |
-| Mobile screen | `SearchScreen` in `src/app/[locale]/app/mobile/PhoneShell.tsx` | messages + channels |
-| Publications search-or-create | `src/components/chat/ForumView.tsx` | thread titles in the current container (local, no relay query) |
+| Desktop bar | `src/app/[locale]/app/search/SearchBar.tsx` | messages + users + channels |
+| Mobile screen | `SearchScreen` in `src/app/[locale]/app/mobile/screens/search/SearchScreen.tsx` | messages + channels |
+| Publications search-or-create | `src/components/chat/forum/ForumView.tsx` | thread titles in the current container (local, no relay query) |
 
-Users are resolved separately by `src/hooks/useNostrUserSearch.ts`: NIP-19
+Users are resolved separately by `src/hooks/identity/useNostrUserSearch.ts`: NIP-19
 decode, NIP-05 `.well-known` lookup, and a kind-0 NIP-50 query against
 indexer relays. That is profile discovery, so (like the bridge's
 `DEFAULT_PROFILE_LOOKUP_RELAYS`) it is allowed to leave the active relay.
@@ -25,7 +25,7 @@ Message search never is.
 
 ## Grammar
 
-Parsed by `src/utils/search-query.ts` (`parseSearchQuery`), shared by both
+Parsed by `src/utils/chat/search/search-query.ts` (`parseSearchQuery`), shared by both
 shells.
 
 | Filter | Syntax | Notes |
@@ -81,7 +81,7 @@ away 29, and read as "no results".
 A relay that doesn't implement NIP-50 does not error; it **ignores the
 `search` field** and returns unfiltered recent events. Presenting those as
 hits would be silently wrong, so the bar reads `supported_nips` from the
-relay's NIP-11 document (`supportsSearch` in `src/services/relay-info.ts`), omits
+relay's NIP-11 document (`supportsSearch` in `src/services/relay/relay-info.ts`), omits
 `search` when 50 is absent, filters entirely client-side, and tells the user
 that only recent messages were scanned.
 
@@ -143,11 +143,11 @@ highlighted `role="option"`; the result count is `aria-live="polite"`.
 
 ## Tests
 
-- `tests/utils/search-query.test.ts` - grammar, phrases, dates, term splitting,
+- `tests/utils/chat/search/search-query.test.ts` - grammar, phrases, dates, term splitting,
   AND matching, unresolved tokens.
 - `tests/services/nostr-bridge/bridge.test.ts` (`describe('searchMessages')`) -
   single-term relay filter, over-fetch before `has:`, trim + partial flag,
   phrase contiguity, NIP-50-absent fallback.
-- `tests/app/[locale]/app/SearchBar.test.tsx` - debounce, race, stale clearing, scope
+- `tests/app/[locale]/app/search/SearchBar.test.tsx` - debounce, race, stale clearing, scope
   toggle, keyboard, paging, jump.
 - `tests/app/[locale]/app/mobile/search-screen.test.tsx` - mobile parity.

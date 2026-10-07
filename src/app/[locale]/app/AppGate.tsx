@@ -22,12 +22,12 @@ import './mobile/mobile-shell.css';
 import { useIsLoggedIn } from '@/services/nostr-bridge';
 import ReadStateRoot from '@/services/read-state/root';
 import ActivityIndicator from '@/components/feedback/ActivityIndicator';
-import { usePreferences } from '@/hooks/usePreferences';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { initSocial } from '@/services/social/pool';
-import { useIsMobile } from '@/hooks/useIsMobile';
-import { useSessionNoticeToast } from '@/hooks/app/useSessionNoticeToast';
+import { useIsMobile } from '@/hooks/common/useIsMobile';
+import { useSessionNoticeToast } from '@/hooks/shell/login/useSessionNoticeToast';
 
-const AppShell = dynamic(() => import('./DesktopShell'), { ssr: false });
+const AppShell = dynamic(() => import('./desktop/DesktopShell'), { ssr: false });
 const MobileShell = dynamic(() => import('./mobile/PhoneShell'), { ssr: false });
 
 export default function AppGate() {

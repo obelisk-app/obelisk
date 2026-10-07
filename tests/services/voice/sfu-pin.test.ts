@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: vi.fn(),
   getBridgeImpl: vi.fn(),
   isImportableRelayUrl: vi.fn((url: string) => url.startsWith('wss://')),

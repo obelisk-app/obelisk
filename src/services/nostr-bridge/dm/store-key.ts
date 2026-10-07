@@ -19,8 +19,8 @@
 import type { NipSigner } from '@/lib/nip-59';
 import { RECORD_KEY_BYTES } from '@/lib/crypto/record-cipher';
 import { fromBase64Url, toBase64Url } from '@/lib/crypto/webcrypto';
-import { KIND_NIP78_APP_DATA } from '@/utils/nip-kinds';
-import { forgetDecrypt } from '../decrypt-cache';
+import { KIND_NIP78_APP_DATA } from '@/utils/nostr/nip-kinds';
+import { forgetDecrypt } from '../cache/decrypt-cache';
 
 export const DM_KEY_D_TAG = 'obelisk:dm-key:v1';
 

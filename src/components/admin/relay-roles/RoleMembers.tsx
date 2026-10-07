@@ -1,14 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Text from '@/components/ui/Text';
-import UserAvatar from '@/components/ui/UserAvatar';
+import Button from '@/components/ui/buttons/Button';
+import Input from '@/components/ui/forms/Input';
+import Text from '@/components/ui/layout/Text';
+import UserAvatar from '@/components/ui/media/UserAvatar';
 import { useTranslations } from 'next-intl';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useRelayPeople, useUserMetadata, type JsMemberInfo } from '@/services/nostr-bridge';
-import type { RelayRole } from '@/services/relay-roles';
+import type { RelayRole } from '@/services/relay/relay-roles';
 import { parsePubkeyInput } from '@/utils/identity/parse-pubkey';
 
 /** The expanded member panel of one role: search relay members, grant, and the current holders to revoke. */

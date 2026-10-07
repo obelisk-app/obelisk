@@ -1,6 +1,6 @@
 /** OpenGraph / twitter: / <title> unfurl of an ordinary page, fetched through `safeFetch`. */
 
-import { decodeEntities, readMeta, type LinkPreview } from '@/utils/link-preview';
+import { decodeEntities, readMeta, type LinkPreview } from '@/utils/link-preview/link-preview';
 import { safeFetch } from './safe-fetch';
 
 export async function previewGeneric(url: string): Promise<LinkPreview | null> {

@@ -8,7 +8,7 @@ import {
   startRingLoop,
   SOUND_MIN_GAP_MS,
 } from '@/services/notifications/sound';
-import { setPreference } from '@/services/preferences';
+import { setPreference } from '@/services/preferences/preferences';
 
 function installFakeAudio(state: AudioContextState = 'running') {
   const oscillators: Array<{ start: ReturnType<typeof vi.fn> }> = [];

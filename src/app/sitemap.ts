@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
-import { listAllGuides, listSlugs } from '@/services/guides';
+import { listAllGuides, listSlugs } from '@/services/guides/guides';
 import { LOCALES, type Locale } from '@/i18n';
-import { SHOT_META } from '@/components/guides/Shot';
+import { SHOT_META } from '@/components/guides/mdx/Shot';
 import { guideImages } from '@/utils/seo/guide';
 import { buildSitemap, type SitemapGuide } from '@/utils/seo/sitemap';
 

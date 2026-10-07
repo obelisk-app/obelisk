@@ -1,5 +1,5 @@
 import type { JsForumTag } from '@/services/nostr-bridge';
-import { paletteForTag } from '@/utils/forum-tag-colors';
+import { paletteForTag } from '@/utils/chat/forum/forum-tag-colors';
 
 /** Leading color dot for a publication tag with no emoji of its own. */
 export function MobileTagDot({ tag }: { tag: JsForumTag }) {

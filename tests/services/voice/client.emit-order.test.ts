@@ -120,7 +120,7 @@ const bridgeFake = vi.hoisted(() => {
     reset: () => { cbs.length = 0; },
   };
 });
-vi.mock('@/services/nostr-bridge/client', () => ({ getBridge: bridgeFake.getBridge }));
+vi.mock('@/services/nostr-bridge/facade/client', () => ({ getBridge: bridgeFake.getBridge }));
 
 import { VoiceClient, type VoiceClientEvents, type RemoteTrack } from '@/services/voice/client';
 import { __resetSharedAudioContextForTests } from '@/services/voice/speaking-detector';

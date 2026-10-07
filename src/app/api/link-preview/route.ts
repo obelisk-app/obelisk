@@ -19,7 +19,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { isX, type LinkPreview } from '@/utils/link-preview';
+import { isX, type LinkPreview } from '@/utils/link-preview/link-preview';
 import { cachedPreview, storePreview } from '@/services/server/link-preview/preview-cache';
 import { previewGeneric } from '@/services/server/link-preview/preview-generic';
 import { previewX } from '@/services/server/link-preview/preview-x';

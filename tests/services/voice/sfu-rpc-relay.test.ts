@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
 const subs = vi.hoisted(() => [] as Array<{ filter: Filter; onEvent: (ev: NostrEvent) => void; opts: Record<string, unknown> }>);
-vi.mock('@/services/nostr-bridge/client', () => {
+vi.mock('@/services/nostr-bridge/facade/client', () => {
   const bridge = {
     subscribeFilterWatched: (filter: Filter, onEvent: (ev: NostrEvent) => void, opts: Record<string, unknown>) => {
       subs.push({ filter, onEvent, opts });

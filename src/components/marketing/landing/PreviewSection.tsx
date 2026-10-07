@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 import RevealSection from './RevealSection';
 
 /**

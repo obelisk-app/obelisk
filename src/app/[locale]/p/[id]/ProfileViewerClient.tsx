@@ -19,7 +19,7 @@ import { useSyncExternalStore } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { safeNpub } from '@/utils/identity/short-npub';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
-import NostrProfile from '@/components/chat/NostrProfile';
+import NostrProfile from '@/components/chat/profile/NostrProfile';
 
 /** Matches the app's own breakpoint for the phone presentation. */
 const MOBILE_QUERY = '(max-width: 767px)';

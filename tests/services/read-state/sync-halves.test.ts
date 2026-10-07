@@ -3,7 +3,7 @@
  * read-state sync subscribes, publishes or listens for page lifecycle.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 // No bridge registered: the real client module, with an empty slot.
 beforeEach(() => unregisterBridge());

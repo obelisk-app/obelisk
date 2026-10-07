@@ -49,7 +49,7 @@ subscribes on each device so cursors converge via monotonic `max()` merge.
 
 ## 2. Cursor model
 
-`src/store/read-state.ts`:
+`src/store/read-state/index.ts`:
 
 ```ts
 interface ReadStateStore {
@@ -76,7 +76,7 @@ interface ReadStateStore {
   via `ensureReadStateStoreForAccount`. Mounted from
   `ReadStateRoot` on every login change.
 
-### 2b. Notification streams (`src/store/notifications.ts`)
+### 2b. Notification streams (`src/store/notifications/index.ts`)
 
 Notifications are **two independent streams that never share a cursor**.
 Conflating them was the original bug: one `inboxEvents` ring buffer and
@@ -102,7 +102,7 @@ Rules:
     channel and ≤8 others get a per-channel stream, so without the live REQ
     a mention in any other channel never arrived. `ingestPing` skips
     channels that have their own stream.
-  - The **background relay watch** (`src/services/nostr-bridge/background-watch.ts`)
+  - The **background relay watch** (`src/services/nostr-bridge/relay/background-watch.ts`)
     on the 3 most-recently-used *other* relays, on a separate pool: a
     `#p:[me]` REQ from the relay's mention cursor (catch-up while the app
     was closed; needs the sender to p-tag, which Obelisk does per NIP-27)
@@ -134,13 +134,13 @@ Rules:
   `m.seen || m.createdAt <= relayCursor`; the channel cursor is deliberately
   NOT consulted, because it jumps to the newest message the moment a
   channel opens at the bottom and used to clear mentions the user never
-  laid eyes on. `useMentionSeen` (`src/hooks/useMentionSeen.ts`, mounted in
+  laid eyes on. `useMentionSeen` (`src/hooks/read-state/useMentionSeen.ts`, mounted in
   `ReadStateRoot`) sets `seen` once the `[data-msg-id]` row is ≥60% visible
   (IntersectionObserver, so scroll-container clipping counts) for 1s with
   the tab visible and focused. A mention in the channel you're watching
   still gets a card (no chime); the observer clears it once it's really on
   screen. `seen` is per device; only the relay mention cursor syncs.
-- **Per-channel preferences** (`src/store/channel-prefs.ts`, set from the
+- **Per-channel preferences** (`src/store/chat/channel-prefs.ts`, set from the
   channel right-click / long-press menu, `ChannelContextMenu.tsx`), keyed
   `relay|channelId`, persisted per account. Applied in one place, the
   bridge's `deliverGroupPing`:
@@ -215,11 +215,11 @@ ServerRail relay-tile `@` overlay on the active relay.
 
 | Surface | File | Behaviour |
 |---|---|---|
-| Relay-tile `@` overlay | `src/app/[locale]/app/ServerRail.tsx` (RelayTile) | Tiny green `@` badge when the active relay has unread mentions or replies in any channel. Cross-relay surveillance is a follow-up. |
+| Relay-tile `@` overlay | `src/app/[locale]/app/rail/ServerRail.tsx` (RelayTile) | Tiny green `@` badge when the active relay has unread mentions or replies in any channel. Cross-relay surveillance is a follow-up. |
 | Channel row badges | desktop `DesktopShell.tsx` (`GroupNode`), mobile `PhoneShell.tsx` (channel list) | Gray unread count + green pill for `mentions + replies`. Bold name when unread > 0. |
-| MentionNavigator | `src/components/chat/MentionNavigator.tsx` | Floating bottom-right of the message viewport. `↑ N / total ↓` when there are highlights; `F7` / `Shift+F7` keyboard shortcuts. Plus a `⌄` jump-to-latest button when scrolled away from the bottom. |
+| MentionNavigator | `src/components/chat/mentions/MentionNavigator.tsx` | Floating bottom-right of the message viewport. `↑ N / total ↓` when there are highlights; `F7` / `Shift+F7` keyboard shortcuts. Plus a `⌄` jump-to-latest button when scrolled away from the bottom. |
 | Inbox bell | desktop `DesktopShell.tsx` (`RelayTopBar`), mobile inbox tab | Two tabs: **Mentions** (active relay) and **DMs**, with independent counts, independent "mark read", and independent "clear". The bell glyph shows their sum. |
-| Tab title + favicon | `src/hooks/useFaviconBadge.ts` | `useTotalDMUnread` + unread mentions on the active relay. Ordinary channel traffic does **not** badge the tab; a busy relay would otherwise pin it at `(99+)` forever. |
+| Tab title + favicon | `src/hooks/notifications/useFaviconBadge.ts` | `useTotalDMUnread` + unread mentions on the active relay. Ordinary channel traffic does **not** badge the tab; a busy relay would otherwise pin it at `(99+)` forever. |
 
 ## 7. Encrypted multi-device sync
 
@@ -346,7 +346,7 @@ its scope. On any change:
 
 ### NIP-44 + signing
 
-`wrapForSelf` and `unwrapForSelf` (`src/lib/nip-59.ts`) accept a
+`wrapForSelf` and `unwrapForSelf` (`src/lib/nip-59/index.ts`) accept a
 `NipSigner`: `signEvent` + `nip44Encrypt` + `nip44Decrypt`. The bridge
 builds one for the active session via `getNipSigner()`:
 
@@ -460,18 +460,18 @@ in-page and the browser owns the OS handoff.
 
 | File | Covers |
 |---|---|
-| `tests/store/read-state.test.ts` | cursor monotonicity, account-swap persist key, `applyRemoteState` merge semantics |
-| `tests/store/notifications.test.ts` | stream independence, per-relay bucketing, first-connect floor, backfill drop, caps/dedup, remote cursor merge |
+| `tests/store/read-state/read-state.test.ts` | cursor monotonicity, account-swap persist key, `applyRemoteState` merge semantics |
+| `tests/store/notifications/notifications.test.ts` | stream independence, per-relay bucketing, first-connect floor, backfill drop, caps/dedup, remote cursor merge |
 | `tests/services/nostr-bridge/bridge-mentions.test.ts` (`mention notifications`) | mentions-only ingest, relay stamping, self-mention and reply suppression, cursor-gated backfill |
 | `tests/services/read-state/selectors.test.ts` | unread counts, own-message exclusion, `computeChannelHighlights` ordering, mention + reply union |
 | `tests/services/read-state/replies.test.ts` | NIP-10 strict reply detection, parent lookup, edge cases |
 | `tests/services/read-state/relay-sync.test.ts` | sub/ingest with merged cursors, debounced publish, d-tag filtering, cache-first paint |
 | `tests/hooks/read-state/useReadyToSync.test.tsx` | `useReadyToSync` gate: false before connect, flips on EOSE, flips after 1000ms grace, no flip if connection drops mid-grace |
-| `tests/lib/nip-59.test.ts` | wrap/unwrap roundtrip, null-on-junk, recipient mismatch, ephemeral pubkey privacy |
+| `tests/lib/nip-59/nip-59.test.ts` | wrap/unwrap roundtrip, null-on-junk, recipient mismatch, ephemeral pubkey privacy |
 | `tests/utils/message-text/mentions.test.ts` | content-only and `#p`-tag mention extraction |
-| `tests/components/chat/MentionNavigator.test.tsx` | ↑↓ clamping, F7 / Shift+F7 keys, scrollIntoView, hidden when no highlights |
-| `tests/hooks/useAutoMarkRead.test.tsx` | cursor advances on watching, halts on hidden, monotonic on backfill |
-| `tests/hooks/useFaviconBadge.test.tsx` | tab title + favicon count DMs + active-relay mentions only, ignore ordinary traffic and other relays' mentions |
+| `tests/components/chat/mentions/MentionNavigator.test.tsx` | ↑↓ clamping, F7 / Shift+F7 keys, scrollIntoView, hidden when no highlights |
+| `tests/hooks/read-state/useAutoMarkRead.test.tsx` | cursor advances on watching, halts on hidden, monotonic on backfill |
+| `tests/hooks/notifications/useFaviconBadge.test.tsx` | tab title + favicon count DMs + active-relay mentions only, ignore ordinary traffic and other relays' mentions |
 
 End-to-end (Playwright):
 

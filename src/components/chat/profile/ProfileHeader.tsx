@@ -2,13 +2,13 @@
 
 import type { JsUserMetadata } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import ProfileMenu from '@/components/social/ProfileMenu';
-import UserAvatar from '@/components/ui/UserAvatar';
-import RemoteImage from '@/components/ui/RemoteImage';
-import Button from '@/components/ui/Button';
-import { CloseIcon } from '@/components/ui/icons';
+import ProfileMenu from '@/components/social/profile/ProfileMenu';
+import UserAvatar from '@/components/ui/media/UserAvatar';
+import RemoteImage from '@/components/ui/media/RemoteImage';
+import Button from '@/components/ui/buttons/Button';
+import { CloseIcon } from '@/components/ui/icons/icons';
 import { profileShortNpub } from '@/utils/identity/profile-labels';
-import IconButton from '@/components/ui/IconButton';
+import IconButton from '@/components/ui/buttons/IconButton';
 
 type Meta = Partial<JsUserMetadata> | null | undefined;
 

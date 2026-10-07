@@ -5,7 +5,7 @@
 
 import { formatPubkey, npubToHex } from '@nostr-wot/data';
 import { getBridgeImpl } from '@/services/nostr-bridge';
-import type { ZapTarget } from '@/store/messageZap';
+import type { ZapTarget } from '@/store/chat/message-zap';
 
 export interface ParsedMessage {
   id: string;

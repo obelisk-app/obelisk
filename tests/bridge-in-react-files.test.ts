@@ -29,7 +29,7 @@ const EXCEPTIONS: Record<string, string> = {
   // that needs the bridge, and only on that click. It loads the front door
   // with `await import(...)` there, which is why the landing and marketing
   // pages ship without the bridge (and why they have no provider to ask).
-  'src/components/marketing/Navbar.tsx': 'lazy logout on the marketing pages',
+  'src/components/marketing/site/Navbar.tsx': 'lazy logout on the marketing pages',
 };
 
 function sourceFiles(dir: string): string[] {
@@ -69,7 +69,7 @@ describe('React files reach the bridge through the provider', () => {
   });
 
   it('the navbar reaches the bridge only through a dynamic import', () => {
-    const navbar = readFileSync('src/components/marketing/Navbar.tsx', 'utf8');
+    const navbar = readFileSync('src/components/marketing/site/Navbar.tsx', 'utf8');
     // A static import of the front door would put the whole bridge in the
     // landing page's first load, which the exception exists to avoid.
     expect(navbar).not.toMatch(/^\s*import\s+(?!type\b)[^;]*from\s+['"]@\/services\/nostr-bridge['"]/m);

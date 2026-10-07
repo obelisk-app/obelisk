@@ -7,21 +7,21 @@ import { renderWithBridge } from '@tests/support/render-with-bridge';
 
 const roster = { admins: [] as string[], members: [] as string[] };
 
-vi.mock('@/hooks/chat/useNostrPresence', () => ({
+vi.mock('@/hooks/chat/members/useNostrPresence', () => ({
   useNostrPresence: () => undefined,
   PRESENCE_WINDOW_MS: 15 * 60 * 1000,
   presenceActivityKey: (relay: string, pubkey: string) => `${relay}:${pubkey}`,
 }));
 
-vi.mock('@/hooks/useNostrUserSearch', () => ({ useNostrUserSearch: () => ({ results: [], loading: false }) }));
-vi.mock('@/services/relay-info', () => ({ faviconFor: () => '', fetchRelayInfo: vi.fn().mockResolvedValue(null) }));
-vi.mock('@/services/relay-branding', () => ({
+vi.mock('@/hooks/identity/useNostrUserSearch', () => ({ useNostrUserSearch: () => ({ results: [], loading: false }) }));
+vi.mock('@/services/relay/relay-info', () => ({ faviconFor: () => '', fetchRelayInfo: vi.fn().mockResolvedValue(null) }));
+vi.mock('@/services/relay/relay-branding', () => ({
   publishBranding: vi.fn(),
 }));
 vi.mock('@/hooks/relay/useRelayBranding', () => ({
   useRelayBranding: () => ({}),
 }));
-vi.mock('@/services/relay-emojis', () => ({
+vi.mock('@/services/relay/relay-emojis', () => ({
   relayEmojiMap: () => ({}),
   relayMediaKindMap: () => ({}),
   resolveRelayEmojiSet: (set: unknown) => set,
@@ -30,7 +30,7 @@ vi.mock('@/services/relay-emojis', () => ({
 vi.mock('@/hooks/relay/useRelayEmojiSet', () => ({
   useRelayEmojiSet: () => ({ title: '', emojis: [], updatedAt: 0 }),
 }));
-vi.mock('@/services/channel-layout', () => ({
+vi.mock('@/services/relay/channel-layout', () => ({
   applyLayout: () => ({ categories: [], uncategorized: [] }),
   publishLayout: vi.fn(),
   newCategoryId: () => 'cat-test',
@@ -41,21 +41,21 @@ vi.mock('@/hooks/relay/useChannelLayout', () => ({
 vi.mock('@/hooks/relay/useRelayOperatorPubkey', () => ({
   useRelayOperatorPubkey: () => null,
 }));
-vi.mock('@/services/relay-roles', () => ({
+vi.mock('@/services/relay/relay-roles', () => ({
   rolesByPubkey: () => ({}),
 }));
 vi.mock('@/hooks/relay/useRelayRoles', () => ({
   useRelayRoles: () => ({ roles: [], holders: {}, updatedAt: 0 }),
 }));
-vi.mock('@/components/media/BlossomImageInput', () => ({
+vi.mock('@/components/media/upload/BlossomImageInput', () => ({
   default: () => null,
   ChannelAppearanceInput: () => null,
 }));
 vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({ default: () => null }));
-vi.mock('@/components/admin/RelayEmojiAdminModal', () => ({ default: () => null }));
-vi.mock('@/components/admin/RelayRolesAdminModal', () => ({ default: () => null }));
+vi.mock('@/components/admin/relay-emoji/RelayEmojiAdminModal', () => ({ default: () => null }));
+vi.mock('@/components/admin/relay-roles/RelayRolesAdminModal', () => ({ default: () => null }));
 
-import { MemberListScreen } from '@/app/[locale]/app/mobile/screens/MemberListScreen';
+import { MemberListScreen } from '@/app/[locale]/app/mobile/screens/channel/MemberListScreen';
 const MOD = { id: 'mod', name: 'Moderator', tier: 5, color: '#ff0000', emoji: '🛡️' };
 const OG = { id: 'og', name: 'OG', tier: 2, color: '#00ff00', emoji: '' };
 

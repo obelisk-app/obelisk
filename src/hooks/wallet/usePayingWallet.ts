@@ -5,7 +5,7 @@ import { isWebLNAvailable } from '@nostr-wot/wallet';
 import { useMyPubkey } from '@/services/nostr-bridge';
 import { ensureNwcWalletLoaded } from '@/services/wallet/nwc-wallet';
 import type { WalletKind } from '@/services/wallet/wallet';
-import { useNwcWalletStore, type NwcWalletView } from '@/store/nwc-wallet';
+import { useNwcWalletStore, type NwcWalletView } from '@/store/wallet/nwc-wallet';
 
 export interface PayingWallet {
   /**

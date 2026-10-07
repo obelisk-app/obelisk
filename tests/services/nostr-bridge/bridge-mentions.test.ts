@@ -35,7 +35,7 @@ describe('nostr-bridge', () => {
     // three rules the notification split is built on: mentions-only,
     // stamped with the active relay, and gated by the relay's cursor.
     async function loginAndSubscribe(groupId: string) {
-      const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+      const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
       const { useNotificationsStore, NOTIFICATIONS_INITIAL } = await import('@/store/notifications');
       const { skHex, pkHex } = makeKeypair();
       const bridge = await getBridge();
@@ -192,14 +192,14 @@ describe('nostr-bridge', () => {
       // to skip all three: every historical mention became an unread card
       // that could never be seen, and background listening was off until
       // the user switched relays.
-      const { STORAGE_KEY, RELAYS_KEY } = await import('@/services/nostr-bridge/client');
+      const { STORAGE_KEY, RELAYS_KEY } = await import('@/services/nostr-bridge/facade/client');
       const { skHex, pkHex } = makeKeypair();
       const active = 'wss://relay.example.com';
       const other = 'wss://other.example.com';
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ privKeyHex: skHex, pubKeyHex: pkHex, loginMethod: 'nsec', relayUrl: active }));
       localStorage.setItem(RELAYS_KEY, JSON.stringify([active, other]));
       localStorage.setItem(`obelisk-dex/recent-relays/${pkHex}`, JSON.stringify([other]));
-      const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+      const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
       await getBridge();
       await flush(8);
       const { useNotificationsStore } = await import('@/store/notifications');
@@ -211,7 +211,7 @@ describe('nostr-bridge', () => {
     it('channel prefs: Nothing drops the card; muted keeps it silently; unfollowed still pings on mentions', async () => {
       const groupId = 'notif-prefs';
       const { impl, pkHex, useNotificationsStore } = await loginAndSubscribe(groupId);
-      const { useChannelPrefsStore, MUTED_FOREVER } = await import('@/store/channel-prefs');
+      const { useChannelPrefsStore, MUTED_FOREVER } = await import('@/store/chat/channel-prefs');
       const alert = await import('@/services/notifications/alert');
       const announce = vi.spyOn(alert, 'announceIncoming');
       const relay = impl.currentRelayUrl.get();
@@ -242,7 +242,7 @@ describe('nostr-bridge', () => {
     it("channel prefs: 'All messages' chimes on ordinary traffic, but not when unfollowed", async () => {
       const groupId = 'notif-all';
       const { impl, useNotificationsStore } = await loginAndSubscribe(groupId);
-      const { useChannelPrefsStore } = await import('@/store/channel-prefs');
+      const { useChannelPrefsStore } = await import('@/store/chat/channel-prefs');
       const alert = await import('@/services/notifications/alert');
       const announce = vi.spyOn(alert, 'announceIncoming');
       const relay = impl.currentRelayUrl.get();

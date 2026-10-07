@@ -4,7 +4,7 @@ const subscribeFilterWatched = vi.hoisted(
   () => vi.fn<(...args: unknown[]) => () => void>(() => () => {}),
 );
 
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: vi.fn(async () => ({})),
   getBridgeImpl: () => ({ subscribeFilterWatched }),
 }));
@@ -15,8 +15,8 @@ import {
 } from '@/services/games/resolve';
 import { flushGameIngest, resetGameIngest } from '@/services/games/ingest';
 import { useGamesStore } from '@/store/games';
-import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
-import { chainReaction } from '@/lib/games/chain-reaction';
+import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
+import { chainReaction } from '@/lib/games/chain-reaction/chain-reaction';
 
 const CH = 'channel-1';
 const HOST = 'pk-host';

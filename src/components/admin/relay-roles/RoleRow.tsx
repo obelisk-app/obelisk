@@ -1,11 +1,11 @@
 'use client';
 
-import Button from '@/components/ui/Button';
-import { ChevronDownIcon, ChevronUpIcon } from '@/components/ui/icons';
-import Input from '@/components/ui/Input';
+import Button from '@/components/ui/buttons/Button';
+import { ChevronDownIcon, ChevronUpIcon } from '@/components/ui/icons/icons';
+import Input from '@/components/ui/forms/Input';
 import { useTranslations } from 'next-intl';
-import { normalizeRoleColor, type RelayRole } from '@/services/relay-roles';
-import type { RelayRolesDraft } from '@/hooks/admin/useRelayRolesDraft';
+import { normalizeRoleColor, type RelayRole } from '@/services/relay/relay-roles';
+import type { RelayRolesDraft } from '@/hooks/admin/relay-roles/useRelayRolesDraft';
 import RoleEmojiField from './RoleEmojiField';
 import RoleMembers from './RoleMembers';
 

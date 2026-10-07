@@ -7,8 +7,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { BridgeImpl } from '@/services/nostr-bridge/client';
-import type { JsMessage } from '@/services/nostr-bridge/types';
+import type { BridgeImpl } from '@/services/nostr-bridge/facade/client';
+import type { JsMessage } from '@/services/nostr-bridge/common/types';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 
 const byGroup: Record<string, JsMessage[]> = {};

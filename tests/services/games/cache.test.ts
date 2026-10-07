@@ -6,7 +6,7 @@ const bridge = vi.hoisted(() => ({
   present: true,
 }));
 
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridgeImpl: () => (bridge.present
     ? { getPublicKey: () => bridge.pubkey, currentRelayUrl: { get: () => bridge.relay } }
     : null),
@@ -18,10 +18,10 @@ import {
 } from '@/services/games/cache';
 import { flushGameIngest, resetGameIngest, ingestGameEvents } from '@/services/games/ingest';
 import { useGamesStore } from '@/store/games';
-import { cacheGet, cacheSet, cacheClearAll } from '@/services/nostr-bridge/cache';
-import { KIND_GAME } from '@/utils/nip-kinds';
-import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
-import { chainReaction } from '@/lib/games/chain-reaction';
+import { cacheGet, cacheSet, cacheClearAll } from '@/services/nostr-bridge/cache/cache';
+import { KIND_GAME } from '@/utils/nostr/nip-kinds';
+import { buildCreate, buildGameOp, parseGameEvent, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
+import { chainReaction } from '@/lib/games/chain-reaction/chain-reaction';
 
 const CH = 'channel-1';
 const HOST = 'pk-host';

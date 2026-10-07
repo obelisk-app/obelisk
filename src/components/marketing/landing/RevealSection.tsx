@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useScrollReveal } from '@/hooks/useScrollReveal';
+import { useScrollReveal } from '@/hooks/marketing/useScrollReveal';
 
 /**
  * A landing section that fades up the first time it scrolls into view and

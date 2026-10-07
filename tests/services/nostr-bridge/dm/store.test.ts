@@ -72,7 +72,7 @@ async function firstVisit() {
   fake.state.published.push(await giftWrapFrom(alice, bob.pkHex, SECOND));
   fake.state.published.push(kind4From(alice, bob.pkHex, OLD_STYLE));
   const ext = installExtension(bob);
-  const { getBridge } = await import('@/services/nostr-bridge/client');
+  const { getBridge } = await import('@/services/nostr-bridge/facade/client');
   const bridge = await getBridge();
   await bridge.loginWithNip07(bob.pkHex);
   const read = await watchDms(bridge);
@@ -209,7 +209,7 @@ describe('encrypted DM store: login methods and storage', () => {
     fake.state.published.push(await giftWrapFrom(alice, bob.pkHex, FIRST));
     // An extension is present but must never be asked: the nsec signer is in the page.
     const ext = installExtension(bob);
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const bridge = await getBridge();
     await bridge.loginWithNsec(bob.skHex, bob.pkHex);
     let read = await watchDms(bridge);
@@ -266,7 +266,7 @@ describe('encrypted DM store: login methods and storage', () => {
       const bob = keysFrom(makeKeypair());
       fake.state.published.push(await giftWrapFrom(alice, bob.pkHex, FIRST));
       const ext = installExtension(bob);
-      const { getBridge } = await import('@/services/nostr-bridge/client');
+      const { getBridge } = await import('@/services/nostr-bridge/facade/client');
       const bridge = await getBridge();
       await bridge.loginWithNip07(bob.pkHex);
       return { alice, ext, bridge, read: await watchDms(bridge) };

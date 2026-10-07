@@ -2,7 +2,7 @@
 
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
 import { useTranslations } from 'next-intl';
-import BackButton from '../../BackButton';
+import BackButton from '../../chrome/BackButton';
 
 /** The phone channel header: category line, back, name, and the search / settings / members buttons. */
 export function ChannelHeaderBar({ header, back, onSearch, isChannelAdmin, onOpenSettings, openMembers }: {

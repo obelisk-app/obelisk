@@ -9,7 +9,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, finalizeEvent, type Event as NostrEvent, type Filter } from 'nostr-tools';
-import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/utils/nip-kinds';
+import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
 import {
   deliver,
   flush,
@@ -30,7 +30,7 @@ installBridgeHarness(fake);
 describe('nostr-bridge', () => {
 
   it('subscribeVoiceFilterWatched rides the session pool for mesh signaling', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -72,7 +72,7 @@ describe('nostr-bridge', () => {
 
 
   it('a mesh call leaves background group streams open: the hub budget admits the voice REQ, nothing is trimmed', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { getRelayHub } = await import('@/lib/relay-hub');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
@@ -114,7 +114,7 @@ describe('nostr-bridge', () => {
 
 
   it('a mesh call leaves lazy admin/member subs open', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -148,7 +148,7 @@ describe('nostr-bridge', () => {
 
 
   it('keeps replace-mode voice subscriptions pinned across relay switches', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -193,7 +193,7 @@ describe('nostr-bridge', () => {
 
 
   it('surfaces explicit relay rejections for ephemeral voice events', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -208,7 +208,7 @@ describe('nostr-bridge', () => {
 
 
   it('marks mesh voice channels live from presence beacons', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -242,7 +242,7 @@ describe('nostr-bridge', () => {
 
 
   it('removes mesh voice participants when a same-second leave beacon arrives', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -301,7 +301,7 @@ describe('nostr-bridge', () => {
 
 
   it('marks a locally published mesh beacon live without waiting for relay echo', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -332,7 +332,7 @@ describe('nostr-bridge', () => {
 
 
   it('clears a locally published mesh call when the local user publishes a leave beacon', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -373,7 +373,7 @@ describe('nostr-bridge', () => {
 
 
   it('ignores non-Obelisk kind 20078 events for mesh live detection', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -402,7 +402,7 @@ describe('nostr-bridge', () => {
 
 
   it('ignores SFU topology beacons for mesh live detection', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -433,7 +433,7 @@ describe('nostr-bridge', () => {
 
 
   it('uses SFU topology beacon p-tags as passive active-call participants', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -473,7 +473,7 @@ describe('nostr-bridge', () => {
 
 
   it('parses SFU active-call content participants for passive rosters', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);

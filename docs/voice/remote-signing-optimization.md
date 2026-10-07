@@ -148,7 +148,7 @@ credential's channel and lifetime. Do not ship the client half alone.
   channel lifecycle.
 - `src/services/voice/transport.ts` - kind `20078` templates and publish boundary.
 - `src/services/voice/failure-handlers.ts` - relay retry behavior.
-- `src/services/nostr-bridge/client.ts` - account signing and NIP-46 session setup.
+- `src/services/nostr-bridge/facade/client.ts` - account signing and NIP-46 session setup.
 
 ## Protocol references
 

@@ -1,7 +1,7 @@
-import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
-import { inferMediaKind } from '@/utils/media-tags/media-kind';
+import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
+import { inferMediaKind } from '@/utils/media/tags/media-kind';
 import type { JsMediaKind } from '@/services/nostr-bridge';
-import type { RecentEmoji } from '@/services/recent-emojis';
+import type { RecentEmoji } from '@/services/chat/picker/recent-emojis';
 import type { CustomEmojiEntry, PickedCustomEmoji } from './picker-types';
 
 /** Most results a search shows per section. */

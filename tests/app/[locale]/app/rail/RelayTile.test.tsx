@@ -7,7 +7,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   return bridgeMock();
 });
 
-vi.mock('@/services/relay-info', () => ({
+vi.mock('@/services/relay/relay-info', () => ({
   faviconFor: () => null,
   fetchRelayInfo: () => new Promise(() => {}),
 }));

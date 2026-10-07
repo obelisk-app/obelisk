@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { __resetPermissionPromptForTests, armNotificationPermissionPrompt } from '@/services/notifications/permission-prompt';
-import { setPreference } from '@/services/preferences';
+import { setPreference } from '@/services/preferences/preferences';
 
 function stubNotification(permission: NotificationPermission) {
   const requestPermission = vi.fn(async () => 'granted' as NotificationPermission);

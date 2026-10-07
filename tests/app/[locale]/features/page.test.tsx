@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import FeaturesPage from '@/app/[locale]/features/page';
 
-vi.mock('@/components/marketing/Navbar', () => ({ default: () => <nav>Obelisk</nav> }));
-vi.mock('@/components/marketing/Footer', () => ({ default: () => <footer /> }));
-vi.mock('@/components/marketing/ShootingStars', () => ({ default: () => null }));
+vi.mock('@/components/marketing/site/Navbar', () => ({ default: () => <nav>Obelisk</nav> }));
+vi.mock('@/components/marketing/site/Footer', () => ({ default: () => <footer /> }));
+vi.mock('@/components/common/ShootingStars', () => ({ default: () => null }));
 
 describe('FeaturesPage', () => {
   it('shows every comeback feature with a screenshot and working calls to action', async () => {

@@ -4,7 +4,7 @@ const publishEvent = vi.hoisted(() => vi.fn());
 const dropRelayConnection = vi.hoisted(() => vi.fn());
 const ready = vi.hoisted(() => ({ impl: true }));
 
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: vi.fn(async () => ({})),
   getBridgeImpl: () => (ready.impl ? { publishEvent, dropRelayConnection, getPublicKey: () => null } : null),
 }));

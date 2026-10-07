@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import MediaLibraryModal from '@/components/media/MediaLibraryModal';
-import RemoteImage from '@/components/ui/RemoteImage';
-import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
+import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
+import RemoteImage from '@/components/ui/media/RemoteImage';
+import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
 import { useStickerSelection } from '@/hooks/chat/message/useStickerSelection';
 
 export function StickerImg({ sticker }: { sticker: MessageSticker }) {

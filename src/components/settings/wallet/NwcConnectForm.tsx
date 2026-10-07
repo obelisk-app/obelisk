@@ -2,10 +2,10 @@
 
 import { useId } from 'react';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Text from '@/components/ui/Text';
-import type { NwcPreview } from '@/hooks/settings/useWalletSettings';
+import Button from '@/components/ui/buttons/Button';
+import Input from '@/components/ui/forms/Input';
+import Text from '@/components/ui/layout/Text';
+import type { NwcPreview } from '@/hooks/settings/wallet/useWalletSettings';
 import { nwcWalletLabel, relayHostLabel } from '@/utils/wallet/wallet-label';
 
 interface Props {

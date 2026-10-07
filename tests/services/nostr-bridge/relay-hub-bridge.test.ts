@@ -34,7 +34,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import type { EventTemplate, Filter, VerifiedEvent } from 'nostr-tools';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
-import { FakeRelaySocket, authPrompts, bytesToHex, settle, installFakeRelayPage } from '@/services/nostr-bridge/test-support';
+import { FakeRelaySocket, authPrompts, bytesToHex, settle, installFakeRelayPage } from '@/services/nostr-bridge/common/test-support';
 
 const ACTIVE_RELAY = 'wss://public.obelisk.ar/';
 
@@ -48,7 +48,7 @@ describe('the bridge on the RelayHub', () => {
     const signEvent = vi.fn(async (template: EventTemplate): Promise<VerifiedEvent> => finalizeEvent(template, sk));
     Object.defineProperty(window, 'nostr', { configurable: true, value: { signEvent, getPublicKey: async () => pk } });
 
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { getRelayHub } = await import('@/lib/relay-hub');
     const bridge = await getBridge();
     const login = bridge.loginWithNip07(pk);
@@ -107,7 +107,7 @@ describe('the bridge on the RelayHub', () => {
 
   it('opens one socket per relay URL under concurrent subscribes and publishes', async () => {
     const sk = generateSecretKey();
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { getRelayHub } = await import('@/lib/relay-hub');
     const bridge = await getBridge();
     const login = bridge.loginWithNsec(bytesToHex(sk), getPublicKey(sk));
@@ -150,7 +150,7 @@ describe('the bridge on the RelayHub', () => {
 
   it('re-issues every pre-drop REQ on the new socket generation from the hub\'s connected report, the active channel first', async () => {
     const sk = generateSecretKey();
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { getRelayHub } = await import('@/lib/relay-hub');
     const bridge = await getBridge();
     const login = bridge.loginWithNsec(bytesToHex(sk), getPublicKey(sk));
@@ -205,7 +205,7 @@ describe('the bridge on the RelayHub', () => {
   it('collapses two identical kind-1059 REQs into one on the wire, which closes only when the last holder releases', async () => {
     const sk = generateSecretKey();
     const me = getPublicKey(sk);
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { getRelayHub } = await import('@/lib/relay-hub');
     const bridge = await getBridge();
     const login = bridge.loginWithNsec(bytesToHex(sk), me);

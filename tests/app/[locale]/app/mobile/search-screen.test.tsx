@@ -29,25 +29,25 @@ vi.mock('@/services/nostr-bridge', async () => {
   });
 });
 
-vi.mock('@/hooks/useNostrUserSearch', () => ({
+vi.mock('@/hooks/identity/useNostrUserSearch', () => ({
   useNostrUserSearch: () => ({ directHit: null, nip05Hit: null, nostrResults: [], loading: false }),
 }));
 
-vi.mock('@/services/relay-info', () => ({
+vi.mock('@/services/relay/relay-info', () => ({
   faviconFor: (url: string) => `https://favicon/${url}`,
   fetchRelayInfo: vi.fn().mockResolvedValue(null),
   supportsSearch: () => true,
   SUGGESTED_RELAYS: [],
 }));
 
-vi.mock('@/services/relay-branding', () => ({
+vi.mock('@/services/relay/relay-branding', () => ({
   publishBranding: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@/hooks/relay/useRelayBranding', () => ({
   useRelayBranding: () => ({}),
 }));
 
-vi.mock('@/services/relay-emojis', () => ({
+vi.mock('@/services/relay/relay-emojis', () => ({
   relayEmojiMap: () => ({}),
   publishRelayEmojiSet: vi.fn().mockResolvedValue(undefined),
 }));
@@ -55,7 +55,7 @@ vi.mock('@/hooks/relay/useRelayEmojiSet', () => ({
   useRelayEmojiSet: () => ({ title: '', emojis: [], updatedAt: 0 }),
 }));
 
-vi.mock('@/services/channel-layout', () => ({
+vi.mock('@/services/relay/channel-layout', () => ({
   applyLayout: () => ({ categories: [], uncategorized: [] }),
   publishLayout: vi.fn().mockResolvedValue(undefined),
   newCategoryId: () => 'cat-test',
@@ -67,15 +67,15 @@ vi.mock('@/hooks/relay/useRelayOperatorPubkey', () => ({
   useRelayOperatorPubkey: () => null,
 }));
 
-vi.mock('@/components/media/BlossomImageInput', () => ({
+vi.mock('@/components/media/upload/BlossomImageInput', () => ({
   default: () => <div />,
   ChannelAppearanceInput: () => <div />,
 }));
 
 vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({ default: () => <div /> }));
-vi.mock('@/components/admin/RelayEmojiAdminModal', () => ({ default: () => <div /> }));
+vi.mock('@/components/admin/relay-emoji/RelayEmojiAdminModal', () => ({ default: () => <div /> }));
 
-import { SearchScreen } from '@/app/[locale]/app/mobile/screens/SearchScreen';
+import { SearchScreen } from '@/app/[locale]/app/mobile/screens/search/SearchScreen';
 const hit = (id: string, content: string) => ({
   id, pubkey: 'f'.repeat(64), content, createdAt: 1_700_000_000, kind: 9,
   replyToId: null, mentions: [], groupId: 'rly/abc',

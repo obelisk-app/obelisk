@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useProfileEditorForm } from '@/hooks/chat/useProfileEditorForm';
-import ProfileAppearanceEditor from '@/components/settings/ProfileAppearanceEditor';
+import { useProfileEditorForm } from '@/hooks/chat/profile/useProfileEditorForm';
+import ProfileAppearanceEditor from '@/components/settings/account/ProfileAppearanceEditor';
 import { useTranslations } from 'next-intl';
-import Input from '@/components/ui/Input';
-import TextArea from '@/components/ui/TextArea';
-import Button from '@/components/ui/Button';
+import Input from '@/components/ui/forms/Input';
+import TextArea from '@/components/ui/forms/TextArea';
+import Button from '@/components/ui/buttons/Button';
 
 export function EditProfileForm({
   initial,

@@ -1,9 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Modal from '@/components/ui/Modal';
-import ModalHeader from '@/components/ui/ModalHeader';
-import Table from '@/components/ui/Table';
+import Modal from '@/components/ui/overlays/Modal';
+import ModalHeader from '@/components/ui/overlays/ModalHeader';
+import Table from '@/components/ui/data/Table';
 import { useRelayAdminPanel } from '@/hooks/admin/relay-admin/useRelayAdminPanel';
 import { relayAdminRowKey } from '@/utils/admin/relay-admin-rows';
 import { relayAdminColumns } from './columns';

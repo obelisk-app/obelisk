@@ -5,7 +5,7 @@
  * is checked here against `BridgeReads.prototype`.
  */
 import { describe, expect, it } from 'vitest';
-import { BridgeReads } from '@/services/nostr-bridge/facade-reads';
+import { BridgeReads } from '@/services/nostr-bridge/facade/facade-reads';
 import { FAKE_BRIDGE_STORES, fakeBridge } from '@tests/support/fake-bridge';
 
 const own = Object.getOwnPropertyDescriptors(BridgeReads.prototype);

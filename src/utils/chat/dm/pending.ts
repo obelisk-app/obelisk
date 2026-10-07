@@ -1,5 +1,5 @@
-import { emojiTagsForContent, type CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
-import { stickerTagsForContent, type MessageSticker } from '@/utils/media-tags/sticker-tags';
+import { emojiTagsForContent, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
+import { stickerTagsForContent, type MessageSticker } from '@/utils/media/tags/sticker-tags';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 import type { MediaPickerTab } from '../picker/media-catalog';
 

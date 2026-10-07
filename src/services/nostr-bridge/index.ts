@@ -1,14 +1,14 @@
-export { getBridge, getBridgeImpl, type BridgeImpl } from './client';
-export { isImportableRelayUrl } from './relay-list';
+export { getBridge, getBridgeImpl, type BridgeImpl } from './facade/client';
+export { isImportableRelayUrl } from './relay/relay-list';
 // The page's relay hub, for a service that rides it under its own identity (a wallet connection).
-export { pageRelayHub } from './page-hub';
-export { DEFAULT_PROFILE_LOOKUP_RELAYS } from './profile-sync-cache';
-export { cacheGet, cacheSet, cacheDelete } from './cache';
-export { resubscribeOnQuotaClose } from './quota-resubscribe';
-export { hasSeenWrap, markWrapSeen, type WrapLedgerScope } from './wrap-ledger';
-export { nostrActions } from './actions';
+export { pageRelayHub } from './facade/page-hub';
+export { DEFAULT_PROFILE_LOOKUP_RELAYS } from './profile/profile-sync-cache';
+export { cacheGet, cacheSet, cacheDelete } from './cache/cache';
+export { resubscribeOnQuotaClose } from './relay/quota-resubscribe';
+export { hasSeenWrap, markWrapSeen, type WrapLedgerScope } from './cache/wrap-ledger';
+export { nostrActions } from './facade/actions';
 // The React provider and the two hooks that hand out the instance itself.
-export { BridgeProvider, type BridgeProviderProps } from './provider';
+export { BridgeProvider, type BridgeProviderProps } from './hooks/bridge-provider';
 export { useAwaitBridge, useBridge, useBridgeReady } from './hooks/provider';
 // The React hooks, one file per concern under `./hooks/`.
 export {
@@ -88,4 +88,4 @@ export type {
   MessagesStatus,
   RelayAccessState,
   Unsubscribe,
-} from './types';
+} from './common/types';

@@ -5,7 +5,7 @@
  */
 import type { Rumor } from '@/lib/nip-59';
 import type { WrapLedgerScope } from '@/services/nostr-bridge';
-import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/utils/nip-kinds';
+import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/utils/nostr/nip-kinds';
 
 /** Inner rumor d-tag for groups-scope state events. */
 export const D_TAG_GROUPS = 'obelisk:readstate:v1';

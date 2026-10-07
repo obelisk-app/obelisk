@@ -9,7 +9,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools';
-import { KIND_GROUP_ADMINS, KIND_GROUP_METADATA } from '@/utils/nip-kinds';
+import { KIND_GROUP_ADMINS, KIND_GROUP_METADATA } from '@/utils/nostr/nip-kinds';
 import {
   deliver,
   fakeRelayMetadata,
@@ -30,7 +30,7 @@ installBridgeHarness(fake);
 describe('nostr-bridge', () => {
 
   it('relayAccess flips to ok on event/EOSE and stays ok across per-sub CLOSED reasons', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -42,7 +42,7 @@ describe('nostr-bridge', () => {
     // EOSE fires from FakePool's subscribe via queueMicrotask: that should
     // flip the active relay to 'ok'.
     await flush();
-    const activeRelay = (await import('@/services/nostr-bridge/client')).getBridgeImpl()!['relays'][0];
+    const activeRelay = (await import('@/services/nostr-bridge/facade/client')).getBridgeImpl()!['relays'][0];
     const norm = activeRelay.replace(/\/+$/, '').toLowerCase();
     expect(observed.at(-1)?.[norm]).toBe('ok');
 
@@ -86,7 +86,7 @@ describe('nostr-bridge', () => {
   // regardless of whether EOSE already fired.
 
   it('retries a sub when CLOSED auth-required arrives after EOSE', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -152,7 +152,7 @@ describe('nostr-bridge', () => {
 
 
   it('re-issues a sub CLOSED without a classifiable reason after the hub\'s backoff, so the channel is not left dead', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -205,7 +205,7 @@ describe('nostr-bridge', () => {
   // and retried forever, each retry restarting the same scan, so the channel
   // list never populated from the relay and the user saw only the disk cache.
   it('gives the relay-wide group subs far longer than 5s to answer', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
 
     // No EOSE and no events on any sub: exactly how a relay mid-scan looks.
@@ -245,7 +245,7 @@ describe('nostr-bridge', () => {
 
 
   it('does NOT retry a sub when CLOSED is relay quota/rate-limit', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -278,7 +278,7 @@ describe('nostr-bridge', () => {
 
 
   it('frees the group slot when a message sub is CLOSED for relay quota', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -315,7 +315,7 @@ describe('nostr-bridge', () => {
 
 
   it('preflight relay-access keeps EOSE-accepted slot available for immediate CLOSED downgrade', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -339,7 +339,7 @@ describe('nostr-bridge', () => {
     // every other REQ (admin/member, kind 0, branding). The fix caps the
     // immediate path to the first onclose; subsequent closes use the
     // standard exponential backoff.
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -390,7 +390,7 @@ describe('nostr-bridge', () => {
 
 
   it('does not flash the relay-access banner on transient auth-required CLOSED', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -452,7 +452,7 @@ describe('nostr-bridge', () => {
 
 
   it('schedules at most one retry when CLOSED auth-required fires twice', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -504,8 +504,8 @@ describe('nostr-bridge', () => {
     // relay's group under the new relay's cache key (since
     // `cacheSet(this.currentRelayUrl.get(), ...)` uses whichever relay is
     // currently active).
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-    const { cacheGet } = await import('@/services/nostr-bridge/cache');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheGet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);

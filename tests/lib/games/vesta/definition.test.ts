@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest';
 import { createGame, applyMove } from 'vesta';
 import { vesta, normalizeSeed, readResumeState, playerCountOf } from '@/lib/games/vesta/definition';
 import { diceFromEntropy } from '@/lib/games/vesta/dice';
-import { deriveSession } from '@/lib/games/session';
-import { buildCreate, buildGameOp, parseGameEvent, localSeatId, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol';
+import { deriveSession } from '@/lib/games/session/session';
+import { buildCreate, buildGameOp, parseGameEvent, localSeatId, type GameEvent, type ParsedGameEvent } from '@/lib/games/protocol/protocol';
 
 const CH = 'channel-1';
 const HOST = 'pk-host';

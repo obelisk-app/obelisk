@@ -61,7 +61,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   });
 });
 
-vi.mock('@/components/chat/MessageContent', () => ({
+vi.mock('@/components/chat/message/MessageContent', () => ({
   default: ({ content }: { content: string }) => <div>{content}</div>,
 }));
 

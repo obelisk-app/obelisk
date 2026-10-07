@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { groupFixture } from '@tests/support/mocks/nostr-bridge';
-import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
+import { ConfirmDialogHost } from '@/components/ui/overlays/ConfirmDialog';
 import RelayAdminPanel from '@/components/admin/relay-admin/RelayAdminPanel';
 
 const ADMIN = 'a'.repeat(64);

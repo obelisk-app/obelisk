@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useToastStore } from '@/store/toast';
+import { useToastStore } from '@/store/feedback/toast';
 import { useTranslations } from 'next-intl';
-import { CloseIcon } from '@/components/ui/icons';
+import { CloseIcon } from '@/components/ui/icons/icons';
 
 const AUTO_DISMISS_MS = 5000;
 

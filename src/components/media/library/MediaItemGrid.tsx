@@ -1,8 +1,8 @@
 'use client';
 
 import type { JsMediaItem } from '@/services/nostr-bridge';
-import MediaThumb from '@/components/media/MediaThumb';
-import { CloseIcon } from '@/components/ui/icons';
+import MediaThumb from '@/components/media/library/MediaThumb';
+import { CloseIcon } from '@/components/ui/icons/icons';
 import { useTranslations } from 'next-intl';
 
 /** A square grid of media items; each tile opens, favourites, or just shows its item. */

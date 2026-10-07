@@ -12,22 +12,22 @@
 const ICON_SET = 'an icon set: stateless SVG glyphs drawn on the same grid, read and edited side by side';
 
 export const MULTI_COMPONENT: Readonly<Record<string, string>> = {
-  'src/components/ui/icons.tsx': ICON_SET,
-  'src/components/voice/icons.tsx': ICON_SET,
+  'src/components/ui/icons/icons.tsx': ICON_SET,
+  'src/components/voice/common/icons.tsx': ICON_SET,
   'src/components/chat/forum/forum-icons.tsx': ICON_SET,
   'src/components/chat/composer/composer-icons.tsx': ICON_SET,
   'src/components/chat/pq/pq-shield-icons.tsx': ICON_SET,
-  'src/components/social/feed-screen/icons.tsx': ICON_SET,
-  'src/app/[locale]/app/login/LoginIcons.tsx': ICON_SET,
-  'src/components/guides/mdx-components.tsx':
+  'src/components/social/feed/icons.tsx': ICON_SET,
+  'src/app/[locale]/app/login/login-icons.tsx': ICON_SET,
+  'src/components/guides/mdx/mdx-components.tsx':
     'the MDX component map: one styled element per Markdown tag, handed to the MDX renderer as one object',
   'src/app/[locale]/media-kit/kit/banners.tsx':
     'the media-kit banner variants: the same artwork at each social network size, drawn from one shared layout',
-  'src/app/[locale]/app/lazy-mounts.tsx':
-    'the shell\'s lazy boundaries in one place, so tests/app/[locale]/app/lazy-mounts.test.tsx can see every heavy import stays out of the first download',
-  'src/components/chat/games/LazyTables.tsx':
+  'src/app/[locale]/app/mounts/lazy-mounts.tsx':
+    'the shell\'s lazy boundaries in one place, so tests/app/[locale]/app/mounts/lazy-mounts.test.tsx can see every heavy import stays out of the first download',
+  'src/components/games/table/LazyTables.tsx':
     'the game tables\' lazy boundaries, one per board, each a Suspense wrapper around a lazy import',
-  'src/components/ui/menu.tsx':
+  'src/components/ui/overlays/menu.tsx':
     'the menu primitive\'s parts (item, link, divider), which share one private row style and are always used together',
 };
 

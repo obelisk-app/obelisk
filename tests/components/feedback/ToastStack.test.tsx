@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import ToastStack from '@/components/feedback/ToastStack';
-import { useToastStore } from '@/store/toast';
+import { useToastStore } from '@/store/feedback/toast';
 
 const renderStack = () => render(<LocaleProvider initialLocale="en"><ToastStack /></LocaleProvider>);
 

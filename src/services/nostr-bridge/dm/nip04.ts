@@ -5,11 +5,11 @@
  */
 import { CodedError } from '@/utils/errors/codes';
 import { nip04, type Event as NostrEvent } from 'nostr-tools';
-import { KIND_ENCRYPTED_DM } from '@/utils/nip-kinds';
-import type { BridgeContext } from '../context';
-import { memoizeDecrypt } from '../decrypt-cache';
-import { getTag } from '../event-tags';
-import { enqueueSignerOp, type SignerLane } from '../signer-queue';
+import { KIND_ENCRYPTED_DM } from '@/utils/nostr/nip-kinds';
+import type { BridgeContext } from '../facade/context';
+import { memoizeDecrypt } from '../cache/decrypt-cache';
+import { getTag } from '../common/event-tags';
+import { enqueueSignerOp, type SignerLane } from '../session/signer-queue';
 import type { BunkerRunOpts, RemoteSigner } from '../session/bunker';
 import type { DmSend, DmSettle } from './send';
 import type { IngestDmParams } from './thread';

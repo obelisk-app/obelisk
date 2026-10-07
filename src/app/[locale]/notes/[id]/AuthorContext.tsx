@@ -10,7 +10,7 @@
  */
 
 import { Link } from '@/i18n/navigation';
-import { serverLocale } from '@/services/server/locale';
+import { serverLocale } from '@/services/server/i18n/locale';
 import { formatDate } from '@/utils/format/format';
 import { nip19 } from 'nostr-tools';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -18,10 +18,10 @@ import {
   displayNameFor,
   type AuthorRelays,
   type ViewerProfile,
-} from '@/services/server/nostr-fetch';
-import { plainTextForPreview } from '@/services/server/note-preview';
+} from '@/services/server/viewer/nostr-fetch';
+import { plainTextForPreview } from '@/services/server/viewer/note-preview';
 import FollowButton from './FollowButton';
-import RemoteImage from '@/components/ui/RemoteImage';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 import { NOTE_VIEWER_PATH, noteIdentifier } from '@/services/social/note-links';
 
 function npubOf(pubkey: string): string {

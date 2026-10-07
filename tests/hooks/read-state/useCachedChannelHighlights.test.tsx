@@ -10,9 +10,9 @@
  */
 import { afterEach, describe, expect, it, beforeEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
-import { StateStore } from '@/services/nostr-bridge/state-store';
+import { StateStore } from '@/services/nostr-bridge/common/state-store';
 import type { BridgeImpl, JsMessage } from '@/services/nostr-bridge';
-import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 const byGroup = new StateStore<Record<string, JsMessage[]>>({});
 const bridgeSubs = { opened: 0, closed: 0 };

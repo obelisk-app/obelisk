@@ -9,7 +9,7 @@ const getPublicKey = vi.hoisted(() => vi.fn(() => 'pk-me'));
 
 const relayUrl = vi.hoisted(() => ({ value: 'wss://relay.test' }));
 
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: vi.fn(async () => ({})),
   getBridgeImpl: () => ({
     publishEvent,
@@ -27,8 +27,8 @@ import {
 } from '@/services/games/transport';
 import { flushGameIngest, resetGameIngest } from '@/services/games/ingest';
 import { useGamesStore } from '@/store/games';
-import { buildCreate, buildGameOp, GAME_TAG } from '@/lib/games/protocol';
-import { chainReaction } from '@/lib/games/chain-reaction';
+import { buildCreate, buildGameOp, GAME_TAG } from '@/lib/games/protocol/protocol';
+import { chainReaction } from '@/lib/games/chain-reaction/chain-reaction';
 
 const CH = 'channel-1';
 const GAME = 'g'.repeat(64);

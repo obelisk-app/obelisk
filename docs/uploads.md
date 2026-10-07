@@ -6,7 +6,7 @@ events.
 
 ## Upload flow
 
-`src/services/blossom.ts` implements the shared BUD-01 flow:
+`src/services/media/blossom.ts` implements the shared BUD-01 flow:
 
 1. Hash the file with SHA-256.
 2. Sign a short-lived kind `24242` Blossom authorization event.
@@ -68,10 +68,10 @@ For compatibility with voice notes published before the `voice` marker existed, 
 Code map:
 
 ~~~text
-src/components/chat/ComposerActions.tsx  recorder and live timer
-src/utils/media-tags/voice-note-tags.ts              marker validation
-src/services/nostr-bridge/client.ts          event parsing and optimistic state
-src/components/chat/MessageContent.tsx  compact audio player
+src/components/chat/composer/ComposerActions.tsx  recorder and live timer
+src/utils/media/tags/voice-note-tags.ts              marker validation
+src/services/nostr-bridge/facade/client.ts          event parsing and optimistic state
+src/components/chat/message/MessageContent.tsx  compact audio player
 ~~~
 
 ## Size limits

@@ -2,11 +2,11 @@
 
 import { memo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import ObeliskIcon from '@/components/ui/ObeliskIcon';
-import RemoteImage from '@/components/ui/RemoteImage';
+import ObeliskIcon from '@/components/ui/icons/ObeliskIcon';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 import { RecentIcon } from '../picker/RecentIcon';
 import { commandDescription, type BotProfiles, type SlashCommand, type SlashCommandSection } from '@/utils/chat/slash/slash-commands';
-import OptionRow from '@/components/ui/OptionRow';
+import OptionRow from '@/components/ui/forms/OptionRow';
 
 // CommandRow comes first: the hook-order guard reads a file top-down and
 // does not see `memo(function ...)` as a new component.

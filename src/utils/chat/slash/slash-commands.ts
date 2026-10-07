@@ -1,4 +1,4 @@
-import { gameCatalog } from '@/lib/games/catalog';
+import { gameCatalog } from '@/lib/games/core/catalog';
 import type { MessageKey, Translate } from '@/i18n/keys';
 
 export interface SlashCommandParam {

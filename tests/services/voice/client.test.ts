@@ -244,7 +244,7 @@ const bridgeFake = vi.hoisted(() => {
     },
   };
 });
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: bridgeFake.getBridge,
 }));
 

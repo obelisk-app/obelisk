@@ -30,13 +30,13 @@ Canonical list of open bugs and tech debt in Obelisk. Fixes are tracked here unt
   is relay-operator housekeeping, not a client change. Note that filtering
   `isHidden` groups out of the **live** stream client-side would be wrong:
   it is how members reach legitimately private channels; the cache-seed skip
-  in `src/services/nostr-bridge/seed.ts` exists only so hidden metadata is never painted from a
+  in `src/services/nostr-bridge/cache/seed.ts` exists only so hidden metadata is never painted from a
   previous identity's snapshot.
 
 ## Realtime & presence
 
 - **Online users not updating**: all users appear online regardless of actual status. Presence state is not driven by socket connect/disconnect events.
-- **Nuevo miembro no aparece en tiempo real en la member list**: when Bob joins a group where Alice is already connected, Alice does not see Bob in the sidebar until she reloads (or sends/receives a message that embeds his profile). Audit the bridge's kind 39002 (members) subscription path against `MemberList.tsx`: members arrive through the relay-wide admin/member REQ the session opens (`src/services/nostr-bridge/groups/membership.ts`; group metadata ingest no longer opens a per-group one), but updates may not be triggering a re-render of the member list when the joiner has no kind:0 cached yet.
+- **Nuevo miembro no aparece en tiempo real en la member list**: when Bob joins a group where Alice is already connected, Alice does not see Bob in the sidebar until she reloads (or sends/receives a message that embeds his profile). Audit the bridge's kind 39002 (members) subscription path against `MemberList.tsx`: members arrive through the relay-wide admin/member REQ the session opens (`src/services/nostr-bridge/groups/membership/membership.ts`; group metadata ingest no longer opens a per-group one), but updates may not be triggering a re-render of the member list when the joiner has no kind:0 cached yet.
 - **Lateral member list does not update per server**: switching servers must reload members, roles and online state for the server the user is now viewing.
 
 ## Rendering & UI
@@ -81,7 +81,7 @@ Games are moving out of this repo into [obelisk-apps](https://github.com/obelisk
 - **Phishing inside the frame** (a fake "paste your nsec"). The only mitigations are host-drawn chrome ("by <name> · third-party app") and app-prefixed toasts.
 - **CPU and battery abuse** lasts until the modal is closed. Frames must never run in the background.
 - **`src/proxy.ts` and obelisk-tauri must agree.** `frame-src` needs `https://frame.obelisk.ar` in both, kept in step by hand. Tauri's embed list has already drifted from dex's.
-- **The Blossom servers in `src/services/blossom.ts` reject JS bundles.** They sniff uploads and 415 anything that isn't media, so app bundles live on the Obelisk-run `https://blossom.obelisk.ar` (hzrd149 blossom-server via the `obelisk-app/blossom-server` fork; WoT-gated uploads written by obelisk-apps `packages/blossom-wot` using the obelisk-relay ladder), with `nostr.download` as a secondary hint. Bundle fetches must use the manifest's `server` hints, never the attachment list. That server is a single host with no mirror yet.
+- **The Blossom servers in `src/services/media/blossom.ts` reject JS bundles.** They sniff uploads and 415 anything that isn't media, so app bundles live on the Obelisk-run `https://blossom.obelisk.ar` (hzrd149 blossom-server via the `obelisk-app/blossom-server` fork; WoT-gated uploads written by obelisk-apps `packages/blossom-wot` using the obelisk-relay ladder), with `nostr.download` as a secondary hint. Bundle fetches must use the manifest's `server` hints, never the attachment list. That server is a single host with no mirror yet.
 - **The first open of an app is slow** (the bundle is fetched from Blossom, then cached by hash). An app whose blobs are gone can't be opened at all.
 - **Legacy `[[game:<id>]]` tables** are mapped to the official apps and run their *current* bundle, with no version pin. Remove the mapping one week after the switch, once kind 2390 retention has pruned every pre-switch `create`.
 - **Chat cards stop being live boards.** An `AppCard` shows the manifest, participants and the app's `status` line. The board is only in the modal, because mounting an iframe per card is too heavy.

@@ -3,9 +3,9 @@
  * the reader's personal stickers and favourites, the relay's custom set,
  * GIPHY results, the built-in starters and recents. All pure.
  */
-import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
-import { mediaItemsFromPacks } from '@/utils/media-tags/media-packs';
-import { inferMediaKind } from '@/utils/media-tags/media-kind';
+import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
+import { mediaItemsFromPacks } from '@/utils/media/tags/media-packs';
+import { inferMediaKind } from '@/utils/media/tags/media-kind';
 import type { JsMediaFavorites, JsMediaKind, JsMediaPack } from '@/services/nostr-bridge';
 import {
   STARTER_GIFS,

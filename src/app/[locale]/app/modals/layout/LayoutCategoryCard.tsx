@@ -2,11 +2,11 @@
 
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import { categoryLabel } from '@/utils/chat/category-label';
-import Input from '@/components/ui/Input';
+import { categoryLabel } from '@/utils/relay/category-label';
+import Input from '@/components/ui/forms/Input';
 import { ChannelOrderRow, DragHandleIcon, MoveButtons } from './ChannelOrderRow';
-import type { useLayoutDrag } from '@/hooks/app/modals/layout/useLayoutDrag';
-import Button from '@/components/ui/Button';
+import type { useLayoutDrag } from '@/hooks/shell/modals/layout/useLayoutDrag';
+import Button from '@/components/ui/buttons/Button';
 
 type Category = { id: string; name: string; channelIds: ReadonlyArray<string> };
 

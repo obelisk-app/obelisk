@@ -25,7 +25,7 @@ import { describe, expect, it } from 'vitest';
 import type { Filter } from 'nostr-tools';
 import { normalizeURL } from 'nostr-tools/utils';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
-import { FakeRelaySocket, authPrompts, loginWithNip07Spy, settle, installFakeRelayPage } from '@/services/nostr-bridge/test-support';
+import { FakeRelaySocket, authPrompts, loginWithNip07Spy, settle, installFakeRelayPage } from '@/services/nostr-bridge/common/test-support';
 
 const ACTIVE_RELAY = 'wss://public.obelisk.ar/';
 const VOICE_RELAY = 'wss://voice.example';

@@ -8,7 +8,7 @@ import {
   useMessagesByGroup,
   type JsForumTag,
 } from '@/services/nostr-bridge';
-import { useForumPrefs } from '@/hooks/chat/useForumPrefs';
+import { useForumPrefs } from '@/hooks/chat/forum/useForumPrefs';
 import { hasExactThreadMatch, visibleForumThreads } from '@/utils/chat/forum/forum-threads';
 import {
   forumAccessFlags,
@@ -38,7 +38,7 @@ export function useForumView(groupId: string, onSelectThread: (childGroupId: str
   const childGroups = useMemo(() => resolveChildGroups(childIds, groups), [childIds, groups]);
 
   // Shared with the phone ForumScreen: one storage key for both shells
-  // (see src/services/forum-prefs.ts).
+  // (see src/services/chat/forum/forum-prefs.ts).
   const { prefs, update: updatePrefs } = useForumPrefs(groupId);
 
   const [searchQuery, setSearchQuery] = useState('');

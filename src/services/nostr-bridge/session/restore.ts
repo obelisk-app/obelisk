@@ -6,10 +6,10 @@
  * `client.ts` (`initialize`).
  */
 import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/store/notifications';
-import { ensureChannelPrefsStoreForAccount } from '@/store/channel-prefs';
-import { DEFAULT_RELAY, isImportableRelayUrl, normalizeConfiguredRelayUrl } from '../relay-list';
-import { LEGACY_STORAGE_KEY, STORAGE_KEY, readMigrated } from '../session-storage';
-import { resetWrapLedger } from '../wrap-ledger';
+import { ensureChannelPrefsStoreForAccount } from '@/store/chat/channel-prefs';
+import { DEFAULT_RELAY, isImportableRelayUrl, normalizeConfiguredRelayUrl } from '../relay/relay-list';
+import { LEGACY_STORAGE_KEY, STORAGE_KEY, readMigrated } from './session-storage';
+import { resetWrapLedger } from '../cache/wrap-ledger';
 import type { LifecycleTargets } from './lifecycle';
 import type { LoginDeps } from './login';
 import type { SessionPersistence } from './persistence';

@@ -1,6 +1,6 @@
 /**
  * Voice channel wire types. v1 ships plaintext signed ephemeral events.
- * See `src/utils/nip-kinds.ts` (KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL) and
+ * See `src/utils/nostr/nip-kinds.ts` (KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL) and
  * docs/voice/mesh-protocol.md.
  */
 

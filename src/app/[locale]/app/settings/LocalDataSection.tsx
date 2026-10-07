@@ -1,6 +1,6 @@
 'use client';
 
-import LocalDataPanel from '@/components/settings/LocalDataPanel';
+import LocalDataPanel from '@/components/settings/privacy/LocalDataPanel';
 
 /** Settings > Data on this device on the desktop: its own section in the settings sidebar. */
 export function LocalDataSection() {

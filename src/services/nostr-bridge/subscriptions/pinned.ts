@@ -7,7 +7,7 @@
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import type { RelayHub } from '@/lib/relay-hub';
-import type { TrackedSub, WatchedSubOptions } from '../context';
+import type { TrackedSub, WatchedSubOptions } from '../facade/context';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 
 /** How long the relay being switched away from keeps its socket, so A -> B -> A costs nothing. */

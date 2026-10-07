@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   scaffoldMentionSlotQuery,
   scaffoldMentionSlotRange,
-} from '@/components/chat/SlashCommandScaffold';
+} from '@/components/chat/slash/SlashCommandScaffold';
 
 describe('scaffoldMentionSlotQuery', () => {
   it('returns the typed partial name when caret is inside the user slot', () => {

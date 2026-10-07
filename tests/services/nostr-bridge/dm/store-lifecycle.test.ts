@@ -43,7 +43,7 @@ async function waitStored(pubkey: string, records: number) {
 
 /** `me` logs in with nsec, opens DMs and reads the message `from` sent. */
 async function readAsNsec(me: ReturnType<typeof keysFrom>, from: ReturnType<typeof keysFrom>, text = TEXT) {
-  const { getBridge } = await import('@/services/nostr-bridge/client');
+  const { getBridge } = await import('@/services/nostr-bridge/facade/client');
   const bridge = await getBridge();
   await bridge.loginWithNsec(me.skHex, me.pkHex);
   const read = await watchDms(bridge);
@@ -73,7 +73,7 @@ describe('encrypted DM store: logout and removal', () => {
     const bob = keysFrom(makeKeypair());
     fake.state.published.push(await giftWrapFrom(alice, bob.pkHex, TEXT));
     installExtension(bob);
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const bridge = await getBridge();
     await bridge.loginWithNip07(bob.pkHex);
     const read = await watchDms(bridge);
@@ -153,15 +153,15 @@ describe('encrypted DM store: two accounts on one browser', () => {
 describe('the seen-wrap ledger across a reload', () => {
   it('remembers after a page reload what it recorded before it', async () => {
     const bob = keysFrom(makeKeypair());
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const bridge = await getBridge();
     await bridge.loginWithNsec(bob.skHex, bob.pkHex);
-    const ledger = await import('@/services/nostr-bridge/wrap-ledger');
+    const ledger = await import('@/services/nostr-bridge/cache/wrap-ledger');
     ledger.markWrapSeen('dm:inert', 'a'.repeat(64));
     ledger.__INTERNAL.flush();
 
     await reload();
-    const after = await import('@/services/nostr-bridge/wrap-ledger');
+    const after = await import('@/services/nostr-bridge/cache/wrap-ledger');
     expect(after.hasSeenWrap('dm:inert', 'a'.repeat(64))).toBe(true);
     after.markWrapSeen('dm:inert', 'b'.repeat(64));
     after.__INTERNAL.flush();

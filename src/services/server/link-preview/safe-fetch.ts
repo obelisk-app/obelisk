@@ -5,7 +5,7 @@
  * fetched, only http(s) and HTML are read, and never more than `MAX_BYTES`.
  */
 
-import { isBlockedAddress } from '@/utils/link-preview';
+import { isBlockedAddress } from '@/utils/link-preview/link-preview';
 import dns from 'node:dns/promises';
 import net from 'node:net';
 

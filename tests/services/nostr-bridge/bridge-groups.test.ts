@@ -9,7 +9,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
-import { KIND_GROUP_METADATA } from '@/utils/nip-kinds';
+import { KIND_GROUP_METADATA } from '@/utils/nostr/nip-kinds';
 import {
   deliver,
   fakeRelayList,
@@ -33,7 +33,7 @@ installBridgeHarness(fake);
 describe('nostr-bridge', () => {
 
   it('createGroup publishes a kind 9007 + 9002 and the group appears in the groups store', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -66,7 +66,7 @@ describe('nostr-bridge', () => {
 
 
   it('parses and publishes NIP-29 hidden/restricted access tags', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -105,7 +105,7 @@ describe('nostr-bridge', () => {
 
 
   it('sendMessage round-trips through subscribers', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -126,7 +126,7 @@ describe('nostr-bridge', () => {
 
 
   it('sendMessage carries NIP-30 custom emoji tags', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -150,7 +150,7 @@ describe('nostr-bridge', () => {
 
 
   it("sendMessage preserves the distinct sticker marker through relay echo", async () => {
-    const { getBridge } = await import("@/services/nostr-bridge/client");
+    const { getBridge } = await import("@/services/nostr-bridge/facade/client");
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -174,7 +174,7 @@ describe('nostr-bridge', () => {
 
 
   it('sendMessage preserves voice-note duration through relay echo', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -196,7 +196,7 @@ describe('nostr-bridge', () => {
 
 
   it('sendReaction emits a kind 7 with target and group tags', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -215,7 +215,7 @@ describe('nostr-bridge', () => {
 
 
   it('sendReaction carries NIP-30 custom emoji tags', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -246,7 +246,7 @@ describe('nostr-bridge', () => {
 
 
   it('removeReaction publishes a NIP-09 delete event and removes the local reaction', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -280,7 +280,7 @@ describe('nostr-bridge', () => {
 
 
   it('removeMessage publishes a NIP-09 delete event and removes the local message', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -309,7 +309,7 @@ describe('nostr-bridge', () => {
 
 
   it('deleteGroupEvent removes moderated messages and reactions from local state', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -352,7 +352,7 @@ describe('nostr-bridge', () => {
 
 
   it('putUser, removeUser, removePermission, deleteGroupEvent publish the right NIP-29 kinds', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const target = makeKeypair();
     const bridge = await getBridge();
@@ -389,7 +389,7 @@ describe('nostr-bridge', () => {
 
 
   it('claimCreatorAdmin no-ops when the active user is not the kind 9007 author', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const otherCreator = makeKeypair();
     const bridge = await getBridge();
@@ -407,7 +407,7 @@ describe('nostr-bridge', () => {
 
 
   it('claimCreatorAdmin no-ops when the user is already in the 39001 admin list', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -425,7 +425,7 @@ describe('nostr-bridge', () => {
 
 
   it('claimCreatorAdmin publishes one kind 9000 admin when creator and not yet listed', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -448,7 +448,7 @@ describe('nostr-bridge', () => {
 
 
   it('createGroup no longer publishes a kind 9000 self-claim (lazy claim only)', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -464,7 +464,7 @@ describe('nostr-bridge', () => {
 
 
   it('subscribeAdmins / subscribeMembers parse 39001/39002 p-tags', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const a = makeKeypair();
     const b = makeKeypair();
@@ -486,7 +486,7 @@ describe('nostr-bridge', () => {
 
 
   it('createGroup with parent emits a [parent,id] tag on the kind 9002 metadata', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -508,7 +508,7 @@ describe('nostr-bridge', () => {
 
 
   it('group with [t,forum] metadata is parsed as kind=forum', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -529,7 +529,7 @@ describe('nostr-bridge', () => {
 
 
   it('child group nesting populates childrenByParent', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -554,7 +554,7 @@ describe('nostr-bridge', () => {
     // newest-wins guard short-circuits the store update, but without this
     // skip the localStorage.setItem would still fire (a sync main-thread
     // operation we want to avoid).
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -616,7 +616,7 @@ describe('nostr-bridge', () => {
     // bucket should contain it. Prior implementation scanned every bucket
     // with Object.keys+filter; the new one looks up the previous parent
     // in O(1). This test ensures the new code still handles re-parents.
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -660,7 +660,7 @@ describe('nostr-bridge', () => {
 
 
   it('parses [forum-tag,id,name,emoji?] entries on kind 39000 into JsGroup.forumTags', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -700,7 +700,7 @@ describe('nostr-bridge', () => {
 
 
   it('parses [topic,id] entries on kind 39000 into JsGroup.topics, de-duped', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -730,7 +730,7 @@ describe('nostr-bridge', () => {
 
 
   it('createGroup with topics emits one [topic,id] tag per entry on kind 9002', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -754,7 +754,7 @@ describe('nostr-bridge', () => {
 
 
   it('editGroupMetadata with forumTags emits [forum-tag,id,name,emoji?] for each entry', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -785,7 +785,7 @@ describe('nostr-bridge', () => {
 
 
   it('round-trips a publication tag color through slot 4', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -815,7 +815,7 @@ describe('nostr-bridge', () => {
 
 
   it('parses tag colors off the relay, ignoring unknown palette keys', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -854,7 +854,7 @@ describe('nostr-bridge', () => {
   it('keeps an empty channel-list EOSE provisional until the metadata retry window is exhausted', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {
-      const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+      const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
       const { skHex, pkHex } = makeKeypair();
       const bridge = await getBridge();
       await bridge.loginWithNsec(skHex, pkHex);

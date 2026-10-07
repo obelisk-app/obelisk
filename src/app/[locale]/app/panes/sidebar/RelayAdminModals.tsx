@@ -2,16 +2,16 @@
 
 import { useState } from 'react';
 import { useConfiguredRelays, type JsGroup } from '@/services/nostr-bridge';
-import type { ChannelLayout } from '@/services/channel-layout';
-import type { RelayBranding } from '@/services/relay-branding';
-import type { RelayEmojiSet } from '@/services/relay-emojis';
-import type { RelayRoles } from '@/services/relay-roles';
+import type { ChannelLayout } from '@/services/relay/channel-layout';
+import type { RelayBranding } from '@/services/relay/relay-branding';
+import type { RelayEmojiSet } from '@/services/relay/relay-emojis';
+import type { RelayRoles } from '@/services/relay/relay-roles';
 import RelayAdminPanel from '@/components/admin/relay-admin/RelayAdminPanel';
-import RelayEmojiAdminModal from '@/components/admin/RelayEmojiAdminModal';
-import RelayRolesAdminModal from '@/components/admin/RelayRolesAdminModal';
-import { ManageLayoutModal } from '../../modals/ManageLayoutModal';
-import { RelayBrandingModal } from '../../modals/RelayBrandingModal';
-import { RelaySettingsModal } from '../../modals/RelaySettingsModal';
+import RelayEmojiAdminModal from '@/components/admin/relay-emoji/RelayEmojiAdminModal';
+import RelayRolesAdminModal from '@/components/admin/relay-roles/RelayRolesAdminModal';
+import { ManageLayoutModal } from '../../modals/layout/ManageLayoutModal';
+import { RelayBrandingModal } from '../../modals/relay/RelayBrandingModal';
+import { RelaySettingsModal } from '../../modals/relay/RelaySettingsModal';
 
 type Props = {
   relay: string;

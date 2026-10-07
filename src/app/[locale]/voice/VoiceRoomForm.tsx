@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
-import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
+import Input from '@/components/ui/forms/Input';
+import Button from '@/components/ui/buttons/Button';
 
 /** Pick a room name and open it. */
 export default function VoiceRoomForm() {

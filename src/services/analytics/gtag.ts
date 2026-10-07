@@ -10,7 +10,7 @@
  * No inline script: the queue and the config call are made here, from the
  * app's own bundle, and the library is a plain `<script src>` that the CSP
  * allows by host (`https://www.googletagmanager.com` in `script-src`,
- * `src/utils/csp.ts`), so it needs no nonce and the nonce never has to
+ * `src/utils/security/csp.ts`), so it needs no nonce and the nonce never has to
  * reach client code.
  *
  * Stopping without a reload: Google's documented opt-out is the window
@@ -19,7 +19,7 @@
  * script goes quiet (single-page navigations included). The cookies it set
  * are expired at the same moment.
  */
-import { cookieNamesOn, expireCookie } from '@/services/cookies';
+import { cookieNamesOn, expireCookie } from '@/services/common/cookies';
 
 export const GA_MEASUREMENT_ID = 'G-BZ4NB66WY0';
 export const GTAG_SRC = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;

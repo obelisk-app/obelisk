@@ -5,7 +5,7 @@ import { LocaleProvider } from '@tests/support/intl';
 vi.mock('@/services/nostr-bridge', () => ({
   useUserMetadata: (pk: string) => (pk === A ? { name: 'ada' } : null),
 }));
-vi.mock('@/components/marketing/ShootingStars', () => ({ default: () => null }));
+vi.mock('@/components/common/ShootingStars', () => ({ default: () => null }));
 
 import { CenteredPanel, PassiveCallRoster, Spinner } from '@/components/voice/room/chrome';
 

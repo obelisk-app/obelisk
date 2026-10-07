@@ -16,8 +16,8 @@ import {
   nwcPayerFor,
 } from '@/services/wallet/nwc-wallet';
 import { NWC_RECORD_PREFIX, NWC_VAULT_KEY_ID, nwcRecordKey } from '@/services/wallet/nwc-storage';
-import { resetAllClientState } from '@/services/reset';
-import { useNwcWalletStore } from '@/store/nwc-wallet';
+import { resetAllClientState } from '@/services/common/reset';
+import { useNwcWalletStore } from '@/store/wallet/nwc-wallet';
 import { VAULT_DB, VAULT_STORE, isSealedBox } from '@/lib/crypto/session-vault';
 import { getRecord, openStore } from '@/lib/crypto/vault-idb';
 import { FakeNwcWallet } from '@tests/support/fake-nwc-wallet';

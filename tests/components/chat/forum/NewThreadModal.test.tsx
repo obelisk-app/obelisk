@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 
-vi.mock('@/hooks/chat/useNewThreadForm', () => ({
+vi.mock('@/hooks/chat/forum/useNewThreadForm', () => ({
   MAX_THREAD_TAGS: 3,
   useNewThreadForm: () => ({
     title: 'Hello', body: '', selectedTagIds: [], submitting: false, error: null, canSubmit: true,

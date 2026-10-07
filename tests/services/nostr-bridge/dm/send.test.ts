@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DmSendModule, resolveDmProtocol, type DmSend, type DmSendDeps } from '@/services/nostr-bridge/dm/send';
-import { StateStore } from '@/services/nostr-bridge/state-store';
-import type { PersistedSession } from '@/services/nostr-bridge/session-storage';
-import type { JsDirectMessage } from '@/services/nostr-bridge/types';
-import { useDMStore } from '@/store/dm';
+import { StateStore } from '@/services/nostr-bridge/common/state-store';
+import type { PersistedSession } from '@/services/nostr-bridge/session/session-storage';
+import type { JsDirectMessage } from '@/services/nostr-bridge/common/types';
+import { useDMStore } from '@/store/chat/dm';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 
 const ME = 'a'.repeat(64);

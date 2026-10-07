@@ -37,23 +37,23 @@ vi.mock('@/services/voice/sfu-pin', () => ({
   publishSfuPin: (...a: unknown[]) => mockPublishSfuPin(...a),
 }));
 
-vi.mock('@/hooks/useNostrUserSearch', () => ({
+vi.mock('@/hooks/identity/useNostrUserSearch', () => ({
   useNostrUserSearch: (...a: unknown[]) => mockUserSearch(...a),
 }));
 
-vi.mock('@/services/relay-info', () => ({
+vi.mock('@/services/relay/relay-info', () => ({
   faviconFor: (url: string) => `https://favicon/${url}`,
   fetchRelayInfo: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('@/services/relay-branding', () => ({
+vi.mock('@/services/relay/relay-branding', () => ({
   publishBranding: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@/hooks/relay/useRelayBranding', () => ({
   useRelayBranding: () => ({}),
 }));
 
-vi.mock('@/services/relay-emojis', () => ({
+vi.mock('@/services/relay/relay-emojis', () => ({
   relayEmojiMap: () => ({}),
   publishRelayEmojiSet: vi.fn().mockResolvedValue(undefined),
 }));
@@ -61,7 +61,7 @@ vi.mock('@/hooks/relay/useRelayEmojiSet', () => ({
   useRelayEmojiSet: () => ({ title: '', emojis: [], updatedAt: 0 }),
 }));
 
-vi.mock('@/services/channel-layout', () => ({
+vi.mock('@/services/relay/channel-layout', () => ({
   applyLayout: () => ({ categories: [], uncategorized: [] }),
   publishLayout: vi.fn().mockResolvedValue(undefined),
   newCategoryId: () => 'cat-test',
@@ -73,7 +73,7 @@ vi.mock('@/hooks/relay/useRelayOperatorPubkey', () => ({
   useRelayOperatorPubkey: () => null,
 }));
 
-vi.mock('@/components/media/BlossomImageInput', () => ({
+vi.mock('@/components/media/upload/BlossomImageInput', () => ({
   default: ({ label }: { label: string }) => <div data-testid={`blossom-${label.toLowerCase()}`}>{label}</div>,
   ChannelAppearanceInput: () => <div data-testid="channel-appearance-preview" />,
 }));
@@ -84,17 +84,17 @@ vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({
   ),
 }));
 
-vi.mock('@/components/admin/RelayEmojiAdminModal', () => ({
+vi.mock('@/components/admin/relay-emoji/RelayEmojiAdminModal', () => ({
   default: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="relay-emoji-admin-stub" onClick={onClose}>emoji panel</div>
   ),
 }));
 
-import { ComposeDmScreen } from '@/app/[locale]/app/mobile/screens/ComposeDmScreen';
-import { DmsListScreen } from '@/app/[locale]/app/mobile/screens/DmsListScreen';
-import { ChannelSettingsSheet } from '@/app/[locale]/app/mobile/sheets/ChannelSettingsSheet';
-import { CreateChannelSheet } from '@/app/[locale]/app/mobile/sheets/CreateChannelSheet';
-import { RelayMenuSheet } from '@/app/[locale]/app/mobile/sheets/RelayMenuSheet';
+import { ComposeDmScreen } from '@/app/[locale]/app/mobile/screens/dm/ComposeDmScreen';
+import { DmsListScreen } from '@/app/[locale]/app/mobile/screens/dm/DmsListScreen';
+import { ChannelSettingsSheet } from '@/app/[locale]/app/mobile/sheets/channel/ChannelSettingsSheet';
+import { CreateChannelSheet } from '@/app/[locale]/app/mobile/sheets/channel/CreateChannelSheet';
+import { RelayMenuSheet } from '@/app/[locale]/app/mobile/sheets/relay/RelayMenuSheet';
 /** Every screen in the shell reads copy from the dictionary now. */
 const renderLocalized = (ui: React.ReactElement) => render(
   <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,

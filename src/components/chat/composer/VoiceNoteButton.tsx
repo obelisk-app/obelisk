@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { TrashIcon } from './composer-icons';
 import { formatElapsed } from '@/utils/format/format-elapsed';
 import { useVoiceRecorder } from '@/hooks/chat/composer/useVoiceRecorder';
-import IconButton from '@/components/ui/IconButton';
+import IconButton from '@/components/ui/buttons/IconButton';
 
 export function VoiceNoteButton({
   disabled,

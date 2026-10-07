@@ -1,7 +1,7 @@
 'use client';
 
 import { SearchIcon } from './SearchIcon';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 import type { Translate } from '@/i18n/keys';
 
 /** The dropdown before anything is typed: the grammar as rows, then recent queries. */

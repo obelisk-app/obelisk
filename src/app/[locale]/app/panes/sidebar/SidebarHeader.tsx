@@ -1,11 +1,11 @@
 'use client';
 
-import type { RelayBranding } from '@/services/relay-branding';
+import type { RelayBranding } from '@/services/relay/relay-branding';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
-import RemoteImage from '@/components/ui/RemoteImage';
-import { connectionLabel } from '@/utils/shell/relay-status';
+import Button from '@/components/ui/buttons/Button';
+import RemoteImage from '@/components/ui/media/RemoteImage';
+import { connectionLabel } from '@/utils/relay/relay-status';
 
 type Props = {
   relay: string;

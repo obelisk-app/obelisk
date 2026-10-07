@@ -3,8 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { LOCALES } from '@/i18n';
 import IntlScope from '@/i18n/IntlScope';
 import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
-import GuideArticlePage from '@/components/guides/GuideArticlePage';
-import { listSlugs, readGuideOrNull } from '@/services/guides';
+import GuideArticlePage from '@/components/guides/article/GuideArticlePage';
+import { listSlugs, readGuideOrNull } from '@/services/guides/guides';
 import { guideMetadata } from '@/utils/seo/guide';
 
 type Params = LocaleParams<{ slug: string }>;

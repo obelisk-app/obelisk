@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { proxy } from '@/proxy';
 import { LOCALE_COOKIE } from '@/i18n';
-import { buildCsp } from '@/utils/csp';
+import { buildCsp } from '@/utils/security/csp';
 import nextConfig from '../next.config';
 
 describe('CSP', () => {

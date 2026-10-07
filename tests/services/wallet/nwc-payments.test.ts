@@ -21,9 +21,9 @@ import { connectNwcWallet, disconnectNwcWallet, ensureNwcWalletLoaded } from '@/
 import { connectWallet, walletKindFor } from '@/services/wallet/wallet';
 import { payInvoice, InvoicePayError } from '@/services/wallet/pay-invoice';
 import { checkZap, sendZap } from '@/services/wallet/send-zap';
-import { useInvoicePaymentsStore } from '@/store/invoice-payments';
+import { useInvoicePaymentsStore } from '@/store/wallet/invoice-payments';
 import { errorText } from '@/utils/errors/error-text';
-import type { ParsedInvoice } from '@/utils/bolt11';
+import type { ParsedInvoice } from '@/utils/wallet/bolt11';
 import { translator } from '@tests/support/intl';
 import { FakeNwcWallet } from '@tests/support/fake-nwc-wallet';
 

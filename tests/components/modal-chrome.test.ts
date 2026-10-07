@@ -29,15 +29,15 @@ const GUARDED = ['src/components', 'src/app'];
  * Modules whose default export opens a dialog. The login steps' `Modal` from
  * `@nostr-wot/ui` is the SDK widget's own design, not one of these.
  */
-const DIALOG_MODULE = /(?:\/ui\/Modal|\/ui\/Sheet|MediaLibraryShell)$/;
+const DIALOG_MODULE = /(?:\/ui\/overlays\/Modal|\/ui\/overlays\/Sheet|MediaLibraryShell)$/;
 /** The shared pieces themselves, and the frames they sit in. */
 const SHARED = new Set([
-  'src/components/ui/Modal.tsx',
-  'src/components/ui/Sheet.tsx',
-  'src/components/ui/ModalHeader.tsx',
-  'src/components/ui/ModalFooter.tsx',
-  'src/app/[locale]/app/mobile/sheets/SheetHeader.tsx',
-  'src/app/[locale]/app/mobile/sheets/SheetActions.tsx',
+  'src/components/ui/overlays/Modal.tsx',
+  'src/components/ui/overlays/Sheet.tsx',
+  'src/components/ui/overlays/ModalHeader.tsx',
+  'src/components/ui/overlays/ModalFooter.tsx',
+  'src/app/[locale]/app/mobile/sheets/chrome/SheetHeader.tsx',
+  'src/app/[locale]/app/mobile/sheets/chrome/SheetActions.tsx',
   'src/components/media/library/MediaLibraryShell.tsx',
 ]);
 const BANNED_TAGS = new Set(['h1', 'h2', 'header', 'footer', 'CloseButton']);
@@ -48,7 +48,7 @@ const BANNED_CLASS = /\b(zap-title|confirm-sheet-(?:title|desc|icon)|sheet-ident
  * fails until it is removed.
  */
 const HEADERLESS: Readonly<Record<string, string>> = {
-  'src/app/[locale]/app/lazy-mounts.tsx':
+  'src/app/[locale]/app/mounts/lazy-mounts.tsx':
     'the loading placeholder shown for a split second while a game dialog downloads; the real dialog brings its header',
 };
 
@@ -141,7 +141,7 @@ describe('modal and sheet chrome', () => {
 
 describe('the chrome rule', () => {
   it('bites on a hand-built header, close button, footer and sheet title', () => {
-    const src = `import Modal from '@/components/ui/Modal';
+    const src = `import Modal from '@/components/ui/overlays/Modal';
     export default function X() {
       return <Modal onClose={f}>
         <header><h2>Title</h2><CloseButton onClick={f} /></header>
@@ -152,12 +152,12 @@ describe('the chrome rule', () => {
     expect(r.dialog).toBe(true);
     expect(r.hasHeader).toBe(false);
     expect(r.handBuilt.map((s) => s.split(' ')[0])).toEqual(['<header>', '<h2>', '<CloseButton>', '<footer>']);
-    const sheet = chromeOf("import Sheet from '@/components/ui/Sheet';\nconst s = <Sheet><div className=\"zap-title\">T</div></Sheet>;");
+    const sheet = chromeOf("import Sheet from '@/components/ui/overlays/Sheet';\nconst s = <Sheet><div className=\"zap-title\">T</div></Sheet>;");
     expect(sheet.handBuilt).toEqual(['.zap-title line 2']);
   });
 
   it('passes a dialog on the shared pieces, with h3 sections in its body', () => {
-    const src = `import Modal from '@/components/ui/Modal';
+    const src = `import Modal from '@/components/ui/overlays/Modal';
     const m = <Modal onClose={f}>
       <ModalHeader title="t" onClose={f} />
       <section><h3>Part</h3></section>

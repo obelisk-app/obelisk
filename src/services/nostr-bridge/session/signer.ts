@@ -7,11 +7,11 @@
  */
 import { CodedError, type ActivityCode } from '@/utils/errors/codes';
 import { finalizeEvent, type Event as NostrEvent, type EventTemplate, type VerifiedEvent } from 'nostr-tools';
-import { trackActivity } from '@/services/activity-log';
-import type { BridgeContext } from '../context';
-import { hexToBytes } from '../hex';
-import { eventKindDescription } from '../kind-description';
-import { enqueueSignerOp } from '../signer-queue';
+import { trackActivity } from '@/services/feedback/activity-log';
+import type { BridgeContext } from '../facade/context';
+import { hexToBytes } from '../common/hex';
+import { eventKindDescription } from '../common/kind-description';
+import { enqueueSignerOp } from './signer-queue';
 import { BUNKER_AUTH_SIGNATURE_TIMEOUT_MS, type BunkerModule } from './bunker';
 
 export type SessionSignerContext = Pick<BridgeContext, 'session'>;

@@ -3,7 +3,7 @@
  * connection's own identity.
  *
  * The wallet relay sees the NWC client key (it signs every request), never
- * the user's. So, like a DM call (`src/services/dm-call/call-pool.ts`), the
+ * the user's. So, like a DM call (`src/services/call/call-pool.ts`), the
  * connection runs as its own hub identity, `nwc:<client pubkey>`:
  *  - its REQs and EVENTs never share a socket with the session identity,
  *    even when the wallet relay is one the user also browses;

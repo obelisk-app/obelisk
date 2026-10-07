@@ -7,7 +7,7 @@
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { quotaSafeLocalStorage } from '@/services/quota-safe-storage';
+import { quotaSafeLocalStorage } from '@/services/common/quota-safe-storage';
 import { wotEngine } from './engine';
 import { wotProbe, type WotStatus } from './extension';
 

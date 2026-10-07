@@ -1,6 +1,6 @@
 'use client';
 
-import Input from '@/components/ui/Input';
+import Input from '@/components/ui/forms/Input';
 
 /** The search field both pickers share: an icon and a bare input in one bordered pill. */
 export function MediaPickerSearch({

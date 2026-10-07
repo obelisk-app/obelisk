@@ -1,11 +1,11 @@
 'use client';
 
 import type { JsMediaItem, JsMediaPack } from '@/services/nostr-bridge';
-import MediaThumb from '@/components/media/MediaThumb';
-import Button from '@/components/ui/Button';
-import Card from '@/components/ui/Card';
-import Chip from '@/components/ui/Chip';
-import Text from '@/components/ui/Text';
+import MediaThumb from '@/components/media/library/MediaThumb';
+import Button from '@/components/ui/buttons/Button';
+import Card from '@/components/ui/layout/Card';
+import Chip from '@/components/ui/data/Chip';
+import Text from '@/components/ui/layout/Text';
 import { useTranslations } from 'next-intl';
 
 /** One pack in the library grid: a strip of its first items and its actions. */

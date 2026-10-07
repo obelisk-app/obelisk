@@ -19,7 +19,7 @@ import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { generateSecretKey, getPublicKey, finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { derivePqKeys, buildAttestationTags, isPqEnvelope, PQC_KIND, type PqKeys } from '@nostr-wot/pq';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 const fake = vi.hoisted(() => {
   const state = {
@@ -77,7 +77,7 @@ vi.mock('nostr-tools', async (orig) => {
   return { ...actual, SimplePool: fake.FakePool };
 });
 
-// `src/services/pq/attestations.ts` deliberately goes through `@nostr-wot/data`'s
+// `src/services/chat/pq/attestations.ts` deliberately goes through `@nostr-wot/data`'s
 // shared pool rather than the bridge's private SimplePool, so point that pool
 // at the same fake relay the bridge publishes to.
 vi.mock('@nostr-wot/data', async (orig) => {
@@ -234,14 +234,14 @@ beforeEach(async () => {
   vi.resetModules();
   delete (window as unknown as { nostr?: unknown }).nostr;
   window.localStorage.clear();
-  const { clearAttestationCache } = await import('@/services/pq/attestations');
+  const { clearAttestationCache } = await import('@/services/chat/pq/attestations');
   clearAttestationCache();
 });
 
 afterEach(async () => {
-  const { getBridgeImpl } = await import('@/services/nostr-bridge/client');
+  const { getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
   getBridgeImpl()?.dispose();
-  const { setPreference } = await import('@/services/preferences');
+  const { setPreference } = await import('@/services/preferences/preferences');
   setPreference('postQuantumEnabled', false);
   setPreference('directMessagesEnabled', false);
   delete (window as unknown as { nostr?: unknown }).nostr;
@@ -251,8 +251,8 @@ afterEach(async () => {
 
 describe('post-quantum DM sending', () => {
   it('seals with a post-quantum envelope when the conversation qualifies', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { unwrapGiftWrap } = await import('@nostr-wot/dm');
 
@@ -287,8 +287,8 @@ describe('post-quantum DM sending', () => {
   });
 
   it('records pq: true on the sender\'s own copy of a post-quantum message', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
 
     const alice = makeKeypair();
     const bob = makeKeypair();
@@ -316,8 +316,8 @@ describe('post-quantum DM sending', () => {
   });
 
   it('sends classic NIP-17 when the peer publishes no attestation, and never blocks', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
 
     const alice = makeKeypair();
     const bob = makeKeypair();
@@ -347,8 +347,8 @@ describe('post-quantum DM sending', () => {
   });
 
   it('sends classic when the preference is off, even with keys on both sides', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
 
     const alice = makeKeypair();
     const bob = makeKeypair();
@@ -369,8 +369,8 @@ describe('post-quantum DM sending', () => {
   });
 
   it('sends classic when the extension publishes no capability marker', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
 
     const alice = makeKeypair();
     const bob = makeKeypair();
@@ -394,8 +394,8 @@ describe('post-quantum DM sending', () => {
   });
 
   it('falls back to classic, still publishing, when the signer refuses post-quantum', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
 
     const alice = makeKeypair();
     const bob = makeKeypair();
@@ -443,8 +443,8 @@ describe('post-quantum DM sending', () => {
  */
 describe('post-quantum DM self-copy', () => {
   it('encapsulates the self-copy to our own KEM key, so we can still read it', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { unwrapGiftWrap } = await import('@nostr-wot/dm');
 
@@ -491,8 +491,8 @@ describe('post-quantum DM self-copy', () => {
     // Sealing our own copy post-quantum while the message actually travelled
     // classic would make it read as protected after a reload, when it never
     // was. Understating is the only safe direction here.
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
 
     const alice = makeKeypair();
     const bob = makeKeypair();
@@ -516,8 +516,8 @@ describe('post-quantum DM self-copy', () => {
 
   it('still reports pq: true after the self-copy is ingested', async () => {
     // The mark a user sees must be the same before and after a reload.
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
 
     const alice = makeKeypair();
     const bob = makeKeypair();
@@ -549,8 +549,8 @@ describe('post-quantum DM self-copy', () => {
 
 describe('post-quantum DM receiving', () => {
   it('stamps pq: true on an inbound post-quantum gift wrap', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
     const { toBase64 } = await import('@nostr-wot/pq');
@@ -583,8 +583,8 @@ describe('post-quantum DM receiving', () => {
   });
 
   it('stamps pq: false on an inbound classic gift wrap in the same thread', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { PrivateKeySigner } = await import('@nostr-wot/signers');
     const { buildChatMessage, sealAndGiftWrap } = await import('@nostr-wot/dm');
     const { toBase64 } = await import('@nostr-wot/pq');

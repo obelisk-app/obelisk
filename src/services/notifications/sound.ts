@@ -24,7 +24,7 @@
  * one chime, not five (see {@link SOUND_MIN_GAP_MS}).
  */
 
-import { getPreferences } from '@/services/preferences';
+import { getPreferences } from '@/services/preferences/preferences';
 import {
   DEFAULT_RINGTONE,
   RING_PERIOD_MS,

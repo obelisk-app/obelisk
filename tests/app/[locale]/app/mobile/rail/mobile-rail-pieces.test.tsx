@@ -10,7 +10,7 @@ import type { ReactElement } from 'react';
 import { LocaleProvider } from '@tests/support/intl';
 
 const relayInfo = vi.hoisted(() => ({ fetch: vi.fn() }));
-vi.mock('@/services/relay-info', () => ({
+vi.mock('@/services/relay/relay-info', () => ({
   faviconFor: (url: string) => `https://favicon/${url}`,
   fetchRelayInfo: (url: string) => relayInfo.fetch(url),
 }));
@@ -31,7 +31,7 @@ vi.mock('@/hooks/notifications/useNotificationSelectors', () => ({
 // The pill probes social relays on mount; this file only checks what the
 // banner hands it.
 const pill = vi.hoisted(() => ({ props: null as null | Record<string, unknown> }));
-vi.mock('@/components/social/RelayStatusPill', () => ({
+vi.mock('@/components/relay/RelayStatusPill', () => ({
   default: (props: Record<string, unknown> & { onOpenSettings: () => void }) => {
     pill.props = props;
     return <button data-testid="pill-stub" onClick={props.onOpenSettings} />;
@@ -41,10 +41,10 @@ vi.mock('@/components/feedback/MobileSigningIndicator', () => ({
   default: () => <span data-testid="signing-stub" />,
 }));
 
-import { MobileServerRail } from '@/app/[locale]/app/mobile/MobileServerRail';
+import { MobileServerRail } from '@/app/[locale]/app/mobile/rail/MobileServerRail';
 import { MobileServerBanner } from '@/app/[locale]/app/mobile/rail/MobileServerBanner';
 import { RelayTile } from '@/app/[locale]/app/mobile/rail/RelayTile';
-import { OPEN_SETTINGS_EVENT } from '@/utils/open-settings';
+import { OPEN_SETTINGS_EVENT } from '@/utils/settings/open-settings';
 
 const renderLocalized = (ui: ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
 const flush = () => act(async () => { await Promise.resolve(); });

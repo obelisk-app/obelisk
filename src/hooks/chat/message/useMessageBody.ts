@@ -3,11 +3,11 @@
 import { useMemo } from 'react';
 import { preprocessForMarkdown } from '@/utils/message-text/markdown';
 import { replaceShortcodes } from '@/utils/message-text/emoji-shortcodes';
-import { extractGameMarkers } from '@/lib/games/protocol';
+import { extractGameMarkers } from '@/lib/games/protocol/protocol';
 import type { MemberInfo } from '@/utils/message-text/mentions';
 import type { JsMemberInfo } from '@/services/nostr-bridge';
-import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
-import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
+import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
+import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import { findInvoices, findWelcomeBanner, hoistUrls, stripHoisted } from '@/utils/message-text/hoist';
 
 /**

@@ -29,7 +29,7 @@ vi.mock('nostr-tools', async (orig) => {
 });
 
 // Import bridge AFTER the mock is registered.
-import { isImportableRelayUrl } from '@/services/nostr-bridge/client';
+import { isImportableRelayUrl } from '@/services/nostr-bridge/facade/client';
 
 installBridgeHarness(fake);
 
@@ -44,7 +44,7 @@ describe('nostr-bridge', () => {
 
 
   it('logs in with nsec and exposes the public key', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -53,20 +53,20 @@ describe('nostr-bridge', () => {
 
 
   it('NIP-04 DM round-trip: alice → bob, decrypts on bob side', async () => {
-    const { getBridge: getBridgeAlice } = await import('@/services/nostr-bridge/client');
+    const { getBridge: getBridgeAlice } = await import('@/services/nostr-bridge/facade/client');
     const alice = makeKeypair();
     const bob = makeKeypair();
 
     const bridgeA = await getBridgeAlice();
     await bridgeA.loginWithNsec(alice.skHex, alice.pkHex);
-    const { setPreference } = await import('@/services/preferences');
+    const { setPreference } = await import('@/services/preferences/preferences');
     setPreference('directMessagesEnabled', true);
     bridgeA.subscribeDirectMessages(() => {});
 
     // NIP-17 is the default protocol now; this thread explicitly opts into
     // NIP-04 via the per-thread override to verify the legacy path still
     // behaves exactly as before the SDK adoption.
-    const { useDMStore } = await import('@/store/dm');
+    const { useDMStore } = await import('@/store/chat/dm');
     useDMStore.getState().setProtocolOverride(bob.pkHex, 'nip04');
 
     await bridgeA.sendDirectMessage(bob.pkHex, 'meet me at the obelisk');
@@ -87,7 +87,7 @@ describe('nostr-bridge', () => {
 
 
   it('drops plaintext and late decrypts when the active identity changes', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const alice = makeKeypair();
     const bob = makeKeypair();
     const peer = makeKeypair();
@@ -103,7 +103,7 @@ describe('nostr-bridge', () => {
         createdAt: 1,
       }],
     });
-    const { useDMStore } = await import("@/store/dm");
+    const { useDMStore } = await import("@/store/chat/dm");
     useDMStore.setState({
       isDMMode: true,
       activeDMPubkey: peer.pkHex,
@@ -148,8 +148,8 @@ describe('nostr-bridge', () => {
 
 
   it('does not open DM relay subscriptions until local DM opt-in is enabled', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
-    const { setPreference } = await import('@/services/preferences');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { setPreference } = await import('@/services/preferences/preferences');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -174,7 +174,7 @@ describe('nostr-bridge', () => {
 
 
   it('does not run connect fan-out or flip login before a delayed relay handshake completes', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
 
@@ -215,7 +215,7 @@ describe('nostr-bridge', () => {
 
 
   it('gives a resumed mobile PWA enough time to open its relay WebSocket', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     let connectionTimeout = 0;
     fake.state.ensureRelayImpl = (_url, options) => {
@@ -230,7 +230,7 @@ describe('nostr-bridge', () => {
 
 
   it("enables native ping on every bridge pool", async () => {
-    const { getBridge } = await import("@/services/nostr-bridge/client");
+    const { getBridge } = await import("@/services/nostr-bridge/facade/client");
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -243,8 +243,8 @@ describe('nostr-bridge', () => {
 
 
   it("closes the previous active relay socket once the switch grace window lapses", async () => {
-    const { getBridge } = await import("@/services/nostr-bridge/client");
-    const { setPreference } = await import("@/services/preferences");
+    const { getBridge } = await import("@/services/nostr-bridge/facade/client");
+    const { setPreference } = await import("@/services/preferences/preferences");
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -281,7 +281,7 @@ describe('nostr-bridge', () => {
 
 
   it("keeps mounted channel subscriptions alive across relay switches", async () => {
-    const { getBridge } = await import("@/services/nostr-bridge/client");
+    const { getBridge } = await import("@/services/nostr-bridge/facade/client");
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -307,7 +307,7 @@ describe('nostr-bridge', () => {
 
 
   it("announces a relay switch immediately but defers mounted REQs until the handshake", async () => {
-    const { getBridge } = await import("@/services/nostr-bridge/client");
+    const { getBridge } = await import("@/services/nostr-bridge/facade/client");
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -343,7 +343,7 @@ describe('nostr-bridge', () => {
 
 
   it("pauses while offline and reconnects immediately when the browser returns online", async () => {
-    const { getBridge, getBridgeImpl } = await import("@/services/nostr-bridge/client");
+    const { getBridge, getBridgeImpl } = await import("@/services/nostr-bridge/facade/client");
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -373,7 +373,7 @@ describe('nostr-bridge', () => {
 
 
   it("wakes a disconnected connection when its tab becomes visible", async () => {
-    const { getBridge, getBridgeImpl } = await import("@/services/nostr-bridge/client");
+    const { getBridge, getBridgeImpl } = await import("@/services/nostr-bridge/facade/client");
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -421,7 +421,7 @@ describe('nostr-bridge', () => {
       });
     };
 
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     await getBridge();
     await flush();
 
@@ -457,7 +457,7 @@ describe('nostr-bridge', () => {
   it('waits for switchRelay handshake failure instead of resolving on the old hard ceiling', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {
-      const { getBridge } = await import('@/services/nostr-bridge/client');
+      const { getBridge } = await import('@/services/nostr-bridge/facade/client');
       const { skHex, pkHex } = makeKeypair();
       const bridge = await getBridge();
       await bridge.loginWithNsec(skHex, pkHex);
@@ -505,7 +505,7 @@ describe('nostr-bridge', () => {
     // The rail UX has only one active relay at a time (the green pill), so
     // `addRelay` should only register in `configuredRelays`: `switchRelay`
     // is the single path that activates a relay.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -529,7 +529,7 @@ describe('nostr-bridge', () => {
 
 
   it('addRelay persists a custom relay without preflight handshaking it', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -546,7 +546,7 @@ describe('nostr-bridge', () => {
 
 
   it('addRelay deduplicates equivalent relay URLs with and without a trailing slash', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -564,7 +564,7 @@ describe('nostr-bridge', () => {
   it('migrates a persisted retired relay to La Crypta', async () => {
     window.localStorage.setItem('obelisk-dex/relays', JSON.stringify(['wss://relay.obelisk.ar', 'wss://public.obelisk.ar']));
 
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     await getBridge();
 
     const impl = getBridgeImpl()!;
@@ -606,7 +606,7 @@ describe('searchMessages', () => {
   }
 
   it('sends only the most selective term to the relay and ANDs the rest locally', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -625,7 +625,7 @@ describe('searchMessages', () => {
   });
 
   it('omits search entirely when the relay has no NIP-50, still filtering locally', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -643,7 +643,7 @@ describe('searchMessages', () => {
   });
 
   it('over-fetches before applying has:, instead of filtering an already-trimmed page', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -662,7 +662,7 @@ describe('searchMessages', () => {
   });
 
   it('trims to limit and flags the result as partial', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -678,7 +678,7 @@ describe('searchMessages', () => {
   });
 
   it('matches a quoted phrase only when contiguous', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);

@@ -1,13 +1,13 @@
 /**
  * Tests for the Nostr-relay transport layer of voice channels.
  *
- * The bridge (`@/services/nostr-bridge/client`) is mocked with a thin in-memory
+ * The bridge (`@/services/nostr-bridge/facade/client`) is mocked with a thin in-memory
  * implementation that captures `publishEvent` calls and replays them to
  * matching subscribers. This lets us drive presence + signal flows without
  * spinning up a real relay.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/utils/nip-kinds';
+import { KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL } from '@/utils/nostr/nip-kinds';
 
 interface FakeEvent {
   pubkey: string;
@@ -97,7 +97,7 @@ const bridgeFake = vi.hoisted(() => {
   };
 });
 
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: vi.fn(async () => bridgeFake.impl),
   getBridgeImpl: vi.fn(() => bridgeFake.impl),
 }));

@@ -6,7 +6,7 @@
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { getBridgeImpl, hasSeenWrap, markWrapSeen, cacheGet, cacheSet } from '@/services/nostr-bridge';
 import { unwrapForSelf } from '@/lib/nip-59';
-import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/utils/nip-kinds';
+import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/utils/nostr/nip-kinds';
 import {
   READ_STATE_WATCHDOG_MS,
   cacheKindFor,

@@ -105,7 +105,7 @@ describe('eslint.config.mjs', () => {
     expect(globToRegExp('**/*.test.ts').test('tests/a/b.test.ts')).toBe(true);
     expect(globToRegExp('**/*.test.ts').test('a.test.ts')).toBe(true);
     expect(globToRegExp('**/*.test.ts').test('tests/a/b.test.tsx')).toBe(false);
-    expect(globToRegExp('src/services/relay-roles.ts').test('src/services/relay-roles-sync.ts')).toBe(false);
+    expect(globToRegExp('src/services/relay/relay-roles.ts').test('src/services/relay/relay-roles-sync.ts')).toBe(false);
     expect(globToRegExp('src/lib/*').test('src/lib/a/b.ts')).toBe(false);
     expect(() => globToRegExp('src/{a,b}/**')).toThrow();
   });
@@ -114,7 +114,7 @@ describe('eslint.config.mjs', () => {
     const eslint = new ESLint({ cwd: ROOT });
 
     it('is an error everywhere in src/', async () => {
-      const config = await eslint.calculateConfigForFile(join(ROOT, 'src/utils/nip-kinds.ts'));
+      const config = await eslint.calculateConfigForFile(join(ROOT, 'src/utils/nostr/nip-kinds.ts'));
       expect(config.rules?.['max-lines']).toEqual([2, { max: 300, skipBlankLines: true, skipComments: true }]);
     });
 

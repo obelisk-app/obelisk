@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 import { networkInterfaces } from "os";
 import createNextIntlPlugin from "next-intl/plugin";
-import { buildCsp } from "./src/utils/csp";
+import { buildCsp } from "./src/utils/security/csp";
 
 // next-intl's request config: the URL's locale and its message modules.
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
@@ -38,7 +38,7 @@ const localIPs = Object.values(networkInterfaces())
 // makes it a strict superset: wherever both headers reach a browser the
 // intersection is exactly the proxy policy, and alone it still pins script
 // and frame hosts, blocks plugins, framing, base-uri and form-action. See
-// src/utils/csp.ts for the reasoning and tests/utils/csp.test.ts for the pin.
+// src/utils/security/csp.ts for the reasoning and tests/utils/security/csp.test.ts for the pin.
 const STATIC_CSP_FLOOR = buildCsp({
   nonce: null,
   isDev: process.env.NODE_ENV !== 'production',

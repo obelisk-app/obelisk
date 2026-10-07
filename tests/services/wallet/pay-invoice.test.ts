@@ -5,9 +5,9 @@ import {
   isInvoiceExpired,
   payInvoice,
 } from '@/services/wallet/pay-invoice';
-import { useInvoicePaymentsStore } from '@/store/invoice-payments';
-import { resetAllClientState } from '@/services/reset';
-import type { ParsedInvoice } from '@/utils/bolt11';
+import { useInvoicePaymentsStore } from '@/store/wallet/invoice-payments';
+import { resetAllClientState } from '@/services/common/reset';
+import type { ParsedInvoice } from '@/utils/wallet/bolt11';
 
 // A fake WebLN provider only: nothing here can reach a real wallet or network.
 const NOW_MS = Date.UTC(2026, 9, 6, 12, 0, 0);

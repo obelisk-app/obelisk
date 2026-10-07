@@ -194,7 +194,7 @@ directly instead of going through `setRelayAccessDeferred` (the default 4s
 soak that absorbs transient AUTH races for the rest of the fan-out).
 
 **How a refusal is told apart from an AUTH problem** (`classifyAccessClose`
-in `src/services/nostr-bridge/relay-rejection.ts`). Every watched sub passes `onauth`, and nostr-tools
+in `src/services/nostr-bridge/publish/relay-rejection.ts`). Every watched sub passes `onauth`, and nostr-tools
 (`abstract-pool.js` `subscribeMap`) handles a CLOSED whose reason starts
 with `auth-required: ` itself: it swallows the CLOSED, runs NIP-42 AUTH, and
 resubscribes. What the bridge then sees is one of:
@@ -299,7 +299,7 @@ fires for the new relay automatically.
 `relay.onclose` flips the state to `'Disconnected'` (or keeps `'Offline'`) and kicks
 `reconnectInBackground()` with capped, jittered exponential backoff. Native relay pings detect half-open sockets; browser `online` and visible-tab events wake a pending retry immediately, while `offline` pauses retry traffic.
 
-UI surface: `src/app/[locale]/app/RelayStatusBanner.tsx` (desktop, inside
+UI surface: `src/components/feedback/RelayStatusBanner.tsx` (desktop, inside
 `ActivityIndicator`) folds connection state and relay access into one
 line. Connection problems win, then access: `authenticating` (yellow
 spinner), `auth-required` (yellow "Not authenticated"), `restricted` (red
@@ -366,7 +366,7 @@ this one" CLOSED doesn't flip the relay-wide banner.
 
 ## 9. bridgeCache (stale-while-revalidate)
 
-`src/services/nostr-bridge/cache.ts` is a small `localStorage`-backed cache. Startup indexes all required kinds in one storage scan and batches StateStore hydration by data type.
+`src/services/nostr-bridge/cache/cache.ts` is a small `localStorage`-backed cache. Startup indexes all required kinds in one storage scan and batches StateStore hydration by data type.
 Keyed by `obelisk-cache-v4/<relay>/<kind>/<id>` (`cache-keys.ts`) with a `{ v, t }` payload; older prefixes are evicted on load.
 No TTL: relays are the source of truth and `created_at`-newest-wins
 replaces entries through `cacheSet`.
@@ -472,7 +472,7 @@ would then, for instance, publish empty read cursors from their `pagehide`
 flush.
 
 The error panel's **Clear cache** (`clearAllClientCacheExceptSession()`,
-`src/services/cache-clear.ts`) removes the categories the relays can rebuild
+`src/services/local-data/cache-clear.ts`) removes the categories the relays can rebuild
 (`CACHE_CATEGORIES`: channels, profiles, readState, dms) and reloads; it
 keeps the login, preferences and the device-only `personal` data.
 
@@ -516,8 +516,8 @@ For each login method, clear localStorage then:
 
 | File | Covers |
 |---|---|
-| `tests/services/nostr-bridge/cache.test.ts` | round-trip, isolation by relay/kind, prefix-wipe deletion, JSON corruption resilience, kind 0 shape |
-| `tests/services/cache-clear.test.ts` | the error panel's wipe: cache categories gone, login, preferences and device-only data kept, idempotent |
+| `tests/services/nostr-bridge/cache/cache.test.ts` | round-trip, isolation by relay/kind, prefix-wipe deletion, JSON corruption resilience, kind 0 shape |
+| `tests/services/local-data/cache-clear.test.ts` | the error panel's wipe: cache categories gone, login, preferences and device-only data kept, idempotent |
 | `tests/services/local-data/*.test.ts` | the inventory guard, one owner per key, each category removes exactly its keys, remove everything, the write fence |
 | `tests/services/nostr-bridge/session/connection.test.ts` (`session/fanout`) | P0 opens at once, P2 on the next microtask, then the per-group REQs, active channel first |
 | `tests/services/nostr-bridge/preflight.test.ts` | preflight REQ fires, CLOSED restricted/auth-required flips access within ~50ms, EOSE flips to 'ok', no retry on maxAttempts=1 |

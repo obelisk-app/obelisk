@@ -12,9 +12,9 @@
  */
 import { getValidPositions, type GameState as VestaState } from 'vesta';
 import { isRobberPending } from '@/lib/games/vesta/definition';
-import type { GameSession } from '@/lib/games/session';
-import type { SeatSpec } from '@/lib/games/protocol';
-import type { CRState } from '@/lib/games/chain-reaction';
+import type { GameSession } from '@/lib/games/session/session';
+import type { SeatSpec } from '@/lib/games/protocol/protocol';
+import type { CRState } from '@/lib/games/chain-reaction/chain-reaction';
 import { vertices, edges } from '@/lib/games/vesta/geometry';
 import { createState, encodeBoard, step, type GameState as StackerState } from '@/lib/games/stacker/engine';
 import type { MatchState } from '@/lib/games/stacker/match';

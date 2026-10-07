@@ -9,7 +9,7 @@ This is the one instruction file for every agent in this repo; `CLAUDE.md` only 
 - Next.js 16 (App Router) + TypeScript + Tailwind v4 (La Crypta design system). Pages are client-rendered over the bridge; the server side is small: `src/proxy.ts` (CSP nonce, first-visit locale), server metadata and the public `/notes`, `/p` viewers (`src/services/server/`), and one API route, `src/app/api/link-preview/route.ts` (OpenGraph unfurl, so a link a reader only *views* never reaches a third-party OG service). No database, no session server.
 - `nostr-tools` for events, signing and sockets. The RelayHub (`src/lib/relay-hub/`) owns the app's relay sockets; the exceptions are the NIP-46 `BunkerSigner` (its own connection to the bunker's relays) and the SFU's direct WebSocket RPC (`src/services/voice/sfu-rpc-direct.ts`).
 - `@nostr-wot/*`: `data` and `ui` (WoT-aware profiles, the login widget), `dm` (NIP-17 wire format), `pq` (post-quantum DM scheme), `signers`, `wallet` (NIP-57 zap requests and receipt validation).
-- Zustand stores in `src/store/`: `chat`, `dm`, `dm-call` (with `dm-call-store`, `-policy`, `-runtime`), `voice`, `notifications`, `read-state`, `channel-prefs`, `games`, `hints`, `moderation`, `multi-account`, `toast`, `messageZap`, `invoice-payments`, `nwc-wallet`. Identity is not a store: it lives on the bridge.
+- Zustand stores in `src/store/<module>/` (a module's main store is its `index.ts`): `chat` (with `chat/dm`, `chat/channel-prefs`, `chat/message-zap`), `call/dm-call` (with `dm-call-store`, `-policy`, `-runtime`), `voice`, `notifications`, `read-state`, `games`, `hints`, `moderation`, `feedback/toast`, `wallet/invoice-payments`, `wallet/nwc-wallet`, and the per-account plumbing in `common/` (`multi-account`, `persist-version`). Identity is not a store: it lives on the bridge.
 - Payments (zaps and paying an invoice posted in chat) go through one module, `src/services/wallet/wallet.ts`, which picks the wallet: the account's Nostr Wallet Connect (NIP-47) wallet when one is connected (Settings > Wallet; `nwc-wallet.ts`, protocol in `src/lib/nwc/`), else a WebLN extension, else none. `pay-invoice.ts` and `send-zap.ts` sit beside it and keep their double-pay guards. The NWC link is a spending credential: sealed per account under its own vault key (`nwc-storage.ts`), never in the clear, deleted on disconnect and logout; its relay traffic rides the hub as `nwc:<client pubkey>`. See [docs/bitcoin-zaps-nwc.md](docs/bitcoin-zaps-nwc.md).
 - next-intl for the three languages (see i18n).
 - Vitest + React Testing Library + jsdom; Playwright for the end-to-end specs in `scripts/e2e/`.
@@ -43,28 +43,29 @@ CI (`.github/workflows/ci.yml`) runs: `npm ci`, `check-source-bytes.sh`, `lint`,
 
 ## Where code goes
 
-The owner's folder rules, enforced by the guard tests listed under Testing:
+The owner's folder rules, enforced by the guard tests listed under Testing (detail and the full module map: [docs/conventions.md](docs/conventions.md#where-a-file-goes)):
 
 | Folder | Holds |
 |---|---|
-| `src/lib/` | Mini-packages: no app imports, publishable as they stand (`relay-hub/`, `nwc/`, `games/`, `emoji/`, `crypto/`, `nip-59.ts`, `remark-spoiler.ts`) |
-| `src/utils/<topic>/` | Small stateless helpers by topic (`identity/`, `relay-url/`, `format/`, `message-text/`, `errors/`, `shell/`, ...) |
-| `src/services/` | Business logic and integrations: anything that talks to a relay, the bridge, a store, `fetch`, storage, WebRTC or the clipboard |
-| `src/hooks/<module>/` | The hooks layer: every React hook, mirroring the module it serves (`src/components/chat/gallery/` -> `src/hooks/chat/gallery/`, `src/app/[locale]/app/mobile/` -> `src/hooks/app/mobile/`) |
-| `src/components/`, `src/app/` | Components only (plus Next.js file conventions). No hook definitions, no `.ts` logic modules |
-| `src/store/` | Zustand stores |
+| `src/lib/<package>/` | Mini-packages: no app imports, publishable as they stand, each a folder with an `index.ts` entry (`relay-hub/`, `nwc/`, `games/`, `emoji/`, `crypto/`, `nip-59/`, `remark-spoiler/`) |
+| `src/utils/<module or topic>/` | Small stateless helpers: a feature's in its module folder (`chat/dm/`, `voice/`, `wallet/`), shared ones by topic (`identity/`, `relay-url/`, `format/`, `message-text/`, `errors/`, `nostr/`, ...) |
+| `src/services/<module>/` | Business logic and integrations: anything that talks to a relay, the bridge, a store, `fetch`, storage, WebRTC or the clipboard (`chat/`, `call/`, `relay/`, `media/`, `preferences/`, `common/`, the bridge in `nostr-bridge/`, server code in `server/`) |
+| `src/hooks/<module>/` | The hooks layer: every React hook, mirroring the module it serves (`src/components/chat/gallery/` -> `src/hooks/chat/gallery/`, `src/app/[locale]/app/mobile/` -> `src/hooks/shell/mobile/`; the app frame under `src/app/[locale]/app/` is the `shell` module); generic hooks in `src/hooks/common/` |
+| `src/components/<module>/`, `src/app/` | Components only (plus Next.js file conventions). No hook definitions, no `.ts` logic modules. The ui kit is `src/components/ui/<kind>/`; cross-feature pieces are in `src/components/common/` |
+| `src/store/<module>/` | Zustand stores; a module's main store is its `index.ts` |
 | `src/i18n/` | next-intl config, message modules, the hardcoded-strings scanner |
-| `tests/` | Every test, mirroring `src/` (`src/components/chat/MemberList.tsx` -> `tests/components/chat/MemberList.test.tsx`). `src/` holds no tests |
+| `tests/` | Every test, mirroring `src/` (`src/components/chat/members/MemberList.tsx` -> `tests/components/chat/members/MemberList.test.tsx`). `src/` holds no tests |
 
+- **Nothing loose at a layer root, one name per feature.** In `components`, `hooks`, `services`, `utils`, `store` and `lib` every file sits in a module folder; code used across features goes in `common/` or a named shared topic. A feature keeps one folder name in every layer (`components/chat/dm/thread/DmThreadMenu.tsx`, `hooks/chat/dm/thread/useDmThread.ts`, `services/chat/dm/opt-in.ts`, `utils/chat/dm/pending.ts`, `store/chat/dm.ts`). A folder with sub-folders keeps only its `index` or entry component beside them. Component files are PascalCase (`DmThreadMenu.tsx`, acronyms as words), modules of several pieces kebab-case (`icons.tsx`, `columns.tsx`); hooks are `useX.ts`; everything in `services`, `utils`, `store` and `lib` is kebab-case.
 - **A component file is markup** ([docs/conventions.md](docs/conventions.md#component-files)). One exported component per file, reading its state and handlers from one view-model hook (`src/hooks/<module>/use<Component>.ts`) and its data from bridge and store hooks. Purely visual local state may stay as up to two `useState` / `useRef`; effects, memos, callbacks, reducers, derived data and handlers with logic live in the hook. Pure shaping (build rows, filter, sort, format) goes to `src/utils/<topic>/`; actions with side effects (publish, remove a user, confirm-then-act) to `src/services/<topic>/`. Inline handlers only pass a value on (`onClick={() => vm.kick(row)}`).
 - **Tables and multi-part features.** Column definitions in a `columns.tsx` next to the component, each non-trivial cell its own small component file, toolbar and footer their own components, the whole feature in a folder named after it. The reference is `src/components/admin/relay-admin/`.
 - **More than one component in a file** only for the reasoned list in `scripts/markup-only/multi-component.ts` (icon sets, the MDX component map, the media-kit banner variants, the lazy-boundary modules, the menu primitive's parts).
-- **Dialogs use the shared chrome.** A desktop `<Modal>` renders `ModalHeader` and, when it has actions at its foot, `ModalFooter` (`src/components/ui/`); a phone `<Sheet>` renders `SheetHeader` and `SheetActions` (`src/app/[locale]/app/mobile/sheets/`). No hand-built title row, close button or footer ([docs/conventions.md](docs/conventions.md#modal-and-sheet-chrome)).
+- **Dialogs use the shared chrome.** A desktop `<Modal>` renders `ModalHeader` and, when it has actions at its foot, `ModalFooter` (`src/components/ui/overlays/`); a phone `<Sheet>` renders `SheetHeader` and `SheetActions` (`src/app/[locale]/app/mobile/sheets/chrome/`). No hand-built title row, close button or footer ([docs/conventions.md](docs/conventions.md#modal-and-sheet-chrome)).
 - Before writing a hook or helper, look for one (`useDismiss` for click-outside and Escape, `useAnchoredPosition` for popovers, `shortNpubLabel` for a key shown to a person).
 - A props type used only by its component stays in the component file; a type shared with logic lives beside the logic.
 - Files in `src/` stay at or under 300 lines (blank and comment lines not counted). Split by responsibility; do not raise the limit.
 - No em dash (U+2014) in any file, code, comments or docs. Write `\u2014` when code must handle the character as data.
-- Pages live under `src/app/[locale]/`. The chat surface is `src/app/[locale]/app/`: `AppGate.tsx` picks `DesktopShell.tsx` or `mobile/PhoneShell.tsx` by `useIsMobile()`; `AppProviders.tsx` mounts the bridge provider and the runtime translator.
+- Pages live under `src/app/[locale]/`. The chat surface is `src/app/[locale]/app/`: `AppGate.tsx` picks `desktop/DesktopShell.tsx` or `mobile/PhoneShell.tsx` by `useIsMobile()`; `mounts/AppProviders.tsx` mounts the bridge provider and the runtime translator.
 
 ## The relay layer
 
@@ -76,15 +77,15 @@ The single connection owner for the page. It imports only `nostr-tools` and itse
 - **NIP-42 AUTH once per relay + pubkey.** `AuthLayer` keeps one record per `(relayUrl, pubkey)`, not per challenge, so a reconnect does not mean a new signer prompt. Where AUTH may be answered is decided by leases (`auth-policy.ts`, `auth-leases.ts`).
 - **A shared request registry.** `SubscriptionRegistry` dedupes live REQs by canonical filter (refcounted, never merged), re-issues them in priority order (`voice > active > dm > background`) on the next socket generation, runs the silence watchdog, and interprets CLOSED reasons (`restricted:`, `auth-required:`, quotas).
 - **Bounded caches with eviction.** Every cache is a `BoundedMap` / `BoundedSet` (`bounded-map.ts`: LRU or FIFO, entry and byte caps, TTL). `ProfileCache` is the kind 0 cache. The bridge's own stores that grow with relay traffic are capped too (`tests/services/nostr-bridge/bounded-stores.test.ts`).
-- The page's hub is created by `pageRelayHub()` (`src/services/nostr-bridge/page-hub.ts`, also exported from the front door); the social pool (`src/services/social/pool.ts`) and a connected NWC wallet share it.
+- The page's hub is created by `pageRelayHub()` (`src/services/nostr-bridge/facade/page-hub.ts`, also exported from the front door); the social pool (`src/services/social/pool.ts`) and a connected NWC wallet share it.
 
 ### The bridge (`src/services/nostr-bridge/`)
 
-The bridge owns the session (login, signer, sealed persistence), the relay rail, group / message / member / DM state, and the subscriptions behind them. `client.ts` is the facade (`BridgeImpl`), composed from modules in `compose.ts`; its read half is `facade-reads.ts`, its commands `facade-commands.ts`. Session code is in `session/`, groups in `groups/`, DMs in `dm/`, hooks in `hooks/`.
+The bridge owns the session (login, signer, sealed persistence), the relay rail, group / message / member / DM state, and the subscriptions behind them. `index.ts` is the front door; everything else sits in a sub-folder. `facade/client.ts` is the facade (`BridgeImpl`), composed from modules in `facade/compose.ts`; its read half is `facade/facade-reads.ts`, its commands `facade/facade-commands.ts`. Session code is in `session/`, groups in `groups/` (`membership/`, `metadata/`, `message/`), DMs in `dm/`, profiles in `profile/`, the publish path in `publish/`, the relay rail and background watch in `relay/`, the local caches in `cache/`, the session's lists in `lists/`, voice presence in `voice/`, React bindings in `hooks/`, and the shared primitives (state store, types, tag readers) in `common/`.
 
 - **Front door.** Code outside the folder imports only `@/services/nostr-bridge` (its `index.ts`), never a file inside it. `tests/services/nostr-bridge/front-door.test.ts` enforces this; its allow-list only shrinks.
 - **React gets the bridge from `<BridgeProvider>`**, never from `getBridge()` / `getBridgeImpl()`. Use the hooks for state (`useGroups`, `useMyPubkey`, `useMessages`, ...), `useBridge()` for imperative calls (null until ready, so effects list it in their deps and handlers check it), `useAwaitBridge()` for a callback that may run before the bridge has started, and `nostrActions` for commands. `getBridge()` is for code with no render tree (voice, stores, relay services).
-- A route whose components use the bridge mounts the provider in its own layout or page: `AppProviders` on `/app`, `src/components/BridgeRoute.tsx` on the public viewers. Never in a layout that also wraps the landing or marketing pages, which ship without the bridge. Outside a provider the hooks return their initial value forever.
+- A route whose components use the bridge mounts the provider in its own layout or page: `AppProviders` on `/app`, `src/components/common/BridgeRoute.tsx` on the public viewers. Never in a layout that also wraps the landing or marketing pages, which ship without the bridge. Outside a provider the hooks return their initial value forever.
 - New relay-derived data: a `StateStore` on the bridge, an ingest that keeps the newest `created_at`, a `subscribeX` on the facade, and a `useX` hook (on `useSubscription`) in the matching file under `hooks/`, exported from `index.ts`. Add the store to the test fake too (`tests/services/nostr-bridge/fake-bridge-shape.test.ts` checks it).
 - `bridgeCache` (`cache.ts`, keys `obelisk-cache-v4/{relay}/{kind}/{id}`) is the localStorage stale-while-revalidate cache for small relay-derived state that should paint instantly on reload. DMs and gift wraps are never cached. Contract: [docs/data-system.md](docs/data-system.md).
 
@@ -118,7 +119,7 @@ A new background subscription that is not a DM goes on the active relay, never a
 
 The one sanctioned exception for groups is the **background relay watch** (`background-watch.ts`): the 3 most recently used other relays still in the rail, kind 9 only (`#p:[me]` catch-up and live-from-now), with an AUTH lease only while watched. Toggle: `preferences.backgroundRelayWatch`. Do not grow it into a general cross-relay sync.
 
-Default relays: groups `wss://public.obelisk.ar` (`DEFAULT_RELAY`) and `wss://lacrypta-relay.obelisk.ar` (`relay-list.ts`); profile lookups `DEFAULT_PROFILE_LOOKUP_RELAYS` (`profile-sync-cache.ts`); social `DEFAULT_SOCIAL_RELAYS` (`src/services/social/relays.ts`); calls `DEFAULT_CALL_RELAYS` (`src/services/preferences-schema.ts`). Anywhere a stranger's name or picture is shown, read `useAuthor` (`src/hooks/social/useAuthor.ts`), which merges the bridge's profiles with the social tier's.
+Default relays: groups `wss://public.obelisk.ar` (`DEFAULT_RELAY`) and `wss://lacrypta-relay.obelisk.ar` (`relay-list.ts`); profile lookups `DEFAULT_PROFILE_LOOKUP_RELAYS` (`profile-sync-cache.ts`); social `DEFAULT_SOCIAL_RELAYS` (`src/services/social/relays.ts`); calls `DEFAULT_CALL_RELAYS` (`src/services/preferences/preferences-schema.ts`). Anywhere a stranger's name or picture is shown, read `useAuthor` (`src/hooks/social/profile/useAuthor.ts`), which merges the bridge's profiles with the social tier's.
 
 Notifications (DMs and group pings as two streams, mention/reply detection, read cursors, sync over NIP-59): [docs/read-state.md](docs/read-state.md).
 
@@ -154,10 +155,10 @@ Forum-kind channels are **Publications** in every user-facing string, in all thr
 
 ## Rules that are easy to break
 
-- **Relay-wide settings are operator-only.** Resolve the operator with `operatorPubkeyFromRelayInfo()` (`src/services/relay-info.ts`: a valid NIP-11 `contact` npub, else `pubkey`). Never widen relay-wide authority to the NIP-29 group admins; `relayOperatorAuthors()` returns exactly one author. The relay stays the final authority. See [docs/relay-layout-and-branding.md](docs/relay-layout-and-branding.md).
-- **Event kinds** come from `src/utils/nip-kinds.ts`. Add a missing kind there instead of a local constant or a raw number in a filter.
+- **Relay-wide settings are operator-only.** Resolve the operator with `operatorPubkeyFromRelayInfo()` (`src/services/relay/relay-info.ts`: a valid NIP-11 `contact` npub, else `pubkey`). Never widen relay-wide authority to the NIP-29 group admins; `relayOperatorAuthors()` returns exactly one author. The relay stays the final authority. See [docs/relay-layout-and-branding.md](docs/relay-layout-and-branding.md).
+- **Event kinds** come from `src/utils/nostr/nip-kinds.ts`. Add a missing kind there instead of a local constant or a raw number in a filter.
 - **Keys are never labels.** Show NIP-05 or `shortNpubLabel` (`src/utils/identity/short-npub.ts`), never raw hex.
-- **Design.** Use the `lc-*` tokens and classes (`src/app/globals.css`) and the primitives in `src/components/ui/` (`Button`, `IconButton`, `menu.tsx`, ...) rather than a raw `<button>`. Anything clickable reads as clickable (`lc-white` or `lc-green`, never `lc-muted`; aim for WCAG AA on the surface it sits on). UI chrome uses SVG icons from `src/components/ui/icons.tsx`, not emoji or text glyphs; emoji belong in content. Data-fetching components get a skeleton state.
+- **Design.** Use the `lc-*` tokens and classes (`src/app/globals.css`) and the primitives in `src/components/ui/`, grouped by kind (`buttons/`, `forms/`, `overlays/`, `layout/`, `data/`, `feedback/`, `media/`, `icons/`, each with an `index.ts`: `Button`, `IconButton`, `overlays/menu.tsx`, ...) rather than a raw `<button>`. Anything clickable reads as clickable (`lc-white` or `lc-green`, never `lc-muted`; aim for WCAG AA on the surface it sits on). UI chrome uses SVG icons from `src/components/ui/icons/icons.tsx`, not emoji or text glyphs; emoji belong in content. Data-fetching components get a skeleton state.
 - **Google Analytics loads only after the person allows it** (`src/services/analytics/`; the question is `AnalyticsConsentRoot` in the `[locale]` layout). Never put a third-party script or pixel in a layout or page; anything new that reports to a third party goes behind the same answer. See [docs/data-system.md §11](docs/data-system.md).
 - **Anything stored in the browser** (a localStorage key, a persisted store, IndexedDB, Cache Storage, a cookie) is listed in the local-data inventory, `src/services/local-data/inventory-*.ts`, in the category a person would look for it under. Settings > Data on this device and `/help/local-data` read that list, and `tests/services/local-data/inventory-guard.test.ts` fails on a key it does not hold. See [docs/data-system.md §11](docs/data-system.md).
 - **Persisted per-user state** is a Zustand `persist` store with an `ensureXForAccount(pubkey)` helper registered in `PER_ACCOUNT_STORES` (`src/services/read-state/root.tsx`). See [docs/read-state.md](docs/read-state.md).
@@ -185,7 +186,8 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | `tests/hooks/hooks-layer.test.ts` | No hook file or hook definition under `src/components/` or `src/app/` |
 | `tests/components/markup-only.test.ts` | Component files are markup: no effects, memos, callbacks, reducers, more than two `useState` / `useRef`, functions with logic, or extra components (rule: `scripts/markup-only/analyze.ts`); shrink-only per-file baseline `tests/components/markup-only-baseline.json`, regenerated by `scripts/markup-only/baseline.ts`, never hand-edited |
 | `tests/components/modal-chrome.test.ts` | A file that renders `<Modal>` / `<Sheet>` draws no `<h1>` / `<h2>` / `<header>` / `<footer>` / `CloseButton` or sheet title class of its own and renders `ModalHeader` / `SheetHeader` |
-| `tests/components/components-only.test.ts` | Only component modules under `src/components/` and `src/app/` (plus Next.js conventions); shrink-only exception list |
+| `tests/structure/module-layout.test.ts` | The folder rules: nothing loose at a layer root (`components`, `hooks`, `services`, `utils`, `store`, `lib`); a layer's top-level folders come from the module map (`MODULES`) or its short reasoned list; one spelling per folder name across the layers; a folder with sub-folders keeps only its `index` or listed entry component loose (route files excepted); every `src/lib/` package has an `index.ts`. Its lists only shrink |
+| `tests/components/components-only.test.ts` | Only component modules under `src/components/` and `src/app/` (plus Next.js conventions and a pure re-export `index.ts`); shrink-only exception list |
 | `tests/services/nostr-bridge/front-door.test.ts` | Nothing outside the bridge imports a path inside it; shrink-only allow-list |
 | `tests/bridge-in-react-files.test.ts` | No `getBridge` / `getBridgeImpl` under `src/components`, `src/app`, `src/hooks` (one reasoned exception) |
 | `tests/app/bridge-provider-routes.test.ts` | Every page that ships the bridge renders under a provider; the landing and marketing pages ship without it |
@@ -201,10 +203,10 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | `tests/i18n/call-arguments.test.ts` | Every literal `t('key', {...})` passes exactly the arguments the English message declares |
 | `tests/i18n/next-config.test.ts` | Old guide URLs redirect permanently; the proxy sees the request URL as sent |
 | `tests/utils/seo/guide-content.test.ts`, `tests/app/og-images.test.ts` | Every guide's search title and description fit (45-57, 145-157 characters, all languages); every indexed page has its own `opengraph-image` route |
-| `tests/utils/nip-kinds.test.ts` | No local `KIND_` constant or raw numeric kinds filter outside its shrink-only debt lists |
+| `tests/utils/nostr/nip-kinds.test.ts` | No local `KIND_` constant or raw numeric kinds filter outside its shrink-only debt lists |
 | `tests/hooks-after-early-return.test.ts` | No hook call after an early return in a component |
 | `tests/app/dev/dev-routes.test.ts` | Nothing under `src/app/dev/` is routable outside `next dev` |
-| `tests/app/[locale]/app/lazy-mounts.test.tsx` | Voice, games, DM calls and game engines stay out of the shell's first download |
+| `tests/app/[locale]/app/mounts/lazy-mounts.test.tsx` | Voice, games, DM calls and game engines stay out of the shell's first download |
 | `tests/app/[locale]/app/navigation-invariants.test.ts`, `deep-link-gate.test.ts` | Desktop navigation goes through the shell's view state; `?relay=` deep links go through `useRelayDeepLink` |
 | `tests/csp.test.ts`, `tests/service-worker-cache.test.ts` | The CSP from `src/proxy.ts`; what `public/sw.js` may cache |
 | `tests/services/local-data/inventory-guard.test.ts` | Every storage key, persisted store and IndexedDB database in `src/` is in the local-data inventory; IndexedDB only from the session vault and the DM store; `NOT_STORAGE` is shrink-only |
@@ -216,9 +218,9 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 
 Verified on 2026-10-06. Do not add to any of these.
 
-- Local `KIND_*` constants remain in five `src/services/social/` files, and raw kind numbers in a few filters; the lists are in `tests/utils/nip-kinds.test.ts`.
+- Local `KIND_*` constants remain in five `src/services/social/` files, and raw kind numbers in a few filters; the lists are in `tests/utils/nostr/nip-kinds.test.ts`.
 - `normalizeRelayUrl` exists twice with different signatures: `src/utils/relay-url/normalize.ts` (canonical) and `src/services/social/relays.ts` (the social tier's).
-- The muted-channel marker is still the `🔕` emoji in `mobile/screens/ChannelRow.tsx` and `panes/GroupNode.tsx`.
-- Hooks outside the hooks layer: the bridge's own hooks (`src/services/nostr-bridge/hooks/`), `useRemoteMediaGate` (`src/services/remote-media-gate.ts`, on the front-door allow-list) and `useWotStore` (`src/services/wot/store.ts`). `ReadStateRoot` (`src/services/read-state/root.tsx`) is a component in services.
+- The muted-channel marker is still the `🔕` emoji in `mobile/screens/server/ChannelRow.tsx` and `panes/sidebar/GroupNode.tsx`.
+- Hooks outside the hooks layer: the bridge's own hooks (`src/services/nostr-bridge/hooks/`), `useRemoteMediaGate` (`src/services/media/remote-media-gate.ts`, on the front-door allow-list) and `useWotStore` (`src/services/wot/store.ts`). `ReadStateRoot` (`src/services/read-state/root.tsx`) is a component in services.
 - `tests/support/mocks/ndk.ts` mocks a library that is no longer a dependency; nothing imports it.
 - Open bugs: [docs/known-bugs.md](docs/known-bugs.md), [docs/sfu-known-bugs.md](docs/sfu-known-bugs.md).

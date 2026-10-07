@@ -35,7 +35,7 @@ describe('nostr-bridge', () => {
 
   it('opens kind:0 on the active relay as a bounded one-shot and bounds external lookup', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const other = makeKeypair().pkHex;
     const bridge = await getBridge();
@@ -80,7 +80,7 @@ describe('nostr-bridge', () => {
 
   it('folds a burst of profile lookups into one multi-author kind:0 REQ', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -113,7 +113,7 @@ describe('nostr-bridge', () => {
 
   it('does not prefetch member profiles for channels the user has not opened', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -145,7 +145,7 @@ describe('nostr-bridge', () => {
 
 
   it('editUserMetadata publishes kind:0 to the active relay plus quiet lookup relays', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -162,7 +162,7 @@ describe('nostr-bridge', () => {
 
 
   it('does not overwrite profile metadata when the preservation read times out', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -188,7 +188,7 @@ describe('nostr-bridge', () => {
 
 
   it('creates a new profile without waiting for an absent profile read', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -202,7 +202,7 @@ describe('nostr-bridge', () => {
 
 
   it('edits from the signed profile cache when the preservation read would time out', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -218,7 +218,7 @@ describe('nostr-bridge', () => {
 
 
   it('cached kind:0 keeps the newest event', async () => {
-    const { getCachedKind0, setCachedKind0 } = await import('@/services/nostr-bridge/client');
+    const { getCachedKind0, setCachedKind0 } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const older = finalizeEvent({ kind: 0, content: '{"name":"old"}', tags: [], created_at: 10 }, hexToBytesForTest(skHex));
     const newer = finalizeEvent({ kind: 0, content: '{"name":"new"}', tags: [], created_at: 20 }, hexToBytesForTest(skHex));
@@ -232,7 +232,7 @@ describe('nostr-bridge', () => {
 
 
   it('redirects the retired relay and republishes cached kind:0 without a wide profile lookup', async () => {
-    const { getBridge, getBridgeImpl, setCachedKind0 } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl, setCachedKind0 } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const cached = finalizeEvent({ kind: 0, content: '{"name":"Cached"}', tags: [], created_at: 30 }, hexToBytesForTest(skHex));
     setCachedKind0(cached);
@@ -255,7 +255,7 @@ describe('nostr-bridge', () => {
 
 
   it('editUserMetadata publishes kind 0 to the active relay plus quiet profile lookup relays', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);

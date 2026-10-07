@@ -4,7 +4,7 @@
  */
 import { useMemo } from 'react';
 import { displayNameFor } from '@/utils/identity/display-name';
-import type { JsUserMetadata } from '../types';
+import type { JsUserMetadata } from '../common/types';
 import { useSubscription } from './subscription';
 
 export function useMembershipReady(groupId: string | null): boolean {

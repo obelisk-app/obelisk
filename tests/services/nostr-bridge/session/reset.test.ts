@@ -17,10 +17,10 @@ import {
   resetSubscriptionState,
 } from '@/services/nostr-bridge/session/reset';
 import { SessionState } from '@/services/nostr-bridge/session/state';
-import { StateStore } from '@/services/nostr-bridge/state-store';
-import type { JsDirectMessage } from '@/services/nostr-bridge/types';
+import { StateStore } from '@/services/nostr-bridge/common/state-store';
+import type { JsDirectMessage } from '@/services/nostr-bridge/common/types';
 
-vi.mock('@/services/reset', () => ({ resetAllClientState: vi.fn() }));
+vi.mock('@/services/common/reset', () => ({ resetAllClientState: vi.fn() }));
 
 function targets() {
   const log: string[] = [];
@@ -191,7 +191,7 @@ describe('session/reset', () => {
   });
 
   it('a logout empties the stores in the facade order, the client stores last', async () => {
-    const { resetAllClientState } = await import('@/services/reset');
+    const { resetAllClientState } = await import('@/services/common/reset');
     const { t, log, dmsByPeer } = targets();
     t.state.isLoggedIn.set(true);
     t.state.myPubkey.set('pk');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { subscribeBotCommands, type BotCommandSet } from '@/services/bot-commands';
+import { subscribeBotCommands, type BotCommandSet } from '@/services/relay/bot-commands';
 
 const EMPTY: BotCommandSet[] = [];
 

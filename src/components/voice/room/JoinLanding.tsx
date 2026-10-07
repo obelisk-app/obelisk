@@ -8,7 +8,7 @@
 import type { ActiveCallInfo } from '@/services/nostr-bridge';
 import type { VoiceErrorCode } from '@/services/voice/errors';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 import { PassiveCallRoster, StageBackdrop } from './chrome';
 import { RoomHeader } from './header';
 

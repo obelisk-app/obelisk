@@ -2,7 +2,7 @@
 
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import CloseButton from '@/components/ui/CloseButton';
+import CloseButton from '@/components/ui/buttons/CloseButton';
 
 /** The text chat docked beside a voice room, resizable from its left edge. */
 export function VoiceChatRail({ width, onResize, onHide, children }: {

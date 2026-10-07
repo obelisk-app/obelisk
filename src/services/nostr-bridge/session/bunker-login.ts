@@ -8,8 +8,8 @@ import { CodedError, codeOrMessage, type ActivityCode, type ErrorCode } from '@/
 import { getPublicKey } from 'nostr-tools';
 import { BunkerSigner, createNostrConnectURI, parseBunkerInput } from 'nostr-tools/nip46';
 import { generateSecretKey } from 'nostr-tools/pure';
-import { failActivity, pushActivity, resolveActivity } from '@/services/activity-log';
-import { bytesToHex, hexToBytes } from '../hex';
+import { failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
+import { bytesToHex, hexToBytes } from '../common/hex';
 import type { BunkerModule, RemoteSigner } from './bunker';
 import type { SessionState } from './state';
 

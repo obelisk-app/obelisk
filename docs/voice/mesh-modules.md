@@ -78,18 +78,18 @@
 
 ## React surface
 
-- **`src/components/voice/VoiceRoom.tsx`** - the main UI shell.
+- **`src/components/voice/room/VoiceRoom.tsx`** - the main UI shell.
   Mounts `VoiceClient`, wires events to local state, renders tiles.
-- **`src/components/voice/VoiceControls.tsx`** - mic/cam/screen/leave
+- **`src/components/voice/controls/VoiceControls.tsx`** - mic/cam/screen/leave
   toolbar.
-- **`src/components/voice/VoiceStatusBar.tsx`** - minimized "you're
+- **`src/components/voice/status-bar/VoiceStatusBar.tsx`** - minimized "you're
   in a call" status pill.
-- **`src/components/voice/DebugOverlay.tsx`** - `?debug=voice`
+- **`src/components/voice/room/DebugOverlay.tsx`** - `?debug=voice`
   diagnostic overlay (Phase 3).
 
 ## Hooks
 
-- **`src/hooks/chat/useVoiceChatPane.ts`** - joint hook for the chat
+- **`src/hooks/shell/panes/channel/useVoiceChatPane.ts`** - joint hook for the chat
   side panel that coordinates voice state with the chat tab.
 
 ## Module deferred from this round

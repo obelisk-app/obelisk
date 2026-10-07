@@ -16,8 +16,8 @@ const heightOf = (file: string, testId: string): string | undefined => {
 
 describe('DM header alignment', () => {
   it('the DM list header and the thread header have the same fixed height', () => {
-    const list = heightOf('DMList.tsx', 'dm-list-header');
-    const thread = heightOf('panes/DMPanel.tsx', 'dm-thread-header');
+    const list = heightOf('dm/DmList.tsx', 'dm-list-header');
+    const thread = heightOf('panes/dm/DmPanel.tsx', 'dm-thread-header');
     expect(list).toBeDefined();
     expect(list).toBe(thread);
   });

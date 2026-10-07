@@ -126,11 +126,11 @@ favorites use the existing local `bridgeCache` as stale-while-revalidate data.
 ## Code map
 
 ```text
-src/utils/media-tags/media-packs.ts                       parse and serialize packs/favorites
-src/services/nostr-bridge/client.ts               subscribe, ingest, publish, and cache
-src/components/media/MediaLibraryModal.tsx   marketplace, packs, favorites, one-time import
-src/components/chat/MessageMediaPicker.tsx   merged Emoji/GIF/Sticker data
-src/services/relay-emojis.ts                      operator-owned server favorites
-src/utils/media-tags/custom-emoji-tags.ts                 NIP-30 validation and message tags
-src/utils/media-tags/sticker-tags.ts                      standalone sticker marker and fallback
+src/utils/media/tags/media-packs.ts                       parse and serialize packs/favorites
+src/services/nostr-bridge/facade/client.ts               subscribe, ingest, publish, and cache
+src/components/media/library/MediaLibraryModal.tsx   marketplace, packs, favorites, one-time import
+src/components/chat/picker/MessageMediaPicker.tsx   merged Emoji/GIF/Sticker data
+src/services/relay/relay-emojis.ts                      operator-owned server favorites
+src/utils/media/tags/custom-emoji-tags.ts                 NIP-30 validation and message tags
+src/utils/media/tags/sticker-tags.ts                      standalone sticker marker and fallback
 ```

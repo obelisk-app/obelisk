@@ -15,7 +15,7 @@ vi.mock('@/services/nostr-bridge', () => ({
 
 import { CodedError } from '@/utils/errors/codes';
 import { checkZap, sendZap, ZapError, type ZapDraft } from '@/services/wallet/send-zap';
-import { KIND_REACTION } from '@/utils/nip-kinds';
+import { KIND_REACTION } from '@/utils/nostr/nip-kinds';
 
 const RECIPIENT = 'c'.repeat(64);
 const signer = { pubkey: 'a'.repeat(64), signEvent: vi.fn() };

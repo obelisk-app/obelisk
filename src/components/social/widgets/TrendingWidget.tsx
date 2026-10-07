@@ -4,7 +4,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { useMemo } from 'react';
 import { trendingTags } from '@/services/social/trending';
 import { useTranslations } from 'next-intl';
-import FollowTagButton from '../FollowTagButton';
+import FollowTagButton from '../tags/FollowTagButton';
 import WidgetCard, { WidgetEmpty } from './WidgetCard';
 
 /**

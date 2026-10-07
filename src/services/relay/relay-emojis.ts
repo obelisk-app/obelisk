@@ -1,0 +1,220 @@
+'use client';
+
+import type { Event as NostrEvent, Filter } from 'nostr-tools';
+import { getBridge, getBridgeImpl, cacheGet, cacheSet } from '@/services/nostr-bridge';
+import type { JsMediaKind, JsMediaPack } from '@/services/nostr-bridge';
+import { KIND_EMOJI_SET } from '@/utils/nostr/nip-kinds';
+import {
+  customEmojiMapFromTags,
+  isValidCustomEmojiName,
+  normalizeCustomEmojiName,
+  type CustomEmojiMap,
+} from '@/utils/media/tags/custom-emoji-tags';
+import { mediaItemsFromPacks } from '@/utils/media/tags/media-packs';
+import { inferMediaKind } from '@/utils/media/tags/media-kind';
+
+export interface RelayEmoji {
+  readonly name: string;
+  readonly url: string;
+  readonly kind?: JsMediaKind;
+}
+
+export interface RelayEmojiSet {
+  readonly title: string;
+  readonly emojis: ReadonlyArray<RelayEmoji>;
+  readonly packAddresses?: ReadonlyArray<string>;
+  /** created_at of the source event, or 0 if none seen yet. */
+  readonly updatedAt: number;
+  readonly author?: string;
+  readonly eventId?: string;
+}
+
+export const EMPTY_RELAY_EMOJI_SET: RelayEmojiSet = {
+  title: '',
+  emojis: [],
+  packAddresses: [],
+  updatedAt: 0,
+};
+
+const relayEmojiLatestAt = new Map<string, number>();
+const relayEmojiListeners = new Map<string, Set<(set: RelayEmojiSet) => void>>();
+
+function notifyRelayEmojiSet(relayUrl: string, set: RelayEmojiSet): void {
+  for (const listener of relayEmojiListeners.get(relayUrl) ?? []) listener(set);
+}
+function isPackAddress(value: string): boolean {
+  const [kind, author, identifier] = value.split(":", 3);
+  return kind === "30030" && author?.length === 64 && /^[0-9a-f]+/.test(author) && !!identifier;
+}
+
+export function relayEmojiSetDTag(relayUrl: string): string {
+  return `obelisk:emojis:${relayUrl}`;
+}
+
+export function relayEmojiMap(set: RelayEmojiSet): CustomEmojiMap {
+  const out: CustomEmojiMap = {};
+  for (const emoji of set.emojis) out[emoji.name] = emoji.url;
+  return out;
+}
+
+export function relayMediaKindMap(set: RelayEmojiSet): Record<string, JsMediaKind> {
+  return Object.fromEntries(
+    set.emojis.map((emoji) => [emoji.name, emoji.kind ?? inferMediaKind(emoji.url)]),
+  );
+}
+
+export function resolveRelayEmojiSet(
+  set: RelayEmojiSet,
+  packs: Readonly<Record<string, JsMediaPack>>,
+): RelayEmojiSet {
+  const byName = new Map(set.emojis.map((item) => [item.name, item]));
+  for (const item of mediaItemsFromPacks(set.packAddresses ?? [], packs)) byName.set(item.name, item);
+  return { ...set, emojis: Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name)) };
+}
+
+export function parseRelayEmojiSet(ev: NostrEvent): RelayEmojiSet {
+  const packAddresses = Array.from(new Set(ev.tags
+    .filter((tag) => tag[0] === 'a' && isPackAddress(tag[1] ?? ''))
+    .map((tag) => tag[1])));
+  const kinds = new Map<string, JsMediaKind>();
+  for (const tag of ev.tags) {
+    const name = normalizeCustomEmojiName(tag[1] ?? '');
+    const kind = tag[2];
+    if (tag[0] === 'media' && name && (kind === 'emoji' || kind === 'gif' || kind === 'sticker')) kinds.set(name, kind);
+  }
+  let title = '';
+  const byName = new Map<string, RelayEmoji>();
+  for (const tag of ev.tags) {
+    if (tag[0] === 'title' && tag[1]) {
+      title = tag[1];
+      continue;
+    }
+    if (tag[0] !== 'emoji') continue;
+    const name = normalizeCustomEmojiName(tag[1] ?? '');
+    const url = tag[2]?.trim();
+    if (!isValidCustomEmojiName(name) || !url) continue;
+    byName.set(name, { name, url, kind: kinds.get(name) ?? inferMediaKind(url) });
+  }
+  return {
+    title,
+    emojis: Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    packAddresses,
+    updatedAt: ev.created_at,
+    author: ev.pubkey,
+    eventId: ev.id,
+  };
+}
+
+export function toRelayEmojiSetTags(set: RelayEmojiSet, relayUrl: string): string[][] {
+  const tags: string[][] = [
+    ['d', relayEmojiSetDTag(relayUrl)],
+    ['title', set.title.trim() || 'Obelisk emojis'], // i18n-exempt: default set title published on the wire, read by every client
+    ...Array.from(new Set(set.packAddresses ?? []))
+      .filter((address) => isPackAddress(address))
+      .map((address) => ['a', address]),
+  ];
+  const seen = new Set<string>();
+  for (const emoji of set.emojis) {
+    const name = normalizeCustomEmojiName(emoji.name);
+    const url = emoji.url.trim();
+    if (!isValidCustomEmojiName(name) || !url || seen.has(name)) continue;
+    seen.add(name);
+    tags.push(['emoji', name, url]);
+    if (emoji.kind) tags.push(['media', name, emoji.kind]);
+  }
+  return tags;
+}
+
+export function relayEmojiSetFromMap(
+  map: CustomEmojiMap,
+  title = 'Obelisk emojis', // i18n-exempt: default set title published on the wire
+): RelayEmojiSet {
+  return {
+    title,
+    emojis: Object.entries(map)
+      .map(([name, url]) => ({
+        name: normalizeCustomEmojiName(name),
+        url,
+        kind: inferMediaKind(url),
+      }))
+      .filter((emoji) => isValidCustomEmojiName(emoji.name) && !!emoji.url)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    updatedAt: 0,
+  };
+}
+
+export function subscribeRelayEmojiSet(
+  relayUrl: string,
+  authors: ReadonlyArray<string>,
+  onChange: (set: RelayEmojiSet) => void,
+): () => void {
+  const impl = getBridgeImpl();
+  if (!impl) {
+    let cancelled = false;
+    let unsub: (() => void) | null = null;
+    void getBridge().then(() => {
+      if (cancelled) return;
+      unsub = subscribeRelayEmojiSet(relayUrl, authors, onChange);
+    });
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
+  }
+
+  if (authors.length === 0) return () => {};
+  const d = relayEmojiSetDTag(relayUrl);
+  let latest: RelayEmojiSet = EMPTY_RELAY_EMOJI_SET;
+  const apply = (next: RelayEmojiSet) => {
+    latest = next;
+    relayEmojiLatestAt.set(relayUrl, next.updatedAt);
+    cacheSet(relayUrl, KIND_EMOJI_SET, d, next);
+    onChange(next);
+  };
+  const listeners = relayEmojiListeners.get(relayUrl) ?? new Set<(set: RelayEmojiSet) => void>();
+  listeners.add(apply);
+  relayEmojiListeners.set(relayUrl, listeners);
+
+  const cached = cacheGet<RelayEmojiSet>(relayUrl, KIND_EMOJI_SET, d);
+  if (cached) apply(cached.value);
+  const filter: Filter = {
+    kinds: [KIND_EMOJI_SET],
+    authors: [...authors],
+    "#d": [d],
+  };
+  const unsubscribe = impl.subscribeFilterWatched(filter, (ev) => {
+    if (ev.created_at < latest.updatedAt) return;
+    if (ev.created_at === latest.updatedAt && latest.eventId && ev.id >= latest.eventId) return;
+    apply(parseRelayEmojiSet(ev));
+  });
+  return () => {
+    unsubscribe();
+    listeners.delete(apply);
+    if (listeners.size === 0) relayEmojiListeners.delete(relayUrl);
+  };
+}
+
+export async function publishRelayEmojiSet(
+  relayUrl: string,
+  set: RelayEmojiSet,
+): Promise<void> {
+  await getBridge();
+  const impl = getBridgeImpl();
+  if (!impl) throw new Error('nostr bridge not initialized');
+  const previousAt = Math.max(set.updatedAt, relayEmojiLatestAt.get(relayUrl) ?? 0);
+  const event = await impl.publishEvent(
+    {
+      kind: KIND_EMOJI_SET,
+      content: '',
+      tags: toRelayEmojiSetTags(set, relayUrl),
+      created_at: Math.max(Math.floor(Date.now() / 1000), previousAt + 1),
+    },
+    { extraRelays: [relayUrl], mode: 'replace' },
+  );
+  const published = parseRelayEmojiSet(event);
+  relayEmojiLatestAt.set(relayUrl, published.updatedAt);
+  cacheSet(relayUrl, KIND_EMOJI_SET, relayEmojiSetDTag(relayUrl), published);
+  notifyRelayEmojiSet(relayUrl, published);
+}
+
+export { customEmojiMapFromTags };

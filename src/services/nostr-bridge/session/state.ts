@@ -6,10 +6,10 @@
  * exposes the stores as properties; the modules' `BridgeContext` closures
  * read `session` and `relays` from it live.
  */
-import { DEFAULT_RELAY, DEFAULT_RELAYS } from '../relay-list';
-import type { PersistedSession } from '../session-storage';
-import { StateStore } from '../state-store';
-import type { RelayAccessState } from '../types';
+import { DEFAULT_RELAY, DEFAULT_RELAYS } from '../relay/relay-list';
+import type { PersistedSession } from './session-storage';
+import { StateStore } from '../common/state-store';
+import type { RelayAccessState } from '../common/types';
 import type { SessionNotice } from './vault';
 
 export type LoginMethod = 'nsec' | 'nip07' | 'bunker';

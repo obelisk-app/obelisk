@@ -4,8 +4,8 @@
  */
 import { useMemo } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { EMPTY_MEDIA_FAVORITES } from '@/utils/media-tags/media-packs';
-import type { JsMediaFavorites, JsMediaPack } from '../types';
+import { EMPTY_MEDIA_FAVORITES } from '@/utils/media/tags/media-packs';
+import type { JsMediaFavorites, JsMediaPack } from '../common/types';
 import { useSubscription } from './subscription';
 
 export function useMyContactList(): NostrEvent | null {

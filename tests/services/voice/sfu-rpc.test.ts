@@ -14,7 +14,7 @@ const bridgeFake = vi.hoisted(() => ({
   subscribeFilterWatched: vi.fn(() => vi.fn()),
 }));
 
-vi.mock('@/services/nostr-bridge/client', () => ({
+vi.mock('@/services/nostr-bridge/facade/client', () => ({
   getBridge: vi.fn(async () => bridgeFake),
   getBridgeImpl: vi.fn(() => bridgeFake),
 }));

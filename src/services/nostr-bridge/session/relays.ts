@@ -15,9 +15,9 @@ import {
   normalizeConfiguredRelayUrl,
   uniqueRelayUrls,
   validateRelayUrl,
-} from '../relay-list';
+} from '../relay/relay-list';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-import { LEGACY_RELAYS_KEY, RELAYS_KEY, readMigrated } from '../session-storage';
+import { LEGACY_RELAYS_KEY, RELAYS_KEY, readMigrated } from './session-storage';
 import { RELAY_SWITCH_GRACE_MS } from '../subscriptions/pinned';
 import type { PerGroupReqs } from './fanout';
 import type { LifecycleTargets } from './lifecycle';

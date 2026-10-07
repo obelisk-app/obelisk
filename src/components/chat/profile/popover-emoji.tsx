@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 import { replaceShortcodes, customEmojiPlaceholderRegex } from '@/utils/message-text/emoji-shortcodes';
-import RemoteImage from '@/components/ui/RemoteImage';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 
 /**
  * A name or bio with `:shortcode:` custom emoji drawn as images. Uses its

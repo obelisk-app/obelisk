@@ -2,9 +2,9 @@
 
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import RemoteImage from '@/components/ui/RemoteImage';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useZoomPan } from '@/hooks/chat/gallery/useZoomPan';
-import IconButton from '@/components/ui/IconButton';
+import IconButton from '@/components/ui/buttons/IconButton';
 
 /** Exported so other media surfaces (the feed's carousel) zoom identically. */
 export interface LightboxProps {

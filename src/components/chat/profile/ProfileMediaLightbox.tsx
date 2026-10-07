@@ -2,10 +2,10 @@
 
 import { isVideoUrl } from '@/utils/attachments/attachments';
 import { useTranslations } from 'next-intl';
-import RemoteImage from '@/components/ui/RemoteImage';
-import { CloseIcon } from '@/components/ui/icons';
-import { useDismiss } from '@/hooks/useDismiss';
-import IconButton from '@/components/ui/IconButton';
+import RemoteImage from '@/components/ui/media/RemoteImage';
+import { CloseIcon } from '@/components/ui/icons/icons';
+import { useDismiss } from '@/hooks/common/useDismiss';
+import IconButton from '@/components/ui/buttons/IconButton';
 
 export function ProfileMediaLightbox({ url, onClose }: { url: string; onClose: () => void }) {
   const t = useTranslations();

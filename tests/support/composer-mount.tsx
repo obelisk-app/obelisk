@@ -6,7 +6,7 @@
  */
 import { vi } from 'vitest';
 import type { JsGroup, JsUserMetadata } from '@/services/nostr-bridge';
-import { StateStore } from '@/services/nostr-bridge/state-store';
+import { StateStore } from '@/services/nostr-bridge/common/state-store';
 import { groupFixture, userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
 
 export const COMPOSER_ME = 'b'.repeat(64);

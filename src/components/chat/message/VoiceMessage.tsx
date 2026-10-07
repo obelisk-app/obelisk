@@ -1,10 +1,10 @@
 'use client';
 
-import type { MessageVoiceNote } from '@/utils/media-tags/voice-note-tags';
+import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
-import Range from '@/components/ui/Range';
-import RemoteImage from '@/components/ui/RemoteImage';
+import Range from '@/components/ui/forms/Range';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 import { formatElapsed } from '@/utils/format/format-elapsed';
 import { useVoicePlayback } from '@/hooks/chat/message/useVoicePlayback';
 
@@ -25,7 +25,7 @@ export function VoiceMessage({
   /**
    * `false` renders the player but fetches nothing until play is pressed
    * (`preload="none"`): the press is the reader's consent to contact the
-   * sender's host. See `src/services/remote-media.ts`.
+   * sender's host. See `src/services/media/remote-media.ts`.
    */
   autoLoad?: boolean;
 }) {

@@ -1,7 +1,7 @@
 /**
  * What goes on a preview card, as data: the card component
  * (`src/components/seo/OgCard.tsx`) draws it, the routes' loaders
- * (`src/services/server/og-cards.ts`) fill it.
+ * (`src/services/server/og/og-cards.ts`) fill it.
  */
 
 import type { Locale } from '@/i18n';

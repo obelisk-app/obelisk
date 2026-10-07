@@ -1,7 +1,7 @@
 import { requestZapInvoice } from '@nostr-wot/wallet';
 import { getDefaultRelays } from '@nostr-wot/data';
 import { getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
-import { KIND_REACTION } from '@/utils/nip-kinds';
+import { KIND_REACTION } from '@/utils/nostr/nip-kinds';
 import type { NipSigner } from '@/lib/nip-59';
 import { codeOrMessage } from '@/utils/errors/codes';
 import { connectWallet, isWalletAvailable } from './wallet';

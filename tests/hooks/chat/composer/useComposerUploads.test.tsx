@@ -4,7 +4,7 @@ import { LocaleProvider } from '@tests/support/intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const uploadToBlossom = vi.fn<(f: File) => Promise<string>>();
-vi.mock('@/services/blossom', () => ({ uploadToBlossom: (f: File) => uploadToBlossom(f) }));
+vi.mock('@/services/media/blossom', () => ({ uploadToBlossom: (f: File) => uploadToBlossom(f) }));
 
 import { useComposerUploads } from '@/hooks/chat/composer/useComposerUploads';
 

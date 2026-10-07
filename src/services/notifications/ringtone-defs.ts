@@ -3,7 +3,7 @@
  * send) playing a shared set of phrases. Pure data; `ringtone-synth.ts` turns
  * it into Web Audio nodes and `sound.ts` decides when to play.
  */
-import type { NotificationRingtone } from '@/services/preferences';
+import type { NotificationRingtone } from '@/services/preferences/preferences';
 
 export type NotificationSoundKind = 'mention' | 'reply' | 'dm' | 'ring' | 'ringback';
 

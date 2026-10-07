@@ -2,7 +2,7 @@
 
 import { useChatStore } from '@/store/chat';
 import { useUserMetadata } from '@/services/nostr-bridge';
-import RemoteImage from '@/components/ui/RemoteImage';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 
 export function MentionChip({ pubkey, displayName }: { pubkey: string; displayName: string }) {
   const openProfilePopup = useChatStore((s) => s.openProfilePopup);

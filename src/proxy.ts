@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALES, detectLocale, isLocale } from './i18n/index';
 import { routing } from './i18n/routing';
-import { buildCsp } from './utils/csp';
+import { buildCsp } from './utils/security/csp';
 import { isCrawler } from './utils/seo/crawler';
 
 /**
@@ -22,7 +22,7 @@ import { isCrawler } from './utils/seo/crawler';
  *   3. next-intl maps the URL to the `[locale]` route and keeps the cookie
  *      in step with the URL's language; we add the nonce to the request
  *      headers it forwards, so `headers()` in the layout reads it, and set
- *      the CSP on whatever it returns. The policy itself is in src/utils/csp.ts,
+ *      the CSP on whatever it returns. The policy itself is in src/utils/security/csp.ts,
  *      shared with the static floor next.config.ts sends.
  */
 

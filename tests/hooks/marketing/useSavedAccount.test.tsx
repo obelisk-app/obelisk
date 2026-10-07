@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { PROFILE_SYNC_CACHE_KEY } from '@/services/nostr-bridge/profile-sync-cache';
-import { LEGACY_STORAGE_KEY, STORAGE_KEY } from '@/services/nostr-bridge/session-storage';
+import { PROFILE_SYNC_CACHE_KEY } from '@/services/nostr-bridge/profile/profile-sync-cache';
+import { LEGACY_STORAGE_KEY, STORAGE_KEY } from '@/services/nostr-bridge/session/session-storage';
 import {
   LEGACY_SESSION_KEY,
   PROFILE_CACHE_KEY,

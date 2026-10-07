@@ -18,7 +18,7 @@
  * `mocks/nostr-bridge.ts` is a `Partial`.
  */
 import type { BridgeImpl, MessagesStatus } from '@/services/nostr-bridge';
-import { StateStore } from '@/services/nostr-bridge/state-store';
+import { StateStore } from '@/services/nostr-bridge/common/state-store';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { BRIDGE_MOCK_PUBKEY, BRIDGE_MOCK_RELAY } from '@tests/support/mocks/nostr-bridge';
 

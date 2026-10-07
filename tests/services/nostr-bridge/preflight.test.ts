@@ -14,7 +14,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 import { generateSecretKey, getPublicKey, type Event as NostrEvent } from 'nostr-tools';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 interface CapturedSub {
   filter: Record<string, unknown>;
@@ -123,7 +123,7 @@ afterEach(() => {
 
 describe('preflight: whitelist detection', () => {
   it('fires a kind:0 authors=[me] REQ during connect', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -134,7 +134,7 @@ describe('preflight: whitelist detection', () => {
   });
 
   it('flips relayAccess to "restricted" immediately on CLOSED restricted reason', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
 
@@ -168,7 +168,7 @@ describe('preflight: whitelist detection', () => {
   });
 
   it('flips relayAccess to "auth-required" immediately when AUTH itself failed', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
 
@@ -192,7 +192,7 @@ describe('preflight: whitelist detection', () => {
   });
 
   it('promotes relayAccess to "ok" on preflight EOSE', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
 
@@ -213,7 +213,7 @@ describe('preflight: whitelist detection', () => {
   });
 
   it('downgrades preflight EOSE-then-CLOSED post-AUTH refusal to restricted instead of sticking on ok', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
 
@@ -240,7 +240,7 @@ describe('preflight: whitelist detection', () => {
   // nostr-tools swallows the first one, AUTHs and resubscribes, so the bare
   // reason we see is the post-AUTH refusal: that is "not whitelisted".
   it('reads a bare auth-required CLOSED after AUTH as "restricted", immediately', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
 
@@ -266,7 +266,7 @@ describe('preflight: whitelist detection', () => {
   });
 
   it('does not retry preflight after the single attempt (maxAttempts=1)', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);

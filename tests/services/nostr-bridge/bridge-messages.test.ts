@@ -38,7 +38,7 @@ describe('nostr-bridge', () => {
   // view always wins the relay's first response.
 
   it('background metadata defers per-group message REQs; setActiveGroup fires the active one immediately', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -82,7 +82,7 @@ describe('nostr-bridge', () => {
 
 
   it('uses one live per-group stream for messages and deletes', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -102,7 +102,7 @@ describe('nostr-bridge', () => {
 
 
   it('does not open per-group creator subscriptions during metadata fan-out', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -121,7 +121,7 @@ describe('nostr-bridge', () => {
 
 
   it('caps background message streams below public relay subscription quota', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -149,7 +149,7 @@ describe('nostr-bridge', () => {
 
 
   it('setActiveGroup after a queued metadata burst promotes the clicked channel to the head of the queue', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -203,7 +203,7 @@ describe('nostr-bridge', () => {
   // between the loading spinner and "No messages yet" copy.
 
   it('subscribeMessagesStatus: starts at "loading", flips to "empty-unconfirmed" after empty EOSE', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -224,7 +224,7 @@ describe('nostr-bridge', () => {
 
 
   it('event arriving after empty EOSE flips status to "has-messages" and cancels the retry', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -250,7 +250,7 @@ describe('nostr-bridge', () => {
 
 
   it('exhausting the retry ladder (3 retries) promotes status to "empty-confirmed"', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -280,7 +280,7 @@ describe('nostr-bridge', () => {
 
 
   it("public channel confirms an empty EOSE even while relay AUTH is inconclusive", async () => {
-    const { getBridge, getBridgeImpl } = await import("@/services/nostr-bridge/client");
+    const { getBridge, getBridgeImpl } = await import("@/services/nostr-bridge/facade/client");
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -319,7 +319,7 @@ describe('nostr-bridge', () => {
     // (status not 'has-messages'), a user click via setActiveGroup
     // MUST tear down the stuck sub and open a fresh one. Otherwise
     // the click just bumps a sub that's never going to deliver.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -364,7 +364,7 @@ describe('nostr-bridge', () => {
     // filters on the same socket). Firing querySync alongside the
     // restart gives the channel a parallel second chance: if either
     // path returns events, ingestMessage promotes to 'has-messages'.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -399,7 +399,7 @@ describe('nostr-bridge', () => {
     // because a sub opened during AUTH-pending got stranded with no
     // EOSE, and the wireAuthSettledHook only refreshed channels in
     // empty-*." Channels in 'loading' get refreshed too now.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -450,7 +450,7 @@ describe('nostr-bridge', () => {
     // healthy and delivering, a click must NOT tear it down. Otherwise
     // every channel switch would burn a REQ on the relay for no
     // benefit.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -491,7 +491,7 @@ describe('nostr-bridge', () => {
     // verdict is deferred and status stays at `empty-unconfirmed` so
     // the UI keeps the spinner up. The wireAuthSettledHook fires a
     // fresh REQ when AUTH eventually settles.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -536,7 +536,7 @@ describe('nostr-bridge', () => {
     // for any channel held in `empty-unconfirmed` / `empty-confirmed`.
     // The fresh REQ rides the now-AUTH'd socket and delivers history,
     // no page reload required.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -587,7 +587,7 @@ describe('nostr-bridge', () => {
   it('AUTH failure keeps channel emptiness unconfirmed', async () => {
     // A rejected relay cannot prove the channel is empty. The relay
     // banner owns the failure while message emptiness stays unconfirmed.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -629,7 +629,7 @@ describe('nostr-bridge', () => {
     // that goes out as a fresh frame, by which point AUTH / whitelist
     // state has had time to settle. Events ingested through that path
     // promote status back from `empty-confirmed` to `has-messages`.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -687,7 +687,7 @@ describe('nostr-bridge', () => {
 
 
   it('cold-load fallback is single-shot per session unless refreshGroupMessages re-arms it', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -754,7 +754,7 @@ describe('nostr-bridge', () => {
     // bridge's `oneose` and downgrade status to `empty-unconfirmed`,
     // restarting the 1.5/3/5s ladder. UI consequence: the chat pane
     // oscillated between the spinner and the welcome copy forever.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -802,7 +802,7 @@ describe('nostr-bridge', () => {
 
 
   it('setActiveGroup on an "empty-confirmed" channel restarts the sub and resets confidence to "loading"', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -831,7 +831,7 @@ describe('nostr-bridge', () => {
 
 
   it('refreshGroupMessages resets retry counter and restarts the kind 9 sub', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -867,7 +867,7 @@ describe('nostr-bridge', () => {
     // and since `ingestMessage` is where profile-picture lookups are
     // fanned out, background-channel avatars would never load until the
     // user refreshed the page.
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -916,8 +916,8 @@ describe('nostr-bridge', () => {
   // round trip.
 
   it('ingestMessage persists confirmed messages to bridgeCache after the debounce', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-    const { cacheGet } = await import('@/services/nostr-bridge/cache');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheGet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -954,7 +954,7 @@ describe('nostr-bridge', () => {
 
 
   it('background message-queue drain is gated by the active channel reaching its first EOSE / event', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);

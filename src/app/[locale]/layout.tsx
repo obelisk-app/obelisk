@@ -9,8 +9,8 @@ import IntlScope from '@/i18n/IntlScope';
 import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
 import { PWA_ROUTE_GUARD, siteJsonLd, siteMetadata } from '@/utils/seo/site';
 import ToastStack from '@/components/feedback/ToastStack';
-import { ConfirmDialogHost } from '@/components/ui/ConfirmDialog';
-import AppearancePreferencesRoot from '@/components/settings/AppearancePreferencesRoot';
+import { ConfirmDialogHost } from '@/components/ui/overlays/ConfirmDialog';
+import AppearancePreferencesRoot from '@/components/settings/appearance/AppearancePreferencesRoot';
 import AnalyticsConsentRoot from '@/components/analytics/AnalyticsConsentRoot';
 // SDK styles first so our globals.css overrides win at equal specificity
 // (e.g. the la-crypta `--nui-overlay-bg` override that lets the login

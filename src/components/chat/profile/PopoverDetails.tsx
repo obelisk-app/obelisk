@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { GlobeIcon, ZapIcon } from '@/components/ui/icons';
+import { GlobeIcon, ZapIcon } from '@/components/ui/icons/icons';
 import { BASE_ROLE, websiteHref, type PopoverMember } from '@/hooks/chat/profile/usePopoverMember';
 
 /** Roles + links, recessed so they read as details, not actions. */

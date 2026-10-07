@@ -30,8 +30,8 @@ installBridgeHarness(fake);
 describe('nostr-bridge', () => {
 
   it('cached messages cap at MESSAGE_CACHE_LIMIT (last 50 by createdAt)', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-    const { cacheGet } = await import('@/services/nostr-bridge/cache');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheGet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -85,8 +85,8 @@ describe('nostr-bridge', () => {
 
 
   it('optimistic placeholders are filtered out before the cache write', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-    const { cacheGet } = await import('@/services/nostr-bridge/cache');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheGet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -124,8 +124,8 @@ describe('nostr-bridge', () => {
 
 
   it('seedCacheForRelay paints cached messages into messagesByGroup before live REQ', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-    const { cacheSet } = await import('@/services/nostr-bridge/cache');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheSet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -156,8 +156,8 @@ describe('nostr-bridge', () => {
 
 
   it('does not paint hidden channels or messages from cache before live relay confirmation', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-    const { cacheSet } = await import('@/services/nostr-bridge/cache');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheSet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -197,8 +197,8 @@ describe('nostr-bridge', () => {
 
 
   it('setActiveGroup seeds cached messages when the channel memory is empty', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-    const { cacheSet } = await import('@/services/nostr-bridge/cache');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheSet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -224,8 +224,8 @@ describe('nostr-bridge', () => {
 
 
   it('refreshGroupMessages keeps cached messages visible while the live REQ restarts', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-    const { cacheSet } = await import('@/services/nostr-bridge/cache');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheSet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -251,8 +251,8 @@ describe('nostr-bridge', () => {
 
 
   it('ingestReaction persists to bridgeCache and seedCacheForRelay paints it', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-    const { cacheGet, cacheSet } = await import('@/services/nostr-bridge/cache');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheGet, cacheSet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -311,8 +311,8 @@ describe('nostr-bridge', () => {
 
 
   it('logout wipes the bridgeCache so the next user does not inherit cached messages', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
-    const { cacheGet } = await import('@/services/nostr-bridge/cache');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
+    const { cacheGet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -342,7 +342,7 @@ describe('nostr-bridge', () => {
 
 
   it('returns end for normal relay pagination only after a confirmed empty page', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const groupId = 'normal-pagination-empty';
     const bridge = await getBridge();
@@ -363,7 +363,7 @@ describe('nostr-bridge', () => {
 
 
   it('keeps pagination retryable when the relay never sends EOSE', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const groupId = 'normal-pagination-error';
     const bridge = await getBridge();
@@ -391,7 +391,7 @@ describe('nostr-bridge', () => {
 
 
   it('adds older messages from normal relay pagination', async () => {
-    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const groupId = 'normal-pagination-added';
     const bridge = await getBridge();

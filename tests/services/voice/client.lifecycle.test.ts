@@ -158,7 +158,7 @@ const bridgeFake = vi.hoisted(() => {
     reset: () => { cbs.length = 0; releaseCapacity.mockClear(); },
   };
 });
-vi.mock('@/services/nostr-bridge/client', () => ({ getBridge: bridgeFake.getBridge }));
+vi.mock('@/services/nostr-bridge/facade/client', () => ({ getBridge: bridgeFake.getBridge }));
 
 import { VoiceClient } from '@/services/voice/client';
 import { Peer } from '@/services/voice/peer';

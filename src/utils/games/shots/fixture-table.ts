@@ -5,10 +5,10 @@
  * keeps "random-looking" boards reproducible. The boards themselves are in
  * `fixtures.ts`.
  */
-import { deriveSession, type GameSession } from '@/lib/games/session';
-import { registerGameDef } from '@/lib/games/registry';
-import type { GameDefinition } from '@/lib/games/types';
-import { chainReaction } from '@/lib/games/chain-reaction';
+import { deriveSession, type GameSession } from '@/lib/games/session/session';
+import { registerGameDef } from '@/lib/games/core/registry';
+import type { GameDefinition } from '@/lib/games/core/types';
+import { chainReaction } from '@/lib/games/chain-reaction/chain-reaction';
 import { vesta } from '@/lib/games/vesta/definition';
 import { stacker } from '@/lib/games/stacker/definition';
 import {
@@ -18,7 +18,7 @@ import {
   type GameEvent,
   type ParsedGameEvent,
   type SeatSpec,
-} from '@/lib/games/protocol';
+} from '@/lib/games/protocol/protocol';
 
 // The harness replays synchronously, so it installs every engine up front.
 // (Dev only: the app loads each engine on demand, see registry.ts.)

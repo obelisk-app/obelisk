@@ -7,8 +7,8 @@
  * `session.state`. What this definition really contributes is the player
  * limits and the match reducer (`./match.ts`) that replay runs instead.
  */
-import type { ApplyResult, GameDefinition } from '../types';
-import { STACKER_META } from '../game-meta';
+import type { ApplyResult, GameDefinition } from '../core/types';
+import { STACKER_META } from '../core/game-meta';
 import { applyMatchEvent, initialMatch } from './match';
 
 export const STACKER_MIN_PLAYERS = STACKER_META.minPlayers;

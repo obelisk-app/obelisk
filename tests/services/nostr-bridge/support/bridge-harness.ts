@@ -9,7 +9,7 @@ import { afterEach, beforeEach, vi } from 'vitest';
 import { finalizeEvent, generateSecretKey, getPublicKey, type Event as NostrEvent, type Filter } from 'nostr-tools';
 import { normalizeURL } from 'nostr-tools/utils';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 import type { FakeBridgePool } from '@tests/services/nostr-bridge/support/bridge-fake-pool';
 
 let installed: FakeBridgePool | null = null;
@@ -46,7 +46,7 @@ export function installBridgeHarness(fake: FakeBridgePool): void {
   });
 
   afterEach(async () => {
-    const { getBridgeImpl } = await import('@/services/nostr-bridge/client');
+    const { getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     getBridgeImpl()?.dispose();
     unregisterBridge();
     (() => { pool().state.published = []; pool().state.subscriptions = []; pool().state.subscriptionLog = []; pool().state.ensureRelayCalls = []; pool().state.ensureRelayImpl = null; pool().state.querySyncCalls = []; pool().state.suppressNextEose = false; pool().state.suppressAllEose = false; pool().state.poolSeq = 0; pool().state.poolOptions = []; pool().state.closeCalls = []; pool().state.closeOpenSubscriptionCounts = []; })();

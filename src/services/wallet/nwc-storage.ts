@@ -13,7 +13,7 @@
  * - Only one account is logged in per browser, so a record for any other
  *   account is left over from a logout this page did not see: it is erased
  *   when an account loads its own (`forgetNwcRecords(except)`), and every
- *   record is erased by the logout path (`src/services/reset.ts`).
+ *   record is erased by the logout path (`src/services/common/reset.ts`).
  */
 import { VaultError, isVaultAvailable, isSealedBox, openSessionVault, type SealedBox } from '@/lib/crypto/session-vault';
 

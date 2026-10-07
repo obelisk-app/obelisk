@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import IntlScope from '@/i18n/IntlScope';
 import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
-import GuidesIndexPage from '@/components/guides/GuidesIndexPage';
+import GuidesIndexPage from '@/components/guides/listing/GuidesIndexPage';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { standardPageMetadata } from '@/utils/seo/standard';
 

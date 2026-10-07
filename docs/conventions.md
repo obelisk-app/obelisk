@@ -1,6 +1,47 @@
 # Code conventions
 
-Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../AGENTS.md#where-code-goes); this page is the detail behind two of its rules: component files are markup, and every modal and sheet uses the shared header and footer.
+Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../AGENTS.md#where-code-goes); this page is the detail behind three of its rules: where a file goes, component files are markup, and every modal and sheet uses the shared header and footer.
+
+## Where a file goes
+
+The layers are `src/components`, `src/hooks`, `src/services`, `src/utils`, `src/store` and `src/lib`. All of them are split the same way (round 28), and `tests/structure/module-layout.test.ts` holds them to it.
+
+1. **Nothing loose at a layer's root.** Every file sits in a module folder. Code used across features goes in `common/` (`hooks/common/useDismiss.ts`, `services/common/clipboard.ts`, `components/common/AnchoredMenu.tsx`, `store/common/multi-account.ts`) or, in `utils`, in a named shared topic (`format/`, `identity/`, `message-text/`, `relay-url/`, `nostr/`, ...).
+2. **The same feature names in every layer.** A layer's top-level folders come from one module map (below; `MODULES` in the guard). A feature that has code in several layers uses the same path in each: `components/chat/dm/thread/DmThreadMenu.tsx`, `hooks/chat/dm/thread/useDmThread.ts`, `services/chat/dm/opt-in.ts`, `utils/chat/dm/pending.ts`, `store/chat/dm.ts`. A small layer may stop a level higher (`services/chat/dm/` is flat), but never renames: one folder name is spelled one way everywhere (no `dm-call` beside `call`, no `messages` beside `message`).
+3. **A folder with sub-folders keeps only its entry loose.** Beside its sub-folders a folder holds its `index.ts` or its entry component (`components/social/FeedScreen.tsx`, `app/[locale]/app/AppGate.tsx`, `app/[locale]/app/mobile/PhoneShell.tsx`; the list is `ENTRY` in the guard) and nothing else. Files shared by a feature's sub-features go in its own `common/` (`components/voice/common/icons.tsx`, `services/nostr-bridge/common/`).
+4. **A lib package is a folder with an `index.ts`** (`lib/nip-59/index.ts`, `lib/games/index.ts`).
+
+The route tree follows rule 3: Next.js files (`page.tsx`, `layout.tsx`, `opengraph-image.tsx`, ...) stay where routing needs them, every other file of a folder with sub-folders sits in one. The app frame under `src/app/[locale]/app/` is the `shell` module: its hooks mirror it under `src/hooks/shell/` (`app/[locale]/app/mobile/rail/` reads `hooks/shell/mobile/rail/`) and its pure helpers are in `src/utils/shell/`.
+
+**Naming.** Component files are PascalCase after their component, an acronym written as a word (`DmThreadMenu.tsx`, `FaqItem.tsx`); a component module of several pieces or of data is kebab-case (`icons.tsx`, `columns.tsx`, `markdown-components.tsx`). Hooks are `useX.ts`. Everything in `services`, `utils`, `store` and `lib` is kebab-case. A store module's main store is its `index.ts` (`@/store/voice`); a second store in the module has its own name (`@/store/chat/dm`).
+
+### The module map
+
+| Module | What it is | Sub-features |
+|---|---|---|
+| `common` | Code used by several features | |
+| `ui` (components only) | The design-system kit, by kind, an `index.ts` per group | `buttons`, `forms`, `overlays`, `layout`, `data`, `feedback`, `media`, `icons` |
+| `shell` | The app frame at `/app` (components in `src/app/[locale]/app/`) | `desktop`, `mobile` (`carousel`, `chrome`, `nav`, `rail`, `screens/<screen>`, `sheets/<topic>`), `panes` (`channel`, `dm`, `message`, `reader`, `sidebar`, `topbar`), `modals`, `rail`, `search`, `settings`, `dm`, `login`, `user-panel`, `mounts` |
+| `chat` | Group channels and DMs | `channel`, `composer`, `dm` (`composer`, `message`, `thread`, `unlock`), `forum`, `gallery`, `members`, `mentions`, `message`, `picker`, `pq`, `profile`, `search`, `slash`, `timeline`, `zaps` |
+| `games` | Turn-based games played in a channel. Its own module, not a part of chat: it has its own lib package, services, store, dev harness and lazy downloads, and chat only embeds its card | `card`, `table`, `new-game`, `start-table`, `results`, `channel`, `chain-reaction`, `stacker`, `vesta` |
+| `voice` | Voice and video rooms | `room`, `controls`, `status-bar`, `audio`, `common` |
+| `call` | One-to-one DM calls | |
+| `social` | The Nostr feeds | `feed`, `note`, `composer`, `article`, `profile`, `tags`, `viewer`, `widgets` |
+| `relay` | Relay-wide data and actions: info, branding, emoji, roles, channel layout, bot commands, deep links, status | |
+| `admin` | The operator's tools | `relay-admin`, `relay-roles`, `relay-emoji` |
+| `settings` | The settings screens | `account`, `appearance`, `notifications`, `privacy`, `social-relays`, `wallet` |
+| `preferences` | The person's preferences, read by every feature | |
+| `identity` | People: NIP-05 checks, user search, names and keys | |
+| `media` | Uploads, the media library, the remote-media gate | `library`, `upload`, `remote` |
+| `wallet` | Zaps and Nostr Wallet Connect | |
+| `notifications`, `read-state` | Alerts, badges, read cursors | |
+| `feedback` | Activity indicator, toasts, error panel | |
+| `moderation` | Mutes and blocks | |
+| `wot` | Web of trust | |
+| `login`, `analytics`, `local-data`, `hints`, `i18n` | The login widget's storage, consent and gtag, the on-device data inventory, onboarding hints, the runtime translator | |
+| `marketing`, `guides`, `help`, `media-kit`, `seo` | The public site | `marketing`: `landing`, `site`, `showcase`; `guides`: `article`, `listing`, `mdx`, `svg` |
+
+Folders one layer has and the others do not: `services/nostr-bridge/` (the bridge, behind its front door), `services/server/` (server-only code) and the `utils` shared topics; each is listed with its reason in `LAYER_ONLY`.
 
 ## Component files
 
@@ -29,7 +70,7 @@ A component file is markup. Reading one should tell you what is on the screen, n
 
 ### Files that may hold more than one component
 
-Only the reasoned list in `scripts/markup-only/multi-component.ts`: the icon sets (`ui/icons.tsx`, `voice/icons.tsx` and four small ones), the MDX component map (`guides/mdx-components.tsx`), the media-kit banner variants (`media-kit/kit/banners.tsx`), the two lazy-boundary modules (`app/lazy-mounts.tsx`, `chat/games/LazyTables.tsx`) and the menu primitive's parts (`ui/menu.tsx`). Each entry carries its reason; the list only shrinks.
+Only the reasoned list in `scripts/markup-only/multi-component.ts`: the icon sets (`ui/icons/icons.tsx`, `voice/common/icons.tsx` and five small ones), the MDX component map (`guides/mdx/mdx-components.tsx`), the media-kit banner variants (`media-kit/kit/banners.tsx`), the two lazy-boundary modules (`app/mounts/lazy-mounts.tsx`, `games/table/LazyTables.tsx`) and the menu primitive's parts (`ui/overlays/menu.tsx`). Each entry carries its reason; the list only shrinks.
 
 ### Route files
 
@@ -80,12 +121,12 @@ npx tsx scripts/markup-only/baseline.ts --top 20               # the worst files
 
 Every desktop dialog renders the same header and footer, so titles, spacing and buttons look alike everywhere:
 
-- `src/components/ui/ModalHeader.tsx`. `bar` (the default): title and optional subtitle, an optional icon (decorative by default; `decorativeIcon={false}` for one that names itself, like a game preview) or back chevron before the title, extra controls (tabs, a copy button) as children, the close button at the right, a hairline below. `alert`: a centred title under a tinted icon circle (`tone` `danger`, `accent` or `warning`), no close button; the confirmation dialogs.
-- `src/components/ui/ModalFooter.tsx`. `bar`: status text on the left (`meta`), the dismiss button (`cancel`) and the actions on the right (`actions`, the main one last; `tone` `primary`, `danger`, `secondary` or `zap` picks the one look for that role, `zap` being the yellow pill with the zap icon every Lightning payment uses), a hairline above. `alert`: the same buttons stacked full width on a phone and in a right-aligned row from `sm` up.
+- `src/components/ui/overlays/ModalHeader.tsx`. `bar` (the default): title and optional subtitle, an optional icon (decorative by default; `decorativeIcon={false}` for one that names itself, like a game preview) or back chevron before the title, extra controls (tabs, a copy button) as children, the close button at the right, a hairline below. `alert`: a centred title under a tinted icon circle (`tone` `danger`, `accent` or `warning`), no close button; the confirmation dialogs.
+- `src/components/ui/overlays/ModalFooter.tsx`. `bar`: status text on the left (`meta`), the dismiss button (`cancel`) and the actions on the right (`actions`, the main one last; `tone` `primary`, `danger`, `secondary` or `zap` picks the one look for that role, `zap` being the yellow pill with the zap icon every Lightning payment uses), a hairline above. `alert`: the same buttons stacked full width on a phone and in a right-aligned row from `sm` up.
 
 The phone shell has its own sheet design and keeps it, consistent within itself:
 
-- `src/app/[locale]/app/mobile/sheets/SheetHeader.tsx`: the centred sheet title with its accent glyph and an optional help line, an optional back chevron for a sheet with sub-views, the `confirm` shape (tinted icon circle, title, description) and the `identity` shape (an avatar beside a name and a mono line, the relay menu).
-- `src/app/[locale]/app/mobile/sheets/SheetActions.tsx`: the full-width primary button (or a destructive one, `tone: 'danger'`) and the quiet cancel under it.
+- `src/app/[locale]/app/mobile/sheets/chrome/SheetHeader.tsx`: the centred sheet title with its accent glyph and an optional help line, an optional back chevron for a sheet with sub-views, the `confirm` shape (tinted icon circle, title, description) and the `identity` shape (an avatar beside a name and a mono line, the relay menu).
+- `src/app/[locale]/app/mobile/sheets/chrome/SheetActions.tsx`: the full-width primary button (or a destructive one, `tone: 'danger'`) and the quiet cancel under it.
 
 `tests/components/modal-chrome.test.ts` enforces it: a file that renders `<Modal>` or `<Sheet>` may not render its own `<h1>` / `<h2>`, `<header>`, `<footer>` or `CloseButton`, nor the phone shell's title classes; the shared pieces render those. Section headings inside a dialog's body use `<h3>` and below.

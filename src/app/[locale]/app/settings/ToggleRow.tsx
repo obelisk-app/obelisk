@@ -1,6 +1,6 @@
 'use client';
 
-import Toggle from '@/components/ui/Toggle';
+import Toggle from '@/components/ui/forms/Toggle';
 
 /** A labelled on/off setting: label and description on the left, the toggle on the right. */
 export function ToggleRow({

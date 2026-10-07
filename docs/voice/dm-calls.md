@@ -14,17 +14,17 @@ Nothing here needs a server. The only infrastructure a call touches is:
 
 | Path | What |
 |---|---|
-| `src/services/dm-call/protocol.ts` | Control messages (invite / accept / decline / cancel / hangup / busy), parsing, freshness |
-| `src/services/dm-call/signaling.ts`, `signal-outbox.ts` | `CallSignalChannel`: kind 25050 on throwaway keys, NIP-44 content; the outbox numbers, batches and re-sends until acked |
-| `src/services/dm-call/call-pool.ts` | The call's transport: the page's relay hub under the call's own identity (`ephemeral:<callId>`, `authPolicy: 'never-auth'`) |
-| `src/services/dm-call/session.ts` | `DmCallSession`: one mesh `Peer`, rebuild / reconnect; capture in `local-media.ts`, the other side's streams in `remote-media.ts`, give-up timers in `call-liveness.ts`, shapes and limits in `session-config.ts` |
-| `src/services/dm-call/load-session.ts` | Fetches `session.ts` (and with it simple-peer) on demand: when a call starts, when an invite rings, when the pointer reaches the call buttons. Nothing in the shell imports the session statically |
-| `src/store/dm-call.ts` | The state machine and the inbound router; the store and its actions are `dm-call-store.ts`, "who can ring me" and the IP policy `dm-call-policy.ts`, timers and the live session `dm-call-runtime.ts` (none of which imports the session statically) |
-| `src/hooks/useDmCallListener.ts` | Listens for call messages while logged in; mounted by `LazyDmCallLayer` (`src/app/[locale]/app/lazy-mounts.tsx`), which ships with the shell, so an invite never waits on a download |
+| `src/services/call/protocol.ts` | Control messages (invite / accept / decline / cancel / hangup / busy), parsing, freshness |
+| `src/services/call/signaling.ts`, `signal-outbox.ts` | `CallSignalChannel`: kind 25050 on throwaway keys, NIP-44 content; the outbox numbers, batches and re-sends until acked |
+| `src/services/call/call-pool.ts` | The call's transport: the page's relay hub under the call's own identity (`ephemeral:<callId>`, `authPolicy: 'never-auth'`) |
+| `src/services/call/session.ts` | `DmCallSession`: one mesh `Peer`, rebuild / reconnect; capture in `local-media.ts`, the other side's streams in `remote-media.ts`, give-up timers in `call-liveness.ts`, shapes and limits in `session-config.ts` |
+| `src/services/call/load-session.ts` | Fetches `session.ts` (and with it simple-peer) on demand: when a call starts, when an invite rings, when the pointer reaches the call buttons. Nothing in the shell imports the session statically |
+| `src/store/call/dm-call.ts` | The state machine and the inbound router; the store and its actions are `dm-call-store.ts`, "who can ring me" and the IP policy `dm-call-policy.ts`, timers and the live session `dm-call-runtime.ts` (none of which imports the session statically) |
+| `src/hooks/call/useDmCallListener.ts` | Listens for call messages while logged in; mounted by `LazyDmCallLayer` (`src/app/[locale]/app/mounts/lazy-mounts.tsx`), which ships with the shell, so an invite never waits on a download |
 | `src/services/nostr-bridge/dm/calls.ts` | `sendDmCallMessage`, `subscribeDmCallMessages`, `sealAndWrapExpiring`; holds a fresh message that arrives before anyone listens and hands it to the first listener |
 | `src/services/notifications/sound.ts`, `alert.ts` | `ring` / `ringback` phrases per ringtone; `ringIncomingCall`, `startRingback` |
 | `src/components/call/` | `DmCallButtons`, `DmCallLayer` (banner + call view + remote audio) |
-| `src/components/settings/CallSettings.tsx` | Who can call, IP protection, call relays |
+| `src/components/settings/notifications/CallSettings.tsx` | Who can call, IP protection, call relays |
 
 ## Wire
 
@@ -170,11 +170,11 @@ and stays down 30 s ends `connection-lost`.
 
 ## Tests
 
-- `tests/services/dm-call/protocol.test.ts`: parse, validation, freshness.
-- `tests/services/dm-call/signaling.test.ts`: learning the peer from its hello, delivery to a REQ that went live late, re-send until acked / exactly-once, batching, give-up, stale-session purge, strangers ignored, size cap.
-- `tests/services/dm-call/call-pool.test.ts`: on the real hub, the call's REQs and EVENTs use a socket of their own and never answer AUTH, even on a relay the session is authenticated to.
-- `tests/services/dm-call/session.test.ts`: two real sessions over `src/services/dm-call/fake-ephemeral-relay.ts` (a relay that keeps nothing and forwards only to live REQs): connect via hello alone, via the accept alone, and without a rebuild under slow REQs and 30-50 % seeded random loss; bye, give-up, reconnect timeout, caller rebuild followed by the callee, hangup. `call-liveness.test.ts`, `remote-media.test.ts`, `session-config.test.ts` and `load-session.test.ts` cover the parts.
-- `tests/store/dm-call.test.ts`, `dm-call-store.test.ts`, `dm-call-policy.test.ts`, `dm-call-runtime.test.ts`, `dm-call-lazy.test.ts`: the state machine, contacts-only, busy, answered elsewhere, IP policy, and (`dm-call-lazy`) an invite that rings and no call lost or doubled while the session download is slow or fails.
+- `tests/services/call/protocol.test.ts`: parse, validation, freshness.
+- `tests/services/call/signaling.test.ts`: learning the peer from its hello, delivery to a REQ that went live late, re-send until acked / exactly-once, batching, give-up, stale-session purge, strangers ignored, size cap.
+- `tests/services/call/call-pool.test.ts`: on the real hub, the call's REQs and EVENTs use a socket of their own and never answer AUTH, even on a relay the session is authenticated to.
+- `tests/services/call/session.test.ts`: two real sessions over `src/services/call/fake-ephemeral-relay.ts` (a relay that keeps nothing and forwards only to live REQs): connect via hello alone, via the accept alone, and without a rebuild under slow REQs and 30-50 % seeded random loss; bye, give-up, reconnect timeout, caller rebuild followed by the callee, hangup. `call-liveness.test.ts`, `remote-media.test.ts`, `session-config.test.ts` and `load-session.test.ts` cover the parts.
+- `tests/store/call/dm-call.test.ts`, `dm-call-store.test.ts`, `dm-call-policy.test.ts`, `dm-call-runtime.test.ts`, `dm-call-lazy.test.ts`: the state machine, contacts-only, busy, answered elsewhere, IP policy, and (`dm-call-lazy`) an invite that rings and no call lost or doubled while the session download is slow or fails.
 - `tests/services/nostr-bridge/dm-nip17.test.ts` (`DM call control messages`): expiring wrap, listener delivery, stale drop, self notice.
 - `tests/services/notifications/sound.test.ts`: the ring loop.
-- `tests/components/call/DmCallLayer.test.tsx`, `tests/components/settings/CallSettings.test.tsx`, `tests/app/[locale]/app/lazy-dm-call.test.tsx`.
+- `tests/components/call/DmCallLayer.test.tsx`, `tests/components/settings/notifications/CallSettings.test.tsx`, `tests/app/[locale]/app/mounts/lazy-dm-call.test.tsx`.

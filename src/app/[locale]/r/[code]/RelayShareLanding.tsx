@@ -6,7 +6,7 @@ import { useRouter } from '@/i18n/navigation';
 import { nostrActions } from '@/services/nostr-bridge';
 import { decodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 import { errorText } from '@/utils/errors/error-text';
 
 const RELAY_BRANDING: Record<string, { logo: string; alt: string }> = {

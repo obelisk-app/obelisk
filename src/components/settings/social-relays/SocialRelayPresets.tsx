@@ -1,6 +1,6 @@
-import Text from '@/components/ui/Text';
+import Text from '@/components/ui/layout/Text';
 import { SOCIAL_RELAY_PRESETS } from '@/services/social/relays';
-import { relayKey } from '@/hooks/settings/useSocialRelayDraft';
+import { relayKey } from '@/hooks/settings/social-relays/useSocialRelayDraft';
 import type { Translate } from '@/i18n/keys';
 
 /** The suggested relays: one chip each, marked once it is already in the draft. */

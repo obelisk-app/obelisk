@@ -13,21 +13,21 @@ import { useRef, type ReactNode } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMyPubkey } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import Modal from '@/components/ui/Modal';
-import ModalHeader from '@/components/ui/ModalHeader';
-import NoteComposer from './NoteComposer';
-import MobileComposer from './MobileComposer';
-import NoteThread from './NoteThread';
-import ArticleReader from './ArticleCard';
-import FeedSearch from './FeedSearch';
-import InlineReader from './InlineReader';
-import FeedWidgets from './FeedWidgets';
-import FeedToolbar from './feed-screen/FeedToolbar';
-import FeedColumn from './feed-screen/FeedColumn';
-import FeedFloatingControls from './feed-screen/FeedFloatingControls';
-import FilterSheet from './feed-screen/FilterSheet';
-import { useFeedScreen } from '@/hooks/social/feed-screen/useFeedScreen';
-import { useComposeRowVisible } from '@/hooks/social/feed-screen/useComposeRowVisible';
+import Modal from '@/components/ui/overlays/Modal';
+import ModalHeader from '@/components/ui/overlays/ModalHeader';
+import NoteComposer from './composer/NoteComposer';
+import MobileComposer from './composer/MobileComposer';
+import NoteThread from './note/NoteThread';
+import ArticleReader from './article/ArticleCard';
+import FeedSearch from './feed/FeedSearch';
+import InlineReader from './article/InlineReader';
+import FeedWidgets from './widgets/FeedWidgets';
+import FeedToolbar from './feed/FeedToolbar';
+import FeedColumn from './feed/FeedColumn';
+import FeedFloatingControls from './feed/FeedFloatingControls';
+import FilterSheet from './feed/FilterSheet';
+import { useFeedScreen } from '@/hooks/social/feed/useFeedScreen';
+import { useComposeRowVisible } from '@/hooks/social/feed/useComposeRowVisible';
 
 
 export default function FeedScreen({

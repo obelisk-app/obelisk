@@ -1,5 +1,5 @@
 import { isLocale } from '@/i18n';
-import { renderGuideOgImage, ogImageSize } from '@/components/guides/guide-og-image';
+import { renderGuideOgImage, ogImageSize } from '@/components/guides/article/guide-og-image';
 
 export const runtime = 'nodejs';
 export const size = ogImageSize;

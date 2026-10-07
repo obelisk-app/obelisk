@@ -20,13 +20,13 @@ import {
   fetchHashtagNotes,
   fetchProfilesForViewer,
   type ViewerProfile,
-} from '@/services/server/nostr-fetch';
-import { plainTextForPreview, previewImage } from '@/services/server/note-preview';
-import ViewerHeader from '@/components/social/ViewerHeader';
-import FollowTagButton from '@/components/social/FollowTagButton';
-import { serverLocale } from '@/services/server/locale';
+} from '@/services/server/viewer/nostr-fetch';
+import { plainTextForPreview, previewImage } from '@/services/server/viewer/note-preview';
+import ViewerHeader from '@/components/social/viewer/ViewerHeader';
+import FollowTagButton from '@/components/social/tags/FollowTagButton';
+import { serverLocale } from '@/services/server/i18n/locale';
 import { formatDate } from '@/utils/format/format';
-import RemoteImage from '@/components/ui/RemoteImage';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 import { NOTE_VIEWER_PATH, noteIdentifier } from '@/services/social/note-links';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 

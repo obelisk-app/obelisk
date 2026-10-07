@@ -33,11 +33,11 @@
  * cards scrolling into view cost two REQs, not twenty-four.
  */
 import { getBridge, getBridgeImpl } from '@/services/nostr-bridge';
-import { KIND_GAME } from '@/utils/nip-kinds';
+import { KIND_GAME } from '@/utils/nostr/nip-kinds';
 import { useGamesStore } from '@/store/games';
-import { registerClientResetHook } from '@/services/reset';
+import { registerClientResetHook } from '@/services/common/reset';
 import { ingestGameEvent } from './ingest';
-import { parseGameEvent, type GameEvent } from '@/lib/games/protocol';
+import { parseGameEvent, type GameEvent } from '@/lib/games/protocol/protocol';
 
 /** How long ids accumulate before a batch goes out. */
 export const RESOLVE_BATCH_MS = 250;

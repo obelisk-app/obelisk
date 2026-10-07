@@ -119,8 +119,8 @@ vi.mock('nostr-tools/nip46', () => {
   };
 });
 
-import { STORAGE_KEY } from '@/services/nostr-bridge/client';
-import { unregisterBridge } from '@/services/nostr-bridge/bridge-slot';
+import { STORAGE_KEY } from '@/services/nostr-bridge/facade/client';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 function makeKeypair() {
   const sk = generateSecretKey();
@@ -155,7 +155,7 @@ afterEach(() => {
 
 describe('Fix A: login → render race', () => {
   it('isLoggedIn flips only after connect completes', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
 
@@ -179,7 +179,7 @@ describe('Fix A: login → render race', () => {
   });
 
   it('global subscriptions are open by the time isLoggedIn fires true', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
 
@@ -207,7 +207,7 @@ describe('Fix B (revised): admin/member subscription is lazy', () => {
   // first useAdmins / useMembers / subscribeAdmins / subscribeMembers
   // call from the chat panel. See docs/data-system.md.
   it('does NOT subscribe to kinds 39001+39002 on kind 39000 ingest', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -236,7 +236,7 @@ describe('Fix B (revised): admin/member subscription is lazy', () => {
   });
 
   it('opens the per-group admin/member REQ on first subscribeAdmins call', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);
@@ -283,7 +283,7 @@ describe('Fix C: bunker pre-warm on initialize', () => {
       }),
     );
 
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     await getBridge();
     // Pre-warm is fire-and-forget; allow microtasks to drain.
     await new Promise((r) => setTimeout(r, 0));
@@ -303,7 +303,7 @@ describe('Fix C: bunker pre-warm on initialize', () => {
       }),
     );
 
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     await getBridge();
     await new Promise((r) => setTimeout(r, 0));
 
@@ -312,7 +312,7 @@ describe('Fix C: bunker pre-warm on initialize', () => {
   });
 
   it('does not replay connect for SDK-paired loginWithBunker handoff', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const bridge = await getBridge();
 
     await bridge.loginWithBunker('bunker://abc?relay=wss://relay.nsec.app', {
@@ -325,7 +325,7 @@ describe('Fix C: bunker pre-warm on initialize', () => {
   });
 
   it('keeps a bridge-owned signer alive after the SDK closes its paired signer', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const bridge = await getBridge();
     const { BunkerSigner } = await import('nostr-tools/nip46');
     const signer = BunkerSigner.fromBunker(
@@ -349,7 +349,7 @@ describe('Fix C: bunker pre-warm on initialize', () => {
   });
 
   it('evicts a timed-out NIP-42 signature so the same challenge can retry', async () => {
-    const { BUNKER_AUTH_SIGNATURE_TIMEOUT_MS, getBridge } = await import('@/services/nostr-bridge/client');
+    const { BUNKER_AUTH_SIGNATURE_TIMEOUT_MS, getBridge } = await import('@/services/nostr-bridge/facade/client');
     const bridge = await getBridge();
     await bridge.loginWithBunker('bunker://abc?relay=wss://relay.nsec.app', {
       clientSecretHex: 'b'.repeat(64),
@@ -390,7 +390,7 @@ describe('Fix C: bunker pre-warm on initialize', () => {
       }),
     );
 
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     await getBridge();
     await new Promise((r) => setTimeout(r, 0));
 
@@ -409,7 +409,7 @@ describe('Fix E: re-login does not strand kind 39000 behind newest-wins guard', 
   // the sidebar reads "No channels found" until the user toggles relays.
   // resetSessionState now clears the Map.
   it('re-ingests kind 39000 with the same created_at after logout + login', async () => {
-    const { getBridge } = await import('@/services/nostr-bridge/client');
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
 
@@ -441,8 +441,8 @@ describe('Fix E: re-login does not strand kind 39000 behind newest-wins guard', 
 
 describe('Fix D (bridgeCache integration): admin/member persistence', () => {
   it('persists admin list to cache when the relay delivers kind 39001', async () => {
-    const clientMod = await import('@/services/nostr-bridge/client');
-    const { cacheGet } = await import('@/services/nostr-bridge/cache');
+    const clientMod = await import('@/services/nostr-bridge/facade/client');
+    const { cacheGet } = await import('@/services/nostr-bridge/cache/cache');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await clientMod.getBridge();
     await bridge.loginWithNsec(skHex, pkHex);

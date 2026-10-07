@@ -10,14 +10,14 @@
  * across the user's configured relays.
  */
 import type { Event as NostrEvent } from 'nostr-tools';
-import { KIND_GAME } from '@/utils/nip-kinds';
+import { KIND_GAME } from '@/utils/nostr/nip-kinds';
 import {
   parseGameEvent,
   GAME_LOG_WINDOW_SECONDS,
   GAME_TAG,
   type GameEvent,
   type ParsedGameEvent,
-} from '@/lib/games/protocol';
+} from '@/lib/games/protocol/protocol';
 import { bridge, GAME_SUB_WATCHDOG_MS } from './transport-bridge';
 
 export {

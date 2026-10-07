@@ -2,8 +2,8 @@
 
 import { useMemo } from 'react';
 import { useMediaPacks } from '@/services/nostr-bridge';
-import type { MessageSticker } from '@/utils/media-tags/sticker-tags';
-import { stickerSelection, type StickerSelection } from '@/utils/media-library/sticker-selection';
+import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
+import { stickerSelection, type StickerSelection } from '@/utils/media/library/sticker-selection';
 
 /**
  * The media-library selection for a sticker, recomputed only when its

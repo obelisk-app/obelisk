@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import type { PqProtectionLevel } from '@/services/pq/status';
+import type { PqProtectionLevel } from '@/services/chat/pq/status';
 
 const SIZE = 16;
 

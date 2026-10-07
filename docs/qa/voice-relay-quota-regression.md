@@ -31,7 +31,7 @@ npx vitest run tests/services/nostr-bridge/bridge-relay-access.test.ts tests/ser
 Target appearance preferences:
 
 ```bash
-npx vitest run tests/services/preferences.test.ts tests/components/settings/AppearancePreferenceControls.test.tsx "tests/app/[locale]/app/UserPanel.preferences.test.tsx"
+npx vitest run tests/services/preferences/preferences.test.ts tests/components/settings/appearance/AppearancePreferenceControls.test.tsx "tests/app/[locale]/app/user-panel/UserPanel.preferences.test.tsx"
 ```
 
 Run bridge and voice transport together:

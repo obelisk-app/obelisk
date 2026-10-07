@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Checkbox from '@/components/ui/Checkbox';
+import Checkbox from '@/components/ui/forms/Checkbox';
 import { useUserMetadata } from '@/services/nostr-bridge';
 import { profileNameOr } from '@/utils/identity/profile-labels';
 import { shortNpubLabel } from '@/utils/identity/short-npub';

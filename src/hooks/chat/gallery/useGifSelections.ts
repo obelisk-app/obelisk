@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useMediaPacks, useMyMediaFavorites } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
-import { buildGifSelections } from '@/utils/media-library/gif-selections';
+import { buildGifSelections } from '@/utils/media/library/gif-selections';
 
 /** `buildGifSelections` over the live packs, favourites and relay emoji. */
 export function useGifSelections(urls: ReadonlyArray<string>) {

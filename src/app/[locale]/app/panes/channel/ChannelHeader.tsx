@@ -2,9 +2,9 @@
 
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
-import SearchBar from '../../SearchBar';
+import SearchBar from '../../search/SearchBar';
 import { CopyInviteLinkButton } from './CopyInviteLinkButton';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/buttons/Button';
 
 type Props = {
   groupId: string;

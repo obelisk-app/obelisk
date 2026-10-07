@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { SEARCHABLE_EMOJI, normalizeEmojiKeyword } from '@/lib/emoji';
-import { loadRecentEmojis, pushRecentEmoji, type RecentEmoji } from '@/services/recent-emojis';
-import type { CustomEmojiMap } from '@/utils/media-tags/custom-emoji-tags';
+import { loadRecentEmojis, pushRecentEmoji, type RecentEmoji } from '@/services/chat/picker/recent-emojis';
+import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import type { JsMediaKind } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
 import { customEntriesFrom, filterByName, resolveRecentEntries, SEARCH_LIMIT } from '@/utils/chat/picker/custom-emoji-entries';

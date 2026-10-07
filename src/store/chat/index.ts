@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { RelayRole } from '@/services/relay-roles';
+import type { RelayRole } from '@/services/relay/relay-roles';
 
 export interface ChatState {
   activeChannelId: string | null;

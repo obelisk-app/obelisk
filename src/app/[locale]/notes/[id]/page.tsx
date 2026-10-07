@@ -29,9 +29,9 @@ import {
   fetchEventForViewer,
   fetchProfilesForViewer,
   topHashtags,
-} from '@/services/server/nostr-fetch';
-import { buildNotePreview } from '@/services/server/note-preview';
-import ViewerHeader from '@/components/social/ViewerHeader';
+} from '@/services/server/viewer/nostr-fetch';
+import { buildNotePreview } from '@/services/server/viewer/note-preview';
+import ViewerHeader from '@/components/social/viewer/ViewerHeader';
 import NoteViewerClient from './NoteViewerClient';
 import AuthorContext from './AuthorContext';
 import OpenInClients from './OpenInClients';

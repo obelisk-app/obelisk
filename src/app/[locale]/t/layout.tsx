@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import IntlScope from '@/i18n/IntlScope';
-import BridgeRoute from '@/components/BridgeRoute';
+import BridgeRoute from '@/components/common/BridgeRoute';
 
 /**
  * The public viewers ship the social and chat modules (note cards, profiles),

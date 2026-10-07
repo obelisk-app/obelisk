@@ -4,10 +4,10 @@
  * NIP-42. Pure move from `dm/relays.ts`.
  */
 import { parseInboxRelayList, parseRelayList } from '@nostr-wot/data';
-import { KIND_DM_INBOX_RELAYS, KIND_RELAY_LIST } from '@/utils/nip-kinds';
-import { getPreferences } from '@/services/preferences';
-import { PROFILE_RELAYS, newestEvent } from '../profile-sync-cache';
-import { isImportableRelayUrl, uniqueRelayUrls } from '../relay-list';
+import { KIND_DM_INBOX_RELAYS, KIND_RELAY_LIST } from '@/utils/nostr/nip-kinds';
+import { getPreferences } from '@/services/preferences/preferences';
+import { PROFILE_RELAYS, newestEvent } from '../profile/profile-sync-cache';
+import { isImportableRelayUrl, uniqueRelayUrls } from '../relay/relay-list';
 import type { DmRelaysContext, DmRelaysDeps } from './relays';
 
 export interface InboxListDeps extends DmRelaysDeps {

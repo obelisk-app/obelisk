@@ -1,10 +1,10 @@
 'use client';
 
-import type { Nip05State } from '@/services/nip05-verify';
+import type { Nip05State } from '@/services/identity/nip05-verify';
 import { useTranslations } from 'next-intl';
-import { CheckBadgeIcon, CopyIcon } from '@/components/ui/icons';
-import Spinner from '@/components/ui/Spinner';
-import WotBadge from '../WotBadge';
+import { CheckBadgeIcon, CopyIcon } from '@/components/ui/icons/icons';
+import Spinner from '@/components/ui/feedback/Spinner';
+import WotBadge from '../../wot/WotBadge';
 import { renderWithEmojis } from './popover-emoji';
 import type { PopoverMember } from '@/hooks/chat/profile/usePopoverMember';
 

@@ -32,7 +32,7 @@ installBridgeHarness(fake);
 installVaultPage();
 
 async function loginNsec(keys = makeKeypair()) {
-  const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/client');
+  const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
   const bridge = await getBridge();
   await bridge.loginWithNsec(keys.skHex, keys.pkHex);
   return { bridge, impl: getBridgeImpl()!, ...keys };

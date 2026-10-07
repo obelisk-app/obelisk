@@ -14,8 +14,8 @@
  */
 import { NwcClient, canPay, NwcError, parseNwcUri, type NwcConnection } from '@/lib/nwc';
 import { pageRelayHub } from '@/services/nostr-bridge';
-import { registerClientResetHook } from '@/services/reset';
-import { useNwcWalletStore, type NwcWalletView } from '@/store/nwc-wallet';
+import { registerClientResetHook } from '@/services/common/reset';
+import { useNwcWalletStore, type NwcWalletView } from '@/store/wallet/nwc-wallet';
 import { createHubNwcTransport, type HubNwcTransport } from './nwc-transport';
 import { deleteNwcWallet, destroyNwcVaultKey, forgetNwcRecords, hasNwcRecord, openNwcWallet, sealNwcWallet } from './nwc-storage';
 import type { WalletConnection } from './wallet-types';
@@ -179,7 +179,7 @@ export function nwcPayerFor(account: string | null): WalletConnection | null {
 }
 
 // Logout (or another account logging in over this one): drop the wallet from
-// memory and destroy its key. `src/services/reset.ts` erases the records
+// memory and destroy its key. `src/services/common/reset.ts` erases the records
 // itself, so they go even on a page that never loaded this module.
 registerClientResetHook(() => {
   dropMemory();

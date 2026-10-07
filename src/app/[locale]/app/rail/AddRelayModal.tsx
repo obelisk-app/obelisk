@@ -2,18 +2,18 @@
 
 import { useId, useMemo, useState } from 'react';
 import { useConfiguredRelays } from '@/services/nostr-bridge';
-import { faviconFor, SUGGESTED_RELAYS } from '@/services/relay-info';
+import { faviconFor, SUGGESTED_RELAYS } from '@/services/relay/relay-info';
 import { shortHost } from '@/utils/relay-url/url-host';
-import { useAddRelayForm, useSuggestedRelayAdd } from '@/hooks/chat/useAddRelayForm';
-import Modal from '@/components/ui/Modal';
-import Button from '@/components/ui/Button';
-import ErrorState from '@/components/ui/ErrorState';
-import Input from '@/components/ui/Input';
+import { useAddRelayForm, useSuggestedRelayAdd } from '@/hooks/relay/useAddRelayForm';
+import Modal from '@/components/ui/overlays/Modal';
+import Button from '@/components/ui/buttons/Button';
+import ErrorState from '@/components/ui/feedback/ErrorState';
+import Input from '@/components/ui/forms/Input';
 import { useTranslations } from 'next-intl';
 import { colorFor, letterFor } from '@/utils/relay-url/relay-tile-style';
-import { useRelayInfo } from '@/hooks/app/rail/useRelayInfo';
-import ModalHeader from '@/components/ui/ModalHeader';
-import RemoteImage from '@/components/ui/RemoteImage';
+import { useRelayInfo } from '@/hooks/shell/rail/useRelayInfo';
+import ModalHeader from '@/components/ui/overlays/ModalHeader';
+import RemoteImage from '@/components/ui/media/RemoteImage';
 
 /** Add a relay to the rail: pick a suggested one, or type a URL. */
 export function AddRelayModal({ onClose }: { onClose: () => void }) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NWC_KINDS, chooseEncryption, codeForWalletError, parseNwcInfo, type NwcErrorCode } from '@/lib/nwc';
-import { KIND_NWC_INFO, KIND_NWC_REQUEST, KIND_NWC_RESPONSE } from '@/utils/nip-kinds';
+import { KIND_NWC_INFO, KIND_NWC_REQUEST, KIND_NWC_RESPONSE } from '@/utils/nostr/nip-kinds';
 import { isErrorCode } from '@/utils/errors/codes';
 
 // Every code the mini-package can throw, typed so a new one fails to compile until it is listed here.

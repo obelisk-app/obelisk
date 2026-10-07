@@ -40,17 +40,17 @@ import {
   useGroups,
 } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/services/nostr-bridge';
-import { useAutoMarkRead } from '@/hooks/useAutoMarkRead';
-import { useMentionSeen } from '@/hooks/useMentionSeen';
+import { useAutoMarkRead } from '@/hooks/read-state/useAutoMarkRead';
+import { useMentionSeen } from '@/hooks/read-state/useMentionSeen';
 import { armNotificationPermissionPrompt } from '@/services/notifications/permission-prompt';
-import { useFaviconBadge } from '@/hooks/useFaviconBadge';
+import { useFaviconBadge } from '@/hooks/notifications/useFaviconBadge';
 import { useReadyToSync } from '@/hooks/read-state/useReadyToSync';
 import { ensureReadStateStoreForAccount } from '@/store/read-state';
 import { ensureNotificationsStoreForAccount } from '@/store/notifications';
-import { ensureDMStoreForAccount } from '@/store/dm';
+import { ensureDMStoreForAccount } from '@/store/chat/dm';
 import { ensureModerationStoreForAccount } from '@/store/moderation';
 import { ensureHintsStoreForAccount } from '@/store/hints';
-import { ensureChannelPrefsStoreForAccount } from '@/store/channel-prefs';
+import { ensureChannelPrefsStoreForAccount } from '@/store/chat/channel-prefs';
 import { startGroupsRelaySync, startDMRelaySync } from './relay-sync';
 import { fetchRelayList } from '@nostr-wot/data';
 import { leasedRelays } from '@/services/social/pool';

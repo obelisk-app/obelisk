@@ -22,8 +22,8 @@
  * because everyone shared a keyboard.
  */
 import { applyMove, createGame, type GameState } from 'vesta';
-import type { ApplyResult, GameDefinition } from '../types';
-import { VESTA_META } from '../game-meta';
+import type { ApplyResult, GameDefinition } from '../core/types';
+import { VESTA_META } from '../core/game-meta';
 import { seatIndex, toMove, type VestaAction } from './moves';
 import { dryRun } from './rules';
 import { sequence } from './sequence';
