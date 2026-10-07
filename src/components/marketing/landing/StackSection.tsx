@@ -2,8 +2,10 @@
 
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
-import RevealSection from './RevealSection';
+import Reveal from '@/components/ui/animations/Reveal';
 import { TECH_STACK } from './landing-data';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * The tech stack cards, each linking out.
@@ -11,15 +13,15 @@ import { TECH_STACK } from './landing-data';
 export default function StackSection() {
   const t = useTranslations();
   return (
-    <RevealSection id="stack" className="py-24 px-6">
+    <Reveal id="stack" className="py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('marketing.stack.heading')}<span className="text-lc-green">.</span>
-          </h2>
-          <p className="text-lc-muted text-lg max-w-xl mx-auto">
+          <Heading as="h2" variant="section" className="mb-4">
+            {t('marketing.stack.heading')}
+          </Heading>
+          <Text as="p" variant="lead" className="max-w-xl mx-auto">
             {t('marketing.stack.subtitle')}
-          </p>
+          </Text>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {TECH_STACK.map((tech) => (
@@ -39,16 +41,16 @@ export default function StackSection() {
                   </div>
                 )}
                 <div>
-                  <h3 className={`text-sm font-bold ${tech.color} group-hover:scale-105 transition-transform origin-left`}>
+                  <Heading as="h3" className={`text-sm font-bold ${tech.color} group-hover:scale-105 transition-transform origin-left`}>
                     {tech.name}
-                  </h3>
-                  <p className="text-xs text-lc-muted">{t(tech.descKey)}</p>
+                  </Heading>
+                  <Text as="p" variant="caption">{t(tech.descKey)}</Text>
                 </div>
               </div>
             </a>
           ))}
         </div>
       </div>
-    </RevealSection>
+    </Reveal>
   );
 }

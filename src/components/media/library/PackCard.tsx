@@ -8,6 +8,7 @@ import Chip from '@/components/ui/data/Chip';
 import Text from '@/components/ui/layout/Text';
 import { useTranslations } from 'next-intl';
 import { isFavoriteItem } from '@/utils/media/library/library-view';
+import Heading from '@/components/ui/layout/Heading';
 
 /** One pack in the library grid: a strip of its first items and its actions. */
 export default function PackCard({ pack, mine, favorite, itemFavorites, busy, server, serverSelected, onView, onOpenItem, onEdit, onDelete, onFavorite, onServer }: {
@@ -38,8 +39,8 @@ export default function PackCard({ pack, mine, favorite, itemFavorites, busy, se
         ))}
       </div>
       <div className="p-3">
-        <h3 className="truncate text-sm font-semibold text-lc-white">{pack.title}</h3>
-        <p className="mt-1 line-clamp-2 text-xs text-lc-muted">{pack.description || t('media.itemCount', { count: pack.items.length })}</p>
+        <Heading as="h3" variant="panel" className="truncate">{pack.title}</Heading>
+        <Text as="p" variant="caption" className="mt-1 line-clamp-2">{pack.description || t('media.itemCount', { count: pack.items.length })}</Text>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button variant="secondary" size="xs" onClick={onView}>{t('media.viewPack')}</Button>
           {!server && <Chip state={favorite ? 'selected' : 'idle'} disabled={busy} onClick={onFavorite} aria-label={favorite ? t('media.pack.unsaveNamed', { title: pack.title }) : t('media.pack.saveNamed', { title: pack.title })}>{favorite ? '★' : '☆'} {t(favorite ? 'media.pack.saved' : 'media.pack.save')}</Chip>}

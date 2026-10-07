@@ -33,9 +33,9 @@ export default function VestaTradePanel({ state, seatLabel, busy, turn }: {
           <ResourceRow label={t('games.vesta.give')} values={vm.give} onChange={vm.setGiveCount} max={vm.giveMax} />
           <ResourceRow label={t('games.vesta.take')} values={vm.take} onChange={vm.setTakeCount} max={vm.takeMax} />
           {vm.bankRates && (
-            <p className="text-[10px] text-lc-muted">
+            <Text as="p" size="10" tone="muted">
               {t('games.vestaTable.bankRates', { rates: vm.bankRates })}
-            </p>
+            </Text>
           )}
           <Button
             variant="pill"

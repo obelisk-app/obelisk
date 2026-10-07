@@ -11,7 +11,7 @@ import { renderWithBridge } from '@tests/support/render-with-bridge';
 const push = vi.fn();
 
 vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({ useRouter: () => ({ push }) }));
-vi.mock('@/components/common/ShootingStars', () => ({ default: () => null }));
+vi.mock('@/components/ui/animations/ShootingStars', () => ({ default: () => null }));
 vi.mock('@/components/voice/controls/VoiceControls', () => ({ default: () => null }));
 vi.mock('@/components/voice/room/DebugOverlay', () => ({ DebugOverlay: () => null }));
 vi.mock('@/hooks/voice/room/useVoiceRoomGate', () => ({

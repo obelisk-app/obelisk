@@ -14,6 +14,7 @@ import type { ComposerMode } from '@/hooks/social/composer/useNoteDraft';
 import { ComposeButton } from './FeedControls';
 import StarterPacks from './StarterPacks';
 import InfiniteSentinel from './InfiniteSentinel';
+import Text from '@/components/ui/layout/Text';
 
 /** The reading column: the inline compose row, then starter packs, the media grid, or the note list. */
 export default function FeedColumn({
@@ -113,7 +114,7 @@ export default function FeedColumn({
             disabled={state.exhausted || state.loadingMore}
           />
           {state.loadingMore && (
-            <p className="py-6 text-center text-xs text-lc-muted">{t('social.loadingMore')}</p>
+            <Text as="p" variant="caption" className="py-6 text-center">{t('social.loadingMore')}</Text>
           )}
         </>
       ) : (

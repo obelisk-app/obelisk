@@ -53,7 +53,7 @@ vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock('@/components/common/ShootingStars', () => ({
+vi.mock('@/components/ui/animations/ShootingStars', () => ({
   default: () => null,
 }));
 

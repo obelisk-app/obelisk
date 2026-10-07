@@ -19,6 +19,7 @@ import { DownloadIcon, FileIcon, LockIcon } from '@/assets/icons';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { VoiceMessage } from '@/components/chat/message/VoiceMessage';
 import TextButton from '@/components/ui/buttons/TextButton';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFile; onAccent?: boolean }) {
   const t = useTranslations();
@@ -45,15 +46,15 @@ export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFi
     if (state.status !== 'ready') {
       const aspect = file.dim ? `${file.dim.width} / ${file.dim.height}` : undefined;
       return (
-        <div
-          className="lc-skeleton flex min-h-24 w-64 max-w-full items-center justify-center rounded-lg"
+        <Skeleton
+          className="flex min-h-24 w-64 max-w-full items-center justify-center rounded-lg"
           style={{ aspectRatio: category === 'image' ? aspect : undefined }}
           data-testid="dm-file-loading"
           role="status"
           aria-label={t('dm.file.decrypting')}
         >
           <LockIcon size={18} className={muted} />
-        </div>
+        </Skeleton>
       );
     }
     if (category === 'image') {

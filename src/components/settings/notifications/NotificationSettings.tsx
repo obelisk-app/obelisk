@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import SettingRow from '@/components/ui/forms/SettingRow';
 import Toggle from '@/components/ui/forms/Toggle';
 import Button from '@/components/ui/buttons/Button';
-import Text from '@/components/ui/layout/Text';
+import Heading from '@/components/ui/layout/Heading';
 import { useNotificationSettings } from '@/hooks/settings/notifications/useNotificationSettings';
 import RingtonePicker from './RingtonePicker';
 
@@ -61,9 +61,9 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
   return (
     <section className="space-y-3 rounded-lg border border-lc-border bg-lc-dark/30 p-3" data-testid="notification-settings">
       <div className="flex items-center justify-between gap-2">
-        <Text as="h3" variant="label" size="xs" weight="semibold" tone="muted">
+        <Heading as="h3" variant="label">
           {t('settings.preferences.notifications.title')}
-        </Text>
+        </Heading>
         <Button
           variant="outlinePill"
           size="xs"

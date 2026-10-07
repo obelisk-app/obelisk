@@ -4,6 +4,7 @@ import { useMyPubkey } from '@/services/nostr-bridge';
 import NostrProfile from '@/components/chat/profile/NostrProfile';
 import { useTranslations } from 'next-intl';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
+import Heading from '@/components/ui/layout/Heading';
 
 export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
   const t = useTranslations();
@@ -12,7 +13,7 @@ export function SettingsProfileScreen({ go }: { go: (s: ScreenName) => void }) {
   return (
     <div className="screen active" data-screen="settings-profile">
       <div className="app-header">
-        <h2>{t("settings.you")}</h2>
+        <Heading as="h2">{t("settings.you")}</Heading>
       </div>
       {/*
         The Perfil/Preferencias pair was a two-item tab bar sitting above a

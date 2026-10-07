@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import WidgetCard from './WidgetCard';
 import WidgetEmpty from './WidgetEmpty';
 import Button from '@/components/ui/buttons/Button';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 /**
  * The hashtags this account follows: NIP-51 kind 10015.
@@ -20,7 +21,7 @@ export default function FollowedTagsWidget({ onOpenTag }: { onOpenTag?: (tag: st
     <WidgetCard title={t('social.followedTags')} testId="widget-followed-tags">
       {!ready ? (
         <div className="space-y-1.5 p-1.5" aria-hidden="true">
-          {[0, 1, 2].map((index) => <div key={index} className="lc-skeleton h-5 rounded" />)}
+          {[0, 1, 2].map((index) => <Skeleton key={index} className="h-5 rounded" />)}
         </div>
       ) : (tags ?? []).length === 0 ? (
         <WidgetEmpty testId="followed-tags-empty">{t('social.followedTagsEmpty')}</WidgetEmpty>

@@ -7,6 +7,8 @@ import Input from '@/components/ui/forms/Input';
 import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
 import { ComposeUserRow } from './ComposeUserRow';
 import { ComposeRecentRow } from './ComposeRecentRow';
+import Heading from '@/components/ui/layout/Heading';
+import Label from '@/components/ui/forms/Label';
 
 /** The phone new-message screen: a To: field, recent conversations, people search. */
 export function ComposeDmScreen({ back, selectPeer }: { back: () => void; selectPeer: (peer: string) => void }) {
@@ -18,7 +20,7 @@ export function ComposeDmScreen({ back, selectPeer }: { back: () => void; select
     <div className="screen compose-dm-screen active" data-screen="compose-dm">
       <div className="compose-dm-header">
         <button className="compose-dm-cancel" onClick={back}>{t('common.cancel')}</button>
-        <h2>{t('dm.newMessage')}</h2>
+        <Heading as="h2">{t('dm.newMessage')}</Heading>
         <button
           className={`compose-dm-next ${canNext ? 'active' : ''}`}
           disabled={!canNext}
@@ -29,7 +31,7 @@ export function ComposeDmScreen({ back, selectPeer }: { back: () => void; select
       </div>
       <DmUnlock />
       <div className="compose-dm-to">
-        <label htmlFor={toId} className="compose-dm-to-label">{t('dm.compose.to')}</label>
+        <Label htmlFor={toId} className="compose-dm-to-label">{t('dm.compose.to')}</Label>
         <Input
           variant="bare"
           id={toId}

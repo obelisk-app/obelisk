@@ -28,9 +28,9 @@ export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }
   const entries = useMutedAndBlocked();
 
   const body = entries.length === 0 ? (
-    <p className="text-xs text-lc-muted" data-testid="moderation-empty">
+    <Text as="p" variant="caption" data-testid="moderation-empty">
       {t('settings.moderation.empty')}
-    </p>
+    </Text>
   ) : (
     <ul className="space-y-1">
       {entries.map((entry) => (

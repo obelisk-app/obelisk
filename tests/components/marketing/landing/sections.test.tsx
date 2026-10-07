@@ -1,8 +1,7 @@
 import type { ImgHTMLAttributes, ReactElement } from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
-import RevealSection from '@/components/marketing/landing/RevealSection';
 import LandingHero from '@/components/marketing/landing/LandingHero';
 import PreviewSection from '@/components/marketing/landing/PreviewSection';
 import CtaSection from '@/components/marketing/landing/CtaSection';
@@ -24,9 +23,7 @@ vi.mock('next/image', () => ({
   },
 }));
 
-let reveal: ((entries: Array<{ isIntersecting: boolean }>) => void) | null = null;
 class MockIntersectionObserver {
-  constructor(cb: (entries: Array<{ isIntersecting: boolean }>) => void) { reveal = cb; }
   observe = vi.fn();
   disconnect = vi.fn();
 }
@@ -35,16 +32,7 @@ const renderEn = (ui: ReactElement) => render(<LocaleProvider initialLocale="en"
 
 describe('landing sections', () => {
   beforeEach(() => { vi.stubGlobal('IntersectionObserver', MockIntersectionObserver); });
-  afterEach(() => { vi.unstubAllGlobals(); reveal = null; });
-
-  it('RevealSection is hidden until it scrolls into view, then fades up', () => {
-    render(<RevealSection id="s" className="py-24 px-6" testId="sec"><p>x</p></RevealSection>);
-    const sec = screen.getByTestId('sec');
-    expect(sec).toHaveAttribute('id', 's');
-    expect(sec.className).toBe('py-24 px-6 opacity-0');
-    act(() => reveal?.([{ isIntersecting: true }]));
-    expect(sec.className).toBe('py-24 px-6 animate-fade-in-up');
-  });
+  afterEach(() => { vi.unstubAllGlobals(); });
 
   it('the hero, preview and CTA launch buttons call onLaunch', () => {
     const onLaunch = vi.fn();
@@ -79,6 +67,14 @@ describe('landing sections', () => {
     expect(container.querySelector('#learn')?.querySelectorAll('a.lc-card')).toHaveLength(LEARN_GUIDES.length);
     const stack = container.querySelector('#stack');
     expect(stack?.querySelectorAll('a[target="_blank"]')).toHaveLength(TECH_STACK.length);
+  });
+
+  it('the roadmap phases are h3 under the section h2, no level skipped', () => {
+    const { container } = renderEn(<RoadmapSection />);
+    const section = container.querySelector('#roadmap') as HTMLElement;
+    expect(within(section).getAllByRole('heading', { level: 2 })).toHaveLength(1);
+    expect(within(section).getAllByRole('heading', { level: 3 })).toHaveLength(ROADMAP_PHASES.length);
+    expect(within(section).queryAllByRole('heading', { level: 4 })).toHaveLength(0);
   });
 
   it('the FAQ renders every question and a matching FAQPage JSON-LD', () => {

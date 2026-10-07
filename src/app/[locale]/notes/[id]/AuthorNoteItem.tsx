@@ -4,6 +4,7 @@ import type { Locale } from '@/i18n';
 import { plainTextForPreview } from '@/services/server/viewer/note-preview';
 import { NOTE_VIEWER_PATH, noteIdentifier } from '@/services/social/note-links';
 import { formatDate } from '@/utils/format/format';
+import Text from '@/components/ui/layout/Text';
 
 /** Another of the author's notes: two lines of its text (or `sharedMedia` when it has none) and its date, linking to it. */
 export default function AuthorNoteItem({ note, locale, sharedMedia }: { note: NostrEvent; locale: Locale; sharedMedia: string }) {
@@ -16,9 +17,9 @@ export default function AuthorNoteItem({ note, locale, sharedMedia }: { note: No
         href={`${NOTE_VIEWER_PATH}/${noteIdentifier(note)}`}
         className="block min-w-0 rounded-xl border border-lc-border bg-lc-dark p-3 transition-colors hover:border-lc-green/40"
       >
-        <p className="line-clamp-2 break-words text-sm text-lc-white">
+        <Text as="p" size="sm" tone="default" className="line-clamp-2 break-words">
           {text || sharedMedia}
-        </p>
+        </Text>
         <time
           className="mt-1 block text-[10px] text-lc-muted"
           dateTime={new Date(note.created_at * 1000).toISOString()}

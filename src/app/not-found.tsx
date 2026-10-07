@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { DEFAULT_LOCALE } from '@/i18n';
 import { NOINDEX, renderedTitle } from '@/utils/seo/page';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * A request no route matched and the proxy never localised (`/dev/...` in
@@ -18,8 +20,8 @@ export default async function RootNotFound() {
   return (
     <html lang={DEFAULT_LOCALE}>
       <body style={{ fontFamily: 'system-ui, sans-serif', textAlign: 'center', paddingTop: '20vh' }}>
-        <h1>{t('common.notFound.title')}</h1>
-        <p>{t('common.notFound.body')}</p>
+        <Heading as="h1">{t('common.notFound.title')}</Heading>
+        <Text as="p">{t('common.notFound.body')}</Text>
       </body>
     </html>
   );

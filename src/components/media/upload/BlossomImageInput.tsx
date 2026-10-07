@@ -17,6 +17,8 @@ import FileInput from '@/components/ui/forms/FileInput';
 import Input from '@/components/ui/forms/Input';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useBlossomImageInput } from '@/hooks/media/upload/useBlossomImageInput';
+import Label from '@/components/ui/forms/Label';
+import Text from '@/components/ui/layout/Text';
 
 interface Props {
   label: string;
@@ -58,7 +60,7 @@ export default function BlossomImageInput({
 
   return (
     <div>
-      <label htmlFor={urlId} className="block text-xs text-lc-muted mb-1.5 uppercase tracking-wider">{label}</label>
+      <Label variant="caps" htmlFor={urlId} className="block mb-1.5">{label}</Label>
       <div className="flex items-center gap-3">
         {showPreview && (value ? (
           <RemoteImage src={value} alt="" className={thumbCls} />
@@ -72,17 +74,17 @@ export default function BlossomImageInput({
           placeholder={placeholder ?? t('media.blossom.urlPlaceholder')}
           className="flex-1 transition-colors"
         />
-        <label className="lc-pill lc-pill-secondary text-xs cursor-pointer whitespace-nowrap">
+        <Label className="lc-pill lc-pill-secondary text-xs cursor-pointer whitespace-nowrap">
           {t(uploading ? 'media.blossom.uploading' : 'media.blossom.upload')}
           <FileInput
             accept={accept}
             disabled={uploading}
             onChange={(e) => picked(e.target)}
           />
-        </label>
+        </Label>
       </div>
       {error && <ErrorState className="mt-1.5">{error}</ErrorState>}
-      {hint && <p className="mt-1.5 text-[11px] text-lc-muted">{hint}</p>}
+      {hint && <Text as="p" size="11" tone="muted" className="mt-1.5">{hint}</Text>}
     </div>
   );
 }

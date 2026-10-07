@@ -26,6 +26,11 @@ describe('GuideCard', () => {
     expect(link.getAttribute('href')).toBe('/guides/my-guide');
   });
 
+  it('its title is an h2: the cards sit straight under the index page h1', () => {
+    render(<GuideCard slug="my-guide" frontmatter={fm} />);
+    expect(screen.getByRole('heading', { level: 2, name: 'My Guide' })).toBeInTheDocument();
+  });
+
   it('falls back to placeholder when heroComponent is unknown', () => {
     render(
       <GuideCard

@@ -7,6 +7,7 @@ import Button from '@/components/ui/buttons/Button';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { connectionLabel } from '@/utils/relay/relay-status';
 import { GearIcon } from '@/assets/icons';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 type Props = {
   relay: string;
@@ -56,10 +57,10 @@ export function SidebarHeader({
       )}
       <div className="relative flex h-14 items-center gap-3 overflow-hidden px-4">
         {!brandingLoaded && (
-          <div
+          <Skeleton
             aria-hidden
             data-testid="sidebar-icon-skeleton"
-            className="lc-skeleton h-9 w-9 shrink-0 rounded-lg border border-lc-border"
+            className="h-9 w-9 shrink-0 rounded-lg border border-lc-border"
           />
         )}
         {brandingLoaded && branding.icon && (
@@ -71,10 +72,11 @@ export function SidebarHeader({
         )}
         <div className="min-w-0 flex-1 truncate text-base font-bold text-lc-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
           {showTitleSkeleton ? (
-            <span
+            <Skeleton
+              as="span"
               aria-hidden
               data-testid="sidebar-title-skeleton"
-              className="lc-skeleton inline-block h-4 w-32 align-middle"
+              className="inline-block h-4 w-32 align-middle"
             />
           ) : (
             branding.name || shortHost(relay)

@@ -1,3 +1,6 @@
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
+
 /** A media-kit section: its anchor, heading and optional line of description above the content. */
 export function Section({
   id,
@@ -13,13 +16,13 @@ export function Section({
   return (
     <section id={id} className="scroll-mt-24">
       <div className="mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold text-lc-white tracking-tight">
+        <Heading as="h2" variant="article" className="sm:text-3xl">
           {title}
-        </h2>
+        </Heading>
         {description && (
-          <p className="mt-2 text-sm sm:text-base text-lc-muted max-w-3xl">
+          <Text as="p" variant="muted" className="mt-2 sm:text-base max-w-3xl">
             {description}
-          </p>
+          </Text>
         )}
       </div>
       {children}

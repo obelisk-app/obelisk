@@ -17,6 +17,8 @@ import { Field } from '../common/Field';
 import { SectionHeader } from '../common/SectionHeader';
 import { ToggleCard } from '../common/ToggleCard';
 import Chip from '@/components/ui/data/Chip';
+import Text from '@/components/ui/layout/Text';
+import Label from '@/components/ui/forms/Label';
 
 export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () => void }) {
   const t = useTranslations();
@@ -128,29 +130,29 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                 />
               </div>
               {channelKind === 'voice' && (
-                <p className="text-[11px] text-lc-muted">
+                <Text as="p" size="11" tone="muted">
                   {t.rich('shell.desktop.channel.voiceHelp', {
                     tag: () => <code className="text-lc-white/80">[&quot;t&quot;,&quot;voice&quot;]</code>,
                     url: () => <code className="text-lc-white/80">/voice/{group.id.slice(0, 8)}…</code>,
                   })}
-                </p>
+                </Text>
               )}
               {channelKind === 'voice-sfu' && (
                 <>
-                  <p className="text-[11px] text-lc-muted">
+                  <Text as="p" size="11" tone="muted">
                     {t.rich('shell.desktop.channel.sfuHelp', {
                       tag: () => <code className="text-lc-white/80">[&quot;t&quot;,&quot;voice-sfu&quot;]</code>,
                     })}
-                  </p>
+                  </Text>
                   <div className="space-y-2 rounded-lg border border-lc-border bg-lc-black/40 p-3">
-                    <p className="text-[11px] uppercase tracking-wider text-lc-muted">{t('shell.desktop.sfu.operator')}</p>
-                    <p className="text-[11px] text-lc-muted">
+                    <Text as="p" variant="label" size="11" tone="muted">{t('shell.desktop.sfu.operator')}</Text>
+                    <Text as="p" size="11" tone="muted">
                       {t.rich('shell.desktop.sfu.help', {
                         info: () => <code className="text-lc-white/80">/info</code>,
                       })}
-                    </p>
+                    </Text>
                     <div>
-                      <label htmlFor={sfuUrlId} className="text-[11px] text-lc-muted">{t('shell.desktop.sfu.url')}</label>
+                      <Label variant="field" htmlFor={sfuUrlId}>{t('shell.desktop.sfu.url')}</Label>
                       <div className="flex gap-2">
                         <Input
                           id={sfuUrlId}
@@ -181,16 +183,16 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                         <div className="mt-1 break-all font-mono text-lc-white/70">{sfuVerified.pubkey}</div>
                       </div>
                     )}
-                    <p className="text-[10px] text-lc-muted">{t('shell.desktop.sfu.verifyHelp')}</p>
+                    <Text as="p" size="10" tone="muted">{t('shell.desktop.sfu.verifyHelp')}</Text>
                   </div>
                 </>
               )}
               {channelKind === 'forum' && (
-                <p className="text-[11px] text-lc-muted">
+                <Text as="p" size="11" tone="muted">
                   {t.rich('shell.desktop.channel.forumHelp', {
                     tag: () => <code className="text-lc-white/80">[&quot;t&quot;,&quot;forum&quot;]</code>,
                   })}
-                </p>
+                </Text>
               )}
             </section>
 
@@ -200,7 +202,7 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                   title={t('shell.desktop.channel.forumTags')}
                   hint={t('shell.desktop.channel.forumTagsHint')}
                 />
-                <p className="text-[11px] text-lc-muted">{t('shell.desktop.channel.forumTagsHelp')}</p>
+                <Text as="p" size="11" tone="muted">{t('shell.desktop.channel.forumTagsHelp')}</Text>
                 <ForumTagsEditor value={forumTags} onChange={setForumTags} />
               </section>
             )}

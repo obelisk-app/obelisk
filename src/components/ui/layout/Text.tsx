@@ -6,14 +6,32 @@ import { cn } from '@/utils/style/cn';
  *   hint under a control   xs        in-row meta (counts, mono keys)   11 or 10
  *   paragraph              sm        social feed body                  13
  *   panel section label    10 + variant="label"
- *   settings-page heading  xs + variant="label"
- *   modal section heading  sm + weight="semibold" as="h3"
+ *
+ * The body variants carry a size and a tone for the three most common roles,
+ * and an explicit `size` or `tone` still wins:
+ *   caption   text-xs  muted   the hint or status line under a control or a row
+ *   muted     text-sm  muted   secondary body copy, an empty state's sentence
+ *   lead      text-lg  muted   the intro under a page's or a section's title
+ *
+ * Headings are `Heading` (`./Heading`), form labels `Label` (`../forms/Label`).
  */
 export type TextSize = '9' | '10' | '11' | '13' | 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl';
 export type TextTone = 'default' | 'muted' | 'accent' | 'danger' | 'inherit';
 export type TextWeight = 'normal' | 'medium' | 'semibold' | 'bold' | 'extrabold';
-/** `label` is the small-caps section label: uppercase, one tracking (`wider`) at every size. */
-export type TextVariant = 'body' | 'label';
+/**
+ * `body` adds nothing; `label` is the small-caps section label: uppercase, one
+ * tracking (`wider`) at every size; `caption`, `muted` and `lead` set a size
+ * and a tone (above).
+ */
+export type TextVariant = 'body' | 'label' | 'caption' | 'muted' | 'lead';
+
+const VARIANT_DEFAULTS: Record<TextVariant, { size?: TextSize; tone?: TextTone }> = {
+  body: {},
+  label: {},
+  caption: { size: 'xs', tone: 'muted' },
+  muted: { size: 'sm', tone: 'muted' },
+  lead: { size: 'lg', tone: 'muted' },
+};
 
 const SIZE_CLASS: Record<TextSize, string> = {
   '9': 'text-[9px]',
@@ -46,7 +64,7 @@ const WEIGHT_CLASS: Record<TextWeight, string> = {
 };
 
 export interface TextProps extends HTMLAttributes<HTMLElement> {
-  as?: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'label' | 'li' | 'dt' | 'dd';
+  as?: 'span' | 'p' | 'div' | 'li' | 'dt' | 'dd';
   size?: TextSize;
   tone?: TextTone;
   weight?: TextWeight;
@@ -56,9 +74,9 @@ export interface TextProps extends HTMLAttributes<HTMLElement> {
 }
 
 /**
- * One text element for the muted hint, the heading and the section label,
- * which between them account for most of the 545 `text-lc-muted` and
- * 104 `<hN className>` strings this replaced.
+ * One text element for paragraphs, the muted hint and the section label,
+ * which between them account for most of the 545 `text-lc-muted` strings
+ * this replaced.
  *
  * Defaults are deliberately neutral (`span`, inherited size and color), so
  * `<Text tone="muted" size="xs">` renders exactly `text-xs text-lc-muted`.
@@ -66,7 +84,7 @@ export interface TextProps extends HTMLAttributes<HTMLElement> {
 export default function Text({
   as: Tag = 'span',
   size,
-  tone = 'inherit',
+  tone,
   weight = 'normal',
   variant = 'body',
   truncate,
@@ -74,13 +92,14 @@ export default function Text({
   children,
   ...rest
 }: TextProps) {
+  const shownSize = size ?? VARIANT_DEFAULTS[variant].size;
   return (
     <Tag
       className={cn(
-        size && SIZE_CLASS[size],
+        shownSize && SIZE_CLASS[shownSize],
         WEIGHT_CLASS[weight],
         variant === 'label' && 'uppercase tracking-wider',
-        TONE_CLASS[tone],
+        TONE_CLASS[tone ?? VARIANT_DEFAULTS[variant].tone ?? 'inherit'],
         truncate === 'truncate' && 'truncate',
         className,
       ) || undefined}

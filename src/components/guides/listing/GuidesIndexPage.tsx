@@ -9,6 +9,8 @@ import GuideCard from '@/components/guides/listing/GuideCard';
 import Navbar from '@/components/marketing/site/Navbar';
 import Footer from '@/components/marketing/site/Footer';
 import JsonLd from '@/components/seo/JsonLd';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 export default async function GuidesIndexPage({ locale }: { locale: Locale }) {
   const guides = await listAllGuides(locale);
@@ -42,15 +44,15 @@ export default async function GuidesIndexPage({ locale }: { locale: Locale }) {
             {t('guides.index.backHome')}
           </Link>
           <div className="mt-4">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-lc-white tracking-tight">
+            <Heading as="h1" variant="page">
               {t('guides.index.heading')}
-            </h1>
-            <p className="mt-3 text-lg text-lc-muted max-w-2xl">{t('guides.index.subtitle')}</p>
+            </Heading>
+            <Text as="p" variant="lead" className="mt-3 max-w-2xl">{t('guides.index.subtitle')}</Text>
           </div>
         </div>
 
         {guides.length === 0 ? (
-          <p className="text-lc-muted">{t('guides.index.empty')}</p>
+          <Text as="p" tone="muted">{t('guides.index.empty')}</Text>
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             {guides.map((g) => (

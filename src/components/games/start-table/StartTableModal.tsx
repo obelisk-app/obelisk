@@ -111,9 +111,9 @@ export default function StartTableModal({
               </div>
 
               {row.savedName && (
-                <p className="mt-1 pl-7 text-[10px] text-lc-muted">
+                <Text as="p" size="10" tone="muted" className="mt-1 pl-7">
                   {t('games.startTable.takesOver', { name: row.savedName })}
-                </p>
+                </Text>
               )}
             </li>
           ))}

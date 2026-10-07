@@ -11,6 +11,8 @@ import { useFormat } from '@/i18n/useFormat';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import PayingWalletNote from './PayingWalletNote';
+import Label from '@/components/ui/forms/Label';
+import Text from '@/components/ui/layout/Text';
 
 /** The zap form for one target: amount (with quick picks), comment, and send on the yellow zap pill. */
 export default function MessageZapDialog({ target, close }: { target: ZapTarget; close: () => void }) {
@@ -29,7 +31,7 @@ export default function MessageZapDialog({ target, close }: { target: ZapTarget;
           onClose={close}
         />
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          <label htmlFor={vm.amountId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.amount')}</label>
+          <Label htmlFor={vm.amountId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.amount')}</Label>
           <Input
             id={vm.amountId}
             type="number"
@@ -55,7 +57,7 @@ export default function MessageZapDialog({ target, close }: { target: ZapTarget;
               </button>
             ))}
           </div>
-          <label htmlFor={vm.commentId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.comment')}</label>
+          <Label htmlFor={vm.commentId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.comment')}</Label>
           <Input
             id={vm.commentId}
             type="text"
@@ -65,9 +67,9 @@ export default function MessageZapDialog({ target, close }: { target: ZapTarget;
             placeholder={t('chat.zap.commentPlaceholder')}
             className="mb-3"
           />
-          {vm.error && <p className="mb-3 break-words text-xs text-red-400">{vm.error}</p>}
+          {vm.error && <Text as="p" size="xs" tone="danger" className="mb-3 break-words">{vm.error}</Text>}
           {!vm.lud16 && (
-            <p className="mb-3 text-xs text-yellow-400">{t('chat.zap.noAddress')}</p>
+            <Text as="p" size="xs" className="mb-3 text-yellow-400">{t('chat.zap.noAddress')}</Text>
           )}
           <PayingWalletNote className="mb-3" />
         </div>

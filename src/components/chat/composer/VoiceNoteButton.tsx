@@ -5,6 +5,7 @@ import { formatElapsed } from '@/utils/format/format-elapsed';
 import { useVoiceRecorder } from '@/hooks/chat/composer/useVoiceRecorder';
 import IconButton from '@/components/ui/buttons/IconButton';
 import { MicRecordIcon, TrashNarrowIcon } from '@/assets/icons';
+import PulseDot from '@/components/ui/animations/PulseDot';
 
 export function VoiceNoteButton({
   disabled,
@@ -28,7 +29,7 @@ export function VoiceNoteButton({
           <TrashNarrowIcon size={null} className="h-5 w-5" />
         </IconButton>
         <span className="flex items-center gap-2 px-1 font-mono text-sm text-red-400">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" aria-hidden="true" />
+          <PulseDot color="bg-red-400" />
           <span data-testid="voice-recording-time">{formatElapsed(elapsed * 1000)}</span>
         </span>
         <IconButton

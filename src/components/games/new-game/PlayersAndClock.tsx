@@ -38,13 +38,13 @@ export default function PlayersAndClock({ form }: { form: NewGameForm }) {
           </Chip>
         ))}
       </div>
-      <p className="mt-1 text-[10px] text-lc-muted">
+      <Text as="p" size="10" tone="muted" className="mt-1">
         {localPlayers === 0
           ? t('games.newGame.waitsInChannel')
           : selected.realtime
             ? t('games.newGame.startsSolo')
             : t('games.newGame.startsHotSeat', { count: localPlayers })}
-      </p>
+      </Text>
 
       {selected.type !== 'stacker' && (
         <>
@@ -62,9 +62,9 @@ export default function PlayersAndClock({ form }: { form: NewGameForm }) {
             ))}
           </div>
           {selected.type === 'vesta' && timeout > 0 && (
-            <p className="mt-1 text-[10px] text-lc-muted">
+            <Text as="p" size="10" tone="muted" className="mt-1">
               {t('games.turnClockHelp')}
-            </p>
+            </Text>
           )}
         </>
       )}

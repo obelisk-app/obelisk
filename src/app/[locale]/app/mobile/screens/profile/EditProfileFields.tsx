@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';
 import TextArea from '@/components/ui/forms/TextArea';
 import type { EditProfileScreenModel } from '@/hooks/shell/mobile/screens/profile/useEditProfileScreen';
+import Label from '@/components/ui/forms/Label';
 
 /** The profile editor's text fields, each named by its visible label. */
 export default function EditProfileFields({ vm }: { vm: EditProfileScreenModel }) {
@@ -19,7 +20,7 @@ export default function EditProfileFields({ vm }: { vm: EditProfileScreenModel }
   return (
     <div className="edit-fields">
       <div className="setup-field">
-        <label htmlFor={nameId}>{t('mobile.settings.displayName')}</label>
+        <Label htmlFor={nameId}>{t('mobile.settings.displayName')}</Label>
         <div className="setup-input-wrap">
           <Input
             variant="mobile"
@@ -33,7 +34,7 @@ export default function EditProfileFields({ vm }: { vm: EditProfileScreenModel }
         </div>
       </div>
       <div className="setup-field">
-        <label htmlFor={aboutId}>{t('shell.user.about')}</label>
+        <Label htmlFor={aboutId}>{t('shell.user.about')}</Label>
         <TextArea
           variant="mobile"
           id={aboutId}
@@ -46,7 +47,7 @@ export default function EditProfileFields({ vm }: { vm: EditProfileScreenModel }
         />
       </div>
       <div className="setup-field">
-        <label htmlFor={nip05Id}>NIP-05</label>
+        <Label htmlFor={nip05Id}>NIP-05</Label>
         <div className="setup-input-wrap">
           <Input
             variant="mobile"
@@ -61,7 +62,7 @@ export default function EditProfileFields({ vm }: { vm: EditProfileScreenModel }
         </div>
       </div>
       <div className="setup-field">
-        <label htmlFor={lud16Id}>{t('mobile.settings.lightningAddress')}</label>
+        <Label htmlFor={lud16Id}>{t('mobile.settings.lightningAddress')}</Label>
         <div className="setup-input-wrap">
           <Input
             variant="mobile"
@@ -82,7 +83,7 @@ export default function EditProfileFields({ vm }: { vm: EditProfileScreenModel }
         can't upload a file while silently ignoring what was typed.
       */}
       <div className="setup-field">
-        <label htmlFor={pictureId}>{t('shell.user.field.picture')}</label>
+        <Label htmlFor={pictureId}>{t('shell.user.field.picture')}</Label>
         <div className="setup-input-wrap">
           <Input
             variant="mobile"
@@ -99,7 +100,7 @@ export default function EditProfileFields({ vm }: { vm: EditProfileScreenModel }
         </div>
       </div>
       <div className="setup-field">
-        <label htmlFor={bannerId}>{t('shell.user.field.banner')}</label>
+        <Label htmlFor={bannerId}>{t('shell.user.field.banner')}</Label>
         <div className="setup-input-wrap">
           <Input
             variant="mobile"
@@ -116,7 +117,7 @@ export default function EditProfileFields({ vm }: { vm: EditProfileScreenModel }
         </div>
       </div>
       <div className="setup-field">
-        <label htmlFor={websiteId}>{t('shell.user.field.website')}</label>
+        <Label htmlFor={websiteId}>{t('shell.user.field.website')}</Label>
         <div className="setup-input-wrap">
           <Input
             variant="mobile"

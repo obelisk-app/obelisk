@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useAccountBackupExport } from '@/hooks/settings/account/useAccountBackupExport';
+import Text from '@/components/ui/layout/Text';
 
 export default function AccountBackupExport({ mobile = false }: { mobile?: boolean }) {
   const t = useTranslations();
@@ -29,9 +30,9 @@ export default function AccountBackupExport({ mobile = false }: { mobile?: boole
         <span className={mobile ? 'settings-row-meta muted' : 'text-lc-muted'} aria-hidden="true">↓</span>
       </button>
       {message && (
-        <p className={mobile ? 'px-4 py-2 text-xs' : 'mt-2 px-1 text-xs'} role={status === 'error' ? 'alert' : 'status'}>
+        <Text as="p" className={mobile ? 'px-4 py-2 text-xs' : 'mt-2 px-1 text-xs'} role={status === 'error' ? 'alert' : 'status'}>
           {message}
-        </p>
+        </Text>
       )}
     </div>
   );

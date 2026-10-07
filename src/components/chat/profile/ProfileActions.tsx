@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import { cn } from '@/utils/style/cn';
+import Text from '@/components/ui/layout/Text';
 
 /** Follow and message buttons under someone else's bio, plus the follow error. */
 export function ProfileActions({
@@ -56,7 +57,7 @@ export function ProfileActions({
         bug.
       */}
 
-      {followError && <p className="px-5 pb-2 text-xs text-red-400">{t('social.profileFeed.followFailed')}</p>}
+      {followError && <Text as="p" size="xs" tone="danger" className="px-5 pb-2">{t('social.profileFeed.followFailed')}</Text>}
     </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import DmOptInGate from '../../../dm/DmOptInGate';
+import Heading from '@/components/ui/layout/Heading';
 
 /** The DMs tab before the person has turned DMs on: the title and the opt-in gate. */
 export function MobileDmOptInScreen({
@@ -15,7 +16,7 @@ export function MobileDmOptInScreen({
   return (
     <div className="screen active" data-screen="dms-list">
       <div className="app-header">
-        <h2>{t('dm.title')}</h2>
+        <Heading as="h2">{t('dm.title')}</Heading>
       </div>
       <DmOptInGate
         surface="mobile"

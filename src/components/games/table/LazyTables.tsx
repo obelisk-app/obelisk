@@ -3,6 +3,7 @@
 import { lazy, Suspense, type ComponentProps } from 'react';
 import type VestaTableComponent from '../vesta/VestaTable';
 import type StackerTableComponent from '../stacker/StackerTable';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 /**
  * The Vesta and Stacker tables, each fetched when a table of that game is
@@ -17,7 +18,7 @@ const StackerTable = lazy(() => import('../stacker/StackerTable'));
 
 /** The same skeleton the modal shows while it loads the table's log. */
 function TableLoading() {
-  return <div className="lc-skeleton h-64 w-full rounded-lg" data-testid="game-table-loading" />;
+  return <Skeleton className="h-64 w-full rounded-lg" data-testid="game-table-loading" />;
 }
 
 export function LazyVestaTable(props: ComponentProps<typeof VestaTableComponent>) {

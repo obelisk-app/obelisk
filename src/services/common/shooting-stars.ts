@@ -1,6 +1,6 @@
 /**
  * The shooting-stars animation behind `ShootingStars`
- * (`src/components/common/ShootingStars.tsx`): a pool of streaks that wait a
+ * (`src/components/ui/animations/ShootingStars.tsx`): a pool of streaks that wait a
  * few seconds, cross the canvas from top right to bottom left, fade in, and
  * start over somewhere else once they leave it.
  *

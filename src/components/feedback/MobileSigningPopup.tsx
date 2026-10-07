@@ -6,6 +6,8 @@ import CloseButton from '@/components/ui/buttons/CloseButton';
 import Overlay from '@/components/ui/overlays/Overlay';
 import type { MessageKey } from '@/i18n/keys';
 import { activityDetail, activityTitle } from '@/utils/errors/activity-text';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /** What the signer is being asked for, or that nothing is waiting on it. */
 export default function MobileSigningPopup({ entry, onClose }: { entry: ActivityEntry | null; onClose: () => void }) {
@@ -33,8 +35,8 @@ export default function MobileSigningPopup({ entry, onClose }: { entry: Activity
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 id="mobile-signing-title" className="text-base font-semibold">{t('mobile.signing.title')}</h2>
-            <p className="mt-1 text-xs text-lc-green">{t(statusKey)}</p>
+            <Heading as="h2" id="mobile-signing-title" className="text-base font-semibold">{t('mobile.signing.title')}</Heading>
+            <Text as="p" size="xs" tone="accent" className="mt-1">{t(statusKey)}</Text>
           </div>
           <CloseButton onClick={onClose} />
         </div>
@@ -44,7 +46,7 @@ export default function MobileSigningPopup({ entry, onClose }: { entry: Activity
             {detail && <div className="mt-1 break-words text-xs text-lc-muted">{detail}</div>}
           </div>
         ) : (
-          <p className="mt-4 text-sm text-lc-muted">{t('mobile.signing.none')}</p>
+          <Text as="p" variant="muted" className="mt-4">{t('mobile.signing.none')}</Text>
         )}
       </div>
     </Overlay>

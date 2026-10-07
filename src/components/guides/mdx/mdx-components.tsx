@@ -6,25 +6,21 @@ import Clip from './Clip';
 import { SvgHero } from '@/assets/illustrations/guides';
 import Diagram from '@/assets/illustrations/guides/embed/Diagram';
 import Mark from '@/assets/illustrations/guides/embed/Mark';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 function H2(props: ComponentPropsWithoutRef<'h2'>) {
   return (
-    <h2
-      className="mt-12 mb-4 text-2xl font-bold text-lc-white tracking-tight scroll-mt-24"
-      {...props}
-    />
+    <Heading as="h2" variant="article" className="mt-12 mb-4 scroll-mt-24" {...props} />
   );
 }
 function H3(props: ComponentPropsWithoutRef<'h3'>) {
   return (
-    <h3
-      className="mt-8 mb-3 text-xl font-semibold text-lc-white tracking-tight scroll-mt-24"
-      {...props}
-    />
+    <Heading as="h3" className="mt-8 mb-3 text-xl font-semibold text-lc-white tracking-tight scroll-mt-24" {...props} />
   );
 }
 function P(props: ComponentPropsWithoutRef<'p'>) {
-  return <p className="my-4 text-[15px] leading-7 text-lc-white/85" {...props} />;
+  return <Text as="p" className="my-4 text-[15px] leading-7 text-lc-white/85" {...props} />;
 }
 function UL(props: ComponentPropsWithoutRef<'ul'>) {
   return <ul className="my-4 ml-6 list-disc text-[15px] leading-7 text-lc-white/85 marker:text-lc-green" {...props} />;

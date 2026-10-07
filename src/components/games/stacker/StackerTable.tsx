@@ -9,6 +9,7 @@ import StackerOpponent from './StackerOpponent';
 import StackerKeysPanel from './StackerKeysPanel';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
+import Text from '@/components/ui/layout/Text';
 
 export interface StackerTableProps extends StackerTableInput {
   seatLabel: (seatId: string) => string;
@@ -137,11 +138,11 @@ export default function StackerTable({ seatLabel, ...input }: StackerTableProps)
       {vm.keysOpen && <StackerKeysPanel onClose={vm.closeKeys} />}
 
       {match.over && (
-        <p className="text-center text-xs text-lc-white" data-testid="stacker-result">
+        <Text as="p" size="xs" tone="default" className="text-center" data-testid="stacker-result">
           {match.winner
             ? t('games.stacker.lastStanding', { name: seatLabel(match.winner) })
             : t('games.stacker.allToppedOut')}
-        </p>
+        </Text>
       )}
     </div>
   );

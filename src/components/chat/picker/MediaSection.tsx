@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import type { MediaEntry } from '@/utils/chat/picker/media-catalog';
 import { MediaSectionTile } from './MediaSectionTile';
+import Heading from '@/components/ui/layout/Heading';
 
 /**
  * A titled grid of media tiles, each with a favourite star; an optional
@@ -23,7 +24,7 @@ export function MediaSection({ id, title, entries, onPick, favoriteUrls, onFavor
   if (!children && entries.length === 0) return null;
   return (
     <section className="mb-3" data-testid={'media-section-' + id}>
-      <h3 className="sticky top-0 z-10 mb-2 border-b border-lc-border bg-[var(--picker-surface,var(--color-lc-dark))] py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted">{title}</h3>
+      <Heading as="h3" className="sticky top-0 z-10 mb-2 border-b border-lc-border bg-[var(--picker-surface,var(--color-lc-dark))] py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted">{title}</Heading>
       <div className="grid grid-cols-4 auto-rows-[82px] content-start gap-2">
         {children}
         {entries.map((entry) => (

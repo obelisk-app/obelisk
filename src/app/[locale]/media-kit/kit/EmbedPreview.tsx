@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { CodeBlock } from './CodeBlock';
 import { DownloadPngButton } from './DownloadPngButton';
+import Heading from '@/components/ui/layout/Heading';
 
 /** An HTML embed rendered live, with a PNG download and the snippet to copy. */
 export function EmbedPreview({
@@ -20,7 +21,7 @@ export function EmbedPreview({
   return (
     <div>
       <div className="flex items-center justify-between mb-3 gap-3">
-        <h3 className="text-lg font-semibold">{title}</h3>
+        <Heading as="h3" variant="card">{title}</Heading>
         <DownloadPngButton
           targetRef={ref}
           filename={filename}

@@ -9,6 +9,7 @@ import { CloseIcon } from '@/assets/icons';
 import { tagEmojiValue } from '@/utils/chat/forum/forum-tags';
 import { useForumTagsEditor } from '@/hooks/chat/forum/useForumTagsEditor';
 import { TagColorPicker } from './TagColorPicker';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * Admin editor for a forum container's curated tag set (name, optional
@@ -111,7 +112,7 @@ export default function ForumTagsEditor({
         {t('chat.forum.addTag')}
       </Button>
       {vm.atMax && (
-        <p className="text-[11px] text-lc-muted">{t('chat.forum.maxTags', { count: vm.max })}</p>
+        <Text as="p" size="11" tone="muted">{t('chat.forum.maxTags', { count: vm.max })}</Text>
       )}
     </div>
   );

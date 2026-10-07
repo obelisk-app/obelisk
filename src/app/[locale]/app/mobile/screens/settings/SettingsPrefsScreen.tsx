@@ -18,6 +18,7 @@ import { DisconnectConfirmSheet } from '../../sheets/account/DisconnectConfirmSh
 import BackButton from '../../chrome/BackButton';
 import { SettingsSubScreen } from './SettingsSubScreen';
 import { LogOutIcon } from '@/assets/icons';
+import Heading from '@/components/ui/layout/Heading';
 
 export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward' | 'back') => void }) {
   const t = useTranslations();
@@ -45,7 +46,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
       {/* Back to the profile, since the tab pair that used to do this is gone. */}
       <div className="app-header">
         <BackButton onClick={() => go('settings-profile', 'back')} data-testid="prefs-back" />
-        <h2>{t('settings.preferencesTitle')}</h2>
+        <Heading as="h2">{t('settings.preferencesTitle')}</Heading>
       </div>
       <div className="settings-body">
         <div className="settings-section">

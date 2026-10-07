@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useAddRelayForm } from '@/hooks/relay/rail/useAddRelayForm';
 import Button from '@/components/ui/buttons/Button';
 import Input from '@/components/ui/forms/Input';
+import Label from '@/components/ui/forms/Label';
+import Text from '@/components/ui/layout/Text';
 
 /** The add-relay dialog's custom tab: type a URL, add it and switch to it. */
 export function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
@@ -14,8 +16,8 @@ export function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
   const urlId = useId();
   return (
     <form onSubmit={(e) => void submit(e)}>
-      <label htmlFor={urlId} className="block text-sm font-semibold text-lc-white">{t('shell.rail.addModal.urlLabel')}</label>
-      <p className="mt-1 text-xs text-lc-muted">{t('shell.rail.addModal.urlHint')}</p>
+      <Label htmlFor={urlId} className="block text-sm font-semibold text-lc-white">{t('shell.rail.addModal.urlLabel')}</Label>
+      <Text as="p" variant="caption" className="mt-1">{t('shell.rail.addModal.urlHint')}</Text>
       <Input
         id={urlId}
         autoFocus
@@ -24,7 +26,7 @@ export function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
         spellCheck={false}
         className="mt-3 font-mono"
       />
-      {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+      {err && <Text as="p" size="sm" tone="danger" className="mt-2">{err}</Text>}
       <div className="mt-4 flex justify-end">
         <Button type="submit" disabled={busy || !url.trim()}>
           {busy ? t('shell.rail.addModal.adding') : t('shell.rail.addRelay')}

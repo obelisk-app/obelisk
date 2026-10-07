@@ -2,6 +2,8 @@ import { Link } from '@/i18n/navigation';
 import type { GuideFrontmatter } from '@/services/guides/guides';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { HERO_REGISTRY } from '@/assets/illustrations/guides';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 interface Props {
   slug: string;
@@ -21,10 +23,10 @@ export default function GuideCard({ slug, frontmatter }: Props) {
         {Hero ? <Hero /> : <div className="w-full h-full bg-lc-olive-dark" />}
       </div>
       <div className="p-5">
-        <h3 className="text-lg font-bold text-lc-white group-hover:text-lc-green transition-colors">
+        <Heading as="h2" variant="cardLink">
           {frontmatter.title}
-        </h3>
-        <p className="mt-2 text-sm text-lc-muted line-clamp-2">{frontmatter.description}</p>
+        </Heading>
+        <Text as="p" variant="muted" className="mt-2 line-clamp-2">{frontmatter.description}</Text>
         <div className="mt-4 flex items-center gap-2 flex-wrap">
           {frontmatter.tags?.slice(0, 3).map((t) => (
             <span

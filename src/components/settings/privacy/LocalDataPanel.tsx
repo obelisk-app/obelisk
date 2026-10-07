@@ -6,6 +6,8 @@ import Button from '@/components/ui/buttons/Button';
 import AnalyticsSetting from './AnalyticsSetting';
 import LocalDataCategoryRow from './LocalDataCategoryRow';
 import { useClearLocalData } from '@/hooks/shell/settings/useClearLocalData';
+import Text from '@/components/ui/layout/Text';
+import Heading from '@/components/ui/layout/Heading';
 
 /**
  * Settings > Data on this device, on both shells: every category of local
@@ -20,7 +22,7 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
 
   return (
     <div className={mobile ? 'space-y-3 px-4 py-3' : 'space-y-4'} data-testid="local-data-panel">
-      <p className="text-sm leading-6 text-lc-muted">{t('settings.localData.intro')}</p>
+      <Text as="p" variant="muted" className="leading-6">{t('settings.localData.intro')}</Text>
       <AnalyticsSetting />
       <ul className="divide-y divide-lc-border overflow-hidden rounded-lg border border-lc-border">
         {categories.map((category) => (
@@ -36,8 +38,8 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
       <section className="rounded-lg border border-red-500/30 p-3" data-testid="local-data-everything">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-lc-white">{t('settings.localData.removeAll.title')}</h3>
-            <p className="mt-0.5 text-xs leading-5 text-lc-muted">{t('settings.localData.removeAll.description')}</p>
+            <Heading as="h3" variant="panel">{t('settings.localData.removeAll.title')}</Heading>
+            <Text as="p" variant="caption" className="mt-0.5 leading-5">{t('settings.localData.removeAll.description')}</Text>
           </div>
           <Button
             variant="danger"

@@ -33,9 +33,10 @@ describe('Text', () => {
     expect(screen.getByTestId('t')).toHaveClass(cls);
   });
 
-  it('renders a heading element with weight', () => {
-    render(<Text as="h2" size="sm" weight="semibold" tone="default" data-testid="t">Title</Text>);
-    const el = screen.getByRole('heading', { level: 2 });
+  it('renders a paragraph with weight', () => {
+    render(<Text as="p" size="sm" weight="semibold" tone="default" data-testid="t">Title</Text>);
+    const el = screen.getByTestId('t');
+    expect(el.tagName).toBe('P');
     expect(el.className).toBe('text-sm font-semibold text-lc-white');
   });
 
@@ -66,8 +67,25 @@ describe('Text role sizes', () => {
     expect(screen.getByTestId('t').className).toBe('text-[10px] font-semibold uppercase tracking-wider text-lc-muted');
   });
 
-  it('headings take any level', () => {
-    render(<Text as="h3" size="lg" weight="bold" tone="default">Section</Text>);
-    expect(screen.getByRole('heading', { level: 3, name: 'Section' })).toHaveClass('text-lg', 'font-bold');
+});
+
+describe('Text body variants', () => {
+  it.each([
+    ['caption', 'text-xs text-lc-muted'],
+    ['muted', 'text-sm text-lc-muted'],
+    ['lead', 'text-lg text-lc-muted'],
+  ] as const)('%s renders the hand-written string it replaced', (variant, cls) => {
+    render(<Text as="p" variant={variant} data-testid="t" />);
+    expect(screen.getByTestId('t').className).toBe(cls);
+  });
+
+  it('an explicit size or tone wins over the variant', () => {
+    render(<Text as="p" variant="caption" size="11" tone="danger" data-testid="t" />);
+    expect(screen.getByTestId('t').className).toBe('text-[11px] text-red-400');
+  });
+
+  it('body adds nothing', () => {
+    render(<Text as="p" variant="body" data-testid="t" />);
+    expect(screen.getByTestId('t')).not.toHaveAttribute('class');
   });
 });

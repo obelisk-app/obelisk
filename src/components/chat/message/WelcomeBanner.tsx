@@ -1,6 +1,6 @@
 'use client';
 
-import ShootingStars from '@/components/common/ShootingStars';
+import ShootingStars from '@/components/ui/animations/ShootingStars';
 
 /**
  * Welcome banner wrapper: the welcome bot posts a markdown image pointing

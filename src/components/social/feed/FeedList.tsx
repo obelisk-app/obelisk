@@ -26,6 +26,8 @@ import type { FeedState } from '@/hooks/social/feed/useFeed';
 import { useFeedList } from '@/hooks/social/feed/useFeedList';
 import NoteCard from '../note/NoteCard';
 import { ArrowUpIcon } from '@/assets/icons';
+import Text from '@/components/ui/layout/Text';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 export default function FeedList({
   state,
@@ -72,7 +74,7 @@ export default function FeedList({
   if (loading && notes.length === 0) {
     return (
       <div className="space-y-3 p-4" data-testid="feed-loading">
-        {[0, 1, 2].map((item) => <div key={item} className="lc-skeleton h-28 rounded-2xl" />)}
+        {[0, 1, 2].map((item) => <Skeleton key={item} className="h-28 rounded-2xl" />)}
       </div>
     );
   }
@@ -80,9 +82,9 @@ export default function FeedList({
   if (notes.length === 0) {
     return (
       <div className="flex min-h-48 flex-col items-center justify-center gap-3 px-6 text-center" data-testid="feed-empty">
-        <p className="max-w-xs text-sm text-lc-muted">
+        <Text as="p" variant="muted" className="max-w-xs">
           {error ? t('social.loadFailed') : emptyLabel ?? t('social.profileFeed.empty')}
-        </p>
+        </Text>
         <Button variant="pillSecondary" size="xs" onClick={state.refresh}>
           {t('social.refresh')}
         </Button>

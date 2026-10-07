@@ -117,9 +117,9 @@ export default function RelayStatusPill({
                 {/* AUTH is the difference between "connected" and "can read
                     this relay's groups": a relay can be up and still hand
                     back nothing until the challenge is answered. */}
-                <p className="pl-4 pt-0.5 text-[10px] text-lc-muted" data-testid="relay-status-auth">
+                <Text as="p" size="10" tone="muted" className="pl-4 pt-0.5" data-testid="relay-status-auth">
                   {t(`social.auth.${vm.access}`)}
-                </p>
+                </Text>
               </div>
               <MenuDivider />
             </>

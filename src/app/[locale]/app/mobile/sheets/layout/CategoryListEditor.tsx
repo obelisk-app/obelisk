@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { categoryLabel } from '@/utils/relay/category-label';
 import Input from '@/components/ui/forms/Input';
 import { ChevronDownIcon, ChevronUpIcon } from '@/assets/icons';
+import Label from '@/components/ui/forms/Label';
 
 const arrowBtnStyle: React.CSSProperties = {
   width: 28,
@@ -27,9 +28,9 @@ export function CategoryListEditor({ categories, moveCategory, renameCategory, d
   const t = useTranslations();
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+      <Label variant="sheet">
         {t('mobile.layout.categories')}
-      </label>
+      </Label>
       {categories.length === 0 ? (
         <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>
           {t('mobile.layout.empty')}

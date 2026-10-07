@@ -20,6 +20,7 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 import Text from '@/components/ui/layout/Text';
 import { useArticleCard } from '@/hooks/social/article/useArticleCard';
 import { BookAltIcon } from '@/assets/icons';
+import Heading from '@/components/ui/layout/Heading';
 
 /** Compact card for a feed row. */
 export function ArticleCard({
@@ -65,13 +66,13 @@ export function ArticleCard({
             {t('social.minReadCount', { minutes })}
           </span>
         </Text>
-        <h3 className="line-clamp-2 text-base font-bold leading-snug text-lc-white">
+        <Heading as="h3" className="line-clamp-2 text-base font-bold leading-snug text-lc-white">
           {meta.title || t('social.untitledArticle')}
-        </h3>
+        </Heading>
         {(meta.summary || note.content) && (
-          <p className="line-clamp-2 text-[13px] leading-relaxed text-lc-muted">
+          <Text as="p" size="13" tone="muted" className="line-clamp-2 leading-relaxed">
             {excerpt}
-          </p>
+          </Text>
         )}
         <span className="inline-block pt-1 text-[11px] font-semibold text-lc-green">
           {t('social.openArticle')} →

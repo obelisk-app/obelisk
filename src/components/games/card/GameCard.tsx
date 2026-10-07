@@ -5,6 +5,7 @@ import { gameIcon, gameName } from '@/lib/games/core/catalog';
 import { useGameCard } from '@/hooks/games/card/useGameCard';
 import ActionLabel from './ActionLabel';
 import StatusLabel from './StatusLabel';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 /**
  * In-channel card for a table, rendered from the `[[game:<id>]]` marker the
@@ -19,7 +20,7 @@ function GameCard({ gameId }: { gameId: string }) {
   if (!session) {
     return (
       <span className="mt-1 block max-w-sm rounded-lg border border-lc-border bg-lc-dark p-3" data-testid="game-card-loading">
-        <span className="lc-skeleton block h-4 w-32 rounded" />
+        <Skeleton as="span" className="block h-4 w-32 rounded" />
       </span>
     );
   }

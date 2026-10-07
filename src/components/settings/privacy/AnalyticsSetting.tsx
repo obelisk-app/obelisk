@@ -4,6 +4,9 @@ import { useTranslations } from 'next-intl';
 import AnalyticsChoiceButtons from '@/components/analytics/AnalyticsChoiceButtons';
 import { useAnalyticsConsent } from '@/hooks/analytics/useAnalyticsConsent';
 import { setAnalyticsConsent } from '@/services/analytics/consent';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 /**
  * Settings > Data on this device: the Analytics answer, changeable at any
@@ -20,11 +23,11 @@ export default function AnalyticsSetting() {
       : t('settings.localData.analytics.unset');
   return (
     <section className="rounded-lg border border-lc-border p-3" data-testid="analytics-setting">
-      <h3 className="text-sm font-semibold text-lc-white">{t('settings.localData.analytics.title')}</h3>
+      <Heading as="h3" variant="panel">{t('settings.localData.analytics.title')}</Heading>
       {known ? (
-        <p className="mt-0.5 text-xs leading-5 text-lc-muted" data-testid="analytics-setting-status">{status}</p>
+        <Text as="p" variant="caption" className="mt-0.5 leading-5" data-testid="analytics-setting-status">{status}</Text>
       ) : (
-        <div className="mt-1.5 h-3 w-40 animate-pulse rounded bg-lc-border" />
+        <Skeleton variant="pulse" className="mt-1.5 h-3 w-40 rounded bg-lc-border" />
       )}
       <div className="mt-3 sm:max-w-xs">
         <AnalyticsChoiceButtons choice={choice} onChoose={setAnalyticsConsent} testIdPrefix="analytics-setting" />

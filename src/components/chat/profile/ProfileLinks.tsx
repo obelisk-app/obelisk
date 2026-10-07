@@ -19,6 +19,7 @@ import { useTranslations } from 'next-intl';
 import TextButton from '@/components/ui/buttons/TextButton';
 import { BioSegmentView } from './BioSegmentView';
 import { BoltIcon, GlobeIcon } from '@/assets/icons';
+import Text from '@/components/ui/layout/Text';
 
 export default function ProfileLinks({
   about,
@@ -38,9 +39,9 @@ export default function ProfileLinks({
   return (
     <div className="profile-view-bio shrink-0 px-5 py-2" data-testid="profile-links">
       {segments.length > 0 && (
-        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-lc-muted">
+        <Text as="p" tone="muted" className="whitespace-pre-wrap text-[15px] leading-relaxed">
           {segments.map((segment, index) => <BioSegmentView key={index} segment={segment} />)}
-        </p>
+        </Text>
       )}
 
       {(site || lud16) && (

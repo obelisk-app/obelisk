@@ -4,6 +4,8 @@ import { useTranslations } from 'next-intl';
 import { useVoiceRoomForm } from '@/hooks/voice/join/useVoiceRoomForm';
 import Input from '@/components/ui/forms/Input';
 import Button from '@/components/ui/buttons/Button';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /** Pick a room name and open it. */
 export default function VoiceRoomForm() {
@@ -17,8 +19,8 @@ export default function VoiceRoomForm() {
         className="w-full max-w-md space-y-4 bg-neutral-900 border border-neutral-800 rounded-xl p-6"
       >
         <div>
-          <h1 className="text-xl font-semibold">{t('voice.voicePage.title')}</h1>
-          <p className="text-sm text-neutral-400 mt-1">{t('voice.voicePage.hint')}</p>
+          <Heading as="h1" className="text-xl font-semibold">{t('voice.voicePage.title')}</Heading>
+          <Text as="p" size="sm" className="text-neutral-400 mt-1">{t('voice.voicePage.hint')}</Text>
         </div>
         <Input
           type="text"

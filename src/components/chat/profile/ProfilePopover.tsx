@@ -16,6 +16,7 @@ import { PopoverIdentity } from './PopoverIdentity';
 import { PopoverDetails } from './PopoverDetails';
 import { PopoverActions } from './PopoverActions';
 import IconButton from '@/components/ui/buttons/IconButton';
+import Text from '@/components/ui/layout/Text';
 
 export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }: {
   pubkey: string;
@@ -102,9 +103,9 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
           />
 
           {member?.about && (
-            <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-lc-white/85" data-testid="profile-about">
+            <Text as="p" size="sm" className="line-clamp-3 whitespace-pre-wrap break-words leading-relaxed text-lc-white/85" data-testid="profile-about">
               <EmojiText text={member.about} emojis={serverEmojis} />
-            </p>
+            </Text>
           )}
 
           <PopoverDetails member={member} />

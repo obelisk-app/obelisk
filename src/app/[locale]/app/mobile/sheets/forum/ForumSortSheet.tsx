@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import Sheet from '@/components/ui/overlays/Sheet';
 import SheetHeader from '../chrome/SheetHeader';
 import { SortSheetRow } from './SortSheetRow';
+import Label from '@/components/ui/forms/Label';
 
 export function ForumSortSheet({
   prefs,
@@ -20,7 +21,7 @@ export function ForumSortSheet({
     <Sheet onClose={close} screen="forum-sort" label={t('chat.forum.sortTitle')} testId="mobile-forum-sort-sheet">
       <SheetHeader title={t('chat.forum.sortTitle')} />
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('chat.forum.sortBy')}</label>
+        <Label variant="sheet">{t('chat.forum.sortBy')}</Label>
         <SortSheetRow
           label={t('chat.forum.sortActive')}
           checked={prefs.sortBy === 'recent'}
@@ -33,7 +34,7 @@ export function ForumSortSheet({
           onClick={() => onChange({ sortBy: 'created' })}
           testId="mobile-forum-sort-created"
         />
-        <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 12 }}>{t('chat.forum.tagMatching')}</label>
+        <Label variant="sheet" style={{ marginTop: 12 }}>{t('chat.forum.tagMatching')}</Label>
         <SortSheetRow
           label={t('chat.forum.matchAny')}
           checked={prefs.tagMatch === 'any'}

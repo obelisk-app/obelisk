@@ -7,6 +7,7 @@ import Spinner from '@/components/ui/feedback/Spinner';
 import WotBadge from '../../wot/WotBadge';
 import { EmojiText } from './EmojiText';
 import type { PopoverMember } from '@/hooks/chat/profile/usePopoverMember';
+import Heading from '@/components/ui/layout/Heading';
 
 /** Name, WoT badge, NIP-05 handle and the copyable npub. */
 export function PopoverIdentity({
@@ -31,10 +32,10 @@ export function PopoverIdentity({
   const t = useTranslations();
   return (
     <div className="min-w-0">
-      <h3 className="flex items-center gap-2 break-words text-lg font-semibold leading-tight text-lc-white" data-testid="profile-name">
+      <Heading as="h3" variant="card" className="flex items-center gap-2 break-words leading-tight" data-testid="profile-name">
         <span><EmojiText text={displayName} emojis={serverEmojis} /></span>
         <WotBadge pubkey={pubkey} />
-      </h3>
+      </Heading>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs" data-testid="profile-handle">
         {/*
           Three states, none of which shows a badge before the

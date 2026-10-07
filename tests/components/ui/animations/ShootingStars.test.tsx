@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import ShootingStars from '@/components/common/ShootingStars';
+import ShootingStars from '@/components/ui/animations/ShootingStars';
 
 /** Just enough of a 2D context for the streaks to be drawn. */
 function fakeContext() {

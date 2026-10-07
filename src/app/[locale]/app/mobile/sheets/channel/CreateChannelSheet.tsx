@@ -8,6 +8,7 @@ import Input from '@/components/ui/forms/Input';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
 import { PlusIcon } from '@/assets/icons';
+import Label from '@/components/ui/forms/Label';
 
 /**
  * Phone skin of the new-channel form, as a bottom sheet over the channel
@@ -35,18 +36,9 @@ export function CreateChannelSheet({
         subtitle={t.rich('shell.channel.create.help', { settings: () => <strong>{t('shell.desktop.channel.settings')}</strong> })}
       />
       <form onSubmit={form.submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <label htmlFor={nameId}
-          style={{
-            fontSize: 10,
-            color: 'var(--app-text-dim)',
-            fontWeight: 500,
-            textTransform: 'uppercase',
-            letterSpacing: '0.12em',
-            fontFamily: "'JetBrains Mono', monospace",
-          }}
-        >
+        <Label variant="sheetMono" htmlFor={nameId}>
           {t('shell.channel.create.nameOn', { relay: relayLabel })}
-        </label>
+        </Label>
         <div className="setup-input-wrap">
           <Input
             variant="mobile"

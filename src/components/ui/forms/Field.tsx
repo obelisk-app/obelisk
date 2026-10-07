@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/utils/style/cn';
+import Label from './Label';
 
 export { fieldNoteId } from '@/utils/style/field-note';
 
@@ -25,9 +26,9 @@ export default function Field({ htmlFor, label, error, hint, className, children
   return (
     <div className={cn('block', className)}>
       {label !== undefined && (
-        <label htmlFor={htmlFor} className="mb-1 block text-[11px] font-medium text-lc-muted">
+        <Label htmlFor={htmlFor} variant="field" className="mb-1 block">
           {label}
-        </label>
+        </Label>
       )}
       {children}
       {error ? (

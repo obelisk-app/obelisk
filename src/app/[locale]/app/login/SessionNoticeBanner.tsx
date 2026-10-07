@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useSessionNotice } from '@/services/nostr-bridge';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * Above the login methods: why a saved session could not be restored. The
@@ -14,8 +15,8 @@ export function SessionNoticeBanner() {
   if (notice === null || notice === 'not-remembered') return null;
   const message = notice === 'vault-unavailable' ? t('shell.login.notice.vaultUnavailable') : t('shell.login.notice.unlockFailed');
   return (
-    <p className="nui-warning" role="status" data-testid="session-notice">
+    <Text as="p" className="nui-warning" role="status" data-testid="session-notice">
       {message}
-    </p>
+    </Text>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { DownloadAltIcon, FileAltIcon } from '@/assets/icons';
+import Text from '@/components/ui/layout/Text';
 
 interface AttachmentCardProps {
   url: string;
@@ -43,8 +44,8 @@ export default function AttachmentCard({ url, name, thumbnailUrl }: AttachmentCa
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-lc-white truncate">{name}</p>
-        <p className="text-xs text-lc-muted">{ext}</p>
+        <Text as="p" size="sm" tone="default" weight="medium" className="truncate">{name}</Text>
+        <Text as="p" variant="caption">{ext}</Text>
       </div>
       <DownloadAltIcon strokeWidth={2} className="text-lc-muted shrink-0" />
     </a>

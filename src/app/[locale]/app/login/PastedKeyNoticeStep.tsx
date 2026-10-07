@@ -3,6 +3,8 @@
 import { Modal } from '@nostr-wot/ui';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 type Props = {
   onClose: () => void;
@@ -20,10 +22,10 @@ export function PastedKeyNoticeStep({ onClose, onBack, onContinue, busy, error }
     <Modal open onClose={onClose} aria-label={t('shell.login.pastedKey.title')} classes={{ modal: 'obelisk-login-modal' }}>
       <div className="nui-form" data-testid="pasted-key-notice">
         <div className="nui-form-head">
-          <h3 className="nui-form-title">{t('shell.login.pastedKey.title')}</h3>
-          <p className="nui-form-sub">{t('shell.login.pastedKey.body')}</p>
+          <Heading as="h3" className="nui-form-title">{t('shell.login.pastedKey.title')}</Heading>
+          <Text as="p" className="nui-form-sub">{t('shell.login.pastedKey.body')}</Text>
         </div>
-        {error && <p className="nui-error" role="alert">{error}</p>}
+        {error && <Text as="p" className="nui-error" role="alert">{error}</Text>}
         <Button variant="pill" className="w-full" loading={busy} onClick={onContinue}>
           {t('shell.login.pastedKey.continue')}
         </Button>

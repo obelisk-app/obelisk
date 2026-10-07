@@ -3,6 +3,7 @@
 import type { JsDirectMessage } from '@/services/nostr-bridge';
 import { useDmListRow } from '@/hooks/shell/dm/useDmListRow';
 import UserAvatar from '@/components/ui/media/UserAvatar';
+import Text from '@/components/ui/layout/Text';
 
 /** One conversation in the desktop DM list: avatar, name, unread count and the last message. */
 export function DmListRow({
@@ -45,13 +46,11 @@ export function DmListRow({
           )}
         </div>
         {row.preview && (
-          <p
-            className={
+          <Text as="p" className={
               'truncate text-xs ' + (row.unread ? 'text-lc-white' : 'text-lc-muted')
-            }
-          >
+            }>
             {row.preview}
-          </p>
+          </Text>
         )}
       </div>
     </button>

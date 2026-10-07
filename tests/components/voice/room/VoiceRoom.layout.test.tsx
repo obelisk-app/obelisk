@@ -67,7 +67,7 @@ function activeClient() {
 }
 
 vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({ useRouter: () => ({ push: vi.fn() }) }));
-vi.mock('@/components/common/ShootingStars', () => ({ default: () => null }));
+vi.mock('@/components/ui/animations/ShootingStars', () => ({ default: () => null }));
 vi.mock('@/components/voice/controls/VoiceControls', () => ({ default: () => <div data-testid="voice-controls" /> }));
 vi.mock('@/components/voice/room/DebugOverlay', () => ({ DebugOverlay: () => null }));
 vi.mock('@/services/voice/sfu-control', () => ({ ensureSfuRoomStarted: vi.fn(async () => null) }));

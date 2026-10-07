@@ -31,6 +31,8 @@ import { PrivacySettingsSection } from '../settings/PrivacySettingsSection';
 import { RelaysSettingsSection } from '../settings/RelaysSettingsSection';
 import { WalletSettingsSection } from '../settings/WalletSettingsSection';
 import type { MessageKey } from '@/i18n/keys';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 const SETTINGS_NAV: ReadonlyArray<{
   label: MessageKey;
@@ -139,8 +141,8 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
           ) : (
             <div className="max-w-3xl mx-auto px-10 py-10" data-testid={`settings-section-${settingsTab}`}>
               <div className="mb-6">
-                <h2 className="text-lc-white text-xl font-semibold">{t(`settings.section.${settingsTab}.label`)}</h2>
-                <p className="mt-1 text-sm text-lc-muted">{t(`settings.section.${settingsTab}.desc`)}</p>
+                <Heading as="h2" className="text-lc-white text-xl font-semibold">{t(`settings.section.${settingsTab}.label`)}</Heading>
+                <Text as="p" variant="muted" className="mt-1">{t(`settings.section.${settingsTab}.desc`)}</Text>
               </div>
               {settingsTab === 'profile' && (
                 <EditProfileForm

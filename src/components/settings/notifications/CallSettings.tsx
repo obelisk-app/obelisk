@@ -20,7 +20,7 @@ export default function CallSettings({ mobile = false }: { mobile?: boolean }) {
     <div className="space-y-4">
       <div className="space-y-1.5">
         <div className="text-sm font-semibold text-lc-white">{t('settings.calls.from.label')}</div>
-        <p className="text-xs text-lc-muted">{t('settings.calls.fromHint')}</p>
+        <Text as="p" variant="caption">{t('settings.calls.fromHint')}</Text>
         <CallChoice<CallsFrom>
           name="calls-from"
           mobile={mobile}
@@ -34,7 +34,7 @@ export default function CallSettings({ mobile = false }: { mobile?: boolean }) {
       </div>
       <div className="space-y-1.5">
         <div className="text-sm font-semibold text-lc-white">{t('settings.calls.ip.label')}</div>
-        <p className="text-xs text-lc-muted">{t('settings.calls.ipHint')}</p>
+        <Text as="p" variant="caption">{t('settings.calls.ipHint')}</Text>
         <CallChoice<CallIpProtection>
           name="call-ip"
           mobile={mobile}
@@ -49,7 +49,7 @@ export default function CallSettings({ mobile = false }: { mobile?: boolean }) {
       </div>
       <div className="space-y-2">
         <div className="text-sm font-semibold text-lc-white">{t('settings.calls.relays')}</div>
-        <p className="text-xs text-lc-muted">{t('settings.calls.relaysHint')}</p>
+        <Text as="p" variant="caption">{t('settings.calls.relaysHint')}</Text>
         <CallRelayEditor key={vm.relaysKey} saved={vm.relays} onStatus={vm.setStatus} />
         {vm.status !== 'idle' && (
           <span className={`text-xs ${vm.status === 'invalid' ? 'text-red-400' : 'text-lc-green'}`} role="status">

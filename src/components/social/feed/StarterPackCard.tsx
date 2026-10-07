@@ -6,6 +6,8 @@ import Card from '@/components/ui/layout/Card';
 import type { StarterPack } from '@/services/social/starter-packs';
 import type { StarterPackRow } from '@/utils/social/starter-pack-rows';
 import StarterPackFace from './StarterPackFace';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /** One pack: title, description, how many are new, the follow button and the faces. */
 export default function StarterPackCard({
@@ -26,14 +28,14 @@ export default function StarterPackCard({
     <Card as="section" data-testid="starter-pack">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-lc-white">{pack.title}</h3>
+          <Heading as="h3" variant="panel" className="truncate">{pack.title}</Heading>
           {pack.description && (
-            <p className="mt-0.5 line-clamp-2 text-[13px] text-lc-muted">{pack.description}</p>
+            <Text as="p" size="13" tone="muted" className="mt-0.5 line-clamp-2">{pack.description}</Text>
           )}
-          <p className="mt-1 text-[11px] text-lc-muted">
+          <Text as="p" size="11" tone="muted" className="mt-1">
             {t('social.packPeopleCount', { count: pack.members.length })}
             {already > 0 && ` · ${t('social.packAlreadyCount', { count: already })}`}
-          </p>
+          </Text>
         </div>
         <Button
           variant="pill"

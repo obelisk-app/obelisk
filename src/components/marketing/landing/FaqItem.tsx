@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Heading from '@/components/ui/layout/Heading';
 
 interface Props {
   id: string;
@@ -22,11 +23,9 @@ export default function FaqItem({ id, question, answer }: Props) {
         aria-expanded={open}
         aria-controls={`faq-${id}-answer`}
       >
-        <h3
-          className="text-base md:text-[17px] font-semibold text-lc-white pr-4 leading-snug"
-        >
+        <Heading as="h3" className="text-base md:text-[17px] font-semibold text-lc-white pr-4 leading-snug">
           {question}
-        </h3>
+        </Heading>
         <span
           aria-hidden="true"
           className={`shrink-0 text-lc-green text-2xl leading-none mt-0.5 transition-transform duration-300 ${

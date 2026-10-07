@@ -25,9 +25,9 @@ export default function NwcConnectForm({ draft, onDraft, preview, busy, error, o
 
   return (
     <div className="space-y-3" data-testid="nwc-connect-form">
-      <p className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-2 text-xs text-yellow-200" data-testid="nwc-warning">
+      <Text as="p" size="xs" className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-2 text-yellow-200" data-testid="nwc-warning">
         {t('settings.wallet.warning')}
-      </p>
+      </Text>
       <Input
         id={fieldId}
         label={t('settings.wallet.uriLabel')}

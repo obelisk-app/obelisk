@@ -8,6 +8,8 @@ import Spinner from '@/components/ui/feedback/Spinner';
 import { useGamesStore } from '@/store/games';
 import { useTranslations } from 'next-intl';
 import { useDmCallListener } from '@/hooks/call/useDmCallListener';
+import Text from '@/components/ui/layout/Text';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 /**
  * The heavy features, loaded only when they are used.
@@ -51,8 +53,8 @@ function ModalLoading({ onClose, label }: { onClose: () => void; label?: string 
       testId="lazy-modal-loading"
       panelClassName="w-full max-w-md mx-4 rounded-xl bg-lc-dark border border-lc-border p-6"
     >
-      <div className="lc-skeleton h-40 w-full rounded-lg" />
-      {label && <p className="mt-3 text-center text-xs text-lc-muted">{label}</p>}
+      <Skeleton className="h-40 w-full rounded-lg" />
+      {label && <Text as="p" variant="caption" className="mt-3 text-center">{label}</Text>}
     </Modal>
   );
 }

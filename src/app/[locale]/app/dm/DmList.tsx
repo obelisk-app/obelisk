@@ -16,6 +16,8 @@ import ComposeDm from './ComposeDm';
 import { DmListRow } from './DmListRow';
 import { DmTabLabel } from './DmTabLabel';
 import { SearchIcon, TrashRoundIcon } from '@/assets/icons';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 export default function DmList({
   activePeer,
@@ -35,7 +37,7 @@ export default function DmList({
       {/* Same fixed height as the thread header beside it (`DmPanel`), so the
           two bottom borders form one line across the whole surface. */}
       <div className="flex h-[60px] shrink-0 items-center justify-between border-b border-lc-border px-4 shadow-sm" data-testid="dm-list-header">
-        <h3 className="truncate text-sm font-bold text-lc-white">{t('dm.title')}</h3>
+        <Heading as="h3" variant="panel" className="truncate">{t('dm.title')}</Heading>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -103,7 +105,7 @@ export default function DmList({
       <div className="flex-1 overflow-y-auto pb-2 md:pb-28">
         {!vm.hasConversations ? (
           <div className="p-4 text-center">
-            <p className="text-sm text-lc-muted">{t('dm.noConversations')}</p>
+            <Text as="p" variant="muted">{t('dm.noConversations')}</Text>
             <button
               onClick={vm.startComposing}
               className="mt-2 text-xs text-lc-green hover:underline"
@@ -113,11 +115,11 @@ export default function DmList({
           </div>
         ) : vm.visible.length === 0 ? (
           <div className="p-4 text-center">
-            <p className="text-sm text-lc-muted">
+            <Text as="p" variant="muted">
               {vm.activeTab === 'follows'
                 ? t('dm.noFollows')
                 : t('dm.everyoneInFollows')}
-            </p>
+            </Text>
           </div>
         ) : (
           vm.visible.map((p) => (

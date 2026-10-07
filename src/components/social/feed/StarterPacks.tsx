@@ -17,6 +17,9 @@ import { useTranslations } from 'next-intl';
 import EmptyState from '@/components/ui/feedback/EmptyState';
 import { useStarterPacks } from '@/hooks/social/feed/useStarterPacks';
 import StarterPackCard from './StarterPackCard';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 export default function StarterPacks({
   onOpenProfile,
@@ -36,8 +39,8 @@ export default function StarterPacks({
   */
   const heading = (
     <div className="px-1">
-      <h2 className="text-base font-semibold text-lc-white">{t('social.packsTitle')}</h2>
-      <p className="mt-0.5 text-[13px] text-lc-muted">{t('social.packsSubtitle')}</p>
+      <Heading as="h2" className="text-base font-semibold text-lc-white">{t('social.packsTitle')}</Heading>
+      <Text as="p" size="13" tone="muted" className="mt-0.5">{t('social.packsSubtitle')}</Text>
     </div>
   );
 
@@ -45,7 +48,7 @@ export default function StarterPacks({
     return (
       <div className="space-y-3 p-4" data-testid="starter-packs-loading">
         {heading}
-        {[0, 1].map((index) => <div key={index} className="lc-skeleton h-28 rounded-xl" />)}
+        {[0, 1].map((index) => <Skeleton key={index} className="h-28 rounded-xl" />)}
       </div>
     );
   }

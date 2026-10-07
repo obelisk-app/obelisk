@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import SegmentedControl from '@/components/ui/forms/SegmentedControl';
-import Text from '@/components/ui/layout/Text';
+import Heading from '@/components/ui/layout/Heading';
 import { CONTENT_FILTERS, type ContentFilter } from '@/services/social/kinds';
 import type { FeedSort } from '@/services/social/rank';
 import { useHistoryDismiss } from '@/hooks/common/useHistoryDismiss';
@@ -61,9 +61,9 @@ export default function FilterSheet({
       >
         {mobile && <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-lc-border" aria-hidden="true" />}
 
-        <Text as="h2" size="11" weight="semibold" variant="label" tone="muted" className="mb-2">
+        <Heading as="h2" className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-lc-muted">
           {t('social.sort.top')} · {t('social.sort.recent')}
-        </Text>
+        </Heading>
         <SegmentedControl
           aria-label={`${t('social.sort.top')} · ${t('social.sort.recent')}`}
           fit="fill"
@@ -77,9 +77,9 @@ export default function FilterSheet({
           }))}
         />
 
-        <Text as="h2" size="11" weight="semibold" variant="label" tone="muted" className="mb-2">
+        <Heading as="h2" className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-lc-muted">
           {t('social.filters')}
-        </Text>
+        </Heading>
         <div className="grid grid-cols-2 gap-2">
           {CONTENT_FILTERS.map((value) => (
             <button

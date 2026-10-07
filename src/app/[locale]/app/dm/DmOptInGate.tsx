@@ -4,6 +4,8 @@ import { useTranslations } from 'next-intl';
 import { useDmOptInGate } from '@/hooks/shell/dm/useDmOptInGate';
 import Button from '@/components/ui/buttons/Button';
 import { LockWideIcon } from '@/assets/icons';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 type Surface = 'desktop' | 'sidebar' | 'mobile';
 
@@ -57,10 +59,10 @@ export default function DmOptInGate({
             <LockWideIcon size={18} strokeWidth={2} />
           </div>
           <div className="min-w-0">
-            <h2 id={`dm-opt-in-title-${surface}`} className={compact ? 'text-sm font-bold text-lc-white' : 'text-lg font-bold text-lc-white'}>
+            <Heading as="h2" id={`dm-opt-in-title-${surface}`} className={compact ? 'text-sm font-bold text-lc-white' : 'text-lg font-bold text-lc-white'}>
               {t('dm.optIn.title')}
-            </h2>
-            <p className="mt-1 text-xs text-lc-muted">{t('dm.optIn.subtitle')}</p>
+            </Heading>
+            <Text as="p" variant="caption" className="mt-1">{t('dm.optIn.subtitle')}</Text>
           </div>
         </div>
 

@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { ROADMAP_PHASES } from './landing-data';
+import Heading from '@/components/ui/layout/Heading';
 
 type Phase = (typeof ROADMAP_PHASES)[number];
 
@@ -30,7 +31,7 @@ export default function RoadmapPhase({ phase }: { phase: Phase }) {
             {done ? `✓ ${t('marketing.roadmap.done')}` : t('marketing.roadmap.upcoming')}
           </span>
         </div>
-        <h4 className="text-lg font-semibold text-lc-white mb-2">{t(`marketing.roadmap.${phase.key}.title`)}</h4>
+        <Heading as="h3" variant="card" className="mb-2">{t(`marketing.roadmap.${phase.key}.title`)}</Heading>
         <ul className="space-y-1">
           {items.map((item) => (
             <li key={item} className="text-sm text-lc-muted flex items-start gap-2">

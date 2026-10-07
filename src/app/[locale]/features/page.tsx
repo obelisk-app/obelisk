@@ -3,11 +3,13 @@ import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import Footer from '@/components/marketing/site/Footer';
 import Navbar from '@/components/marketing/site/Navbar';
-import ShootingStars from '@/components/common/ShootingStars';
+import ShootingStars from '@/components/ui/animations/ShootingStars';
 import { getTranslations } from 'next-intl/server';
 import IntlScope from '@/i18n/IntlScope';
 import { pageLocale, type LocaleParams } from '@/i18n/page-locale';
 import { standardPageMetadata } from '@/utils/seo/standard';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * The screenshots. Their copy - title, description, and the alt text a
@@ -89,12 +91,12 @@ export default async function FeaturesPage({ params }: LocaleParams) {
         <Navbar />
         <header className="px-6 pb-16 pt-32 text-center">
           <span className="inline-flex rounded-full border border-lc-green/20 bg-lc-olive/40 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-lc-green">{t('marketing.features.eyebrow')}</span>
-          <h1 className="mx-auto mt-5 max-w-4xl text-4xl font-extrabold leading-[1.05] tracking-tight text-lc-white md:text-6xl">
+          <Heading as="h1" variant="display" className="mx-auto mt-5 max-w-4xl">
             {t('marketing.features.headline')}<span className="text-lc-green lc-glow-text"> {t('marketing.features.headlineAccent')}</span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-lc-muted md:text-xl">
+          </Heading>
+          <Text as="p" variant="lead" className="mx-auto mt-6 max-w-2xl leading-relaxed md:text-xl">
             {t('marketing.features.subhead')}
-          </p>
+          </Text>
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/app" className="lc-pill lc-pill-primary px-8 py-3 text-base">{t('marketing.features.openApp')}</Link>
             <a href="https://github.com/obelisk-app/obelisk" className="lc-pill lc-pill-secondary px-8 py-3 text-base" target="_blank" rel="noopener noreferrer">{t('marketing.features.viewSource')}</a>
@@ -110,9 +112,9 @@ export default async function FeaturesPage({ params }: LocaleParams) {
                 </div>
               </figure>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lc-green">{t('marketing.features.number', { n: String(index + 1).padStart(2, '0') })}</p>
-                <h2 className="mt-3 text-3xl font-bold tracking-tight text-lc-white md:text-4xl">{t(`marketing.features.item.${feature.id}.title`)}</h2>
-                <p className="mt-4 text-base leading-relaxed text-lc-muted md:text-lg">{t(`marketing.features.item.${feature.id}.description`)}</p>
+                <Text as="p" size="xs" tone="accent" weight="semibold" className="uppercase tracking-[0.18em]">{t('marketing.features.number', { n: String(index + 1).padStart(2, '0') })}</Text>
+                <Heading as="h2" variant="section" accent={false} className="mt-3 tracking-tight">{t(`marketing.features.item.${feature.id}.title`)}</Heading>
+                <Text as="p" size="base" tone="muted" className="mt-4 leading-relaxed md:text-lg">{t(`marketing.features.item.${feature.id}.description`)}</Text>
               </div>
             </article>
           ))}
@@ -120,8 +122,8 @@ export default async function FeaturesPage({ params }: LocaleParams) {
 
         <section className="px-6 py-24 text-center">
           <div className="lc-card lc-glow mx-auto max-w-3xl p-10 md:p-12">
-            <h2 className="text-3xl font-bold text-lc-white md:text-4xl">{t('marketing.features.ctaTitle')}</h2>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-lc-muted">{t('marketing.features.ctaBody')}</p>
+            <Heading as="h2" variant="section" accent={false}>{t('marketing.features.ctaTitle')}</Heading>
+            <Text as="p" variant="lead" className="mx-auto mt-4 max-w-xl">{t('marketing.features.ctaBody')}</Text>
             <Link href="/app" className="lc-pill lc-pill-primary mt-8 inline-flex px-10 py-3.5 text-base">{t('marketing.features.ctaButton')}</Link>
           </div>
         </section>

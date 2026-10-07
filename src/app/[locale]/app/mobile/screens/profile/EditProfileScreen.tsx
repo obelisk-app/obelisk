@@ -7,6 +7,7 @@ import BackButton from '../../chrome/BackButton';
 import EditProfileBannerTap from './EditProfileBannerTap';
 import EditProfileAvatarTap from './EditProfileAvatarTap';
 import EditProfileFields from './EditProfileFields';
+import Heading from '@/components/ui/layout/Heading';
 
 /**
  * The phone's profile editor: tap the banner or avatar to pick an image, or
@@ -20,7 +21,7 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
     <div className="screen active" data-screen="profile-edit">
       <div className="setup-header">
         <BackButton onClick={vm.goBack} disabled={vm.busy} />
-        <h2>{t('mobile.settings.editProfile')}</h2>
+        <Heading as="h2">{t('mobile.settings.editProfile')}</Heading>
         <button
           className="setup-skip save-action"
           onClick={vm.save}

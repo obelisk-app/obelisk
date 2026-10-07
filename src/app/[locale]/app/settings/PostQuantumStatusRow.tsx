@@ -4,6 +4,7 @@ import { Link } from '@/i18n/navigation';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { useTranslations } from 'next-intl';
 import { usePostQuantumProbe } from '@/hooks/shell/settings/usePostQuantumProbe';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * Read-only status line beneath the post-quantum toggle. Reports the three
@@ -26,14 +27,14 @@ export function PostQuantumStatusRow() {
   if (!myPubkey) return null;
 
   if (state === null) {
-    return <p className="mt-1 text-xs text-lc-muted">{t('settings.postQuantumChecking')}</p>;
+    return <Text as="p" variant="caption" className="mt-1">{t('settings.postQuantumChecking')}</Text>;
   }
 
   if (state.canSend) {
     return (
-      <p className="mt-1 text-xs text-lc-muted" data-testid="pq-status-ready">
+      <Text as="p" variant="caption" className="mt-1" data-testid="pq-status-ready">
         {t('settings.postQuantumDetected')} {t('settings.postQuantumReady')}
-      </p>
+      </Text>
     );
   }
 
@@ -44,14 +45,14 @@ export function PostQuantumStatusRow() {
     // messages keep going out classic, and Obelisk will switch on its own
     // once the signer says it can.
     return (
-      <p className="mt-1 text-xs text-lc-muted" data-testid="pq-status-signer-unknown">
+      <Text as="p" variant="caption" className="mt-1" data-testid="pq-status-signer-unknown">
         {t('settings.postQuantumDetected')} {t('settings.postQuantumSignerUnknown')}
-      </p>
+      </Text>
     );
   }
 
   return (
-    <p className="mt-1 text-xs text-lc-muted">
+    <Text as="p" variant="caption" className="mt-1">
       {t('settings.postQuantumNotDetected')}{' '}
       <Link
         href={guidePath('quantum-safe-dms')}
@@ -59,6 +60,6 @@ export function PostQuantumStatusRow() {
       >
         {t('settings.postQuantumSetupLink')}
       </Link>
-    </p>
+    </Text>
   );
 }

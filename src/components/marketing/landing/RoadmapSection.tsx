@@ -1,9 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import RevealSection from './RevealSection';
+import Reveal from '@/components/ui/animations/Reveal';
 import { ROADMAP_PHASES } from './landing-data';
 import RoadmapPhase from './RoadmapPhase';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * The roadmap as a vertical timeline.
@@ -11,15 +13,15 @@ import RoadmapPhase from './RoadmapPhase';
 export default function RoadmapSection() {
   const t = useTranslations();
   return (
-    <RevealSection id="roadmap" className="py-24 px-6">
+    <Reveal id="roadmap" className="py-24 px-6">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('marketing.roadmap.heading')}<span className="text-lc-green">.</span>
-          </h2>
-          <p className="text-lc-muted text-lg max-w-xl mx-auto">
+          <Heading as="h2" variant="section" className="mb-4">
+            {t('marketing.roadmap.heading')}
+          </Heading>
+          <Text as="p" variant="lead" className="max-w-xl mx-auto">
             {t('marketing.roadmap.subtitle')}
-          </p>
+          </Text>
         </div>
         <div className="relative">
           {/* Timeline line */}
@@ -32,6 +34,6 @@ export default function RoadmapSection() {
           </div>
         </div>
       </div>
-    </RevealSection>
+    </Reveal>
   );
 }

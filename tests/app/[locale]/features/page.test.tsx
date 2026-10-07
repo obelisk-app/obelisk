@@ -5,7 +5,7 @@ import FeaturesPage from '@/app/[locale]/features/page';
 
 vi.mock('@/components/marketing/site/Navbar', () => ({ default: () => <nav>Obelisk</nav> }));
 vi.mock('@/components/marketing/site/Footer', () => ({ default: () => <footer /> }));
-vi.mock('@/components/common/ShootingStars', () => ({ default: () => null }));
+vi.mock('@/components/ui/animations/ShootingStars', () => ({ default: () => null }));
 
 describe('FeaturesPage', () => {
   it('shows every comeback feature with a screenshot and working calls to action', async () => {

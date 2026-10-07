@@ -34,6 +34,8 @@ import {
 import ViewerHeader from '@/components/social/viewer/ViewerHeader';
 import AuthorContext from '@/app/[locale]/notes/[id]/AuthorContext';
 import ProfileViewerClient from './ProfileViewerClient';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 export const runtime = 'nodejs';
 export const revalidate = 300;
@@ -82,10 +84,10 @@ export default async function ProfileViewerPage({ params }: Params) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-lc-black px-5 text-center text-lc-white">
         <div>
-          <h1 className="text-lg font-semibold">{t('social.profileViewer.notFound')}</h1>
-          <p className="mt-2 text-sm text-lc-muted">
+          <Heading as="h1" variant="card">{t('social.profileViewer.notFound')}</Heading>
+          <Text as="p" variant="muted" className="mt-2">
             {t('social.profileViewer.notFoundHelp')}
-          </p>
+          </Text>
           <Link href="/app" className="lc-pill-primary mt-6 inline-block px-5 py-2 text-xs">
             {t('social.viewer.openInObelisk')}
           </Link>

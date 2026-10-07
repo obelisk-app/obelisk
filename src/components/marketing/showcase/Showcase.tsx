@@ -1,8 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import { useScrollReveal } from '@/hooks/marketing/useScrollReveal';
 import { CheckIcon } from '@/assets/icons';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
+import Reveal from '@/components/ui/animations/Reveal';
 
 export type ShowcaseItem = {
   src: string;
@@ -18,14 +20,13 @@ export type ShowcaseItem = {
 };
 
 export function ShowcaseRow({ item, index }: { item: ShowcaseItem; index: number }) {
-  const [ref, visible] = useScrollReveal<HTMLDivElement>();
   const isPortrait = item.orientation === 'portrait';
   const reverse = index % 2 === 1;
 
   return (
-    <article
-      ref={ref}
-      className={`relative ${visible ? 'animate-fade-in-up' : 'opacity-0'}`}
+    <Reveal
+      as="article"
+      className="relative"
       itemScope
       itemType="https://schema.org/ImageObject"
     >
@@ -70,15 +71,12 @@ export function ShowcaseRow({ item, index }: { item: ShowcaseItem; index: number
           <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
             {item.badge}
           </span>
-          <h2
-            className="mt-4 text-2xl md:text-3xl lg:text-4xl font-bold text-lc-white leading-tight tracking-tight"
-            itemProp="name"
-          >
+          <Heading as="h2" variant="article" className="mt-4 md:text-3xl lg:text-4xl leading-tight" itemProp="name">
             {item.title}
-          </h2>
-          <p className="mt-4 text-base md:text-lg text-lc-muted leading-relaxed">
+          </Heading>
+          <Text as="p" size="base" tone="muted" className="mt-4 md:text-lg leading-relaxed">
             {item.description}
-          </p>
+          </Text>
           {item.features.length > 0 && (
             <ul className="mt-6 space-y-2.5">
               {item.features.map((f) => (
@@ -91,6 +89,6 @@ export function ShowcaseRow({ item, index }: { item: ShowcaseItem; index: number
           )}
         </div>
       </div>
-    </article>
+    </Reveal>
   );
 }

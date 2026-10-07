@@ -1,5 +1,5 @@
 /**
- * Form controls: inputs, text area, select, checkbox, toggle, range, file input, segmented control and the labelled rows that hold them.
+ * Form controls: labels, inputs, text area, select, checkbox, toggle, range, file input, segmented control and the labelled rows that hold them.
  *
  * The group's public pieces. Import a piece from its file
  * (`@/components/ui/forms/<Piece>`) or several from here (`@/components/ui/forms`).
@@ -14,6 +14,8 @@ export { default as Input } from './Input';
 export * from './Input';
 export { default as InputEnd } from './InputEnd';
 export * from './InputEnd';
+export { default as Label } from './Label';
+export * from './Label';
 export { default as OptionRow } from './OptionRow';
 export * from './OptionRow';
 export { default as Range } from './Range';

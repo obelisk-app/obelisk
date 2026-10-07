@@ -6,18 +6,19 @@ import { LockIcon } from '@/assets/icons';
 import Button from '@/components/ui/buttons/Button';
 import { copyWithToast } from '@/services/common/clipboard';
 import { json } from '@/utils/chat/dm/dm-message-utils';
+import Text from '@/components/ui/layout/Text';
 
 /** One raw event in the DM raw-event dialog: a hint, an optional warning, its id and kind, the JSON and a copy button. */
 export function DmRawEventView({ event, hint, warning, testId }: { event: DmRawEvent; hint: string; warning?: string | null; testId: string }) {
   const t = useTranslations();
   return (
     <div data-testid={testId}>
-      <p className="mb-2 text-xs text-lc-muted">{hint}</p>
+      <Text as="p" variant="caption" className="mb-2">{hint}</Text>
       {warning && (
-        <p className="mb-2 flex items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-300" role="note">
+        <Text as="p" size="xs" className="mb-2 flex items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-amber-300" role="note">
           <LockIcon size={13} className="mt-0.5 shrink-0" />
           {warning}
-        </p>
+        </Text>
       )}
       <dl className="mb-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px]">
         <dt className="text-lc-muted">{t('social.eventIdLabel')}</dt>

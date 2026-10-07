@@ -3,6 +3,7 @@ import type { Locale } from '@/i18n';
 import { readGuide } from '@/services/guides/guides';
 import { relatedGuideCards, type RelatedGuideItem } from '@/utils/guides/related';
 import RelatedGuideCard from './RelatedGuideCard';
+import Heading from '@/components/ui/layout/Heading';
 
 interface Props {
   locale: Locale;
@@ -19,12 +20,9 @@ export default async function RelatedGuides({ locale, items }: Props) {
 
   return (
     <section className="my-12 not-prose" aria-labelledby="related-guides-heading">
-      <h2
-        id="related-guides-heading"
-        className="text-2xl font-bold text-lc-white tracking-tight mb-4"
-      >
+      <Heading as="h2" variant="article" id="related-guides-heading" className="mb-4">
         {t('guides.related.heading')}
-      </h2>
+      </Heading>
       <div
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-6 px-6 pb-4 [scrollbar-width:thin]"
         role="list"

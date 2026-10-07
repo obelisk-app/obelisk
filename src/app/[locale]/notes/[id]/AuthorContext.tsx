@@ -23,6 +23,7 @@ import { safeNpub } from '@/utils/identity/short-npub';
 import { relayHostLabel } from '@/utils/relay-url/relay-host';
 import AuthorContextSection from './AuthorContextSection';
 import AuthorNoteItem from './AuthorNoteItem';
+import Text from '@/components/ui/layout/Text';
 
 export default async function AuthorContext({
   author,
@@ -118,9 +119,9 @@ export default async function AuthorContext({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[10px] text-lc-muted">
+          <Text as="p" size="10" tone="muted" className="mt-2">
             {t('social.author.relaysHelp')}
-          </p>
+          </Text>
         </AuthorContextSection>
       )}
     </div>

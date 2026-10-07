@@ -10,6 +10,7 @@ import TextArea from '@/components/ui/forms/TextArea';
 import Button from '@/components/ui/buttons/Button';
 import CloseButton from '@/components/ui/buttons/CloseButton';
 import Text from '@/components/ui/layout/Text';
+import Heading from '@/components/ui/layout/Heading';
 
 export function NewThreadModal({
   forumGroupId,
@@ -51,7 +52,7 @@ export function NewThreadModal({
         className="lc-card w-full max-w-xl max-h-[85vh] overflow-y-auto p-4 space-y-3"
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-lc-white">{t('chat.forum.new')}</h3>
+          <Heading as="h3" variant="panel">{t('chat.forum.new')}</Heading>
           <CloseButton onClick={onClose} />
         </div>
         <Input

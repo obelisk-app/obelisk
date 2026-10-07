@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ASSETS, PITCHES } from '@/utils/media-kit/content';
 import { CopyButton } from './CopyButton';
 import { Section } from './Section';
+import Text from '@/components/ui/layout/Text';
 
 /** The pitches (short and long, in the page language) and the downloadable logos and icons. */
 export function AboutSections() {
@@ -26,7 +27,7 @@ export function AboutSections() {
                 </span>
                 <CopyButton text={t(textKey)} />
               </div>
-              <p className="text-sm text-lc-white">{t(textKey)}</p>
+              <Text as="p" size="sm" tone="default">{t(textKey)}</Text>
             </div>
           ))}
         </div>

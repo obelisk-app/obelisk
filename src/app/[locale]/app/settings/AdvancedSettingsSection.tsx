@@ -6,6 +6,7 @@ import AccountBackupExport from '@/components/settings/account/AccountBackupExpo
 import DeveloperSignatureTest from '@/components/settings/account/DeveloperSignatureTest';
 import { useTranslations } from 'next-intl';
 import { ToggleRow } from './ToggleRow';
+import Heading from '@/components/ui/layout/Heading';
 
 export function AdvancedSettingsSection() {
   const prefs = usePreferences();
@@ -13,9 +14,9 @@ export function AdvancedSettingsSection() {
   return (
     <div className="space-y-4">
       <section className="space-y-2 rounded-lg border border-lc-border bg-lc-dark/30 p-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-lc-muted">
+        <Heading as="h3" variant="label">
           {t("settings.preferences.backup.advanced")}
-        </h3>
+        </Heading>
         <AccountBackupExport />
       </section>
       <section className="space-y-3 border-t border-lc-border pt-4" data-testid="desktop-developer-settings">

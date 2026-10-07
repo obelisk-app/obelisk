@@ -16,6 +16,8 @@ import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
 import { accessPillStyle, kindPillStyle } from '@/utils/shell/mobile/pill-styles';
 import { GearIcon } from '@/assets/icons';
+import Label from '@/components/ui/forms/Label';
+import Text from '@/components/ui/layout/Text';
 
 // Bottom-sheet for per-channel admin settings (kind 9002 metadata edits +
 // kind 9000/9001/9003 member management). Mirrors the desktop
@@ -71,7 +73,7 @@ export function ChannelSettingsSheet({
 
       {/* Basics */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label htmlFor={nameId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.field.name')}</label>
+        <Label variant="sheet" htmlFor={nameId}>{t('mobile.field.name')}</Label>
         <div className="setup-input-wrap">
           <Input
             variant="mobile"
@@ -81,7 +83,7 @@ export function ChannelSettingsSheet({
             data-testid="mobile-channel-settings-name"
           />
         </div>
-        <label htmlFor={aboutId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.field.description')}</label>
+        <Label variant="sheet" htmlFor={aboutId}>{t('mobile.field.description')}</Label>
         <div className="setup-input-wrap">
           <TextArea
             variant="mobile"
@@ -97,7 +99,7 @@ export function ChannelSettingsSheet({
 
       {/* Access */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.channel.access')}</label>
+        <Label variant="sheet">{t('mobile.channel.access')}</Label>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" data-testid="mobile-channel-access-public" style={accessPillStyle(access === 'public')} onClick={() => setAccess('public')}>
             <div style={{ fontSize: 16 }}>🌐</div>
@@ -119,7 +121,7 @@ export function ChannelSettingsSheet({
 
       {/* Channel kind */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('mobile.channel.type')}</label>
+        <Label variant="sheet">{t('mobile.channel.type')}</Label>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {(['text', 'voice', 'voice-sfu', 'forum'] as const).map((k) => (
             <button
@@ -137,8 +139,8 @@ export function ChannelSettingsSheet({
             style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, border: '1px solid var(--app-line)', borderRadius: 12, background: 'var(--app-surface)' }}
             data-testid="mobile-sfu-section"
           >
-            <label htmlFor={sfuUrlId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('shell.desktop.sfu.url')}</label>
-            <p style={{ fontSize: 11, color: 'var(--app-text-dim)', margin: 0 }}>{t('shell.desktop.sfu.verifyHelp')}</p>
+            <Label variant="sheet" htmlFor={sfuUrlId}>{t('shell.desktop.sfu.url')}</Label>
+            <Text as="p" style={{ fontSize: 11, color: 'var(--app-text-dim)', margin: 0 }}>{t('shell.desktop.sfu.verifyHelp')}</Text>
             <div style={{ display: 'flex', gap: 8 }}>
               <div className="setup-input-wrap" style={{ flex: 1, minWidth: 0 }}>
                 <Input
@@ -177,7 +179,7 @@ export function ChannelSettingsSheet({
 
       {channelKind === 'forum' && (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }} data-testid="mobile-forum-tags-editor">
-          <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('shell.desktop.channel.forumTags')}</label>
+          <Label variant="sheet">{t('shell.desktop.channel.forumTags')}</Label>
           <ForumTagsEditor value={forumTags} onChange={setForumTags} />
         </section>
       )}
@@ -195,9 +197,9 @@ export function ChannelSettingsSheet({
 
       {/* Members */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label htmlFor={newMemberId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+        <Label variant="sheet" htmlFor={newMemberId}>
           {t('mobile.members.addHelp')}
-        </label>
+        </Label>
         <form onSubmit={(e) => void addMember(e)} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="setup-input-wrap">
             <Input
@@ -210,14 +212,14 @@ export function ChannelSettingsSheet({
               style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}
             />
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--app-text-dim)' }}>
+          <Label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--app-text-dim)' }}>
             <Checkbox
               checked={makeAdmin}
               onChange={(e) => setMakeAdmin(e.target.checked)}
               aria-label={t('mobile.members.promote')}
             />
             {t('mobile.members.promote')}
-          </label>
+          </Label>
           {memberErr && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{memberErr}</div>}
           <button
             type="submit"
@@ -231,9 +233,9 @@ export function ChannelSettingsSheet({
       </section>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+        <Label variant="sheet">
           {t('mobile.members.count', { count: allPubkeys.length })}
-        </label>
+        </Label>
         {allPubkeys.length === 0 ? (
           <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>
             {t('mobile.members.emptyHelp')}

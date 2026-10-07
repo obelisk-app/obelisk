@@ -10,6 +10,7 @@ import {
 } from '@/assets/icons';
 import CallControlButton from './CallControlButton';
 import CallStatusText from './CallStatusText';
+import Text from '@/components/ui/layout/Text';
 
 /** The call view, from "Calling..." through the "Call ended" card. */
 export default function DmCallView() {
@@ -87,7 +88,7 @@ export default function DmCallView() {
       </div>
       {/* Shown on the ended card too: "Call failed" alone doesn't say that the
           microphone permission was refused. */}
-      {s.error && <p className="px-4 pt-2 text-center text-xs text-red-400" role="alert">{t(`calls.call.error.${s.error}`)}</p>}
+      {s.error && <Text as="p" size="xs" tone="danger" className="px-4 pt-2 text-center" role="alert">{t(`calls.call.error.${s.error}`)}</Text>}
       <div className="flex shrink-0 items-center justify-center gap-3 px-4 py-4">
         {ended ? (
           <CallControlButton onClick={() => s.dismiss()} label={t('calls.call.close')} testId="dm-call-close">

@@ -7,6 +7,7 @@ import VestaTurnActions from './VestaTurnActions';
 import VestaTradePanel from './VestaTradePanel';
 import { useVestaTable, type VestaTableInput } from '@/hooks/games/vesta/useVestaTable';
 import { useTranslations } from 'next-intl';
+import Text from '@/components/ui/layout/Text';
 
 export interface VestaTableProps extends VestaTableInput {
   seatLabel: (seatId: string) => string;
@@ -44,9 +45,9 @@ export default function VestaTable({ seatLabel, busy, ...input }: VestaTableProp
       <VestaTradePanel state={state} seatLabel={seatLabel} busy={busy} turn={vm.turn} />
 
       {vm.waiting && (
-        <p className="text-center text-[11px] text-lc-muted">
+        <Text as="p" size="11" tone="muted" className="text-center">
           {t('games.vestaTable.waitingFor', { name: seatLabel(vm.waitingFor) })}
-        </p>
+        </Text>
       )}
     </div>
   );

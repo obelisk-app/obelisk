@@ -8,6 +8,7 @@ import { MentionInboxCard } from './MentionInboxCard';
 import { DmInboxCard } from './DmInboxCard';
 import { LockedDmsCard } from './LockedDmsCard';
 import { BellAltIcon } from '@/assets/icons';
+import Heading from '@/components/ui/layout/Heading';
 
 /** The phone inbox: mentions on the active relay and DM pings, a tab each. */
 export function InboxScreen({
@@ -25,7 +26,7 @@ export function InboxScreen({
   return (
     <div className="screen active" data-screen="inbox">
       <div className="app-header">
-        <h2>{t('shell.inbox.title')}</h2>
+        <Heading as="h2">{t('shell.inbox.title')}</Heading>
         <button className="mark-all-read" onClick={vm.markAllRead}>{t('shell.inbox.markAllRead')}</button>
       </div>
       <div className="filter-tabs native-scroll-x">

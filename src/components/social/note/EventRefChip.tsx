@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import type { NostrRef } from '@/services/social/nip27';
 import { useEventRefChip } from '@/hooks/social/note/useEventRefChip';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 /**
  * A referenced note, named rather than hashed.
@@ -42,7 +43,7 @@ export default function EventRefChip({
         )}
       </span>
       {loading ? (
-        <span className="lc-skeleton h-3 w-2/3 rounded" aria-hidden="true" />
+        <Skeleton as="span" className="h-3 w-2/3 rounded" aria-hidden="true" />
       ) : snippet ? (
         <span className="line-clamp-2 min-w-0 text-lc-white/75">{snippet}</span>
       ) : null}

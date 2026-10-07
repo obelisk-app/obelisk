@@ -3,6 +3,8 @@
 import { Modal } from '@nostr-wot/ui';
 import { nip19 } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 type Props = {
   pubkey: string;
@@ -32,8 +34,8 @@ export function GeneratedNpubStep({ pubkey, onClose, onBack, shared, onShare, fi
       <div className="nui-form obelisk-npub-share" data-testid="generated-npub-step">
         <div className="nui-form-head">
           <span className="obelisk-step-done" aria-hidden="true">✓</span>
-          <h3 className="nui-form-title">{t('shell.login.profileReady')}</h3>
-          <p className="nui-form-sub">{t('shell.login.npubHelp')}</p>
+          <Heading as="h3" className="nui-form-title">{t('shell.login.profileReady')}</Heading>
+          <Text as="p" className="nui-form-sub">{t('shell.login.npubHelp')}</Text>
         </div>
         <div className="nui-key-display">{npub}</div>
         <div className="obelisk-share-actions">
@@ -59,7 +61,7 @@ export function GeneratedNpubStep({ pubkey, onClose, onBack, shared, onShare, fi
             {shared ? t('shell.login.linkCopied') : t('shell.login.shareMyProfile')}
           </button>
         </div>
-        {finishError && <p className="nui-error" role="alert">{finishError}</p>}
+        {finishError && <Text as="p" className="nui-error" role="alert">{finishError}</Text>}
         <button type="button" className="nui-login-button" disabled={finishing} onClick={onFinish}>
           {finishing ? t('shell.login.connecting') : t('shell.login.enter')}
         </button>

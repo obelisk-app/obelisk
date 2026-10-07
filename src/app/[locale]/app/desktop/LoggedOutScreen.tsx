@@ -1,6 +1,6 @@
 'use client';
 
-import ShootingStars from '@/components/common/ShootingStars';
+import ShootingStars from '@/components/ui/animations/ShootingStars';
 import LoginModal from '../login/LoginModal';
 
 /**

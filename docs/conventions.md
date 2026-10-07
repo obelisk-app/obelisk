@@ -1,6 +1,6 @@
 # Code conventions
 
-Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../AGENTS.md#where-code-goes); this page is the detail behind four of its rules: where a file goes, component files are markup, every picture lives in `src/assets/`, and every modal and sheet uses the shared header and footer.
+Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../AGENTS.md#where-code-goes); this page is the detail behind six of its rules: where a file goes, component files are markup, every picture lives in `src/assets/`, text goes through the type pieces, shared animations live in `ui/animations/`, and every modal and sheet uses the shared header and footer.
 
 ## Where a file goes
 
@@ -20,7 +20,7 @@ The route tree follows rule 3: Next.js files (`page.tsx`, `layout.tsx`, `opengra
 | Module | What it is | Sub-features |
 |---|---|---|
 | `common` | Code used by several features | |
-| `ui` (components only) | The design-system kit, by kind, an `index.ts` per group | `buttons`, `forms`, `overlays`, `layout`, `data`, `feedback`, `media` |
+| `ui` (components only) | The design-system kit, by kind, an `index.ts` per group | `buttons`, `forms`, `overlays`, `layout`, `data`, `feedback`, `media`, `animations` |
 | `shell` | The app frame at `/app` (components in `src/app/[locale]/app/`) | `desktop`, `mobile` (`carousel`, `chrome`, `nav`, `rail`, `screens/<screen>`, `sheets/<topic>`), `panes` (`channel`, `dm`, `message`, `reader`, `sidebar`, `topbar`), `modals`, `rail`, `search`, `settings`, `dm`, `login`, `user-panel`, `mounts` |
 | `chat` | Group channels and DMs | `channel`, `composer`, `dm` (`composer`, `message`, `thread`, `unlock`), `forum`, `gallery`, `members`, `mentions`, `message`, `picker`, `pq`, `profile`, `search`, `slash`, `timeline`, `zaps` |
 | `games` | Turn-based games played in a channel. Its own module, not a part of chat: it has its own lib package, services, store, dev harness and lazy downloads, and chat only embeds its card | `card`, `table`, `new-game`, `start-table`, `results`, `channel`, `chain-reaction`, `stacker`, `vesta` |
@@ -146,6 +146,45 @@ A caller passes only what differs: `<ChevronRightIcon size={12} strokeWidth={2.5
 **Drawn from data.** SVG computed from live data at render time (a chart, a level meter, a QR code) may stay in its component, listed with its reason in `DATA_DRIVEN` in `tests/assets/assets-only.test.ts`. A static shape inside such a component still moves to assets. The list is empty today: the game thumbnails and the landing's relay pulse are drawn from fixed geometry, so they are illustrations.
 
 `tests/assets/assets-only.test.ts` holds all of this: no `<svg>` or SVG shape in JSX, no `<svg` markup in a string or a stylesheet outside `src/assets/`; no `...Icon` component outside `src/assets/icons/` (the brand `ObeliskIcon` aside); only icon files, `IconSvg.tsx` and the barrel in that folder, every icon in the barrel; no two icon files with the same drawing.
+
+## Type
+
+Every heading, paragraph and form label outside the ui kit goes through one of three pieces (round 32), so text with the same role looks the same everywhere.
+
+**`Heading`** (`src/components/ui/layout/Heading.tsx`). `as` (h1 to h4) is the level in the page's outline and is required; `variant` is the look, chosen by role, independent of the level. A variant is type only (size, weight, color, tracking): margins and layout stay in the caller's `className`. With no variant the heading adds no class, for one a stylesheet styles (the phone shell's `.app-header h2`, the login modal's `nui-form-title`).
+
+| Variant | Classes | Role |
+|---|---|---|
+| `display` | `text-4xl md:text-6xl font-extrabold leading-[1.05] tracking-tight text-lc-white` | A marketing page's hero title (the showcases, `/features`) |
+| `page` | `text-4xl md:text-5xl font-extrabold tracking-tight text-lc-white` | A content page's title (guides, help, local data) |
+| `section` | `text-3xl md:text-4xl font-bold text-lc-white`, then a green `.` | A marketing section's title; `accent="?"` for the question, `accent={false}` for none |
+| `article` | `text-2xl font-bold tracking-tight text-lc-white` | A heading inside a guide, a guide page's own section |
+| `card` | `text-lg font-semibold text-lc-white` | A card's title; the title of a compact viewer page (note, profile, tag, relay link) |
+| `cardLink` | `text-lg font-bold text-lc-white transition-colors group-hover:text-lc-green` | A card that is a link |
+| `panel` | `text-sm font-semibold text-lc-white` | A heading in a panel, a settings block or a dialog body |
+| `label` | `text-xs font-semibold uppercase tracking-wider text-lc-muted` | The small-caps heading over a group of rows |
+
+A heading that fits no role keeps its classes on a variant-less `Heading` (the landing hero, the game-over headline). Dialog titles are not headings you write: `ModalHeader` and the phone's `SheetHeader` draw them.
+
+**`Text`** (`src/components/ui/layout/Text.tsx`) for paragraphs (`as="p"`) and styled spans: `size`, `tone`, `weight`, and the body variants `caption` (`text-xs text-lc-muted`, the hint or status line), `muted` (`text-sm text-lc-muted`, secondary copy), `lead` (`text-lg text-lc-muted`, the intro under a title) and `label` (small caps). An explicit `size` or `tone` wins over the variant's. `Text` no longer renders headings or labels.
+
+**`Label`** (`src/components/ui/forms/Label.tsx`) for every form label; `Field` renders it. Variants: `field` (`text-[11px] font-medium text-lc-muted`), `caps` (`text-xs uppercase tracking-wider text-lc-muted`), and the phone sheet labels `sheet` and `sheetMono`, kept as the inline styles they were so the sheet stylesheet's rules lose to them as before. A label that wraps its control (a toggle row, a file-picker pill) takes no variant and its own layout classes.
+
+**Bundle size.** `Heading`, `Text` and `cn` are in nearly every chunk, so `next.config.ts` gives them one shared client chunk (`type`); without it webpack copied them into the layout chunk and each page chunk (seven copies, about 1.5 kB gzip on each page).
+
+`tests/components/typography.test.ts` fails on a raw `<h1>` to `<h6>`, `<p>` or `<label>` in JSX under `src/components/` or `src/app/`, outside the ui kit and the phone sheet chrome (`src/app/[locale]/app/mobile/sheets/chrome/`). There is no baseline: it is zero.
+
+## Animations
+
+Shared motion lives in `src/components/ui/animations/` (round 32); a one-off animation that belongs to one feature stays with that feature (the game-over burst, the hero's floating bubbles).
+
+| Piece | What it is |
+|---|---|
+| `Reveal` | A block that fades up the first time it scrolls into view (`useScrollReveal`, `src/hooks/common/`); `as` picks `section` (the landing sections) or `article` (the showcase rows) |
+| `ShootingStars` | The lime streaks behind the landing, the showcases, the logged-out screen, the welcome banner and the voice stage; hook `src/hooks/common/useShootingStars.ts`, loop `src/services/common/shooting-stars.ts` |
+| `PingDot` | A status dot with a ping halo (the voice room header, the SFU and media-sync pills) |
+| `PulseDot` | A pulsing status dot (recording, an active call, the relay status banner) |
+| `Skeleton` | A loading placeholder: the `.lc-skeleton` shimmer, or `pulse` for the settings rows' pulse |
 
 ## Modal and sheet chrome
 

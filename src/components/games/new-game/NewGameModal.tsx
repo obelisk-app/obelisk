@@ -11,6 +11,7 @@ import PlayersAndClock from './PlayersAndClock';
 import { useNewGameForm } from '@/hooks/games/new-game/useNewGameForm';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * Pick a game, set it up, open the table.
@@ -68,11 +69,11 @@ export default function NewGameModal({
             <GameSetupOptions form={form} />
             <PlayersAndClock form={form} />
 
-            <p className="mt-3 text-[11px] text-lc-muted">
+            <Text as="p" size="11" tone="muted" className="mt-3">
               {t(localPlayers > 0 ? 'games.newGame.everyoneHere' : 'games.newGame.hostSeated', {
                 summary: gameSummary(t, selected),
               })}
-            </p>
+            </Text>
 
             {error && <ErrorState className="mt-3">{error}</ErrorState>}
           </div>

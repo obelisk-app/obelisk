@@ -30,6 +30,7 @@ import { useProfileAppearanceEditor } from '@/hooks/settings/account/useProfileA
 import type { ProfileAppearanceValue } from '@/utils/settings/profile-image';
 import ProfileUrlField from './ProfileUrlField';
 import { PencilIcon } from '@/assets/icons';
+import Text from '@/components/ui/layout/Text';
 
 export type ImagePick = {
   /** The chosen file, or null when the user typed a URL instead. */
@@ -114,7 +115,7 @@ export default function ProfileAppearanceEditor({
         onChange={(event) => picked('picture', event.target)}
       />
 
-      {error && <p className="mb-2 text-xs text-red-400" role="alert">{error}</p>}
+      {error && <Text as="p" size="xs" tone="danger" className="mb-2" role="alert">{error}</Text>}
 
       {/* The URL fields stay: uploading is the fast path, not the only one. */}
       <div className={mobile ? 'space-y-3' : 'space-y-3'}>

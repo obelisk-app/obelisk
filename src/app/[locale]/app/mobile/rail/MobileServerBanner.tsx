@@ -7,6 +7,7 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useMobileServerBanner } from '@/hooks/shell/mobile/rail/useMobileServerBanner';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 import { MoreVerticalIcon, PlusIcon, SearchShortIcon } from '@/assets/icons';
+import Heading from '@/components/ui/layout/Heading';
 
 /**
  * The active relay's banner above the phone's channel list: its banner
@@ -79,7 +80,7 @@ export function MobileServerBanner({
           )}
         </div>
         <div className="server-banner-copy">
-          <h2>{label}</h2>
+          <Heading as="h2">{label}</Heading>
           {/* The host is the relay's own page - its rules and operator. */}
           {vm.host && (vm.website ? (
             <a href={vm.website} target="_blank" rel="noopener noreferrer" data-testid="mobile-relay-website">

@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { DEFAULT_LOCALE, isLocale } from '@/i18n';
 import { Link } from '@/i18n/navigation';
 import { NOINDEX } from '@/utils/seo/page';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * The 404's own title, in the URL's language, and `noindex` stated here too:
@@ -21,8 +23,8 @@ export default async function NotFound() {
   const t = await getTranslations();
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-3xl font-bold text-lc-white">{t('common.notFound.title')}</h1>
-      <p className="max-w-md text-lc-muted">{t('common.notFound.body')}</p>
+      <Heading as="h1" className="text-3xl font-bold text-lc-white">{t('common.notFound.title')}</Heading>
+      <Text as="p" tone="muted" className="max-w-md">{t('common.notFound.body')}</Text>
       <Link href="/" className="lc-pill lc-pill-primary px-6 py-2 text-sm">{t('common.notFound.home')}</Link>
     </main>
   );

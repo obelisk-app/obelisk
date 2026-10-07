@@ -6,6 +6,8 @@ import LandingHeroAnimation from './LandingHeroAnimation';
 import HeroProductPreview from './HeroProductPreview';
 import { LogInIcon } from '@/assets/icons';
 import GitHubMark from '@/assets/brand/GitHubMark';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * The hero: headline, pitch, the launch and GitHub buttons, the animation and the screenshots.
@@ -25,16 +27,16 @@ export default function LandingHero({ onLaunch }: { onLaunch: () => void }) {
         <LandingHeroAnimation />
 
         <div className="flex min-w-0 flex-col items-center text-center lg:items-start lg:text-left">
-          <h1 className="w-full max-w-[680px] text-4xl font-extrabold leading-[1.05] tracking-normal sm:text-5xl lg:text-6xl mb-4">
+          <Heading as="h1" className="w-full max-w-[680px] text-4xl font-extrabold leading-[1.05] tracking-normal sm:text-5xl lg:text-6xl mb-4">
             {t('marketing.hero.title')}{' '}
             <span className="text-lc-green lc-glow-text">{t('marketing.hero.titleHighlight')}</span>
-          </h1>
-          <p className="text-base md:text-xl text-lc-white max-w-2xl leading-relaxed">
+          </Heading>
+          <Text as="p" size="base" tone="default" className="md:text-xl max-w-2xl leading-relaxed">
             {t('marketing.hero.subtitle')}
-          </p>
-          <p className="mt-3 text-sm md:text-base text-lc-muted max-w-2xl leading-relaxed">
+          </Text>
+          <Text as="p" variant="muted" className="mt-3 md:text-base max-w-2xl leading-relaxed">
             {t('marketing.hero.trustLine')}
-          </p>
+          </Text>
           <div className="mt-7 flex flex-col sm:flex-row gap-3">
             <Button variant="pill" size="lg" onClick={() => onLaunch()}>
               <LogInIcon size={18} strokeWidth={2.5} />

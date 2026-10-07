@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import Text from '@/components/ui/layout/Text';
+import Heading from '@/components/ui/layout/Heading';
 
 /** One group of search results (people, tags, posts) under its heading. */
 export default function FeedSearchSection({
@@ -15,9 +15,9 @@ export default function FeedSearchSection({
 }) {
   return (
     <section data-testid={testId}>
-      <Text as="h3" size="10" weight="semibold" variant="label" tone="muted" className="px-5 pb-2 pt-4">
+      <Heading as="h3" className="px-5 pb-2 pt-4 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
         {title}
-      </Text>
+      </Heading>
       {children}
     </section>
   );

@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import type { JsGroup } from '@/services/nostr-bridge';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 export function ThreadGalleryCardSkeleton({
   thread,
@@ -23,8 +24,8 @@ export function ThreadGalleryCardSkeleton({
         <div className="text-sm font-semibold text-lc-white truncate">
           {thread.name || t('chat.forum.loadingTitle')}
         </div>
-        <div className="lc-skeleton h-3 w-3/4" />
-        <div className="lc-skeleton h-2 w-1/2" />
+        <Skeleton className="h-3 w-3/4" />
+        <Skeleton className="h-2 w-1/2" />
       </div>
     </button>
   );

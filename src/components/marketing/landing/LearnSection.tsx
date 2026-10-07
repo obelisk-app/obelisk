@@ -3,8 +3,10 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { guidePath } from '@/utils/guides/guide-urls';
-import RevealSection from './RevealSection';
+import Reveal from '@/components/ui/animations/Reveal';
 import { LEARN_GUIDES } from './landing-data';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * The guide cards and the link to every guide.
@@ -12,15 +14,15 @@ import { LEARN_GUIDES } from './landing-data';
 export default function LearnSection() {
   const t = useTranslations();
   return (
-    <RevealSection id="learn" className="py-24 px-6">
+    <Reveal id="learn" className="py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('marketing.learn.heading')}<span className="text-lc-green">.</span>
-          </h2>
-          <p className="text-lc-muted text-lg max-w-xl mx-auto">
+          <Heading as="h2" variant="section" className="mb-4">
+            {t('marketing.learn.heading')}
+          </Heading>
+          <Text as="p" variant="lead" className="max-w-xl mx-auto">
             {t('marketing.learn.subtitle')}
-          </p>
+          </Text>
         </div>
         <div className="grid gap-6 md:grid-cols-2">
           {LEARN_GUIDES.map((g) => (
@@ -29,12 +31,12 @@ export default function LearnSection() {
               href={guidePath(g.slug)}
               className="lc-card p-6 group"
             >
-              <h3 className="text-lg font-bold text-lc-white group-hover:text-lc-green transition-colors">
+              <Heading as="h3" variant="cardLink">
                 {t(`marketing.learn.card.${g.tKey}.title`)}
-              </h3>
-              <p className="mt-2 text-sm text-lc-muted">
+              </Heading>
+              <Text as="p" variant="muted" className="mt-2">
                 {t(`marketing.learn.card.${g.tKey}.desc`)}
-              </p>
+              </Text>
               <div className="mt-4 text-xs text-lc-green font-semibold">
                 {t('marketing.learn.cta')} →
               </div>
@@ -50,6 +52,6 @@ export default function LearnSection() {
           </Link>
         </div>
       </div>
-    </RevealSection>
+    </Reveal>
   );
 }

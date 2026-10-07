@@ -4,6 +4,7 @@
 
 import { useRelayStatusBanner } from '@/hooks/feedback/useRelayStatusBanner';
 import type { Severity } from '@/utils/relay/relay-status';
+import PulseDot from '@/components/ui/animations/PulseDot';
 
 const SEVERITY_CLASSES: Record<Severity, string> = {
   info: 'bg-lc-card/60 border-lc-border text-lc-white',
@@ -34,10 +35,7 @@ export default function RelayStatusBanner({ hideAuthenticating = false }: { hide
           aria-hidden
         />
       ) : (
-        <span
-          className={`mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full ${status.severity === 'warn' ? 'bg-yellow-400' : 'bg-red-400'} animate-pulse`}
-          aria-hidden
-        />
+        <PulseDot color={status.severity === 'warn' ? 'bg-yellow-400' : 'bg-red-400'} className="mt-1.5 inline-block shrink-0" />
       )}
       <div className="min-w-0">
         <div className="font-semibold leading-tight">{status.label}</div>

@@ -12,6 +12,7 @@ import TextArea from '@/components/ui/forms/TextArea';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
 import { ImageIcon } from '@/assets/icons';
+import Label from '@/components/ui/forms/Label';
 
 // Bottom-sheet for editing kind 30078 relay branding (name, description,
 // icon, banner). Mobile-native counterpart of the desktop RelayBrandingModal,
@@ -56,9 +57,9 @@ export function EditBrandingSheet({
           hint={t('mobile.branding.bannerHint')}
         />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label htmlFor={nameId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'JetBrains Mono', monospace" }}>
+          <Label variant="sheetMono" htmlFor={nameId}>
             {t('mobile.settings.displayName')}
-          </label>
+          </Label>
           <div className="setup-input-wrap">
             <Input
               variant="mobile"
@@ -70,9 +71,9 @@ export function EditBrandingSheet({
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label htmlFor={descriptionId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'JetBrains Mono', monospace" }}>
+          <Label variant="sheetMono" htmlFor={descriptionId}>
             {t('mobile.field.description')}
-          </label>
+          </Label>
           <div className="setup-input-wrap">
             <TextArea
               variant="mobile"

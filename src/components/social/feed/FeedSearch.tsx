@@ -24,6 +24,7 @@ import { useFeedSearch } from '@/hooks/social/feed/useFeedSearch';
 import FeedSearchSection from './FeedSearchSection';
 import FeedSearchPerson from './FeedSearchPerson';
 import { GlobeIcon, SearchWideIcon } from '@/assets/icons';
+import Text from '@/components/ui/layout/Text';
 
 export default function FeedSearch({
   initialQuery = '',
@@ -94,9 +95,9 @@ export default function FeedSearch({
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {debounced.length === 0 && (
-          <p className="px-5 py-10 text-center text-xs text-lc-muted" data-testid="feed-search-hint">
+          <Text as="p" variant="caption" className="px-5 py-10 text-center" data-testid="feed-search-hint">
             {t('social.searchHint')}
-          </p>
+          </Text>
         )}
 
         {empty && (

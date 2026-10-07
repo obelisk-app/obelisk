@@ -11,6 +11,7 @@
  */
 
 import type { ReactNode } from 'react';
+import Heading from '@/components/ui/layout/Heading';
 
 export default function WidgetCard({
   title,
@@ -30,9 +31,9 @@ export default function WidgetCard({
       data-testid={testId}
     >
       <header className="flex items-center justify-between gap-2 border-b border-lc-border/70 px-3 py-2.5">
-        <h2 className="min-w-0 truncate text-[13px] font-bold tracking-tight text-lc-white">
+        <Heading as="h2" className="min-w-0 truncate text-[13px] font-bold tracking-tight text-lc-white">
           {title}
-        </h2>
+        </Heading>
         {action}
       </header>
       <div className="p-1.5">{children}</div>

@@ -1,8 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import RevealSection from './RevealSection';
+import Reveal from '@/components/ui/animations/Reveal';
 import { FEATURE_KEYS } from './landing-data';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * The feature grid.
@@ -10,15 +12,15 @@ import { FEATURE_KEYS } from './landing-data';
 export default function FeaturesSection() {
   const t = useTranslations();
   return (
-    <RevealSection id="features" className="py-24 px-6">
+    <Reveal id="features" className="py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('marketing.features.heading')}<span className="text-lc-green">.</span>
-          </h2>
-          <p className="text-lc-muted text-lg max-w-xl mx-auto">
+          <Heading as="h2" variant="section" className="mb-4">
+            {t('marketing.features.heading')}
+          </Heading>
+          <Text as="p" variant="lead" className="max-w-xl mx-auto">
             {t('marketing.features.subtitle')}
-          </p>
+          </Text>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {FEATURE_KEYS.map((f) => (
@@ -26,12 +28,12 @@ export default function FeaturesSection() {
               <div className="w-12 h-12 rounded-xl bg-lc-olive/50 flex items-center justify-center text-lc-green mb-4 group-hover:bg-lc-olive transition-colors">
                 {f.icon}
               </div>
-              <h3 className="text-lg font-semibold text-lc-white mb-2">{t(f.titleKey)}</h3>
-              <p className="text-sm text-lc-muted leading-relaxed">{t(f.descKey)}</p>
+              <Heading as="h3" variant="card" className="mb-2">{t(f.titleKey)}</Heading>
+              <Text as="p" variant="muted" className="leading-relaxed">{t(f.descKey)}</Text>
             </div>
           ))}
         </div>
       </div>
-    </RevealSection>
+    </Reveal>
   );
 }

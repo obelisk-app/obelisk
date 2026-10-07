@@ -6,6 +6,8 @@ import Navbar from '@/components/marketing/site/Navbar';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { HELP_TOPICS, helpTopicPath } from '@/utils/guides/help-topics';
 import { useTranslations } from 'next-intl';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /** The help index: one card per topic, then a link to every guide. */
 export default function HelpIndex() {
@@ -18,10 +20,10 @@ export default function HelpIndex() {
         <Link href="/app" className="text-sm font-medium text-lc-green hover:text-lc-green-dark">
           {t('help.back')}
         </Link>
-        <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-lc-white md:text-5xl">
+        <Heading as="h1" variant="page" className="mt-5">
           {t('help.title')}
-        </h1>
-        <p className="mt-3 max-w-2xl text-lg text-lc-muted">{t('help.subtitle')}</p>
+        </Heading>
+        <Text as="p" variant="lead" className="mt-3 max-w-2xl">{t('help.subtitle')}</Text>
 
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           {HELP_TOPICS.map((topic) => (
@@ -31,8 +33,8 @@ export default function HelpIndex() {
               data-testid={`help-topic-${topic.slug}`}
               className="lc-card group p-6 transition-colors hover:border-lc-green/50"
             >
-              <h2 className="text-lg font-bold text-lc-white group-hover:text-lc-green">{t(topic.titleKey)}</h2>
-              <p className="mt-2 text-sm leading-6 text-lc-muted">{t(topic.descriptionKey)}</p>
+              <Heading as="h2" variant="cardLink">{t(topic.titleKey)}</Heading>
+              <Text as="p" variant="muted" className="mt-2 leading-6">{t(topic.descriptionKey)}</Text>
             </Link>
           ))}
         </div>

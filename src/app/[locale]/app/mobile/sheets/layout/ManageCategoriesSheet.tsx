@@ -14,6 +14,7 @@ import { CategoryListEditor } from './CategoryListEditor';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
 import { MenuIcon } from '@/assets/icons';
+import Label from '@/components/ui/forms/Label';
 
 // Bottom-sheet for the kind 30078 channel-layout doc - categories + their
 // position, plus per-channel category assignment. Mirrors the desktop
@@ -60,9 +61,9 @@ export function ManageCategoriesSheet({
       />
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label htmlFor={newCatId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+        <Label variant="sheet" htmlFor={newCatId}>
           {t('mobile.layout.newCategory')}
-        </label>
+        </Label>
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="setup-input-wrap" style={{ flex: 1 }}>
             <Input
@@ -94,9 +95,9 @@ export function ManageCategoriesSheet({
       />
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+        <Label variant="sheet">
           {t('mobile.layout.channelsCount', { count: channels.length })}
-        </label>
+        </Label>
         {channels.length === 0 ? (
           <div style={{ fontSize: 12, color: 'var(--app-text-mute)', padding: '6px 4px' }}>
             {t('mobile.space.noChannels')}

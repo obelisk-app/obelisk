@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useScrollReveal } from '@/hooks/marketing/useScrollReveal';
+import { useScrollReveal } from '@/hooks/common/useScrollReveal';
 
 /** A controllable IntersectionObserver: the test decides when an element intersects. */
 class FakeIntersectionObserver {

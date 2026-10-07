@@ -33,7 +33,7 @@ vi.mock('@/components/marketing/site/Navbar', () => ({
   default: () => <nav data-testid="mock-navbar" />,
 }));
 
-vi.mock('@/components/common/ShootingStars', () => ({
+vi.mock('@/components/ui/animations/ShootingStars', () => ({
   default: () => <div data-testid="mock-shooting-stars" />,
 }));
 

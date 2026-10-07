@@ -34,6 +34,7 @@ import { DmPendingFiles } from './DmPendingFiles';
 import { DmVoiceDraft } from './DmVoiceDraft';
 import { DmComposerActions } from './DmComposerControls';
 import { DmSendControl } from './DmSendControl';
+import Text from '@/components/ui/layout/Text';
 
 /** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
 const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
@@ -70,7 +71,7 @@ export function DmComposer({ peer, variant }: { peer: string; variant: 'desktop'
   if (variant === 'mobile') {
     return (
       <div className="composer" data-testid="dm-composer">
-        {error && <p className="px-3 pb-1 text-xs text-red-400" role="alert">{error}</p>}
+        {error && <Text as="p" size="xs" tone="danger" className="px-3 pb-1" role="alert">{error}</Text>}
         {pendingStrip}
         <div className="composer-inner">
           {actions}
@@ -103,7 +104,7 @@ export function DmComposer({ peer, variant }: { peer: string; variant: 'desktop'
         className="px-5 pt-3 pb-3"
         data-testid="dm-composer"
       >
-        {error && <p className="mb-2 break-words text-xs text-red-400" role="alert">{error}</p>}
+        {error && <Text as="p" size="xs" tone="danger" className="mb-2 break-words" role="alert">{error}</Text>}
         {pendingStrip}
         <div className="flex min-h-[3.5rem] items-center gap-1 rounded-xl border border-lc-border bg-lc-card px-2 focus-within:border-lc-green">
           {actions}

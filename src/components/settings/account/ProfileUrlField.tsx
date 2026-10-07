@@ -2,6 +2,7 @@
 
 import { useId } from 'react';
 import Input from '@/components/ui/forms/Input';
+import Label from '@/components/ui/forms/Label';
 
 /** A labelled URL box under the profile header; blank and hinted while a file is staged instead. */
 export default function ProfileUrlField({
@@ -22,7 +23,7 @@ export default function ProfileUrlField({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-xs uppercase tracking-wider text-lc-muted">{label}</label>
+      <Label variant="caps" htmlFor={id} className="mb-1.5 block">{label}</Label>
       <Input
         id={id}
         value={disabled ? '' : value}

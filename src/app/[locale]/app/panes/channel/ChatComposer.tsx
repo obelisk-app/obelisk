@@ -16,6 +16,7 @@ import Input from '@/components/ui/forms/Input';
 import { ComposerAttachments } from './ComposerAttachments';
 import { ComposerReplyBar } from './ComposerReplyBar';
 import { SendIcon, StickerIcon } from '@/assets/icons';
+import Text from '@/components/ui/layout/Text';
 
 /** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
 const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
@@ -34,7 +35,7 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
     <form onSubmit={(e) => void composer.send(e)} className="shrink-0 px-5 pt-3 pb-3">
       {props.replyingTo && <ComposerReplyBar replyingTo={props.replyingTo} onCancel={() => props.setReplyingTo(null)} />}
       {composer.sendError && (
-        <p className="mb-2 break-words text-xs text-red-400" data-testid="composer-error">{composer.sendError}</p>
+        <Text as="p" size="xs" tone="danger" className="mb-2 break-words" data-testid="composer-error">{composer.sendError}</Text>
       )}
       {composer.activeSlashCommand && (
         <SlashCommandScaffold command={composer.activeSlashCommand} content={composer.draft} caret={composer.caret} />

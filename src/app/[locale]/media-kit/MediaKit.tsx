@@ -16,6 +16,8 @@ import { EmbedSections } from './kit/EmbedSections';
 import { PaletteSection } from './kit/PaletteSection';
 import { ShortCopySection } from './kit/ShortCopySection';
 import { GuidelinesSection } from './kit/GuidelinesSection';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 export default function MediaKit() {
   const t = useTranslations();
@@ -28,12 +30,12 @@ export default function MediaKit() {
             <span className="inline-block w-2 h-2 rounded-full bg-lc-green lc-glow" />
             {t('mediaKit.eyebrow')}
           </div>
-          <h1 className="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight">
+          <Heading as="h1" className="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight">
             {t('mediaKit.title')}
-          </h1>
-          <p className="mt-4 max-w-2xl text-base sm:text-lg text-lc-muted">
+          </Heading>
+          <Text as="p" size="base" tone="muted" className="mt-4 max-w-2xl sm:text-lg">
             {t('mediaKit.intro')}
-          </p>
+          </Text>
 
           <nav className="mt-8 flex flex-wrap gap-2 text-sm">
             {NAV_LINKS.map(([href, labelKey]) => (

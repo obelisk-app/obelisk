@@ -19,6 +19,7 @@ import Input from '@/components/ui/forms/Input';
 import CloseButton from '@/components/ui/buttons/CloseButton';
 import { ComposeDmResultRow } from './ComposeDmResultRow';
 import { SearchIcon } from '@/assets/icons';
+import Text from '@/components/ui/layout/Text';
 
 export default function ComposeDm({
   onClose,
@@ -72,9 +73,9 @@ export default function ComposeDm({
             />
           ))}
           {vm.results.length === 0 && (
-            <p className="px-2 py-1.5 text-xs text-lc-muted" role="status">
+            <Text as="p" variant="caption" className="px-2 py-1.5" role="status">
               {vm.loading ? t('shell.search.searching') : t('shell.search.noMatches')}
-            </p>
+            </Text>
           )}
         </div>
       )}

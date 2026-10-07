@@ -2,8 +2,10 @@
 
 import { useTranslations } from 'next-intl';
 import YouTubeEmbed from '@/components/common/YouTubeEmbed';
-import RevealSection from './RevealSection';
+import Reveal from '@/components/ui/animations/Reveal';
 import { DEMO_VIDEO_ID } from './landing-data';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * Demo video: sits between the hero pitch and the device screenshots
@@ -14,15 +16,15 @@ import { DEMO_VIDEO_ID } from './landing-data';
 export default function DemoVideoSection() {
   const t = useTranslations();
   return (
-    <RevealSection id="demo-video" className="pt-10 pb-4 px-6" testId="landing-demo-video">
+    <Reveal id="demo-video" className="pt-10 pb-4 px-6" data-testid="landing-demo-video">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('marketing.landing.video.heading')}<span className="text-lc-green">.</span>
-          </h2>
-          <p className="text-lc-muted text-lg max-w-2xl mx-auto">
+          <Heading as="h2" variant="section" className="mb-4">
+            {t('marketing.landing.video.heading')}
+          </Heading>
+          <Text as="p" variant="lead" className="max-w-2xl mx-auto">
             {t('marketing.landing.video.subtitle')}
-          </p>
+          </Text>
         </div>
         <YouTubeEmbed
           videoId={DEMO_VIDEO_ID}
@@ -31,6 +33,6 @@ export default function DemoVideoSection() {
           thumbnailRes="maxres"
         />
       </div>
-    </RevealSection>
+    </Reveal>
   );
 }

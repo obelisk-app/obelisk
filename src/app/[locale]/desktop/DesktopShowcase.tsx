@@ -4,10 +4,12 @@ import { Link } from '@/i18n/navigation';
 import { useRouter } from '@/i18n/navigation';
 import Navbar from '@/components/marketing/site/Navbar';
 import Footer from '@/components/marketing/site/Footer';
-import ShootingStars from '@/components/common/ShootingStars';
+import ShootingStars from '@/components/ui/animations/ShootingStars';
 import { ShowcaseRow, type ShowcaseItem } from '@/components/marketing/showcase/Showcase';
 import { useTranslations } from 'next-intl';
 import Button, { buttonClass } from '@/components/ui/buttons/Button';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 export default function DesktopShowcase() {
   const t = useTranslations();
@@ -61,15 +63,15 @@ export default function DesktopShowcase() {
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
               {t('showcase.desktop.hero.badge')}
             </span>
-            <h1 className="mt-5 text-4xl md:text-6xl font-extrabold text-lc-white leading-[1.05] tracking-tight">
+            <Heading as="h1" variant="display" className="mt-5">
               {t('showcase.desktop.hero.title')}{' '}
               <span className="text-lc-green lc-glow-text">
                 {t('showcase.desktop.hero.titleHighlight')}
               </span>
-            </h1>
-            <p className="mt-6 text-lg md:text-xl text-lc-muted max-w-2xl mx-auto leading-relaxed">
+            </Heading>
+            <Text as="p" variant="lead" className="mt-6 md:text-xl max-w-2xl mx-auto leading-relaxed">
               {t('showcase.desktop.hero.subtitle')}
-            </p>
+            </Text>
             <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
               <Button
                 variant="pill"
@@ -99,12 +101,12 @@ export default function DesktopShowcase() {
         <section className="px-6 py-24">
           <div className="max-w-3xl mx-auto text-center">
             <div className="lc-card p-12 lc-glow">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                {t('showcase.desktop.cta.heading')}<span className="text-lc-green">.</span>
-              </h2>
-              <p className="text-lc-muted text-lg mb-8 max-w-lg mx-auto">
+              <Heading as="h2" variant="section" className="mb-4">
+                {t('showcase.desktop.cta.heading')}
+              </Heading>
+              <Text as="p" variant="lead" className="mb-8 max-w-lg mx-auto">
                 {t('showcase.desktop.cta.subtitle')}
-              </p>
+              </Text>
               <Button
                 variant="pill"
                 size="lg"

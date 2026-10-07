@@ -195,8 +195,28 @@ const nextConfig: NextConfig = {
    * barrel re-exports (about 4 kB gzip on each page). Turbopack (dev) does
    * not read this hook; it only affects `next build --webpack`.
    */
-  webpack(config) {
+  webpack(config, { isServer }) {
     config.module.rules.push({ test: /[\\/]src[\\/]assets[\\/].*\.tsx?$/, sideEffects: false });
+    /*
+     * The type pieces (`Heading`, `Text`) and `cn` render nearly every
+     * heading and paragraph, so the layout chunk and each page chunk would
+     * otherwise carry its own copy of them (seven copies of `Text` and of
+     * `Heading` in the round 32 build, about 1.5 kB gzip per page). One small
+     * shared chunk instead.
+     */
+    const split = config.optimization?.splitChunks;
+    if (!isServer && split && typeof split === 'object') {
+      split.cacheGroups = {
+        ...split.cacheGroups,
+        type: {
+          name: 'type',
+          test: /[\\/]src[\\/](components[\\/]ui[\\/]layout[\\/](Heading|Text)|utils[\\/]style[\\/]cn)\.tsx?$/,
+          chunks: 'all',
+          enforce: true,
+          priority: 40,
+        },
+      };
+    }
     return config;
   },
 };

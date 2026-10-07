@@ -1,6 +1,7 @@
 import { useTranslations } from 'next-intl';
 import { BRAND_NAME, GLOW_GRADIENT, GRID_OVERLAY } from '@/utils/media-kit/content';
 import ObeliskTwoToneMark from '@/assets/brand/ObeliskTwoToneMark';
+import Text from '@/components/ui/layout/Text';
 
 /** Where each layer of a centered composition sits, as % of the banner. */
 type CenteredLayout = {
@@ -82,12 +83,9 @@ function CenteredBanner({ layout: l }: { layout: CenteredLayout }) {
           {t('mediaKit.brand.tagline')}
         </span>
       </div>
-      <p
-        className="absolute text-center text-lc-green font-semibold text-[10px] sm:text-xs md:text-sm w-full"
-        style={{ bottom: l.oneLinerBottom }}
-      >
+      <Text as="p" size="10" tone="accent" weight="semibold" className="absolute text-center sm:text-xs md:text-sm w-full" style={{ bottom: l.oneLinerBottom }}>
         {t('mediaKit.brand.oneLiner')}
-      </p>
+      </Text>
     </div>
   );
 }

@@ -35,6 +35,7 @@ import ErrorState from '@/components/ui/feedback/ErrorState';
 import FileInput from '@/components/ui/forms/FileInput';
 import ComposerToolButton from './ComposerToolButton';
 import { AlertTriangleIcon, ImageIcon, LinkIcon } from '@/assets/icons';
+import Text from '@/components/ui/layout/Text';
 
 /** Twitter-ish soft limit: past this, a note is an article. */
 const SOFT_LIMIT = 1000;
@@ -106,7 +107,7 @@ export default function MobileComposer({
 
       {parent && (
         <div className="shrink-0 border-b border-lc-border px-4 py-2" data-testid="mobile-composer-context">
-          <p className="line-clamp-2 text-xs text-lc-muted">{parent.content}</p>
+          <Text as="p" variant="caption" className="line-clamp-2">{parent.content}</Text>
         </div>
       )}
 

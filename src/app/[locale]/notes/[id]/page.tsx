@@ -35,6 +35,7 @@ import ViewerHeader from '@/components/social/viewer/ViewerHeader';
 import NoteViewerClient from './NoteViewerClient';
 import AuthorContext from './AuthorContext';
 import OpenInClients from './OpenInClients';
+import Text from '@/components/ui/layout/Text';
 
 export const runtime = 'nodejs';
 /**
@@ -120,7 +121,7 @@ export default async function NoteViewerPage({ params }: Params) {
       <noscript>
         {note && (
           <div className="mx-auto max-w-2xl px-5 py-6">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed">{note.content}</p>
+            <Text as="p" size="sm" className="whitespace-pre-wrap leading-relaxed">{note.content}</Text>
           </div>
         )}
       </noscript>

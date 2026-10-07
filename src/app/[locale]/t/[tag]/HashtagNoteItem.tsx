@@ -8,6 +8,7 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 import { formatDate } from '@/utils/format/format';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import HashtagAvatar from './HashtagAvatar';
+import Text from '@/components/ui/layout/Text';
 
 /** One note under the hashtag: author, date, three lines of text (or `sharedMedia`) and its first image, linking to the note. */
 export default function HashtagNoteItem({
@@ -38,7 +39,7 @@ export default function HashtagNoteItem({
             {formatDate(locale, note.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}
           </time>
         </div>
-        <p className="line-clamp-3 text-sm text-lc-white">{text || sharedMedia}</p>
+        <Text as="p" size="sm" tone="default" className="line-clamp-3">{text || sharedMedia}</Text>
         {image && (
           <RemoteImage
             src={image}

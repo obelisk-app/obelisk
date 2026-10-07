@@ -14,6 +14,8 @@ import NoteCard from './NoteCard';
 import NoteComposer from '../composer/NoteComposer';
 import { useMyPubkey } from '@/services/nostr-bridge';
 import EmptyState from '@/components/ui/feedback/EmptyState';
+import Text from '@/components/ui/layout/Text';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 export default function NoteThread({
   noteId,
@@ -31,7 +33,7 @@ export default function NoteThread({
   if (loading) {
     return (
       <div className="space-y-3 p-4" data-testid="thread-loading">
-        {[0, 1].map((item) => <div key={item} className="lc-skeleton h-24 rounded-xl" />)}
+        {[0, 1].map((item) => <Skeleton key={item} className="h-24 rounded-xl" />)}
       </div>
     );
   }
@@ -90,7 +92,7 @@ export default function NoteThread({
           ))}
         </div>
       ) : (
-        <p className="p-6 text-center text-xs text-lc-muted">{t('social.noReplies')}</p>
+        <Text as="p" variant="caption" className="p-6 text-center">{t('social.noReplies')}</Text>
       )}
     </div>
   );

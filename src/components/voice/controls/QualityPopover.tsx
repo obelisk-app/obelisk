@@ -8,6 +8,7 @@
 import { useTranslations } from 'next-intl';
 import { useQualityPopover } from '@/hooks/voice/controls/useQualityPopover';
 import QualitySection from './QualitySection';
+import Text from '@/components/ui/layout/Text';
 
 export default function QualityPopover() {
   const t = useTranslations();
@@ -31,7 +32,7 @@ export default function QualityPopover() {
         onChange={vm.setReceivedQuality}
         testid="quality-in"
       />
-      <p className="text-[10px] text-white/40 mt-2">{t('voice.audioNote')}</p>
+      <Text as="p" size="10" className="text-white/40 mt-2">{t('voice.audioNote')}</Text>
     </div>
   );
 }

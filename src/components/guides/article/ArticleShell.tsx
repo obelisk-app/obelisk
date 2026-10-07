@@ -5,6 +5,8 @@ import type { GuideFrontmatter } from '@/services/guides/guides';
 import { formatDate } from '@/utils/format/format';
 import { useTranslations } from 'next-intl';
 import { HERO_REGISTRY } from '@/assets/illustrations/guides';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 interface Props {
   frontmatter: GuideFrontmatter;
@@ -53,10 +55,10 @@ export default function ArticleShell({
             </span>
           ))}
         </div>
-        <h1 className="text-4xl md:text-5xl font-extrabold text-lc-white tracking-tight leading-tight">
+        <Heading as="h1" variant="page" className="leading-tight">
           {frontmatter.title}
-        </h1>
-        <p className="mt-4 text-lg text-lc-muted leading-relaxed">{frontmatter.description}</p>
+        </Heading>
+        <Text as="p" variant="lead" className="mt-4 leading-relaxed">{frontmatter.description}</Text>
 
         <div className="mt-6 flex items-center gap-4 text-xs text-lc-muted flex-wrap">
           <span>

@@ -5,6 +5,7 @@ import ErrorState from '@/components/ui/feedback/ErrorState';
 import FileInput from '@/components/ui/forms/FileInput';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useChannelAppearanceInput } from '@/hooks/media/upload/useChannelAppearanceInput';
+import Label from '@/components/ui/forms/Label';
 
 /** A channel's banner with its picture overlapping it, as the header shows them, and an upload button for each. */
 export default function ChannelAppearanceInput({
@@ -41,7 +42,7 @@ export default function ChannelAppearanceInput({
           ['picture', t('media.blossom.uploadPicture')],
           ['banner', t('media.blossom.uploadBanner')],
         ] as const).map(([kind, label]) => (
-          <label key={kind} className="lc-pill lc-pill-secondary cursor-pointer whitespace-nowrap text-xs">
+          <Label key={kind} className="lc-pill lc-pill-secondary cursor-pointer whitespace-nowrap text-xs">
             {uploading === kind ? t('media.blossom.uploading') : label}
             <FileInput
               accept="image/*"
@@ -49,7 +50,7 @@ export default function ChannelAppearanceInput({
               disabled={uploading !== null}
               onChange={(e) => picked(e.target, kind)}
             />
-          </label>
+          </Label>
         ))}
       </div>
       {error && <ErrorState className="mt-1.5">{error}</ErrorState>}

@@ -7,6 +7,7 @@ import { useDmsListScreen } from '@/hooks/shell/mobile/screens/dm/useDmsListScre
 import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
 import { DmRow } from './DmRow';
 import { LockWideIcon, PlusIcon, SearchShortIcon } from '@/assets/icons';
+import Heading from '@/components/ui/layout/Heading';
 
 /** The phone DMs tab: conversations with people you follow, and with everyone else. */
 export function DmsListScreen({
@@ -24,7 +25,7 @@ export function DmsListScreen({
   return (
     <div className="screen active" data-screen="dms-list">
       <div className="app-header">
-        <h2>{t('dm.title')}</h2>
+        <Heading as="h2">{t('dm.title')}</Heading>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <MobileSigningIndicator />
           <button className="icon-btn action-search" onClick={() => go('compose-dm')} aria-label={t('common.search')}>

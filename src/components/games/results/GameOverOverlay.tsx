@@ -6,6 +6,8 @@ import { useGameOverOverlay } from '@/hooks/games/results/useGameOverOverlay';
 import { scoreLabel } from '@/utils/games/copy/game-copy';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * The result splash. Covers the table the moment the log says the game is
@@ -45,13 +47,9 @@ export default function GameOverOverlay({
         </span>
       )}
 
-      <h2
-        className="cr-win-title mt-2 text-4xl font-black leading-none tracking-tight sm:text-5xl"
-        style={{ color: view.color }}
-        data-testid="game-over-headline"
-      >
+      <Heading as="h2" className="cr-win-title mt-2 text-4xl font-black leading-none tracking-tight sm:text-5xl" style={{ color: view.color }} data-testid="game-over-headline">
         {t(view.headlineKey)}
-      </h2>
+      </Heading>
 
       {!draw && winner && !iWon && (
         <div className="mt-4 flex items-center gap-2">
@@ -63,16 +61,16 @@ export default function GameOverOverlay({
       )}
 
       {!draw && iWon && (
-        <p className="mt-3 text-sm text-lc-muted">{t('games.boardYours')}</p>
+        <Text as="p" variant="muted" className="mt-3">{t('games.boardYours')}</Text>
       )}
 
-      {draw && <p className="mt-3 text-sm text-lc-muted">{t('games.boardNobody')}</p>}
+      {draw && <Text as="p" variant="muted" className="mt-3">{t('games.boardNobody')}</Text>}
 
       {/* What you finished with: the thing you actually want to see. */}
       {myScore && (
-        <p className="mt-2 font-mono text-sm text-lc-white" data-testid="game-over-score">
+        <Text as="p" size="sm" tone="default" className="mt-2 font-mono" data-testid="game-over-score">
           {scoreLabel(t, myScore)}
-        </p>
+        </Text>
       )}
 
       <Button

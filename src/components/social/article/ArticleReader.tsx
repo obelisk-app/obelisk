@@ -15,6 +15,8 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import MessageContent from '@/components/chat/message/MessageContent';
 import { useArticleReader } from '@/hooks/social/article/useArticleReader';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /** Full reader: used by the thread pane and the article modal. */
 export default function ArticleReader({
@@ -38,12 +40,12 @@ export default function ArticleReader({
         />
       )}
 
-      <h1 className="text-balance text-2xl font-extrabold leading-tight text-lc-white md:text-3xl">
+      <Heading as="h1" className="text-balance text-2xl font-extrabold leading-tight text-lc-white md:text-3xl">
         {meta.title || t('social.untitledArticle')}
-      </h1>
+      </Heading>
 
       {meta.summary && (
-        <p className="mt-3 text-sm leading-relaxed text-lc-muted">{meta.summary}</p>
+        <Text as="p" variant="muted" className="mt-3 leading-relaxed">{meta.summary}</Text>
       )}
 
       <div className="mt-5 flex items-center gap-3 border-y border-lc-border py-3">

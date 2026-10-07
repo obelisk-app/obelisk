@@ -60,7 +60,7 @@ function makeClient(channelId: string): FakeClient {
 }
 
 vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({ useRouter: () => ({ push: vi.fn() }) }));
-vi.mock('@/components/common/ShootingStars', () => ({ default: () => null }));
+vi.mock('@/components/ui/animations/ShootingStars', () => ({ default: () => null }));
 vi.mock('@/components/voice/controls/VoiceControls', () => ({
   default: ({ onLeave }: { onLeave: () => void }) => (
     <button data-testid="leave-btn" onClick={() => { void onLeave(); }}>leave</button>

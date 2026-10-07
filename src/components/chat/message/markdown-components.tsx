@@ -19,6 +19,7 @@ import { MarkdownCode } from './MarkdownCode';
 import { MarkdownImage } from './MarkdownImage';
 import { MarkdownLink } from './MarkdownLink';
 import { MarkdownInline } from './MarkdownInline';
+import Text from '@/components/ui/layout/Text';
 
 export interface MarkdownComponentOptions {
   mentions: MentionMap;
@@ -48,9 +49,9 @@ export function buildMarkdownComponents({
       </blockquote>
     ),
     // Headings (limited like Discord)
-    h1: ({ children }) => <p className="text-lg font-bold text-lc-white"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></p>,
-    h2: ({ children }) => <p className="text-base font-bold text-lc-white"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></p>,
-    h3: ({ children }) => <p className="text-sm font-bold text-lc-white"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></p>,
+    h1: ({ children }) => <Text as="p" size="lg" tone="default" weight="bold"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
+    h2: ({ children }) => <Text as="p" size="base" tone="default" weight="bold"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
+    h3: ({ children }) => <Text as="p" size="sm" tone="default" weight="bold"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
     // Text formatting
     strong: ({ children }) => <strong className="font-bold text-lc-white"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></strong>,
     em: ({ children }) => <em className="italic text-lc-white/80"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></em>,
@@ -60,7 +61,7 @@ export function buildMarkdownComponents({
     ol: ({ children }) => <ol className="list-decimal list-inside my-1 text-lc-white/90">{children}</ol>,
     li: ({ children }) => <li className="text-sm"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></li>,
     // Paragraph: swap mention placeholders
-    p: ({ children }) => <p className="my-0"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></p>,
+    p: ({ children }) => <Text as="p" className="my-0"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
     // Spoiler nodes (from our remark plugin)
     spoiler: ({ children }: { children?: ReactNode }) => <SpoilerText>{children}</SpoilerText>,
   } as Components;

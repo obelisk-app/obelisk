@@ -6,6 +6,8 @@ import { guidePath } from '@/utils/guides/guide-urls';
 import ObeliskIcon from '@/assets/brand/ObeliskIcon';
 import TextButton from '@/components/ui/buttons/TextButton';
 import { reviewAnalyticsConsent } from '@/services/analytics/consent';
+import Text from '@/components/ui/layout/Text';
+import Heading from '@/components/ui/layout/Heading';
 
 export const GUIDE_SLUGS = [
   { slug: 'what-is-obelisk', tKey: 'marketing.learn.card.whatIsObelisk.title' },
@@ -29,19 +31,16 @@ export default function Footer() {
                 Obelisk
               </span>
             </Link>
-            <p className="text-sm text-lc-muted leading-6 max-w-xs">
+            <Text as="p" variant="muted" className="leading-6 max-w-xs">
               {t('marketing.footer.brandBlurb')}
-            </p>
+            </Text>
           </div>
 
           {/* Guides */}
           <nav aria-labelledby="footer-guides">
-            <h3
-              id="footer-guides"
-              className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4"
-            >
+            <Heading as="h3" id="footer-guides" className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4">
               {t('marketing.footer.col.guides')}
-            </h3>
+            </Heading>
             <ul className="space-y-2.5">
               {GUIDE_SLUGS.map((g) => (
                 <li key={g.slug}>
@@ -66,12 +65,9 @@ export default function Footer() {
 
           {/* Product */}
           <nav aria-labelledby="footer-product">
-            <h3
-              id="footer-product"
-              className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4"
-            >
+            <Heading as="h3" id="footer-product" className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4">
               {t('marketing.footer.col.product')}
-            </h3>
+            </Heading>
             <ul className="space-y-2.5">
               <li>
                 <Link
@@ -112,12 +108,9 @@ export default function Footer() {
 
           {/* Community */}
           <nav aria-labelledby="footer-community">
-            <h3
-              id="footer-community"
-              className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4"
-            >
+            <Heading as="h3" id="footer-community" className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4">
               {t('marketing.footer.col.community')}
-            </h3>
+            </Heading>
             <ul className="space-y-2.5">
               <li>
                 <a
@@ -144,12 +137,9 @@ export default function Footer() {
 
           {/* Legal */}
           <nav aria-labelledby="footer-legal">
-            <h3
-              id="footer-legal"
-              className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4"
-            >
+            <Heading as="h3" id="footer-legal" className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4">
               {t('marketing.footer.col.legal')}
-            </h3>
+            </Heading>
             <ul className="space-y-2.5">
               <li>
                 <a
@@ -191,8 +181,8 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 pt-6 border-t border-lc-border/40 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-lc-muted">{t('marketing.footer.tagline')}</p>
-          <p className="text-xs text-lc-muted">© {new Date().getFullYear()} Fabricio Acosta · AGPL-3.0</p> {/* i18n-exempt: copyright line, a person's name and a license id */}
+          <Text as="p" variant="caption">{t('marketing.footer.tagline')}</Text>
+          <Text as="p" variant="caption">© {new Date().getFullYear()} Fabricio Acosta · AGPL-3.0</Text> {/* i18n-exempt: copyright line, a person's name and a license id */}
         </div>
       </div>
     </footer>

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import BackButton from '../../chrome/BackButton';
+import Heading from '@/components/ui/layout/Heading';
 
 /** A preferences sub-screen: a back button and title over its own settings body. */
 export function SettingsSubScreen({
@@ -21,7 +22,7 @@ export function SettingsSubScreen({
     <div className="screen active" data-screen={screen}>
       <div className="app-header">
         <BackButton onClick={onBack} data-testid={backTestId} />
-        <h2>{title}</h2>
+        <Heading as="h2">{title}</Heading>
       </div>
       <div className="settings-body">
         {children}

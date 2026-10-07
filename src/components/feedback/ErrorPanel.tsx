@@ -3,6 +3,8 @@
 import Button from '@/components/ui/buttons/Button';
 import TextButton from '@/components/ui/buttons/TextButton';
 import { useErrorPanel } from '@/hooks/feedback/useErrorPanel';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * The recovery UI behind `app/error.tsx` and `app/global-error.tsx`.
@@ -35,12 +37,12 @@ export default function ErrorPanel({
       className="flex min-h-screen w-full items-center justify-center bg-lc-black px-4 py-10 text-lc-white"
     >
       <div className="lc-card w-full max-w-lg p-6 sm:p-8">
-        <h1 className="text-xl font-semibold sm:text-2xl">{t('panel.title')}</h1>
-        <p className="mt-3 text-sm leading-relaxed text-lc-muted">{t('panel.body')}</p>
+        <Heading as="h1" className="text-xl font-semibold sm:text-2xl">{t('panel.title')}</Heading>
+        <Text as="p" variant="muted" className="mt-3 leading-relaxed">{t('panel.body')}</Text>
         {vm.code && (
-          <p className="mt-3 text-sm leading-relaxed text-lc-white" data-testid="error-panel-reason">
+          <Text as="p" size="sm" tone="default" className="mt-3 leading-relaxed" data-testid="error-panel-reason">
             {t(`codes.${vm.code}`)}
-          </p>
+          </Text>
         )}
 
         {vm.detail && (
@@ -90,9 +92,9 @@ export default function ErrorPanel({
         </div>
 
         {vm.clearedCount !== null && (
-          <p className="mt-3 text-xs text-lc-green" data-testid="error-cleared-note">
+          <Text as="p" size="xs" tone="accent" className="mt-3" data-testid="error-cleared-note">
             {t('panel.cleared', { count: vm.clearedCount })}
-          </p>
+          </Text>
         )}
       </div>
     </div>

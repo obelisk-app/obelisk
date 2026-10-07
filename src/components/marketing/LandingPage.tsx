@@ -3,7 +3,7 @@
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import Navbar from './site/Navbar';
-import ShootingStars from '../common/ShootingStars';
+import ShootingStars from '@/components/ui/animations/ShootingStars';
 import Footer from './site/Footer';
 import { useTranslations } from 'next-intl';
 import { guidePath } from '@/utils/guides/guide-urls';
@@ -16,10 +16,12 @@ import LandingHero from './landing/LandingHero';
 import LearnSection from './landing/LearnSection';
 import PreviewSection from './landing/PreviewSection';
 import RelayPulse from '@/assets/illustrations/marketing/RelayPulse';
-import RevealSection from './landing/RevealSection';
+import Reveal from '@/components/ui/animations/Reveal';
 import RoadmapSection from './landing/RoadmapSection';
 import StackSection from './landing/StackSection';
 import StepsSection from './landing/StepsSection';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * The marketing landing page. Each section is its own component in
@@ -67,17 +69,17 @@ export default function LandingPage() {
           says so. The claim is conditional on purpose: a signer without
           post-quantum support still sends classic NIP-44, and saying otherwise
           would badge an unprotected message as protected. */}
-      <RevealSection id="post-quantum" className="py-24 px-6 border-t border-lc-border">
+      <Reveal id="post-quantum" className="py-24 px-6 border-t border-lc-border">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('marketing.pqc.heading')}<span className="text-lc-green">.</span>
-          </h2>
-          <p className="text-lc-muted text-lg mb-4">{t('marketing.pqc.subtitle')}</p>
-          <p className="text-sm text-lc-muted/80 mb-12">{t('marketing.pqc.status')}</p>
+          <Heading as="h2" variant="section" className="mb-4">
+            {t('marketing.pqc.heading')}
+          </Heading>
+          <Text as="p" variant="lead" className="mb-4">{t('marketing.pqc.subtitle')}</Text>
+          <Text as="p" size="sm" className="text-lc-muted/80 mb-12">{t('marketing.pqc.status')}</Text>
 
-          <p className="text-xs uppercase tracking-widest text-lc-muted mb-6">
+          <Text as="p" variant="caption" className="uppercase tracking-widest mb-6">
             {t('marketing.pqc.collab')}
-          </p>
+          </Text>
           <div className="grid sm:grid-cols-2 gap-4 text-left">
             {/* Both marks are monochrome white-on-transparent, which is the sanctioned
                 on-dark treatment for each brand and keeps the pair visually consistent.
@@ -119,7 +121,7 @@ export default function LandingPage() {
             </Link>
           </div>
         </div>
-      </RevealSection>
+      </Reveal>
 
       <Footer />
 

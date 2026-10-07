@@ -9,6 +9,7 @@ import Sheet from '@/components/ui/overlays/Sheet';
 import SheetHeader from '../chrome/SheetHeader';
 import Input from '@/components/ui/forms/Input';
 import TextArea from '@/components/ui/forms/TextArea';
+import Label from '@/components/ui/forms/Label';
 
 export function NewThreadSheet({
   forumGroupId,
@@ -44,7 +45,7 @@ export function NewThreadSheet({
     <Sheet onClose={close} screen="new-thread" label={t('chat.forum.new')} testId="mobile-new-thread-sheet" maxHeight="92%" as="form" onSubmit={(e) => void submit(e)}>
       <SheetHeader title={t('chat.forum.new')} />
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label htmlFor={titleId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{t('chat.forum.titleLabel')}</label>
+        <Label variant="sheet" htmlFor={titleId}>{t('chat.forum.titleLabel')}</Label>
         <div className="setup-input-wrap">
           <Input
             autoFocus
@@ -57,7 +58,7 @@ export function NewThreadSheet({
             data-testid="mobile-new-thread-title"
           />
         </div>
-        <label htmlFor={bodyId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 6 }}>{t('mobile.forum.firstMessage')}</label>
+        <Label variant="sheet" htmlFor={bodyId} style={{ marginTop: 6 }}>{t('mobile.forum.firstMessage')}</Label>
         <TextArea
           variant="mobile"
           id={bodyId}
@@ -69,9 +70,9 @@ export function NewThreadSheet({
         />
         {forumTags.length > 0 && (
           <>
-            <label style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 6 }}>
+            <Label variant="sheet" style={{ marginTop: 6 }}>
               {t('mobile.forum.tagsCount', { count: selectedTagIds.length, max: MAX_TAGS })}
-            </label>
+            </Label>
             <div className="forum-filter-row" style={{ flexWrap: 'wrap', overflow: 'visible', margin: 0, padding: 0 }} data-testid="mobile-new-thread-tag-picker">
               {forumTags.map((tag) => (
                 <NewThreadTagChip key={tag.id} tag={tag} selectedTagIds={selectedTagIds} max={MAX_TAGS} onToggle={() => toggleTag(tag.id)} />

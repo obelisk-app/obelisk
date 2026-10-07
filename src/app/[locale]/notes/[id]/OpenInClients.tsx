@@ -12,15 +12,16 @@
 
 import { NOSTR_CLIENTS } from '@/services/social/clients';
 import { serverLocale } from '@/services/server/i18n/locale';
+import Heading from '@/components/ui/layout/Heading';
 
 export default async function OpenInClients({ identifier }: { identifier: string }) {
   const { t } = await serverLocale();
 
   return (
     <section className="min-w-0" data-testid="open-in-clients">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-lc-muted">
+      <Heading as="h2" variant="label" className="mb-3">
         {t('social.note.openIn')}
-      </h2>
+      </Heading>
       {/*
         Wraps on a narrow rail and stays a single flowing row on mobile, so
         one list works in both places without a second layout.

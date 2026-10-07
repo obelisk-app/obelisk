@@ -17,6 +17,7 @@ import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import Button from '@/components/ui/buttons/Button';
 import { MaximizeIcon, MinimizeIcon } from '@/assets/icons';
 import { gameIcon, gameName } from '@/lib/games/core/catalog';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 /**
  * The table itself: roster while waiting, board while playing, result when
@@ -38,7 +39,7 @@ export default function GameTableModal({ gameId, onClose }: { gameId: string; on
       <Modal onClose={onClose} testId="game-modal" panelClassName="flex w-full max-w-md mx-4 flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-xl">
         <ModalHeader title={t('games.loadingTable')} onClose={onClose} />
         <div className="px-5 py-4">
-          <div className="lc-skeleton h-40 w-full rounded-lg" />
+          <Skeleton className="h-40 w-full rounded-lg" />
         </div>
       </Modal>
     );

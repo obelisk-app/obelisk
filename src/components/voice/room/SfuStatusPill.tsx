@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { SfuStatus } from '@/services/voice/room-events';
+import PingDot from '@/components/ui/animations/PingDot';
 
 /**
  * SFU upgrade status for the current call. Distinct from voice-client
@@ -45,12 +46,7 @@ export default function SfuStatusPill({ status }: { status: SfuStatus }) {
       title={t(`voice.sfu.${status}.detail`)}
       className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium leading-none ${v.tone}`}
     >
-      <span className="relative inline-flex h-1.5 w-1.5">
-        {v.pulse && (
-          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-70 ${v.dot}`} />
-        )}
-        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${v.dot}`} />
-      </span>
+      <PingDot color={v.dot} ping={v.pulse} />
       <span>{t(`voice.sfu.${status}.label`)}</span>
     </div>
   );

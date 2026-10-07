@@ -10,6 +10,7 @@ import type { SfuStatus } from '@/services/voice/room-events';
 import SfuStatusPill from './SfuStatusPill';
 import MeshSyncStatusPill from './MeshSyncStatusPill';
 import { UsersAltIcon } from '@/assets/icons';
+import PingDot from '@/components/ui/animations/PingDot';
 
 export default function RoomHeader({ name, count, sfuStatus, meshSyncingCount = 0 }: {
   name: string;
@@ -21,10 +22,7 @@ export default function RoomHeader({ name, count, sfuStatus, meshSyncingCount = 
   return (
     <div className="relative z-10 px-3 sm:px-5 py-3 flex items-center gap-3 border-b border-white/5" data-testid="voice-room-header">
       <div className="min-w-0 flex items-center gap-2.5 flex-1 min-w-0">
-        <span className="relative flex h-2 w-2 shrink-0">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lc-green opacity-50" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-lc-green" />
-        </span>
+        <PingDot color="bg-lc-green" size="sm" halo={50} className="shrink-0" />
         <div className="min-w-0">
           <div className="text-[10px] uppercase tracking-[0.14em] text-lc-muted leading-none mb-1">{t('voice.channel')}</div>
           <div className="font-semibold text-lc-white truncate text-sm sm:text-base leading-tight">{name}</div>

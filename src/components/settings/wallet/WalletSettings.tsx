@@ -12,6 +12,7 @@ import { useWalletSettings } from '@/hooks/settings/wallet/useWalletSettings';
 import type { MessageKey } from '@/i18n/keys';
 import NwcConnectForm from './NwcConnectForm';
 import NwcConnectedCard from './NwcConnectedCard';
+import Skeleton from '@/components/ui/animations/Skeleton';
 
 const PAYER_KEY = {
   nwc: 'settings.wallet.current.nwc',
@@ -28,7 +29,7 @@ export default function WalletSettings({ mobile = false }: { mobile?: boolean })
     <>
       <Text as="p" size="xs" tone="muted">{t('settings.wallet.intro')}</Text>
       {paying.loading ? (
-        <div className="h-16 animate-pulse rounded-lg bg-lc-border/40" data-testid="nwc-loading" />
+        <Skeleton variant="pulse" className="h-16 rounded-lg bg-lc-border/40" data-testid="nwc-loading" />
       ) : paying.nwc ? (
         <NwcConnectedCard wallet={paying.nwc} busy={w.busy} onDisconnect={() => void w.disconnect()} />
       ) : (

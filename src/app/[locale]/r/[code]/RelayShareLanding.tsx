@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import { useRelayShareLanding } from '@/hooks/relay/deep-link/useRelayShareLanding';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 const RELAY_BRANDING: Record<string, { logo: string; alt: string }> = {
   'wss://lacrypta-relay.obelisk.ar': { logo: '/lacrypta-logo.png', alt: 'La Crypta' }, // i18n-exempt: the relay's brand name
@@ -19,8 +21,8 @@ export default function RelayShareLanding({ code }: { code: string }) {
       <div className="lc-card w-full max-w-md rounded-2xl border border-lc-border bg-lc-dark p-6 text-center">
         {error ? (
           <>
-            <h1 className="text-lg font-bold text-lc-white">{t('common.relayLanding.failed')}</h1>
-            <p className="mt-2 text-sm text-lc-muted">{error}</p>
+            <Heading as="h1" variant="card">{t('common.relayLanding.failed')}</Heading>
+            <Text as="p" variant="muted" className="mt-2">{error}</Text>
             <Button onClick={goToApp} className="mt-4">
               {t('common.relayLanding.goToApp')}
             </Button>
@@ -37,9 +39,9 @@ export default function RelayShareLanding({ code }: { code: string }) {
                 priority
               />
             )}
-            <h1 className="text-lg font-bold text-lc-white">{t('common.relayLanding.connecting')}</h1>
+            <Heading as="h1" variant="card">{t('common.relayLanding.connecting')}</Heading>
             {relayUrl && (
-              <p className="mt-2 break-all font-mono text-xs text-lc-muted">{relayUrl}</p>
+              <Text as="p" variant="caption" className="mt-2 break-all font-mono">{relayUrl}</Text>
             )}
             <div className="lc-spinner mx-auto mt-4" />
           </>

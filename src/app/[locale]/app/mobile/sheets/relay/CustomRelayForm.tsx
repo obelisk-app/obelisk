@@ -4,6 +4,8 @@ import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAddRelayForm } from '@/hooks/relay/rail/useAddRelayForm';
 import Input from '@/components/ui/forms/Input';
+import Label from '@/components/ui/forms/Label';
+import Text from '@/components/ui/layout/Text';
 
 /** The add-relay sheet's custom tab: a relay URL field and the add button. */
 export function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
@@ -13,12 +15,12 @@ export function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
 
   return (
     <form onSubmit={(e) => void submit(e)} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <label htmlFor={urlId} style={{ fontSize: 10, color: 'var(--app-text-dim)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'JetBrains Mono', monospace" }}>
+      <Label variant="sheetMono" htmlFor={urlId}>
         {t('shell.rail.addModal.urlLabel')}
-      </label>
-      <p style={{ fontSize: 12, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
+      </Label>
+      <Text as="p" style={{ fontSize: 12, color: 'var(--app-text-dim)', margin: 0, lineHeight: 1.5 }}>
         {t('mobile.rail.addHelp')}
-      </p>
+      </Text>
       <div className="setup-input-wrap">
         <Input
           autoFocus

@@ -7,6 +7,8 @@ import Navbar from '@/components/marketing/site/Navbar';
 import { LOCAL_DATA_CATEGORIES } from '@/services/local-data/categories';
 import type { MessageKey } from '@/i18n/keys';
 import LocalDataHelpSection from './LocalDataHelpSection';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 const WHY: ReadonlyArray<MessageKey> = [
   'help.localData.why.speed',
@@ -37,10 +39,10 @@ export default function LocalDataHelp() {
         <Link href="/help" className="text-sm font-medium text-lc-green hover:text-lc-green-dark">
           {t('help.localData.back')}
         </Link>
-        <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-lc-white md:text-5xl">
+        <Heading as="h1" variant="page" className="mt-5">
           {t('help.localData.title')}
-        </h1>
-        <p className="mt-3 text-lg text-lc-muted">{t('help.localData.intro')}</p>
+        </Heading>
+        <Text as="p" variant="lead" className="mt-3">{t('help.localData.intro')}</Text>
 
         <LocalDataHelpSection title={t('help.localData.why.title')}>
           <ul className="list-disc space-y-2 pl-5">
@@ -49,7 +51,7 @@ export default function LocalDataHelp() {
         </LocalDataHelpSection>
 
         <LocalDataHelpSection title={t('help.localData.server.title')}>
-          <p>{t('help.localData.server.body')}</p>
+          <Text as="p">{t('help.localData.server.body')}</Text>
         </LocalDataHelpSection>
 
         <LocalDataHelpSection title={t('help.localData.categories.title')} testId="local-data-help-categories">
@@ -61,11 +63,11 @@ export default function LocalDataHelp() {
               </div>
             ))}
           </dl>
-          <p className="mt-4 text-sm">{t('help.localData.categories.perAccount')}</p>
+          <Text as="p" size="sm" className="mt-4">{t('help.localData.categories.perAccount')}</Text>
         </LocalDataHelpSection>
 
         <LocalDataHelpSection title={t('help.localData.settings.title')}>
-          <p>{t('help.localData.settings.body')}</p>
+          <Text as="p">{t('help.localData.settings.body')}</Text>
         </LocalDataHelpSection>
 
         <LocalDataHelpSection title={t('help.localData.other.title')} testId="local-data-help-other">
@@ -82,7 +84,7 @@ export default function LocalDataHelp() {
         </LocalDataHelpSection>
 
         <LocalDataHelpSection title={t('help.localData.published.title')}>
-          <p>{t('help.localData.published.body')}</p>
+          <Text as="p">{t('help.localData.published.body')}</Text>
         </LocalDataHelpSection>
       </main>
       <Footer />

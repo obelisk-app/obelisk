@@ -10,6 +10,7 @@ import NoteContent from './NoteContent';
 import { ArticleCard } from '../article/ArticleCard';
 import MediaCarousel from './MediaCarousel';
 import NoteImetaMedia from './NoteImetaMedia';
+import Text from '@/components/ui/layout/Text';
 
 /** What a card shows under its header, per render mode (article, highlight, group, file, ...). */
 export default function NoteBody({
@@ -81,7 +82,7 @@ export default function NoteBody({
       <div data-testid="note-file">
         {vm.fileUrl && <MediaCarousel items={[{ url: vm.fileUrl, mimeType: vm.fileMimeType }]} />}
         {note.content.trim() && (
-          <p className="mt-2 text-[13px] text-lc-muted">{note.content}</p>
+          <Text as="p" size="13" tone="muted" className="mt-2">{note.content}</Text>
         )}
       </div>
     );
@@ -98,9 +99,9 @@ export default function NoteBody({
             <NoteContent content={note.content} noteId={note.id} onOpenProfile={onOpenProfile} onOpenNote={onOpenNote} onOpenTag={onOpenTag} />
           </div>
         ) : null}
-        <p className="mt-2 text-[11px] text-lc-muted">
+        <Text as="p" size="11" tone="muted" className="mt-2">
           {`${t('social.unsupportedKind')} (kind ${note.kind})`}
-        </p>
+        </Text>
       </Card>
     );
   }

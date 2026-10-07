@@ -8,6 +8,7 @@ import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import SegmentedControl from '@/components/ui/forms/SegmentedControl';
 import { rawEventFacts } from '@/utils/chat/dm/dm-message-utils';
 import { DmRawEventView } from './DmRawEventView';
+import Text from '@/components/ui/layout/Text';
 
 export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessage; onClose: () => void }) {
   const t = useTranslations();
@@ -35,7 +36,7 @@ export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessag
         )}
       </ModalHeader>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-        {!rumor && !wire && <p className="text-xs text-lc-muted">{t('dm.raw.unavailable')}</p>}
+        {!rumor && !wire && <Text as="p" variant="caption">{t('dm.raw.unavailable')}</Text>}
         {rumor && tab === 'message' && (
           <DmRawEventView
             event={rumor}
@@ -49,7 +50,7 @@ export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessag
             <DmRawEventView event={wire} hint={nip04 ? t('dm.raw.nip04Hint') : t('dm.raw.wrapHint')} testId="dm-raw-wire" />
             {nip04 && (
               <div className="mt-3">
-                <p className="mb-1 text-[11px] text-lc-muted">{t('dm.raw.decrypted')}</p>
+                <Text as="p" size="11" tone="muted" className="mb-1">{t('dm.raw.decrypted')}</Text>
                 <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-lc-border bg-lc-black p-3 text-xs text-lc-white">
                   {message.content}
                 </pre>

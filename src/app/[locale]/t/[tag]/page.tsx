@@ -19,6 +19,8 @@ import FollowTagButton from '@/components/social/tags/FollowTagButton';
 import { serverLocale } from '@/services/server/i18n/locale';
 import HashtagShell from './HashtagShell';
 import HashtagNoteItem from './HashtagNoteItem';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 export const runtime = 'nodejs';
 export const revalidate = 120;
@@ -56,8 +58,8 @@ export default async function HashtagPage({ params }: Params) {
     return (
       <HashtagShell>
         <div className="px-5 py-20 text-center">
-          <h1 className="text-lg font-semibold">{t('social.tagPage.notFound')}</h1>
-          <p className="mt-2 text-sm text-lc-muted">{t('social.tagPage.notFoundHelp')}</p>
+          <Heading as="h1" variant="card">{t('social.tagPage.notFound')}</Heading>
+          <Text as="p" variant="muted" className="mt-2">{t('social.tagPage.notFoundHelp')}</Text>
         </div>
       </HashtagShell>
     );
@@ -71,13 +73,13 @@ export default async function HashtagPage({ params }: Params) {
     <HashtagShell>
       <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-3">
-          <h1 className="min-w-0 truncate text-2xl font-extrabold">#{clean}</h1>
+          <Heading as="h1" className="min-w-0 truncate text-2xl font-extrabold">#{clean}</Heading>
           {/* NIP-51 kind 10015, so the follow is portable to other clients. */}
           <FollowTagButton tag={clean} />
         </div>
-        <p className="mt-1 text-xs text-lc-muted">
+        <Text as="p" variant="caption" className="mt-1">
           {notes.length > 0 ? t('social.tagPage.recent', { count: notes.length }) : t('social.tagPage.none')}
-        </p>
+        </Text>
       </div>
 
       <ul className="divide-y divide-lc-border border-t border-lc-border" data-testid="hashtag-notes">

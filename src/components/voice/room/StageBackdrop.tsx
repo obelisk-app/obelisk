@@ -1,4 +1,4 @@
-import ShootingStars from '@/components/common/ShootingStars';
+import ShootingStars from '@/components/ui/animations/ShootingStars';
 
 /** The room's backdrop: the grid, the shooting stars and the glow. */
 export default function StageBackdrop() {

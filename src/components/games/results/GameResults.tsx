@@ -5,6 +5,7 @@ import { gameIcon, gameName } from '@/lib/games/core/catalog';
 import { scoreDetail, scoreLabel } from '@/utils/games/copy/game-copy';
 import { useTranslations } from 'next-intl';
 import { useGameResults } from '@/hooks/games/results/useGameResults';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * How a match ended, for everyone.
@@ -61,7 +62,7 @@ export default function GameResults({
       </ol>
 
       {detail && (
-        <p className="text-center text-[10px] text-lc-muted">{scoreDetail(t, detail)}</p>
+        <Text as="p" size="10" tone="muted" className="text-center">{scoreDetail(t, detail)}</Text>
       )}
     </div>
   );

@@ -51,9 +51,9 @@ export default function GameSetupOptions({ form }: { form: NewGameForm }) {
             aria-label={t('games.pieceSeed')}
             data-testid="stacker-seed"
           />
-          <p className="mt-1 text-[10px] text-lc-muted">
+          <Text as="p" size="10" tone="muted" className="mt-1">
             {t('games.pieceSeedHelp')}
-          </p>
+          </Text>
         </>
       )}
 
@@ -70,9 +70,9 @@ export default function GameSetupOptions({ form }: { form: NewGameForm }) {
             aria-label={t('games.boardSeed')}
             data-testid="vesta-seed"
           />
-          <p className="mt-1 text-[10px] text-lc-muted">
+          <Text as="p" size="10" tone="muted" className="mt-1">
             {t('games.boardSeedHelp')}
-          </p>
+          </Text>
 
           <Text as="p" size="10" variant="label" tone="muted" className="mt-4">{t('games.continueSaved')}</Text>
           <FileInput
@@ -91,9 +91,9 @@ export default function GameSetupOptions({ form }: { form: NewGameForm }) {
             {t('games.loadVesta')}
           </Button>
           {resume && (
-            <p className="mt-2 text-[11px] text-lc-green" data-testid="vesta-resume-note">
+            <Text as="p" size="11" tone="accent" className="mt-2" data-testid="vesta-resume-note">
               {t('games.newGame.resuming', { name: resume.name, count: resume.players })}
-            </p>
+            </Text>
           )}
         </>
       )}

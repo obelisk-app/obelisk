@@ -9,6 +9,7 @@ import type { FeedSort } from '@/services/social/rank';
 import type { FeedKind } from '@/services/social/feed';
 import Button from '@/components/ui/buttons/Button';
 import { FilterIcon, GearIcon, GlobeIcon, SearchWideIcon, UsersIcon } from '@/assets/icons';
+import Heading from '@/components/ui/layout/Heading';
 
 /** Source segment, content filters, sort, and the action cluster on the right. */
 export default function FeedToolbar({
@@ -67,7 +68,7 @@ export default function FeedToolbar({
       made the feed look like a different app bolted into the window.
     */}
     <div className="lc-header-surface flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-lc-border px-5 py-2">
-      <h1 className="sr-only">{t('social.feed')}</h1>
+      <Heading as="h1" className="sr-only">{t('social.feed')}</Heading>
 
       {/*
         The count lives in the tooltip rather than as its own line of text:

@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { ChevronLeftIcon, CloseIcon, ExpandIcon, ShrinkIcon } from '@/assets/icons';
 import { PaneIconButton } from './PaneIconButton';
+import Heading from '@/components/ui/layout/Heading';
 
 /**
  * Header for the thread / article reader.
@@ -39,7 +40,7 @@ export function ReaderPaneHeader({
       >
         <ChevronLeftIcon size={20} strokeWidth={2.3} />
       </button>
-      <h2 className="text-sm font-semibold text-lc-white">{title}</h2>
+      <Heading as="h2" variant="panel">{title}</Heading>
       <div className="ml-auto flex items-center gap-0.5">
         <PaneIconButton
           label={full ? t('social.restoreFeed') : t('social.expandFeed')}

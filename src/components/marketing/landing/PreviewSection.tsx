@@ -4,8 +4,10 @@ import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import Button from '@/components/ui/buttons/Button';
-import RevealSection from './RevealSection';
+import Reveal from '@/components/ui/animations/Reveal';
 import { LogInIcon } from '@/assets/icons';
+import Heading from '@/components/ui/layout/Heading';
+import Text from '@/components/ui/layout/Text';
 
 /**
  * Product preview: desktop + mobile screenshots that link out to the
@@ -16,15 +18,15 @@ import { LogInIcon } from '@/assets/icons';
 export default function PreviewSection({ onLaunch }: { onLaunch: () => void }) {
   const t = useTranslations();
   return (
-    <RevealSection id="preview" className="pt-12 pb-16 px-6">
+    <Reveal id="preview" className="pt-12 pb-16 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('marketing.landing.preview.heading')}<span className="text-lc-green">.</span>
-          </h2>
-          <p className="text-lc-muted text-lg max-w-2xl mx-auto">
+          <Heading as="h2" variant="section" className="mb-4">
+            {t('marketing.landing.preview.heading')}
+          </Heading>
+          <Text as="p" variant="lead" className="max-w-2xl mx-auto">
             {t('marketing.landing.preview.subtitle')}
-          </p>
+          </Text>
         </div>
 
         <div className="space-y-6 max-w-5xl mx-auto">
@@ -48,12 +50,12 @@ export default function PreviewSection({ onLaunch }: { onLaunch: () => void }) {
               <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
                 {t('marketing.landing.preview.desktop.badge')}
               </span>
-              <h3 className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
+              <Heading as="h3" className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
                 {t('marketing.landing.preview.desktop.title')}
-              </h3>
-              <p className="mt-2 text-sm md:text-base text-lc-muted leading-relaxed">
+              </Heading>
+              <Text as="p" variant="muted" className="mt-2 md:text-base leading-relaxed">
                 {t('marketing.landing.preview.desktop.desc')}
-              </p>
+              </Text>
               <span className="mt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
                 {t('marketing.landing.preview.desktop.cta')}
                 <span aria-hidden="true">→</span>
@@ -81,12 +83,12 @@ export default function PreviewSection({ onLaunch }: { onLaunch: () => void }) {
               <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
                 {t('marketing.landing.preview.mobile.badge')}
               </span>
-              <h3 className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
+              <Heading as="h3" className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
                 {t('marketing.landing.preview.mobile.title')}
-              </h3>
-              <p className="mt-2 text-sm md:text-base text-lc-muted leading-relaxed">
+              </Heading>
+              <Text as="p" variant="muted" className="mt-2 md:text-base leading-relaxed">
                 {t('marketing.landing.preview.mobile.desc')}
-              </p>
+              </Text>
               <span className="mt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
                 {t('marketing.landing.preview.mobile.cta')}
                 <span aria-hidden="true">→</span>
@@ -102,6 +104,6 @@ export default function PreviewSection({ onLaunch }: { onLaunch: () => void }) {
           </Button>
         </div>
       </div>
-    </RevealSection>
+    </Reveal>
   );
 }
