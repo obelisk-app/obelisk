@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import type { MessageRowActions } from '@/hooks/shell/panes/message/useMessageRowActions';
 import RemoteImage from '@/components/ui/media/RemoteImage';
+import { useMessageToolbar } from '@/hooks/shell/panes/message/useMessageToolbar';
 
 /**
  * One slot of the message hover toolbar: a ghost icon Button at a fixed
@@ -36,6 +37,7 @@ export function MessageToolbar({
   onReply: (m: JsMessage) => void;
 }) {
   const t = useTranslations();
+  const vm = useMessageToolbar({ msg, actions, closeAll, toggleMenu, onForward, onReply });
   return (
     <div
       role="toolbar"
@@ -46,25 +48,22 @@ export function MessageToolbar({
       }
       data-testid="message-toolbar"
     >
-      {actions.quick3.map((e) => {
-        const mine = actions.myReactedEmojis.has(e.char);
-        return (
-          <Button
-            key={e.char}
-            variant="ghost"
-            size="icon"
-            onClick={() => { actions.reactWith(e); closeAll(); }}
-            disabled={mine}
-            className={`${TOOLBAR_BTN} text-lg`}
-            title={mine ? t('shell.desktop.reactions.alreadyReacted') : t('shell.desktop.reactions.reactEmoji', { emoji: e.char })}
-            data-testid="message-quick-reaction"
-          >
-            {e.url
-              ? <RemoteImage src={e.url} alt={e.char} className="h-5 w-5 object-contain" />
-              : <span className="leading-none">{e.char}</span>}
-          </Button>
-        );
-      })}
+      {vm.slots.map(({ emoji: e, mine }) => (
+        <Button
+          key={e.char}
+          variant="ghost"
+          size="icon"
+          onClick={() => vm.react(e)}
+          disabled={mine}
+          className={`${TOOLBAR_BTN} text-lg`}
+          title={mine ? t('shell.desktop.reactions.alreadyReacted') : t('shell.desktop.reactions.reactEmoji', { emoji: e.char })}
+          data-testid="message-quick-reaction"
+        >
+          {e.url
+            ? <RemoteImage src={e.url} alt={e.char} className="h-5 w-5 object-contain" />
+            : <span className="leading-none">{e.char}</span>}
+        </Button>
+      ))}
       <Button
         variant="ghost"
         size="icon"
@@ -80,7 +79,7 @@ export function MessageToolbar({
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => { onReply(msg); closeAll(); }}
+        onClick={vm.reply}
         className={TOOLBAR_BTN}
         title={t('shell.desktop.message.reply')}
         aria-label={t('shell.desktop.message.reply')}
@@ -91,7 +90,7 @@ export function MessageToolbar({
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => { onForward(); closeAll(); }}
+        onClick={vm.forward}
         className={TOOLBAR_BTN}
         title={t('chat.message.forward')}
         aria-label={t('chat.message.forward')}
@@ -103,10 +102,7 @@ export function MessageToolbar({
         ref={moreBtnRef}
         variant="ghost"
         size="icon"
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleMenu();
-        }}
+        onClick={vm.more}
         className={`${TOOLBAR_BTN} ${menuOpen ? 'bg-lc-green/15 text-lc-white' : ''}`}
         title={t('shell.desktop.message.moreActions')}
         aria-label={t('shell.desktop.message.moreActions')}

@@ -1,43 +1,26 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useToastStore } from '@/store/feedback/toast';
 import { useTranslations } from 'next-intl';
 import { CloseIcon } from '@/components/ui/icons/icons';
+import { useToastStack } from '@/hooks/feedback/useToastStack';
 
-const AUTO_DISMISS_MS = 5000;
-
+/** The toasts at the top right; each closes on its own after five seconds. */
 export default function ToastStack() {
   const t = useTranslations();
-  const toasts = useToastStore((s) => s.toasts);
-  const dismissToast = useToastStore((s) => s.dismissToast);
+  const vm = useToastStack();
 
-  useEffect(() => {
-    if (toasts.length === 0) return;
-    const timers = toasts.map((t) => {
-      const remaining = Math.max(0, AUTO_DISMISS_MS - (Date.now() - t.createdAt));
-      return window.setTimeout(() => dismissToast(t.id), remaining);
-    });
-    return () => {
-      timers.forEach((id) => window.clearTimeout(id));
-    };
-  }, [toasts, dismissToast]);
-
-  if (toasts.length === 0) return null;
+  if (vm.toasts.length === 0) return null;
 
   return (
     <div
       className="fixed top-4 right-4 z-[60] flex flex-col gap-2 max-w-sm w-[calc(100vw-2rem)] sm:w-96"
       data-testid="toast-stack"
     >
-      {toasts.map((toast) => (
+      {vm.toasts.map((toast) => (
         <button
           key={toast.id}
           type="button"
-          onClick={() => {
-            toast.onClick?.();
-            dismissToast(toast.id);
-          }}
+          onClick={() => vm.open(toast)}
           className="lc-card text-left px-4 py-3 shadow-lg border border-lc-border hover:border-lc-green/50 transition-colors cursor-pointer group"
           data-testid="toast"
         >
@@ -50,10 +33,7 @@ export default function ToastStack() {
               role="button"
               aria-label={t('common.dismiss')}
               tabIndex={-1}
-              onClick={(e) => {
-                e.stopPropagation();
-                dismissToast(toast.id);
-              }}
+              onClick={(e) => vm.dismiss(e, toast.id)}
               className="text-lc-muted hover:text-lc-white shrink-0"
               data-testid="toast-dismiss"
             >

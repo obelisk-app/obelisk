@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { useConfiguredRelays, type JsGroup } from '@/services/nostr-bridge';
+import type { JsGroup } from '@/services/nostr-bridge';
 import type { ChannelLayout } from '@/services/relay/channel-layout';
 import type { RelayBranding } from '@/services/relay/relay-branding';
 import type { RelayEmojiSet } from '@/services/relay/relay-emojis';
@@ -12,6 +11,7 @@ import RelayRolesAdminModal from '@/components/admin/relay-roles/RelayRolesAdmin
 import { ManageLayoutModal } from '../../modals/layout/ManageLayoutModal';
 import { RelayBrandingModal } from '../../modals/relay/RelayBrandingModal';
 import { RelaySettingsModal } from '../../modals/relay/RelaySettingsModal';
+import { useRelayAdminModals } from '@/hooks/shell/panes/sidebar/useRelayAdminModals';
 
 type Props = {
   relay: string;
@@ -30,55 +30,50 @@ type Props = {
 export function RelayAdminModals({
   relay, isRelayOperator, settingsOpen, onCloseSettings, layout, channels, branding, emojiSet, relayRoles,
 }: Props) {
-  const [layoutOpen, setLayoutOpen] = useState(false);
-  const [brandingOpen, setBrandingOpen] = useState(false);
-  const [emojisOpen, setEmojisOpen] = useState(false);
-  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
-  const [rolesOpen, setRolesOpen] = useState(false);
-  const configuredRelays = useConfiguredRelays();
+  const vm = useRelayAdminModals();
   return (
     <>
       {settingsOpen && isRelayOperator && (
         <RelaySettingsModal
           onClose={onCloseSettings}
-          onBranding={() => setBrandingOpen(true)}
-          onEmojis={() => setEmojisOpen(true)}
-          onLayout={() => setLayoutOpen(true)}
-          onMembers={() => setAdminPanelOpen(true)}
-          onRoles={() => setRolesOpen(true)}
+          onBranding={() => vm.open('branding')}
+          onEmojis={() => vm.open('emojis')}
+          onLayout={() => vm.open('layout')}
+          onMembers={() => vm.open('members')}
+          onRoles={() => vm.open('roles')}
         />
       )}
-      {layoutOpen && relay && isRelayOperator && (
+      {vm.opened.layout && relay && isRelayOperator && (
         <ManageLayoutModal
           relayUrl={relay}
           layout={layout}
           channels={channels}
-          onClose={() => setLayoutOpen(false)}
+          onClose={() => vm.close('layout')}
         />
       )}
-      {brandingOpen && relay && isRelayOperator && (
+      {vm.opened.branding && relay && isRelayOperator && (
         <RelayBrandingModal
           relayUrl={relay}
           branding={branding}
-          onClose={() => setBrandingOpen(false)}
+          onClose={() => vm.close('branding')}
         />
       )}
-      {emojisOpen && relay && isRelayOperator && (
+      {vm.opened.emojis && relay && isRelayOperator && (
         <RelayEmojiAdminModal
           relayUrl={relay}
           emojiSet={emojiSet}
-          configuredRelays={configuredRelays}
-          onClose={() => setEmojisOpen(false)}
+          configuredRelays={vm.configuredRelays}
+          onClose={() => vm.close('emojis')}
         />
       )}
-      {adminPanelOpen && isRelayOperator && (
-        <RelayAdminPanel onClose={() => setAdminPanelOpen(false)} />
+      {vm.opened.members && isRelayOperator && (
+        <RelayAdminPanel onClose={() => vm.close('members')} />
       )}
-      {rolesOpen && relay && isRelayOperator && (
+      {vm.opened.roles && relay && isRelayOperator && (
         <RelayRolesAdminModal
           relayUrl={relay}
           roles={relayRoles}
-          onClose={() => setRolesOpen(false)}
+          onClose={() => vm.close('roles')}
         />
       )}
     </>

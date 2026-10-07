@@ -1,11 +1,12 @@
 'use client';
 
 import { useRef } from 'react';
-import { CR_SIZES, type CRSizeKey } from '@/lib/games/chain-reaction/chain-reaction';
+import { CR_SIZES } from '@/lib/games/chain-reaction/chain-reaction';
 import { useTranslations } from 'next-intl';
 import FileInput from '@/components/ui/forms/FileInput';
 import Input from '@/components/ui/forms/Input';
 import type { NewGameForm } from '@/hooks/games/new-game/useNewGameForm';
+import { useGameSetupOptions } from '@/hooks/games/new-game/useGameSetupOptions';
 import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 
@@ -13,7 +14,7 @@ import Button from '@/components/ui/buttons/Button';
 export default function GameSetupOptions({ form }: { form: NewGameForm }) {
   const t = useTranslations();
   const fileRef = useRef<HTMLInputElement>(null);
-  const { selected, size, setSize, seed, setSeed, editVestaSeed, resume, loadSave } = form;
+  const { selected, size, setSize, seed, setSeed, editVestaSeed, resume, sizes, pickSave } = useGameSetupOptions(form);
   if (!selected) return null;
   return (
     <>
@@ -21,7 +22,7 @@ export default function GameSetupOptions({ form }: { form: NewGameForm }) {
         <>
           <Text as="p" size="10" variant="label" tone="muted" className="mt-4">{t('games.board')}</Text>
           <div className="mt-1 grid grid-cols-3 gap-2">
-            {(Object.keys(CR_SIZES) as CRSizeKey[]).map((key) => (
+            {sizes.map((key) => (
               <button
                 key={key}
                 type="button"
@@ -78,11 +79,7 @@ export default function GameSetupOptions({ form }: { form: NewGameForm }) {
             ref={fileRef}
             accept=".json,application/json"
             aria-label={t('games.loadVesta')}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void loadSave(file);
-              e.target.value = '';
-            }}
+            onChange={pickSave}
             data-testid="vesta-import-input"
           />
           <Button

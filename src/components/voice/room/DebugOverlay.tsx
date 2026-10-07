@@ -1,22 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { VoiceMetrics } from '@/services/voice/metrics';
-import type { VoiceDebugEvent } from '@/services/voice/debug';
 import { useTranslations } from 'next-intl';
-
-const REFRESH_MS = 500;
-const SHOW_EVENTS = 50;
-
-interface DebugBag {
-  events: VoiceDebugEvent[];
-  metrics: VoiceMetrics | null;
-}
-
-function readBag(): DebugBag | null {
-  if (typeof window === 'undefined') return null;
-  return (window as unknown as { __obeliskVoiceDebug?: DebugBag }).__obeliskVoiceDebug ?? null;
-}
+import { useDebugOverlay } from '@/hooks/voice/room/useDebugOverlay';
+import DebugSection from './DebugSection';
+import DebugRow from './DebugRow';
 
 /**
  * Floating diagnostic panel for the mesh voice layer. Mounted by
@@ -39,16 +26,7 @@ function readBag(): DebugBag | null {
  */
 export function DebugOverlay() {
   const t = useTranslations();
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const id = window.setInterval(() => setTick((t) => t + 1), REFRESH_MS);
-    return () => window.clearInterval(id);
-  }, []);
-
-  const bag = readBag();
-  const metrics = bag?.metrics;
-  const events = bag?.events.slice(-SHOW_EVENTS).reverse() ?? [];
+  const { tick, metrics, events } = useDebugOverlay();
 
   return (
     <div
@@ -75,63 +53,63 @@ export function DebugOverlay() {
       {!metrics && <div style={{ color: '#a3a3a3' }}>{t('voice.voiceDebug.noClient')}</div>}
       {metrics && (
         <>
-          <Section title={t('voice.voiceDebug.peers')}>
-            <Row k="connected" v={metrics.peers.connected} />
-            <Row k="ever" v={metrics.peers.ever} />
-            <Row k="tornDown" v={metrics.peers.tornDown} />
-            <Row k="byUnload" v={metrics.peers.tornDownByUnload} />
-            <Row k="iceExhausted" v={metrics.peers.iceExhausted} />
-          </Section>
-          <Section title={t('voice.voiceDebug.controlChannel')}>
-            <Row k="opened" v={metrics.controlChannel.opened} />
-            <Row k="ping" v={`${metrics.controlChannel.pingSent}/${metrics.controlChannel.pongRcvd}`} />
-            <Row k="lastRtt" v={metrics.controlChannel.lastRttMs ?? '-'} />
-          </Section>
-          <Section title={t('voice.voiceDebug.discovery')}>
-            <Row k="viaRelay" v={metrics.transitive.discoveredViaRelay} />
-            <Row k="viaControl" v={metrics.transitive.discoveredViaControl} />
-          </Section>
-          <Section title={t('voice.voiceDebug.signals')}>
-            <Row k="sent/rcvd" v={`${metrics.signals.sent}/${metrics.signals.rcvd}`} />
-            <Row k="bye-control" v={metrics.signals.byeViaControl} />
-            <Row k="bye-relay" v={metrics.signals.byeViaRelay} />
-          </Section>
-          <Section title={t('voice.voiceDebug.dropped')}>
-            <Row k="wot" v={metrics.signalsDropped.wot} highlight={metrics.signalsDropped.wot > 0} />
-            <Row k="membFinal" v={metrics.signalsDropped.membershipFinal} highlight={metrics.signalsDropped.membershipFinal > 0} />
-            <Row k="membDefer" v={metrics.signalsDropped.membershipDeferred} />
-            <Row k="overflow" v={metrics.signalsDropped.deferredOverflow} highlight={metrics.signalsDropped.deferredOverflow > 0} />
-            <Row k="notForMe" v={metrics.signalsDropped.notForMe} />
-          </Section>
-          <Section title={t('voice.voiceDebug.relay')}>
-            <Row k="beacons s/r" /* i18n-exempt: metric name, developer-only ?debug=voice overlay */ v={`${metrics.beacons.sent}/${metrics.beacons.rcvd}`} />
-            <Row k="publishFail" v={metrics.relay.publishFail} highlight={metrics.relay.publishFail > 0} />
-            <Row k="auth wait/timeout" /* i18n-exempt: metric name, developer-only ?debug=voice overlay */ v={`${metrics.relay.authWaited}/${metrics.relay.authTimedOut}`} />
+          <DebugSection title={t('voice.voiceDebug.peers')}>
+            <DebugRow k="connected" v={metrics.peers.connected} />
+            <DebugRow k="ever" v={metrics.peers.ever} />
+            <DebugRow k="tornDown" v={metrics.peers.tornDown} />
+            <DebugRow k="byUnload" v={metrics.peers.tornDownByUnload} />
+            <DebugRow k="iceExhausted" v={metrics.peers.iceExhausted} />
+          </DebugSection>
+          <DebugSection title={t('voice.voiceDebug.controlChannel')}>
+            <DebugRow k="opened" v={metrics.controlChannel.opened} />
+            <DebugRow k="ping" v={`${metrics.controlChannel.pingSent}/${metrics.controlChannel.pongRcvd}`} />
+            <DebugRow k="lastRtt" v={metrics.controlChannel.lastRttMs ?? '-'} />
+          </DebugSection>
+          <DebugSection title={t('voice.voiceDebug.discovery')}>
+            <DebugRow k="viaRelay" v={metrics.transitive.discoveredViaRelay} />
+            <DebugRow k="viaControl" v={metrics.transitive.discoveredViaControl} />
+          </DebugSection>
+          <DebugSection title={t('voice.voiceDebug.signals')}>
+            <DebugRow k="sent/rcvd" v={`${metrics.signals.sent}/${metrics.signals.rcvd}`} />
+            <DebugRow k="bye-control" v={metrics.signals.byeViaControl} />
+            <DebugRow k="bye-relay" v={metrics.signals.byeViaRelay} />
+          </DebugSection>
+          <DebugSection title={t('voice.voiceDebug.dropped')}>
+            <DebugRow k="wot" v={metrics.signalsDropped.wot} highlight={metrics.signalsDropped.wot > 0} />
+            <DebugRow k="membFinal" v={metrics.signalsDropped.membershipFinal} highlight={metrics.signalsDropped.membershipFinal > 0} />
+            <DebugRow k="membDefer" v={metrics.signalsDropped.membershipDeferred} />
+            <DebugRow k="overflow" v={metrics.signalsDropped.deferredOverflow} highlight={metrics.signalsDropped.deferredOverflow > 0} />
+            <DebugRow k="notForMe" v={metrics.signalsDropped.notForMe} />
+          </DebugSection>
+          <DebugSection title={t('voice.voiceDebug.relay')}>
+            <DebugRow k="beacons s/r" /* i18n-exempt: metric name, developer-only ?debug=voice overlay */ v={`${metrics.beacons.sent}/${metrics.beacons.rcvd}`} />
+            <DebugRow k="publishFail" v={metrics.relay.publishFail} highlight={metrics.relay.publishFail > 0} />
+            <DebugRow k="auth wait/timeout" /* i18n-exempt: metric name, developer-only ?debug=voice overlay */ v={`${metrics.relay.authWaited}/${metrics.relay.authTimedOut}`} />
             {metrics.relay.lastError && (
-              <Row k="lastErr" v={metrics.relay.lastError.slice(0, 40)} highlight />
+              <DebugRow k="lastErr" v={metrics.relay.lastError.slice(0, 40)} highlight />
             )}
-          </Section>
-          <Section title={t('voice.voiceDebug.rateLimit')}>
-            <Row k="hit" v={metrics.rateLimit.hit} highlight={metrics.rateLimit.hit > 0} />
-            <Row k="backoff" v={`${metrics.rateLimit.backoffMs}ms`} />
-          </Section>
-          <Section title={t('voice.voiceDebug.sfuReliability')}>
-            <Row
+          </DebugSection>
+          <DebugSection title={t('voice.voiceDebug.rateLimit')}>
+            <DebugRow k="hit" v={metrics.rateLimit.hit} highlight={metrics.rateLimit.hit > 0} />
+            <DebugRow k="backoff" v={`${metrics.rateLimit.backoffMs}ms`} />
+          </DebugSection>
+          <DebugSection title={t('voice.voiceDebug.sfuReliability')}>
+            <DebugRow
               k="retries"
               v={metrics.sfuReliability.consumeRetries}
               highlight={metrics.sfuReliability.consumeRetries > 0}
             />
-            <Row
+            <DebugRow
               k="stale"
               v={metrics.sfuReliability.staleConsumer}
               highlight={metrics.sfuReliability.staleConsumer > 0}
             />
-            <Row
+            <DebugRow
               k="failed"
               v={metrics.sfuReliability.consumeFailed}
               highlight={metrics.sfuReliability.consumeFailed > 0}
             />
-          </Section>
+          </DebugSection>
         </>
       )}
       <div style={{ fontWeight: 600, marginTop: 8, marginBottom: 4 }}>{t('voice.voiceDebug.events')}</div>
@@ -149,24 +127,6 @@ export function DebugOverlay() {
           ) : null}
         </div>
       ))}
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginTop: 6 }}>
-      <div style={{ color: '#fafafa', fontWeight: 500 }}>{title}</div>
-      {children}
-    </div>
-  );
-}
-
-function Row({ k, v, highlight }: { k: string; v: number | string; highlight?: boolean }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', color: highlight ? '#ef4444' : '#a3a3a3' }}>
-      <span>{k}</span>
-      <span>{String(v)}</span>
     </div>
   );
 }

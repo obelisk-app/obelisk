@@ -13,6 +13,7 @@ import {
   useLockedDmCount,
   useUnreadMentionCount,
 } from '@/hooks/notifications/useNotificationSelectors';
+import { inboxTabs, type NotifTab } from '@/utils/shell/panes/topbar/inbox-tabs';
 
 /**
  * Close a popover on a click outside it (or its trigger) and on Escape.
@@ -42,7 +43,7 @@ export function useDismissOnOutside(
   }, [open, setOpen, popoverAttr, triggerAttr]);
 }
 
-export type NotifTab = 'mentions' | 'dms';
+export type { NotifTab };
 
 /**
  * The bell's two independent streams, see `src/store/notifications/index.ts`.
@@ -88,6 +89,8 @@ export function useInboxStreams(relay: string) {
     notifTab, setNotifTab,
     mentions, mentionCursor, dmNotifications, dmCursor,
     unreadMentions, unreadDms, unreadInboxCount, lockedDms,
+    /** The two tabs with their unread counts. */
+    tabs: inboxTabs(unreadMentions, unreadDms),
     tabItems: notifTab === 'mentions' ? mentions : dmNotifications,
     /** The open tab has something to list: cards, or the locked DMs row. */
     tabHasItems: notifTab === 'mentions' ? mentions.length > 0 : dmNotifications.length > 0 || lockedDms > 0,

@@ -11,33 +11,20 @@
  *
  * Authorization: `useVoiceRoomGate` subscribes to NIP-29 admins (39001)
  * and members (39002). The layout rules are the pure functions in
- * `room/stage-layout.ts`.
+ * `stage-layout.ts`; the state and layout come from `useVoiceRoom`.
  */
-import { useMemo, useRef, useState } from 'react';
-import { useRouter } from '@/i18n/navigation';
-import type { VoiceClient } from '@/services/voice/client';
-import type { VoiceErrorCode } from '@/services/voice/errors';
-import { useVoiceStore } from '@/store/voice';
-import { useActiveCall, useGroups, useCurrentRelayUrl, useMyLoginMethod } from '@/services/nostr-bridge';
-import { shouldUseSfuTopology } from '@/services/voice/topology';
 import VoiceControls from '../controls/VoiceControls';
 import { DebugOverlay } from './DebugOverlay';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
-import { CenteredPanel, Spinner, StageBackdrop } from './chrome';
-import { MeshSyncStatusPill, RoomHeader } from './header';
+import CenteredPanel from './CenteredPanel';
+import Spinner from './RoomSpinner';
+import StageBackdrop from './StageBackdrop';
+import MeshSyncStatusPill from './MeshSyncStatusPill';
+import RoomHeader from './RoomHeader';
 import { JoinLanding } from './JoinLanding';
 import { StageArea } from './StageArea';
-import { useVoiceRoomGate } from '@/hooks/voice/room/useVoiceRoomGate';
-import { useVoiceRoomClient } from '@/hooks/voice/room/useVoiceRoomClient';
-import { useStagePin } from '@/hooks/voice/room/useStagePin';
-import {
-  countMeshSyncing,
-  groupTracksByPubkey,
-  listScreenSharers,
-  resolveStage,
-  splitParticipants,
-} from '@/utils/voice/stage-layout';
+import { useVoiceRoom } from '@/hooks/voice/room/useVoiceRoom';
 
 // `MeshSyncStatusPill` keeps its historical import path.
 export { MeshSyncStatusPill };
@@ -52,58 +39,8 @@ interface Props {
 
 export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen, onToggleChat }: Props) {
   const t = useTranslations();
-  const router = useRouter();
-  const groups = useGroups();
-  const currentRelayUrl = useCurrentRelayUrl();
-  const loginMethod = useMyLoginMethod();
-  const channelKind = useMemo(
-    () => groups.find((g) => g.id === channelId)?.kind ?? null,
-    [groups, channelId],
-  );
-  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
-  const activeCall = useActiveCall(channelId);
-  const expectSfu = useMemo(
-    () => shouldUseSfuTopology(channelKind, activeCall?.mode),
-    [channelKind, activeCall?.mode],
-  );
-  // Shared by the gate (which pushes role changes into the running client)
-  // and the client hook (which owns it).
-  const clientRef = useRef<VoiceClient | null>(null);
-  const [error, setError] = useState<VoiceErrorCode | null>(null);
-
-  const { gate, selfPubkey } = useVoiceRoomGate(channelId, clientRef, setError);
-  const {
-    joined, join, leave, participants, remoteTracks, peerConnectionStates, local, localVideo, sfuStatus,
-  } = useVoiceRoomClient({ channelId, clientRef, gate, expectSfu, activeCall, currentRelayUrl, loginMethod, setError });
-
-  const [pinned, setPinned] = useStagePin(joined);
-
-  const tracksByPubkey = useMemo(() => groupTracksByPubkey(remoteTracks), [remoteTracks]);
-
-  // Keyed on the track, so toggling the mic no longer re-binds the camera preview.
-  const localCamStream = useMemo(
-    () => (localVideo.camera ? new MediaStream([localVideo.camera]) : null),
-    [localVideo.camera],
-  );
-  const localScreenStream = useMemo(
-    () => (localVideo.screen ? new MediaStream([localVideo.screen]) : null),
-    [localVideo.screen],
-  );
-
-  const { videoPubkeys, audioPubkeys } = splitParticipants({
-    selfPubkey, participants, localCamera: local.camera, tracks: tracksByPubkey,
-  });
-  const screenSharers = listScreenSharers({
-    selfPubkey, participants, localScreen: !!(local.screen && localScreenStream), tracks: tracksByPubkey,
-  });
-  const activeStage = useMemo(
-    () => resolveStage({ pinned, screenSharers, tracks: tracksByPubkey, selfPubkey, localCamStream, localScreenStream }),
-    [pinned, screenSharers, tracksByPubkey, selfPubkey, localCamStream, localScreenStream],
-  );
-  const meshSyncingCount = useMemo(
-    () => countMeshSyncing({ joined, expectSfu, participants, peerConnectionStates }),
-    [joined, expectSfu, participants, peerConnectionStates],
-  );
+  const vm = useVoiceRoom(channelId, channelName);
+  const { gate, error } = vm;
 
   if (gate.phase === 'init' || gate.phase === 'loading-roles') {
     return (
@@ -121,33 +58,22 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
         <div className="text-lg font-semibold">{t('voice.notMember')}</div>
         <div className="mt-2 text-sm text-neutral-400">{t('voice.notMemberHelp')}</div>
         <div className="mt-4 font-mono text-xs text-neutral-500 break-all">{channelId}</div>
-        <Button variant="pillSecondary" size="sm" className="mt-6" onClick={() => router.push('/app')}>
+        <Button variant="pillSecondary" size="sm" className="mt-6" onClick={vm.back}>
           {t('common.back')}
         </Button>
       </CenteredPanel>
     );
   }
 
-  const totalCount = participants.length + 1;
-  const displayName = channelName ?? `${channelId.slice(0, 16)}…`;
-  const passiveParticipantPubkeys = activeCall?.participantPubkeys ?? [];
-  const passiveCount = activeCall
-    ? Math.max(
-        activeCall.participantCount > 0 ? activeCall.participantCount : 0,
-        passiveParticipantPubkeys.length,
-      )
-    : 0;
-  const browsingWhileConnected = !!currentVoiceChannelId && currentVoiceChannelId !== channelId;
-
-  if (!joined) {
+  if (!vm.joined) {
     return (
       <JoinLanding
-        displayName={displayName}
-        activeCall={activeCall}
-        passiveCount={passiveCount}
-        passiveParticipantPubkeys={passiveParticipantPubkeys}
-        browsingWhileConnected={browsingWhileConnected}
-        onJoin={join}
+        displayName={vm.displayName}
+        activeCall={vm.activeCall}
+        passiveCount={vm.passiveCount}
+        passiveParticipantPubkeys={vm.passiveParticipantPubkeys}
+        browsingWhileConnected={vm.browsingWhileConnected}
+        onJoin={vm.join}
         error={error}
         chatSlot={chatSlot}
         isChatOpen={isChatOpen}
@@ -155,30 +81,18 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
     );
   }
 
-  const debugOverlay = typeof window !== 'undefined'
-    && new URLSearchParams(window.location.search).get('debug') === 'voice';
-
   return (
     <div className="relative flex-1 flex min-h-0 p-2 sm:p-3 gap-2" data-testid="voice-channel">
-      {debugOverlay && <DebugOverlay />}
+      {vm.debugOverlay && <DebugOverlay />}
       <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden rounded-2xl border border-lc-border bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-800 shadow-2xl">
         <StageBackdrop />
-        <RoomHeader name={displayName} count={totalCount} sfuStatus={sfuStatus} meshSyncingCount={meshSyncingCount} />
+        <RoomHeader name={vm.displayName} count={vm.totalCount} sfuStatus={vm.sfuStatus} meshSyncingCount={vm.meshSyncingCount} />
 
-        <StageArea
-          activeStage={activeStage}
-          pinned={pinned}
-          setPinned={setPinned}
-          videoPubkeys={videoPubkeys}
-          audioPubkeys={audioPubkeys}
-          selfPubkey={selfPubkey}
-          localCamStream={localCamStream}
-          tracksByPubkey={tracksByPubkey}
-        />
+        <StageArea {...vm.stage} />
 
         {/* Floating control pill */}
         <div className="absolute left-0 right-0 bottom-3 sm:bottom-4 z-20 flex justify-center pointer-events-none px-2">
-          <VoiceControls onLeave={leave} isChatOpen={isChatOpen} onToggleChat={onToggleChat} />
+          <VoiceControls onLeave={vm.leave} isChatOpen={isChatOpen} onToggleChat={onToggleChat} />
         </div>
       </div>
 

@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { useVoiceStatusBar } from '@/hooks/voice/status-bar/useVoiceStatusBar';
 import { useVoiceStore } from '@/store/voice';
+import { setActiveVoiceClient } from '@/services/voice/active-client';
+import type { VoiceClient } from '@/services/voice/client';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { groupFixture } from '@tests/support/mocks/nostr-bridge';
@@ -23,7 +25,9 @@ beforeEach(() => {
 });
 afterEach(() => {
   nav.mediaDevices = prevDevices;
+  setActiveVoiceClient(null);
   useVoiceStore.getState().leaveVoice();
+  vi.restoreAllMocks();
 });
 
 describe('useVoiceStatusBar', () => {
@@ -63,5 +67,25 @@ describe('useVoiceStatusBar', () => {
     const { result } = render();
     result.current.jump();
     expect(jump).not.toHaveBeenCalled();
+  });
+
+  it('deafens and reports a mic that will not stop instead of rejecting, like the control bar', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    const client = {
+      setDeafenEnabled: vi.fn(),
+      setMicEnabled: vi.fn(async () => { throw new Error('stuck'); }),
+    };
+    setActiveVoiceClient(client as unknown as VoiceClient);
+    useVoiceStore.setState({ isMuted: false, isDeafened: false });
+    const { result } = render();
+    act(() => { result.current.toggleDeafen(); });
+    expect(client.setDeafenEnabled).toHaveBeenCalledWith(true);
+    await waitFor(() => expect(warn).toHaveBeenCalledWith('[voice] mic did not stop on deafen', expect.any(Error)));
+    await new Promise((r) => setTimeout(r, 0));
+    process.off('unhandledRejection', unhandled);
+    expect(unhandled).not.toHaveBeenCalled();
+    expect(useVoiceStore.getState().isDeafened).toBe(true);
   });
 });

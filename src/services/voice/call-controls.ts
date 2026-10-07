@@ -49,6 +49,16 @@ export async function toggleVoiceDeafen(isDeafened: boolean, isMuted: boolean): 
   if (next && !isMuted) await client.setMicEnabled(false);
 }
 
+/**
+ * `toggleVoiceDeafen` as both control bars run it. Deafen is already
+ * applied when the mic stop fails; a mic that will not stop is the one
+ * thing worth hearing about, since it stays live, so it is warned about and
+ * never left as an unhandled rejection.
+ */
+export function toggleVoiceDeafenWarned(isDeafened: boolean, isMuted: boolean): Promise<void> {
+  return toggleVoiceDeafen(isDeafened, isMuted).catch((e) => console.warn('[voice] mic did not stop on deafen', e));
+}
+
 export function toggleVoiceCamera(isCameraOn: boolean): Promise<void> {
   return runMediaToggle((c) => c.setCameraEnabled(!isCameraOn), 'camera');
 }

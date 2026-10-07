@@ -83,9 +83,9 @@ describe('desktop navigation invariants', () => {
     // find out what it would do.
     expect(read('desktop/DesktopDrawer.tsx')).toContain('onPickFeed={onToggleFeed}');
     expect(shell).not.toContain('cycleFeed');
-    const readerPane = read('panes/reader/ReaderPane.tsx');
-    expect(readerPane).toContain('feed-pane-expand');
-    expect(readerPane).toContain('feed-pane-close');
+    const feedActions = read('panes/reader/FeedPaneActions.tsx');
+    expect(feedActions).toContain('feed-pane-expand');
+    expect(feedActions).toContain('feed-pane-close');
   });
 
   it('threads open in a side pane on desktop, not a modal', () => {

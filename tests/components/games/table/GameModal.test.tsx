@@ -52,7 +52,9 @@ vi.mock('@/components/games/chain-reaction/ChainReactionBoard', () => ({
   SEAT_COLORS: [{ hex: '#ff4d5e', dot: '' }, { hex: '#b4f953', dot: '' }],
 }));
 
-const GameModal = (await import('@/components/games/table/GameModal')).default;
+const GameModal = (await import('@/components/games/table/GameTableModal')).default;
+const { GameModalHost } = await import('@/components/games/table/GameModal');
+const { useGamesStore } = await import('@/store/games');
 
 function finishedTable(): GameSession {
   return {
@@ -127,5 +129,35 @@ describe('GameModal chrome', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Loading the table from the relay');
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(onClose).toHaveBeenCalledOnce();
+  });
+});
+
+describe('GameModalHost', () => {
+  afterEach(() => { act(() => useGamesStore.getState().setOpenGame(null)); });
+
+  it('mounts nothing while no table is open', () => {
+    renderLocalized(<GameModalHost />);
+    expect(screen.queryByTestId('game-modal')).toBeNull();
+  });
+
+  it('mounts the open table and closes it through the store', () => {
+    session = finishedTable();
+    act(() => useGamesStore.getState().setOpenGame('table-1'));
+    renderLocalized(<GameModalHost />);
+    expect(screen.getByTestId('game-modal-title')).toHaveTextContent('Chain Reaction');
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(useGamesStore.getState().openGameId).toBeNull();
+    expect(screen.queryByTestId('game-modal')).toBeNull();
+  });
+});
+
+describe('GameModal fullscreen', () => {
+  it('switches the header button between entering and leaving fullscreen', () => {
+    session = finishedTable();
+    renderLocalized(<GameModal gameId="table-1" onClose={() => {}} />);
+    const button = screen.getByTestId('game-fullscreen');
+    const before = button.getAttribute('aria-label');
+    fireEvent.click(button);
+    expect(screen.getByTestId('game-fullscreen').getAttribute('aria-label')).not.toBe(before);
   });
 });

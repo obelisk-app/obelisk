@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useCreateChannelForm } from '@/hooks/chat/channel/useCreateChannelForm';
+import { useCreateGroupSection } from '@/hooks/shell/panes/sidebar/useCreateGroupSection';
 import Input from '@/components/ui/forms/Input';
 import Button from '@/components/ui/buttons/Button';
 import { CloseIcon } from '@/components/ui/icons/icons';
+import { PlusGlyph } from './PlusGlyph';
 
 /**
  * Desktop skin of the new-channel form: a `+` in the channels header that
@@ -14,15 +14,7 @@ import { CloseIcon } from '@/components/ui/icons/icons';
  */
 export function CreateGroupSection({ count, onCreated }: { count: number; onCreated: (groupId: string) => void }) {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
-  const form = useCreateChannelForm((id) => {
-    setOpen(false);
-    onCreated(id);
-  });
-  const toggle = () => {
-    if (open) form.reset();
-    setOpen((v) => !v);
-  };
+  const { open, form, toggle } = useCreateGroupSection(onCreated);
   const toggleLabel = open ? t('common.cancel') : t('shell.channel.create.submit');
 
   return (
@@ -61,14 +53,5 @@ export function CreateGroupSection({ count, onCreated }: { count: number; onCrea
         </form>
       )}
     </div>
-  );
-}
-
-/** A plus at the icon set's size and stroke; `icons.tsx` has no `PlusIcon` yet. */
-function PlusGlyph() {
-  return (
-    <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden="true" focusable="false">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
   );
 }

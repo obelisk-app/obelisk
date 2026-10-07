@@ -3,7 +3,7 @@
 /**
  * The hint itself: a small card pinned to the control it explains.
  *
- * Positioning is the same solved problem as `AnchoredMenu`: portal to
+ * Positioning (`useHintCallout`) is the same solved problem as `AnchoredMenu`: portal to
  * `document.body`, `position: fixed` measured from the anchor's rect,
  * prefer below and flip above when there's no room, clamp to the viewport,
  * stay invisible until measured so it never flashes in the wrong place.
@@ -26,18 +26,11 @@
  * lockout. Someone who wants to keep working can.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import Text from '@/components/ui/layout/Text';
-import { useDismiss } from '@/hooks/common/useDismiss';
-
-/** Keeps the card off the viewport edges. */
-const MARGIN = 8;
-const WIDTH = 264;
-/** Breathing room between the card and the control it points at. */
-const GAP = 10;
+import { HINT_CARD_WIDTH, useHintCallout } from '@/hooks/hints/useHintCallout';
 
 export default function HintCallout({
   anchor,
@@ -53,43 +46,9 @@ export default function HintCallout({
   onMuteAll: () => void;
 }) {
   const t = useTranslations();
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; below: boolean } | null>(null);
+  const { cardRef, pos, canPortal } = useHintCallout(anchor, title, body, onDismiss);
 
-  const place = useCallback(() => {
-    const rect = anchor.getBoundingClientRect();
-    const height = cardRef.current?.offsetHeight ?? 0;
-
-    const fitsBelow = rect.bottom + GAP + height < window.innerHeight - MARGIN;
-    const top = fitsBelow
-      ? rect.bottom + GAP
-      : Math.max(MARGIN, rect.top - height - GAP);
-
-    const centred = rect.left + rect.width / 2 - WIDTH / 2;
-    const left = Math.max(MARGIN, Math.min(centred, window.innerWidth - WIDTH - MARGIN));
-
-    setPos({ top: Math.max(MARGIN, top), left, below: fitsBelow });
-  }, [anchor]);
-
-  useLayoutEffect(() => {
-    place();
-  }, [place, title, body]);
-
-  useEffect(() => {
-    // `true` for the capture phase: the anchor may live inside a scroll
-    // container whose scroll events never reach the window.
-    window.addEventListener('scroll', place, true);
-    window.addEventListener('resize', place);
-    return () => {
-      window.removeEventListener('scroll', place, true);
-      window.removeEventListener('resize', place);
-    };
-  }, [place]);
-
-  // Escape only: a press outside lands on the scrim, which has its own handler.
-  useDismiss({ onDismiss, outside: 'none' });
-
-  if (typeof document === 'undefined') return null;
+  if (!canPortal) return null;
 
   return createPortal(
     <>
@@ -115,7 +74,7 @@ export default function HintCallout({
         style={{
           top: pos?.top ?? -9999,
           left: pos?.left ?? -9999,
-          width: WIDTH,
+          width: HINT_CARD_WIDTH,
           visibility: pos ? 'visible' : 'hidden',
         }}
         data-testid="hint-callout"

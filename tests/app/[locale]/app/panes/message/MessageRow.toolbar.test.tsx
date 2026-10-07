@@ -15,6 +15,7 @@ vi.mock('@/components/chat/message/MessageContent', () => ({
 
 const sendReaction = vi.fn();
 const sendMessage = vi.fn(async () => {});
+const setMuted = vi.fn(async () => {});
 vi.mock('@/services/nostr-bridge', async (orig) => {
   const actual = await orig<typeof import('@/services/nostr-bridge')>();
   const { bridgeOverrides, groupFixture, userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
@@ -39,7 +40,7 @@ vi.mock('@/services/nostr-bridge', async (orig) => {
         ensureUserMetadata: () => Promise.resolve(),
         removeReaction: vi.fn(),
         deleteGroupEvent: vi.fn(),
-        setMuted: vi.fn(),
+        setMuted: (...a: unknown[]) => setMuted(...(a as [])),
       },
     }),
   };
@@ -47,6 +48,8 @@ vi.mock('@/services/nostr-bridge', async (orig) => {
 
 import { MessageRow } from '@/app/[locale]/app/panes/message/MessageRow';
 import { __resetRecentEmojiSnapshotForTests, pushRecentEmoji } from '@/services/chat/picker/recent-emojis';
+import { useMessageZapStore } from '@/store/chat/message-zap';
+import { useToastStore } from '@/store/feedback/toast';
 
 const msg = {
   id: 'm'.repeat(64),
@@ -74,6 +77,8 @@ describe('message hover toolbar', () => {
     __resetRecentEmojiSnapshotForTests();
     sendReaction.mockClear();
     sendMessage.mockClear();
+    setMuted.mockClear();
+    useMessageZapStore.setState({ target: null });
   });
 
   it('has 7 controls: 3 recent reactions, add-reaction, reply, forward, more', () => {
@@ -164,5 +169,109 @@ describe('MessageRow memoization', () => {
     render(<LocaleProvider initialLocale="en"><Parent stableProps={false} /></LocaleProvider>);
     fireEvent.click(screen.getByTestId('force'));
     expect(contentRenders.count).toBe(2);
+  });
+});
+
+describe('message row menu and toolbar actions', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    __resetRecentEmojiSnapshotForTests();
+    sendReaction.mockClear();
+    setMuted.mockClear();
+    useMessageZapStore.setState({ target: null });
+  });
+
+  const openMenu = () => {
+    fireEvent.click(screen.getByTestId('message-more'));
+    return screen.getByTestId('message-menu');
+  };
+
+  it('the more button toggles the menu and marks itself expanded', () => {
+    renderRow();
+    expect(screen.getByTestId('message-more').getAttribute('aria-expanded')).toBe('false');
+    openMenu();
+    expect(screen.getByTestId('message-more').getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(screen.getByTestId('message-more'));
+    expect(screen.queryByTestId('message-menu')).toBeNull();
+  });
+
+  it('menu Reply replies and closes the menu', () => {
+    const onReply = vi.fn();
+    renderRow(onReply);
+    openMenu();
+    fireEvent.click(screen.getByTestId('message-menu-reply'));
+    expect(onReply).toHaveBeenCalledWith(msg);
+    expect(screen.queryByTestId('message-menu')).toBeNull();
+  });
+
+  it('menu Forward opens the forward dialog and closes the menu', () => {
+    renderRow();
+    openMenu();
+    fireEvent.click(screen.getByTestId('message-menu-forward'));
+    expect(screen.queryByTestId('message-menu')).toBeNull();
+    expect(screen.getByTestId('forward-target-there')).toBeInTheDocument();
+  });
+
+  it('a menu quick reaction reacts and closes everything', () => {
+    renderRow();
+    openMenu();
+    fireEvent.click(screen.getAllByTestId('message-menu-quick-reaction')[0]);
+    expect(sendReaction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('message-menu')).toBeNull();
+  });
+
+  it('menu Zap opens the zap dialog for the author and closes the menu', () => {
+    renderRow();
+    openMenu();
+    fireEvent.click(screen.getByTestId('message-menu-zap'));
+    expect(useMessageZapStore.getState().target).toMatchObject({ messageId: msg.id, recipientPubkey: msg.pubkey, groupId: 'here' });
+    expect(screen.queryByTestId('message-menu')).toBeNull();
+  });
+
+  it('menu Copy text copies, toasts and closes the menu', () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const before = useToastStore.getState().toasts.length;
+    renderRow();
+    openMenu();
+    fireEvent.click(screen.getByTestId('message-menu-copy-text'));
+    expect(writeText).toHaveBeenCalledWith('hello world');
+    expect(useToastStore.getState().toasts.length).toBe(before + 1);
+    expect(screen.queryByTestId('message-menu')).toBeNull();
+  });
+
+  it('menu Mute mutes the author and closes the menu', () => {
+    renderRow();
+    const menu = openMenu();
+    expect(within(menu).getByTestId('message-menu-mute').textContent).toContain('Mute user');
+    fireEvent.click(screen.getByTestId('message-menu-mute'));
+    expect(setMuted).toHaveBeenCalledWith(msg.pubkey, true);
+    expect(screen.queryByTestId('message-menu')).toBeNull();
+  });
+
+  it('toolbar Forward opens the forward dialog', () => {
+    renderRow();
+    fireEvent.click(screen.getByTestId('message-forward'));
+    expect(screen.getByTestId('forward-target-there')).toBeInTheDocument();
+  });
+
+  it('a click on the message body pins the toolbar open, and a second unpins it', () => {
+    renderRow();
+    const bar = screen.getByTestId('message-toolbar');
+    expect(bar.className).toContain('hidden');
+    fireEvent.click(screen.getByText('hello world'));
+    expect(bar.className).not.toContain('hidden');
+    fireEvent.click(screen.getByText('hello world'));
+    expect(bar.className).toContain('hidden');
+  });
+
+  it('a click on a button inside the body does not pin the toolbar', () => {
+    renderRow();
+    const bar = screen.getByTestId('message-toolbar');
+    const body = screen.getByText('hello world');
+    const inner = document.createElement('button');
+    body.appendChild(inner);
+    fireEvent.click(inner);
+    expect(bar.className).toContain('hidden');
   });
 });

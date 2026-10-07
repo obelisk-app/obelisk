@@ -1,23 +1,15 @@
 'use client';
 
-import type { GameState, HexCoord } from 'vesta';
-import type { GameSession } from '@/lib/games/session/session';
-import type { VestaAction } from '@/lib/games/vesta/definition';
 import VestaBoard from './VestaBoard';
 import VestaPlayers from './VestaPlayers';
 import VestaPrompts from './VestaPrompts';
 import VestaTurnActions from './VestaTurnActions';
 import VestaTradePanel from './VestaTradePanel';
-import { useVestaTurn } from '@/hooks/games/vesta/useVestaTurn';
+import { useVestaTable, type VestaTableInput } from '@/hooks/games/vesta/useVestaTable';
 import { useTranslations } from 'next-intl';
 
-export interface VestaTableProps {
-  session: GameSession;
-  state: GameState;
-  /** Seats this account may act for. Several means hot-seat on this machine. */
-  mySeats: string[];
+export interface VestaTableProps extends VestaTableInput {
   seatLabel: (seatId: string) => string;
-  onAction: (action: VestaAction, seat: string) => Promise<void>;
   busy?: boolean;
 }
 
@@ -30,33 +22,30 @@ export interface VestaTableProps {
  * Chain Reaction, because a rejected move over a relay is silent. If it is not
  * offered, it is not legal.
  */
-export default function VestaTable({ session, state, mySeats, seatLabel, onAction, busy }: VestaTableProps) {
+export default function VestaTable({ seatLabel, busy, ...input }: VestaTableProps) {
   const t = useTranslations();
-  const turn = useVestaTurn({ session, state, mySeats, onAction });
-  const { mode, send, myTurn, turnSeat } = turn;
+  const vm = useVestaTable(input);
+  const { state, mySeats } = input;
 
   return (
     <div className="space-y-3">
       <VestaBoard
         state={state}
-        mode={mode}
-        onPickVertex={(spot) => {
-          if (mode === 'city') void send({ type: 'place-city', ...spot } as VestaAction);
-          else void send({ type: 'place-settlement', ...spot } as VestaAction);
-        }}
-        onPickEdge={(edge) => void send({ type: 'place-road', ...edge } as VestaAction)}
-        onPickHex={(hex: HexCoord) => void send({ type: 'move-robber', q: hex.q, r: hex.r } as VestaAction)}
+        mode={vm.turn.mode}
+        onPickVertex={vm.pickVertex}
+        onPickEdge={vm.pickEdge}
+        onPickHex={vm.pickHex}
       />
 
-      <VestaPlayers state={state} mySeats={mySeats} seatLabel={seatLabel} turn={turn} />
-      <VestaPrompts state={state} seatLabel={seatLabel} busy={busy} turn={turn} />
-      <VestaTurnActions state={state} busy={busy} turn={turn} />
+      <VestaPlayers state={state} mySeats={mySeats} seatLabel={seatLabel} turn={vm.turn} />
+      <VestaPrompts state={state} seatLabel={seatLabel} busy={busy} turn={vm.turn} />
+      <VestaTurnActions state={state} busy={busy} turn={vm.turn} />
 
-      <VestaTradePanel state={state} seatLabel={seatLabel} busy={busy} turn={turn} />
+      <VestaTradePanel state={state} seatLabel={seatLabel} busy={busy} turn={vm.turn} />
 
-      {!myTurn && state.winner === null && (
+      {vm.waiting && (
         <p className="text-center text-[11px] text-lc-muted">
-          {t('games.vestaTable.waitingFor', { name: seatLabel(turnSeat ?? '') })}
+          {t('games.vestaTable.waitingFor', { name: seatLabel(vm.waitingFor) })}
         </p>
       )}
     </div>

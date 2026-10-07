@@ -5,7 +5,7 @@ import { requestVoiceJump } from '@/services/voice/jump-to-voice';
 import { watchMultipleCameras } from '@/services/voice/camera-watch';
 import { leaveActiveVoiceCall } from '@/services/voice/leave-active-call';
 import {
-  switchVoiceCamera, toggleVoiceCamera, toggleVoiceDeafen, toggleVoiceMic, toggleVoiceScreenShare,
+  switchVoiceCamera, toggleVoiceCamera, toggleVoiceDeafenWarned, toggleVoiceMic, toggleVoiceScreenShare,
 } from '@/services/voice/call-controls';
 import { voiceChannelLabel } from '@/utils/voice/channel-label';
 
@@ -39,8 +39,7 @@ export function useVoiceStatusBar() {
     isSignalingDegraded,
     showSwitchCamera: isCameraOn && hasMultipleCameras,
     toggleMute: () => void toggleVoiceMic(isMuted),
-    // A mic that will not stop on deafen is not caught here, as before the move.
-    toggleDeafen: () => void toggleVoiceDeafen(isDeafened, isMuted),
+    toggleDeafen: () => void toggleVoiceDeafenWarned(isDeafened, isMuted),
     toggleCamera: () => void toggleVoiceCamera(isCameraOn),
     switchCamera: () => void switchVoiceCamera(),
     toggleScreen: () => void toggleVoiceScreenShare(isScreenSharing),

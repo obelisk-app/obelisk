@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import type { GameSession } from '@/lib/games/session/session';
-import { isDraw, scoreFor } from '@/lib/games/core/standings';
-import { SEAT_COLORS } from '../chain-reaction/ChainReactionBoard';
+import { useGameOverOverlay } from '@/hooks/games/results/useGameOverOverlay';
 import { scoreLabel } from '@/utils/games/copy/game-copy';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
@@ -31,32 +29,9 @@ export default function GameOverOverlay({
   onClose: () => void;
 }) {
   const t = useTranslations();
-  // Dismissal is keyed to the result it dismissed, so a later match on the
-  // same table re-arms the splash on its own, with no effect and no reset.
-  const [dismissedResult, setDismissedResult] = useState<string | null>(null);
-  const resultKey = `${session.id}:${session.finishedAt ?? ''}`;
-
-  if (session.status !== 'finished' || dismissedResult === resultKey) return null;
-
-  const winner = session.winner;
-  // Seats, not pubkeys: one account can hold several, and on a solo table the
-  // seat id is not the pubkey once extra seats exist.
-  const mySeats = session.seats.filter((s) => s.by === myPubkey).map((s) => s.id);
-  const iWon = !!winner && (winner === myPubkey || mySeats.includes(winner));
-  const iPlayed = mySeats.length > 0 || (!!myPubkey && session.participants.includes(myPubkey));
-  const iLost = iPlayed && !iWon;
-  const draw = isDraw(session);
-  const myScore = scoreFor(session, mySeats[0] ?? (iPlayed ? myPubkey : null));
-
-  const winnerSeat = winner ? session.participants.indexOf(winner) : -1;
-  const accent = winnerSeat >= 0 ? SEAT_COLORS[winnerSeat]?.hex ?? '#b4f953' : '#a3a3a3';
-
-  const headline = t(draw ? 'games.overlay.draw' : iWon ? 'games.overlay.youWon' : iLost ? 'games.overlay.youLost' : 'games.overlay.over');
-
-  const dismiss = () => {
-    setDismissedResult(resultKey);
-    onClose();
-  };
+  const { view, dismiss, dismissFromButton } = useGameOverOverlay(session, myPubkey, onClose);
+  if (!view) return null;
+  const { winner, draw, iWon, myScore } = view;
 
   return (
     <div
@@ -72,10 +47,10 @@ export default function GameOverOverlay({
 
       <h2
         className="cr-win-title mt-2 text-4xl font-black leading-none tracking-tight sm:text-5xl"
-        style={{ color: iLost ? '#f87171' : accent }}
+        style={{ color: view.color }}
         data-testid="game-over-headline"
       >
-        {headline}
+        {t(view.headlineKey)}
       </h2>
 
       {!draw && winner && !iWon && (
@@ -103,7 +78,7 @@ export default function GameOverOverlay({
       <Button
         variant="pill"
         size="xs"
-        onClick={(e) => { e.stopPropagation(); dismiss(); }}
+        onClick={dismissFromButton}
         className="mt-6"
         data-testid="game-over-close"
         autoFocus

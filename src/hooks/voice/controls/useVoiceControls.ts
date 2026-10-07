@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useVoiceStore } from '@/store/voice';
 import { watchMultipleCameras } from '@/services/voice/camera-watch';
 import {
-  switchVoiceCamera, toggleVoiceCamera, toggleVoiceDeafen, toggleVoiceMic, toggleVoiceScreenShare,
+  switchVoiceCamera, toggleVoiceCamera, toggleVoiceDeafenWarned, toggleVoiceMic, toggleVoiceScreenShare,
 } from '@/services/voice/call-controls';
 
 /**
@@ -28,11 +28,7 @@ export function useVoiceControls() {
     error,
     showSwitchCamera: isCameraOn && hasMultipleCameras,
     toggleMute: () => void toggleVoiceMic(isMuted),
-    toggleDeafen: () => {
-      // Deafen is already applied; a mic that will not stop is the one
-      // thing here worth hearing about, since it stays live.
-      toggleVoiceDeafen(isDeafened, isMuted).catch((e) => console.warn('[voice] mic did not stop on deafen', e));
-    },
+    toggleDeafen: () => void toggleVoiceDeafenWarned(isDeafened, isMuted),
     toggleCamera: () => void toggleVoiceCamera(isCameraOn),
     switchCamera: () => void switchVoiceCamera(),
     toggleScreenShare: () => void toggleVoiceScreenShare(isScreenSharing),

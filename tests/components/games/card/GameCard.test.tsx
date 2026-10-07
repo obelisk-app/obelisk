@@ -29,7 +29,8 @@ vi.mock('@/services/nostr-bridge', async (importOriginal) => {
   };
 });
 
-import GameCard, { RESOLVE_GRACE_MS } from '@/components/games/card/GameCard';
+import GameCard from '@/components/games/card/GameCard';
+import { RESOLVE_GRACE_MS } from '@/hooks/games/card/useGameCard';
 import ChainReactionBoard from '@/components/games/chain-reaction/ChainReactionBoard';
 import MessageContent from '@/components/chat/message/MessageContent';
 import { useGamesStore } from '@/store/games';

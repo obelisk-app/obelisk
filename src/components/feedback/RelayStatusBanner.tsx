@@ -2,16 +2,8 @@
 
 /** Relay status row for the unified bottom-right activity stack. */
 
-import {
-  useConnectionState,
-  useIsLoggedIn,
-  useMyLoginMethod,
-  useRelayAccess,
-  useCurrentRelayUrl,
-} from '@/services/nostr-bridge';
-import { shortHost } from '@/utils/relay-url/url-host';
-import { useTranslations } from 'next-intl';
-import { relayStatus, type Severity } from '@/utils/relay/relay-status';
+import { useRelayStatusBanner } from '@/hooks/feedback/useRelayStatusBanner';
+import type { Severity } from '@/utils/relay/relay-status';
 
 const SEVERITY_CLASSES: Record<Severity, string> = {
   info: 'bg-lc-card/60 border-lc-border text-lc-white',
@@ -25,24 +17,13 @@ const SPINNER_CLASSES: Record<Severity, string> = {
   error: 'border-red-300/30 border-t-red-200',
 };
 
-function bannerTestId(state: string): 'connection-loss-banner' | 'relay-access-banner' {
-  return state === 'disconnected' || state === 'offline' ? 'connection-loss-banner' : 'relay-access-banner';
-}
-
 /** Shared relay row inside the bottom-right activity stack. */
 export default function RelayStatusBanner({ hideAuthenticating = false }: { hideAuthenticating?: boolean }) {
-  const t = useTranslations();
-  const isLoggedIn = useIsLoggedIn();
-  const conn = useConnectionState();
-  const access = useRelayAccess();
-  const loginMethod = useMyLoginMethod();
-  const relay = useCurrentRelayUrl();
-  if (!isLoggedIn || !relay) return null;
-  const status = relayStatus(conn, access, loginMethod, shortHost(relay), t);
-  if (!status || (hideAuthenticating && (status.state === 'authenticating' || status.state === 'auth-required'))) return null;
+  const status = useRelayStatusBanner(hideAuthenticating);
+  if (!status) return null;
   return (
     <div
-      data-testid={bannerTestId(status.state)}
+      data-testid={status.testId}
       data-state={status.state}
       data-severity={status.severity}
       className={'pointer-events-auto flex items-start gap-3 rounded-xl border px-3 py-2 text-xs shadow-2xl backdrop-blur ' + SEVERITY_CLASSES[status.severity]}

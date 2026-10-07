@@ -1,7 +1,6 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { MentionText } from '@/components/chat/mentions/MentionText';
 import {
   isDmNotificationRead,
   isMentionRead,
@@ -12,6 +11,8 @@ import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import type { InboxStreams } from '@/hooks/shell/panes/topbar/useTopBarPopovers';
 import SegmentedControl from '@/components/ui/forms/SegmentedControl';
+import { InboxRow } from './InboxRow';
+import { InboxTabLabel } from './InboxTabLabel';
 
 /** The bell's popover: mentions on this relay and DMs, each with its own read cursor. */
 export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
@@ -68,28 +69,11 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
           aria-label={t('common.notifications')}
           value={notifTab}
           onChange={setNotifTab}
-          options={(['mentions', 'dms'] as const).map((key) => {
-            const count = key === 'mentions' ? inbox.unreadMentions : inbox.unreadDms;
-            return {
-              value: key,
-              testId: `notif-tab-${key}`,
-              label: (
-                <>
-                  {key === 'mentions' ? t('shell.inbox.tab.mentions') : t('shell.inbox.tab.dms')}
-                  {/* Ink-on-green on the selected segment, green-on-ink otherwise. */}
-                  {count > 0 && (
-                    <span
-                      className={`min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center leading-none ${
-                        notifTab === key ? 'bg-lc-black text-lc-green' : 'bg-lc-green text-lc-black'
-                      }`}
-                    >
-                      {count > 99 ? '99+' : count}
-                    </span>
-                  )}
-                </>
-              ),
-            };
-          })}
+          options={inbox.tabs.map((tab) => ({
+            value: tab.key,
+            testId: tab.testId,
+            label: <InboxTabLabel tab={tab} selected={notifTab === tab.key} />,
+          }))}
         />
       </div>
       <div className="overflow-y-auto flex-1">
@@ -139,35 +123,5 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
       </div>
     </div>,
     document.body,
-  );
-}
-
-function InboxRow({ read, label, time, preview, onClick, testId }: {
-  read: boolean;
-  label: string;
-  time?: string;
-  preview: string | null | undefined;
-  onClick: () => void;
-  testId?: string;
-}) {
-  return (
-    <li>
-      <button
-        onClick={onClick}
-        data-testid={testId}
-        className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-lc-card/60 transition-colors ${read ? '' : 'bg-lc-olive/30'}`}
-      >
-        <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${read ? 'bg-transparent' : 'bg-lc-green'}`} />
-        <div className="flex-1 min-w-0">
-          <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
-            {label}
-            {time && <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{time}</span>}
-          </div>
-          {preview && (
-            <div className="text-sm text-lc-white truncate"><MentionText content={preview} /></div>
-          )}
-        </div>
-      </button>
-    </li>
   );
 }

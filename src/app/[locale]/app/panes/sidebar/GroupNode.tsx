@@ -1,21 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  useCurrentRelayUrl,
-  useMessages,
-  useActiveCall,
-  useMyPubkey,
-  type JsGroup,
-} from '@/services/nostr-bridge';
-import { wotColorClass } from '@/services/wot/colors';
-import { useUnreadMentionCardsForChannel } from '@/hooks/notifications/useNotificationSelectors';
-import { useCachedChannelHighlights } from '@/hooks/read-state/useChannelHighlights';
+import type { JsGroup } from '@/services/nostr-bridge';
 import { ChannelContextMenu } from '@/components/chat/channel/ChannelContextMenu';
-import { isChannelMuted, useChannelPref } from '@/store/chat/channel-prefs';
 import { useTranslations } from 'next-intl';
 import type { View } from '@/utils/shell/desktop/view';
+import { useGroupNode } from '@/hooks/shell/panes/sidebar/useGroupNode';
+import { ActiveCallBadge } from './ActiveCallBadge';
+import { ForumThreadRow } from './ForumThreadRow';
 
+/**
+ * One channel in the desktop sidebar, with its children under it: a
+ * publication's threads on an L-rail (foldable), or nested channels. State
+ * and handlers come from `useGroupNode`.
+ */
 export function GroupNode({
   group,
   depth,
@@ -28,126 +25,78 @@ export function GroupNode({
   group: JsGroup;
   depth: number;
   childrenByParent: Readonly<Record<string, ReadonlyArray<string>>>;
-  groupsById: Record<string, JsGroup>;
+  groupsById: Readonly<Record<string, JsGroup>>;
   view: View;
   onSelect: (id: string) => void;
   distanceById?: Readonly<Record<string, number | null>>;
 }) {
   const t = useTranslations();
-  const childIds = childrenByParent[group.id] ?? [];
-  const active = view.kind === 'group' && view.groupId === group.id;
-  const myPubkey = useMyPubkey();
-  const highlights = useCachedChannelHighlights(group.id, myPubkey);
-  // When the user is actively viewing the channel, the auto-mark hook is
-  // about to advance the cursor - suppress the badge to avoid a brief
-  // count flash. Matches the existing favicon-badge subtraction at
-  // useFaviconBadge.ts.
-  const showBadges = !active;
-  const relay = useCurrentRelayUrl();
-  const pref = useChannelPref(relay, group.id);
-  const muted = isChannelMuted(pref);
-  // Unfollowed: its traffic stops asking for attention. Mentions still do.
-  const unread = showBadges && !pref.unfollowed ? highlights.unread : 0;
-  // Mention cards stay until the message has actually been on screen
-  // (`useMentionSeen`), so they show even on the active row.
-  const mentionCards = useUnreadMentionCardsForChannel(relay, group.id);
-  // Right-click → channel menu (mark read, follow, mute, notify, copy link).
-  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
-  const mentionsOrReplies = Math.max(
-    showBadges ? (highlights.mentions + highlights.replies) : 0,
-    mentionCards,
-  );
-  // Forum containers default to expanded so newly-created threads are
-  // immediately visible. Persisted per-group in localStorage so the user's
-  // choice survives reloads. Non-forum groups stay always-expanded (no
-  // toggle rendered) - collapsing arbitrary nesting isn't part of this UX.
-  const isCollapsible = group.kind === 'forum' && childIds.length > 0;
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.localStorage.getItem(`obelisk-dex/forum-collapsed/${group.id}`) === '1';
-  });
-  const toggleCollapsed = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    if (typeof window !== 'undefined') {
-      const key = `obelisk-dex/forum-collapsed/${group.id}`;
-      if (next) window.localStorage.setItem(key, '1');
-      else window.localStorage.removeItem(key);
-    }
-  };
+  const vm = useGroupNode({ group, view, depth, childrenByParent, groupsById, distanceById });
+  const childProps = { depth: depth + 1, childrenByParent, groupsById, view, onSelect, distanceById };
   return (
     <>
       <div
-        style={{ paddingLeft: `${0.5 + Math.max(0, depth - 1) * 0.85}rem` }}
+        style={{ paddingLeft: vm.indent }}
         className={
           'flex w-full items-center gap-1 rounded text-left text-base transition ' +
-          (active
+          (vm.active
             ? 'bg-lc-olive text-lc-white'
             : 'text-lc-muted hover:bg-lc-card hover:text-lc-white') +
-          ((pref.unfollowed || muted) && !active ? ' opacity-55' : '')
+          (vm.dimmed ? ' opacity-55' : '')
         }
-        onContextMenu={(e) => {
-          if (!relay) return;
-          e.preventDefault();
-          setMenuAt({ x: e.clientX, y: e.clientY });
-        }}
+        onContextMenu={vm.openMenu}
         data-testid={`channel-row-${group.id}`}
       >
-        {menuAt && relay && (
+        {vm.menuAt && vm.menuTarget && (
           <ChannelContextMenu
-            target={{
-              relay,
-              channelId: group.id,
-              name: group.name ?? group.id.slice(0, 12),
-              hasUnread: highlights.unread > 0 || mentionCards > 0,
-            }}
-            x={menuAt.x}
-            y={menuAt.y}
-            onClose={() => setMenuAt(null)}
+            target={vm.menuTarget}
+            x={vm.menuAt.x}
+            y={vm.menuAt.y}
+            onClose={vm.closeMenu}
           />
         )}
-        {depth > 0 && !isCollapsible && <span className="pl-1 text-lc-muted lc-tree-marker">↳</span>}
+        {depth > 0 && !vm.isCollapsible && <span className="pl-1 text-lc-muted lc-tree-marker">↳</span>}
         <button
           onClick={() => onSelect(group.id)}
           className="flex flex-1 items-center gap-2 truncate px-1 py-1.5 text-left"
         >
           <span className="text-lc-muted">#</span>
           <span
-            className={`flex-1 truncate ${unread > 0 ? 'font-semibold text-lc-white' : ''} ${distanceById ? wotColorClass(distanceById[group.id] ?? null) : ''}`}
-            title={distanceById && distanceById[group.id] != null ? `WoT ${distanceById[group.id]}°` : undefined}
+            className={`flex-1 truncate ${vm.unread > 0 ? 'font-semibold text-lc-white' : ''} ${vm.wotClass}`}
+            title={vm.wotTitle}
           >
-            {group.name ?? group.id.slice(0, 12)}
+            {vm.label}
           </span>
           {!group.isPublic && <span title={t('mobile.channel.private')} className="text-[10px]">🔒</span>}
           {!group.isOpen && <span title={t('shell.desktop.channel.closed')} className="text-[10px]">⊝</span>}
           <ActiveCallBadge groupId={group.id} kind={group.kind} />
-          {muted && <span title={t('chat.channelMenu.muted')} aria-label={t('chat.channelMenu.muted')} className="text-[11px]">🔕</span>}
-          {unread > 0 && (
+          {vm.muted && <span title={t('chat.channelMenu.muted')} aria-label={t('chat.channelMenu.muted')} className="text-[11px]">🔕</span>}
+          {vm.unread > 0 && (
             <span
-              aria-label={t('shell.desktop.channels.unread', { count: unread })}
+              aria-label={t('shell.desktop.channels.unread', { count: vm.unread })}
               className="text-xs tabular-nums text-lc-muted"
             >
-              {unread > 99 ? '99+' : unread}
+              {vm.unread > 99 ? '99+' : vm.unread}
             </span>
           )}
-          {mentionsOrReplies > 0 && (
+          {vm.mentionsOrReplies > 0 && (
             <span
-              aria-label={t('shell.desktop.channels.mentions', { count: mentionsOrReplies })}
+              aria-label={t('shell.desktop.channels.mentions', { count: vm.mentionsOrReplies })}
               className="rounded-full bg-lc-green px-1.5 py-px text-[10px] font-bold text-lc-black"
             >
-              {mentionsOrReplies > 99 ? '99+' : mentionsOrReplies}
+              {vm.mentionsOrReplies > 99 ? '99+' : vm.mentionsOrReplies}
             </span>
           )}
         </button>
-        {isCollapsible && (
+        {vm.isCollapsible && (
           <button
-            onClick={toggleCollapsed}
+            onClick={vm.toggleCollapsed}
             className="flex shrink-0 items-center justify-center px-2 py-1.5 text-lc-white/70 hover:text-lc-green"
-            aria-label={collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
-            title={collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
+            aria-label={vm.collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
+            title={vm.collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
           >
             <svg
-              className={`h-3.5 w-3.5 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
+              className={`h-3.5 w-3.5 transition-transform duration-150 ${vm.collapsed ? '' : 'rotate-90'}`}
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -160,90 +109,20 @@ export function GroupNode({
           </button>
         )}
       </div>
-      {!collapsed && (group.kind === 'forum' ? (
+      {!vm.collapsed && (group.kind === 'forum' ? (
         // Forum threads get the Discord-style L-rail treatment: wrap them in
         // .lc-forum-threads so each row's ::before/::after can paint a
         // continuous vertical rail terminating in an L-corner at the last row.
         <div className="lc-forum-threads">
-          {childIds.map((cid) => {
-            const child = groupsById[cid];
-            if (!child) return null;
-            // For forum-container children (threads), only render in the
-            // sidebar once the thread has ≥ 1 message - empty/aborted threads
-            // stay hidden so the sidebar doesn't accumulate noise.
-            return (
-              <ForumChildGroupNode
-                key={cid}
-                group={child}
-                depth={depth + 1}
-                childrenByParent={childrenByParent}
-                groupsById={groupsById}
-                view={view}
-                onSelect={onSelect}
-                distanceById={distanceById}
-              />
-            );
-          })}
+          {vm.children.map((child) => (
+            <ForumThreadRow key={child.id} groupId={child.id}>
+              <GroupNode group={child} {...childProps} />
+            </ForumThreadRow>
+          ))}
         </div>
       ) : (
-        childIds.map((cid) => {
-          const child = groupsById[cid];
-          if (!child) return null;
-          return (
-            <GroupNode
-              key={cid}
-              group={child}
-              depth={depth + 1}
-              childrenByParent={childrenByParent}
-              groupsById={groupsById}
-              view={view}
-              onSelect={onSelect}
-              distanceById={distanceById}
-            />
-          );
-        })
+        vm.children.map((child) => <GroupNode key={child.id} group={child} {...childProps} />)
       ))}
     </>
-  );
-}
-
-function ForumChildGroupNode(props: {
-  group: JsGroup;
-  depth: number;
-  childrenByParent: Readonly<Record<string, ReadonlyArray<string>>>;
-  groupsById: Record<string, JsGroup>;
-  view: View;
-  onSelect: (id: string) => void;
-  distanceById?: Readonly<Record<string, number | null>>;
-}) {
-  const messages = useMessages(props.group.id);
-  if (messages.length === 0) return null;
-  return (
-    <div className="lc-thread-row">
-      <GroupNode {...props} />
-    </div>
-  );
-}
-
-/**
- * "LIVE" pill rendered next to a voice channel's name when the SFU has
- * published a current kind 31314 active-call announcement for it. Only
- * shown for voice / voice-sfu channels - text and forum channels can't
- * have an SFU room. Re-evaluates every 15s via {@link useActiveCall} so
- * a stale (expired) announcement fades without needing a manual refresh.
- */
-function ActiveCallBadge({ groupId, kind }: { groupId: string; kind: JsGroup['kind'] }) {
-  const t = useTranslations();
-  const active = useActiveCall(groupId);
-  if (kind !== 'voice' && kind !== 'voice-sfu') return null;
-  if (!active) return null;
-  return (
-    <span
-      title={t('shell.desktop.voice.liveTitle')}
-      className="ml-1 inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-300"
-    >
-      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
-      {t('shell.desktop.voice.live')}
-    </span>
   );
 }

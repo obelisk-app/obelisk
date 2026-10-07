@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setActiveVoiceClient } from '@/services/voice/active-client';
 import type { VoiceClient } from '@/services/voice/client';
 import {
-  switchVoiceCamera, toggleVoiceCamera, toggleVoiceDeafen, toggleVoiceMic, toggleVoiceScreenShare,
+  switchVoiceCamera, toggleVoiceCamera, toggleVoiceDeafen, toggleVoiceDeafenWarned, toggleVoiceMic, toggleVoiceScreenShare,
 } from '@/services/voice/call-controls';
 import { useVoiceStore } from '@/store/voice';
 
@@ -79,6 +79,15 @@ describe('toggleVoiceDeafen', () => {
     client.setMicEnabled.mockRejectedValueOnce(new Error('stuck'));
     await expect(toggleVoiceDeafen(false, false)).rejects.toThrow('stuck');
     expect(useVoiceStore.getState().isDeafened).toBe(true);
+  });
+
+  it('the warned form resolves and warns about a mic that will not stop', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    client.setMicEnabled.mockRejectedValueOnce(new Error('stuck'));
+    await expect(toggleVoiceDeafenWarned(false, false)).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledWith('[voice] mic did not stop on deafen', expect.any(Error));
+    expect(useVoiceStore.getState().isDeafened).toBe(true);
+    warn.mockRestore();
   });
 });
 

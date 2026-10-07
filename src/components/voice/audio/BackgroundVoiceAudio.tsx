@@ -18,28 +18,11 @@
  * inside `VoiceClient.setDeafenEnabled` (which disables the underlying
  * MediaStreamTracks), so no extra wiring is needed here.
  */
-import { useEffect, useRef, useState } from 'react';
-import { subscribeActiveVoiceClient } from '@/services/voice/active-client';
-import type { VoiceClient, RemoteTrack } from '@/services/voice/client';
-import { useVoiceStore } from '@/store/voice';
+import { useBackgroundVoiceAudio } from '@/hooks/voice/audio/useBackgroundVoiceAudio';
+import BackgroundAudioElement from './BackgroundAudioElement';
 
 export default function BackgroundVoiceAudio() {
-  const [client, setClient] = useState<VoiceClient | null>(null);
-  const [tracks, setTracks] = useState<RemoteTrack[]>([]);
-
-  useEffect(() => {
-    return subscribeActiveVoiceClient((c) => {
-      setClient(c);
-      if (!c) setTracks([]);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!client) return;
-    return client.subscribeRemoteTracks((t) => setTracks(t));
-  }, [client]);
-
-  const audible = tracks.filter((t) => t.kind === 'audio' || t.kind === 'screen-audio');
+  const audible = useBackgroundVoiceAudio();
 
   return (
     <div
@@ -52,20 +35,4 @@ export default function BackgroundVoiceAudio() {
       ))}
     </div>
   );
-}
-
-function BackgroundAudioElement({ pubkey, stream }: { pubkey: string; stream: MediaStream }) {
-  const ref = useRef<HTMLAudioElement | null>(null);
-  const isMutedForMe = useVoiceStore((s) => s.isDeafened || !!s.localMutedPubkeys[pubkey]);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.srcObject = stream;
-    // jsdom's play() returns void; guard with `?.catch` so the autoplay
-    // rejection path stays a noop in tests.
-    el.play()?.catch(() => { /* user gesture during join already unlocks audio in real browsers */ });
-  }, [stream]);
-
-  return <audio ref={ref} autoPlay muted={isMutedForMe} />;
 }

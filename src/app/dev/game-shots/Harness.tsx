@@ -1,23 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { GameState as VestaState } from 'vesta';
 import ChainReactionBoard from '@/components/games/chain-reaction/ChainReactionBoard';
 import VestaTable from '@/components/games/vesta/VestaTable';
 import VestaBoard from '@/components/games/vesta/VestaBoard';
 import StackerTable from '@/components/games/stacker/StackerTable';
 import StackerBoard from '@/components/games/stacker/StackerBoard';
-import type { StackerRunner } from '@/lib/games/stacker/runner';
 import GameResults from '@/components/games/results/GameResults';
 import NewGameModal from '@/components/games/new-game/NewGameModal';
-import {
-  chainReactionFixture,
-  finishedChainReaction,
-  seatLabel,
-  stackerFixture,
-  stackerWell,
-  vestaFixture,
-} from '@/utils/games/shots/fixtures';
+import { seatLabel } from '@/utils/games/shots/fixtures';
+import { useHarness } from '@/hooks/games/shots/useHarness';
+import Frame from './Frame';
 
 /**
  * Every surface the game guides show, mounted from fixture logs.
@@ -27,39 +21,8 @@ import {
  * adding a picture to a guide is adding a `<Shot>` here, not a new script.
  */
 
-const noop = async () => {};
-
-function Frame({ name, width, children }: { name: string; width: number; children: React.ReactNode }) {
-  return (
-    <section className="p-6">
-      <div
-        data-shot={name}
-        className="rounded-xl border border-lc-border bg-lc-dark p-4"
-        style={{ width }}
-      >
-        {children}
-      </div>
-    </section>
-  );
-}
-
 export default function Harness() {
-  const cr = useMemo(() => chainReactionFixture(), []);
-  const crDone = useMemo(() => finishedChainReaction(), []);
-  const vesta = useMemo(() => vestaFixture(), []);
-  const stacker = useMemo(() => stackerFixture(), []);
-  // A paused well: everything `StackerBoard` reads off a runner, none of what
-  // it does. The cast is the harness admitting it is not a real match.
-  const still = useMemo(() => {
-    const state = stackerWell();
-    return {
-      state,
-      onFrame: (listener: (s: typeof state) => void) => {
-        listener(state);
-        return () => {};
-      },
-    } as unknown as StackerRunner;
-  }, []);
+  const { cr, crSeats, crDone, vesta, vestaSeats, stacker, still, noop } = useHarness();
   // The picker is a modal: it paints over the page, so it renders only when
   // the snapshot script asks for it.
   const [picker, setPicker] = useState(false);
@@ -83,7 +46,7 @@ export default function Harness() {
         <div className="flex items-center justify-center gap-7">
           <ChainReactionBoard
             game={cr}
-            mySeats={[cr.currentTurn ?? 'seat-ana']}
+            mySeats={crSeats}
             onAction={noop}
             maxWidth={300}
             maxHeight={420}
@@ -103,7 +66,7 @@ export default function Harness() {
       <Frame name="chain-reaction-board" width={420}>
         <ChainReactionBoard
           game={cr}
-          mySeats={[cr.currentTurn ?? 'seat-ana']}
+          mySeats={crSeats}
           onAction={noop}
           maxWidth={360}
           seatLabel={seatLabel}
@@ -115,7 +78,7 @@ export default function Harness() {
       <Frame name="chain-reaction-fullscreen" width={1200}>
         <ChainReactionBoard
           game={cr}
-          mySeats={[cr.currentTurn ?? 'seat-ana']}
+          mySeats={crSeats}
           onAction={noop}
           maxWidth={1168}
           maxHeight={690}
@@ -131,7 +94,7 @@ export default function Harness() {
         <VestaTable
           session={vesta}
           state={vesta.state as VestaState}
-          mySeats={[vesta.currentTurn ?? 'seat-ana']}
+          mySeats={vestaSeats}
           seatLabel={seatLabel}
           onAction={noop}
         />
@@ -139,9 +102,7 @@ export default function Harness() {
 
       <Frame name="stacker-well" width={340}>
         <div className="flex justify-center">
-          {/* The board draws whatever its runner hands it and never asks the
-              runner for anything else, so a still frame is a state plus an
-              `onFrame` that fires once. Nothing is running here on purpose. */}
+          {/* A still frame (`stillRunner`): nothing is running here on purpose. */}
           <StackerBoard runner={still} cell={22} />
         </div>
       </Frame>

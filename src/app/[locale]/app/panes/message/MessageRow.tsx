@@ -1,12 +1,10 @@
 'use client';
 
-import { displayNameFor } from '@/utils/identity/display-name';
 import { memo } from 'react';
-import { useUserMetadata as useProfile, type JsMessage } from '@/services/nostr-bridge';
+import type { JsMessage } from '@/services/nostr-bridge';
 import MessageContent from '@/components/chat/message/MessageContent';
 import FloatingPanel from '@/components/ui/overlays/FloatingPanel';
 import ForwardMessageModal from '@/components/chat/message/ForwardMessageModal';
-import { useChatStore } from '@/store/chat';
 import EmojiPicker from '@/components/chat/picker/EmojiPicker';
 import { type MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
@@ -19,8 +17,7 @@ import { MessageToolbar } from './MessageToolbar';
 import { ReactionPills } from './ReactionPills';
 import { ReplyPreviewRow } from './ReplyPreviewRow';
 import { flashMessage } from '@/utils/chat/timeline/message-flash';
-import { useMessageRowActions } from '@/hooks/shell/panes/message/useMessageRowActions';
-import { useMessageRowMenus } from '@/hooks/shell/panes/message/useMessageRowMenus';
+import { useMessageRow } from '@/hooks/shell/panes/message/useMessageRow';
 import Button from '@/components/ui/buttons/Button';
 import CloseButton from '@/components/ui/buttons/CloseButton';
 
@@ -57,20 +54,14 @@ export const MessageRow = memo(function MessageRow({
 }) {
   const { formatDateTime } = useFormat();
   const t = useTranslations();
-  const meta = useProfile(msg.pubkey);
-  const menus = useMessageRowMenus();
-  const actions = useMessageRowActions({ msg, groupId, isAdmin, reactions, meta });
-  const displayName = displayNameFor(msg.pubkey, meta);
-  const openProfile = (event: React.MouseEvent<HTMLElement>) => useChatStore.getState().openProfilePopup(
-    msg.pubkey,
-    { x: event.clientX, y: event.clientY },
-  );
+  const vm = useMessageRow({ msg, groupId, isAdmin, reactions });
+  const { meta, menus, actions } = vm;
 
   return (
     <div data-msg-id={msg.id} className={'group relative flex gap-3 rounded px-2 py-0.5 hover:bg-lc-card/40 ' + (grouped ? 'mt-0' : 'mt-3') + (msg.pending ? ' opacity-60' : '')}>
       <div className="w-10 shrink-0">
         {!grouped && (
-          <button onClick={openProfile} className="rounded-full transition hover:opacity-80">
+          <button onClick={vm.openProfile} className="rounded-full transition hover:opacity-80">
             <Avatar pubkey={msg.pubkey} size={10} picture={meta?.picture ?? null} />
           </button>
         )}
@@ -78,7 +69,7 @@ export const MessageRow = memo(function MessageRow({
       <div className="min-w-0 flex-1">
         {!grouped && (
           <div className="flex items-baseline gap-2">
-            <button onClick={openProfile} className="text-sm font-bold text-lc-white hover:underline">{displayName}</button>
+            <button onClick={vm.openProfile} className="text-sm font-bold text-lc-white hover:underline">{vm.displayName}</button>
             <RoleBadge pubkey={msg.pubkey} />
             <span className="text-[10px] text-lc-muted">
               {formatDateTime(msg.createdAt, {
@@ -103,12 +94,7 @@ export const MessageRow = memo(function MessageRow({
         )}
         <div
           className="break-words text-sm text-lc-white cursor-pointer"
-          onClick={(e) => {
-            // Don't hijack clicks on links/buttons inside the message content.
-            const t = e.target as HTMLElement;
-            if (t.closest('a, button, input, textarea, [data-no-msg-menu]')) return;
-            menus.togglePinned();
-          }}
+          onClick={vm.onBodyClick}
         >
           <MessageContent
             content={msg.content}
@@ -149,7 +135,7 @@ export const MessageRow = memo(function MessageRow({
         <MessageToolbar
           msg={msg}
           actions={actions}
-          pinned={menus.menuOpen || menus.panelPinned || menus.pickerOpen}
+          pinned={vm.toolbarPinned}
           menuOpen={menus.menuOpen}
           moreBtnRef={menus.moreBtnRef}
           closeAll={menus.closeAll}
@@ -166,10 +152,7 @@ export const MessageRow = memo(function MessageRow({
             <EmojiPicker
               variant="floating"
               disabledEmojis={actions.myReactedEmojis}
-              onPick={(e, custom) => {
-                actions.onReactionClick(e, custom ? { [custom.name]: custom.url } : undefined);
-                menus.closeAll();
-              }}
+              onPick={vm.pickReaction}
               onClose={() => menus.setPickerOpen(false)}
             />
           </FloatingPanel>
@@ -177,7 +160,7 @@ export const MessageRow = memo(function MessageRow({
         {menus.forwarding && (
           <ForwardMessageModal
             message={msg}
-            authorName={displayName}
+            authorName={vm.displayName}
             fromGroupId={groupId}
             onClose={() => menus.setForwarding(false)}
           />

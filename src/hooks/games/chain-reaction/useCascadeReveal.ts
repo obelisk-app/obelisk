@@ -75,7 +75,14 @@ export function useCascadeReveal({
 
     if (!mover || !(mover in prevSeats) || prev.length !== cells.length) {
       syncRefs();
-      setReveal({ cells, animating: false });
+      // Keep the state as it is when it already shows this board: a board
+      // rebuilt with the same cells must not cost another render, or a
+      // caller that rebuilds it every render never settles.
+      setReveal((cur) => (
+        !cur.animating && cur.cells.length === cells.length && !boardChanged(cur.cells, cells)
+          ? cur
+          : { cells, animating: false }
+      ));
       return;
     }
 

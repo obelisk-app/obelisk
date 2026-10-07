@@ -1,13 +1,14 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { useHintsStore } from '@/store/hints';
 import Button from '@/components/ui/buttons/Button';
-import { BookIcon, LayersIcon, LockIcon, ShieldIcon, SparklesIcon, ZapIcon } from '@/components/ui/icons/icons';
+import { BookIcon, SparklesIcon } from '@/components/ui/icons/icons';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { localizedPath } from '@/utils/seo/alternates';
 import { HELP_TOPICS, helpTopicPath } from '@/utils/guides/help-topics';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { useHelpPopover } from '@/hooks/shell/panes/topbar/useHelpPopover';
+import { HelpTopicIcon } from './HelpTopicIcon';
 
 /**
  * Help panel, deliberately the same shell as the notification popover
@@ -18,8 +19,7 @@ import { useLocale, useTranslations } from 'next-intl';
  */
 export function HelpPopover({ onClose }: { onClose: () => void }) {
   const t = useTranslations();
-  const locale = useLocale();
-  const resetHints = useHintsStore((state) => state.resetHints);
+  const vm = useHelpPopover(onClose);
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div
@@ -45,7 +45,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
           {HELP_TOPICS.map((topic) => (
             <li key={topic.slug}>
               <a
-                href={localizedPath(locale, helpTopicPath(topic))}
+                href={localizedPath(vm.locale, helpTopicPath(topic))}
                 data-testid={`help-popover-topic-${topic.slug}`}
                 onClick={onClose}
                 className="lc-card group flex items-start gap-3 p-3 hover:border-lc-green/50"
@@ -66,7 +66,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
       </div>
       <div className="space-y-2 border-t border-lc-border px-4 py-3">
         <a
-          href={localizedPath(locale, guidePath())}
+          href={localizedPath(vm.locale, guidePath())}
           data-testid="help-popover-view-more"
           onClick={onClose}
           className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-lc-green/40 bg-lc-green/10 px-4 py-2 text-xs font-semibold text-lc-green transition-colors hover:border-lc-green/70 hover:bg-lc-green/20"
@@ -82,7 +82,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
         <Button
           variant="outlinePill"
           size="xs"
-          onClick={() => { resetHints(); onClose(); }}
+          onClick={vm.replayHints}
           className="w-full"
           data-testid="help-popover-replay-hints"
         >
@@ -92,28 +92,5 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
       </div>
     </div>,
     document.body,
-  );
-}
-
-/** Icon tile for a help-popover guide card, keyed by guide slug. */
-function HelpTopicIcon({ slug }: { slug: string }) {
-  const Icon = slug === 'how-obelisk-works'
-    ? LayersIcon
-    : slug === 'admin-cli'
-      // "Run a community": moderation, roles and bans. The guide's slug is
-      // older than its copy; the CLI it was named for is gone.
-      ? ShieldIcon
-      : slug === 'bitcoin-zaps'
-        ? ZapIcon
-        : slug === 'local-data'
-          ? LockIcon
-          : SparklesIcon;
-  return (
-    <span
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-lc-green/30 bg-lc-green/10 text-lc-green"
-      data-testid={`help-topic-icon-${slug}`}
-    >
-      <Icon size={18} />
-    </span>
   );
 }
