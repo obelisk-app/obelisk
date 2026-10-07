@@ -1,3 +1,4 @@
+import type React from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useLayoutDrag } from '@/hooks/shell/modals/layout/useLayoutDrag';
@@ -47,5 +48,48 @@ describe('useLayoutDrag', () => {
     act(() => { took = result.current.dropBefore('cat', 'other'); });
     expect(took).toBe(true);
     expect(placeChannel).toHaveBeenCalledWith('ch', 'cat', 'other');
+  });
+
+  describe('DOM handlers', () => {
+    const event = () => ({ preventDefault: vi.fn(), dataTransfer: { effectAllowed: '' } }) as unknown as React.DragEvent & { preventDefault: ReturnType<typeof vi.fn> };
+
+    it('a card is a drop target only while something is grabbed', () => {
+      const { result } = setup();
+      const before = event();
+      result.current.cardDragOver(before);
+      expect(before.preventDefault).not.toHaveBeenCalled();
+      const start = event();
+      act(() => result.current.startCategoryDrag(start, 'cat-a'));
+      expect(start.dataTransfer.effectAllowed).toBe('move');
+      const over = event();
+      result.current.cardDragOver(over);
+      expect(over.preventDefault).toHaveBeenCalled();
+    });
+
+    it('a card drop places the grabbed category', () => {
+      const { result, placeCategory } = setup();
+      act(() => result.current.grabCategory('cat-a'));
+      const drop = event();
+      act(() => result.current.cardDrop(drop, 1, 'cat-b'));
+      expect(drop.preventDefault).toHaveBeenCalled();
+      expect(placeCategory).toHaveBeenCalledWith('cat-a', 1);
+    });
+
+    it('the bucket accepts and takes channels only', () => {
+      const { result, placeChannel } = setup();
+      act(() => result.current.grabCategory('cat-a'));
+      const refused = event();
+      result.current.bucketDragOver(refused);
+      act(() => result.current.bucketDrop(refused));
+      expect(refused.preventDefault).not.toHaveBeenCalled();
+      act(() => result.current.grabChannel('one'));
+      const over = event();
+      result.current.bucketDragOver(over);
+      expect(over.preventDefault).toHaveBeenCalled();
+      const drop = event();
+      act(() => result.current.bucketDrop(drop));
+      expect(drop.preventDefault).toHaveBeenCalled();
+      expect(placeChannel).toHaveBeenCalledWith('one', null);
+    });
   });
 });

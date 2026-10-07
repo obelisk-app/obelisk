@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { CompassIcon, EditIcon, MessageIcon, SettingsIcon } from '@/components/ui/icons/icons';
-import { openSettings } from '@/utils/settings/open-settings';
+import { usePopoverActions } from '@/hooks/chat/profile/usePopoverActions';
 import Button from '@/components/ui/buttons/Button';
 
 
@@ -21,6 +21,7 @@ export function PopoverActions({
   onMessage?: (pubkey: string) => void;
 }) {
   const t = useTranslations();
+  const vm = usePopoverActions(pubkey, onClose, onExplore, onMessage);
   return (
     <div className="space-y-2 border-t border-lc-border pt-3" data-testid="profile-compact-actions">
       {isSelf ? (
@@ -29,7 +30,7 @@ export function PopoverActions({
             variant="outlinePill"
             size="xs"
             className="h-8"
-            onClick={() => { onClose(); openSettings('profile'); }}
+            onClick={vm.editProfile}
             data-testid="profile-edit-btn"
           >
             <EditIcon size={15} /> {t('settings.editProfile')}
@@ -38,7 +39,7 @@ export function PopoverActions({
             variant="outlinePill"
             size="xs"
             className="h-8"
-            onClick={() => { onClose(); openSettings('general'); }}
+            onClick={vm.openPreferences}
             data-testid="profile-preferences-btn"
           >
             <SettingsIcon size={15} /> {t('settings.openPreferences')}
@@ -49,10 +50,7 @@ export function PopoverActions({
           variant="outlinePill"
           size="xs"
           className="h-8 w-full"
-          onClick={() => {
-            onClose();
-            onMessage(pubkey);
-          }}
+          onClick={vm.message}
           data-testid="profile-message-btn"
         >
           <MessageIcon size={15} /> {t('mobile.profile.message')}
@@ -61,10 +59,7 @@ export function PopoverActions({
       <Button
         variant="pill"
         size="xs"
-        onClick={() => {
-          onClose();
-          onExplore(pubkey);
-        }}
+        onClick={vm.explore}
         className="w-full"
         data-testid="profile-explore-btn"
       >

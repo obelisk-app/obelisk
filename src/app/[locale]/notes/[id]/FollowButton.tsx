@@ -14,16 +14,8 @@
  * profile is already there, and Obelisk's own surfaces do have one.
  */
 
-import { useState } from 'react';
-import {
-  useBridge,
-  useMyContactList,
-  useMyContactListReady,
-  useMyPubkey,
-} from '@/services/nostr-bridge';
-import { toggledFollowTags } from '@/services/social/profile-feed';
-import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { useTranslations } from 'next-intl';
+import { useFollowButton } from '@/hooks/social/viewer/useFollowButton';
 
 export default function FollowButton({
   pubkey,
@@ -33,57 +25,24 @@ export default function FollowButton({
   className?: string;
 }) {
   const t = useTranslations();
-  const bridge = useBridge();
-  const myPubkey = useMyPubkey();
-  const contactEvent = useMyContactList();
-  const ready = useMyContactListReady();
-  const relays = usePreferences().socialRelays;
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const vm = useFollowButton(pubkey);
 
-  const following = !!contactEvent?.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey);
-
-  if (!myPubkey || myPubkey === pubkey) return null;
-
-  const toggle = async () => {
-    // Without the contact list loaded, publishing would replace it with a
-    // one-entry list - i.e. silently unfollow everyone.
-    if (!bridge || busy || !ready) return;
-    setBusy(true);
-    setFailed(false);
-    try {
-      await bridge.publishEvent({
-        kind: 3,
-        content: contactEvent?.content ?? '',
-        tags: toggledFollowTags(contactEvent?.tags ?? [], pubkey, !following),
-        created_at: Math.max(Math.floor(Date.now() / 1000), (contactEvent?.created_at ?? 0) + 1),
-      }, { extraRelays: relays, mode: 'replace' });
-    } catch {
-      setFailed(true);
-    } finally {
-      setBusy(false);
-    }
-  };
+  if (vm.hidden) return null;
 
   return (
     <button
       type="button"
-      onClick={(event) => {
-        // The row is a link to the profile; the button is not.
-        event.preventDefault();
-        event.stopPropagation();
-        void toggle();
-      }}
-      disabled={busy || !ready}
-      aria-pressed={following}
+      onClick={vm.onClick}
+      disabled={vm.disabled}
+      aria-pressed={vm.following}
       className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-50 ${
-        following
+        vm.following
           ? 'border-lc-border text-lc-muted hover:text-lc-white'
           : 'border-lc-green/50 bg-lc-green/15 text-lc-green hover:bg-lc-green/25'
       } ${className}`}
       data-testid="follow-button"
     >
-      {busy ? '…' : t(failed ? 'social.viewer.retry' : following ? 'social.viewer.following' : 'social.viewer.follow')}
+      {vm.busy ? '…' : t(vm.labelKey)}
     </button>
   );
 }

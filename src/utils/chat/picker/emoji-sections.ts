@@ -1,4 +1,5 @@
 import type { MessageKey } from '@/i18n/keys';
+import { EMOJI_CATEGORIES } from '@/lib/emoji';
 
 /**
  * The picker's category sections: each groups one or more `EMOJI_CATEGORIES`.
@@ -20,3 +21,8 @@ export const EMOJI_NAV: ReadonlyArray<{ name: string; icon: string; labelKey: Me
   { name: 'Recent', icon: '◷', labelKey: 'chat.emoji.recent' },
   ...EMOJI_SECTIONS,
 ];
+
+/** Every emoji of one picker section, its categories in order. */
+export function sectionEmojis(section: { categories: readonly string[] }) {
+  return section.categories.flatMap((category) => EMOJI_CATEGORIES[category] ?? []);
+}

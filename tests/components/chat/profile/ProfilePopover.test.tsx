@@ -232,6 +232,41 @@ describe('ProfilePopover', () => {
     window.removeEventListener(OPEN_SETTINGS_EVENT, listener);
   });
 
+  it('zap prefills the open channel and closes; without a channel it does nothing', () => {
+    const onZap = vi.fn();
+    window.addEventListener('obelisk:zap-prefill', onZap);
+    const onClose = vi.fn();
+    renderProfile(onClose);
+    fireEvent.click(screen.getByTestId('profile-zap-btn'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect((onZap.mock.calls[0][0] as CustomEvent).detail).toEqual({ pubkey: PUBKEY, displayName: 'AndyCreed' });
+    useChatStore.setState({ activeChannelId: null });
+    fireEvent.click(screen.getByTestId('profile-zap-btn'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    window.removeEventListener('obelisk:zap-prefill', onZap);
+  });
+
+  it('message and explore close the card and hand the key over', () => {
+    const onClose = vi.fn();
+    const onExplore = vi.fn();
+    const onMessage = vi.fn();
+    renderProfile(onClose, onExplore, onMessage);
+    fireEvent.click(screen.getByTestId('profile-message-btn'));
+    expect(onMessage).toHaveBeenCalledWith(PUBKEY);
+    fireEvent.click(screen.getByTestId('profile-explore-btn'));
+    expect(onExplore).toHaveBeenCalledWith(PUBKEY);
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('the bio draws custom emoji from the relay set', () => {
+    useChatStore.setState({ serverEmojis: { logo: 'https://x/logo.png' } });
+    bridge.metadata = { ...bridge.metadata!, about: 'hi :logo: there' };
+    renderProfile();
+    const about = screen.getByTestId('profile-about');
+    expect(about.querySelector('img')).toHaveAttribute('src', 'https://x/logo.png');
+    expect(about.textContent).toBe('hi  there');
+  });
+
   it('the ⋯ trigger is an SVG icon button and its menu rows carry icons', () => {
     renderProfile();
     const trigger = screen.getByTestId('profile-more-button');

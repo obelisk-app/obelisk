@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { publishBranding, type RelayBranding } from '@/services/relay/relay-branding';
 import { useTranslations } from 'next-intl';
 import { errorText } from '@/utils/errors/error-text';
@@ -18,6 +18,8 @@ export interface RelayBrandingForm {
   readonly setDescription: (value: string) => void;
   /** Trim every field, publish the kind 30078 branding doc, then `onSaved`. */
   readonly save: () => Promise<void>;
+  /** A form's `onSubmit`: stays on the page and saves. */
+  readonly submit: (event: FormEvent) => void;
 }
 
 /**
@@ -57,5 +59,10 @@ export function useRelayBrandingForm(
     }
   }
 
-  return { icon, banner, name, description, saving, error, setIcon, setBanner, setName, setDescription, save };
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void save();
+  };
+
+  return { icon, banner, name, description, saving, error, setIcon, setBanner, setName, setDescription, save, submit };
 }

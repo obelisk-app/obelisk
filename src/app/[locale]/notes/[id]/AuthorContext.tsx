@@ -11,34 +11,18 @@
 
 import { Link } from '@/i18n/navigation';
 import { serverLocale } from '@/services/server/i18n/locale';
-import { formatDate } from '@/utils/format/format';
-import { nip19 } from 'nostr-tools';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
   displayNameFor,
   type AuthorRelays,
   type ViewerProfile,
 } from '@/services/server/viewer/nostr-fetch';
-import { plainTextForPreview } from '@/services/server/viewer/note-preview';
 import FollowButton from './FollowButton';
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { NOTE_VIEWER_PATH, noteIdentifier } from '@/services/social/note-links';
-
-function npubOf(pubkey: string): string {
-  try {
-    return nip19.npubEncode(pubkey);
-  } catch {
-    return pubkey;
-  }
-}
-
-function hostOf(url: string): string {
-  try {
-    return new URL(url).host;
-  } catch {
-    return url.replace(/^wss?:\/\//, '').replace(/\/+$/, '');
-  }
-}
+import { safeNpub } from '@/utils/identity/short-npub';
+import { relayHostLabel } from '@/utils/relay-url/relay-host';
+import AuthorContextSection from './AuthorContextSection';
+import AuthorNoteItem from './AuthorNoteItem';
 
 export default async function AuthorContext({
   author,
@@ -63,37 +47,17 @@ export default async function AuthorContext({
   return (
     <div className="min-w-0 space-y-8" data-testid="author-context">
       {notes.length > 0 && (
-        <Section title={t('social.viewer.moreFrom', { name })} testId="author-more-notes">
+        <AuthorContextSection title={t('social.viewer.moreFrom', { name })} testId="author-more-notes">
           <ul className="space-y-2">
-            {notes.map((note) => {
-              // Markdown and bech32 read as noise at two lines; this is the
-              // same stripper the link previews use.
-              const text = plainTextForPreview(note.content);
-              return (
-                <li key={note.id}>
-                  <Link
-                    href={`${NOTE_VIEWER_PATH}/${noteIdentifier(note)}`}
-                    className="block min-w-0 rounded-xl border border-lc-border bg-lc-dark p-3 transition-colors hover:border-lc-green/40"
-                  >
-                    <p className="line-clamp-2 break-words text-sm text-lc-white">
-                      {text || t('social.viewer.sharedMedia')}
-                    </p>
-                    <time
-                      className="mt-1 block text-[10px] text-lc-muted"
-                      dateTime={new Date(note.created_at * 1000).toISOString()}
-                    >
-                      {formatDate(locale, note.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </time>
-                  </Link>
-                </li>
-              );
-            })}
+            {notes.map((note) => (
+              <AuthorNoteItem key={note.id} note={note} locale={locale} sharedMedia={t('social.viewer.sharedMedia')} />
+            ))}
           </ul>
-        </Section>
+        </AuthorContextSection>
       )}
 
       {hashtags.length > 0 && (
-        <Section title={t('social.author.writesAbout')} testId="author-hashtags">
+        <AuthorContextSection title={t('social.author.writesAbout')} testId="author-hashtags">
           <div className="flex flex-wrap gap-1.5">
             {hashtags.map((tag) => (
               <Link
@@ -105,16 +69,16 @@ export default async function AuthorContext({
               </Link>
             ))}
           </div>
-        </Section>
+        </AuthorContextSection>
       )}
 
       {follows.length > 0 && (
-        <Section title={t('social.author.follows')} testId="author-follows">
+        <AuthorContextSection title={t('social.author.follows')} testId="author-follows">
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
             {follows.map((profile) => (
               <li key={profile.pubkey}>
                 <Link
-                  href={`/p/${npubOf(profile.pubkey)}`}
+                  href={`/p/${safeNpub(profile.pubkey)}`}
                   className="flex min-w-0 items-center gap-2 rounded-xl border border-lc-border bg-lc-dark p-2 transition-colors hover:border-lc-green/40"
                 >
                   {profile.picture ? (
@@ -139,43 +103,26 @@ export default async function AuthorContext({
               </li>
             ))}
           </ul>
-        </Section>
+        </AuthorContextSection>
       )}
 
       {writeRelays.length > 0 && (
-        <Section title={t('social.author.publishesTo')} testId="author-relays">
+        <AuthorContextSection title={t('social.author.publishesTo')} testId="author-relays">
           <ul className="flex flex-wrap gap-1.5">
             {writeRelays.map((relay) => (
               <li
                 key={relay}
                 className="max-w-full break-all rounded-full border border-lc-border px-2.5 py-1 font-mono text-[10px] text-lc-muted"
               >
-                {hostOf(relay)}
+                {relayHostLabel(relay)}
               </li>
             ))}
           </ul>
           <p className="mt-2 text-[10px] text-lc-muted">
             {t('social.author.relaysHelp')}
           </p>
-        </Section>
+        </AuthorContextSection>
       )}
     </div>
-  );
-}
-
-function Section({
-  title,
-  testId,
-  children,
-}: {
-  title: string;
-  testId: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="min-w-0" data-testid={testId}>
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-lc-muted">{title}</h2>
-      {children}
-    </section>
   );
 }

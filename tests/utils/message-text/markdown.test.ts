@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { preprocessForMarkdown, EVERYONE_PLACEHOLDER, extractUrls, isImageUrl, extractYouTubeId } from '@/utils/message-text/markdown';
 import type { MemberInfo } from '@/utils/message-text/mentions';
+import { markdownCode, youtubeEmbeds } from '@/utils/message-text/markdown';
 
 const members: MemberInfo[] = [
   { pubkey: 'a'.repeat(64), displayName: 'Alice' },
@@ -94,5 +95,26 @@ describe('extractYouTubeId', () => {
 
   it('returns null for non-YouTube URLs', () => {
     expect(extractYouTubeId('https://example.com')).toBeNull();
+  });
+});
+
+describe('youtubeEmbeds', () => {
+  it('keeps the links that name a video, with their id', () => {
+    expect(youtubeEmbeds(['https://youtu.be/dQw4w9WgXcQ', 'https://youtube.com/'])).toEqual([
+      { url: 'https://youtu.be/dQw4w9WgXcQ', id: 'dQw4w9WgXcQ' },
+    ]);
+  });
+});
+
+describe('markdownCode', () => {
+  it('a language class makes a block and names the language', () => {
+    expect(markdownCode('language-ts', 'a\n', false)).toEqual({ block: true, code: 'a', language: 'ts' });
+  });
+  it('several source lines make a block only with a position', () => {
+    expect(markdownCode(undefined, 'a\nb', true).block).toBe(true);
+    expect(markdownCode(undefined, 'a\nb', false).block).toBe(false);
+  });
+  it('one line with no class is inline code', () => {
+    expect(markdownCode('', 'x', true)).toEqual({ block: false, code: 'x', language: undefined });
   });
 });

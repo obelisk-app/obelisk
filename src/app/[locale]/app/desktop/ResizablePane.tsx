@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useResizablePane } from '@/hooks/shell/desktop/useResizablePane';
 
 export function ResizablePane({
   storageKey,
@@ -28,40 +28,7 @@ export function ResizablePane({
   onWidthChange?: (w: number) => void;
 }) {
   const t = useTranslations();
-  const [width, setWidth] = useState<number>(() => {
-    if (typeof window === 'undefined') return defaultWidth;
-    const v = window.localStorage.getItem(storageKey);
-    const n = v ? parseInt(v, 10) : defaultWidth;
-    return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : defaultWidth;
-  });
-  const startRef = useRef<{ x: number; w: number } | null>(null);
-
-  function onMouseDown(e: React.MouseEvent) {
-    e.preventDefault();
-    startRef.current = { x: e.clientX, w: width };
-    function onMove(ev: MouseEvent) {
-      if (!startRef.current) return;
-      const delta = ev.clientX - startRef.current.x;
-      const next = side === 'right'
-        ? startRef.current.w + delta
-        : startRef.current.w - delta;
-      const clamped = Math.max(min, Math.min(max, next));
-      setWidth(clamped);
-    }
-    function onUp() {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      window.localStorage.setItem(storageKey, String(width));
-      startRef.current = null;
-    }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  }
-
-  useEffect(() => {
-    window.localStorage.setItem(storageKey, String(width));
-    onWidthChange?.(width);
-  }, [storageKey, width, onWidthChange]);
+  const { width, onMouseDown } = useResizablePane({ storageKey, defaultWidth, min, max, side, onWidthChange });
 
   const handle = (
     <div
@@ -89,7 +56,3 @@ export function ResizablePane({
     </>
   );
 }
-
-// -- Login --------------------------------------------------------------
-
-// -- Sidebar ------------------------------------------------------------

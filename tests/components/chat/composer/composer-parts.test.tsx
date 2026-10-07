@@ -1,25 +1,10 @@
 import { fireEvent, render, renderHook, act, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
-import { AttachmentMenu, promptForContact } from '@/components/chat/composer/AttachmentMenu';
+import { AttachmentMenu } from '@/components/chat/composer/AttachmentMenu';
 import { useFileDrag } from '@/hooks/chat/composer/useFileDrag';
 
 const renderLocalized = (ui: React.ReactElement) => render(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
-
-describe('promptForContact', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it('returns the trimmed answer, or null when blank or cancelled', () => {
-    const prompt = vi.fn(() => '  npub1abc  ');
-    vi.stubGlobal('prompt', prompt);
-    expect(promptForContact('Which key?')).toBe('npub1abc');
-    expect(prompt).toHaveBeenCalledWith('Which key?');
-    vi.stubGlobal('prompt', vi.fn(() => '   '));
-    expect(promptForContact('Which key?')).toBeNull();
-    vi.stubGlobal('prompt', vi.fn(() => null));
-    expect(promptForContact('Which key?')).toBeNull();
-  });
-});
 
 describe('AttachmentMenu file inputs', () => {
   it('gives each hidden picker a name and closes on a press outside', () => {
@@ -48,6 +33,49 @@ describe('AttachmentMenu file inputs', () => {
     const file = new File(['x'], 'a.png', { type: 'image/png' });
     fireEvent.change(input, { target: { files: [file] } });
     expect(onFiles).toHaveBeenCalledWith([file]);
+    expect(input.value).toBe('');
+  });
+
+  it('hands nothing over when the picker closes empty', () => {
+    const onFiles = vi.fn();
+    const { container } = renderLocalized(<AttachmentMenu onFiles={onFiles} onContact={() => {}} onNewSticker={() => {}} />);
+    fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [] } });
+    expect(onFiles).not.toHaveBeenCalled();
+  });
+
+  it('a menu entry closes the menu and opens its picker', () => {
+    const { container } = renderLocalized(<AttachmentMenu onFiles={() => {}} onContact={() => {}} onNewSticker={() => {}} />);
+    const camera = container.querySelectorAll('input[type="file"]')[2] as HTMLInputElement;
+    const click = vi.spyOn(camera, 'click');
+    fireEvent.click(screen.getByRole('button', { name: 'Add attachment' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Camera' }));
+    expect(click).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+});
+
+describe('AttachmentMenu contact entry', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('asks for a key, closes the menu and passes the trimmed answer on', () => {
+    const prompt = vi.fn(() => ' npub1xyz ');
+    vi.stubGlobal('prompt', prompt);
+    const onContact = vi.fn();
+    renderLocalized(<AttachmentMenu onFiles={() => {}} onContact={onContact} onNewSticker={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add attachment' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Contact' }));
+    expect(prompt).toHaveBeenCalledOnce();
+    expect(onContact).toHaveBeenCalledWith('npub1xyz');
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('passes nothing on when the prompt is cancelled', () => {
+    vi.stubGlobal('prompt', vi.fn(() => null));
+    const onContact = vi.fn();
+    renderLocalized(<AttachmentMenu onFiles={() => {}} onContact={onContact} onNewSticker={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add attachment' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Contact' }));
+    expect(onContact).not.toHaveBeenCalled();
   });
 });
 

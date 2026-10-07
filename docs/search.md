@@ -13,7 +13,7 @@ the client against the relay.
 
 | Surface | File | Searches |
 |---|---|---|
-| Desktop bar | `src/app/[locale]/app/search/SearchBar.tsx` | messages + users + channels |
+| Desktop bar | `src/app/[locale]/app/search/SearchBar.tsx` (its panes beside it, state in `src/hooks/shell/search/`) | messages + users + channels |
 | Mobile screen | `SearchScreen` in `src/app/[locale]/app/mobile/screens/search/SearchScreen.tsx` | messages + channels |
 | Publications search-or-create | `src/components/chat/forum/ForumView.tsx` | thread titles in the current container (local, no relay query) |
 

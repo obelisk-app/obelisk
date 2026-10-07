@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { chatLinkTarget, navigateInApp } from '@/utils/message-text/chat-link';
+import { isModifiedClick } from '@/utils/message-text/chat-link';
 
 describe('chatLinkTarget', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -34,5 +35,13 @@ describe('chatLinkTarget', () => {
     window.removeEventListener('popstate', onPop);
     expect(push).toHaveBeenCalledWith(null, '', '/chat?c=general');
     expect(onPop).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('isModifiedClick', () => {
+  const click = (over = {}) => ({ metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, ...over });
+  it('is true with any modifier held, false for a plain click', () => {
+    expect(isModifiedClick(click())).toBe(false);
+    for (const k of ['metaKey', 'ctrlKey', 'shiftKey', 'altKey']) expect(isModifiedClick(click({ [k]: true }))).toBe(true);
   });
 });

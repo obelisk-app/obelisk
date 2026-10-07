@@ -124,8 +124,11 @@ describe('Navbar account menu', () => {
 
 describe('Navbar bundle', () => {
   it('never imports the Nostr bridge statically, so the marketing pages do not download it', () => {
-    const src = readFileSync(resolve(process.cwd(), 'src/components/marketing/site/Navbar.tsx'), 'utf8');
-    expect(src).not.toMatch(/^import[^;]*from '@\/services\/nostr-bridge'/m);
-    expect(src).toContain("await import('@/services/nostr-bridge')");
+    for (const file of ['src/components/marketing/site/Navbar.tsx', 'src/components/marketing/site/NavAccountMenu.tsx', 'src/hooks/marketing/useNavbar.ts']) {
+      const src = readFileSync(resolve(process.cwd(), file), 'utf8');
+      expect(src, file).not.toMatch(/^import[^;]*from '@\/services\/nostr-bridge'/m);
+    }
+    // The logout reaches it on click, through the navbar's view model.
+    expect(readFileSync(resolve(process.cwd(), 'src/hooks/marketing/useNavbar.ts'), 'utf8')).toContain("await import('@/services/nostr-bridge')");
   });
 });

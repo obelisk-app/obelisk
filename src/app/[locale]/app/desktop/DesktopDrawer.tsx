@@ -1,14 +1,14 @@
 'use client';
 
-import { nostrActions } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import ServerRail from '../rail/ServerRail';
 import DmList from '../dm/DmList';
-import { DMOptInBoundary } from '../dm/DmOptInGate';
+import { DMOptInBoundary } from '../dm/DmOptInBoundary';
 import { ResizablePane } from './ResizablePane';
 import { Sidebar } from '../panes/sidebar/Sidebar';
 import type { View } from '@/utils/shell/desktop/view';
 import { SIDEBAR_KEY, type RailMode } from '@/utils/shell/desktop/desktop-layout';
+import { useDesktopDrawer } from '@/hooks/shell/desktop/useDesktopDrawer';
 
 type Props = {
   relay: string;
@@ -31,6 +31,7 @@ export function DesktopDrawer({
   relay, conn, view, setView, railMode, sidebarOpen, closeDrawer, leaveDms, onToggleFeed, onSidebarWidth,
 }: Props) {
   const t = useTranslations();
+  const vm = useDesktopDrawer({ relay, setView, closeDrawer });
   return (
     <>
       {/* Mobile backdrop */}
@@ -51,25 +52,16 @@ export function DesktopDrawer({
       >
         <ServerRail
           mode={railMode}
-          onPickDM={() => { setView({ kind: 'dm', peer: null }); closeDrawer(); }}
+          onPickDM={vm.pickDm}
           onPickFeed={onToggleFeed}
-          onPickRelay={async (url) => {
-            setView({ kind: 'empty' });
-            try {
-              if (url !== relay) await nostrActions.switchRelay(url);
-            } catch (err) {
-              console.warn('[appshell] switchRelay from rail failed', err);
-            } finally {
-              closeDrawer();
-            }
-          }}
+          onPickRelay={vm.pickRelay}
         />
         {view.kind !== 'feed' && <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={onSidebarWidth}>
           {view.kind === 'dm' ? (
             <DMOptInBoundary surface="sidebar" secondaryLabel={t('dm.optIn.notNow')} onSecondary={leaveDms}>
               <DmList
                 activePeer={view.peer}
-                onPick={(p) => { setView({ kind: 'dm', peer: p }); closeDrawer(); }}
+                onPick={vm.pickPeer}
               />
             </DMOptInBoundary>
           ) : (
@@ -77,7 +69,7 @@ export function DesktopDrawer({
               relay={relay}
               conn={conn}
               view={view}
-              setView={(v) => { setView(v); closeDrawer(); }}
+              setView={vm.pickView}
             />
           )}
         </ResizablePane>}

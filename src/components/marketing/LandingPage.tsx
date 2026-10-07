@@ -1,10 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-// Note: do NOT auto-redirect logged-in visitors to /app here.
-// The landing page must remain reachable from /app and via direct URL,
-// even when a session exists in localStorage.
-import { useRouter } from '@/i18n/navigation';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import Navbar from './site/Navbar';
@@ -12,6 +7,7 @@ import ShootingStars from '../common/ShootingStars';
 import Footer from './site/Footer';
 import { useTranslations } from 'next-intl';
 import { guidePath } from '@/utils/guides/guide-urls';
+import { useLandingPage } from '@/hooks/marketing/useLandingPage';
 import CtaSection from './landing/CtaSection';
 import DemoVideoSection from './landing/DemoVideoSection';
 import FaqSection from './landing/FaqSection';
@@ -27,22 +23,16 @@ import StepsSection from './landing/StepsSection';
 
 /**
  * The marketing landing page. Each section is its own component in
- * `./landing/` and owns its scroll reveal; this file keeps the page order,
- * the navigate-to-app state, and the post-quantum section (whose partner
- * names are the page's two exempt brand strings in the i18n baseline).
+ * `./landing/` and owns its scroll reveal; this file keeps the page order
+ * and the post-quantum section (whose partner names are the page's two
+ * exempt brand strings in the i18n baseline). Going to the app is
+ * `useLandingPage`, which never redirects a signed-in visitor on its own.
  */
 export default function LandingPage() {
-  const router = useRouter();
-  const [isNavigating, setIsNavigating] = useState(false);
   const t = useTranslations();
-  const launch = () => router.push('/app');
+  const vm = useLandingPage();
 
-  const handleLoginSuccess = () => {
-    setIsNavigating(true);
-    router.push('/app');
-  };
-
-  if (isNavigating) {
+  if (vm.isNavigating) {
     return (
       <div className="h-screen flex items-center justify-center bg-lc-black">
         <div className="flex flex-col items-center gap-3">
@@ -57,17 +47,17 @@ export default function LandingPage() {
     <main className="min-h-screen bg-lc-black appearance-bg lc-grid-bg relative">
       <ShootingStars />
       <div className="relative z-10">
-      <Navbar onLoginSuccess={handleLoginSuccess} />
-      <LandingHero onLaunch={launch} />
+      <Navbar onLoginSuccess={vm.onLoginSuccess} />
+      <LandingHero onLaunch={vm.launch} />
       <DemoVideoSection />
       <RelayPulse />
-      <PreviewSection onLaunch={launch} />
+      <PreviewSection onLaunch={vm.launch} />
       <FeaturesSection />
       <StepsSection />
       <RoadmapSection />
       <LearnSection />
       <StackSection />
-      <CtaSection onLaunch={launch} />
+      <CtaSection onLaunch={vm.launch} />
       <FaqSection />
 
       {/* Post-quantum messages: joint work with Nostr WoT + QuantaKrypto.

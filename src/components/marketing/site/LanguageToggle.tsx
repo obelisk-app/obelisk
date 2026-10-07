@@ -13,10 +13,8 @@
  * (`/guides/vesta` to `/es/guides/vesta`); see `useSwitchLocale`.
  */
 
-import { useRef, useState } from 'react';
-import { useLocale } from 'next-intl';
 import { LOCALES, type Locale } from '@/i18n';
-import { useSwitchLocale } from '@/hooks/i18n/useSwitchLocale';
+import { useLanguageToggle } from '@/hooks/marketing/useLanguageToggle';
 import Button from '@/components/ui/buttons/Button';
 import { CheckIcon, ChevronDownIcon } from '@/components/ui/icons/icons';
 import { MenuItem } from '@/components/ui/overlays/menu';
@@ -37,23 +35,14 @@ const LANGUAGE_CODES: Record<Locale, string> = {
 };
 
 export default function LanguageToggle() {
-  const locale = useLocale();
-  const switchLocale = useSwitchLocale();
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const [open, setOpen] = useState(false);
-
-  const pick = (next: Locale) => {
-    setOpen(false);
-    switchLocale(next);
-  };
-
+  const { locale, triggerRef, open, toggle, close, pick } = useLanguageToggle();
   return (
     <>
       <Button
         ref={triggerRef}
         variant="outlinePill"
         size="xs"
-        onClick={() => setOpen((value) => !value)}
+        onClick={toggle}
         aria-label={LANGUAGE_NAMES[locale]}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -65,7 +54,7 @@ export default function LanguageToggle() {
 
       <PopoverPanel
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={close}
         anchorRef={triggerRef}
         follow="close"
         width={160}

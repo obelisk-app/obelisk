@@ -1,26 +1,18 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
-import { useConfiguredRelays } from '@/services/nostr-bridge';
-import { faviconFor, SUGGESTED_RELAYS } from '@/services/relay/relay-info';
-import { shortHost } from '@/utils/relay-url/url-host';
-import { useAddRelayForm, useSuggestedRelayAdd } from '@/hooks/relay/useAddRelayForm';
+import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
+import { useAddRelayModal } from '@/hooks/shell/rail/useAddRelayModal';
 import Modal from '@/components/ui/overlays/Modal';
-import Button from '@/components/ui/buttons/Button';
-import ErrorState from '@/components/ui/feedback/ErrorState';
-import Input from '@/components/ui/forms/Input';
-import { useTranslations } from 'next-intl';
-import { colorFor, letterFor } from '@/utils/relay-url/relay-tile-style';
-import { useRelayInfo } from '@/hooks/shell/rail/useRelayInfo';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
-import RemoteImage from '@/components/ui/media/RemoteImage';
+import { useTranslations } from 'next-intl';
+import { AddRelayTabButton } from './AddRelayTabButton';
+import { CustomRelayForm } from './CustomRelayForm';
+import { SuggestedRelayItem } from './SuggestedRelayItem';
 
 /** Add a relay to the rail: pick a suggested one, or type a URL. */
 export function AddRelayModal({ onClose }: { onClose: () => void }) {
   const t = useTranslations();
-  const [tab, setTab] = useState<'suggested' | 'custom'>('suggested');
-  const configured = useConfiguredRelays();
-  const configuredSet = useMemo(() => new Set(configured), [configured]);
+  const vm = useAddRelayModal();
 
   return (
     <Modal
@@ -30,22 +22,22 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
         <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} />
 
         <div className="flex shrink-0 border-b border-lc-border px-5">
-          <TabButton active={tab === 'suggested'} onClick={() => setTab('suggested')}>
+          <AddRelayTabButton active={vm.tab === 'suggested'} onClick={vm.showSuggested}>
             {t('shell.rail.addModal.suggested')}
-          </TabButton>
-          <TabButton active={tab === 'custom'} onClick={() => setTab('custom')}>
+          </AddRelayTabButton>
+          <AddRelayTabButton active={vm.tab === 'custom'} onClick={vm.showCustom}>
             {t('shell.rail.addModal.custom')}
-          </TabButton>
+          </AddRelayTabButton>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          {tab === 'suggested' ? (
+          {vm.tab === 'suggested' ? (
             <ul className="flex flex-col gap-2">
               {SUGGESTED_RELAYS.map((r) => (
                 <SuggestedRelayItem
                   key={r.url}
                   url={r.url}
-                  alreadyAdded={configuredSet.has(r.url)}
+                  alreadyAdded={vm.isAdded(r.url)}
                   onAdded={onClose}
                 />
               ))}
@@ -55,112 +47,5 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
     </Modal>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={
-        'relative -mb-px flex-1 px-4 py-3 text-sm font-semibold transition-colors ' +
-        (active ? 'text-lc-white' : 'text-lc-muted hover:text-lc-white')
-      }
-    >
-      {children}
-      <span
-        className={
-          'absolute bottom-0 left-0 right-0 h-0.5 rounded-full transition-opacity ' +
-          (active ? 'bg-lc-green opacity-100' : 'opacity-0')
-        }
-      />
-    </button>
-  );
-}
-
-function SuggestedRelayItem({
-  url,
-  alreadyAdded,
-  onAdded,
-}: {
-  url: string;
-  alreadyAdded: boolean;
-  onAdded: () => void;
-}) {
-  const t = useTranslations();
-  const { info } = useRelayInfo(url);
-  const [iconFailed, setIconFailed] = useState(false);
-  const { busy, error: err, add } = useSuggestedRelayAdd(url, alreadyAdded, onAdded);
-
-  const name = info?.name || shortHost(url);
-  const description = info?.description || t('shell.rail.addModal.noDescription');
-  const icon = info?.icon || faviconFor(url);
-  const initials = letterFor(shortHost(url));
-  const accent = colorFor(shortHost(url));
-
-  return (
-    <li className="flex items-center gap-3 rounded-xl border border-lc-border bg-lc-card/60 p-3">
-      <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl text-base font-bold text-white"
-        style={{ background: icon && !iconFailed ? '#000' : accent }}
-      >
-        {icon && !iconFailed ? (
-          <RemoteImage
-            src={icon}
-            alt=""
-            onError={() => setIconFailed(true)}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <span>{initials}</span>
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-lc-white">{name}</div>
-        <div className="truncate font-mono text-xs text-lc-muted">{url}</div>
-        <div className="mt-0.5 truncate text-xs text-lc-muted">{description}</div>
-        {err && <ErrorState as="div" className="mt-1">{err}</ErrorState>}
-      </div>
-      <Button onClick={() => void add()} disabled={alreadyAdded || busy} className="shrink-0">
-        {alreadyAdded
-          ? t('shell.rail.addModal.added')
-          : busy ? t('shell.rail.addModal.adding') : t('shell.rail.addModal.add')}
-      </Button>
-    </li>
-  );
-}
-
-function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
-  const t = useTranslations();
-  const { url, busy, error: err, setUrl, submit } = useAddRelayForm(onAdded);
-
-  const urlId = useId();
-  return (
-    <form onSubmit={(e) => void submit(e)}>
-      <label htmlFor={urlId} className="block text-sm font-semibold text-lc-white">{t('shell.rail.addModal.urlLabel')}</label>
-      <p className="mt-1 text-xs text-lc-muted">{t('shell.rail.addModal.urlHint')}</p>
-      <Input
-        id={urlId}
-        autoFocus
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        spellCheck={false}
-        className="mt-3 font-mono"
-      />
-      {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
-      <div className="mt-4 flex justify-end">
-        <Button type="submit" disabled={busy || !url.trim()}>
-          {busy ? t('shell.rail.addModal.adding') : t('shell.rail.addRelay')}
-        </Button>
-      </div>
-    </form>
   );
 }

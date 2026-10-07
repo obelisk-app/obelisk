@@ -4,8 +4,10 @@ import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import { categoryLabel } from '@/utils/relay/category-label';
 import Input from '@/components/ui/forms/Input';
-import { ChannelOrderRow, DragHandleIcon, MoveButtons } from './ChannelOrderRow';
-import type { useLayoutDrag } from '@/hooks/shell/modals/layout/useLayoutDrag';
+import { ChannelOrderRow } from './ChannelOrderRow';
+import { DragHandleIcon } from './DragHandleIcon';
+import { MoveButtons } from './MoveButtons';
+import type { LayoutDrag } from '@/hooks/shell/modals/layout/useLayoutDrag';
 import Button from '@/components/ui/buttons/Button';
 
 type Category = { id: string; name: string; channelIds: ReadonlyArray<string> };
@@ -15,7 +17,7 @@ type Props = {
   idx: number;
   categories: ReadonlyArray<Category>;
   channelsById: Readonly<Record<string, JsGroup>>;
-  drag: ReturnType<typeof useLayoutDrag>;
+  drag: LayoutDrag;
   renameCategory: (id: string, name: string) => void;
   moveCategory: (id: string, delta: number) => void;
   deleteCategory: (id: string) => void;
@@ -31,11 +33,8 @@ export function LayoutCategoryCard({
   return (
     <div
       className="rounded-xl border border-lc-border bg-lc-black/40 p-3 transition-colors hover:border-lc-green/30"
-      onDragOver={(event) => { if (drag.dragged) event.preventDefault(); }}
-      onDrop={(event) => {
-        event.preventDefault();
-        drag.dropOnCategory(idx, cat.id);
-      }}
+      onDragOver={drag.cardDragOver}
+      onDrop={(event) => drag.cardDrop(event, idx, cat.id)}
       data-testid={`layout-category-${cat.id}`}
     >
       <div className="flex items-center gap-2">
@@ -43,7 +42,7 @@ export function LayoutCategoryCard({
           variant="ghost"
           size="icon"
           draggable
-          onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; drag.grabCategory(cat.id); }}
+          onDragStart={(event) => drag.startCategoryDrag(event, cat.id)}
           onDragEnd={drag.endDrag}
           className="cursor-grab active:cursor-grabbing"
           aria-label={t('shell.desktop.layout.grabCategory', { name: categoryLabel(cat.name, t) })}

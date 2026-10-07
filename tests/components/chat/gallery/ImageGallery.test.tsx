@@ -82,3 +82,69 @@ describe('ImageGallery lightbox', () => {
     expect(screen.getByTestId('lightbox-viewport').style.cursor).toBe('zoom-in');
   });
 });
+
+describe('ImageGallery layout', () => {
+  it('renders nothing for no images', () => {
+    const { container } = renderLocalized(<ImageGallery urls={[]} />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('one image keeps its aspect; a broken one hides itself', () => {
+    renderLocalized(<ImageGallery urls={urls(1)} wide />);
+    const gallery = screen.getByTestId('image-gallery');
+    expect(gallery).toHaveAttribute('data-count', '1');
+    expect(gallery).toHaveClass('w-full');
+    const img = gallery.querySelector('img')!;
+    fireEvent.error(img);
+    expect(img.style.display).toBe('none');
+  });
+
+  it('two images sit side by side at 2:1', () => {
+    renderLocalized(<ImageGallery urls={urls(2)} />);
+    const gallery = screen.getByTestId('image-gallery');
+    expect(gallery).toHaveClass('grid-cols-2', 'grid-rows-1', 'max-w-sm');
+    expect(gallery.style.aspectRatio).toBe('2 / 1');
+    expect(screen.getAllByTestId('gallery-tile')).toHaveLength(2);
+  });
+
+  it('three images: the first spans both rows', () => {
+    renderLocalized(<ImageGallery urls={urls(3)} />);
+    const tiles = screen.getAllByTestId('gallery-tile');
+    expect(tiles[0]).toHaveClass('row-span-2');
+    expect(tiles[1]).not.toHaveClass('row-span-2');
+    expect(screen.getByTestId('image-gallery')).toHaveClass('grid-rows-2');
+  });
+
+  it('more than four: four tiles, the last says how many more, and a broken tile hides', () => {
+    renderLocalized(<ImageGallery urls={urls(6)} />);
+    const tiles = screen.getAllByTestId('gallery-tile');
+    expect(tiles).toHaveLength(4);
+    expect(screen.getByTestId('overflow-overlay')).toHaveTextContent('+2');
+    expect(tiles[3]).toContainElement(screen.getByTestId('overflow-overlay'));
+    const img = tiles[1].querySelector('img')!;
+    fireEvent.error(img);
+    expect(img.style.display).toBe('none');
+  });
+
+  it('a tile opens the lightbox on its image; prev and next wrap; the counter follows', () => {
+    renderLocalized(<ImageGallery urls={urls(3)} />);
+    fireEvent.click(screen.getAllByTestId('gallery-tile')[2]);
+    expect(screen.getByTestId('lightbox')).toHaveTextContent('3 / 3');
+    fireEvent.click(screen.getByTestId('lightbox-next'));
+    expect(screen.getByTestId('lightbox')).toHaveTextContent('1 / 3');
+    fireEvent.click(screen.getByTestId('lightbox-prev'));
+    expect(screen.getByTestId('lightbox')).toHaveTextContent('3 / 3');
+  });
+
+  it('the close button and a backdrop click close the lightbox; a click on the image does not', () => {
+    renderLocalized(<ImageGallery urls={urls(2)} />);
+    fireEvent.click(screen.getAllByTestId('gallery-tile')[0]);
+    fireEvent.click(screen.getByTestId('lightbox-viewport'));
+    expect(screen.getByTestId('lightbox')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('lightbox'));
+    expect(screen.queryByTestId('lightbox')).toBeNull();
+    fireEvent.click(screen.getAllByTestId('gallery-tile')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByTestId('lightbox')).toBeNull();
+  });
+});

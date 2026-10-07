@@ -5,7 +5,8 @@ import { LocaleProvider } from '@tests/support/intl';
 import type { Locale } from '@/i18n';
 import SwapAnythingHero from '@/components/guides/svg/heroes/SwapAnythingHero';
 import SwapMatrixDiagram from '@/components/guides/svg/diagrams/SwapMatrixDiagram';
-import { HERO_REGISTRY, DIAGRAM_REGISTRY, SvgHero, Diagram } from '@/components/guides/svg/index';
+import { HERO_REGISTRY, DIAGRAM_REGISTRY, SvgHero } from '@/components/guides/svg/index';
+import Diagram from '@/components/guides/svg/embed/Diagram';
 
 /** The artwork's words come from the `guides` messages, so it renders inside a provider. */
 const render = (ui: ReactElement, locale: Locale = 'en') =>

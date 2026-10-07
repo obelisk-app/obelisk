@@ -2,49 +2,12 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { DmRawEvent, JsDirectMessage } from '@/services/nostr-bridge';
+import type { JsDirectMessage } from '@/services/nostr-bridge';
 import Modal from '@/components/ui/overlays/Modal';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
-import { LockIcon } from '@/components/ui/icons/icons';
-import Button from '@/components/ui/buttons/Button';
 import SegmentedControl from '@/components/ui/forms/SegmentedControl';
-import { copyWithToast } from '@/services/common/clipboard';
-import { json, rawEventFacts } from '@/utils/chat/dm/dm-message-utils';
-
-function RawEventView({ event, hint, warning, testId }: { event: DmRawEvent; hint: string; warning?: string | null; testId: string }) {
-  const t = useTranslations();
-  return (
-    <div data-testid={testId}>
-      <p className="mb-2 text-xs text-lc-muted">{hint}</p>
-      {warning && (
-        <p className="mb-2 flex items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-300" role="note">
-          <LockIcon size={13} className="mt-0.5 shrink-0" />
-          {warning}
-        </p>
-      )}
-      <dl className="mb-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px]">
-        <dt className="text-lc-muted">{t('social.eventIdLabel')}</dt>
-        <dd className="truncate font-mono text-lc-white">{event.id}</dd>
-        <dt className="text-lc-muted">{t('social.kindLabel')}</dt>
-        <dd className="font-mono text-lc-white">{event.kind}</dd>
-      </dl>
-      {/* `break-all`: an event is full of 64-char hex strings. */}
-      <pre className="max-h-[50vh] overflow-auto whitespace-pre-wrap break-all rounded-lg border border-lc-border bg-lc-black p-3 font-mono text-[11px] leading-relaxed text-lc-white/80">
-        {json(event)}
-      </pre>
-      <div className="mt-2 flex justify-end">
-        <Button
-          variant="pillSecondary"
-          size="xs"
-          onClick={() => copyWithToast(json(event), t('dm.msg.copied'))}
-          data-testid={`${testId}-copy`}
-        >
-          {t('social.copyJson')}
-        </Button>
-      </div>
-    </div>
-  );
-}
+import { rawEventFacts } from '@/utils/chat/dm/dm-message-utils';
+import { DmRawEventView } from './DmRawEventView';
 
 export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessage; onClose: () => void }) {
   const t = useTranslations();
@@ -74,7 +37,7 @@ export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessag
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         {!rumor && !wire && <p className="text-xs text-lc-muted">{t('dm.raw.unavailable')}</p>}
         {rumor && tab === 'message' && (
-          <RawEventView
+          <DmRawEventView
             event={rumor}
             hint={t('dm.raw.rumorHint', { kind: String(rumor.kind) })}
             warning={holdsKey ? t('dm.raw.keyWarning') : null}
@@ -83,7 +46,7 @@ export function DmRawEventDialog({ message, onClose }: { message: JsDirectMessag
         )}
         {wire && (tab === 'wire' || !rumor) && (
           <>
-            <RawEventView event={wire} hint={nip04 ? t('dm.raw.nip04Hint') : t('dm.raw.wrapHint')} testId="dm-raw-wire" />
+            <DmRawEventView event={wire} hint={nip04 ? t('dm.raw.nip04Hint') : t('dm.raw.wrapHint')} testId="dm-raw-wire" />
             {nip04 && (
               <div className="mt-3">
                 <p className="mb-1 text-[11px] text-lc-muted">{t('dm.raw.decrypted')}</p>

@@ -33,7 +33,7 @@ export function VoiceMessage({
   const t = useTranslations();
   const {
     audioRef, playing, setPlaying, playbackRate, current, setCurrent,
-    duration, setDuration, progress, toggle, cyclePlaybackRate, seek,
+    duration, progress, toggle, cyclePlaybackRate, seek, onLoadedMetadata,
   } = useVoicePlayback(note.durationSeconds);
 
   return (
@@ -50,7 +50,7 @@ export function VoiceMessage({
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
         onTimeUpdate={(event) => setCurrent(event.currentTarget.currentTime)}
-        onLoadedMetadata={(event) => { if (Number.isFinite(event.currentTarget.duration)) setDuration(event.currentTarget.duration); }}
+        onLoadedMetadata={onLoadedMetadata}
       />
       <button type="button" onClick={toggle} className={`flex shrink-0 items-center justify-center text-white ${compact ? "h-11 w-9" : "h-14 w-10"}`} aria-label={t(playing ? 'chat.voiceNote.pause' : 'chat.voiceNote.play')}>
         {playing ? (

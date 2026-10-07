@@ -14,9 +14,10 @@
  */
 
 import { bioSegments, normalizeWebsite, prettyUrl } from '@/utils/chat/profile/profile-links';
-import { useToastStore } from '@/store/feedback/toast';
+import { copyWithToast } from '@/services/common/clipboard';
 import { useTranslations } from 'next-intl';
 import TextButton from '@/components/ui/buttons/TextButton';
+import { BioSegmentView } from './BioSegmentView';
 
 export default function ProfileLinks({
   about,
@@ -33,32 +34,11 @@ export default function ProfileLinks({
 
   if (segments.length === 0 && !site && !lud16) return null;
 
-  const copyAddress = () => {
-    if (!lud16) return;
-    void Promise.resolve(navigator.clipboard?.writeText(lud16)).catch(() => {});
-    useToastStore.getState().pushToast({ title: t('social.profileFeed.addressCopied'), body: lud16 });
-  };
-
   return (
     <div className="profile-view-bio shrink-0 px-5 py-2" data-testid="profile-links">
       {segments.length > 0 && (
         <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-lc-muted">
-          {segments.map((segment, index) => (
-            segment.type === 'text'
-              ? <span key={index}>{segment.value}</span>
-              : (
-                <a
-                  key={index}
-                  href={segment.href}
-                  target={segment.href.startsWith('http') ? '_blank' : undefined}
-                  rel="noopener noreferrer"
-                  className="text-lc-green underline decoration-lc-green/40 underline-offset-2 hover:decoration-lc-green"
-                  data-testid="profile-bio-link"
-                >
-                  {segment.value}
-                </a>
-              )
-          ))}
+          {segments.map((segment, index) => <BioSegmentView key={index} segment={segment} />)}
         </p>
       )}
 
@@ -82,7 +62,7 @@ export default function ProfileLinks({
           )}
           {lud16 && (
             <TextButton tone="plain"
-              onClick={copyAddress} className="inline-flex items-center gap-1.5 text-lc-muted hover:text-lc-white"
+              onClick={() => copyWithToast(lud16, t('social.profileFeed.addressCopied'), lud16)} className="inline-flex items-center gap-1.5 text-lc-muted hover:text-lc-white"
               data-testid="profile-lud16"
               title={lud16}
             >

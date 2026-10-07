@@ -8,6 +8,7 @@ import type { JsMediaKind } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
 import { customEntriesFrom, filterByName, resolveRecentEntries, SEARCH_LIMIT } from '@/utils/chat/picker/custom-emoji-entries';
 import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
+import type { RecentPickerEntry } from '@/utils/chat/picker/custom-emoji-entries';
 
 /**
  * Search, recents and the custom set of the emoji picker, split by kind.
@@ -88,5 +89,7 @@ export function useEmojiPicker({
     recentEntries,
     handlePick,
     handlePickCustom,
+    /** A Recent entry: a custom pick goes back as custom media, anything else as its character. */
+    handlePickRecent: (entry: RecentPickerEntry) => (entry.custom ? handlePickCustom(entry.custom) : handlePick(entry.char)),
   };
 }

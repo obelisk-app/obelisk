@@ -1,10 +1,9 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import type { PqProtectionLevel } from '@/services/chat/pq/status';
-import { useDismiss } from '@/hooks/common/useDismiss';
+import { usePqShield } from '@/hooks/chat/pq/usePqShield';
 import { ICONS } from './pq-shield-icons';
 
 /**
@@ -38,16 +37,9 @@ export default function PqShield({
   guideHref: string;
 }) {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLSpanElement | null>(null);
-  const panelId = useId();
-
   // Pointer users get it on hover, but the panel holds a link, so touch and
-  // keyboard need a real toggle: hover alone would put that link out of reach
-  // on a phone, which is where this is most likely to be read.
-  const close = () => setOpen(false);
-  // `pointerdown` catches the tap that opened it on a phone as well as a click.
-  useDismiss({ refs: [wrapRef], onDismiss: close, enabled: open, outside: 'pointerdown' });
+  // keyboard need a real toggle (`usePqShield`).
+  const { open, wrapRef, panelId, show, hide, toggle, onBlur } = usePqShield();
 
   const Icon = ICONS[level];
   const label = t(`chat.pq.level.${level}`);
@@ -57,8 +49,8 @@ export default function PqShield({
     <span
       ref={wrapRef}
       className="relative inline-flex shrink-0"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={show}
+      onMouseLeave={hide}
     >
       <button
         type="button"
@@ -69,13 +61,9 @@ export default function PqShield({
         // The visible panel is hover-dependent, so the button carries the
         // whole statement itself for anyone who never sees it.
         aria-label={`${label}. ${detail}`}
-        onClick={() => setOpen((v) => !v)}
-        onFocus={() => setOpen(true)}
-        onBlur={(e) => {
-          // Keep it open while focus is inside the panel, or the guide link
-          // can never be reached by keyboard.
-          if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) setOpen(false);
-        }}
+        onClick={toggle}
+        onFocus={show}
+        onBlur={onBlur}
         className={`rounded p-1 transition-colors ${TONE[level]}`}
       >
         <Icon />

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DM_OPT_IN_PREFERENCE_KEY, DM_OPT_IN_STORAGE_KEY, setDmOptInEnabled } from '@/services/chat/dm/opt-in';
 import { LocaleProvider } from '@tests/support/intl';
-import { DMOptInBoundary } from '@/app/[locale]/app/dm/DmOptInGate';
+import { DMOptInBoundary } from '@/app/[locale]/app/dm/DmOptInBoundary';
 
 describe('DMOptInBoundary', () => {
   beforeEach(() => {
@@ -64,5 +64,37 @@ describe('DMOptInBoundary', () => {
     expect(screen.getByText('Activar mensajes directos')).toBeInTheDocument();
     expect(screen.getByText(/eventos de mensajes directos encriptados/i)).toBeInTheDocument();
     expect(screen.getByTestId('enable-dms-button')).toHaveTextContent('Activar DMs');
+  });
+});
+
+describe('DmOptInGate', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setDmOptInEnabled(false);
+  });
+
+  it('turns DMs on and tells the host, and labels the way out "Not now" by default', async () => {
+    const { default: DmOptInGate } = await import('@/app/[locale]/app/dm/DmOptInGate');
+    const onEnable = vi.fn();
+    const onSecondary = vi.fn();
+    render(
+      <LocaleProvider initialLocale="en">
+        <DmOptInGate surface="sidebar" onEnable={onEnable} onSecondary={onSecondary} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByTestId('dm-opt-in-gate-sidebar')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Not now'));
+    expect(onSecondary).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId('enable-dms-button'));
+    expect(onEnable).toHaveBeenCalledTimes(1);
+    const stored = JSON.parse(localStorage.getItem(DM_OPT_IN_STORAGE_KEY) ?? '{}');
+    expect(stored[DM_OPT_IN_PREFERENCE_KEY]).toBe(true);
+  });
+
+  it('offers no way out when the host gives none', async () => {
+    const { default: DmOptInGate } = await import('@/app/[locale]/app/dm/DmOptInGate');
+    render(<LocaleProvider initialLocale="en"><DmOptInGate /></LocaleProvider>);
+    expect(screen.getByTestId('dm-opt-in-gate-desktop')).toBeInTheDocument();
+    expect(screen.queryByText('Not now')).toBeNull();
   });
 });

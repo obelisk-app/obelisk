@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { useMyPubkey } from '@/services/nostr-bridge';
 import { faviconFor } from '@/services/relay/relay-info';
 import { useHasAnyHighlights } from '@/hooks/read-state/useChannelHighlights';
@@ -10,9 +10,19 @@ import { useTranslations } from 'next-intl';
 import { relayShareLink } from '@/utils/relay-url/relay-share-link';
 import { useRelayInfo } from '@/hooks/shell/rail/useRelayInfo';
 import { useCopyToClipboard } from '@/hooks/common/useCopyToClipboard';
+import { shortHost } from '@/utils/relay-url/url-host';
+import { colorFor, letterFor } from '@/utils/relay-url/relay-tile-style';
 
-/** One relay tile's state: its icon, its unread markers, its context menu and share link. */
-export function useRelayTile(url: string, active: boolean) {
+/**
+ * One relay tile's state: its icon (or letters on an accent), its unread
+ * markers, its right-click menu and share link. The menu's switch and remove
+ * close the menu, then call through.
+ */
+export function useRelayTile(
+  url: string,
+  active: boolean,
+  { onClick, onRemove }: { onClick: () => void; onRemove: () => void },
+) {
   const t = useTranslations();
   const [menu, setMenu] = useState(false);
   const [iconFailed, setIconFailed] = useState(false);
@@ -39,8 +49,25 @@ export function useRelayTile(url: string, active: boolean) {
     if (!(await copy(link))) window.prompt(t('shell.rail.copyPrompt'), link);
   }
 
+  const host = shortHost(url);
+
   return {
     menu, setMenu,
+    initials: letterFor(host),
+    accent: colorFor(host),
+    openMenu: (e: MouseEvent) => {
+      e.preventDefault();
+      setMenu(true);
+    },
+    closeMenu: () => setMenu(false),
+    switchTo: () => {
+      setMenu(false);
+      onClick();
+    },
+    remove: () => {
+      setMenu(false);
+      onRemove();
+    },
     copied: copied !== null, copyShareLink,
     showHighlight, backgroundUnread,
     /** The icon to draw, or `null` for the letter tile. */

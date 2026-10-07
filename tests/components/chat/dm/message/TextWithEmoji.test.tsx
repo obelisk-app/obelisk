@@ -14,4 +14,21 @@ describe('TextWithEmoji', () => {
       unmount();
     }
   });
+
+  it('keeps the text around links and emoji in order, and links get the class and safe rel', () => {
+    const { container } = render(
+      <TextWithEmoji text="a :obelisk_logo: b https://x.example/a c" emojis={{ obelisk_logo: 'https://x/logo.png' }} linkClass="l" />,
+    );
+    expect(container.textContent).toBe('a  b https://x.example/a c');
+    const link = container.querySelector('a')!;
+    expect(link).toHaveClass('l');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(container.querySelector('img')).toHaveAttribute('alt', ':obelisk_logo:');
+  });
+
+  it('plain text renders as it is', () => {
+    const { container } = render(<TextWithEmoji text="just words" emojis={{}} linkClass="l" />);
+    expect(container.innerHTML).toBe('just words');
+  });
 });

@@ -9,13 +9,15 @@
  * the plain text; after it arrives every render is synchronous, so a list of
  * messages never flickers again.
  */
-import { useEffect, useState } from 'react';
+import { createElement, useEffect, useState, type ReactElement } from 'react';
+import type { Components } from 'react-markdown';
 
 /**
  * A render function rather than a component: a component handed back from a
  * hook would count as "created during render" and remount on every render.
+ * It renders the module's `MarkdownBody`.
  */
-export type RenderMarkdownBody = typeof import('@/components/chat/message/MarkdownBody').renderMarkdownBody;
+export type RenderMarkdownBody = (text: string, components: Components) => ReactElement;
 
 let loaded: RenderMarkdownBody | null = null;
 let pending: Promise<RenderMarkdownBody> | null = null;
@@ -23,8 +25,9 @@ let pending: Promise<RenderMarkdownBody> | null = null;
 /** Starts the download (once) and resolves with the renderer. Tests await it before rendering. */
 export function preloadMarkdownBody(): Promise<RenderMarkdownBody> {
   pending ??= import('@/components/chat/message/MarkdownBody').then((mod) => {
-    loaded = mod.renderMarkdownBody;
-    return loaded;
+    const render: RenderMarkdownBody = (text, components) => createElement(mod.default, { text, components });
+    loaded = render;
+    return render;
   });
   return pending;
 }

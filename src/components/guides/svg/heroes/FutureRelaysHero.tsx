@@ -1,4 +1,15 @@
 import { useTranslations } from 'next-intl';
+import { particleField } from '@/utils/guides/art-geometry';
+import { meshLines } from '@/utils/guides/hero-art';
+
+/** The encrypted packets drifting between the relays. */
+const PACKETS = particleField(8, {
+  x: { base: 100, step: 90, mod: 600 },
+  y: { base: 160, step: 37, mod: 120 },
+  delayStep: 0.6,
+  durBase: 5,
+  durCycle: 4,
+});
 
 export default function FutureRelaysHero() {
   const t = useTranslations();
@@ -13,6 +24,7 @@ export default function FutureRelaysHero() {
   const edges: [number, number][] = [
     [0, 2], [1, 2], [0, 3], [1, 4], [3, 5], [4, 5], [2, 5], [0, 1], [3, 4],
   ];
+  const lines = meshLines(relays, edges);
 
   return (
     <svg
@@ -47,22 +59,18 @@ export default function FutureRelaysHero() {
 
       {/* mesh edges with flowing dashes */}
       <g stroke="#b4f953" strokeWidth="1.5" strokeOpacity="0.6" fill="none" strokeLinecap="round">
-        {edges.map(([a, b], i) => {
-          const A = relays[a];
-          const B = relays[b];
-          return (
-            <line
-              key={i}
-              x1={A.cx}
-              y1={A.cy}
-              x2={B.cx}
-              y2={B.cy}
-              strokeDasharray="4 10"
-              className="animate-dash-flow"
-              style={{ animationDelay: `${(i * 0.25).toFixed(2)}s` } as React.CSSProperties}
-            />
-          );
-        })}
+        {lines.map((line, i) => (
+          <line
+            key={i}
+            x1={line.x1}
+            y1={line.y1}
+            x2={line.x2}
+            y2={line.y2}
+            strokeDasharray="4 10"
+            className="animate-dash-flow"
+            style={{ animationDelay: line.delay } as React.CSSProperties}
+          />
+        ))}
       </g>
 
       {/* relay nodes */}
@@ -126,27 +134,21 @@ export default function FutureRelaysHero() {
       </g>
 
       {/* floating encrypted packets */}
-      {Array.from({ length: 8 }).map((_, i) => {
-        const x = 100 + (i * 90) % 600;
-        const y = 160 + ((i * 37) % 120);
-        const delay = `${(i * 0.6).toFixed(2)}s`;
-        const dur = `${(5 + (i % 4)).toFixed(1)}s`;
-        return (
-          <g
-            key={`pkt-${i}`}
-            className="animate-particle"
-            style={{
-              ['--particle-delay' as string]: delay,
-              ['--particle-duration' as string]: dur,
-              transformOrigin: `${x}px ${y}px`,
-            } as React.CSSProperties}
-          >
-            <rect x={x} y={y} width="14" height="10" rx="2" fill="#2d3a1a" stroke="#b4f953" strokeWidth="1" />
-            <rect x={x + 2} y={y + 3} width="6" height="1.5" fill="#b4f953" opacity="0.7" />
-            <rect x={x + 2} y={y + 6} width="4" height="1.5" fill="#b4f953" opacity="0.5" />
-          </g>
-        );
-      })}
+      {PACKETS.map((p) => (
+        <g
+          key={`pkt-${p.i}`}
+          className="animate-particle"
+          style={{
+            ['--particle-delay' as string]: p.delay,
+            ['--particle-duration' as string]: p.dur,
+            transformOrigin: `${p.x}px ${p.y}px`,
+          } as React.CSSProperties}
+        >
+          <rect x={p.x} y={p.y} width="14" height="10" rx="2" fill="#2d3a1a" stroke="#b4f953" strokeWidth="1" />
+          <rect x={p.x + 2} y={p.y + 3} width="6" height="1.5" fill="#b4f953" opacity="0.7" />
+          <rect x={p.x + 2} y={p.y + 6} width="4" height="1.5" fill="#b4f953" opacity="0.5" />
+        </g>
+      ))}
     </svg>
   );
 }

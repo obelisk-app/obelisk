@@ -46,6 +46,34 @@ describe('DmComposer', () => {
     expect(screen.getByTestId('dm-composer-input')).toHaveValue('');
   });
 
+  it('on a phone, Enter sends and Shift+Enter does not', () => {
+    renderLocalized(<DmComposer peer={PEER} variant="mobile" />);
+    const input = screen.getByTestId('dm-composer-input');
+    fireEvent.change(input, { target: { value: 'hi' } });
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true });
+    expect(actions.sendDirectMessage).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(actions.sendDirectMessage).toHaveBeenCalledWith(PEER, 'hi', []);
+  });
+
+  it('on desktop, Enter in the field leaves sending to the form', () => {
+    renderLocalized(<DmComposer peer={PEER} variant="desktop" />);
+    const input = screen.getByTestId('dm-composer-input');
+    fireEvent.change(input, { target: { value: 'hi' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(actions.sendDirectMessage).not.toHaveBeenCalled();
+  });
+
+  it('shows the send button only once there is something to send', () => {
+    renderLocalized(<DmComposer peer={PEER} variant="mobile" />);
+    expect(screen.queryByTestId('dm-send')).toBeNull();
+    fireEvent.change(screen.getByTestId('dm-composer-input'), { target: { value: '  ' } });
+    expect(screen.queryByTestId('dm-send')).toBeNull();
+    fireEvent.change(screen.getByTestId('dm-composer-input'), { target: { value: 'x' } });
+    fireEvent.click(screen.getByTestId('dm-send'));
+    expect(actions.sendDirectMessage).toHaveBeenCalledWith(PEER, 'x', []);
+  });
+
   it('encrypts an attached file, holds it beside the draft, and sends it as a file message', async () => {
     let finish!: (v: unknown) => void;
     encryptAndUploadDmFile.mockImplementation(() => new Promise((r) => { finish = r; }));

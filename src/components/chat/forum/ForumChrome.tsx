@@ -9,7 +9,8 @@
  *     vs gallery, and any/all tag matching), the curated tag chips, and a
  *     trailing "All" chip that clears the tag filter.
  */
-import { useSignerReady, type JsForumTag } from '@/services/nostr-bridge';
+import type { JsForumTag } from '@/services/nostr-bridge';
+import { useForumChrome } from '@/hooks/chat/forum/useForumChrome';
 import { useTranslations } from 'next-intl';
 import type { ForumPrefs } from '@/services/chat/forum/forum-prefs';
 import Input from '@/components/ui/forms/Input';
@@ -44,17 +45,12 @@ export function ForumChrome({
   onClearTags: () => void;
 }) {
   const t = useTranslations();
-  const ready = useSignerReady();
-  const canCreate = !exactMatch && searchQuery.trim().length > 0;
-  const allActive = selectedTagIds.length === 0;
+  const vm = useForumChrome(searchQuery, exactMatch, selectedTagIds, onSubmitSearch);
   return (
     <div className="border-b border-lc-border px-3 py-3 shrink-0 space-y-2.5">
       {/* Row 1: search / create */}
       <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmitSearch();
-        }}
+        onSubmit={vm.submit}
         className="flex items-center gap-2"
         data-testid="forum-search-row"
       >
@@ -65,7 +61,7 @@ export function ForumChrome({
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={t(canCreate ? 'chat.forum.pressEnter' : 'chat.forum.searchOrCreate')}
+          placeholder={t(vm.canCreate ? 'chat.forum.pressEnter' : 'chat.forum.searchOrCreate')}
           data-testid="forum-search-input"
           aria-label={t('chat.forum.searchPlaceholder')}
         />
@@ -73,10 +69,10 @@ export function ForumChrome({
           variant="pill"
           size="xs"
           onClick={onClickNewThread}
-          disabled={!ready}
+          disabled={!vm.ready}
           className="shrink-0"
           data-testid="forum-new-thread-btn"
-          title={t(ready ? 'chat.forum.new' : 'chat.forum.signInToStart')}
+          title={t(vm.ready ? 'chat.forum.new' : 'chat.forum.signInToStart')}
         >
           <NewPostIcon />
           <span className="hidden sm:inline">{t('chat.forum.new')}</span>
@@ -92,7 +88,7 @@ export function ForumChrome({
               <TagChip
                 key={tag.id}
                 tag={tag}
-                active={selectedTagIds.includes(tag.id)}
+                active={vm.isSelected(tag.id)}
                 onClick={() => onToggleTag(tag.id)}
               />
             ))}
@@ -103,12 +99,12 @@ export function ForumChrome({
           onClick={onClearTags}
           className={
             'rounded-full px-3 py-1 text-xs font-medium transition-colors shrink-0 ' +
-            (allActive
+            (vm.allActive
               ? 'bg-lc-card text-lc-white border border-lc-border'
               : 'bg-transparent text-lc-muted border border-lc-border hover:text-lc-white hover:border-lc-muted')
           }
           data-testid="forum-tag-all"
-          aria-pressed={allActive}
+          aria-pressed={vm.allActive}
         >
           {t('mobile.search.all')}
         </button>

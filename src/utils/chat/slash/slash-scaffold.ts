@@ -1,4 +1,4 @@
-import { SLASH_COMMANDS, type SlashCommandParam } from './slash-commands';
+import { SLASH_COMMANDS, type SlashCommand, type SlashCommandParam } from './slash-commands';
 
 /** The whitespace-separated tokens of a command's argument text, with their offsets. */
 export function tokenize(rest: string): { value: string; start: number; end: number }[] {
@@ -83,4 +83,37 @@ export function scaffoldMentionSlotRange(
     return { start: prefix.length + tok.start, end: prefix.length + tok.end };
   }
   return null;
+}
+
+/** One parameter slot of the scaffold under the composer. */
+export interface ScaffoldSlot {
+  readonly name: string;
+  readonly text: string;
+  readonly filled: boolean;
+  readonly active: boolean;
+  readonly optional: boolean;
+}
+
+/**
+ * The scaffold for `command` while `content` is being typed: its slots
+ * (filled from the typed arguments, the one under the caret active) and the
+ * active parameter, or null when there is nothing to show (no parameters,
+ * another command, or only the bare command name so far).
+ */
+export function scaffoldSlots(command: SlashCommand, content: string, caret: number) {
+  const params = command.params;
+  if (!params || params.length === 0) return null;
+  const prefix = `/${command.name}`;
+  if (!content.startsWith(prefix)) return null;
+  const rest = content.slice(prefix.length);
+  if (rest.length === 0) return null;
+
+  const tokens = tokenize(rest);
+  const active = activeParamIndex(rest, Math.max(0, caret - prefix.length), params);
+  const slots: ScaffoldSlot[] = params.map((p, i) => {
+    const value = tokens[i]?.value;
+    const filled = Boolean(value);
+    return { name: p.name, text: filled ? value! : p.name, filled, active: i === active, optional: Boolean(p.optional) };
+  });
+  return { prefix, slots, activeParam: params[active] };
 }

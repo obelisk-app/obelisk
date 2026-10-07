@@ -1,12 +1,12 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Footer from '@/components/marketing/site/Footer';
 import Navbar from '@/components/marketing/site/Navbar';
 import { LOCAL_DATA_CATEGORIES } from '@/services/local-data/categories';
 import type { MessageKey } from '@/i18n/keys';
+import LocalDataHelpSection from './LocalDataHelpSection';
 
 const WHY: ReadonlyArray<MessageKey> = [
   'help.localData.why.speed',
@@ -42,17 +42,17 @@ export default function LocalDataHelp() {
         </h1>
         <p className="mt-3 text-lg text-lc-muted">{t('help.localData.intro')}</p>
 
-        <Section title={t('help.localData.why.title')}>
+        <LocalDataHelpSection title={t('help.localData.why.title')}>
           <ul className="list-disc space-y-2 pl-5">
             {WHY.map((key) => <li key={key}>{t(key)}</li>)}
           </ul>
-        </Section>
+        </LocalDataHelpSection>
 
-        <Section title={t('help.localData.server.title')}>
+        <LocalDataHelpSection title={t('help.localData.server.title')}>
           <p>{t('help.localData.server.body')}</p>
-        </Section>
+        </LocalDataHelpSection>
 
-        <Section title={t('help.localData.categories.title')} testId="local-data-help-categories">
+        <LocalDataHelpSection title={t('help.localData.categories.title')} testId="local-data-help-categories">
           <dl className="space-y-4">
             {LOCAL_DATA_CATEGORIES.map((category) => (
               <div key={category.id} className="lc-card p-4">
@@ -62,13 +62,13 @@ export default function LocalDataHelp() {
             ))}
           </dl>
           <p className="mt-4 text-sm">{t('help.localData.categories.perAccount')}</p>
-        </Section>
+        </LocalDataHelpSection>
 
-        <Section title={t('help.localData.settings.title')}>
+        <LocalDataHelpSection title={t('help.localData.settings.title')}>
           <p>{t('help.localData.settings.body')}</p>
-        </Section>
+        </LocalDataHelpSection>
 
-        <Section title={t('help.localData.other.title')} testId="local-data-help-other">
+        <LocalDataHelpSection title={t('help.localData.other.title')} testId="local-data-help-other">
           <ul className="list-disc space-y-3 pl-5">
             <li>{t('help.localData.other.logout')}</li>
             <li>
@@ -79,22 +79,13 @@ export default function LocalDataHelp() {
             </li>
             <li>{t('help.localData.other.private')}</li>
           </ul>
-        </Section>
+        </LocalDataHelpSection>
 
-        <Section title={t('help.localData.published.title')}>
+        <LocalDataHelpSection title={t('help.localData.published.title')}>
           <p>{t('help.localData.published.body')}</p>
-        </Section>
+        </LocalDataHelpSection>
       </main>
       <Footer />
     </div>
-  );
-}
-
-function Section({ title, testId, children }: { title: string; testId?: string; children: ReactNode }) {
-  return (
-    <section className="mt-10 text-base leading-7 text-lc-muted" data-testid={testId}>
-      <h2 className="mb-3 text-xl font-bold text-lc-white">{title}</h2>
-      {children}
-    </section>
   );
 }

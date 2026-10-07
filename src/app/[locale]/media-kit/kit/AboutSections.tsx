@@ -3,7 +3,8 @@
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { ASSETS, PITCHES } from '@/utils/media-kit/content';
-import { CopyButton, Section } from './kit-ui';
+import { CopyButton } from './CopyButton';
+import { Section } from './Section';
 
 /** The pitches (short and long, in the page language) and the downloadable logos and icons. */
 export function AboutSections() {

@@ -6,7 +6,8 @@ import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';
 import Button from '@/components/ui/buttons/Button';
 import { CloseIcon } from '@/components/ui/icons/icons';
-import { MAX_FORUM_TAGS, removeTagAt, tagEmojiValue, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
+import { tagEmojiValue } from '@/utils/chat/forum/forum-tags';
+import { useForumTagsEditor } from '@/hooks/chat/forum/useForumTagsEditor';
 import { TagColorPicker } from './TagColorPicker';
 
 /**
@@ -23,13 +24,7 @@ export default function ForumTagsEditor({
   onChange: (next: ReadonlyArray<JsForumTag>) => void;
 }) {
   const t = useTranslations();
-  const MAX = MAX_FORUM_TAGS;
-  const updateAt = (idx: number, patch: Partial<JsForumTag>) => onChange(updateTagAt(value, idx, patch));
-  const removeAt = (idx: number) => onChange(removeTagAt(value, idx));
-  const addTag = () => {
-    const next = withNewTag(value, MAX);
-    if (next) onChange(next);
-  };
+  const vm = useForumTagsEditor(value, onChange);
   return (
     <div className="space-y-2">
       {value.length === 0 && (
@@ -45,7 +40,7 @@ export default function ForumTagsEditor({
         >
           <TagColorPicker
             tag={tag}
-            onPick={(color) => updateAt(idx, { color })}
+            onPick={(color) => vm.updateAt(idx, { color })}
           />
           <Input
             size="xs"
@@ -53,7 +48,7 @@ export default function ForumTagsEditor({
             tone="dark"
             type="text"
             value={tag.emoji ?? ''}
-            onChange={(e) => updateAt(idx, { emoji: tagEmojiValue(e.target.value) })}
+            onChange={(e) => vm.updateAt(idx, { emoji: tagEmojiValue(e.target.value) })}
             placeholder="🌐"
             maxLength={4}
             className="w-12 shrink-0 text-center"
@@ -66,7 +61,7 @@ export default function ForumTagsEditor({
             tone="dark"
             type="text"
             value={tag.name}
-            onChange={(e) => updateAt(idx, { name: e.target.value })}
+            onChange={(e) => vm.updateAt(idx, { name: e.target.value })}
             placeholder={t('shell.desktop.tags.name')}
             maxLength={40}
             className="min-w-0 flex-1"
@@ -97,7 +92,7 @@ export default function ForumTagsEditor({
             variant="ghost"
             size="icon"
             tone="danger"
-            onClick={() => removeAt(idx)}
+            onClick={() => vm.removeAt(idx)}
             className="shrink-0"
             aria-label={t('shell.desktop.tags.remove')}
             data-testid={`forum-tag-remove-${tag.id}`}
@@ -109,14 +104,14 @@ export default function ForumTagsEditor({
       <Button
         variant="pillSecondary"
         size="xs"
-        onClick={addTag}
-        disabled={value.length >= MAX}
+        onClick={vm.addTag}
+        disabled={vm.atMax}
         data-testid="forum-tag-add"
       >
         {t('chat.forum.addTag')}
       </Button>
-      {value.length >= MAX && (
-        <p className="text-[11px] text-lc-muted">{t('chat.forum.maxTags', { count: MAX })}</p>
+      {vm.atMax && (
+        <p className="text-[11px] text-lc-muted">{t('chat.forum.maxTags', { count: vm.max })}</p>
       )}
     </div>
   );

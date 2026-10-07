@@ -23,3 +23,8 @@ export function surfaceForView(
   if (view.kind === 'group') return 'channel';
   return 'server';
 }
+
+/** True while the open view is the voice channel the user is in, whose own pane shows the call. */
+export function isViewingActiveCall(view: View, currentVoiceChannelId: string | null): boolean {
+  return view.kind === 'group' && !!currentVoiceChannelId && view.groupId === currentVoiceChannelId;
+}

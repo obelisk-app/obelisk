@@ -13,16 +13,12 @@
  * Tiles morph from rounded-square to circle on hover.
  */
 
-import { useState } from 'react';
-import { useConfiguredRelays, useCurrentRelayUrl } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
+import { useServerRail } from '@/hooks/shell/rail/useServerRail';
+import type { RailMode } from '@/utils/shell/desktop/desktop-layout';
 import { AddRelayModal } from './AddRelayModal';
 import { RailTile } from './RailTile';
 import { RelayTile } from './RelayTile';
-import { confirmAndRemoveRelay } from '@/services/relay/remove-relay';
-
-
-type RailMode = { kind: 'dm' } | { kind: 'feed' } | { kind: 'relay'; url: string };
 
 export default function ServerRail({
   mode,
@@ -35,10 +31,8 @@ export default function ServerRail({
   onPickFeed?: () => void;
   onPickRelay: (url: string) => void;
 }) {
-  const relays = useConfiguredRelays();
-  const currentRelay = useCurrentRelayUrl();
-  const [adding, setAdding] = useState(false);
   const t = useTranslations();
+  const vm = useServerRail(mode);
 
   return (
     <div className="flex w-[72px] shrink-0 flex-col items-center gap-2 py-3">
@@ -81,24 +75,21 @@ export default function ServerRail({
 
       <div className="my-1 h-px w-8 bg-lc-border" />
 
-      {relays.map((url, index) => {
-        const active = mode.kind === 'relay' && currentRelay === url;
-        return (
-          <RelayTile
-            key={url}
-            url={url}
-            active={active}
-            // Only the first tile carries it: the others are the same
-            // control, and a dot on each would read as unread traffic.
-            hint={index === 0 ? 'rail-relay' : undefined}
-            onClick={() => onPickRelay(url)}
-            onRemove={() => { void confirmAndRemoveRelay(url, relays.length, t); }}
-          />
-        );
-      })}
+      {/* Only the first tile carries the hint: the others are the same
+          control, and a dot on each would read as unread traffic. */}
+      {vm.relays.map((url, index) => (
+        <RelayTile
+          key={url}
+          url={url}
+          active={vm.isActive(url)}
+          hint={index === 0 ? 'rail-relay' : undefined}
+          onClick={() => onPickRelay(url)}
+          onRemove={() => vm.remove(url)}
+        />
+      ))}
 
       <button
-        onClick={() => setAdding(true)}
+        onClick={vm.openAdd}
         title={t('shell.rail.addRelay')}
         aria-label={t('shell.rail.addRelay')}
         data-tour="rail-add-relay"
@@ -110,7 +101,7 @@ export default function ServerRail({
         </svg>
       </button>
 
-      {adding && <AddRelayModal onClose={() => setAdding(false)} />}
+      {vm.adding && <AddRelayModal onClose={vm.closeAdd} />}
     </div>
   );
 }

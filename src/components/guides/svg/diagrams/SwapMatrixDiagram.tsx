@@ -1,28 +1,20 @@
 import { useTranslations } from 'next-intl';
-
-interface Row {
-  layer: string;
-  ours: string;
-  alts: string[];
-}
-
-const ROW_HEIGHT = 64;
-const TOP = 60;
-const COL_W = 200;
-const COL_GAP = 16;
-const LABEL_X = 24;
-const COL_X = [LABEL_X + 110, LABEL_X + 110 + (COL_W + COL_GAP), LABEL_X + 110 + 2 * (COL_W + COL_GAP)];
+import {
+  SWAP_COL_W as COL_W, SWAP_COL_X as COL_X, SWAP_LABEL_X as LABEL_X, SWAP_ROW_HEIGHT as ROW_HEIGHT, SWAP_TOP as TOP,
+  swapMatrixHeight, swapMatrixRows, type SwapRow,
+} from '@/utils/guides/diagram-art';
 
 export default function SwapMatrixDiagram() {
   const t = useTranslations();
   /** Project names (ours, strfry, nostr-rs-relay) stay as they are; the rest is copy. */
-  const rows: Row[] = [
+  const rows: SwapRow[] = [
     { layer: t('guides.art.swapMatrix.client'), ours: 'obelisk-dex', alts: [t('guides.art.swapMatrix.otherClients'), t('guides.art.swapMatrix.ownFork')] },
     { layer: t('guides.art.swapMatrix.voice'), ours: 'obelisk-sfu', alts: [t('guides.art.swapMatrix.anySfu'), t('guides.art.swapMatrix.peerToPeer')] },
     { layer: t('guides.art.swapMatrix.bots'), ours: 'obelisk-bots', alts: [t('guides.art.swapMatrix.ownBot'), t('guides.art.swapMatrix.anyKeypair')] },
     { layer: t('guides.art.swapMatrix.relay'), ours: 'obelisk-relay', alts: ['strfry', 'nostr-rs-relay'] },
   ];
-  const height = TOP + rows.length * ROW_HEIGHT + 36;
+  const height = swapMatrixHeight(rows.length);
+  const grid = swapMatrixRows(rows);
 
   return (
     <svg
@@ -80,82 +72,73 @@ export default function SwapMatrixDiagram() {
         {t('guides.art.swapMatrix.alternative')}
       </text>
 
-      {rows.map((row, i) => {
-        const y = TOP + i * ROW_HEIGHT;
-        const cells = [
-          { x: COL_X[0], label: row.ours, primary: true },
-          { x: COL_X[1], label: row.alts[0], primary: false },
-          { x: COL_X[2], label: row.alts[1], primary: false },
-        ];
+      {grid.map((row) => (
+        <g key={row.layer}>
+          {/* row label */}
+          <text
+            x={LABEL_X}
+            y={row.y + 30}
+            fontSize="13"
+            fontWeight="700"
+            fill="#a3a3a3"
+          >
+            {row.layer}
+          </text>
 
-        return (
-          <g key={row.layer}>
-            {/* row label */}
-            <text
-              x={LABEL_X}
-              y={y + 30}
-              fontSize="13"
-              fontWeight="700"
-              fill="#a3a3a3"
-            >
-              {row.layer}
-            </text>
+          {/* connecting strand across the row */}
+          <line
+            x1={COL_X[0] + COL_W}
+            y1={row.y + 24}
+            x2={COL_X[2]}
+            y2={row.y + 24}
+            stroke="#b4f953"
+            strokeWidth="1"
+            strokeDasharray="3 6"
+            strokeOpacity="0.4"
+            className="animate-dash-flow"
+            style={{ animationDelay: row.strandDelay } as React.CSSProperties}
+          />
 
-            {/* connecting strand across the row */}
-            <line
-              x1={COL_X[0] + COL_W}
-              y1={y + 24}
-              x2={COL_X[2]}
-              y2={y + 24}
-              stroke="#b4f953"
-              strokeWidth="1"
-              strokeDasharray="3 6"
-              strokeOpacity="0.4"
-              className="animate-dash-flow"
-              style={{ animationDelay: `${(i * 0.3).toFixed(2)}s` } as React.CSSProperties}
-            />
-
-            {cells.map((cell, j) => (
-              <g key={cell.label}>
-                <rect
-                  x={cell.x}
-                  y={y}
-                  width={COL_W}
-                  height="48"
-                  rx="10"
-                  fill={cell.primary ? '#1e2812' : '#171717'}
-                  stroke={cell.primary ? '#b4f953' : '#262626'}
-                  strokeWidth={cell.primary ? '1.8' : '1'}
+          {row.cells.map((cell) => (
+            <g key={cell.label}>
+              <rect
+                x={cell.x}
+                y={row.y}
+                width={COL_W}
+                height="48"
+                rx="10"
+                fill={cell.primary ? '#1e2812' : '#171717'}
+                stroke={cell.primary ? '#b4f953' : '#262626'}
+                strokeWidth={cell.primary ? '1.8' : '1'}
+              />
+              <text
+                x={cell.x + COL_W / 2}
+                y={row.y + 30}
+                textAnchor="middle"
+                fontSize="14"
+                fontWeight={cell.primary ? '800' : '600'}
+                fill={cell.primary ? '#b4f953' : '#fafafa'}
+                fontFamily="monospace"
+              >
+                {cell.label}
+              </text>
+              {cell.primary && (
+                <circle
+                  cx={cell.x + 14}
+                  cy={row.y + 24}
+                  r="3"
+                  fill="#b4f953"
+                  className="animate-dot-pulse"
+                  style={{
+                    transformOrigin: `${cell.x + 14}px ${row.y + 24}px`,
+                    animationDelay: cell.dotDelay,
+                  } as React.CSSProperties}
                 />
-                <text
-                  x={cell.x + COL_W / 2}
-                  y={y + 30}
-                  textAnchor="middle"
-                  fontSize="14"
-                  fontWeight={cell.primary ? '800' : '600'}
-                  fill={cell.primary ? '#b4f953' : '#fafafa'}
-                  fontFamily="monospace"
-                >
-                  {cell.label}
-                </text>
-                {cell.primary && (
-                  <circle
-                    cx={cell.x + 14}
-                    cy={y + 24}
-                    r="3"
-                    fill="#b4f953"
-                    className="animate-dot-pulse"
-                    style={{
-                      transformOrigin: `${cell.x + 14}px ${y + 24}px`,
-                      animationDelay: `${(i * 0.4 + j * 0.1).toFixed(2)}s`,
-                    } as React.CSSProperties}
-                  />
-                )}
-              </g>
-            ))}
-          </g>
-        );
-      })}
+              )}
+            </g>
+          ))}
+        </g>
+      ))}
 
       <text
         x={LABEL_X}

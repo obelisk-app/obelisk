@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type RefObject } from 'react';
+import { useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
 import { useTranslations } from 'next-intl';
 import { nostrActions } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
@@ -161,6 +161,18 @@ export function useDmComposer(peer: string, inputRef: RefObject<HTMLInputElement
   const closePicker = () => setPickerOpen(false);
 
   const canSend = !uploading && (draft.trim().length > 0 || files.some((f) => f.meta) || Boolean(voice?.meta));
+  /** The form's submit (desktop): send instead of navigating. */
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    send();
+  };
+  /** The phone field's keys: Enter sends, Shift+Enter is left to the field. */
+  const sendOnEnter = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
 
   return {
     mediaAllowed,
@@ -172,6 +184,10 @@ export function useDmComposer(peer: string, inputRef: RefObject<HTMLInputElement
     pickerTab,
     pickerEmojis: mergeCustomEmojiMaps(serverEmojis, customEmojis),
     canSend,
+    /** Send shows while there is anything to send (even before uploads finish); otherwise the voice recorder. */
+    showSend: canSend || draft.trim().length > 0 || files.length > 0 || Boolean(voice),
+    submit,
+    sendOnEnter,
     addFiles,
     removeFile,
     onVoiceRecorded,

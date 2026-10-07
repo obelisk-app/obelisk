@@ -18,12 +18,9 @@
  * what the settings panel already does; nothing here publishes a NIP-51 list.
  */
 
-import { useRef, useState } from 'react';
 import AnchoredMenu from '@/components/common/AnchoredMenu';
-import { useCopyToClipboard } from '@/hooks/common/useCopyToClipboard';
-import { useModerationStore } from '@/store/moderation';
+import { useDmThreadMenu } from '@/hooks/chat/dm/thread/useDmThreadMenu';
 import { useTranslations } from 'next-intl';
-import { safeNpub } from '@/utils/identity/short-npub';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/overlays/menu';
 import { BanIcon, BellIcon, BellOffIcon, CheckBadgeIcon, KeyIcon, MoreIcon, UserIcon } from '@/components/ui/icons/icons';
 import IconButton from '@/components/ui/buttons/IconButton';
@@ -39,18 +36,9 @@ export default function DmThreadMenu({
   className?: string;
 }) {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  // Flash "Copied!", then close: the menu staying open after a copy reads
-  // as the click not having registered.
-  const { copied, copy } = useCopyToClipboard({ onReset: () => setOpen(false) });
-
-  const muted = useModerationStore((s) => s.mutedPubkeys.includes(peer));
-  const blocked = useModerationStore((s) => s.blockedPubkeys.includes(peer));
-  const toggleMute = useModerationStore((s) => s.toggleMute);
-  const toggleBlock = useModerationStore((s) => s.toggleBlock);
-
-  const npub = safeNpub(peer);
+  const {
+    blocked, close, copied, copyNpub, muted, open, openProfile, toggle, toggleBlock, toggleMute, triggerRef,
+  } = useDmThreadMenu(peer, onOpenProfile);
 
   return (
     <>
@@ -59,7 +47,7 @@ export default function DmThreadMenu({
         shape="square"
         size="8"
         tone={open ? 'accent' : 'outline'}
-        onClick={() => setOpen((value) => !value)}
+        onClick={toggle}
         // Same square as the call buttons beside it, so the header's actions
         // read as one set.
         className={`active:scale-95 ${className}`}
@@ -74,7 +62,7 @@ export default function DmThreadMenu({
 
       <AnchoredMenu
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={close}
         anchorRef={triggerRef}
         width={220}
         panelClassName={MENU_PANEL_CLASS}
@@ -84,21 +72,21 @@ export default function DmThreadMenu({
           <MenuItem
             icon={<UserIcon />}
             label={t('dm.viewProfile')}
-            onClick={() => { setOpen(false); onOpenProfile(peer); }}
+            onClick={openProfile}
             testId="dm-menu-profile"
           />
         )}
         <MenuItem
           icon={copied ? <CheckBadgeIcon /> : <KeyIcon />}
           label={copied ? t('common.copied') : t('shell.user.copyNpub')}
-          onClick={() => void copy(npub)}
+          onClick={copyNpub}
           testId="dm-menu-copy-npub"
         />
         <MenuDivider />
         <MenuItem
           icon={muted ? <BellIcon /> : <BellOffIcon />}
           label={t(muted ? 'social.profileFeed.unmute' : 'social.profileFeed.mute')}
-          onClick={() => { toggleMute(peer); setOpen(false); }}
+          onClick={toggleMute}
           testId="dm-menu-mute"
         />
         {/* Destructive last and in red, so it can't be hit on the way to
@@ -106,7 +94,7 @@ export default function DmThreadMenu({
         <MenuItem
           icon={<BanIcon />}
           label={t(blocked ? 'social.profileFeed.unblock' : 'social.profileFeed.block')}
-          onClick={() => { toggleBlock(peer); setOpen(false); }}
+          onClick={toggleBlock}
           danger={!blocked}
           testId="dm-menu-block"
         />

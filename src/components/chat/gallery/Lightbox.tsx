@@ -3,7 +3,7 @@
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { useZoomPan } from '@/hooks/chat/gallery/useZoomPan';
+import { useLightbox } from '@/hooks/chat/gallery/useLightbox';
 import IconButton from '@/components/ui/buttons/IconButton';
 
 /** Exported so other media surfaces (the feed's carousel) zoom identically. */
@@ -17,17 +17,7 @@ export interface LightboxProps {
 
 export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps) {
   const t = useTranslations();
-  const {
-    scale, tx, ty, isZoomed, isDragging,
-    onWheel, onMouseDown, onMouseMove, onMouseUp, onDoubleClick, shouldIgnoreBackdropClick,
-  } = useZoomPan(index);
-
-  // Backdrop click closes only when we're neither zoomed nor dragging;
-  // prevents accidental closes mid-pan.
-  const handleBackdropClick = () => {
-    if (shouldIgnoreBackdropClick()) return;
-    onClose();
-  };
+  const vm = useLightbox(index, onClose, onPrev, onNext);
 
   /*
    * Portalled to `document.body`, and it has to be.
@@ -44,20 +34,17 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
   const panel = (
     <div
       className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center"
-      onClick={handleBackdropClick}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
-      onMouseMove={onMouseMove}
+      onClick={vm.backdropClick}
+      onMouseUp={vm.onMouseUp}
+      onMouseLeave={vm.onMouseUp}
+      onMouseMove={vm.onMouseMove}
       data-testid="lightbox"
     >
       <IconButton
         tone="overlay"
         size="10"
         aria-label={t('common.close')}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
+        onClick={vm.closeClick}
         className="absolute top-4 right-4 z-10"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -72,11 +59,8 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
             tone="overlay"
             size="10"
             aria-label={t('common.previous')}
-            onClick={(e) => {
-              e.stopPropagation();
-              onPrev();
-            }}
-            className={`absolute left-4 top-1/2 -translate-y-1/2 ${isZoomed ? 'pointer-events-none opacity-50' : ''}`}
+            onClick={vm.prevClick}
+            className={`absolute left-4 top-1/2 -translate-y-1/2 ${vm.isZoomed ? 'pointer-events-none opacity-50' : ''}`}
             data-testid="lightbox-prev"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -87,11 +71,8 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
             tone="overlay"
             size="10"
             aria-label={t('common.next')}
-            onClick={(e) => {
-              e.stopPropagation();
-              onNext();
-            }}
-            className={`absolute right-4 top-1/2 -translate-y-1/2 ${isZoomed ? 'pointer-events-none opacity-50' : ''}`}
+            onClick={vm.nextClick}
+            className={`absolute right-4 top-1/2 -translate-y-1/2 ${vm.isZoomed ? 'pointer-events-none opacity-50' : ''}`}
             data-testid="lightbox-next"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -103,13 +84,11 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
 
       <div
         className="max-w-[90vw] max-h-[90vh]"
-        onWheel={onWheel}
+        onWheel={vm.onWheel}
         onClick={(e) => e.stopPropagation()}
-        onDoubleClick={onDoubleClick}
-        onMouseDown={onMouseDown}
-        style={{
-          cursor: isZoomed ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
-        }}
+        onDoubleClick={vm.onDoubleClick}
+        onMouseDown={vm.onMouseDown}
+        style={{ cursor: vm.cursor }}
         data-testid="lightbox-viewport"
       >
         <RemoteImage
@@ -118,9 +97,9 @@ export function Lightbox({ urls, index, onClose, onPrev, onNext }: LightboxProps
           draggable={false}
           className="max-w-[90vw] max-h-[90vh] object-contain select-none"
           style={{
-            transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+            transform: vm.transform,
             transformOrigin: 'center center',
-            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+            transition: vm.isDragging ? 'none' : 'transform 0.1s ease-out',
           }}
         />
       </div>

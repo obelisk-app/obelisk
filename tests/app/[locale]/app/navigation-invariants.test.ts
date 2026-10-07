@@ -43,16 +43,22 @@ describe('desktop navigation invariants', () => {
   });
 
   it('SearchBar hands navigation to the shell instead', () => {
-    expect(read('search/SearchBar.tsx')).toContain('requestJump');
+    // The bar's handlers live in its view model.
+    expect(read('search/SearchBar.tsx')).toContain('useSearchBar(');
+    expect(read('../../../hooks/shell/search/useSearchBar.ts')).toContain('requestJump');
   });
 
   it('the search panes and the shared search hook never navigate via the bridge either', () => {
     // The bar's panes moved to their own files and the search itself to a
     // hook; the rule follows the code.
-    for (const file of ['search/ResultsPane.tsx', 'search/FilterAndHistoryPane.tsx', '../../../hooks/chat/search/useRelaySearch.ts']) {
+    const searchHooks = readdirSync(join(process.cwd(), 'src/hooks/shell/search')).map((f) => `../../../hooks/shell/search/${f}`);
+    const searchParts = readdirSync(join(process.cwd(), 'src/app/[locale]/app/search')).map((f) => `search/${f}`);
+    for (const file of [...searchParts, ...searchHooks, '../../../hooks/chat/search/useRelaySearch.ts']) {
       expect(read(file), file).not.toContain('setActiveGroup');
     }
-    expect(read('search/ResultsPane.tsx')).toContain('requestJump');
+    // A channel result opens through the shell (`ChannelsSection` over `useChannelsSection`).
+    expect(read('search/ChannelsSection.tsx')).toContain('useChannelsSection(');
+    expect(read('../../../hooks/shell/search/useChannelsSection.ts')).toContain('requestJump');
     expect(read('../../../hooks/chat/search/useRelaySearch.ts')).toContain('requestJump');
   });
 
@@ -122,7 +128,9 @@ describe('desktop navigation invariants', () => {
 
   it('the shell answers a pendingJump by changing `view`, not the bridge', () => {
     const shell = read('../../../hooks/shell/desktop/useDesktopNavigation.ts');
-    expect(read('desktop/DesktopShell.tsx')).toContain('useDesktopNavigation(');
+    // The shell's view model holds the navigation; the shell reads the model.
+    expect(read('desktop/DesktopShell.tsx')).toContain('useDesktopShell(');
+    expect(read('../../../hooks/shell/desktop/useDesktopShell.ts')).toContain('useDesktopNavigation(');
     const effect = shell.slice(
       shell.indexOf('const pendingJump ='),
       shell.indexOf('consumeJump()'),

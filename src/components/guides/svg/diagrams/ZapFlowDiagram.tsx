@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl';
+import { ZAP_LANE_X as LANE_X, zapArrows, type ZapLane as Lane } from '@/utils/guides/diagram-art';
 
 /**
  * A NIP-57 zap as Obelisk sends it. The sender's client signs the zap
@@ -7,9 +8,6 @@ import { useTranslations } from 'next-intl';
  * LNURL server publishes the kind 9735 receipt that every client shows. No
  * Obelisk server is anywhere in the money path.
  */
-const LANE_X = { C: 110, W: 335, L: 565, R: 790 } as const;
-type Lane = keyof typeof LANE_X;
-
 export default function ZapFlowDiagram() {
   const t = useTranslations();
   const rows: { y: number; from: Lane; to: Lane; label: string }[] = [
@@ -27,6 +25,7 @@ export default function ZapFlowDiagram() {
     R: t('guides.art.zapFlow.relays'),
   };
   const lanes = Object.keys(LANE_X) as Lane[];
+  const arrows = zapArrows(rows);
 
   return (
     <svg
@@ -56,34 +55,22 @@ export default function ZapFlowDiagram() {
       </g>
 
       {/* arrows */}
-      {rows.map((r, i) => {
-        const x1 = LANE_X[r.from];
-        const x2 = LANE_X[r.to];
-        const right = x2 > x1;
-        return (
-          <g key={i}>
-            <line
-              x1={x1} y1={r.y} x2={x2} y2={r.y}
-              stroke="#b4f953"
-              strokeWidth="1.8"
-              strokeDasharray="6 6"
-              className="animate-dash-flow"
-              style={{ animationDelay: `${i * 0.25}s` } as React.CSSProperties}
-            />
-            <polygon
-              points={
-                right
-                  ? `${x2 - 8},${r.y - 5} ${x2},${r.y} ${x2 - 8},${r.y + 5}`
-                  : `${x2 + 8},${r.y - 5} ${x2},${r.y} ${x2 + 8},${r.y + 5}`
-              }
-              fill="#b4f953"
-            />
-            <text x={(x1 + x2) / 2} y={r.y - 8} textAnchor="middle" fontSize="11" fontWeight="600" fill="#fafafa" fontFamily="monospace">
-              {r.label}
-            </text>
-          </g>
-        );
-      })}
+      {arrows.map((a) => (
+        <g key={a.key}>
+          <line
+            x1={a.x1} y1={a.y} x2={a.x2} y2={a.y}
+            stroke="#b4f953"
+            strokeWidth="1.8"
+            strokeDasharray="6 6"
+            className="animate-dash-flow"
+            style={{ animationDelay: a.delay } as React.CSSProperties}
+          />
+          <polygon points={a.head} fill="#b4f953" />
+          <text x={a.labelX} y={a.y - 8} textAnchor="middle" fontSize="11" fontWeight="600" fill="#fafafa" fontFamily="monospace">
+            {a.label}
+          </text>
+        </g>
+      ))}
 
       {/* footnote */}
       <text x="450" y="340" textAnchor="middle" fontSize="11" fontWeight="600" fill="#a3a3a3">

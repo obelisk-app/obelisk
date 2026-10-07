@@ -19,7 +19,7 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 | `src/services/chat/dm/opt-in.ts` | The `directMessagesEnabled` preference gate. The only file under `src/services/chat/dm/`. |
 | `src/store/chat/dm.ts` | Zustand UI state: `activeDMPubkey`, `isDMMode`, and the persisted per-peer `protocolOverrides`. |
 | `src/services/chat/pq/` | Post-quantum: attestation lookup, own-capability detection, status computation, send-plan resolution. |
-| `src/app/[locale]/app/dm/DmList.tsx`, `ComposeDm.tsx`, `DmOptInGate.tsx` | Shared DM UI. |
+| `src/app/[locale]/app/dm/DmList.tsx`, `ComposeDm.tsx`, `DmOptInGate.tsx` (and `DmOptInBoundary.tsx`), their parts beside them, logic in `src/hooks/shell/dm/` and `src/utils/shell/desktop/` (`dm-list.ts`, `compose-dm.ts`) | Shared DM UI. |
 | `src/app/[locale]/app/panes/dm/DmPanel.tsx` | Desktop thread view. |
 | `src/app/[locale]/app/mobile/screens/dm/DmThreadScreen.tsx` | Mobile thread view. |
 | `src/components/chat/pq/PqMessageMark.tsx`, `src/hooks/chat/pq/usePqConversationStatus.ts` | Post-quantum indicator and the thread's PQ status. |

@@ -1,10 +1,10 @@
 'use client';
 
 import type { JsForumTag } from '@/services/nostr-bridge';
-import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
+import { threadTagChoice } from '@/utils/chat/forum/forum-tags';
 import { useTranslations } from 'next-intl';
 import { MAX_THREAD_TAGS, useNewThreadForm } from '@/hooks/chat/forum/useNewThreadForm';
-import { TagDot } from './TagDot';
+import { NewThreadTagChip } from './NewThreadTagChip';
 import Input from '@/components/ui/forms/Input';
 import TextArea from '@/components/ui/forms/TextArea';
 import Button from '@/components/ui/buttons/Button';
@@ -78,27 +78,9 @@ export function NewThreadModal({
               {t('chat.forum.tagsCount', { count: selectedTagIds.length, max: MAX_TAGS })}
             </Text>
             <div className="flex flex-wrap gap-1.5">
-              {forumTags.map((tag) => {
-                const active = selectedTagIds.includes(tag.id);
-                const disabled = !active && selectedTagIds.length >= MAX_TAGS;
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={() => toggleTag(tag.id)}
-                    disabled={disabled}
-                    style={tagChipStyle(tag, active)}
-                    className="rounded-full border px-3 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-40"
-                    data-testid={`new-thread-tag-${tag.id}`}
-                    aria-pressed={active}
-                  >
-                    {tag.emoji
-                      ? <span className="text-sm leading-none">{tag.emoji}</span>
-                      : <TagDot tag={tag} />}
-                    <span className="truncate max-w-[10rem]">{tag.name}</span>
-                  </button>
-                );
-              })}
+              {forumTags.map((tag) => (
+                <NewThreadTagChip key={tag.id} tag={tag} choice={threadTagChoice(selectedTagIds, tag.id, MAX_TAGS)} onToggle={toggleTag} />
+              ))}
             </div>
           </div>
         )}

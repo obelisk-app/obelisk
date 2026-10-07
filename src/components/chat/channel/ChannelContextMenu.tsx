@@ -12,16 +12,13 @@
  * State lives in `src/store/chat/channel-prefs.ts`; the bridge's
  * `deliverGroupPing` is what honours it.
  */
-import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { MUTED_FOREVER } from '@/store/chat/channel-prefs';
-import { useChannelActions } from '@/hooks/chat/channel/useChannelActions';
-import { useMutedLabel } from '@/hooks/chat/channel/useMutedLabel';
+import { useChannelContextMenu } from '@/hooks/chat/channel/useChannelContextMenu';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/overlays/menu';
 import { AtIcon, BellIcon, BellOffIcon, CheckCircleIcon, ChevronRightIcon, ClockIcon, LinkIcon, StarIcon } from '@/components/ui/icons/icons';
 import { MUTE_OPTIONS, NOTIFY_OPTIONS, type ChannelMenuTarget } from '@/utils/chat/channel/channel-menu-options';
-import { useMenuDismiss, useMenuPlacement } from '@/hooks/chat/channel/useMenuPlacement';
 import { SubMenu } from './SubMenu';
 
 export type { ChannelMenuTarget } from '@/utils/chat/channel/channel-menu-options';
@@ -39,14 +36,9 @@ export function ChannelContextMenu({
   onClose: () => void;
 }) {
   const t = useTranslations();
-  const a = useChannelActions(target);
-  const mutedLabel = useMutedLabel(a.muted ? a.pref.mutedUntil : undefined);
-  const ref = useRef<HTMLDivElement>(null);
-  const [sub, setSub] = useState<'mute' | 'notify' | null>(null);
-  const { pos, flipSub } = useMenuPlacement(ref, x, y);
-  useMenuDismiss(ref, onClose);
-
-  const act = (fn: () => void) => () => { fn(); onClose(); };
+  const {
+    closeSub, copyLink, flipSub, following, level, markRead, mute, muted, mutedLabel, openSub, pos, ref, setLevel, sub, toggleFollow, toggleSub, unmute,
+  } = useChannelContextMenu(target, x, y, onClose);
   const chevron = <ChevronRightIcon size={14} />;
   const radio = (on: boolean) => (
     <span aria-hidden="true" className={`h-3.5 w-3.5 rounded-full border-2 ${on ? 'border-lc-green bg-lc-green' : 'border-lc-muted'}`} />
@@ -67,30 +59,30 @@ export function ChannelContextMenu({
         icon={<CheckCircleIcon />}
         label={t('chat.channelMenu.markRead')}
         disabled={!target.hasUnread}
-        onClick={act(a.markRead)}
+        onClick={markRead}
         testId="channel-menu-mark-read"
       />
       <MenuDivider />
       <MenuItem
-        icon={<StarIcon filled={a.following} />}
-        label={a.following ? t('chat.channelMenu.unfollow') : t('chat.channelMenu.follow')}
-        onClick={act(a.toggleFollow)}
+        icon={<StarIcon filled={following} />}
+        label={following ? t('chat.channelMenu.unfollow') : t('chat.channelMenu.follow')}
+        onClick={toggleFollow}
         testId="channel-menu-follow"
       />
       <MenuItem
         icon={<LinkIcon />}
         label={t('chat.channelMenu.copyLink')}
-        onClick={act(() => void a.copyLink())}
+        onClick={copyLink}
         testId="channel-menu-copy-link"
       />
       <MenuDivider />
-      <div className="relative" onMouseEnter={() => setSub('mute')} onMouseLeave={() => setSub(null)}>
-        {a.muted ? (
+      <div className="relative" onMouseEnter={() => openSub('mute')} onMouseLeave={closeSub}>
+        {muted ? (
           <MenuItem
             icon={<BellIcon />}
             label={t('chat.channelMenu.unmute')}
             hint={mutedLabel}
-            onClick={act(a.unmute)}
+            onClick={unmute}
             testId="channel-menu-unmute"
           />
         ) : (
@@ -98,32 +90,32 @@ export function ChannelContextMenu({
             icon={<BellOffIcon />}
             label={t('chat.channelMenu.mute.label')}
             trailing={chevron}
-            onClick={() => setSub(sub === 'mute' ? null : 'mute')}
+            onClick={() => toggleSub('mute')}
             buttonProps={{ 'aria-haspopup': 'menu', 'aria-expanded': sub === 'mute' }}
             testId="channel-menu-mute"
           />
         )}
-        {!a.muted && sub === 'mute' && (
+        {!muted && sub === 'mute' && (
           <SubMenu flip={flipSub} testId="channel-menu-mute-sub">
             {MUTE_OPTIONS.map((o) => (
               <MenuItem
                 key={o.key}
                 icon={o.ms === MUTED_FOREVER ? <BellOffIcon /> : <ClockIcon />}
                 label={t(o.key)}
-                onClick={act(() => a.mute(o.ms))}
+                onClick={() => mute(o.ms)}
                 testId={`channel-menu-mute-${o.ms}`}
               />
             ))}
           </SubMenu>
         )}
       </div>
-      <div className="relative" onMouseEnter={() => setSub('notify')} onMouseLeave={() => setSub(null)}>
+      <div className="relative" onMouseEnter={() => openSub('notify')} onMouseLeave={closeSub}>
         <MenuItem
           icon={<BellIcon />}
           label={t('chat.channelMenu.notify.label')}
-          hint={t(`chat.channelMenu.notify.${a.level}`)}
+          hint={t(`chat.channelMenu.notify.${level}`)}
           trailing={chevron}
-          onClick={() => setSub(sub === 'notify' ? null : 'notify')}
+          onClick={() => toggleSub('notify')}
           buttonProps={{ 'aria-haspopup': 'menu', 'aria-expanded': sub === 'notify' }}
           testId="channel-menu-notify"
         />
@@ -135,9 +127,9 @@ export function ChannelContextMenu({
                 role="menuitemradio"
                 icon={o.level === 'all' ? <BellIcon /> : o.level === 'mentions' ? <AtIcon /> : <BellOffIcon />}
                 label={t(o.key)}
-                trailing={radio(a.level === o.level)}
-                onClick={act(() => a.setLevel(o.level))}
-                buttonProps={{ 'aria-checked': a.level === o.level }}
+                trailing={radio(level === o.level)}
+                onClick={() => setLevel(o.level)}
+                buttonProps={{ 'aria-checked': level === o.level }}
                 testId={`channel-menu-notify-${o.level}`}
               />
             ))}

@@ -87,4 +87,20 @@ describe('PqShield', () => {
     expect(panel).toHaveTextContent('Básico');
     expect(panel).toHaveTextContent('con quién hablás');
   });
+
+  it('opens on focus and hover; blur keeps it open while focus moves into the panel', () => {
+    const { container } = renderShield('basic');
+    const button = screen.getByTestId('pq-shield');
+    fireEvent.focus(button);
+    const link = screen.getByRole('link', { name: 'How to get extra safe' });
+    fireEvent.blur(button, { relatedTarget: link });
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    fireEvent.blur(button, { relatedTarget: document.body });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    fireEvent.mouseEnter(container.firstElementChild!);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    expect(button).toHaveAttribute('aria-describedby', screen.getByRole('tooltip').id);
+    fireEvent.mouseLeave(container.firstElementChild!);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+  });
 });

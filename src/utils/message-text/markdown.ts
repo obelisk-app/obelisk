@@ -65,3 +65,22 @@ export function extractYouTubeId(url: string): string | null {
   const match = url.match(YOUTUBE_REGEX);
   return match ? match[1] : null;
 }
+
+/** The YouTube links of a message that name a video, with the video id each one embeds. */
+export function youtubeEmbeds(urls: ReadonlyArray<string>): Array<{ url: string; id: string }> {
+  return urls.flatMap((url) => {
+    const id = extractYouTubeId(url);
+    return id ? [{ url, id }] : [];
+  });
+}
+
+/**
+ * What a markdown `code` element is: a fenced block (it has a
+ * `language-*` class, or spans several lines of the source) drawn as a code
+ * block, or inline code. `code` is the text without its final newline.
+ */
+export function markdownCode(className: string | undefined, children: unknown, hasPosition: boolean) {
+  const match = /language-(\w+)/.exec(className || '');
+  const code = String(children).replace(/\n$/, '');
+  return { block: Boolean(match || (hasPosition && code.includes('\n'))), code, language: match?.[1] };
+}

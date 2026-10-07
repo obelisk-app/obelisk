@@ -11,7 +11,8 @@ import { useRelayBrandingForm } from '@/hooks/relay/useRelayBrandingForm';
 import { type RelayBranding } from '@/services/relay/relay-branding';
 import { ChannelAppearanceInput } from '@/components/media/upload/BlossomImageInput';
 import { useTranslations } from 'next-intl';
-import { Field, SectionHeader } from '../common/form-primitives';
+import { Field } from '../common/Field';
+import { SectionHeader } from '../common/SectionHeader';
 
 export function RelayBrandingModal({
   relayUrl,
@@ -25,7 +26,7 @@ export function RelayBrandingModal({
   const t = useTranslations();
   const {
     icon, banner, name, description, saving, error: err,
-    setIcon, setBanner, setName, setDescription, save,
+    setIcon, setBanner, setName, setDescription, submit,
   } = useRelayBrandingForm(relayUrl, branding, onClose);
 
   return (
@@ -41,7 +42,7 @@ export function RelayBrandingModal({
         <form
           id="relay-branding-form"
           className="min-h-0 flex-1 space-y-7 overflow-y-auto p-5"
-          onSubmit={(event) => { event.preventDefault(); void save(); }}
+          onSubmit={submit}
         >
           <section className="space-y-4">
             <SectionHeader title={t('shell.desktop.branding.appearance')} />

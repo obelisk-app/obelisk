@@ -24,8 +24,3 @@ export default function MarkdownBody({ text, components }: { text: string; compo
     </ReactMarkdown>
   );
 }
-
-/** The element for one message body; what the on-demand loader hands back. */
-export function renderMarkdownBody(text: string, components: Components) {
-  return <MarkdownBody text={text} components={components} />;
-}

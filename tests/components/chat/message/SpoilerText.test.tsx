@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { LocaleProvider } from '@tests/support/intl';
 import userEvent from '@testing-library/user-event';
@@ -33,5 +33,16 @@ describe('SpoilerText', () => {
     el.focus();
     await user.keyboard('{Enter}');
     expect(el).toHaveClass('text-lc-white');
+  });
+
+  it('reveals on Space, not on other keys', () => {
+    renderLocalized(<SpoilerText>secret</SpoilerText>);
+    const el = screen.getByTestId('spoiler-text');
+    expect(el).toHaveAttribute('aria-label');
+    fireEvent.keyDown(el, { key: 'a' });
+    expect(el).toHaveClass('text-transparent');
+    fireEvent.keyDown(el, { key: ' ' });
+    expect(el).toHaveClass('text-lc-white');
+    expect(el).not.toHaveAttribute('aria-label');
   });
 });

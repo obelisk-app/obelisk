@@ -1,17 +1,17 @@
 import { render, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithEmojis } from '@/components/chat/profile/popover-emoji';
+import { EmojiText } from '@/components/chat/profile/EmojiText';
 import { requestZapPrefill, websiteHref } from '@/hooks/chat/profile/usePopoverMember';
 import { usePopoverPlacement } from '@/hooks/chat/profile/usePopoverPlacement';
 import { useChatStore } from '@/store/chat';
 
-describe('renderWithEmojis', () => {
+describe('EmojiText', () => {
   it('draws known custom emoji as images and keeps surrounding text', () => {
     const emojis = { obelisk_logo: 'https://x/logo.png' };
     // Rendered repeatedly on purpose: a shared global matcher used to leak
     // `lastIndex` and print the placeholder as text on the next call.
     for (let i = 0; i < 3; i += 1) {
-      const { container, unmount } = render(<>{renderWithEmojis('hi :obelisk_logo: there', emojis)}</>);
+      const { container, unmount } = render(<EmojiText text="hi :obelisk_logo: there" emojis={emojis} />);
       expect(container.querySelectorAll('img')).toHaveLength(1);
       expect(container.querySelector('img')).toHaveAttribute('alt', ':obelisk_logo:');
       expect(container.textContent).toBe('hi  there');
@@ -20,9 +20,9 @@ describe('renderWithEmojis', () => {
   });
 
   it('returns plain text untouched', () => {
-    expect(renderWithEmojis('', {})).toBe('');
-    const { container } = render(<>{renderWithEmojis('just text', {})}</>);
-    expect(container.textContent).toBe('just text');
+    expect(render(<EmojiText text="" emojis={{}} />).container.innerHTML).toBe('');
+    const { container } = render(<EmojiText text="just text" emojis={{}} />);
+    expect(container.innerHTML).toBe('just text');
   });
 });
 

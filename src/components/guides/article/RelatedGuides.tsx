@@ -1,38 +1,18 @@
 import { getTranslations } from 'next-intl/server';
-import { Link } from '@/i18n/navigation';
 import type { Locale } from '@/i18n';
 import { readGuide } from '@/services/guides/guides';
-import { guidePath } from '@/utils/guides/guide-urls';
-import { HERO_REGISTRY } from '../svg';
-
-interface Item {
-  slug: string;
-  note?: string;
-}
+import { relatedGuideCards, type RelatedGuideItem } from '@/utils/guides/related';
+import RelatedGuideCard from './RelatedGuideCard';
 
 interface Props {
   locale: Locale;
-  items: Item[];
+  items: RelatedGuideItem[];
 }
 
-async function resolveItem(locale: Locale, slug: string, note?: string) {
-  try {
-    const guide = await readGuide(locale, slug);
-    return {
-      slug,
-      title: guide.frontmatter.title,
-      subtitle: note ?? guide.frontmatter.description,
-      hero: guide.frontmatter.heroComponent,
-    };
-  } catch {
-    return null;
-  }
-}
-
+/** The "keep reading" strip under an article: one card per related guide that exists; nothing when none does. */
 export default async function RelatedGuides({ locale, items }: Props) {
-  const resolved = (
-    await Promise.all(items.map((i) => resolveItem(locale, i.slug, i.note)))
-  ).filter(<T,>(x: T | null): x is T => x !== null);
+  const guides = await Promise.all(items.map((item) => readGuide(locale, item.slug).catch(() => null)));
+  const resolved = relatedGuideCards(items, guides);
 
   if (resolved.length === 0) return null;
   const t = await getTranslations({ locale });
@@ -49,30 +29,9 @@ export default async function RelatedGuides({ locale, items }: Props) {
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-6 px-6 pb-4 [scrollbar-width:thin]"
         role="list"
       >
-        {resolved.map((r) => {
-          const Hero = HERO_REGISTRY[r.hero];
-          return (
-            <Link
-              key={r.slug}
-              href={guidePath(r.slug)}
-              role="listitem"
-              data-testid={`related-guide-${r.slug}`}
-              className="group shrink-0 w-[260px] sm:w-[300px] snap-start rounded-xl overflow-hidden border border-lc-border bg-lc-dark hover:border-lc-green transition-colors"
-            >
-              <div className="aspect-[16/9] bg-lc-black border-b border-lc-border overflow-hidden">
-                {Hero ? <Hero /> : <div className="w-full h-full bg-lc-olive-dark" />}
-              </div>
-              <div className="p-4">
-                <h3 className="text-base font-bold text-lc-white group-hover:text-lc-green transition-colors">
-                  {r.title}
-                </h3>
-                <p className="mt-1.5 text-sm text-lc-muted line-clamp-2 leading-snug">
-                  {r.subtitle}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+        {resolved.map((guide) => (
+          <RelatedGuideCard key={guide.slug} guide={guide} />
+        ))}
       </div>
     </section>
   );

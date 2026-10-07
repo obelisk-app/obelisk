@@ -17,15 +17,12 @@
  * storage.
  */
 
-import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useMyPubkey } from '@/services/nostr-bridge';
 import type { JsDirectMessage } from '@/services/nostr-bridge';
+import { useDmMessageMenu } from '@/hooks/chat/dm/message/useDmMessageMenu';
 import AnchoredMenu from '@/components/common/AnchoredMenu';
 import { MENU_PANEL_CLASS, MenuDivider, MenuItem } from '@/components/ui/overlays/menu';
 import { CopyIcon, HashIcon, KeyIcon, LinkIcon, MoreIcon, TerminalIcon } from '@/components/ui/icons/icons';
-import { copyWithToast } from '@/services/common/clipboard';
-import { safeNpub } from '@/utils/identity/short-npub';
 import { DmRawEventDialog } from './DmRawEventDialog';
 
 export { DmRawEventDialog } from './DmRawEventDialog';
@@ -41,12 +38,9 @@ export const DM_BUBBLE_MENU_GUTTER = 'pr-11';
  */
 export function DmMessageMenu({ message, className = '' }: { message: JsDirectMessage; className?: string }) {
   const t = useTranslations();
-  const me = useMyPubkey();
-  const [open, setOpen] = useState(false);
-  const [rawOpen, setRawOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const sender = message.outgoing ? me : message.counterparty;
-  const done = (fn: () => void) => () => { fn(); setOpen(false); };
+  const {
+    close, closeRaw, copyFileLink, copyId, copySender, copyText, open, openRaw, rawOpen, sender, toggle, triggerRef,
+  } = useDmMessageMenu(message);
   const tone = message.outgoing
     ? 'bg-black/15 text-black hover:bg-black/30 aria-expanded:bg-black/30'
     : 'bg-white/10 text-lc-white hover:bg-white/20 aria-expanded:bg-white/20';
@@ -56,7 +50,7 @@ export function DmMessageMenu({ message, className = '' }: { message: JsDirectMe
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className={`absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-lc-green ${tone} ${className}`}
         aria-label={t('dm.msg.options')}
         title={t('dm.msg.options')}
@@ -68,7 +62,7 @@ export function DmMessageMenu({ message, className = '' }: { message: JsDirectMe
       </button>
       <AnchoredMenu
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={close}
         anchorRef={triggerRef}
         width={220}
         align={message.outgoing ? 'end' : 'start'}
@@ -76,30 +70,30 @@ export function DmMessageMenu({ message, className = '' }: { message: JsDirectMe
         testId="dm-message-menu-panel"
       >
         {message.file ? (
-          <MenuItem icon={<LinkIcon />} label={t('dm.msg.copyFileLink')} onClick={done(() => copyWithToast(message.file!.url, t('dm.msg.copied')))} testId="dm-msg-copy-file" />
+          <MenuItem icon={<LinkIcon />} label={t('dm.msg.copyFileLink')} onClick={copyFileLink} testId="dm-msg-copy-file" />
         ) : (
-          <MenuItem icon={<CopyIcon />} label={t('dm.msg.copyText')} onClick={done(() => copyWithToast(message.content, t('dm.msg.copied')))} testId="dm-msg-copy-text" />
+          <MenuItem icon={<CopyIcon />} label={t('dm.msg.copyText')} onClick={copyText} testId="dm-msg-copy-text" />
         )}
         <MenuItem
           icon={<HashIcon />}
           label={t('dm.msg.copyId')}
-          onClick={done(() => copyWithToast(message.id, t('dm.msg.copied')))}
+          onClick={copyId}
           disabled={message.pending || message.failed}
           testId="dm-msg-copy-id"
         />
         {sender && (
-          <MenuItem icon={<KeyIcon />} label={t('dm.msg.copySender')} onClick={done(() => copyWithToast(safeNpub(sender), t('dm.msg.copied')))} testId="dm-msg-copy-sender" />
+          <MenuItem icon={<KeyIcon />} label={t('dm.msg.copySender')} onClick={copySender} testId="dm-msg-copy-sender" />
         )}
         <MenuDivider />
         <MenuItem
           icon={<TerminalIcon />}
           label={t('dm.msg.viewRaw')}
-          onClick={done(() => setRawOpen(true))}
+          onClick={openRaw}
           disabled={!message.raw}
           testId="dm-msg-view-raw"
         />
       </AnchoredMenu>
-      {rawOpen && <DmRawEventDialog message={message} onClose={() => setRawOpen(false)} />}
+      {rawOpen && <DmRawEventDialog message={message} onClose={closeRaw} />}
     </>
   );
 }

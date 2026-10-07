@@ -8,6 +8,7 @@ vi.mock('@/services/relay/relay-branding', () => ({
 
 import { useRelayBrandingForm } from '@/hooks/relay/useRelayBrandingForm';
 import { LocaleProvider } from '@tests/support/intl';
+import type React from 'react';
 import type { ReactNode } from 'react';
 
 /** The hook words its errors through next-intl, so it needs a provider. */
@@ -55,5 +56,16 @@ describe('useRelayBrandingForm', () => {
     expect(result.current.error).toBe('Could not save the branding.');
     expect(onSaved).not.toHaveBeenCalled();
     expect(result.current.saving).toBe(false);
+  });
+
+  it('submits from a form without leaving the page', async () => {
+    publishBranding.mockResolvedValueOnce(undefined);
+    const onSaved = vi.fn();
+    const { result } = renderHook(() => useRelayBrandingForm('wss://r', BRANDING, onSaved), { wrapper });
+    const preventDefault = vi.fn();
+    await act(async () => { result.current.submit({ preventDefault } as unknown as React.FormEvent); });
+    expect(preventDefault).toHaveBeenCalled();
+    expect(publishBranding).toHaveBeenCalledTimes(1);
+    expect(onSaved).toHaveBeenCalledTimes(1);
   });
 });

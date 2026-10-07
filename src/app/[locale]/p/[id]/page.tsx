@@ -40,13 +40,6 @@ export const revalidate = 300;
 
 type Params = { params: Promise<{ id: string; locale: string }> };
 
-/** The pubkey an `/p/<id>` names, or a 404 when the id is not a profile identifier. */
-function profilePubkey(id: string): string {
-  const target = parseIdentifier(id);
-  if (!target || target.kind !== 'profile') notFound();
-  return target.pubkey;
-}
-
 /**
  * Someone's Nostr profile: out of search (`noindex, follow`) for the same
  * reason as a note; the card is what the page is for.
@@ -56,7 +49,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const t = await getTranslations({ locale });
   const { id } = await params;
   const path = `/p/${id}`;
-  const profile = await fetchAuthorForViewer(profilePubkey(id));
+  // A 404 when the id is not a profile identifier (a note, an address, noise).
+  const target = parseIdentifier(id);
+  if (!target || target.kind !== 'profile') notFound();
+  const profile = await fetchAuthorForViewer(target.pubkey);
   if (!profile) {
     const title = t('seo.profile.notFound');
     return noindexMetadata({ locale, path, title, image: cardImage(locale, path, cardAlt(t, renderedTitle(title))) });
@@ -77,7 +73,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function ProfileViewerPage({ params }: Params) {
   const { t } = await serverLocale();
   const { id } = await params;
-  const pubkey = profilePubkey(id);
+  const target = parseIdentifier(id);
+  if (!target || target.kind !== 'profile') notFound();
+  const pubkey = target.pubkey;
   const profile = await fetchAuthorForViewer(pubkey);
 
   if (!profile) {

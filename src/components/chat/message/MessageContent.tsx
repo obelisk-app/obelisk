@@ -10,8 +10,6 @@
  * there. Until it loads, the text shows as plain text, which React escapes.
  * The other pieces sit in `./message/`.
  */
-import { extractYouTubeId } from '@/utils/message-text/markdown';
-import { useGroupMemberInfo } from '@/services/nostr-bridge';
 import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
 import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
@@ -25,9 +23,7 @@ import { VoiceMessage } from './VoiceMessage';
 import { VideoMedia } from './VideoMedia';
 import { StickerImg } from './StickerImg';
 import { WelcomeBanner } from './WelcomeBanner';
-import { useMessageBody } from '@/hooks/chat/message/useMessageBody';
-import { useMarkdownComponents, useMessageMediaGate } from '@/hooks/chat/message/useMessageMedia';
-import { useMarkdownBody } from '@/hooks/chat/message/useMarkdownBody';
+import { useMessageContent } from '@/hooks/chat/message/useMessageContent';
 
 export { autolinkLabel } from '@/utils/message-text/autolink-label';
 export { VoiceMessage } from './VoiceMessage';
@@ -64,12 +60,10 @@ export default function MessageContent({
    */
   authorPubkey?: string | null;
 }) {
-  const memberList = useGroupMemberInfo(channelId ?? null);
-  const { media, mergedEmojis, renderEmojis } = useMessageMediaGate(authorPubkey, customEmojis);
   const {
-    imageUrls, videoUrls, audioUrls, youtubeUrls, linkUrls,
-    welcomeBanner, invoices, gameIds, text, mentions,
-  } = useMessageBody({ content, sticker, voiceNote, mergedEmojis, memberList });
+    imageUrls, videoUrls, audioUrls, youtube, linkUrls,
+    welcomeBanner, invoices, gameIds, text, media, components, renderMarkdown,
+  } = useMessageContent({ content, channelId, customEmojis, sticker, voiceNote, authorPubkey });
 
   // Link-preview cards ARE rendered, via <LinkPreview> below: fetching
   // OpenGraph needs a server to make the outbound request, and
@@ -82,8 +76,6 @@ export default function MessageContent({
   // so the anchor itself still has to be readable on its own. That is what
   // `autolinkLabel` is for: a bare `naddr1…` share URL used to print as five
   // lines of unbroken characters.
-  const components = useMarkdownComponents(mentions, renderEmojis, media.show, media.reveal);
-  const renderMarkdown = useMarkdownBody();
 
   return (
     <span data-testid="message-content">
@@ -106,10 +98,7 @@ export default function MessageContent({
       {imageUrls.length > 0 && media.show && <ImageGallery urls={imageUrls} wide={wideMedia} />}
       {/* YouTube embeds hoisted so they render outside the markdown <p>
           (the player swaps in a <div> on click, which is invalid inside <p>) */}
-      {youtubeUrls.map((url) => {
-        const id = extractYouTubeId(url);
-        return id ? <ChatYouTubeEmbed key={url} videoId={id} /> : null;
-      })}
+      {youtube.map((y) => <ChatYouTubeEmbed key={y.url} videoId={y.id} />)}
       {/* Ordinary links, unfurled. Renders nothing until (and unless) the
           preview resolves, so a link that cannot be unfurled just stays a link.
           The card's og:image is third-party media and follows the gate. */}

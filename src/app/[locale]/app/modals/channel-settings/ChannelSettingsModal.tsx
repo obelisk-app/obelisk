@@ -13,7 +13,9 @@ import ForumTagsEditor from '@/components/chat/forum/ForumTagsEditor';
 import { ChannelAppearanceInput } from '@/components/media/upload/BlossomImageInput';
 import { useTranslations } from 'next-intl';
 import { ManageMemberRow } from './ManageMemberRow';
-import { Field, SectionHeader, ToggleCard } from '../common/form-primitives';
+import { Field } from '../common/Field';
+import { SectionHeader } from '../common/SectionHeader';
+import { ToggleCard } from '../common/ToggleCard';
 import Chip from '@/components/ui/data/Chip';
 
 export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () => void }) {

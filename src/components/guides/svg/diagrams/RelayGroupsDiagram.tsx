@@ -1,4 +1,13 @@
 import { useTranslations } from 'next-intl';
+import { relayGroupClients } from '@/utils/guides/diagram-art';
+
+/** The four people connecting to the relay; each one's link is worked out in `diagram-art.ts`. */
+const CLIENTS = relayGroupClients([
+  { x: 80, y: 90, label: 'alice' },
+  { x: 80, y: 220, label: 'bob' },
+  { x: 720, y: 90, label: 'carol' },
+  { x: 720, y: 220, label: 'dan' },
+]);
 
 export default function RelayGroupsDiagram() {
   const t = useTranslations();
@@ -55,46 +64,36 @@ export default function RelayGroupsDiagram() {
       </g>
 
       {/* clients connecting */}
-      {[
-        { x: 80, y: 90, label: 'alice' },
-        { x: 80, y: 220, label: 'bob' },
-        { x: 720, y: 90, label: 'carol' },
-        { x: 720, y: 220, label: 'dan' },
-      ].map((c) => {
-        const fromX = c.x < 400 ? c.x + 32 : c.x - 32;
-        const toX = c.x < 400 ? 280 : 520;
-        const toY = 200;
-        return (
-          <g key={c.label}>
-            <rect
-              x={c.x - 30}
-              y={c.y - 20}
-              width="60"
-              height="40"
-              rx="8"
-              fill="#171717"
-              stroke="#b4f953"
-              strokeWidth="1.5"
-            />
-            <circle cx={c.x} cy={c.y - 4} r="5" fill="#b4f953" />
-            <rect x={c.x - 10} y={c.y + 4} width="20" height="8" rx="3" fill="#2d3a1a" />
-            <text x={c.x} y={c.y + 35} textAnchor="middle" fontSize="10" fontWeight="600" fill="#a3a3a3">
-              {c.label}
-            </text>
+      {CLIENTS.map((c) => (
+        <g key={c.label}>
+          <rect
+            x={c.x - 30}
+            y={c.y - 20}
+            width="60"
+            height="40"
+            rx="8"
+            fill="#171717"
+            stroke="#b4f953"
+            strokeWidth="1.5"
+          />
+          <circle cx={c.x} cy={c.y - 4} r="5" fill="#b4f953" />
+          <rect x={c.x - 10} y={c.y + 4} width="20" height="8" rx="3" fill="#2d3a1a" />
+          <text x={c.x} y={c.y + 35} textAnchor="middle" fontSize="10" fontWeight="600" fill="#a3a3a3">
+            {c.label}
+          </text>
 
-            <line
-              x1={fromX}
-              y1={c.y}
-              x2={toX}
-              y2={toY}
-              stroke="#b4f953"
-              strokeWidth="1.5"
-              strokeDasharray="4 8"
-              className="animate-dash-flow"
-            />
-          </g>
-        );
-      })}
+          <line
+            x1={c.fromX}
+            y1={c.y}
+            x2={c.toX}
+            y2={c.toY}
+            stroke="#b4f953"
+            strokeWidth="1.5"
+            strokeDasharray="4 8"
+            className="animate-dash-flow"
+          />
+        </g>
+      ))}
 
       {/* footer */}
       <text x="400" y="330" textAnchor="middle" fontSize="11" fill="#a3a3a3" fontFamily="monospace">

@@ -29,8 +29,10 @@ function deepLinkEffect(source: string, start: string, end: string): string {
 
 describe('deep-link relay gate', () => {
   it('the desktop shell hands ?relay= to useRelayDeepLink and never switches directly', () => {
-    // The shell's navigation, deep link included, is `src/hooks/shell/desktop/useDesktopNavigation.ts`.
-    expect(read('desktop/DesktopShell.tsx')).toContain('useDesktopNavigation(relay');
+    // The shell's navigation, deep link included, is `src/hooks/shell/desktop/useDesktopNavigation.ts`,
+    // called from the shell's view model.
+    expect(read('desktop/DesktopShell.tsx')).toContain('useDesktopShell(');
+    expect(read('../../../hooks/shell/desktop/useDesktopShell.ts')).toContain('useDesktopNavigation(relay');
     const shell = read('../../../hooks/shell/desktop/useDesktopNavigation.ts');
     expect(shell).toContain("import { useRelayDeepLink } from '@/hooks/relay/useRelayDeepLink'");
     const effect = deepLinkEffect(shell, "const r = params.get('relay')", "params.get('s') === 'feed'");

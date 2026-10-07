@@ -1,4 +1,5 @@
-import { ogCardResponse } from '@/components/seo/OgCard';
+import { ImageResponse } from 'next/og';
+import OgCard from '@/components/seo/OgCard';
 import { tagCard } from '@/services/server/og/og-cards';
 import { OG_SIZE } from '@/utils/seo/og';
 
@@ -11,5 +12,5 @@ export const alt = 'Obelisk';
 /** The card a chat app shows for this link, in the URL's language. */
 export default async function Image({ params }: { params: Promise<{ locale: string; tag: string }> }) {
   const { locale, tag } = await params;
-  return ogCardResponse(await tagCard(locale, tag));
+  return new ImageResponse(OgCard(await tagCard(locale, tag)), OG_SIZE);
 }

@@ -45,3 +45,8 @@ export function navigateInApp(path: string): void {
   window.history.pushState(null, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
+
+/** A click with a modifier held (new tab, new window, download): left to the browser. */
+export function isModifiedClick(e: { metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean }): boolean {
+  return e.metaKey || e.ctrlKey || e.shiftKey || e.altKey;
+}

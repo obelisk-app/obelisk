@@ -1,22 +1,16 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { setDmOptInEnabled } from '@/services/chat/dm/opt-in';
-import { useDmOptInEnabled } from '@/hooks/chat/dm/unlock/useDmOptInEnabled';
 import { useTranslations } from 'next-intl';
+import { useDmOptInGate } from '@/hooks/shell/dm/useDmOptInGate';
 import Button from '@/components/ui/buttons/Button';
 
 type Surface = 'desktop' | 'sidebar' | 'mobile';
 
-interface GateProps {
+export interface DmOptInGateProps {
   surface?: Surface;
   secondaryLabel?: string;
   onEnable?: () => void;
   onSecondary?: () => void;
-}
-
-interface BoundaryProps extends GateProps {
-  children: ReactNode;
 }
 
 const COPY_KEYS = [
@@ -25,42 +19,18 @@ const COPY_KEYS = [
   'dm.optIn.point.device',
 ] as const;
 
-export function DMOptInBoundary({
-  children,
-  surface = 'desktop',
-  secondaryLabel,
-  onEnable,
-  onSecondary,
-}: BoundaryProps) {
-  const enabled = useDmOptInEnabled();
-  if (!enabled) {
-    return (
-      <DmOptInGate
-        surface={surface}
-        secondaryLabel={secondaryLabel}
-        onEnable={onEnable}
-        onSecondary={onSecondary}
-      />
-    );
-  }
-  return <>{children}</>;
-}
-
 export default function DmOptInGate({
   surface = 'desktop',
   secondaryLabel,
   onEnable,
   onSecondary,
-}: GateProps) {
+}: DmOptInGateProps) {
   const t = useTranslations();
   const compact = surface === 'sidebar';
   const mobile = surface === 'mobile';
   const resolvedSecondaryLabel = secondaryLabel ?? t('dm.optIn.notNow');
 
-  const enable = () => {
-    setDmOptInEnabled(true);
-    onEnable?.();
-  };
+  const { enable } = useDmOptInGate(onEnable);
 
   return (
     <div

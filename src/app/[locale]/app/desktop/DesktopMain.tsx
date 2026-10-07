@@ -3,12 +3,12 @@
 import type { Event as NostrEvent } from 'nostr-tools';
 import FeedScreen from '@/components/social/FeedScreen';
 import { useTranslations } from 'next-intl';
-import { DMOptInBoundary } from '../dm/DmOptInGate';
+import { DMOptInBoundary } from '../dm/DmOptInBoundary';
 import { canRestore } from '@/utils/shell/desktop/feed-pane';
 import { ChatLayout } from '../panes/channel/ChatPanel';
 import { DmPanel } from '../panes/dm/DmPanel';
 import { FeedPaneActions } from '../panes/reader/ReaderPane';
-import { EmptyState } from './ShellStates';
+import { EmptyState } from './EmptyState';
 import type { View } from '@/utils/shell/desktop/view';
 import type { FeedPaneControls } from '@/hooks/shell/desktop/useDesktopLayout';
 

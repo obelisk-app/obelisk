@@ -1,4 +1,6 @@
 import { useTranslations } from 'next-intl';
+import RadioColumn from './RadioColumn';
+import MemberRow from './MemberRow';
 
 const DIM = '#5c7a2e';
 
@@ -31,46 +33,6 @@ export default function ChannelSettingsPanel() {
       <rect x="301" y="292" width="215" height="24" rx="12" fill="none" stroke={DIM} strokeWidth="1.2" strokeDasharray="4 3" />
       <text x="408" y="308" textAnchor="middle" fontSize="10.5" fontWeight="600" fill="#b4f953">
         {t('guides.art.adminCli.addMember')}
-      </text>
-    </g>
-  );
-}
-
-function RadioColumn({ x, title, options, selected }: { x: number; title: string; options: string[]; selected: number }) {
-  return (
-    <g>
-      <text x={x} y="138" fontSize="9.5" fontWeight="700" fill="#a3a3a3" letterSpacing="0.6">
-        {title}
-      </text>
-      {options.map((label, i) => {
-        const y = 158 + i * 20;
-        return (
-          <g key={i}>
-            <circle cx={x + 5} cy={y - 4} r="4.5" fill={i === selected ? '#b4f953' : 'none'} stroke="#b4f953" strokeWidth="1.2" />
-            <text x={x + 15} y={y} fontSize="10.5" fill={i === selected ? '#fafafa' : '#a3a3a3'}>
-              {label}
-            </text>
-          </g>
-        );
-      })}
-    </g>
-  );
-}
-
-function MemberRow({ y, name, badge, action }: { y: number; name: string; badge: string; action: string }) {
-  return (
-    <g>
-      <circle cx="309" cy={y - 4} r="8" fill="#2d3a1a" stroke="#b4f953" strokeWidth="1.2" />
-      <text x="323" y={y} fontSize="11" fontWeight="600" fill="#fafafa">
-        {name}
-      </text>
-      <rect x="356" y={y - 13} width="52" height="16" rx="8" fill="#2d3a1a" />
-      <text x="382" y={y - 2} textAnchor="middle" fontSize="9" fontWeight="700" fill="#b4f953">
-        {badge}
-      </text>
-      <rect x="452" y={y - 15} width="64" height="20" rx="10" fill="none" stroke="#b4f953" strokeWidth="1.2" />
-      <text x="484" y={y - 1} textAnchor="middle" fontSize="10" fontWeight="600" fill="#b4f953">
-        {action}
       </text>
     </g>
   );

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import ForumTagsEditor from '@/components/chat/forum/ForumTagsEditor';
+import { MAX_FORUM_TAGS } from '@/utils/chat/forum/forum-tags';
 
 function mount(value = [{ id: 'a1', name: 'news', emoji: null, color: null }]) {
   const onChange = vi.fn();
@@ -32,5 +33,21 @@ describe('ForumTagsEditor', () => {
     const onChange = mount();
     fireEvent.click(screen.getByTestId('forum-tag-remove-a1'));
     expect(onChange).toHaveBeenLastCalledWith([]);
+  });
+
+  it('adds a tag, and stops at the maximum', () => {
+    const onChange = mount();
+    fireEvent.click(screen.getByTestId('forum-tag-add'));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]).toHaveLength(2);
+  });
+
+  it('at the maximum the add button is disabled and says why', () => {
+    const full = Array.from({ length: MAX_FORUM_TAGS }, (_, i) => ({ id: `t${i}`, name: `n${i}`, emoji: null, color: null }));
+    const onChange = mount(full);
+    expect(screen.getByTestId('forum-tag-add')).toBeDisabled();
+    fireEvent.click(screen.getByTestId('forum-tag-add'));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByText(new RegExp(String(MAX_FORUM_TAGS)))).toBeInTheDocument();
   });
 });

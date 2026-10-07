@@ -172,4 +172,28 @@ describe('GeneratedProfileEnhancements', () => {
     expect(aboutInput).toHaveValue('hello world');
     expect(onDraftChange).toHaveBeenLastCalledWith({ about: 'hello world' });
   });
+
+  it('refuses a file that is not an image, and offers a retry when an upload fails', async () => {
+    uploadToBlossom.mockRejectedValueOnce(new Error('relay said no'));
+    const onDraftChange = vi.fn();
+    render(
+      <div className="nui-modal-overlay">
+        <GeneratedProfileEnhancements onDraftChange={onDraftChange} />
+        <div className="obelisk-login-modal">
+          <div className="nui-key-display">{nsec}</div>
+          <label><span>Picture URL</span><input type="url" placeholder="https://example.com/avatar.jpg" /></label>
+        </div>
+      </div>,
+    );
+    await screen.findByText('Upload banner');
+    const avatarPicker = document.querySelector<HTMLInputElement>('[data-kind="picture"] input[type="file"]')!;
+    fireEvent.change(avatarPicker, { target: { files: [new File(['x'], 'notes.txt', { type: 'text/plain' })] } });
+    expect(document.querySelector('.obelisk-upload-error')).toHaveTextContent('Choose an image file.');
+
+    fireEvent.change(avatarPicker, { target: { files: [new File(['x'], 'a.png', { type: 'image/png' })] } });
+    await waitFor(() => expect(document.querySelector('[data-kind="picture"] .obelisk-media-prompt')).toHaveTextContent('Retry'));
+    expect(document.querySelector('.obelisk-upload-error')?.textContent).not.toBe('');
+    expect(avatarPicker.disabled).toBe(false);
+    expect(onDraftChange).not.toHaveBeenCalledWith(expect.objectContaining({ picture: expect.anything() }));
+  });
 });

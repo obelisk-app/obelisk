@@ -1,6 +1,7 @@
 'use client';
 
 import RemoteImage from '@/components/ui/media/RemoteImage';
+import { avatarHue, avatarInitials, hideBrokenImage } from '@/utils/shell/desktop/avatar';
 
 export function Avatar({ pubkey, size, picture }: { pubkey: string; size: number; picture: string | null }) {
   const px = `${size * 4}px`;
@@ -11,19 +12,16 @@ export function Avatar({ pubkey, size, picture }: { pubkey: string; size: number
         alt=""
         style={{ width: px, height: px }}
         className="rounded-full bg-lc-card object-cover"
-        onError={(e) => {
-          (e.currentTarget as HTMLImageElement).style.display = 'none';
-        }}
+        onError={hideBrokenImage}
       />
     );
   }
-  const hue = parseInt(pubkey.slice(0, 6), 16) % 360;
   return (
     <div
-      style={{ width: px, height: px, background: `hsl(${hue} 60% 30%)` }}
+      style={{ width: px, height: px, background: `hsl(${avatarHue(pubkey)} 60% 30%)` }}
       className="flex items-center justify-center rounded-full font-mono text-[10px] font-bold text-lc-white"
     >
-      {pubkey.slice(0, 2).toUpperCase()}
+      {avatarInitials(pubkey)}
     </div>
   );
 }

@@ -146,7 +146,8 @@ close or reload: the same rule as an nsec login.
 ## Zaps
 
 `src/services/wallet/send-zap.ts`, driven by `useSendZap`
-(`src/hooks/chat/zaps/useSendZap.ts`) from `MessageZapModal`:
+(`src/hooks/chat/zaps/useSendZap.ts`) from `MessageZapModal` (its form,
+`MessageZapDialog`, reads `useMessageZapForm`):
 
 1. `checkZap` refuses before anything leaves the browser: no Lightning
    address, no wallet, no amount, no signer.

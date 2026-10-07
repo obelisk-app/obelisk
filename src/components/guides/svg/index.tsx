@@ -1,5 +1,4 @@
 import type { ComponentType } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
 import WhatIsObeliskHero from './heroes/WhatIsObeliskHero';
 import HowObeliskWorksHero from './heroes/HowObeliskWorksHero';
 import WotHero from './heroes/WotHero';
@@ -21,13 +20,14 @@ import DexMark from './marks/DexMark';
 import SfuMark from './marks/SfuMark';
 import BotsMark from './marks/BotsMark';
 import RelayMark from './marks/RelayMark';
-import {
-  HERO_ASSET_META,
-  DIAGRAM_ASSET_META,
-  snapshotPaths,
-  type GuideAssetMeta,
-} from '@/utils/guides/asset-meta';
+import { HERO_ASSET_META } from '@/utils/guides/asset-meta';
+import IndexableSvg from './embed/IndexableSvg';
 
+/**
+ * Every guide hero and diagram by the name an article's frontmatter or MDX
+ * uses. `SvgHero` below embeds a hero; `embed/Diagram.tsx` and
+ * `embed/Mark.tsx` embed the rest.
+ */
 export const HERO_REGISTRY: Record<string, ComponentType> = {
   'what-is-obelisk': WhatIsObeliskHero,
   'how-obelisk-works': HowObeliskWorksHero,
@@ -55,38 +55,7 @@ export const DIAGRAM_REGISTRY: Record<string, ComponentType> = {
   'mark-relay': RelayMark,
 };
 
-function IndexableSvg({
-  name,
-  Component,
-  meta,
-}: {
-  name: string;
-  Component: ComponentType;
-  meta: GuideAssetMeta;
-}) {
-  const t = useTranslations();
-  const locale = useLocale();
-  const paths = snapshotPaths(name, locale);
-  return (
-    <div className="relative w-full">
-      {/* Plain <img>: hidden under the live <svg>, exists only as the indexable asset; next/image would re-encode lossily. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={paths.png}
-        alt={t(meta.altKey)}
-        width={meta.width}
-        height={meta.height}
-        className="block w-full h-auto"
-        loading="lazy"
-        decoding="async"
-      />
-      <div className="absolute inset-0" aria-hidden="true">
-        <Component />
-      </div>
-    </div>
-  );
-}
-
+/** An article's hero: the live drawing over its indexable still frame. */
 export function SvgHero({ name }: { name: string }) {
   const C = HERO_REGISTRY[name];
   const meta = HERO_ASSET_META[name];
@@ -95,50 +64,5 @@ export function SvgHero({ name }: { name: string }) {
     <div className="w-full rounded-xl overflow-hidden border border-lc-border bg-lc-dark">
       <IndexableSvg name={name} Component={C} meta={meta} />
     </div>
-  );
-}
-
-export function Mark({ name, size = 40 }: { name: string; size?: number }) {
-  const t = useTranslations();
-  const locale = useLocale();
-  const C = DIAGRAM_REGISTRY[name];
-  const meta = DIAGRAM_ASSET_META[name];
-  if (!C || !meta) return null;
-  const paths = snapshotPaths(name, locale);
-  return (
-    <span
-      className="relative inline-block align-middle mr-2 rounded-md overflow-hidden border border-lc-border bg-lc-dark"
-      style={{ width: size, height: size }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={paths.png}
-        alt={t(meta.altKey)}
-        width={size}
-        height={size}
-        className="block w-full h-full"
-        loading="lazy"
-        decoding="async"
-      />
-      <span className="absolute inset-0" aria-hidden="true">
-        <C />
-      </span>
-    </span>
-  );
-}
-
-export function Diagram({ name, caption }: { name: string; caption?: string }) {
-  const C = DIAGRAM_REGISTRY[name];
-  const meta = DIAGRAM_ASSET_META[name];
-  if (!C || !meta) return null;
-  return (
-    <figure className="my-10 w-full rounded-xl overflow-hidden border border-lc-border bg-lc-dark">
-      <IndexableSvg name={name} Component={C} meta={meta} />
-      {caption && (
-        <figcaption className="px-4 py-3 text-sm text-lc-muted border-t border-lc-border">
-          {caption}
-        </figcaption>
-      )}
-    </figure>
   );
 }

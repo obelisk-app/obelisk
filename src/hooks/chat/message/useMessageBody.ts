@@ -61,7 +61,7 @@ export function useMessageBody({
   // Resolve `:name:` shortcodes before markdown parsing. Unicode shortcodes
   // are replaced inline (no placeholder: the char is just a char), while
   // custom server emojis are replaced with placeholder tokens that
-  // `processChildren` swaps for <img> elements, mirroring mentions.
+  // `MarkdownInline` swaps for <img> elements, mirroring mentions.
   const shortcodeResolved = useMemo(
     () => replaceShortcodes(bodyContent, mergedEmojis),
     [bodyContent, mergedEmojis],

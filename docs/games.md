@@ -406,8 +406,8 @@ played live with scripted keystrokes. A rules change that alters a board
 alters the guides the next time the script runs.
 
 Guides reference the output with `<Shot name="…" />`, whose alt text and
-intrinsic sizes live in `src/components/guides/mdx/Shot.tsx`; a shot named there
-with no file on disk fails `Shot.test.tsx`.
+intrinsic sizes live in `src/utils/guides/shots.ts`; a shot named there
+with no file on disk fails `tests/utils/guides/shots.test.ts`.
 
 ## Adding another game
 

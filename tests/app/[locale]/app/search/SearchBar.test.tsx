@@ -385,6 +385,57 @@ describe('SearchBar', () => {
   });
 });
 
+describe('SearchBar chrome', () => {
+  it('a press outside the bar closes the pane; one inside does not', () => {
+    renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);
+    fireEvent.focus(screen.getByPlaceholderText(/Buscar test/));
+    fireEvent.mouseDown(screen.getByText('Filtros'));
+    expect(screen.getByText('Filtros')).toBeTruthy();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByText('Filtros')).toBeNull();
+  });
+
+  it('picking a filter puts its token in the bar and keeps the pane open', () => {
+    renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);
+    const input = screen.getByPlaceholderText(/Buscar test/) as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.click(screen.getByText('De un usuario específico'));
+    expect(input.value).toBe('from:');
+  });
+
+  it('picking a recent query fills the bar', () => {
+    localStorage.setItem('obelisk-dex/search-history', JSON.stringify(['hola']));
+    renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);
+    const input = screen.getByPlaceholderText(/Buscar test/) as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.click(screen.getByText('hola'));
+    expect(input.value).toBe('hola');
+  });
+
+  it('a host onJump gets the hit, and the pane closes', async () => {
+    mockSearchMessages.mockResolvedValue(ok([hit('m1', 'HOSTED')]));
+    const onJump = vi.fn();
+    renderSearchBar(<SearchBar serverName="test" activeGroupId={null} onJump={onJump} />);
+    await typeAndSettle(screen.getByPlaceholderText(/Buscar test/), 'x');
+    fireEvent.click(screen.getByText('HOSTED'));
+    expect(onJump).toHaveBeenCalledWith(expect.objectContaining({ id: 'm1' }));
+    expect(screen.queryByText('HOSTED')).toBeNull();
+  });
+
+  it('the phone search button expands the bar; its close button clears and collapses it', async () => {
+    renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);
+    const input = screen.getByPlaceholderText(/Buscar test/) as HTMLInputElement;
+    expect(input.closest('form')!.className).toContain('hidden sm:flex');
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir búsqueda' }));
+    expect(input.closest('form')!.className).not.toContain('hidden');
+    expect(screen.queryByRole('button', { name: 'Abrir búsqueda' })).toBeNull();
+    await typeAndSettle(input, 'hello');
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar búsqueda' }));
+    expect(input.value).toBe('');
+    expect(screen.getByRole('button', { name: 'Abrir búsqueda' })).toBeTruthy();
+  });
+});
+
 describe('SearchBar accessibility', () => {
   it('the combobox carries the placeholder text as its accessible name', () => {
     renderSearchBar(<SearchBar serverName="test" activeGroupId={null} />);

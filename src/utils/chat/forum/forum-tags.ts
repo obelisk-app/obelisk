@@ -32,3 +32,9 @@ export function tagEmojiValue(raw: string): string | null {
   // on grapheme-cluster math here.
   return raw ? raw.slice(0, 4) : null;
 }
+
+/** A tag chip in the new-publication form: picked, and locked because `max` others are already picked. */
+export function threadTagChoice(selectedTagIds: ReadonlyArray<string>, id: string, max: number): { active: boolean; disabled: boolean } {
+  const active = selectedTagIds.includes(id);
+  return { active, disabled: !active && selectedTagIds.length >= max };
+}

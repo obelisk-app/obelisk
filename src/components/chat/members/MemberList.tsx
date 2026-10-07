@@ -1,126 +1,18 @@
 'use client';
 
-import { avatarInitials } from '@/utils/identity/display-name';
-import { useMemo, useState } from 'react';
-import { useChatStore } from '@/store/chat';
-import { useCurrentRelayUrl, useGroupMemberInfo } from '@/services/nostr-bridge';
-import type { JsMemberInfo } from '@/services/nostr-bridge';
-import { presenceActivityKey, useNostrPresence, PRESENCE_WINDOW_MS } from '@/hooks/chat/members/useNostrPresence';
-import RoleBadge from '@/components/chat/members/RoleBadge';
-import RemoteImage from '@/components/ui/media/RemoteImage';
+import { useMemberList } from '@/hooks/chat/members/useMemberList';
 import Text from '@/components/ui/layout/Text';
-import type { RelayRole } from '@/services/relay/relay-roles';
 import { useTranslations } from 'next-intl';
-
-function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnline: boolean }) {
-  const t = useTranslations();
-  // `displayName` is always set: `useGroupMemberInfo` resolves it through
-  // `displayNameFor`, so there is nothing left to fall back to here.
-  const name = member.displayName;
-  const openProfilePopup = useChatStore((state) => state.openProfilePopup);
-
-  return (
-    <button
-      type="button"
-      onClick={(event) => openProfilePopup(member.pubkey, { x: event.clientX, y: event.clientY })}
-      className="w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group cursor-pointer"
-      data-testid="member-item"
-    >
-      <div className={`relative shrink-0 ${isOnline ? '' : 'opacity-60'}`}>
-        {member.picture ? (
-          <RemoteImage src={member.picture} alt="" className="w-8 h-8 rounded-full object-cover" />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-lc-olive flex items-center justify-center">
-            {/* Not `name.slice(0, 2)`: that used to read letters off a hex
-                pubkey and render an avatar labelled `6A`. */}
-            <span className="text-xs font-medium text-lc-green">{avatarInitials(name, member.pubkey)}</span>
-          </div>
-        )}
-        <div
-          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-lc-dark ${
-            isOnline ? 'bg-lc-green' : 'bg-lc-muted'
-          }`}
-          title={t(isOnline ? 'chat.members.online' : 'chat.members.offline')}
-        />
-      </div>
-      {member.role === 'admin' && <span title={t('mobile.members.admin')} aria-label={t('shell.members.roleAdmin')}>🛡️</span>}
-      <span className={`text-sm truncate ${isOnline ? 'text-lc-white' : 'text-lc-muted'}`}>
-        {name}
-      </span>
-      <RoleBadge pubkey={member.pubkey} className="ml-auto max-w-[42%]" />
-    </button>
-  );
-}
+import { MemberItem } from './MemberItem';
 
 export default function MemberList({ groupId }: { groupId: string }) {
   const t = useTranslations();
-  const memberList = useGroupMemberInfo(groupId);
-  const relayUrl = useCurrentRelayUrl();
-  const lastActivityAt = useChatStore((state) => state.lastActivityAt);
-  const presenceTick = useChatStore((state) => state.presenceTick);
-  const rolesByPubkey = useChatStore((state) => state.rolesByPubkey);
-  const [offlineCollapsed, setOfflineCollapsed] = useState(false);
-
-  const memberPubkeys = useMemo(() => memberList.map((member) => member.pubkey), [memberList]);
-  useNostrPresence(memberPubkeys, relayUrl);
-
-  const onlinePubkeys = useMemo(() => {
-    if (!presenceTick) return new Set<string>();
-    const cutoff = presenceTick - PRESENCE_WINDOW_MS;
-    return new Set(memberPubkeys.filter((pubkey) => (lastActivityAt[presenceActivityKey(relayUrl, pubkey)] ?? 0) >= cutoff));
-  }, [lastActivityAt, memberPubkeys, presenceTick, relayUrl]);
-
-  // Online members are bucketed by standing: channel admins, then one section
-  // per relay role in tier order (the same ladder the badge picks from), then
-  // everyone without a role. Offline stays one section regardless of standing:
-  // splitting absent people by rank is noise.
-  const { onlineGroups, offline } = useMemo(() => {
-    const admins: JsMemberInfo[] = [];
-    const plain: JsMemberInfo[] = [];
-    const away: JsMemberInfo[] = [];
-    const byRole = new Map<string, { role: RelayRole; members: JsMemberInfo[] }>();
-
-    for (const member of memberList) {
-      if (!onlinePubkeys.has(member.pubkey)) {
-        away.push(member);
-        continue;
-      }
-      if (member.role === 'admin') {
-        admins.push(member);
-        continue;
-      }
-      const top = rolesByPubkey[member.pubkey]?.[0];
-      if (!top) {
-        plain.push(member);
-        continue;
-      }
-      const bucket = byRole.get(top.id) ?? { role: top, members: [] };
-      bucket.members.push(member);
-      byRole.set(top.id, bucket);
-    }
-
-    const ranked = Array.from(byRole.values())
-      .sort((a, b) => (b.role.tier - a.role.tier) || a.role.id.localeCompare(b.role.id))
-      .map(({ role, members }) => ({
-        key: role.id,
-        label: role.emoji ? `${role.emoji} ${role.name}` : role.name,
-        members,
-      }));
-
-    return {
-      onlineGroups: [
-        { key: 'admin', label: t('chat.members.admin'), members: admins },
-        ...ranked,
-        { key: 'member', label: t('chat.members.member'), members: plain },
-      ].filter((group) => group.members.length > 0),
-      offline: away,
-    };
-  }, [memberList, onlinePubkeys, rolesByPubkey, t]);
+  const vm = useMemberList(groupId);
 
   return (
     <div className="w-60 h-full bg-lc-dark border-l border-lc-border flex flex-col shrink-0">
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-2" data-testid="member-list">
-        {onlineGroups.map((group) => (
+        {vm.onlineGroups.map((group) => (
           <div key={group.key} data-testid={`member-group-${group.key}`}>
             <Text as="div" size="10" weight="semibold" variant="label" tone="muted" className="px-2 py-1">
               {group.label} - {group.members.length}
@@ -129,20 +21,20 @@ export default function MemberList({ groupId }: { groupId: string }) {
           </div>
         ))}
 
-        {offline.length > 0 && (
+        {vm.offline.length > 0 && (
           <div>
             <button
               type="button"
-              onClick={() => setOfflineCollapsed((collapsed) => !collapsed)}
+              onClick={vm.toggleOffline}
               className="flex items-center gap-1.5 px-2 py-1 w-full text-left"
               data-testid="offline-toggle"
             >
-              <span className="text-[10px] text-lc-muted">{offlineCollapsed ? '▸' : '▾'}</span>
+              <span className="text-[10px] text-lc-muted">{vm.offlineCollapsed ? '▸' : '▾'}</span>
               <Text size="10" weight="semibold" variant="label" tone="muted">
-                {t('chat.members.offlineGroup')} - {offline.length}
+                {t('chat.members.offlineGroup')} - {vm.offline.length}
               </Text>
             </button>
-            {!offlineCollapsed && offline.map((member) => (
+            {!vm.offlineCollapsed && vm.offline.map((member) => (
               <MemberItem key={member.pubkey} member={member} isOnline={false} />
             ))}
           </div>

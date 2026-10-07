@@ -5,7 +5,9 @@ import { useTranslations } from 'next-intl';
 import { categoryLabel } from '@/utils/relay/category-label';
 import Select from '@/components/ui/forms/Select';
 import Button from '@/components/ui/buttons/Button';
-import { ChevronRightIcon } from '@/components/ui/icons/icons';
+import { useChannelOrderRow } from '@/hooks/shell/modals/layout/useChannelOrderRow';
+import { DragHandleIcon } from './DragHandleIcon';
+import { MoveButtons } from './MoveButtons';
 
 /** One channel in the layout editor: drag handle, category picker, up/down. */
 export function ChannelOrderRow({
@@ -32,23 +34,20 @@ export function ChannelOrderRow({
   onDropBefore: () => boolean;
 }) {
   const t = useTranslations();
+  const row = useChannelOrderRow({ onGrab, onDropBefore, onChangeCategory });
   if (!channel) return null;
   return (
     <div
       className="flex items-center gap-2 rounded-lg border border-lc-border bg-lc-black px-2 py-1.5 hover:border-lc-green/30"
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        if (!onDropBefore()) return;
-        event.preventDefault();
-        event.stopPropagation();
-      }}
+      onDragOver={row.onDragOver}
+      onDrop={row.onDrop}
       data-testid={`layout-channel-${channel.id}`}
     >
       <Button
         variant="ghost"
         size="icon"
         draggable
-        onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; onGrab(); }}
+        onDragStart={row.onDragStart}
         onDragEnd={onDragEnd}
         className="cursor-grab active:cursor-grabbing"
         aria-label={t('shell.desktop.layout.grabChannel', { name: channel.name ?? channel.id })}
@@ -64,7 +63,7 @@ export function ChannelOrderRow({
         size="2xs"
         tone="dark"
         value={bucket ?? ''}
-        onChange={(e) => onChangeCategory(e.target.value || null)}
+        onChange={row.onCategoryChange}
         aria-label={t('shell.desktop.layout.channelCategory', { channel: channel.name ?? channel.id.slice(0, 12) })}
       >
         <option value="">{t('shell.desktop.layout.uncategorizedOption')}</option>
@@ -76,33 +75,5 @@ export function ChannelOrderRow({
       </Select>
       <MoveButtons onMove={onMove} first={first} last={last} />
     </div>
-  );
-}
-
-/**
- * Up and down for a row in the layout editor: list-row ghost icon buttons
- * with chevrons (the ▲ ▼ glyphs they replace rendered in the OS font).
- */
-export function MoveButtons({ onMove, first, last }: { onMove: (delta: number) => void; first: boolean; last: boolean }) {
-  const t = useTranslations();
-  return (
-    <>
-      <Button variant="ghost" size="icon" onClick={() => onMove(-1)} disabled={first} title={t('shell.desktop.layout.moveUp')} aria-label={t('shell.desktop.layout.moveUp')}>
-        <ChevronRightIcon size={14} className="-rotate-90" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => onMove(+1)} disabled={last} title={t('shell.desktop.layout.moveDown')} aria-label={t('shell.desktop.layout.moveDown')}>
-        <ChevronRightIcon size={14} className="rotate-90" />
-      </Button>
-    </>
-  );
-}
-
-export function DragHandleIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
-      <circle cx="4" cy="3" r="1"/><circle cx="10" cy="3" r="1"/>
-      <circle cx="4" cy="7" r="1"/><circle cx="10" cy="7" r="1"/>
-      <circle cx="4" cy="11" r="1"/><circle cx="10" cy="11" r="1"/>
-    </svg>
   );
 }

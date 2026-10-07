@@ -12,13 +12,15 @@ import { useUserMetadata, type JsForumTag, type JsGroup } from '@/services/nostr
 import { useLocale, useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { InlineTagChip } from './InlineTagChip';
-import { ThreadCardSkeleton } from './ThreadCardSkeletons';
+import { ThreadCardSkeleton } from './ThreadCardSkeleton';
 import { posterName } from '@/utils/chat/forum/forum-threads';
 import { relativeTime } from '@/utils/format/relative-time';
 import { useThreadCardData } from '@/hooks/chat/forum/useThreadCardData';
 
 export { ThreadGallery } from './ThreadGallery';
-export { LoadingThreads, EmptyForum, NoMatchingThreads } from './ThreadListStates';
+export { LoadingThreads } from './LoadingThreads';
+export { EmptyForum } from './EmptyForum';
+export { NoMatchingThreads } from './NoMatchingThreads';
 
 /**
  * Thread card (list view). Three states:

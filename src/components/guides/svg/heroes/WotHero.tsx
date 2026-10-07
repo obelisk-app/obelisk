@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl';
+import { wotEdges, wotNodeFill, wotNodeStroke } from '@/utils/guides/hero-art';
 
 export default function WotHero() {
   const t = useTranslations();
@@ -23,16 +24,7 @@ export default function WotHero() {
     ['e', 's1'], ['f', 's2'], ['c', 's3'],
   ];
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
-  const nodeColor = (trust: number, primary?: boolean) => {
-    if (primary) return '#b4f953';
-    if (trust >= 60) return '#8bc34a';
-    if (trust >= 30) return '#2d3a1a';
-    return '#3a1a1a';
-  };
-  const nodeStroke = (trust: number) => {
-    if (trust < 20) return '#b45353';
-    return '#b4f953';
-  };
+  const lines = wotEdges(byId, edges);
 
   return (
     <svg
@@ -60,23 +52,18 @@ export default function WotHero() {
 
       {/* edges */}
       <g stroke="#b4f953" strokeOpacity="0.4" strokeWidth="1.2" fill="none">
-        {edges.map(([a, b], i) => {
-          const A = byId[a];
-          const B = byId[b];
-          const isSpam = B.trust < 20 || A.trust < 20;
-          return (
-            <line
-              key={i}
-              x1={A.x}
-              y1={A.y}
-              x2={B.x}
-              y2={B.y}
-              stroke={isSpam ? '#b45353' : '#b4f953'}
-              strokeOpacity={isSpam ? 0.25 : 0.45}
-              strokeDasharray={isSpam ? '3 5' : '0'}
-            />
-          );
-        })}
+        {lines.map((line) => (
+          <line
+            key={line.key}
+            x1={line.x1}
+            y1={line.y1}
+            x2={line.x2}
+            y2={line.y2}
+            stroke={line.stroke}
+            strokeOpacity={line.strokeOpacity}
+            strokeDasharray={line.dash}
+          />
+        ))}
       </g>
 
       {/* animated pulses on primary edges */}
@@ -121,8 +108,8 @@ export default function WotHero() {
               cx={n.x}
               cy={n.y}
               r={n.r}
-              fill={nodeColor(n.trust, n.primary)}
-              stroke={nodeStroke(n.trust)}
+              fill={wotNodeFill(n.trust, n.primary)}
+              stroke={wotNodeStroke(n.trust)}
               strokeWidth={n.primary ? 2.5 : 1.5}
             />
             {n.primary && (

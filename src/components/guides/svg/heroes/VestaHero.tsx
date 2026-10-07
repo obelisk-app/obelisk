@@ -5,6 +5,7 @@
  */
 
 import { useTranslations } from 'next-intl';
+import { vestaSettlements, vestaTiles } from '@/utils/guides/hero-art';
 
 const RESOURCES = [
   { hex: '#15803d', label: '10' }, // lumber
@@ -21,26 +22,9 @@ const AXIAL: Array<[number, number]> = [
   [0, 0], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1],
 ];
 
-const R = 58;
-const CX = 300;
-const CY = 200;
-
-function hexPoints(cx: number, cy: number, r: number): string {
-  return Array.from({ length: 6 }, (_, i) => {
-    const angle = (Math.PI / 180) * (60 * i - 30);
-    return `${(cx + r * Math.cos(angle)).toFixed(1)},${(cy + r * Math.sin(angle)).toFixed(1)}`;
-  }).join(' ');
-}
-
-function center(q: number, r: number): [number, number] {
-  return [CX + R * 1.5 * q, CY + R * Math.sqrt(3) * (r + q / 2)];
-}
-
-/** Corner `i` of a hex - settlements sit on vertices, not on tiles. */
-function corner(cx: number, cy: number, i: number): [number, number] {
-  const angle = (Math.PI / 180) * (60 * i - 30);
-  return [cx + R * Math.cos(angle), cy + R * Math.sin(angle)];
-}
+/** The island's tiles and the settlements on them; the numbers are worked out in `hero-art.ts`. */
+const TILES = vestaTiles(AXIAL, RESOURCES);
+const { ax, ay, bx, by, dx, dy } = vestaSettlements();
 
 export default function VestaHero() {
   const t = useTranslations();
@@ -65,53 +49,41 @@ export default function VestaHero() {
       <rect width="800" height="400" fill="url(#bg-vesta)" />
 
       {/* the island */}
-      {AXIAL.map(([q, r], i) => {
-        const [cx, cy] = center(q, r);
-        const res = RESOURCES[i];
-        return (
-          <g key={`${q}-${r}`}>
-            <polygon
-              points={hexPoints(cx, cy, R - 3)}
-              fill={res.hex}
-              fillOpacity="0.85"
-              stroke="#b4f953"
-              strokeOpacity="0.5"
-              strokeWidth="2"
-            />
-            {res.label && (
-              <>
-                <circle cx={cx} cy={cy} r="17" fill="#0a0a0a" fillOpacity="0.75" />
-                <text
-                  x={cx}
-                  y={cy + 5}
-                  fill={res.label === '6' || res.label === '8' ? '#ff4d5e' : '#fafafa'}
-                  fontSize="15"
-                  fontWeight="700"
-                  textAnchor="middle"
-                >
-                  {res.label}
-                </text>
-              </>
-            )}
-          </g>
-        );
-      })}
+      {TILES.map((tile) => (
+        <g key={tile.key}>
+          <polygon
+            points={tile.points}
+            fill={tile.fill}
+            fillOpacity="0.85"
+            stroke="#b4f953"
+            strokeOpacity="0.5"
+            strokeWidth="2"
+          />
+          {tile.label && (
+            <>
+              <circle cx={tile.cx} cy={tile.cy} r="17" fill="#0a0a0a" fillOpacity="0.75" />
+              <text
+                x={tile.cx}
+                y={tile.cy + 5}
+                fill={tile.labelFill}
+                fontSize="15"
+                fontWeight="700"
+                textAnchor="middle"
+              >
+                {tile.label}
+              </text>
+            </>
+          )}
+        </g>
+      ))}
 
       {/* two settlements on vertices, joined by one player's road */}
-      {(() => {
-        const [cx, cy] = center(0, 0);
-        const [ax, ay] = corner(cx, cy, 4);
-        const [bx, by] = corner(cx, cy, 5);
-        const [dx, dy] = corner(cx, cy, 1);
-        return (
-          <g>
-            <line x1={ax} y1={ay} x2={bx} y2={by} stroke="#e07b30" strokeWidth="7" strokeLinecap="round" />
-            <rect x={ax - 9} y={ay - 9} width="18" height="18" rx="4" fill="#e07b30" stroke="#0a0a0a" strokeWidth="2" />
-            <rect x={bx - 9} y={by - 9} width="18" height="18" rx="4" fill="#e07b30" stroke="#0a0a0a" strokeWidth="2" />
-            <rect x={dx - 9} y={dy - 9} width="18" height="18" rx="4" fill="#3498db" stroke="#0a0a0a" strokeWidth="2" />
-          </g>
-        );
-      })()}
+      <g>
+        <line x1={ax} y1={ay} x2={bx} y2={by} stroke="#e07b30" strokeWidth="7" strokeLinecap="round" />
+        <rect x={ax - 9} y={ay - 9} width="18" height="18" rx="4" fill="#e07b30" stroke="#0a0a0a" strokeWidth="2" />
+        <rect x={bx - 9} y={by - 9} width="18" height="18" rx="4" fill="#e07b30" stroke="#0a0a0a" strokeWidth="2" />
+        <rect x={dx - 9} y={dy - 9} width="18" height="18" rx="4" fill="#3498db" stroke="#0a0a0a" strokeWidth="2" />
+      </g>
 
       {/* where the numbers come from */}
       <g fontSize="12" fontWeight="600">

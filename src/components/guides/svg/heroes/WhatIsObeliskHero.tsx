@@ -1,4 +1,14 @@
 import { useTranslations } from 'next-intl';
+import { particleField } from '@/utils/guides/art-geometry';
+
+/** The sparks floating around the obelisk. */
+const SPARKS = particleField(14, {
+  x: { base: 120, step: 43, mod: 580 },
+  y: { base: 80, step: 57, mod: 180 },
+  delayStep: 0.4,
+  durBase: 4,
+  durCycle: 5,
+});
 
 export default function WhatIsObeliskHero() {
   const t = useTranslations();
@@ -41,10 +51,9 @@ export default function WhatIsObeliskHero() {
             y2={280 + i * 12}
           />
         ))}
-        {Array.from({ length: 16 }).map((_, i) => {
-          const x = 400 + (i - 8) * 60;
-          return <line key={`v${i}`} x1={x} y1="280" x2={400 + (i - 8) * 20} y2="400" />;
-        })}
+        {Array.from({ length: 16 }).map((_, i) => (
+          <line key={`v${i}`} x1={400 + (i - 8) * 60} y1="280" x2={400 + (i - 8) * 20} y2="400" />
+        ))}
       </g>
 
       {/* pulsing glow behind obelisk */}
@@ -119,26 +128,20 @@ export default function WhatIsObeliskHero() {
       </g>
 
       {/* particles */}
-      {Array.from({ length: 14 }).map((_, i) => {
-        const x = 120 + (i * 43) % 580;
-        const y = 80 + ((i * 57) % 180);
-        const delay = `${(i * 0.4).toFixed(2)}s`;
-        const dur = `${(4 + (i % 5)).toFixed(1)}s`;
-        return (
-          <circle
-            key={i}
-            cx={x}
-            cy={y}
-            r="1.5"
-            fill="#b4f953"
-            className="animate-particle"
-            style={{
-              ['--particle-delay' as string]: delay,
-              ['--particle-duration' as string]: dur,
-            } as React.CSSProperties}
-          />
-        );
-      })}
+      {SPARKS.map((p) => (
+        <circle
+          key={p.i}
+          cx={p.x}
+          cy={p.y}
+          r="1.5"
+          fill="#b4f953"
+          className="animate-particle"
+          style={{
+            ['--particle-delay' as string]: p.delay,
+            ['--particle-duration' as string]: p.dur,
+          } as React.CSSProperties}
+        />
+      ))}
     </svg>
   );
 }

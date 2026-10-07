@@ -11,18 +11,13 @@
  * appears.
  */
 
-import { displayNameFor } from '@/utils/identity/display-name';
-import { useCallback, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { hexToNpub } from '@nostr-wot/data';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
-import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { useTranslations } from 'next-intl';
 import FeedList from '@/components/social/feed/FeedList';
 import { ComposeButton } from '@/components/social/feed/FeedControls';
 import NoteComposer from '@/components/social/composer/NoteComposer';
 import MobileComposer from '@/components/social/composer/MobileComposer';
-import type { ComposerMode } from '@/hooks/social/composer/useNoteDraft';
 import NoteThread from '@/components/social/note/NoteThread';
 import ArticleReader from '@/components/social/article/ArticleCard';
 import Modal from '@/components/ui/overlays/Modal';
@@ -34,10 +29,7 @@ import { ProfileHeader } from './ProfileHeader';
 import { ProfileActions } from './ProfileActions';
 import { ProfileFeedTabs } from './ProfileFeedTabs';
 import { ProfileMediaLightbox } from './ProfileMediaLightbox';
-import { copyWithToast } from '@/services/common/clipboard';
-import { useProfileMeta } from '@/hooks/chat/profile/useProfileMeta';
-import { useProfileFollow } from '@/hooks/chat/profile/useProfileFollow';
-import { useProfileFeed } from '@/hooks/chat/profile/useProfileFeed';
+import { useNostrProfile } from '@/hooks/chat/profile/useNostrProfile';
 
 type NostrProfileProps = {
   pubkey: string;
@@ -80,51 +72,32 @@ export default function NostrProfile({
   hideClose = false,
 }: NostrProfileProps) {
   const t = useTranslations();
-  const meta = useProfileMeta(pubkey, initialMeta);
-  const relays = usePreferences().socialRelays;
-  const follow = useProfileFollow(pubkey, relays);
-  const { tab, setTab, state, visibleNotes, media } = useProfileFeed(pubkey, relays);
-
-  const [composer, setComposer] = useState<ComposerMode | null>(null);
-  const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
-  const [openNoteId, setOpenNoteId] = useState<string | null>(null);
-  const [openArticle, setOpenArticle] = useState<NostrEvent | null>(null);
-
-  const { isMe } = follow;
-  const displayName = displayNameFor(pubkey, meta);
-
-  // Stable handler identities keep the memoised NoteCards from re-rendering.
-  // Stable identity: NoteCard's memo compares handlers by reference.
-  const handleOpenArticle = useCallback((note: NostrEvent) => setOpenArticle(note), []);
-  const startReply = useCallback((note: NostrEvent) => setComposer({ kind: 'reply', parent: note }), []);
-  const startQuote = useCallback((note: NostrEvent) => setComposer({ kind: 'quote', target: note }), []);
-
-  const copyNpub = () => copyWithToast(hexToNpub(pubkey), t('social.profileFeed.npubCopied'), displayName);
+  const vm = useNostrProfile(pubkey, initialMeta);
 
   // A thread or an article takes over the profile surface rather than
   // opening in a modal on top of it: same reasoning as the feed, a card
   // with a dimmed backdrop gives an article less room than the list it came
   // from.
-  if (openArticle) {
+  if (vm.openArticle) {
     return (
       <InlineReader
         title={t('social.article')}
-        onBack={() => setOpenArticle(null)}
+        onBack={vm.closeArticle}
         testId="profile-article-reader"
       >
-        <ArticleReader note={openArticle} onOpenProfile={onOpenProfile} />
+        <ArticleReader note={vm.openArticle} onOpenProfile={onOpenProfile} />
       </InlineReader>
     );
   }
 
-  if (openNoteId) {
+  if (vm.openNoteId) {
     return (
       <InlineReader
         title={t('social.thread')}
-        onBack={() => setOpenNoteId(null)}
+        onBack={vm.closeNote}
         testId="profile-thread-reader"
       >
-        <NoteThread noteId={openNoteId} onOpenProfile={onOpenProfile} onOpenNote={setOpenNoteId} />
+        <NoteThread noteId={vm.openNoteId} onOpenProfile={onOpenProfile} onOpenNote={vm.setOpenNoteId} />
       </InlineReader>
     );
   }
@@ -136,29 +109,29 @@ export default function NostrProfile({
     >
       <ProfileHeader
         pubkey={pubkey}
-        meta={meta}
-        displayName={displayName}
-        isMe={isMe}
+        meta={vm.meta}
+        displayName={vm.displayName}
+        isMe={vm.isMe}
         mobile={mobile}
         settingsMode={settingsMode}
         hideClose={hideClose}
         onClose={onClose}
         onEditProfile={onEditProfile}
         onOpenSettings={onOpenSettings}
-        onCreatePost={() => setComposer({ kind: 'note' })}
-        onCopyNpub={copyNpub}
+        onCreatePost={vm.composeNote}
+        onCopyNpub={vm.copyNpub}
       />
 
-      <ProfileLinks about={meta?.about} website={meta?.website} lud16={meta?.lud16} />
+      <ProfileLinks about={vm.meta?.about} website={vm.meta?.website} lud16={vm.meta?.lud16} />
 
       <ProfileActions
         pubkey={pubkey}
-        isMe={isMe}
-        following={follow.following}
-        contactsReady={follow.contactsReady}
-        followBusy={follow.followBusy}
-        followError={follow.followError}
-        onToggleFollow={() => void follow.toggleFollow()}
+        isMe={vm.isMe}
+        following={vm.follow.following}
+        contactsReady={vm.follow.contactsReady}
+        followBusy={vm.follow.followBusy}
+        followError={vm.follow.followError}
+        onToggleFollow={() => void vm.follow.toggleFollow()}
         onMessage={onMessage}
       />
 
@@ -167,74 +140,74 @@ export default function NostrProfile({
         the ✎ button in the header instead, because an inline row plus a
         keyboard leaves about two lines to write in.
       */}
-      {isMe && !mobile && (composer?.kind === 'note' ? (
+      {vm.isMe && !mobile && (vm.composer?.kind === 'note' ? (
         <div className="mx-5 mb-4">
           <NoteComposer
             autoFocus
-            onPublished={() => { setComposer(null); setTab('posts'); state.refresh(); }}
-            onCancel={() => setComposer(null)}
+            onPublished={vm.notePublished}
+            onCancel={vm.closeComposer}
           />
         </div>
       ) : (
         <ComposeButton
           pubkey={pubkey}
-          picture={meta?.picture}
-          name={displayName}
-          onClick={() => setComposer({ kind: 'note' })}
+          picture={vm.meta?.picture}
+          name={vm.displayName}
+          onClick={vm.composeNote}
           testId="profile-create-post"
         />
       ))}
 
-      <ProfileFeedTabs tab={tab} onTab={setTab} />
+      <ProfileFeedTabs tab={vm.tab} onTab={vm.setTab} />
 
       <div className="profile-feed-content min-h-40 flex-1" aria-live="polite" role="tabpanel">
-        {tab === 'media' ? (
-          media.length > 0 ? (
-            <MediaGrid items={media} onOpen={setExpandedMedia} />
+        {vm.tab === 'media' ? (
+          vm.media.length > 0 ? (
+            <MediaGrid items={vm.media} onOpen={vm.setExpandedMedia} />
           ) : (
             <div className="flex min-h-40 items-center justify-center px-6 text-center text-sm text-lc-muted" data-testid="profile-feed-empty">
-              {t(state.error ? 'social.profileFeed.loadFailed' : 'social.profileFeed.empty')}
+              {t(vm.state.error ? 'social.profileFeed.loadFailed' : 'social.profileFeed.empty')}
             </div>
           )
         ) : (
           <FeedList
-            state={{ ...state, notes: visibleNotes }}
+            state={{ ...vm.state, notes: vm.visibleNotes }}
             onOpenProfile={onOpenProfile}
-            onOpenNote={setOpenNoteId}
-            onReply={startReply}
-            onQuote={startQuote}
-            onOpenArticle={handleOpenArticle}
+            onOpenNote={vm.setOpenNoteId}
+            onReply={vm.startReply}
+            onQuote={vm.startQuote}
+            onOpenArticle={vm.handleOpenArticle}
           />
         )}
       </div>
 
-      {mobile && composer && (
+      {mobile && vm.composer && (
         <MobileComposer
-          mode={composer}
-          onPublished={() => { setComposer(null); setTab('posts'); state.refresh(); }}
-          onClose={() => setComposer(null)}
+          mode={vm.composer}
+          onPublished={vm.notePublished}
+          onClose={vm.closeComposer}
         />
       )}
 
-      {!mobile && composer && composer.kind !== 'note' && (
-        <Modal onClose={() => setComposer(null)} testId="profile-composer-modal" panelClassName="w-full max-w-lg mx-4 flex max-h-[85vh] flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-xl">
+      {!mobile && vm.composer && vm.composer.kind !== 'note' && (
+        <Modal onClose={vm.closeComposer} testId="profile-composer-modal" panelClassName="w-full max-w-lg mx-4 flex max-h-[85vh] flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-xl">
           <ModalHeader
-            title={t(composer.kind === 'reply' ? 'social.replyAction' : 'social.quote')}
-            onClose={() => setComposer(null)}
+            title={t(vm.composer.kind === 'reply' ? 'social.replyAction' : 'social.quote')}
+            onClose={vm.closeComposer}
           />
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             <NoteComposer
               autoFocus
-              mode={composer}
-              onPublished={() => { setComposer(null); state.refresh(); }}
-              onCancel={() => setComposer(null)}
+              mode={vm.composer}
+              onPublished={vm.replyPublished}
+              onCancel={vm.closeComposer}
             />
           </div>
         </Modal>
       )}
 
-      {expandedMedia && (
-        <ProfileMediaLightbox url={expandedMedia} onClose={() => setExpandedMedia(null)} />
+      {vm.expandedMedia && (
+        <ProfileMediaLightbox url={vm.expandedMedia} onClose={vm.closeMedia} />
       )}
     </div>
   );

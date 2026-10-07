@@ -59,4 +59,15 @@ describe('MessageZapModal', () => {
     expect(send).toHaveClass('bg-yellow-400', 'rounded-full');
     expect(send.querySelector('svg')).not.toBeNull();
   });
+
+  it('an amount that is not a number reads as 0 and cannot be sent; a quick amount is marked', () => {
+    mount();
+    act(() => useMessageZapStore.getState().open({ recipientPubkey: RECIPIENT, displayName: 'Ana', groupId: 'g', defaultAmountSats: 500 }));
+    const amount = screen.getByRole('spinbutton');
+    fireEvent.change(amount, { target: { value: '' } });
+    expect(amount).toHaveValue(0);
+    expect(screen.getByRole('button', { name: 'Zap 0 sats' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: '21,000' }));
+    expect(screen.getByRole('button', { name: '21,000' })).toHaveClass('bg-yellow-400');
+  });
 });

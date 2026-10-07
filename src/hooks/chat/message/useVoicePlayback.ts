@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type SyntheticEvent } from 'react';
 import { nextPlaybackRate } from '@/utils/chat/message/voice-playback';
 
 /**
@@ -45,5 +45,9 @@ export function useVoicePlayback(declaredDuration: number) {
     toggle,
     cyclePlaybackRate,
     seek,
+    /** The real length once the metadata loads; a stream with no finite length keeps the declared one. */
+    onLoadedMetadata: (event: SyntheticEvent<HTMLAudioElement>) => {
+      if (Number.isFinite(event.currentTarget.duration)) setDuration(event.currentTarget.duration);
+    },
   };
 }

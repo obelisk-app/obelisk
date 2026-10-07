@@ -11,7 +11,6 @@
  * the user-agent and viewport disagree.
  */
 
-import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 // Hoist the mobile shell's stylesheet up to the eagerly-loaded route bundle
 // so it's in place before the dynamic PhoneShell chunk hydrates. Without
@@ -19,30 +18,15 @@ import dynamic from 'next/dynamic';
 // in practice means the first paint of the mobile UI is unstyled (SVG
 // icons render at default browser size, etc.).
 import './mobile/mobile-shell.css';
-import { useIsLoggedIn } from '@/services/nostr-bridge';
 import ReadStateRoot from '@/services/read-state/root';
 import ActivityIndicator from '@/components/feedback/ActivityIndicator';
-import { usePreferences } from '@/hooks/preferences/usePreferences';
-import { initSocial } from '@/services/social/pool';
-import { useIsMobile } from '@/hooks/common/useIsMobile';
-import { useSessionNoticeToast } from '@/hooks/shell/login/useSessionNoticeToast';
+import { useAppGate } from '@/hooks/shell/mounts/useAppGate';
 
 const AppShell = dynamic(() => import('./desktop/DesktopShell'), { ssr: false });
 const MobileShell = dynamic(() => import('./mobile/PhoneShell'), { ssr: false });
 
 export default function AppGate() {
-  const isMobile = useIsMobile();
-  const loggedIn = useIsLoggedIn();
-  const socialRelays = usePreferences().socialRelays;
-  useSessionNoticeToast();
-
-  // Point @nostr-wot/data at the user's social relays before any feed read.
-  // Without this the SDK would fall back to its own defaults, so a user who
-  // configured their relays would still be reading from somewhere else.
-  useEffect(() => {
-    initSocial(socialRelays);
-  }, [socialRelays]);
-
+  const { isMobile, loggedIn } = useAppGate();
   if (isMobile === null) return null;
   return (
     <>

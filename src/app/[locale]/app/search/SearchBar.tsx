@@ -7,10 +7,9 @@
  * This file is the desktop paint: the input, the dropdown and its two
  * panes (`search/FilterAndHistoryPane`, `search/ResultsPane`).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import type { JsSearchHit } from '@/services/nostr-bridge';
-import { useRelaySearch } from '@/hooks/chat/search/useRelaySearch';
-import { useChatStore } from '@/store/chat';
+import { useSearchBar } from '@/hooks/shell/search/useSearchBar';
 import { useTranslations } from 'next-intl';
 import { FilterAndHistoryPane } from './FilterAndHistoryPane';
 import { ResultsPane } from './ResultsPane';
@@ -29,76 +28,20 @@ export default function SearchBar({
   onJump?: (msg: JsSearchHit) => void;
 }) {
   const t = useTranslations();
-  const search = useRelaySearch({ activeGroupId });
-  const [open, setOpen] = useState(false);
-  const [mobileExpanded, setMobileExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-
-  const closeAll = useCallback(() => {
-    setOpen(false);
-    // The mobile input is a fixed full-width overlay; leaving it expanded
-    // pins it over the header with its own trigger button hidden.
-    setMobileExpanded(false);
-  }, []);
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) closeAll();
-    }
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, [closeAll]);
-
-  const jumpTo = (m: JsSearchHit) => {
-    // A host may override where a hit goes; by default the shell is asked to
-    // switch channel and scroll to the message. Without that fallback,
-    // clicking a result only closed the dropdown.
-    if (onJump) onJump(m);
-    else if (m.groupId) useChatStore.getState().requestJump(m.groupId, m.id);
-    search.jumpTo(m);
-    closeAll();
-  };
-
-  const applyFilter = (token: string) => {
-    search.applyFilter(token);
-    setOpen(true);
-    // Without this the caret is stranded on the button that was clicked.
-    requestAnimationFrame(() => inputRef.current?.focus());
-  };
-
-  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      if (search.raw) search.setRaw(''); else closeAll();
-      return;
-    }
-    if (search.results.length === 0) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      search.moveActive(1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      search.moveActive(-1);
-    } else if (e.key === 'Enter' && search.activeIndex >= 0) {
-      e.preventDefault();
-      jumpTo(search.results[search.activeIndex]);
-    }
-  }
+  const vm = useSearchBar({ activeGroupId, onJump, inputRef, rootRef });
+  const { search } = vm;
 
   return (
     <div ref={rootRef} className="relative">
       {/* Unmounted rather than `hidden` while expanded: Button's own
           `inline-flex` would outrank a `hidden` utility. */}
-      {!mobileExpanded && (
+      {!vm.mobileExpanded && (
         <Button
           variant="ghost"
           size="icon-md"
-          onClick={() => {
-            setMobileExpanded(true);
-            setOpen(true);
-            requestAnimationFrame(() => inputRef.current?.focus());
-          }}
+          onClick={vm.expandMobile}
           className="sm:hidden rounded-md"
           aria-label={t('shell.search.open')}
         >
@@ -106,12 +49,12 @@ export default function SearchBar({
         </Button>
       )}
       <form
-        onSubmit={(e) => { e.preventDefault(); search.submit(); }}
+        onSubmit={vm.submit}
         className={
           'items-center gap-2 rounded-md border border-lc-border bg-lc-dark sm:bg-lc-black/40 focus-within:border-lc-green/60 ' +
           'max-sm:fixed max-sm:inset-x-2 max-sm:top-2 max-sm:z-50 max-sm:px-3 max-sm:py-2.5 max-sm:shadow-2xl ' +
           'sm:px-3 sm:py-2 sm:w-56 md:w-80 ' +
-          (mobileExpanded ? 'flex' : 'hidden sm:flex')
+          (vm.mobileExpanded ? 'flex' : 'hidden sm:flex')
         }
       >
         <Input
@@ -119,28 +62,28 @@ export default function SearchBar({
           ref={inputRef}
           value={search.raw}
           onChange={(e) => search.setRaw(e.target.value)}
-          onFocus={() => setOpen(true)}
-          onKeyDown={onKeyDown}
+          onFocus={vm.openPane}
+          onKeyDown={vm.onKeyDown}
           placeholder={t('shell.search.placeholderIn', { server: serverName })}
           aria-label={t('shell.search.placeholderIn', { server: serverName })}
           className="flex-1 min-w-0 bg-transparent text-sm sm:text-xs text-lc-white outline-none placeholder:text-lc-muted"
           role="combobox"
-          aria-expanded={open}
+          aria-expanded={vm.open}
           aria-controls="search-results-pane"
           aria-autocomplete="list"
-          aria-activedescendant={search.activeIndex >= 0 ? `search-result-${search.activeIndex}` : undefined}
+          aria-activedescendant={vm.activeDescendant}
         />
         <Button type="submit" variant="ghost" size="icon" className="shrink-0" aria-label={t('common.search')}>
           <SearchIcon size={18} />
         </Button>
         <CloseButton
-          onClick={() => { closeAll(); search.setRaw(''); }}
+          onClick={vm.closeAndClear}
           label={t('shell.search.close')}
           className="sm:hidden"
         />
       </form>
 
-      {open && (
+      {vm.open && (
         <div
           id="search-results-pane"
           // On mobile the input is a fixed overlay at the top of the
@@ -153,13 +96,13 @@ export default function SearchBar({
             'sm:absolute sm:right-0 sm:top-full sm:mt-1 sm:w-[420px] sm:max-h-[70vh]'
           }
         >
-          {!search.raw.trim() ? (
+          {vm.showFilters ? (
             <FilterAndHistoryPane
               serverName={serverName}
               history={search.history}
               t={t}
-              onPickFilter={applyFilter}
-              onPickHistory={(h) => { search.setRaw(h); setOpen(true); }}
+              onPickFilter={vm.applyFilter}
+              onPickHistory={vm.pickHistory}
               onClearHistory={search.clearHistory}
             />
           ) : (
@@ -182,11 +125,11 @@ export default function SearchBar({
               onToggleScope={search.toggleScope}
               loadingMore={search.loadingMore}
               onLoadMore={search.loadMore}
-              onPickFilter={applyFilter}
+              onPickFilter={vm.applyFilter}
               t={t}
-              onJump={jumpTo}
-              onClose={closeAll}
-              onPreviewUser={(pk) => { useChatStore.getState().openProfilePopup(pk); closeAll(); }}
+              onJump={vm.jumpTo}
+              onClose={vm.closeAll}
+              onPreviewUser={vm.previewUser}
             />
           )}
         </div>

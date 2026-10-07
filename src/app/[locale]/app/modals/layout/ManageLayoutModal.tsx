@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { shortHost } from '@/utils/relay-url/url-host';
 import Modal from '@/components/ui/overlays/Modal';
@@ -9,11 +8,10 @@ import Input from '@/components/ui/forms/Input';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import { type ChannelLayout } from '@/services/relay/channel-layout';
-import { useChannelLayoutEditor } from '@/hooks/relay/useChannelLayoutEditor';
+import { useManageLayoutModal } from '@/hooks/shell/modals/layout/useManageLayoutModal';
 import { useTranslations } from 'next-intl';
 import { ChannelOrderRow } from './ChannelOrderRow';
 import { LayoutCategoryCard } from './LayoutCategoryCard';
-import { useLayoutDrag } from '@/hooks/shell/modals/layout/useLayoutDrag';
 
 export function ManageLayoutModal({
   relayUrl,
@@ -27,27 +25,8 @@ export function ManageLayoutModal({
   onClose: () => void;
 }) {
   const t = useTranslations();
-  const {
-    error: err,
-    laidOut,
-    newCategoryName: newCatName,
-    saving,
-    setNewCategoryName: setNewCatName,
-    addCategory,
-    deleteCategory,
-    moveCategory,
-    moveChannel,
-    placeCategory,
-    placeChannel,
-    renameCategory,
-    save,
-    setChannelCategory,
-  } = useChannelLayoutEditor(relayUrl, layout, channels, onClose);
-  const channelsById = useMemo(
-    () => Object.fromEntries(channels.map((group) => [group.id, group])),
-    [channels],
-  );
-  const drag = useLayoutDrag({ placeCategory, placeChannel });
+  const vm = useManageLayoutModal(relayUrl, layout, channels, onClose);
+  const { laidOut, channelsById, drag } = vm;
 
   return (
     <Modal
@@ -65,19 +44,14 @@ export function ManageLayoutModal({
             <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">{t('mobile.layout.newCategory')}</div>
             <div className="flex gap-2">
               <Input
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addCategory();
-                  }
-                }}
+                value={vm.newCategoryName}
+                onChange={(e) => vm.setNewCategoryName(e.target.value)}
+                onKeyDown={vm.onNewCategoryKeyDown}
                 placeholder={t('mobile.layout.categoryPlaceholder')}
                 size="sm"
                 className="flex-1"
               />
-              <Button onClick={addCategory} disabled={!newCatName.trim()} className="shrink-0">
+              <Button onClick={vm.addCategory} disabled={!vm.canAddCategory} className="shrink-0">
                 {t('shell.rail.addModal.add')}
               </Button>
             </div>
@@ -102,11 +76,11 @@ export function ManageLayoutModal({
                 categories={laidOut.categories}
                 channelsById={channelsById}
                 drag={drag}
-                renameCategory={renameCategory}
-                moveCategory={moveCategory}
-                deleteCategory={deleteCategory}
-                moveChannel={moveChannel}
-                setChannelCategory={setChannelCategory}
+                renameCategory={vm.renameCategory}
+                moveCategory={vm.moveCategory}
+                deleteCategory={vm.deleteCategory}
+                moveChannel={vm.moveChannel}
+                setChannelCategory={vm.setChannelCategory}
               />
             ))}
           </section>
@@ -118,10 +92,8 @@ export function ManageLayoutModal({
             </div>
             <div
               className="space-y-1 rounded-lg"
-              onDragOver={(event) => { if (drag.dragged?.type === 'channel') event.preventDefault(); }}
-              onDrop={(event) => {
-                if (drag.dropOnUncategorized()) event.preventDefault();
-              }}
+              onDragOver={drag.bucketDragOver}
+              onDrop={drag.bucketDrop}
               data-testid="layout-uncategorized"
             >
               {laidOut.uncategorized.length === 0 ? (
@@ -137,8 +109,8 @@ export function ManageLayoutModal({
                     first={i === 0}
                     last={i === laidOut.uncategorized.length - 1}
                     categories={laidOut.categories}
-                    onMove={(d) => moveChannel(id, d)}
-                    onChangeCategory={(catId) => setChannelCategory(id, catId)}
+                    onMove={(d) => vm.moveChannel(id, d)}
+                    onChangeCategory={(catId) => vm.setChannelCategory(id, catId)}
                     onGrab={() => drag.grabChannel(id)}
                     onDragEnd={drag.endDrag}
                     onDropBefore={() => drag.dropBefore(null, id)}
@@ -148,15 +120,15 @@ export function ManageLayoutModal({
             </div>
           </section>
 
-          {err && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{err}</div>}
+          {vm.error && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{vm.error}</div>}
         </div>
         <ModalFooter
           meta={t('shell.desktop.layout.saveHelp')}
           cancel={{ onClick: onClose }}
           actions={[{
-            label: saving ? t('shell.desktop.layout.publishing') : t('shell.desktop.layout.publish'),
-            onClick: save,
-            disabled: saving,
+            label: vm.saving ? t('shell.desktop.layout.publishing') : t('shell.desktop.layout.publish'),
+            onClick: vm.save,
+            disabled: vm.saving,
           }]}
         />
     </Modal>

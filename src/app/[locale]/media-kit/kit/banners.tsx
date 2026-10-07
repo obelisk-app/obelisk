@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { BRAND_NAME, GLOW_GRADIENT, GRID_OVERLAY } from '@/utils/media-kit/content';
-import { ObeliskMark } from './kit-ui';
+import { ObeliskMark } from './ObeliskMark';
 
 /** Where each layer of a centered composition sits, as % of the banner. */
 type CenteredLayout = {

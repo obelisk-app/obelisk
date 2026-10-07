@@ -6,7 +6,7 @@ import { useChatStore } from '@/store/chat';
 import { useRemoteMediaGate, type RemoteMediaGate } from '@/services/media/remote-media-gate';
 import { mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import { buildMarkdownComponents } from '@/components/chat/message/markdown-components';
-import type { MentionMap } from '@/components/chat/message/placeholders';
+import type { MentionMap } from '@/utils/message-text/placeholder-segments';
 
 /**
  * The remote-media gate for one message and the emoji set it may render.

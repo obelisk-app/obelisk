@@ -46,4 +46,19 @@ describe('ForumChrome', () => {
     fireEvent.click(screen.getByTestId('forum-tag-t1'));
     expect(props.onToggleTag).toHaveBeenCalledWith('t1');
   });
+
+  it('Enter submits the search, and the placeholder offers to create only without an exact match', () => {
+    const props = mount({ searchQuery: 'new idea' });
+    fireEvent.submit(screen.getByTestId('forum-search-row'));
+    expect(props.onSubmitSearch).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('forum-search-input')).toHaveAttribute('placeholder', 'Press Enter to create…');
+  });
+
+  it('the All chip is pressed while no tag is selected, and clears the selection', () => {
+    const props = mount({ selectedTagIds: ['t1'] });
+    const all = screen.getByTestId('forum-tag-all');
+    expect(all).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(all);
+    expect(props.onClearTags).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,26 +1,19 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
+import { useVoiceRoomForm } from '@/hooks/voice/join/useVoiceRoomForm';
 import Input from '@/components/ui/forms/Input';
 import Button from '@/components/ui/buttons/Button';
 
 /** Pick a room name and open it. */
 export default function VoiceRoomForm() {
   const t = useTranslations();
-  const router = useRouter();
-  const [room, setRoom] = useState('test');
+  const { room, setRoom, submit } = useVoiceRoomForm();
 
   return (
     <div className="min-h-dvh flex items-center justify-center bg-black text-white p-6">
       <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const trimmed = room.trim();
-          if (!trimmed) return;
-          router.push(`/voice/${encodeURIComponent(trimmed)}`);
-        }}
+        onSubmit={submit}
         className="w-full max-w-md space-y-4 bg-neutral-900 border border-neutral-800 rounded-xl p-6"
       >
         <div>

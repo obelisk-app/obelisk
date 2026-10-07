@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useProfileEditorForm } from '@/hooks/chat/profile/useProfileEditorForm';
+import { useEditProfileForm } from '@/hooks/shell/settings/useEditProfileForm';
 import ProfileAppearanceEditor from '@/components/settings/account/ProfileAppearanceEditor';
 import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';
 import TextArea from '@/components/ui/forms/TextArea';
 import Button from '@/components/ui/buttons/Button';
+import { ProfileFormField as Field } from './ProfileFormField';
 
 export function EditProfileForm({
   initial,
@@ -19,26 +19,19 @@ export function EditProfileForm({
 }) {
   const t = useTranslations();
   const {
-    name, about, picture, banner, nip05, lud16, website, pictureFile, bannerFile,
-    setName, setAbout, setPicture, setBanner, setNip05, setLud16, setWebsite, setPictureFile, setBannerFile,
-    uploading, saving, error, save,
-  } = useProfileEditorForm(initial, onSaved);
-  const firstField = useRef<HTMLInputElement>(null);
-  useEffect(() => { firstField.current?.focus(); }, []);
+    name, about, nip05, lud16, website, appearance, firstField,
+    setName, setAbout, setNip05, setLud16, setWebsite, setAppearance,
+    uploading, saving, error, saveProfile,
+  } = useEditProfileForm(initial, onSaved);
 
   return (
     <div className="space-y-3 p-4">
       <ProfileAppearanceEditor
         pubkey={name || '0'}
         displayName={name}
-        value={{ pictureUrl: picture, bannerUrl: banner, pictureFile, bannerFile }}
+        value={appearance}
         uploading={uploading}
-        onChange={(next) => {
-          setPicture(next.pictureUrl);
-          setBanner(next.bannerUrl);
-          setPictureFile(next.pictureFile);
-          setBannerFile(next.bannerFile);
-        }}
+        onChange={setAppearance}
       />
       <Field label={t('shell.user.field.name')}>
         <Input ref={firstField} value={name} onChange={(e) => setName(e.target.value)} />
@@ -57,7 +50,7 @@ export function EditProfileForm({
       </Field>
       {error && <div className="text-xs text-red-400">{error}</div>}
       <div className="flex gap-2 pt-1">
-        <Button variant="pill" size="sm" onClick={() => void save()} disabled={saving} data-testid="save-profile-button">
+        <Button variant="pill" size="sm" onClick={saveProfile} disabled={saving} data-testid="save-profile-button">
           {saving ? t('common.saving') : t('common.save')}
         </Button>
         <Button variant="secondary" size="sm" onClick={onCancel} disabled={saving}>
@@ -65,16 +58,5 @@ export function EditProfileForm({
         </Button>
       </div>
     </div>
-  );
-}
-
-/** Settings sections - one per entry in the settings sidebar. */
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-lc-muted">{label}</span>
-      {children}
-    </label>
   );
 }

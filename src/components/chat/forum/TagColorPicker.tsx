@@ -1,9 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import type { JsForumTag } from '@/services/nostr-bridge';
-import { paletteForTag, TAG_PALETTES } from '@/utils/chat/forum/forum-tag-colors';
-import { useDismiss } from '@/hooks/common/useDismiss';
+import { TAG_PALETTES } from '@/utils/chat/forum/forum-tag-colors';
+import { useTagColorPicker } from '@/hooks/chat/forum/useTagColorPicker';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -20,16 +19,14 @@ export function TagColorPicker({
   onPick: (color: string | null) => void;
 }) {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const close = () => setOpen(false);
-  useDismiss({ refs: [ref], onDismiss: close, enabled: open });
-  const current = paletteForTag(tag);
+  const {
+    current, open, pick, ref, toggle,
+  } = useTagColorPicker(tag, onPick);
   return (
     <div className="relative shrink-0" ref={ref}>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className="flex h-7 w-7 items-center justify-center rounded-md border border-lc-border bg-lc-dark hover:border-lc-muted"
         style={{ borderColor: current.border }}
         aria-label={t('chat.forum.tagColor', { color: tag.color ? t(`chat.forum.colors.${current.key}`) : t('chat.forum.tagColorAuto') })}
@@ -53,7 +50,7 @@ export function TagColorPicker({
               <button
                 key={p.key}
                 type="button"
-                onClick={() => { onPick(p.key); setOpen(false); }}
+                onClick={() => pick(p.key)}
                 title={t(`chat.forum.colors.${p.key}`)}
                 aria-label={t(`chat.forum.colors.${p.key}`)}
                 aria-pressed={tag.color === p.key}
@@ -68,7 +65,7 @@ export function TagColorPicker({
           </div>
           <button
             type="button"
-            onClick={() => { onPick(null); setOpen(false); }}
+            onClick={() => pick(null)}
             className={
               'mt-2 w-full rounded-md px-2 py-1 text-left text-[11px] hover:bg-lc-card ' +
               (tag.color === null ? 'text-lc-green' : 'text-lc-muted hover:text-lc-white')

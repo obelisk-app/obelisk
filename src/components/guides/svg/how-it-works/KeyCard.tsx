@@ -1,4 +1,6 @@
 import { useTranslations } from 'next-intl';
+import KeyCardRow from './KeyCardRow';
+import KeyGlyph from './KeyGlyph';
 
 const DIM = '#5c7a2e';
 
@@ -19,11 +21,11 @@ export default function KeyCard() {
         {t('guides.art.howObeliskWorks.key')}
       </text>
 
-      <Row y={62} glyph="ext" label={t('guides.art.howObeliskWorks.extension')} />
+      <KeyCardRow y={62} glyph="ext" label={t('guides.art.howObeliskWorks.extension')} />
       <text x="240" y="62" {...mono}>NIP-07</text>{/* i18n-exempt: protocol name */}
-      <Row y={82} glyph="phone" label={t('guides.art.howObeliskWorks.signerApp')} />
+      <KeyCardRow y={82} glyph="phone" label={t('guides.art.howObeliskWorks.signerApp')} />
       <text x="240" y="82" {...mono}>NIP-46</text>{/* i18n-exempt: protocol name */}
-      <Row y={102} glyph="lock" label={t('guides.art.howObeliskWorks.session')} />
+      <KeyCardRow y={102} glyph="lock" label={t('guides.art.howObeliskWorks.session')} />
       <text x="240" y="102" textAnchor="end" fontSize="9.5" fill="#a3a3a3">
         {t('guides.art.howObeliskWorks.sessionSub')}
       </text>
@@ -34,53 +36,6 @@ export default function KeyCard() {
       <text x="134" y="144" textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#0a0a0a">
         {t('guides.art.howObeliskWorks.sign')}
       </text>
-    </g>
-  );
-}
-
-function Row({ y, glyph, label }: { y: number; glyph: 'ext' | 'phone' | 'lock'; label: string }) {
-  return (
-    <g>
-      <RowGlyph kind={glyph} x={36} y={y - 4} />
-      <text x="50" y={y} fontSize="10.5" fontWeight="600" fill="#fafafa">
-        {label}
-      </text>
-    </g>
-  );
-}
-
-function KeyGlyph({ x, y }: { x: number; y: number }) {
-  return (
-    <g stroke="#b4f953" strokeWidth="1.6" fill="none" strokeLinecap="round">
-      <circle cx={x - 4} cy={y} r="4.5" />
-      <line x1={x + 1} y1={y} x2={x + 10} y2={y} />
-      <line x1={x + 7} y1={y} x2={x + 7} y2={y + 4} />
-    </g>
-  );
-}
-
-function RowGlyph({ kind, x, y }: { kind: 'ext' | 'phone' | 'lock'; x: number; y: number }) {
-  const stroke = { stroke: '#b4f953', strokeWidth: 1.2, fill: 'none', strokeLinecap: 'round' as const };
-  if (kind === 'ext') {
-    return (
-      <g {...stroke}>
-        <rect x={x - 6} y={y - 4.5} width="12" height="9" rx="1.5" />
-        <line x1={x - 6} y1={y - 1.5} x2={x + 6} y2={y - 1.5} />
-      </g>
-    );
-  }
-  if (kind === 'phone') {
-    return (
-      <g {...stroke}>
-        <rect x={x - 4} y={y - 6} width="8" height="12" rx="1.5" />
-        <line x1={x - 1} y1={y + 3.5} x2={x + 1} y2={y + 3.5} />
-      </g>
-    );
-  }
-  return (
-    <g {...stroke}>
-      <rect x={x - 5} y={y - 1} width="10" height="7" rx="1.5" />
-      <path d={`M${x - 3} ${y - 1} v-2 a3 3 0 0 1 6 0 v2`} />
     </g>
   );
 }

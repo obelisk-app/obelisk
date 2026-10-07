@@ -15,14 +15,9 @@
  * page already had before the bridge connects.
  */
 
-import { useSyncExternalStore } from 'react';
-import { useRouter } from '@/i18n/navigation';
-import { safeNpub } from '@/utils/identity/short-npub';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
 import NostrProfile from '@/components/chat/profile/NostrProfile';
-
-/** Matches the app's own breakpoint for the phone presentation. */
-const MOBILE_QUERY = '(max-width: 767px)';
+import { useProfileViewer } from '@/hooks/social/viewer/useProfileViewer';
 
 export default function ProfileViewerClient({
   pubkey,
@@ -31,31 +26,15 @@ export default function ProfileViewerClient({
   pubkey: string;
   initialMeta: Partial<JsUserMetadata>;
 }) {
-  const router = useRouter();
-  // `useSyncExternalStore` rather than state+effect: the server render has
-  // no viewport, and this is the React-sanctioned way to read an external
-  // value with an SSR fallback instead of setting state during an effect.
-  const mobile = useSyncExternalStore(subscribeToViewport, isMobileViewport, () => false);
+  const vm = useProfileViewer();
 
   return (
     <NostrProfile
       pubkey={pubkey}
       initialMeta={initialMeta}
-      mobile={mobile}
-      // On a page of its own there's nowhere to close *to*; the app is the
-      // place with somewhere to go back to.
-      onClose={() => router.push('/app')}
-      onOpenProfile={(next) => router.push(`/p/${safeNpub(next)}`)}
+      mobile={vm.mobile}
+      onClose={vm.close}
+      onOpenProfile={vm.openProfile}
     />
   );
-}
-
-function subscribeToViewport(onChange: () => void): () => void {
-  const query = window.matchMedia(MOBILE_QUERY);
-  query.addEventListener('change', onChange);
-  return () => query.removeEventListener('change', onChange);
-}
-
-function isMobileViewport(): boolean {
-  return window.matchMedia(MOBILE_QUERY).matches;
 }

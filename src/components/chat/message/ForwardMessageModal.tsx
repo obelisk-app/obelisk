@@ -10,29 +10,16 @@
  * `publishGroupMessage`) and ping them on every forward.
  */
 
-import { useMemo, useState } from 'react';
 import Modal from '@/components/ui/overlays/Modal';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import Input from '@/components/ui/forms/Input';
-import { nostrActions, useGroups } from '@/services/nostr-bridge';
-import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
-import { useToastStore } from '@/store/feedback/toast';
+import type { JsMessage } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import { ForwardIcon, HashIcon } from '@/components/ui/icons/icons';
 import Spinner from '@/components/ui/feedback/Spinner';
 import EmptyState from '@/components/ui/feedback/EmptyState';
 import { MenuItem } from '@/components/ui/overlays/menu';
-import { errorReason } from '@/utils/errors/error-text';
-
-/** The forwarded message body. Exported for tests. */
-export function forwardedContent(
-  msg: Pick<JsMessage, 'content'>,
-  opts: { authorName: string; fromChannel: string | null; label: string },
-): string {
-  const where = opts.fromChannel ? ` #${opts.fromChannel}` : '';
-  const quoted = msg.content.split('\n').map((line) => `> ${line}`).join('\n');
-  return `**${opts.label}**${where} · ${opts.authorName}\n${quoted}`;
-}
+import { useForwardMessageModal } from '@/hooks/chat/message/useForwardMessageModal';
 
 export default function ForwardMessageModal({
   message,
@@ -46,36 +33,7 @@ export default function ForwardMessageModal({
   onClose: () => void;
 }) {
   const t = useTranslations();
-  const groups = useGroups();
-  const [query, setQuery] = useState('');
-  const [sending, setSending] = useState<string | null>(null);
-  const fromName = groups.find((g) => g.id === fromGroupId)?.name ?? null;
-
-  const targets = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return groups
-      .filter((g: JsGroup) => g.id !== fromGroupId && g.kind !== 'voice' && g.kind !== 'voice-sfu' && g.kind !== 'forum')
-      .filter((g) => !q || (g.name ?? g.id).toLowerCase().includes(q))
-      .slice(0, 50);
-  }, [groups, query, fromGroupId]);
-
-  const forward = async (target: JsGroup) => {
-    setSending(target.id);
-    try {
-      await nostrActions.sendMessage(
-        target.id,
-        forwardedContent(message, { authorName, fromChannel: fromName, label: t('chat.message.forwarded') }),
-      );
-      useToastStore.getState().pushToast({
-        title: t('chat.message.forwardedTo', { channel: target.name ?? target.id.slice(0, 8) }),
-        body: '',
-      });
-      onClose();
-    } catch (e) {
-      useToastStore.getState().pushToast({ title: t('chat.message.forwardFailed'), body: errorReason(t, e) });
-      setSending(null);
-    }
-  };
+  const vm = useForwardMessageModal(message, authorName, fromGroupId, onClose);
 
   return (
     <Modal onClose={onClose} testId="forward-modal" panelClassName="flex w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl">
@@ -86,25 +44,25 @@ export default function ForwardMessageModal({
         </blockquote>
         <Input
           autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          value={vm.query}
+          onChange={(e) => vm.setQuery(e.target.value)}
           placeholder={t('chat.message.forwardSearch')}
           aria-label={t('chat.message.forwardSearch')}
           className="mb-2"
           data-testid="forward-search"
         />
         <ul className="max-h-72 space-y-0.5 overflow-y-auto" role="menu" aria-label={t('chat.message.forwardTitle')}>
-          {targets.length === 0 && (
+          {vm.targets.length === 0 && (
             <EmptyState as="li" padding="md" className="px-3">{t('chat.message.forwardEmpty')}</EmptyState>
           )}
-          {targets.map((g) => (
+          {vm.targets.map((g) => (
             <li key={g.id} role="none">
               <MenuItem
                 icon={<HashIcon size={15} />}
                 label={g.name ?? g.id.slice(0, 12)}
-                trailing={sending === g.id ? <Spinner size="sm" /> : undefined}
-                disabled={sending !== null}
-                onClick={() => void forward(g)}
+                trailing={vm.sending === g.id ? <Spinner size="sm" /> : undefined}
+                disabled={vm.sending !== null}
+                onClick={() => void vm.forward(g)}
                 testId={`forward-target-${g.id}`}
               />
             </li>

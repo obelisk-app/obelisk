@@ -6,24 +6,15 @@
  * NIP-02 follows to split Follows / Others.
  */
 
-import { displayNameFor } from '@/utils/identity/display-name';
-import { useEffect, useMemo, useState } from 'react';
-import {
-  useDirectMessages,
-  useMyFollows,
-  type JsDirectMessage,
-} from '@/services/nostr-bridge';
-import { useAuthor } from '@/hooks/social/profile/useAuthor';
-import { ensureSocialProfiles } from '@/services/social/profiles';
-import { useDMUnreadCount } from '@/hooks/read-state/useUnreadCounts';
-import ComposeDm from './ComposeDm';
-import UserAvatar from '@/components/ui/media/UserAvatar';
 import { useTranslations } from 'next-intl';
+import { useDmList } from '@/hooks/shell/dm/useDmList';
+import type { DmListTab } from '@/utils/shell/desktop/dm-list';
 import Button from '@/components/ui/buttons/Button';
 import SegmentedControl from '@/components/ui/forms/SegmentedControl';
 import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
-
-type Tab = 'follows' | 'others';
+import ComposeDm from './ComposeDm';
+import { DmListRow } from './DmListRow';
+import { DmTabLabel } from './DmTabLabel';
 
 export default function DmList({
   activePeer,
@@ -33,37 +24,7 @@ export default function DmList({
   onPick: (peer: string) => void;
 }) {
   const t = useTranslations();
-  const dms = useDirectMessages();
-  const follows = useMyFollows();
-  const followSet = useMemo(() => new Set(follows), [follows]);
-  const [composing, setComposing] = useState(false);
-  const [tab, setTab] = useState<Tab | null>(null);
-
-  const peers = useMemo(() => {
-    return Object.entries(dms).map(([pubkey, msgs]) => {
-      const last = msgs[msgs.length - 1];
-      return {
-        pubkey,
-        last,
-        sortKey: last?.createdAt ?? 0,
-      };
-    }).sort((a, b) => b.sortKey - a.sortKey);
-  }, [dms]);
-
-  // Resolve every peer in one batched REQ instead of letting each row fire
-  // its own - a list of thirty conversations is thirty round trips
-  // otherwise. `ensureSocialProfiles` already filters to what's missing.
-  const peerKey = peers.map((p) => p.pubkey).join(',');
-  useEffect(() => {
-    if (peers.length > 0) void ensureSocialProfiles(peers.map((p) => p.pubkey));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [peerKey]);
-
-  const followsThreads = useMemo(() => peers.filter((p) => followSet.has(p.pubkey)), [peers, followSet]);
-  const othersThreads = useMemo(() => peers.filter((p) => !followSet.has(p.pubkey)), [peers, followSet]);
-
-  const effectiveTab: Tab = tab ?? (followsThreads.length > 0 || othersThreads.length === 0 ? 'follows' : 'others');
-  const visible = effectiveTab === 'follows' ? followsThreads : othersThreads;
+  const vm = useDmList(onPick);
 
   return (
     <aside
@@ -79,7 +40,7 @@ export default function DmList({
             variant="ghost"
             size="icon"
             tone="danger"
-            onClick={() => alert(t('dm.clearCacheAlert'))}
+            onClick={vm.explainCache}
             title={t('dm.clearCacheTitle')}
             aria-label={t('dm.clearCache')}
           >
@@ -94,11 +55,11 @@ export default function DmList({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setComposing((v) => !v)}
+            onClick={vm.toggleComposing}
             className="aria-pressed:text-lc-green aria-pressed:hover:text-lc-green"
             title={t('dm.new')}
             aria-label={t('dm.new')}
-            aria-pressed={composing}
+            aria-pressed={vm.composing}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="7" />
@@ -110,10 +71,10 @@ export default function DmList({
 
       <DmUnlock className="shrink-0 border-b border-lc-border" />
 
-      {composing && (
+      {vm.composing && (
         <ComposeDm
-          onClose={() => setComposing(false)}
-          onPicked={(pk) => { setComposing(false); onPick(pk); }}
+          onClose={vm.closeComposer}
+          onPicked={vm.pickFromComposer}
         />
       )}
 
@@ -129,32 +90,16 @@ export default function DmList({
         in it.
       */}
       <div className="shrink-0 border-b border-lc-border p-2">
-        <SegmentedControl<Tab>
+        <SegmentedControl<DmListTab>
           fit="fill"
           aria-label={t('dm.title')}
-          value={effectiveTab}
-          onChange={setTab}
-          options={(['follows', 'others'] as const).map((tabId) => {
-            const active = effectiveTab === tabId;
-            const count = tabId === 'follows' ? followsThreads.length : othersThreads.length;
-            return {
-              value: tabId,
-              testId: `dm-tab-${tabId}`,
-              label: (
-                <>
-                  <span>{tabId === 'follows' ? t('dm.follows') : t('dm.others')}</span>
-                  {/* On the selected (button-coloured) segment the count takes the ink colour. */}
-                  <span
-                    className={`rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums ${
-                      active ? 'bg-black/15 text-current' : 'bg-lc-border/60 text-lc-muted'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </>
-              ),
-            };
-          })}
+          value={vm.activeTab}
+          onChange={vm.setTab}
+          options={vm.tabs.map((tab) => ({
+            value: tab.id,
+            testId: `dm-tab-${tab.id}`,
+            label: <DmTabLabel tab={tab.id} count={tab.count} active={tab.active} />,
+          }))}
         />
       </div>
 
@@ -164,27 +109,27 @@ export default function DmList({
         the last conversation sat permanently behind the "You" pill.
       */}
       <div className="flex-1 overflow-y-auto pb-2 md:pb-28">
-        {peers.length === 0 ? (
+        {!vm.hasConversations ? (
           <div className="p-4 text-center">
             <p className="text-sm text-lc-muted">{t('dm.noConversations')}</p>
             <button
-              onClick={() => setComposing(true)}
+              onClick={vm.startComposing}
               className="mt-2 text-xs text-lc-green hover:underline"
             >
               {t('dm.startConversation')}
             </button>
           </div>
-        ) : visible.length === 0 ? (
+        ) : vm.visible.length === 0 ? (
           <div className="p-4 text-center">
             <p className="text-sm text-lc-muted">
-              {effectiveTab === 'follows'
+              {vm.activeTab === 'follows'
                 ? t('dm.noFollows')
                 : t('dm.everyoneInFollows')}
             </p>
           </div>
         ) : (
-          visible.map((p) => (
-            <DMRow
+          vm.visible.map((p) => (
+            <DmListRow
               key={p.pubkey}
               pubkey={p.pubkey}
               last={p.last}
@@ -198,69 +143,3 @@ export default function DmList({
     </aside>
   );
 }
-
-function DMRow({
-  pubkey,
-  last,
-  youPrefix,
-  active,
-  onClick,
-}: {
-  pubkey: string;
-  last: JsDirectMessage | undefined;
-  youPrefix: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  // `useAuthor`, not the bridge's `useUserMetadata`: the bridge only queries
-  // the group/profile-lookup relay tier, which holds kind 0 for people in
-  // your NIP-29 rooms. A DM peer is usually someone from the wider network
-  // who has no reason to have published there - which is why every row here
-  // showed an npub and a letter avatar while the same person resolved fine
-  // in the feed. `useAuthor` merges both tiers field by field.
-  const meta = useAuthor(pubkey);
-  const unread = useDMUnreadCount(pubkey);
-  const display = displayNameFor(pubkey, meta);
-  const preview = last
-    ? (last.outgoing ? youPrefix : '') + last.content.replace(/\s+/g, ' ').slice(0, 60)
-    : null;
-  return (
-    <button
-      onClick={onClick}
-      className={
-        'flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors ' +
-        (active ? 'bg-lc-border/40' : 'hover:bg-lc-border/20')
-      }
-    >
-      <UserAvatar pubkey={pubkey} size={8} picture={meta?.picture ?? null} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <span
-            className={
-              'truncate text-sm ' +
-              (unread > 0 ? 'font-bold text-lc-white' : 'font-medium text-lc-white')
-            }
-          >
-            {display}
-          </span>
-          {unread > 0 && (
-            <span className="shrink-0 rounded-full bg-lc-green px-1.5 py-px text-[10px] font-bold text-lc-black">
-              {unread > 99 ? '99+' : unread}
-            </span>
-          )}
-        </div>
-        {preview && (
-          <p
-            className={
-              'truncate text-xs ' + (unread > 0 ? 'text-lc-white' : 'text-lc-muted')
-            }
-          >
-            {preview}
-          </p>
-        )}
-      </div>
-    </button>
-  );
-}
-
-export { default as Avatar } from '@/components/ui/media/UserAvatar';

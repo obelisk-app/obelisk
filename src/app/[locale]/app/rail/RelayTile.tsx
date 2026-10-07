@@ -1,9 +1,7 @@
 'use client';
 
 import HintDot from '@/components/hints/HintDot';
-import { shortHost } from '@/utils/relay-url/url-host';
 import { useTranslations } from 'next-intl';
-import { colorFor, letterFor } from '@/utils/relay-url/relay-tile-style';
 import { useRelayTile } from '@/hooks/shell/rail/useRelayTile';
 import { MENU_PANEL_CLASS, MenuItem } from '@/components/ui/overlays/menu';
 import RemoteImage from '@/components/ui/media/RemoteImage';
@@ -23,10 +21,10 @@ export function RelayTile({
   hint?: string;
 }) {
   const t = useTranslations();
-  const host = shortHost(url);
-  const initials = letterFor(host);
-  const accent = colorFor(host);
-  const { menu, setMenu, copied, copyShareLink, showHighlight, backgroundUnread, icon, onIconError } = useRelayTile(url, active);
+  const {
+    menu, openMenu, closeMenu, switchTo, remove, copied, copyShareLink,
+    showHighlight, backgroundUnread, icon, onIconError, initials, accent,
+  } = useRelayTile(url, active, { onClick, onRemove });
   return (
     <div className="relative">
       {hint && <HintDot hintId={hint} />}
@@ -38,7 +36,7 @@ export function RelayTile({
       />
       <button
         onClick={onClick}
-        onContextMenu={(e) => { e.preventDefault(); setMenu(true); }}
+        onContextMenu={openMenu}
         title={url}
         aria-label={url}
         {...(hint ? { 'data-tour': hint } : {})}
@@ -92,15 +90,15 @@ export function RelayTile({
       )}
       {menu && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} />
+          <div className="fixed inset-0 z-40" onClick={closeMenu} />
           <div role="menu" aria-label={url} className={`absolute left-14 top-0 z-50 w-44 ${MENU_PANEL_CLASS}`}>
             <div className="px-3 py-2 text-[10px] font-mono text-lc-muted truncate">{url}</div>
-            <MenuItem label={t('shell.rail.switchTo')} onClick={() => { setMenu(false); onClick(); }} />
+            <MenuItem label={t('shell.rail.switchTo')} onClick={switchTo} />
             <MenuItem
               label={copied ? t('common.copied') : t('shell.rail.copyShareLink')}
               onClick={() => { void copyShareLink(); }}
             />
-            <MenuItem label={t('shell.rail.remove')} danger onClick={() => { setMenu(false); onRemove(); }} />
+            <MenuItem label={t('shell.rail.remove')} danger onClick={remove} />
           </div>
         </>
       )}

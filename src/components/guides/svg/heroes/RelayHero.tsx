@@ -13,6 +13,8 @@
  */
 
 import { useTranslations } from 'next-intl';
+import { stackRows } from '@/utils/guides/art-geometry';
+import { relayKeyDots, relayTierArcs } from '@/utils/guides/hero-art';
 
 export default function RelayHero() {
   const t = useTranslations();
@@ -34,10 +36,9 @@ export default function RelayHero() {
   /** Half-sweep of every arc. Wide enough to read as a ring, short enough
    *  that the outermost one still clears the top and bottom of the frame. */
   const SPAN = 48;
-  const pt = (r: number, deg: number) => {
-    const rad = (deg * Math.PI) / 180;
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-  };
+  const arcs = relayTierArcs(tiers, cx, cy, SPAN);
+  const dots = relayKeyDots(keys, tiers, cx, cy);
+  const legend = stackRows(tiers, 96, 62);
 
   return (
     <svg
@@ -79,45 +80,36 @@ export default function RelayHero() {
 
       {/* the tier arcs, widening away from the relay */}
       <g fill="none" strokeLinecap="round">
-        {tiers.map((tier, i) => {
-          const a = pt(tier.r, -SPAN);
-          const b = pt(tier.r, SPAN);
-          return (
+        {arcs.map((arc) => (
           <path
-            key={tier.n}
-            d={`M ${a.x.toFixed(1)} ${a.y.toFixed(1)} A ${tier.r} ${tier.r} 0 0 1 ${b.x.toFixed(1)} ${b.y.toFixed(1)}`}
+            key={arc.key}
+            d={arc.d}
             stroke="#b4f953"
-            strokeWidth={2.4 - i * 0.5}
-            opacity={tier.opacity * 0.85}
-            strokeDasharray={i === 0 ? undefined : i === 1 ? '10 7' : '4 9'}
-            className={i === 0 ? undefined : 'animate-dash-flow'}
-            style={{ animationDelay: `${(i * 0.4).toFixed(2)}s` } as React.CSSProperties}
+            strokeWidth={arc.strokeWidth}
+            opacity={arc.opacity}
+            strokeDasharray={arc.dash}
+            className={arc.className}
+            style={{ animationDelay: arc.delay } as React.CSSProperties}
           />
-          );
-        })}
+        ))}
       </g>
 
       {/* admitted keys on each arc */}
-      {keys.map((ring, ri) =>
-        ring.angles.map((a, ki) => {
-          const p = pt(ring.r, a);
-          return (
-            <circle
-              key={`k${ri}-${ki}`}
-              cx={p.x}
-              cy={p.y}
-              r={5.5 - ri * 1.1}
-              fill="#b4f953"
-              opacity={tiers[ri].opacity * 0.9}
-              className="animate-dot-pulse"
-              style={{
-                transformOrigin: `${p.x}px ${p.y}px`,
-                animationDelay: `${(ri * 0.5 + ki * 0.17).toFixed(2)}s`,
-              } as React.CSSProperties}
-            />
-          );
-        }),
-      )}
+      {dots.map((dot) => (
+        <circle
+          key={dot.key}
+          cx={dot.x}
+          cy={dot.y}
+          r={dot.r}
+          fill="#b4f953"
+          opacity={dot.opacity}
+          className="animate-dot-pulse"
+          style={{
+            transformOrigin: `${dot.x}px ${dot.y}px`,
+            animationDelay: dot.delay,
+          } as React.CSSProperties}
+        />
+      ))}
 
       {/* the relay itself */}
       <ellipse
@@ -174,23 +166,20 @@ export default function RelayHero() {
 
       {/* tier legend */}
       <g>
-        {tiers.map((tier, i) => {
-          const y = 96 + i * 62;
-          return (
-            <g key={`legend-${tier.n}`} opacity={tier.opacity}>
-              <rect x="470" y={y - 24} width="290" height="48" rx="12" fill="#171717" stroke="#b4f953" strokeWidth="1.4" />
-              <text x="490" y={y - 4} fontSize="14" fontWeight="800" fill="#b4f953" fontFamily="monospace">
-                {t('guides.art.relay.tier', { n: tier.n })}
-              </text>
-              <text x="490" y={y + 13} fontSize="11" fontWeight="600" fill="#fafafa" opacity="0.75">
-                {tier.sub}
-              </text>
-              <text x="742" y={y + 4} textAnchor="end" fontSize="13" fontWeight="700" fill="#fafafa">
-                {t('guides.art.relay.perMinute', { count: tier.perMinute })}
-              </text>
-            </g>
-          );
-        })}
+        {legend.map((tier) => (
+          <g key={`legend-${tier.n}`} opacity={tier.opacity}>
+            <rect x="470" y={tier.y - 24} width="290" height="48" rx="12" fill="#171717" stroke="#b4f953" strokeWidth="1.4" />
+            <text x="490" y={tier.y - 4} fontSize="14" fontWeight="800" fill="#b4f953" fontFamily="monospace">
+              {t('guides.art.relay.tier', { n: tier.n })}
+            </text>
+            <text x="490" y={tier.y + 13} fontSize="11" fontWeight="600" fill="#fafafa" opacity="0.75">
+              {tier.sub}
+            </text>
+            <text x="742" y={tier.y + 4} textAnchor="end" fontSize="13" fontWeight="700" fill="#fafafa">
+              {t('guides.art.relay.perMinute', { count: tier.perMinute })}
+            </text>
+          </g>
+        ))}
 
         {/* the block list, decided first and overriding all of it */}
         <g>

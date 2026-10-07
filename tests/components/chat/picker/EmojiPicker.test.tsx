@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import EmojiPicker, { emojiPickerClasses } from '@/components/chat/picker/EmojiPicker';
+import EmojiPicker from '@/components/chat/picker/EmojiPicker';
 import { LocaleProvider } from '@tests/support/intl';
 
 /** The component reads its copy from the dictionary, so it needs a provider. */
@@ -164,17 +164,5 @@ describe('EmojiPicker', () => {
     rerender(<LocaleProvider initialLocale="en">{<><EmojiPicker {...props} placement="above" /></>}</LocaleProvider>);
 
     expect(screen.getByRole('dialog', { name: 'Emoji picker' })).toHaveClass('bottom-full', 'mb-1');
-  });
-});
-
-describe('emojiPickerClasses', () => {
-  it('positions the popover by placement and alignment, and sizes the grid by columns', () => {
-    const popover = emojiPickerClasses({ placement: 'below', align: 'left' });
-    expect(popover.isSheet).toBe(false);
-    expect(popover.containerClass).toContain('left-0');
-    expect(popover.containerClass).toContain('top-full');
-    expect(emojiPickerClasses({ variant: 'floating' }).containerClass.startsWith('flex h-[430px]')).toBe(true);
-    expect(emojiPickerClasses({ variant: 'sheet' }).gridClass).toBe('grid grid-cols-7 gap-1.5');
-    expect(emojiPickerClasses({ columns: 12 }).gridClass).toBe('grid grid-cols-12 gap-0.5');
   });
 });

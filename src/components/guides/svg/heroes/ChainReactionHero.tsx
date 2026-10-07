@@ -5,11 +5,12 @@
  */
 
 import { useTranslations } from 'next-intl';
+import { settledOrbs, type ChainCell } from '@/utils/guides/hero-art';
 
 const SEATS = ['#ff4d5e', '#b4f953', '#38bdf8'];
 
 /** A board that looks played rather than generated: fixed, not random. */
-const CELLS: Array<{ col: number; row: number; count: number; seat: number }> = [
+const CELLS: ChainCell[] = [
   { col: 0, row: 0, count: 1, seat: 0 }, { col: 2, row: 0, count: 2, seat: 1 },
   { col: 5, row: 0, count: 1, seat: 2 }, { col: 1, row: 1, count: 3, seat: 1 },
   { col: 4, row: 1, count: 1, seat: 0 }, { col: 6, row: 1, count: 2, seat: 2 },
@@ -22,14 +23,9 @@ const X0 = 60;
 const Y0 = 96;
 const SIZE = 54;
 
-function orbOffsets(count: number): Array<[number, number]> {
-  if (count <= 1) return [[0, 0]];
-  if (count === 2) return [[-8, 0], [8, 0]];
-  return [[-8, 6], [8, 6], [0, -8]];
-}
-
 export default function ChainReactionHero() {
   const t = useTranslations();
+  const settled = settledOrbs(CELLS, SEATS, X0, Y0, SIZE);
   return (
     <svg
       viewBox="0 0 800 400"
@@ -70,24 +66,13 @@ export default function ChainReactionHero() {
       </g>
 
       {/* settled orbs */}
-      {CELLS.map(({ col, row, count, seat }) => {
-        const cx = X0 + col * SIZE + SIZE / 2;
-        const cy = Y0 + row * SIZE + SIZE / 2;
-        return (
-          <g key={`orb-${col}-${row}`}>
-            {orbOffsets(count).map(([dx, dy], i) => (
-              <circle
-                key={i}
-                cx={cx + dx}
-                cy={cy + dy}
-                r="7"
-                fill={SEATS[seat]}
-                fillOpacity="0.9"
-              />
-            ))}
-          </g>
-        );
-      })}
+      {settled.map((cell) => (
+        <g key={cell.key}>
+          {cell.orbs.map((orb, i) => (
+            <circle key={i} cx={orb.cx} cy={orb.cy} r="7" fill={orb.fill} fillOpacity="0.9" />
+          ))}
+        </g>
+      ))}
 
       {/* the cell that just went critical, and the four orbs leaving it */}
       <g>

@@ -1,12 +1,10 @@
 'use client';
 
-import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { RecentIcon } from '../picker/RecentIcon';
-import { useDismiss } from '@/hooks/common/useDismiss';
-import { botLabel, sectionTitle, type BotProfiles, type SlashCommand, type SlashCommandSection } from '@/utils/chat/slash/slash-commands';
-import { CommandRow, RailIcon } from './SlashRows';
-import { useSlashList } from '@/hooks/chat/slash/useSlashList';
+import type { BotProfiles, SlashCommand, SlashCommandSection } from '@/utils/chat/slash/slash-commands';
+import { useSlashCommandAutocomplete } from '@/hooks/chat/slash/useSlashCommandAutocomplete';
+import { SlashRailItem } from './SlashRailItem';
+import { SlashSectionGroup } from './SlashSectionGroup';
 
 export {
   SLASH_COMMANDS,
@@ -34,15 +32,11 @@ export default function SlashCommandAutocomplete({
   sections, rail, filter = 'all', onFilter, selectedIndex, onSelect, onClose, botProfiles,
 }: Props) {
   const t = useTranslations();
-  const ref = useRef<HTMLDivElement>(null);
-  const { select, registerRef } = useSlashList(onSelect, selectedIndex);
-  // Escape stays with the composer, which owns the keyboard while this is open.
-  useDismiss({ refs: [ref], onDismiss: onClose, escape: 'ignore' });
-
-  const showRail = !!rail && rail.length > 1 && !!onFilter;
+  const { ref, select, registerRef, showRail, groups, railItems, setFilter } = useSlashCommandAutocomplete({
+    sections, rail, filter, onFilter, selectedIndex, onSelect, onClose, botProfiles,
+  });
   if (sections.length === 0 && !showRail) return null;
 
-  let flat = 0;
   return (
     <div
       ref={ref}
@@ -51,50 +45,23 @@ export default function SlashCommandAutocomplete({
     >
       {showRail && (
         <div className="flex shrink-0 flex-col items-center gap-2 overflow-y-auto overscroll-contain border-r border-lc-border bg-lc-black/40 p-2" data-testid="slash-rail">
-          {rail!.map((sec) => {
-            const active = filter === sec.key;
-            return (
-              <button
-                key={sec.key}
-                type="button"
-                title={sectionTitle(sec, t('chat.slash.recent'), botProfiles)}
-                aria-pressed={active}
-                onMouseDown={(e) => { e.preventDefault(); onFilter!(active ? 'all' : sec.key); }}
-                className={`rounded-full ring-2 transition-opacity ${active ? 'ring-lc-green opacity-100' : 'ring-transparent opacity-70 hover:opacity-100'}`}
-                data-testid="slash-rail-item"
-              >
-                <RailIcon sec={sec} profiles={botProfiles} />
-              </button>
-            );
-          })}
+          {railItems.map((item) => <SlashRailItem key={item.section.key} item={item} botProfiles={botProfiles} onFilter={setFilter} />)}
         </div>
       )}
       <div className="min-w-0 flex-1 overflow-y-auto overscroll-contain [contain:content]">
         {sections.length === 0 && (
           <div className="px-3 py-4 text-xs text-lc-muted">{t('chat.slash.noMatch')}</div>
         )}
-        {sections.map((sec) => (
-          <div key={sec.key}>
-            <div className="sticky top-0 z-10 flex items-center gap-2 bg-lc-dark px-3 pb-1 pt-2 text-xs font-semibold text-lc-white">
-              {sec.key === 'recent' && <RecentIcon className="h-4 w-4" />}
-              {sectionTitle(sec, t('chat.slash.recent'), botProfiles)}
-            </div>
-            {sec.commands.map((cmd) => {
-              const i = flat++;
-              return (
-                <CommandRow
-                  key={`${sec.key}:${cmd.bot?.pubkey ?? ''}:${cmd.name}`}
-                  cmd={cmd}
-                  index={i}
-                  selected={i === selectedIndex}
-                  label={cmd.bot ? botLabel(cmd.bot, botProfiles) : 'Obelisk'}
-                  picture={cmd.bot ? botProfiles?.[cmd.bot.pubkey]?.picture : null}
-                  onSelect={select}
-                  registerRef={registerRef}
-                />
-              );
-            })}
-          </div>
+        {groups.map((group) => (
+          <SlashSectionGroup
+            key={group.section.key}
+            section={group.section}
+            rows={group.rows}
+            selectedIndex={selectedIndex}
+            botProfiles={botProfiles}
+            onSelect={select}
+            registerRef={registerRef}
+          />
         ))}
       </div>
     </div>

@@ -1,4 +1,14 @@
 import { useTranslations } from 'next-intl';
+import { particleField } from '@/utils/guides/art-geometry';
+
+/** The signed events drifting between the relay and the projects. */
+const EVENTS = particleField(6, {
+  x: { base: 80, step: 130, mod: 640 },
+  y: { base: 200, step: 23, mod: 30 },
+  delayStep: 0.5,
+  durBase: 5,
+  durCycle: 3,
+});
 
 export default function SwapAnythingHero() {
   const t = useTranslations();
@@ -136,22 +146,18 @@ export default function SwapAnythingHero() {
 
       {/* connection lines from relay to each project */}
       <g stroke="#b4f953" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.85">
-        {projects.map((p, i) => {
-          const startX = p.x + 90;
-          const endX = p.x + 90;
-          return (
-            <line
-              key={`line-${i}`}
-              x1={startX}
-              y1={170}
-              x2={endX}
-              y2={250}
-              strokeDasharray="4 8"
-              className="animate-dash-flow"
-              style={{ animationDelay: `${(i * 0.3).toFixed(2)}s` } as React.CSSProperties}
-            />
-          );
-        })}
+        {projects.map((p, i) => (
+          <line
+            key={`line-${i}`}
+            x1={p.x + 90}
+            y1={170}
+            x2={p.x + 90}
+            y2={250}
+            strokeDasharray="4 8"
+            className="animate-dash-flow"
+            style={{ animationDelay: `${(i * 0.3).toFixed(2)}s` } as React.CSSProperties}
+          />
+        ))}
       </g>
 
       {/* project cards */}
@@ -219,27 +225,21 @@ export default function SwapAnythingHero() {
       ))}
 
       {/* floating signed events */}
-      {Array.from({ length: 6 }).map((_, i) => {
-        const x = 80 + (i * 130) % 640;
-        const y = 200 + ((i * 23) % 30);
-        const delay = `${(i * 0.5).toFixed(2)}s`;
-        const dur = `${(5 + (i % 3)).toFixed(1)}s`;
-        return (
-          <g
-            key={`pkt-${i}`}
-            className="animate-particle"
-            style={{
-              ['--particle-delay' as string]: delay,
-              ['--particle-duration' as string]: dur,
-              transformOrigin: `${x}px ${y}px`,
-            } as React.CSSProperties}
-          >
-            <rect x={x} y={y} width="14" height="9" rx="2" fill="#2d3a1a" stroke="#b4f953" strokeWidth="1" />
-            <rect x={x + 2} y={y + 2.5} width="6" height="1.4" fill="#b4f953" opacity="0.7" />
-            <rect x={x + 2} y={y + 5} width="4" height="1.4" fill="#b4f953" opacity="0.5" />
-          </g>
-        );
-      })}
+      {EVENTS.map((p) => (
+        <g
+          key={`pkt-${p.i}`}
+          className="animate-particle"
+          style={{
+            ['--particle-delay' as string]: p.delay,
+            ['--particle-duration' as string]: p.dur,
+            transformOrigin: `${p.x}px ${p.y}px`,
+          } as React.CSSProperties}
+        >
+          <rect x={p.x} y={p.y} width="14" height="9" rx="2" fill="#2d3a1a" stroke="#b4f953" strokeWidth="1" />
+          <rect x={p.x + 2} y={p.y + 2.5} width="6" height="1.4" fill="#b4f953" opacity="0.7" />
+          <rect x={p.x + 2} y={p.y + 5} width="4" height="1.4" fill="#b4f953" opacity="0.5" />
+        </g>
+      ))}
 
       {/* footer caption */}
       <text

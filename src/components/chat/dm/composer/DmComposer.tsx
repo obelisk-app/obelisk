@@ -32,7 +32,8 @@ import { FileDropZone } from '../../composer/ComposerActions';
 import { useDmComposer } from '@/hooks/chat/dm/composer/useDmComposer';
 import { DmPendingFiles } from './DmPendingFiles';
 import { DmVoiceDraft } from './DmVoiceDraft';
-import { DmComposerActions, DmSendControl } from './DmComposerControls';
+import { DmComposerActions } from './DmComposerControls';
+import { DmSendControl } from './DmSendControl';
 
 /** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
 const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
@@ -56,12 +57,7 @@ export function DmComposer({ peer, variant }: { peer: string; variant: 'desktop'
       value={state.draft}
       onChange={(e) => state.typeDraft(e.target.value)}
       onPaste={state.onPaste}
-      onKeyDown={(e) => {
-        if (variant === 'mobile' && e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          state.send();
-        }
-      }}
+      onKeyDown={variant === 'mobile' ? state.sendOnEnter : undefined}
       placeholder={t('dm.placeholderEncrypted')}
       aria-label={t('dm.placeholderEncrypted')}
       data-testid="dm-composer-input"
@@ -103,7 +99,7 @@ export function DmComposer({ peer, variant }: { peer: string; variant: 'desktop'
   return (
     <FileDropZone disabled={!state.mediaAllowed} onFiles={state.addFiles} className="shrink-0">
       <form
-        onSubmit={(e) => { e.preventDefault(); state.send(); }}
+        onSubmit={state.submit}
         className="px-5 pt-3 pb-3"
         data-testid="dm-composer"
       >

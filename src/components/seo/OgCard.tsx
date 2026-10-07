@@ -1,20 +1,16 @@
-import { ImageResponse } from 'next/og';
-import { OG_SIZE } from '@/utils/seo/og';
 import type { OgCardProps } from '@/utils/seo/cards';
+import { cardTitleSize } from '@/utils/seo/card-layout';
 import OgIcon from './OgIcon';
 
 /**
  * A page's 1200x630 preview card, in the look of the guide cards
- * (`src/components/guides/article/guide-og-image.tsx`): the dark-to-olive gradient,
+ * (`src/components/guides/article/GuideOgCard.tsx`): the dark-to-olive gradient,
  * the green obelisk mark and wordmark, a green label, the page's title and
  * description, its address in the footer, and the page's own illustration.
+ *
+ * An `opengraph-image.tsx` route calls it as a function and hands the result
+ * to `ImageResponse`, so the renderer (satori) receives finished elements.
  */
-function titleSize(title: string): number {
-  if (title.length <= 32) return 66;
-  if (title.length <= 52) return 56;
-  if (title.length <= 80) return 48;
-  return 40;
-}
 
 export default function OgCard({ label, title, subtitle, footer, icon }: OgCardProps) {
   return (
@@ -39,7 +35,7 @@ export default function OgCard({ label, title, subtitle, footer, icon }: OgCardP
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 48, flex: 1 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22, flex: 1 }}>
-          <div style={{ fontSize: titleSize(title), fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.08 }}>{title}</div>
+          <div style={{ fontSize: cardTitleSize(title), fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.08 }}>{title}</div>
           <div style={{ fontSize: 26, lineHeight: 1.38, color: '#a3a3a3' }}>{subtitle}</div>
         </div>
         <div
@@ -61,7 +57,3 @@ export default function OgCard({ label, title, subtitle, footer, icon }: OgCardP
   );
 }
 
-/** The card as the PNG an `opengraph-image.tsx` route returns. */
-export function ogCardResponse(props: OgCardProps): ImageResponse {
-  return new ImageResponse(OgCard(props), OG_SIZE);
-}

@@ -3,6 +3,8 @@ import {
   scaffoldMentionSlotQuery,
   scaffoldMentionSlotRange,
 } from '@/components/chat/slash/SlashCommandScaffold';
+import { scaffoldSlots } from '@/utils/chat/slash/slash-scaffold';
+import { SLASH_COMMANDS as COMMANDS } from '@/utils/chat/slash/slash-commands';
 
 describe('scaffoldMentionSlotQuery', () => {
   it('returns the typed partial name when caret is inside the user slot', () => {
@@ -48,5 +50,26 @@ describe('scaffoldMentionSlotRange', () => {
     // `/zap du|m`: caret at position 7, mid-token. The range still covers
     // the whole "dum" token so a picker selection replaces the entire slot.
     expect(scaffoldMentionSlotRange('/zap dum', 7)).toEqual({ start: 5, end: 8 });
+  });
+});
+
+describe('scaffoldSlots', () => {
+  const zap = COMMANDS.find((c) => c.name === 'zap')!;
+  const play = COMMANDS.find((c) => c.name === 'play')!;
+
+  it('is null with no parameters, another command, or only the command name', () => {
+    expect(scaffoldSlots(play, '/play x', 7)).toBeNull();
+    expect(scaffoldSlots(zap, '/play x', 7)).toBeNull();
+    expect(scaffoldSlots(zap, '/zap', 4)).toBeNull();
+  });
+
+  it('fills slots from the typed arguments and marks the one under the caret', () => {
+    const s = scaffoldSlots(zap, '/zap @ana ', 10)!;
+    expect(s.prefix).toBe('/zap');
+    expect(s.slots).toEqual([
+      { name: 'user', text: '@ana', filled: true, active: false, optional: true },
+      { name: 'amount', text: 'amount', filled: false, active: true, optional: true },
+    ]);
+    expect(s.activeParam?.name).toBe('amount');
   });
 });

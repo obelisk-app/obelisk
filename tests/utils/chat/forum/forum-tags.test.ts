@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_FORUM_TAGS, newForumTagId, removeTagAt, tagEmojiValue, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
+import { MAX_FORUM_TAGS, newForumTagId, removeTagAt, tagEmojiValue, threadTagChoice, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
 
 const tag = (id: string) => ({ id, name: id, emoji: null, color: null });
 
@@ -25,5 +25,14 @@ describe('forum tag list helpers', () => {
   it('caps an emoji at 4 code units and treats empty as none', () => {
     expect(tagEmojiValue('🌐🌐🌐')).toBe('🌐🌐');
     expect(tagEmojiValue('')).toBeNull();
+  });
+});
+
+describe('threadTagChoice', () => {
+  it('a picked tag stays enabled; an unpicked one locks once the maximum is picked', () => {
+    expect(threadTagChoice(['a'], 'a', 2)).toEqual({ active: true, disabled: false });
+    expect(threadTagChoice(['a'], 'b', 2)).toEqual({ active: false, disabled: false });
+    expect(threadTagChoice(['a', 'c'], 'b', 2)).toEqual({ active: false, disabled: true });
+    expect(threadTagChoice(['a', 'c'], 'a', 2)).toEqual({ active: true, disabled: false });
   });
 });

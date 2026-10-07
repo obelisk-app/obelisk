@@ -10,20 +10,13 @@
  * happens when the relays were slow rather than when the note is gone.
  */
 
-import { useEffect, useMemo, useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { nip19 } from 'nostr-tools';
-import { fetchNote } from '@nostr-wot/data';
-import { initSocial, querySocial } from '@/services/social/pool';
-import { DEFAULT_SOCIAL_RELAYS } from '@/services/social/relays';
-import { KIND_NOTE, renderModeFor } from '@/services/social/kinds';
-import { getPreferences } from '@/services/preferences/preferences';
-import { useLocale, useTranslations } from 'next-intl';
-import { localizedPath } from '@/utils/seo/alternates';
+import { useTranslations } from 'next-intl';
 import NoteCard from '@/components/social/note/NoteCard';
 import ArticleReader from '@/components/social/article/ArticleCard';
 import type { ViewerTarget } from '@/services/social/identifier';
+import { useNoteViewer } from '@/hooks/social/viewer/useNoteViewer';
 
 export default function NoteViewerClient({
   target,
@@ -33,72 +26,7 @@ export default function NoteViewerClient({
   initialNote: NostrEvent | null;
 }) {
   const t = useTranslations();
-  const locale = useLocale();
-  const [note, setNote] = useState<NostrEvent | null>(initialNote);
-  const [state, setState] = useState<'loading' | 'ready' | 'missing'>(
-    initialNote ? 'ready' : target ? 'loading' : 'missing',
-  );
-
-  useEffect(() => {
-    // Server already found it, or there was nothing to look for.
-    if (initialNote || !target) return;
-    let cancelled = false;
-
-    // A visitor may never have opened the app, so fall back to defaults.
-    const configured = getPreferences().socialRelays;
-    const relays = [...new Set([
-      ...target.relays,
-      ...(configured.length ? configured : DEFAULT_SOCIAL_RELAYS),
-    ])];
-    initSocial(relays);
-
-    (async () => {
-      if (target.kind === 'address') {
-        const events = await querySocial([{
-          kinds: [target.eventKind],
-          authors: [target.pubkey],
-          '#d': [target.identifier],
-          limit: 1,
-        }], { relays });
-        if (cancelled) return;
-        const newest = events.sort((a, b) => b.created_at - a.created_at)[0] ?? null;
-        setNote(newest);
-        setState(newest ? 'ready' : 'missing');
-        return;
-      }
-
-      if (target.kind === 'profile') {
-        setState('missing');
-        return;
-      }
-
-      const entry = await fetchNote(target.id, relays);
-      if (cancelled) return;
-      if (!entry) {
-        setState('missing');
-        return;
-      }
-      setNote({
-        id: entry.id,
-        pubkey: entry.pubkey,
-        content: entry.content,
-        created_at: entry.createdAt,
-        tags: entry.tags,
-        kind: KIND_NOTE,
-        sig: '',
-      });
-      setState('ready');
-    })().catch(() => {
-      if (!cancelled) setState('missing');
-    });
-
-    return () => { cancelled = true; };
-  }, [target, initialNote]);
-
-  const isArticle = useMemo(
-    () => (note ? renderModeFor(note.kind) === 'article' : false),
-    [note],
-  );
+  const { state, note, isArticle, openProfile } = useNoteViewer({ target, initialNote });
 
   if (state === 'loading') {
     return (
@@ -127,17 +55,7 @@ export default function NoteViewerClient({
           note={note}
           // The reader's author button was a dead click here: this page has no
           // in-app profile pane, so send them to the public profile viewer.
-          onOpenProfile={(pubkey) => {
-            // Full-page navigation between two public viewers. `router.push`
-            // would make it client-side, which is a behaviour change (the
-            // profile viewer is server-rendered for its link preview) and
-            // not a lint fix; left as is in rounds 7 and 9.
-            try {
-              window.location.assign(localizedPath(locale, `/p/${nip19.npubEncode(pubkey)}`));
-            } catch {
-              window.location.assign(localizedPath(locale, `/p/${pubkey}`));
-            }
-          }}
+          onOpenProfile={openProfile}
         />
       ) : (
         <div className="border-b border-lc-border">

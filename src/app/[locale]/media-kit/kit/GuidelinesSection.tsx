@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Section } from './kit-ui';
+import { Section } from './Section';
 
 /** Do and don't for the brand. */
 export function GuidelinesSection() {

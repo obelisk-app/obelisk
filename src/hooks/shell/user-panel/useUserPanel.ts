@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { hexToNpub } from '@nostr-wot/data';
-import { nostrActions } from '@/services/nostr-bridge';
+import { nostrActions, useUserMetadata } from '@/services/nostr-bridge';
+import { displayNameFor } from '@/utils/identity/display-name';
+import type { SettingsSection } from '@/utils/settings/open-settings';
 
 export type PanelAnchor = { x: number; y: number; placement?: 'top' | 'bottom' };
 
@@ -51,4 +53,42 @@ export function useUserPanelEffects(pubkey: string, editing: boolean, onClose: (
       document.body.style.overflow = prev;
     };
   }, [editing, onClose]);
+}
+
+/**
+ * The user panel's view model: the person's profile, whether the
+ * fullscreen settings are open and on which section, and logging out (the
+ * host's handler when it has one, else the bridge's).
+ */
+export function useUserPanel({ pubkey, onClose, onLogout, initialEditing, initialTab }: {
+  pubkey: string;
+  onClose: () => void;
+  onLogout?: () => void;
+  initialEditing: boolean;
+  /** `preferences` is the pre-sections name for "the app settings": it lands on the first of them. */
+  initialTab: SettingsSection | 'preferences';
+}) {
+  const meta = useUserMetadata(pubkey);
+  const [editing, setEditing] = useState(initialEditing);
+  const [settingsTab, setSettingsTab] = useState<SettingsSection>(initialTab === 'preferences' ? 'general' : initialTab);
+  useUserPanelEffects(pubkey, editing, onClose);
+  return {
+    meta,
+    displayName: displayNameFor(pubkey, meta),
+    npub: safeNpub(pubkey),
+    editing,
+    startEditing: () => setEditing(true),
+    /** Settings saved or dismissed: close them and the panel. */
+    finishEditing: () => {
+      setEditing(false);
+      onClose();
+    },
+    settingsTab,
+    setSettingsTab,
+    logout: () => {
+      onClose();
+      if (onLogout) onLogout();
+      else void nostrActions.logout();
+    },
+  };
 }

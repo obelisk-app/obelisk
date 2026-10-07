@@ -1,12 +1,9 @@
 'use client';
 
-import { displayNameFor } from '@/utils/identity/display-name';
-import { useState } from 'react';
-import { nostrActions, useUserMetadata as useProfile } from '@/services/nostr-bridge';
 import type { SettingsTab } from '../settings/SettingsSections';
 import { UserProfileCard } from './UserProfileCard';
 import { UserSettingsModal } from './UserSettingsModal';
-import { panelPositionStyle, safeNpub, useUserPanelEffects, type PanelAnchor } from '@/hooks/shell/user-panel/useUserPanel';
+import { panelPositionStyle, useUserPanel, type PanelAnchor } from '@/hooks/shell/user-panel/useUserPanel';
 
 // The sections live in `./settings`; re-exported so existing importers of
 // this module keep working.
@@ -39,33 +36,20 @@ interface UserPanelProps {
 }
 
 export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, initialEditing = false, initialTab = 'profile' }: UserPanelProps) {
-  const meta = useProfile(pubkey);
-  const [editing, setEditing] = useState(initialEditing);
-  // `preferences` is the pre-sections name for "the app settings" - land on
-  // the first of them.
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>(initialTab === 'preferences' ? 'general' : initialTab);
-  useUserPanelEffects(pubkey, editing, onClose);
-
-  const npub = safeNpub(pubkey);
-  const displayName = displayNameFor(pubkey, meta);
-  const logout = () => {
-    onClose();
-    if (onLogout) onLogout();
-    else void nostrActions.logout();
-  };
+  const vm = useUserPanel({ pubkey, onClose, onLogout, initialEditing, initialTab });
 
   if (typeof document === 'undefined') return null;
 
-  if (editing && isMe) {
+  if (vm.editing && isMe) {
     return (
       <UserSettingsModal
         pubkey={pubkey}
-        meta={meta}
-        displayName={displayName}
-        settingsTab={settingsTab}
-        setSettingsTab={setSettingsTab}
-        onDone={() => { setEditing(false); onClose(); }}
-        onLogout={logout}
+        meta={vm.meta}
+        displayName={vm.displayName}
+        settingsTab={vm.settingsTab}
+        setSettingsTab={vm.setSettingsTab}
+        onDone={vm.finishEditing}
+        onLogout={vm.logout}
       />
     );
   }
@@ -73,14 +57,14 @@ export default function UserPanel({ pubkey, isMe, onClose, onLogout, anchor, ini
   return (
     <UserProfileCard
       pubkey={pubkey}
-      meta={meta}
-      displayName={displayName}
-      npub={npub}
+      meta={vm.meta}
+      displayName={vm.displayName}
+      npub={vm.npub}
       isMe={isMe}
       style={panelPositionStyle(anchor, { width: window.innerWidth, height: window.innerHeight })}
       onClose={onClose}
-      onEdit={() => setEditing(true)}
-      onLogout={logout}
+      onEdit={vm.startEditing}
+      onLogout={vm.logout}
     />
   );
 }

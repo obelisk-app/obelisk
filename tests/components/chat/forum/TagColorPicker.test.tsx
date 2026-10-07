@@ -20,4 +20,21 @@ describe('TagColorPicker', () => {
     fireEvent.click(slate);
     expect(onPick).toHaveBeenCalledWith('slate');
   });
+
+  it('a pick closes the menu; Auto clears the override back to null', () => {
+    const onPick = vi.fn();
+    render(
+      <LocaleProvider initialLocale="en">
+        <TagColorPicker tag={{ id: 'n', name: 'n', emoji: null, color: 'amber' }} onPick={onPick} />
+      </LocaleProvider>,
+    );
+    fireEvent.click(screen.getByTestId('forum-tag-color-n'));
+    expect(screen.getByTestId('forum-tag-color-opt-amber')).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByTestId('forum-tag-color-opt-slate'));
+    expect(screen.queryByTestId('forum-tag-color-menu-n')).toBeNull();
+    fireEvent.click(screen.getByTestId('forum-tag-color-n'));
+    fireEvent.click(screen.getByTestId('forum-tag-color-auto-n'));
+    expect(onPick).toHaveBeenLastCalledWith(null);
+    expect(screen.queryByTestId('forum-tag-color-menu-n')).toBeNull();
+  });
 });
