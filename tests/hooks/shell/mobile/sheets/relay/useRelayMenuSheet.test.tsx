@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
+import { useToastStore } from '@/store/feedback/toast';
 import { useRelayMenuSheet } from '@/hooks/shell/mobile/sheets/relay/useRelayMenuSheet';
 
 function setup() {
@@ -11,6 +12,8 @@ function setup() {
   });
   return { result, close };
 }
+
+beforeEach(() => useToastStore.getState().clearToasts());
 
 describe('useRelayMenuSheet', () => {
   it('opens and closes one admin panel at a time', () => {
@@ -22,18 +25,18 @@ describe('useRelayMenuSheet', () => {
     expect(result.current.adminPanel).toBeNull();
   });
 
-  it('copies the URL and shows a line that clears itself', async () => {
-    vi.useFakeTimers();
-    try {
-      Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockResolvedValue(undefined) }, configurable: true });
-      const { result } = setup();
-      await act(async () => { result.current.copyUrl(); await Promise.resolve(); });
-      expect(result.current.toast).toBe('Relay URL copied');
-      act(() => { vi.advanceTimersByTime(1600); });
-      expect(result.current.toast).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
+  it('copies the URL and dispatches through the shared toast store', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockResolvedValue(undefined) }, configurable: true });
+    const { result } = setup();
+    await act(async () => { result.current.copyUrl(); await Promise.resolve(); });
+    expect(useToastStore.getState().toasts).toMatchObject([{ title: 'Relay URL copied' }]);
+  });
+
+  it('does not confirm a clipboard write that failed', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockRejectedValue(new Error('Denied')) }, configurable: true });
+    const { result } = setup();
+    await act(async () => { result.current.copyUrl(); await Promise.resolve(); });
+    expect(useToastStore.getState().toasts).toEqual([]);
   });
 
   it('marks the invite busy while it copies', async () => {
@@ -44,7 +47,7 @@ describe('useRelayMenuSheet', () => {
     expect(result.current.busy).toBe('invite');
     await act(async () => { resolve(); await Promise.resolve(); });
     expect(result.current.busy).toBeNull();
-    expect(result.current.toast).toBe('Invite copied');
+    expect(useToastStore.getState().toasts).toMatchObject([{ title: 'Invite copied' }]);
   });
 
   it('knows the relays in the rail', () => {

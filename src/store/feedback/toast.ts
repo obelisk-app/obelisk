@@ -5,12 +5,13 @@ export interface Toast {
   title: string;
   body: string;
   createdAt: number;
+  durationMs?: number;
   onClick?: () => void;
 }
 
 interface ToastState {
   toasts: Toast[];
-  pushToast: (input: { title: string; body: string; onClick?: () => void }) => string;
+  pushToast: (input: { title: string; body: string; durationMs?: number; onClick?: () => void }) => string;
   dismissToast: (id: string) => void;
   clearToasts: () => void;
 }
@@ -19,10 +20,10 @@ const MAX_TOASTS = 4;
 
 export const useToastStore = create<ToastState>()((set) => ({
   toasts: [],
-  pushToast: ({ title, body, onClick }) => {
+  pushToast: ({ title, body, durationMs, onClick }) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     set((state) => ({
-      toasts: [...state.toasts, { id, title, body, createdAt: Date.now(), onClick }].slice(-MAX_TOASTS),
+      toasts: [...state.toasts, { id, title, body, createdAt: Date.now(), durationMs, onClick }].slice(-MAX_TOASTS),
     }));
     return id;
   },

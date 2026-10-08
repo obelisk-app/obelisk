@@ -1,3 +1,5 @@
+import { useToastStore } from '@/store/feedback/toast';
+import { writeClipboardText } from '@/services/common/clipboard';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useConfiguredRelays } from '@/services/nostr-bridge';
@@ -6,30 +8,25 @@ import { confirmLeaveRelay, leaveRelay, shareRelayInvite } from '@/services/shel
 /** The admin panels the relay menu can stack over itself. */
 export type RelayMenuPanel = 'branding' | 'emojis' | 'categories' | 'members' | 'roles';
 
-/** How long a "copied" line stays under the menu. */
-const TOAST_MS = 1600;
-
 /**
  * The phone relay menu: invite, share, copy URL and leave, each with its
- * busy hint and confirmation line, and which admin panel is open.
+ * busy hint and shared confirmation toast, and which admin panel is open.
  */
 export function useRelayMenuSheet({ relayUrl, label, close }: { relayUrl: string; label: string; close: () => void }) {
   const t = useTranslations();
   const relays = useConfiguredRelays();
   const [busy, setBusy] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [adminPanel, setAdminPanel] = useState<RelayMenuPanel | null>(null);
 
   const flash = (msg: string) => {
-    setToast(msg);
-    window.setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), TOAST_MS);
+    useToastStore.getState().pushToast({ title: msg, body: '' });
   };
   const inviteText = t('mobile.space.inviteText', { name: label, url: relayUrl });
 
   const invite = async () => {
     setBusy('invite');
     try {
-      await navigator.clipboard?.writeText(inviteText);
+      await writeClipboardText(inviteText);
       flash(t('mobile.space.inviteCopied'));
     } catch { /* ignore */ }
     finally { setBusy(null); }
@@ -46,7 +43,7 @@ export function useRelayMenuSheet({ relayUrl, label, close }: { relayUrl: string
 
   const copyUrl = async () => {
     try {
-      await navigator.clipboard?.writeText(relayUrl);
+      await writeClipboardText(relayUrl);
       flash(t('mobile.space.urlCopied'));
     } catch { /* ignore */ }
   };
@@ -65,7 +62,6 @@ export function useRelayMenuSheet({ relayUrl, label, close }: { relayUrl: string
   return {
     relays,
     busy,
-    toast,
     adminPanel,
     openPanel: setAdminPanel,
     closePanel: () => setAdminPanel(null),

@@ -81,8 +81,8 @@ export function usePhoneShell() {
   });
 
   useExternalNavigation(actions.go, pushNav, currentRelayUrl);
-  const { exitToast } = useMobileHistorySync({
-    isLoggedIn, dmOptInEnabled, currentRelayUrl, navRef, relayRef, setNav, setSlideDir, suppressSlideRef,
+  useMobileHistorySync({
+    isLoggedIn, dmOptInEnabled, currentRelayUrl, nav, navRef, relayRef, setNav, setSlideDir, suppressSlideRef,
   });
 
   // Called unconditionally: the shell returns early for a guest, and React
@@ -131,7 +131,6 @@ export function usePhoneShell() {
     hintSurface: hintSurfaceFor(nav.screen),
     dmBadge,
     inboxBadge,
-    exitToast,
     profilePopupPubkey,
     closeProfilePopup,
   };

@@ -14,7 +14,7 @@ export function useToastStack() {
   useEffect(() => {
     if (toasts.length === 0) return;
     const timers = toasts.map((toast) =>
-      window.setTimeout(() => dismissToast(toast.id), toastRemainingMs(toast.createdAt, Date.now())));
+      window.setTimeout(() => dismissToast(toast.id), toastRemainingMs(toast.createdAt, Date.now(), toast.durationMs)));
     return () => {
       timers.forEach((id) => window.clearTimeout(id));
     };

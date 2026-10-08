@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
+import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from 'react';
+import { useTranslations } from 'next-intl';
+import { useToastStore } from '@/store/feedback/toast';
 import { useRouter } from '@/i18n/navigation';
 import { useConfiguredRelays } from '@/services/nostr-bridge';
 import { useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink';
@@ -15,6 +17,7 @@ export interface MobileHistorySyncInputs {
   readonly isLoggedIn: boolean;
   readonly dmOptInEnabled: boolean;
   readonly currentRelayUrl: string | null | undefined;
+  readonly nav: NavState;
   readonly navRef: RefObject<NavState>;
   readonly relayRef: RefObject<string | null>;
   readonly setNav: Dispatch<SetStateAction<NavState>>;
@@ -31,13 +34,17 @@ export interface MobileHistorySyncInputs {
  * `deep-link-gate.test.ts` reads this file.
  */
 export function useMobileHistorySync({
-  isLoggedIn, dmOptInEnabled, currentRelayUrl, navRef, relayRef, setNav, setSlideDir, suppressSlideRef,
+  isLoggedIn, dmOptInEnabled, currentRelayUrl, nav, navRef, relayRef, setNav, setSlideDir, suppressSlideRef,
 }: MobileHistorySyncInputs) {
   const configuredRelays = useConfiguredRelays();
   const switchFromDeepLink = useRelayDeepLink();
   const didInitRef = useRef(false);
   const exitArmedRef = useRef<number>(0);
-  const [exitToast, setExitToast] = useState(false);
+  const exitToastId = useRef<string | null>(null);
+  const t = useTranslations();
+  useEffect(() => () => {
+    if (exitToastId.current) useToastStore.getState().dismissToast(exitToastId.current);
+  }, [nav, isLoggedIn, currentRelayUrl]);
   const router = useRouter();
 
   // ── initial URL parse + history seeding ─────────────────────────────
@@ -100,12 +107,13 @@ export function useMobileHistorySync({
         const now = Date.now();
         if (now - exitArmedRef.current < 2000) {
           exitArmedRef.current = 0;
+          if (exitToastId.current) useToastStore.getState().dismissToast(exitToastId.current);
           router.push('/');
           return;
         }
         exitArmedRef.current = now;
-        setExitToast(true);
-        window.setTimeout(() => setExitToast(false), 2000);
+        if (exitToastId.current) useToastStore.getState().dismissToast(exitToastId.current);
+        exitToastId.current = useToastStore.getState().pushToast({ title: t('mobile.navigation.pressBackAgain'), body: '', durationMs: 2000 });
         // Re-push current nav so the user stays on their screen.
         try {
           window.history.pushState({ nav: navRef.current }, '', urlFor(navRef.current, relayRef.current));
@@ -113,6 +121,7 @@ export function useMobileHistorySync({
         return;
       }
       if (s?.nav) {
+        if (exitToastId.current) useToastStore.getState().dismissToast(exitToastId.current);
         const next = restoredNav(s.nav);
         const prev = navRef.current.screen;
         const isSettingsTabSwitch =
@@ -141,7 +150,5 @@ export function useMobileHistorySync({
     };
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
-  }, [router, dmOptInEnabled, navRef, relayRef, setNav, setSlideDir, suppressSlideRef]);
-
-  return { exitToast };
+  }, [t, router, dmOptInEnabled, navRef, relayRef, setNav, setSlideDir, suppressSlideRef]);
 }

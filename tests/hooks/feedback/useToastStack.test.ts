@@ -30,6 +30,17 @@ describe('useToastStack', () => {
     expect(result.current.toasts).toEqual([]);
   });
 
+  it('expires a short hint without shortening other feedback or restarting its clock', () => {
+    const { result } = renderHook(() => useToastStack());
+    act(() => { useToastStore.getState().pushToast({ title: 'Exit', body: '', durationMs: 2000 }); });
+    act(() => { vi.advanceTimersByTime(1000); });
+    act(() => { useToastStore.getState().pushToast({ title: 'Saved', body: '' }); });
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(result.current.toasts.map((toast) => toast.title)).toEqual(['Saved']);
+    act(() => { vi.advanceTimersByTime(4000); });
+    expect(result.current.toasts).toEqual([]);
+  });
+
   it('closes each toast on its own timer', () => {
     act(() => { useToastStore.getState().pushToast({ title: 'a', body: 'b' }); });
     const { result } = renderHook(() => useToastStack());

@@ -10,7 +10,6 @@
  */
 
 import ProfilePopover from '@/components/chat/profile/ProfilePopover';
-import { useTranslations } from 'next-intl';
 import HintHost from '@/components/hints/HintHost';
 import MessageZapModal from '@/components/chat/zaps/MessageZapModal';
 import { usePhoneShell } from '@/hooks/shell/mobile/nav/usePhoneShell';
@@ -24,7 +23,6 @@ import { RehydratingScreen } from './screens/status/RehydratingScreen';
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
 
 export default function MobileShell() {
-  const t = useTranslations();
   const { dragLayerRef, screensHostRef, ...vm } = usePhoneShell();
 
   // Guests: full-screen login
@@ -65,11 +63,6 @@ export default function MobileShell() {
       <MobileVoiceStatusSlot screen={vm.nav.screen} kbInset={vm.kbInset} />
       {!vm.hideNav && <BottomNav nav={vm.nav} onTabPress={vm.carousel.onTabPress} dmBadge={vm.dmBadge} inboxBadge={vm.inboxBadge} />}
       <HintHost surface={vm.hintSurface} shell="mobile" />
-      {vm.exitToast && (
-        <div className="mobile-exit-toast" role="status" aria-live="polite">
-          {t('mobile.navigation.pressBackAgain')}
-        </div>
-      )}
       {vm.profilePopupPubkey && (
         <ProfilePopover
           pubkey={vm.profilePopupPubkey}

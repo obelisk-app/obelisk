@@ -100,9 +100,7 @@ export function RelayMenuSheet({
           onClick={vm.leave}
         />
       </div>
-      {vm.toast && (
-        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--accent, #b4f953)', textAlign: 'center' }}>{vm.toast}</div>
-      )}
+
       <SheetActions onCancel={close} dismiss="close" cancelClassName="relay-menu-close" />
     </Sheet>
   );

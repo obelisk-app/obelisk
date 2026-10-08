@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
+import ToastStack from '@/components/feedback/ToastStack';
+import { useToastStore } from '@/store/feedback/toast';
 import { ConfirmDialogHost } from '@/components/ui/overlays/ConfirmDialog';
 import { RelayMenuSheet } from '@/app/[locale]/app/mobile/sheets/relay/RelayMenuSheet';
 
@@ -13,11 +15,12 @@ function mount(methods: Record<string, unknown> = {}) {
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
   const close = vi.fn();
   const bridge = fakeBridge({ configuredRelays: [URL_A, URL_B] }, methods as never);
-  renderWithBridge(<><ConfirmDialogHost /><RelayMenuSheet close={close} relayUrl={URL_A} label="Alpha" iconUrl={null} /></>, bridge);
+  renderWithBridge(<><ToastStack /><ConfirmDialogHost /><RelayMenuSheet close={close} relayUrl={URL_A} label="Alpha" iconUrl={null} /></>, bridge);
   return { close };
 }
 
 afterEach(() => {
+  useToastStore.getState().clearToasts();
   writeText.mockClear();
   Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
 });
@@ -66,7 +69,7 @@ describe('RelayMenuSheet actions', () => {
       fireEvent.click(screen.getByText('Copy relay URL'));
       await act(async () => { await Promise.resolve(); });
       expect(screen.getByText('Relay URL copied')).toBeInTheDocument();
-      act(() => { vi.advanceTimersByTime(1700); });
+      act(() => { vi.advanceTimersByTime(5000); });
       expect(screen.queryByText('Relay URL copied')).toBeNull();
     } finally {
       vi.useRealTimers();
