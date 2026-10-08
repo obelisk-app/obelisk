@@ -107,7 +107,7 @@ export function cspDirectives({ nonce, isDev, hashes }: CspOptions): string[] {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    'upgrade-insecure-requests',
+    ...(isDev ? [] : ['upgrade-insecure-requests']),
   ];
 }
 

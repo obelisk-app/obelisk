@@ -67,6 +67,11 @@ describe('the static CSP floor is a superset of the nonce policy', () => {
     expect(buildCsp({ nonce: null, isDev: true })).toContain("'unsafe-eval'");
   });
 
+  it('upgrades insecure requests only outside local development', () => {
+    expect(buildCsp({ nonce: NONCE, isDev: true })).not.toContain('upgrade-insecure-requests');
+    expect(buildCsp({ nonce: null, isDev: false })).toContain('upgrade-insecure-requests');
+  });
+
   it('the floor still forbids the things a bypassed request must not be allowed', () => {
     const floor = parse(buildCsp({ nonce: null, isDev: false }));
     expect(floor.get('object-src')).toEqual(new Set(["'none'"]));
