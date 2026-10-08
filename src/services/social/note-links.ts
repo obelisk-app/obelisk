@@ -12,6 +12,7 @@
  *   /t/<hashtag>           a hashtag feed
  */
 
+import { relayHostLabel } from '@/utils/relay-url/relay-host';
 import { nip19 } from 'nostr-tools';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { NOTE_VIEWER_PATH } from '@/constants/social/note-links';
@@ -89,15 +90,6 @@ export function groupIdOf(note: Pick<NostrEvent, 'tags'>): string | null {
   return note.tags.find((tag) => tag[0] === 'h' && tag[1])?.[1] ?? null;
 }
 
-/** Host form the app's `?relay=` param expects. */
-function relayHost(url: string): string {
-  try {
-    return new URL(url).host;
-  } catch {
-    return url.replace(/^wss?:\/\//, '').replace(/\/+$/, '');
-  }
-}
-
 /**
  * Deep link into the group view for a group-originated note, matching the
  * `?c=&m=&relay=` shape the shell already parses on load.
@@ -111,7 +103,7 @@ export function groupNoteUrl(
   const url = new URL(`${origin()}/app`);
   url.searchParams.set('c', groupId);
   url.searchParams.set('m', note.id);
-  if (relay) url.searchParams.set('relay', relayHost(relay));
+  if (relay) url.searchParams.set('relay', relayHostLabel(relay));
   return url.toString();
 }
 

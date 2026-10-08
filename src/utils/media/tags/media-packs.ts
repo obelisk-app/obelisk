@@ -1,3 +1,4 @@
+import { parseHttpUrl } from '@/utils/url/http-url';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
   isValidCustomEmojiName,
@@ -12,15 +13,6 @@ import type {
 import { inferMediaKind } from './media-kind';
 
 const PACK_ADDRESS_RE = /^30030:[0-9a-f]{64}:.+$/;
-
-function validUrl(value: string | undefined): string {
-  try {
-    const url = new URL(value ?? '');
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
-  } catch {
-    return '';
-  }
-}
 
 function mediaKinds(tags: ReadonlyArray<ReadonlyArray<string>>): Map<string, JsMediaKind> {
   const kinds = new Map<string, JsMediaKind>();
@@ -39,7 +31,7 @@ function mediaItems(tags: ReadonlyArray<ReadonlyArray<string>>, fallbackAddress?
   for (const tag of tags) {
     if (tag[0] !== 'emoji') continue;
     const name = normalizeCustomEmojiName(tag[1] ?? '');
-    const url = validUrl(tag[2]);
+    const url = parseHttpUrl(tag[2])?.href ?? '';
     if (!isValidCustomEmojiName(name) || !url) continue;
     const packAddress = PACK_ADDRESS_RE.test(tag[3] ?? '') ? tag[3] : fallbackAddress;
     byName.set(name, {
@@ -67,7 +59,7 @@ export function parseMediaPack(ev: NostrEvent): JsMediaPack | null {
     author: ev.pubkey,
     title: value('title') || identifier,
     description: value('description'),
-    image: validUrl(value('image')),
+    image: parseHttpUrl(value('image'))?.href ?? '',
     items: mediaItems(ev.tags, address),
     createdAt: ev.created_at,
   };
@@ -90,7 +82,7 @@ function itemTags(items: ReadonlyArray<JsMediaItem>): string[][] {
   const seen = new Set<string>();
   for (const item of items) {
     const name = normalizeCustomEmojiName(item.name);
-    const url = validUrl(item.url);
+    const url = parseHttpUrl(item.url)?.href ?? '';
     if (!isValidCustomEmojiName(name) || !url || seen.has(name)) continue;
     seen.add(name);
     tags.push(item.packAddress
@@ -108,12 +100,13 @@ export function mediaPackTags(
   const identifier = pack.identifier.trim();
   if (!identifier) throw new Error('Pack identifier is required.');
   const address = mediaPackAddress(author, identifier);
+  const image = parseHttpUrl(pack.image)?.href;
   const items = pack.items.map((item) => ({ ...item, packAddress: address }));
   return [
     ['d', identifier],
     ['title', pack.title.trim() || identifier],
     ...(pack.description.trim() ? [['description', pack.description.trim()]] : []),
-    ...(validUrl(pack.image) ? [['image', validUrl(pack.image)]] : []),
+    ...(image ? [['image', image]] : []),
     ...itemTags(items),
   ];
 }

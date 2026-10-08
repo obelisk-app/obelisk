@@ -55,14 +55,16 @@ export default function WalletSettings({ mobile = false }: { mobile?: boolean })
     </>
   );
 
-  return mobile ? (
-    <Section variant="mobile" headingAs="h3" title={t('settings.wallet.title')} data-testid="wallet-settings">
-      <div className="settings-row !block space-y-3">{body}</div>
-    </Section>
-  ) : (
-    <div className="space-y-3" data-testid="wallet-settings">
-      <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">{t('settings.wallet.title')}</Text>
+  return (
+    <Section
+      variant={mobile ? 'mobile' : 'settings'}
+      headingAs="h3"
+      title={t('settings.wallet.title')}
+      className={mobile ? undefined : 'space-y-3'}
+      contentClassName={mobile ? 'settings-row !block space-y-3' : undefined}
+      data-testid="wallet-settings"
+    >
       {body}
-    </div>
+    </Section>
   );
 }

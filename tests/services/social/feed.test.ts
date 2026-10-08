@@ -2,14 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
   noteMatchesSource,
-  chunkAuthors,
   isReplyNote,
   mergeNotes,
   nextCursor,
   oldestCreatedAt,
   applyModeration,
 } from '@/services/social/feed';
-import { AUTHORS_PER_FILTER } from '@/constants/social/feed';
 
 const note = (id: string, createdAt: number, over: Partial<NostrEvent> = {}): NostrEvent => ({
   id,
@@ -66,20 +64,6 @@ describe('pagination cursor', () => {
     const merged = mergeNotes(page, nextPage);
     expect(cursor).toBe(100);
     expect(merged.map((n) => n.id)).toEqual(['a', 'b', 'c']);
-  });
-});
-
-describe('chunkAuthors', () => {
-  it('splits big follow lists so relays do not reject the filter', () => {
-    const authors = Array.from({ length: 750 }, (_, i) => `pk${i}`);
-    const chunks = chunkAuthors(authors);
-    expect(chunks).toHaveLength(3);
-    expect(chunks[0]).toHaveLength(AUTHORS_PER_FILTER);
-    expect(chunks.flat()).toHaveLength(750);
-  });
-
-  it('returns nothing for an empty follow list', () => {
-    expect(chunkAuthors([])).toEqual([]);
   });
 });
 

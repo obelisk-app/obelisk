@@ -49,11 +49,11 @@ export default function ProfileLinks({
       {(site || lud16) && (
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
           {site && (
-            <Link native
+            <Link native variant="text"
               href={site}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-lc-green hover:underline"
+              className="inline-flex items-center gap-1.5"
               data-testid="profile-website"
             >
               <GlobeIcon size={13} strokeWidth={2} />

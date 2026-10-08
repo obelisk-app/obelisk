@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, fireEvent, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useUserPanel } from '@/hooks/shell/user-panel/useUserPanel';
 import { userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
@@ -53,5 +53,21 @@ describe('useUserPanel', () => {
     result.current.logout();
     expect(onClose).toHaveBeenCalled();
     await waitFor(() => expect(logout).toHaveBeenCalled());
+  });
+
+  it('dismisses editing on Escape and restores the previous scroll policy on unmount', () => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'auto';
+    const { onClose, unmount } = setup({ initialEditing: true });
+    try {
+      expect(document.body.style.overflow).toBe('hidden');
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onClose).toHaveBeenCalledTimes(1);
+      unmount();
+      expect(document.body.style.overflow).toBe('auto');
+    } finally {
+      unmount();
+      document.body.style.overflow = previous;
+    }
   });
 });

@@ -21,6 +21,16 @@ const event = (kind: number, tags: string[][]): NostrEvent => ({
 });
 
 describe('media packs', () => {
+  it('serializes canonical HTTP URLs while rejecting other protocols', () => {
+    const parsed = parseMediaPack(event(30030, [
+      ['d', 'urls'], ['image', ' HTTPS://EXAMPLE.COM:443/a b '],
+      ['emoji', 'valid', 'HTTP://EXAMPLE.COM:80/a b'],
+      ['emoji', 'invalid', 'javascript:alert(1)'],
+    ]));
+    expect(parsed?.image).toBe('https://example.com/a%20b');
+    expect(parsed?.items).toEqual([expect.objectContaining({ name: 'valid', url: 'http://example.com/a%20b' })]);
+  });
+
   it('round-trips editable NIP-51 packs with emoji, GIF, and sticker types', () => {
     const tags = mediaPackTags({
       identifier: 'party',

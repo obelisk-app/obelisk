@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useDismiss } from '@/hooks/common/useDismiss';
 
 /**
  * Open/closed state for one message row's overlays: the ⋯ menu, the pinned
@@ -19,24 +20,11 @@ export function useMessageRowMenus() {
   const menuPanelRef = useRef<HTMLDivElement | null>(null);
   const pickerPanelRef = useRef<HTMLDivElement | null>(null);
   const closeAll = () => { setMenuOpen(false); setPanelPinned(false); setPickerOpen(false); };
-  useEffect(() => {
-    if (!menuOpen && !panelPinned && !pickerOpen) return;
-    const close = () => { setMenuOpen(false); setPanelPinned(false); setPickerOpen(false); };
-    const onDocClick = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (menuRef.current?.contains(target)) return;
-      if (menuPanelRef.current?.contains(target)) return;
-      if (pickerPanelRef.current?.contains(target)) return;
-      close();
-    };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onEsc);
-    return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onEsc);
-    };
-  }, [menuOpen, panelPinned, pickerOpen]);
+  useDismiss({
+    refs: [menuRef, menuPanelRef, pickerPanelRef],
+    enabled: menuOpen || panelPinned || pickerOpen,
+    onDismiss: closeAll,
+  });
 
   return {
     menuOpen, setMenuOpen,

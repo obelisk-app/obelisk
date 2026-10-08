@@ -23,6 +23,11 @@ describe('dm-file', () => {
     });
   });
 
+  it('validates the URL but preserves the trimmed rumor spelling', () => {
+    const url = 'HTTPS://EXAMPLE.COM:443/a%2fb';
+    expect(parseDmFileRumor(`  ${url}  `, buildDmFileTags(base))?.url).toBe(url);
+  });
+
   it('rejects unsupported algorithms, bad urls and missing keys', () => {
     const tags = buildDmFileTags(base);
     expect(parseDmFileRumor('javascript:alert(1)', tags)).toBeNull();

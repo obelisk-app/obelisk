@@ -61,14 +61,16 @@ export default function CallSettings({ mobile = false }: { mobile?: boolean }) {
     </div>
   );
 
-  return mobile ? (
-    <Section variant="mobile" headingAs="h3" title={t('settings.calls.title')} data-testid="call-settings">
-      <div className="settings-row !block">{body}</div>
-    </Section>
-  ) : (
-    <div className="space-y-3 border-t border-lc-border pt-4" data-testid="call-settings">
-      <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">{t('settings.calls.title')}</Text>
+  return (
+    <Section
+      variant={mobile ? 'mobile' : 'settings'}
+      headingAs="h3"
+      title={t('settings.calls.title')}
+      className={mobile ? undefined : 'space-y-3 border-t border-lc-border pt-4'}
+      contentClassName={mobile ? 'settings-row !block' : undefined}
+      data-testid="call-settings"
+    >
       {body}
-    </div>
+    </Section>
   );
 }

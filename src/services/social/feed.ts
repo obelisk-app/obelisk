@@ -6,6 +6,7 @@
  * unit-testable without a DOM. The hooks live in `useFeed.ts`.
  */
 
+import { chunkItems } from '@/utils/common/arrays';
 import { findReplyParentId, findRootEventId, relaysForAuthor } from '@nostr-wot/data';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { kindsForFilter, type ContentFilter } from './kinds';
@@ -60,15 +61,6 @@ export function filterForSource(
   filter: ContentFilter = 'all',
 ): NostrEvent[] {
   return notes.filter((note) => noteMatchesSource(note, source, allowedAuthors, filter));
-}
-
-export function chunkAuthors(
-  authors: readonly string[],
-  size = AUTHORS_PER_FILTER,
-): string[][] {
-  const chunks: string[][] = [];
-  for (let i = 0; i < authors.length; i += size) chunks.push([...authors.slice(i, i + size)]);
-  return chunks;
 }
 
 /**
@@ -146,7 +138,7 @@ export async function loadFollowingFeed(
 ): Promise<NostrEvent[]> {
   if (authors.length === 0) return [];
   const limit = opts.limit ?? FEED_PAGE_SIZE;
-  const filters = chunkAuthors(authors).map((chunk) => ({
+  const filters = chunkItems(authors, AUTHORS_PER_FILTER).map((chunk) => ({
     ...baseFilter(limit, opts.until, opts.filter),
     authors: chunk,
   }));

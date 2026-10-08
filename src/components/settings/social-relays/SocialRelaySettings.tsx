@@ -92,16 +92,17 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
     </>
   );
 
-  return mobile ? (
-    <Section variant="mobile" headingAs="h3" title={t('settings.preferences.socialRelays.title')} id={RELAY_SETTINGS_ANCHOR} data-testid="social-relay-settings">
-      <div className="settings-row !block space-y-3">{fields}</div>
-    </Section>
-  ) : (
-    <div className="space-y-3 border-t border-lc-border pt-4" id={RELAY_SETTINGS_ANCHOR} data-testid="social-relay-settings">
-      <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">
-        {t('settings.preferences.socialRelays.title')}
-      </Text>
+  return (
+    <Section
+      variant={mobile ? 'mobile' : 'settings'}
+      headingAs="h3"
+      title={t('settings.preferences.socialRelays.title')}
+      className={mobile ? undefined : 'space-y-3 border-t border-lc-border pt-4'}
+      contentClassName={mobile ? 'settings-row !block space-y-3' : undefined}
+      id={RELAY_SETTINGS_ANCHOR}
+      data-testid="social-relay-settings"
+    >
       {fields}
-    </div>
+    </Section>
   );
 }

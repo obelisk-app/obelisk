@@ -20,6 +20,7 @@
  * wire in the clear.
  */
 
+import { isHttpUrl } from '@/utils/url/http-url';
 import { FILE_CIPHER_ALGORITHM } from '@nostr-wot/dm';
 
 export interface JsDmFile {
@@ -67,12 +68,7 @@ export function buildDmFileTags(file: Omit<JsDmFile, 'url'>): string[][] {
 export function parseDmFileRumor(content: string, tags: ReadonlyArray<ReadonlyArray<string>>): JsDmFile | null {
   const tag = (name: string) => tags.find((t) => t[0] === name)?.[1];
   const url = content.trim();
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
-  } catch {
-    return null;
-  }
+  if (!isHttpUrl(url)) return null;
   const algorithm = (tag('encryption-algorithm') ?? '').toLowerCase();
   if (algorithm !== FILE_CIPHER_ALGORITHM) return null;
   const key = tag('decryption-key') ?? '';

@@ -6,6 +6,7 @@
  * and the whitelist preflight REQ. Pure move from `client.ts` (round 4
  * plan, step 11). This is the module the hub's status adapter feeds.
  */
+import { shortHost } from '@/utils/relay-url/url-host';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { BoundedMap } from '@nostr-wot/relay/hub';
 import { KIND_METADATA } from '@/constants/nostr/nip-kinds';
@@ -128,9 +129,7 @@ export class RelayAccessModule {
     // pushes a pending entry; leaving it resolves (→ ok) or fails
     // (→ auth-required / restricted / unreachable / error).
     if (state === 'authenticating' && cur[key] !== 'authenticating') {
-      const host = (() => {
-        try { return new URL(url).host; } catch { return url; }
-      })();
+      const host = shortHost(url);
       // The host rides as the detail: the indicator reads it into the title.
       const id = pushActivity(
         'relayAuth' satisfies ActivityCode,

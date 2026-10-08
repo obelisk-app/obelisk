@@ -1,5 +1,7 @@
 'use client';
 
+import TextButton from '@/components/ui/buttons/TextButton';
+
 import Text from '@/components/ui/layout/Text';
 import { memo } from 'react';
 import type { JsMessage } from '@/services/nostr-bridge';
@@ -70,7 +72,7 @@ export const MessageRow = memo(function MessageRow({
       <div className="min-w-0 flex-1">
         {!grouped && (
           <div className="flex items-baseline gap-2">
-            <Button variant="bare" onClick={vm.openProfile} className="text-sm font-bold text-lc-white hover:underline">{vm.displayName}</Button>
+            <TextButton tone="plain" onClick={vm.openProfile} className="text-sm font-bold text-lc-white">{vm.displayName}</TextButton>
             <RoleBadge pubkey={msg.pubkey} />
             <Text size="10" tone="muted">
               {formatDateTime(msg.createdAt, {

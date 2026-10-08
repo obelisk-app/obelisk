@@ -22,6 +22,7 @@
  * filter.
  */
 
+import { chunkItems } from '@/utils/common/arrays';
 import { createKeyedObservable, getProfileAggregators, parseKind0 } from '@nostr-wot/data';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { cacheGet, cacheSet } from '@/services/nostr-bridge';
@@ -102,12 +103,6 @@ export function getSocialProfile(pubkey: string): SocialProfile | null {
   return null;
 }
 
-function chunk<T>(items: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
-  return out;
-}
-
 /**
  * Resolve any of `pubkeys` we don't already have fresh. Safe to call on every
  * render of a feed page: it filters to what's actually missing first.
@@ -126,7 +121,7 @@ export async function ensureSocialProfiles(pubkeys: readonly string[]): Promise<
   const relays = [...new Set([...socialRelays(), ...getProfileAggregators()])];
 
   try {
-    await Promise.all(chunk(wanted, AUTHORS_PER_QUERY).map(async (authors) => {
+    await Promise.all(chunkItems(wanted, AUTHORS_PER_QUERY).map(async (authors) => {
       const events = await querySocial([{ kinds: [KIND_METADATA], authors }], { relays });
       // Newest kind 0 wins; a pubkey legitimately has several in flight.
       const newest = new Map<string, NostrEvent>();

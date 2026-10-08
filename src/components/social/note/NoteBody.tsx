@@ -65,9 +65,9 @@ export default function NoteBody({
           <NoteContent content={note.content} noteId={note.id} onOpenProfile={onOpenProfile} onOpenNote={onOpenNote} onOpenTag={onOpenTag} />
         </div>
         {vm.groupHref && (
-          <Link native
+          <Link native variant="text"
             href={vm.groupHref}
-            className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-lc-green hover:underline"
+            className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold"
             data-testid="note-open-in-group"
           >
             {t('social.openInGroup')} →

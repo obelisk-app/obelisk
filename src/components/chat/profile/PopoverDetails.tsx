@@ -30,11 +30,11 @@ export function PopoverDetails({ member }: { member: PopoverMember | undefined }
       {(member?.website || member?.lud16) && (
         <div className="space-y-1.5" data-testid="profile-links">
           {member?.website && (
-            <Link native
+            <Link native variant="text"
               href={websiteHref(member.website)}
               target="_blank"
               rel="noopener noreferrer nofollow"
-              className="flex items-center gap-2 truncate text-xs text-lc-green hover:underline"
+              className="flex items-center gap-2 truncate text-xs"
               data-testid="profile-website"
             >
               <GlobeIcon size={14} />

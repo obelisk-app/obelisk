@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
+import { useCallback, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
+import { useDismiss } from '@/hooks/common/useDismiss';
 import type { JsSearchHit } from '@/services/nostr-bridge';
 import { useRelaySearch } from '@/hooks/chat/search/useRelaySearch';
 import { useChatStore } from '@/store/chat';
@@ -30,13 +31,12 @@ export function useSearchBar({ activeGroupId, onJump, inputRef, rootRef }: {
     setMobileExpanded(false);
   }, []);
 
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) closeAll();
-    }
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, [closeAll, rootRef]);
+  useDismiss({
+    refs: [rootRef],
+    enabled: open || mobileExpanded,
+    escape: 'ignore', // The input handles Escape to clear its query before closing.
+    onDismiss: closeAll,
+  });
 
   const focusInput = () => requestAnimationFrame(() => inputRef.current?.focus());
 

@@ -15,6 +15,11 @@ const event = (kind: number, content: string, tags: string[][], created_at = 10)
 });
 
 describe('account backup', () => {
+  it('canonicalizes media URLs without excluding credentials accepted by the existing policy', () => {
+    expect(backupMediaUrls([event(0, JSON.stringify({ picture: ' HTTPS://user:pass@EXAMPLE.COM:443/a b.png ' }), [])]))
+      .toEqual(['https://user:pass@example.com/a%20b.png']);
+  });
+
   it('extracts Blossom hashes and only media URLs from message content', () => {
     const media = `https://blossom.example/${hash}`;
     expect(blossomHashFromUrl(`${media}.webp?x=1`)).toBe(hash);

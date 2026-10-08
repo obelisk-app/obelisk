@@ -24,7 +24,7 @@ describe('useMessageRowMenus', () => {
   it('Escape closes everything that is open', () => {
     const { result } = renderHook(() => useMessageRowMenus());
     act(() => result.current.togglePicker());
-    act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
+    act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
     expect(result.current.pickerOpen).toBe(false);
     expect(result.current.panelPinned).toBe(false);
   });
@@ -35,5 +35,25 @@ describe('useMessageRowMenus', () => {
     expect(result.current.panelPinned).toBe(true);
     act(() => { document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
     expect(result.current.panelPinned).toBe(false);
+  });
+
+  it('keeps portaled menu and picker presses inside the dismissal boundary', () => {
+    const { result } = renderHook(() => useMessageRowMenus());
+    const panel = document.createElement('div');
+    const child = document.createElement('button');
+    panel.append(child);
+    document.body.append(panel);
+    try {
+      result.current.pickerPanelRef.current = panel;
+      act(() => result.current.openPicker());
+      act(() => child.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+      expect(result.current.pickerOpen).toBe(true);
+      expect(result.current.panelPinned).toBe(true);
+      act(() => document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+      expect(result.current.pickerOpen).toBe(false);
+      expect(result.current.panelPinned).toBe(false);
+    } finally {
+      panel.remove();
+    }
   });
 });

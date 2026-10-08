@@ -11,6 +11,7 @@
  * channel, so an unbounded graph traversal here delays the user's next
  * signature. Nobody is watching a spinner for a WoT verdict; signatures win.
  */
+import { chunkItems } from '@/utils/common/arrays';
 import { enqueueSignerOp } from '@/services/nostr-bridge/session/signer-queue';
 
 export type WotStatus = 'absent' | 'configured' | 'error';
@@ -106,12 +107,6 @@ const DISTANCE_CHUNK = 100;
  */
 const MIN_PATHS_CALL_CAP = 200;
 
-function chunk<T>(items: ReadonlyArray<T>, size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
-  return out;
-}
-
 export async function wotBatch(
   pubkeys: string[],
   maxHops: number,
@@ -124,7 +119,7 @@ export async function wotBatch(
     const out: Record<string, WotBatchEntry> = {};
     const distanceMap: Record<string, number | null> = {};
     if (typeof a.getDistanceBatch === 'function') {
-      for (const part of chunk(pubkeys, DISTANCE_CHUNK)) {
+      for (const part of chunkItems(pubkeys, DISTANCE_CHUNK)) {
         const res = await enqueueSignerOp('background', 'wot:getDistanceBatch', () =>
           a.getDistanceBatch!(part, { maxHops, minPaths }),
         );
@@ -136,7 +131,7 @@ export async function wotBatch(
         for (const pk of part) distanceMap[pk] = res[pk] ?? null;
       }
     } else if (typeof a.getDistance === 'function') {
-      for (const part of chunk(pubkeys, DISTANCE_CHUNK)) {
+      for (const part of chunkItems(pubkeys, DISTANCE_CHUNK)) {
         await Promise.all(
           part.map(async (pk) => {
             try {
@@ -174,7 +169,7 @@ export async function wotBatch(
           skippedTreatedAs: 'paths satisfied',
         });
       }
-      for (const part of chunk(queried, DISTANCE_CHUNK)) {
+      for (const part of chunkItems(queried, DISTANCE_CHUNK)) {
         await Promise.all(
           part.map(async (pk) => {
             try {

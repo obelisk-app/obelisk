@@ -8,18 +8,21 @@ export interface SectionProps extends Omit<HTMLAttributes<HTMLElement>, 'title'>
   description?: ReactNode;
   headingAs?: HeadingProps['as'];
   /** Article sections have an anchor offset; prose sections carry body typography. */
-  variant?: 'article' | 'prose' | 'mobile';
+  variant?: 'article' | 'prose' | 'mobile' | 'settings';
+  /** Optional body wrapper, for compact settings rows with their own padding or spacing. */
+  contentClassName?: string;
   children?: ReactNode;
 }
 
 /** A titled content section with optional introductory copy. */
-export default function Section({ title, description, headingAs = 'h2', variant = 'article', className, children, ...rest }: SectionProps) {
-  if (variant === 'mobile') {
+export default function Section({ title, description, headingAs = 'h2', variant = 'article', className, contentClassName, children, ...rest }: SectionProps) {
+  const content = contentClassName ? <div className={contentClassName}>{children}</div> : children;
+  if (variant === 'mobile' || variant === 'settings') {
     return (
-      <section className={cn('settings-section', className)} {...rest}>
-        <Heading as={headingAs} className="settings-section-title">{title}</Heading>
+      <section className={cn(variant === 'mobile' && 'settings-section', className)} {...rest}>
+        <Heading as={headingAs} variant={variant === 'settings' ? 'label' : undefined} className={variant === 'mobile' ? 'settings-section-title' : undefined}>{title}</Heading>
         {description && <Text as="p" variant="muted">{description}</Text>}
-        {children}
+        {content}
       </section>
     );
   }
@@ -35,7 +38,7 @@ export default function Section({ title, description, headingAs = 'h2', variant 
           </Text>
         )}
       </div>
-      {children}
+      {content}
     </section>
   );
 }

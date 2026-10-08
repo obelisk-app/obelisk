@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useDismiss } from '@/hooks/common/useDismiss';
 
 /**
  * Fullscreen for the call view. Uses the Fullscreen API on the view itself
@@ -17,12 +18,7 @@ export function useCallFullscreen(ref: React.RefObject<HTMLDivElement | null>) {
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, [ref]);
-  useEffect(() => {
-    if (!expanded) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpanded(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [expanded]);
+  useDismiss({ enabled: expanded, outside: 'none', onDismiss: () => setExpanded(false) });
   // Leaving the call must not leave the page stuck in fullscreen.
   useEffect(() => () => {
     if (typeof document !== 'undefined' && document.fullscreenElement && document.fullscreenElement === ref.current) {

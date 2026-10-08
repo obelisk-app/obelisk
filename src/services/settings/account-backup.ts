@@ -1,3 +1,4 @@
+import { parseHttpUrl } from '@/utils/url/http-url';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -46,26 +47,17 @@ function newest(events: readonly NostrEvent[], kind: number): NostrEvent | null 
     .reduce<NostrEvent | null>((latest, event) => !latest || event.created_at > latest.created_at ? event : latest, null);
 }
 
-function httpUrl(value: string | undefined): string | null {
-  try {
-    const url = new URL(value ?? '');
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
-  } catch {
-    return null;
-  }
-}
-
 export function blossomHashFromUrl(value: string): string | null {
-  const url = httpUrl(value);
+  const url = parseHttpUrl(value);
   if (!url) return null;
-  const filename = new URL(url).pathname.split('/').filter(Boolean).at(-1) ?? '';
+  const filename = url.pathname.split('/').filter(Boolean).at(-1) ?? '';
   return filename.match(/^([0-9a-f]{64})(?:\.[a-z0-9]+)?$/i)?.[1]?.toLowerCase() ?? null;
 }
 
 export function backupMediaUrls(events: readonly NostrEvent[]): string[] {
   const urls = new Set<string>();
   const add = (value: string | undefined, explicit = false) => {
-    const url = httpUrl(value?.replace(/[),.;]+$/, ''));
+    const url = parseHttpUrl(value?.replace(/[),.;]+$/, ''))?.href;
     if (url && (explicit || blossomHashFromUrl(url) || MEDIA_EXTENSION_RE.test(url))) urls.add(url);
   };
 

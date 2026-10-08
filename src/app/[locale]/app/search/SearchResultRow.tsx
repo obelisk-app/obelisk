@@ -1,5 +1,7 @@
 'use client';
 
+import TextButton from '@/components/ui/buttons/TextButton';
+
 import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import type { JsSearchHit } from '@/services/nostr-bridge';
@@ -29,7 +31,7 @@ export function SearchResultRow({ id, active, msg, groupName, t, onJump, onAutho
       }
     >
       <div className="flex items-baseline gap-2 text-xs">
-        <Button variant="bare" onClick={() => onAuthor(msg.pubkey)} className="font-semibold text-lc-white hover:underline truncate">{row.name}</Button>
+        <TextButton tone="plain" onClick={() => onAuthor(msg.pubkey)} className="font-semibold text-lc-white truncate">{row.name}</TextButton>
         <span className="text-lc-muted">{t('shell.search.in')}</span>
         <span className="text-lc-green truncate">#{row.channel}</span>
         <Text size="10" tone="muted" className="ml-auto">

@@ -42,16 +42,16 @@ export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }
     </List>
   );
 
-  return mobile ? (
-    <Section variant="mobile" headingAs="h3" title={t('settings.moderation.title')} data-testid="muted-and-blocked">
-      <div className="settings-row !block space-y-2">{body}</div>
-    </Section>
-  ) : (
-    <div className="space-y-2 border-t border-lc-border pt-4" data-testid="muted-and-blocked">
-      <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">
-        {t('settings.moderation.title')}
-      </Text>
+  return (
+    <Section
+      variant={mobile ? 'mobile' : 'settings'}
+      headingAs="h3"
+      title={t('settings.moderation.title')}
+      className={mobile ? undefined : 'space-y-2 border-t border-lc-border pt-4'}
+      contentClassName={mobile ? 'settings-row !block space-y-2' : undefined}
+      data-testid="muted-and-blocked"
+    >
       {body}
-    </div>
+    </Section>
   );
 }
