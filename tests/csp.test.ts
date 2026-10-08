@@ -21,6 +21,7 @@ describe('CSP', () => {
     const res = proxy(req);
     const csp = res.headers.get('Content-Security-Policy');
     expect(csp).toBeTruthy();
+    expect(res.headers.get('Cache-Control')).toContain('no-store');
 
     const directives = csp!.split(';').map((d) => d.trim());
     const scriptSrc = directives.find((d) => d.startsWith('script-src'));
@@ -65,6 +66,7 @@ describe('CSP', () => {
     expect(res.headers.get('Content-Security-Policy')).not.toMatch(/nonce-|unsafe-inline.*googletagmanager/);
     expect(res.headers.get('x-middleware-request-x-nonce')).toBe('');
     expect(uuid).not.toHaveBeenCalled();
+    expect(res.headers.get('Cache-Control')).toBeNull();
   });
 
   it('fails closed when the production build policy is unavailable', () => {

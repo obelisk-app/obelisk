@@ -88,6 +88,7 @@ export function proxy(request: NextRequest) {
   if (!redirect && !request.cookies.has(LOCALE_COOKIE) && !PREFIXED.test(request.nextUrl.pathname)) {
     response.headers.delete('set-cookie');
   }
+  if (redirect || !policy.hashes) response.headers.set('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
   response.headers.set('Content-Security-Policy', csp);
   return response;
 }
