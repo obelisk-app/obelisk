@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Toggle from '@/components/ui/forms/Toggle';
 import Label from '@/components/ui/forms/Label';
 
@@ -19,7 +20,7 @@ export function ToggleRow({
     <Label className="flex items-start justify-between gap-4 cursor-pointer">
       <div className="min-w-0">
         <div className="text-sm text-lc-white">{label}</div>
-        {description && <div className="text-xs text-lc-muted mt-0.5">{description}</div>}
+        {description && <Text as="div" variant="caption" className="mt-0.5">{description}</Text>}
       </div>
       <Toggle checked={checked} onChange={onChange} />
     </Label>

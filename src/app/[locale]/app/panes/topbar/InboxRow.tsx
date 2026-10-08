@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import { MentionText } from '@/components/chat/mentions/MentionText';
 
@@ -22,10 +23,10 @@ export function InboxRow({ read, label, time, preview, onClick, testId }: {
       >
         <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${read ? 'bg-transparent' : 'bg-lc-green'}`} />
         <div className="flex-1 min-w-0">
-          <div className="text-xs uppercase tracking-wider text-lc-muted font-mono mb-0.5">
+          <Text as="div" variant="label" size="xs" tone="muted" className="font-mono mb-0.5">
             {label}
             {time && <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{time}</span>}
-          </div>
+          </Text>
           {preview && (
             <div className="text-sm text-lc-white truncate"><MentionText content={preview} /></div>
           )}

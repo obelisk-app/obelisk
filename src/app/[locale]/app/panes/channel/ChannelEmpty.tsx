@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Stack from '@/components/ui/layout/Stack';
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
@@ -14,20 +15,19 @@ export function ChannelEmpty({ groupId, group, stage }: {
   const t = useTranslations();
   if (stage === 'loading-info' || stage === 'loading-messages') {
     return (
-      <div
-        className="flex h-full items-center justify-center text-sm text-lc-muted"
+      <Text as="div" size="sm" tone="muted"
+        className="flex h-full items-center justify-center"
         data-testid="messages-loading"
-        data-stage={stage === 'loading-info' ? 'channel-info' : 'messages'}
-      >
+        data-stage={stage === 'loading-info' ? 'channel-info' : 'messages'}>
         <Stack gap="3" align="center">
           <div className="lc-spinner" aria-hidden="true" />
           <div>{stage === 'loading-info' ? t('shell.desktop.channel.loadingInfo') : t('shell.desktop.channel.loadingMessages')}</div>
         </Stack>
-      </div>
+      </Text>
     );
   }
   return (
-    <div className="flex h-full items-center justify-center text-sm text-lc-muted">
+    <Text as="div" size="sm" tone="muted" className="flex h-full items-center justify-center">
       <div className="max-w-md text-center">
         {group ? (
           <>
@@ -47,6 +47,6 @@ export function ChannelEmpty({ groupId, group, stage }: {
           </>
         )}
       </div>
-    </div>
+    </Text>
   );
 }

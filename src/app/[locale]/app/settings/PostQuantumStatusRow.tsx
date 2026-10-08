@@ -1,6 +1,6 @@
 'use client';
 
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { useTranslations } from 'next-intl';
 import { usePostQuantumProbe } from '@/hooks/shell/settings/usePostQuantumProbe';
@@ -56,7 +56,7 @@ export function PostQuantumStatusRow() {
       {t('settings.postQuantumNotDetected')}{' '}
       <Link
         href={guidePath('quantum-safe-dms')}
-        className="text-lc-green underline underline-offset-2 hover:text-lc-green/80"
+        variant="prose"
       >
         {t('settings.postQuantumSetupLink')}
       </Link>

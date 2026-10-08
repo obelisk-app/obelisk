@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import type { UserHit } from '@/constants/identity/user-search';
@@ -30,9 +31,9 @@ export function UserResultRow({ hit, badge, onPick }: { hit: UserHit; badge?: st
         <Row gap="1.5" align="center">
           <span className="text-sm text-lc-white truncate">{row.name}</span>
           {badge && (
-            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-lc-green/15 text-lc-green border border-lc-green/30 shrink-0">
+            <Text variant="label" size="9" className="px-1.5 py-0.5 rounded-full bg-lc-green/15 text-lc-green border border-lc-green/30 shrink-0">
               {badge}
-            </span>
+            </Text>
           )}
         </Row>
         <div

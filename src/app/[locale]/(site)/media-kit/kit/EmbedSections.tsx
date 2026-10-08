@@ -1,3 +1,4 @@
+import Link from '@/components/ui/navigation/Link';
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import { embedBadge, embedHtmlBanner, embedOg } from '@/utils/media-kit/content';
@@ -50,14 +51,13 @@ export function EmbedSections() {
           </div>
           <div className="border-t border-lc-border p-3 flex items-center justify-between text-xs text-lc-muted">
             <span>1200 × 630 · /og/obelisk.png</span> {/* i18n-exempt: the image's size and path */}
-            <a
-              href={OG_IMAGE_URL}
+            <Link
+              native href={OG_IMAGE_URL}
               target="_blank"
-              rel="noopener noreferrer"
-              className="lc-pill-secondary px-3 py-1"
+              variant="button" buttonVariant="pillSecondary" size="xs"
             >
               {t('mediaKit.openInNewTab')}
-            </a>
+            </Link>
           </div>
         </Card>
         <CodeBlock

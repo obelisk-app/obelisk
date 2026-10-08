@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import type { DmThread, DmThreadItem as Item } from '@/hooks/chat/dm/thread/useDmThread';
 import { DmBubble } from './DmBubble';
 
@@ -14,7 +15,7 @@ export function DmThreadItem({ item, thread }: { item: Item; thread: DmThread })
     return (
       <div className="my-3 flex items-center gap-3" data-testid="dm-day-divider">
         <span className="h-px flex-1 bg-lc-border" />
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">{item.label}</span>
+        <Text variant="label" size="10" tone="muted" weight="semibold" className="shrink-0">{item.label}</Text>
         <span className="h-px flex-1 bg-lc-border" />
       </div>
     );

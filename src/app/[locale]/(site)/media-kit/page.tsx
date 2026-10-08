@@ -1,7 +1,7 @@
 import IntlScope from '@/i18n/IntlScope';
 import Container from '@/components/ui/layout/Container';
 import Card from '@/components/ui/layout/Card';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { LINKS, NAV_LINKS } from '@/constants/media-kit/content';
 import Section from '@/components/ui/layout/Section';
 import { AboutSections } from './kit/AboutSections';
@@ -43,13 +43,13 @@ export default async function Page() {
 
             <nav className="mt-8 flex flex-wrap gap-2 text-sm">
               {NAV_LINKS.map(([href, labelKey]) => (
-                <a
+                <Link
                   key={href}
                   href={href}
-                  className="lc-pill-secondary px-3 py-1"
+                  variant="button" buttonVariant="pillSecondary" size="xs"
                 >
                   {t(labelKey)}
-                </a>
+                </Link>
               ))}
             </nav>
           </Container>
@@ -97,11 +97,10 @@ export default async function Page() {
           >
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <Card variant="interactive" padding="xl" asChild>
-                <a
+                <Link
                   href={LINKS.site}
                   target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:border-lc-green transition-colors"
+                  variant="card"
                 >
                   <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
                     {t('mediaKit.website')}
@@ -109,14 +108,13 @@ export default async function Page() {
                   <div className="text-sm text-lc-white truncate">
                     {LINKS.site}
                   </div>
-                </a>
+                </Link>
               </Card>
               <Card variant="interactive" padding="xl" asChild>
-                <a
+                <Link
                   href={LINKS.github}
                   target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:border-lc-green transition-colors"
+                  variant="card"
                 >
                   <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
                     GitHub
@@ -124,7 +122,7 @@ export default async function Page() {
                   <div className="text-sm text-lc-white truncate">
                     {LINKS.github}
                   </div>
-                </a>
+                </Link>
               </Card>
               <Card variant="interactive" padding="xl">
                 <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
@@ -143,7 +141,7 @@ export default async function Page() {
             <span>
               {t('mediaKit.needAnythingElse')}
             </span>
-            <Link href="/" className="lc-pill-secondary px-4 py-1">
+            <Link href="/" variant="button" buttonVariant="pillSecondary" size="xs">
               {t('mediaKit.backHome')}
             </Link>
           </div>

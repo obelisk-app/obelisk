@@ -19,7 +19,7 @@ import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
 import { ogImage } from '@/utils/seo/og';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { serverLocale } from '@/services/server/i18n/locale';
 import { parseIdentifier } from '@/services/social/identifier';
 import {
@@ -88,7 +88,7 @@ export default async function ProfileViewerPage({ params }: Params) {
           <Text as="p" variant="muted" className="mt-2">
             {t('social.profileViewer.notFoundHelp')}
           </Text>
-          <Link href="/app" className="lc-pill-primary mt-6 inline-block px-5 py-2 text-xs">
+          <Link href="/app" variant="button" buttonVariant="pill" size="xs" className="mt-6">
             {t('social.viewer.openInObelisk')}
           </Link>
         </div>

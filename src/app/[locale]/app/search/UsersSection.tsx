@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import { useUsersSection } from '@/hooks/shell/search/useUsersSection';
 import type { Translate } from '@/i18n/keys';
 import { UserResultRow } from './UserResultRow';
@@ -9,12 +10,12 @@ export function UsersSection({ query, t, onPreviewUser }: { query: string; t: Tr
   const vm = useUsersSection(query);
   return (
     <section data-testid="search-users-section">
-      <div className="flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-b border-lc-border">
+      <Text as="div" variant="label" size="11" tone="muted" weight="bold" className="flex items-center justify-between px-3 py-2 border-b border-lc-border">
         <span>{t('shell.search.users')}</span>
-        {vm.loading && <span className="text-[10px] normal-case font-normal text-lc-muted">{t('shell.search.searching')}</span>}
-      </div>
+        {vm.loading && <Text size="10" tone="muted" className="normal-case font-normal">{t('shell.search.searching')}</Text>}
+      </Text>
       {vm.empty && (
-        <div className="px-3 py-2 text-xs text-lc-muted">{t('shell.search.noMatches')}</div>
+        <Text as="div" variant="caption" className="px-3 py-2">{t('shell.search.noMatches')}</Text>
       )}
       {vm.rows.map((r) => (
         <UserResultRow key={r.key} hit={r.hit} badge={r.badge} onPick={() => onPreviewUser(r.hit.pubkey)} />

@@ -1,3 +1,4 @@
+import Link from '@/components/ui/navigation/Link';
 import { useTranslations } from 'next-intl';
 import { BRAND_NAME, LINKS, MONO_WORDMARK, OG_IMAGE_URL } from '@/constants/media-kit/content';
 import Section from '@/components/ui/layout/Section';
@@ -20,14 +21,13 @@ export function BannersSection() {
           filename="obelisk-hero-1200x630.png"
           pixelWidth={1200}
           extra={
-            <a
-              href={OG_IMAGE_URL}
+            <Link
+              native href={OG_IMAGE_URL}
               target="_blank"
-              rel="noopener noreferrer"
-              className="lc-pill-secondary px-3 py-1"
+              variant="button" buttonVariant="pillSecondary" size="xs"
             >
               {t('mediaKit.openOgPng')}
-            </a>
+            </Link>
           }
         >
           <HeroBanner />
@@ -88,12 +88,12 @@ export function BannersSection() {
                 {t('mediaKit.brand.tagline')}
               </div>
             </div>
-            <a
+            <Link
               href={LINKS.site}
-              className="lc-pill-primary px-4 py-2 text-sm hidden sm:inline-block"
+              variant="button" buttonVariant="pill" size="sm" className="hidden sm:inline-flex"
             >
               {t('mediaKit.openApp')}
-            </a>
+            </Link>
           </div>
         </BannerCard>
 

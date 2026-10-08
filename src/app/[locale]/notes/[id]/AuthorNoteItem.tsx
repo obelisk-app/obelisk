@@ -1,5 +1,5 @@
 import type { Event as NostrEvent } from 'nostr-tools';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import type { Locale } from '@/i18n';
 import { plainTextForPreview } from '@/services/server/viewer/note-preview';
 import { noteIdentifier } from '@/services/social/note-links';
@@ -21,12 +21,12 @@ export default function AuthorNoteItem({ note, locale, sharedMedia }: { note: No
         <Text as="p" size="sm" tone="default" className="line-clamp-2 break-words">
           {text || sharedMedia}
         </Text>
-        <time
-          className="mt-1 block text-[10px] text-lc-muted"
+        <Text as="time" size="10" tone="muted"
+          className="mt-1 block"
           dateTime={new Date(note.created_at * 1000).toISOString()}
         >
           {formatDate(locale, note.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}
-        </time>
+        </Text>
       </Link>
     </li>
   );

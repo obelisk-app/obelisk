@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import type { JsSearchHit } from '@/services/nostr-bridge';
 import { useSearchResultRow } from '@/hooks/shell/search/useSearchResultRow';
@@ -31,9 +32,9 @@ export function SearchResultRow({ id, active, msg, groupName, t, onJump, onAutho
         <Button variant="bare" onClick={() => onAuthor(msg.pubkey)} className="font-semibold text-lc-white hover:underline truncate">{row.name}</Button>
         <span className="text-lc-muted">{t('shell.search.in')}</span>
         <span className="text-lc-green truncate">#{row.channel}</span>
-        <span className="ml-auto text-[10px] text-lc-muted">
+        <Text size="10" tone="muted" className="ml-auto">
           {row.time}
-        </span>
+        </Text>
       </div>
       <Button variant="bare" onClick={onJump} className="mt-0.5 block w-full text-left text-sm text-lc-white/90 line-clamp-2">{msg.content}</Button>
     </div>

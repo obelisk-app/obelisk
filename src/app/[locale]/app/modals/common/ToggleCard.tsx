@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 
 /** A selectable card: icon, title and subtitle, with a radio dot that fills when active. */
@@ -31,7 +32,7 @@ export function ToggleCard({
       <div className="text-xl leading-none">{icon}</div>
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold">{title}</div>
-        <div className="text-[11px] text-lc-muted">{subtitle}</div>
+        <Text as="div" size="11" tone="muted">{subtitle}</Text>
       </div>
       <div
         className={

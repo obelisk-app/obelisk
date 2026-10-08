@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import VoiceStatusBar from '@/components/voice/status-bar/VoiceStatusBar';
 import { useTranslations } from 'next-intl';
 import type { View } from '@/utils/shell/desktop/view';
@@ -58,21 +59,19 @@ export function Sidebar({
       >
         {/* Relay/AUTH state lives in the unified bottom-right activity stack. */}
         {vm.groups.length === 0 && vm.channelsVisible && !vm.groupMetadataEose && (
-          <div
-            className="px-2 py-3 flex items-center gap-2 text-xs text-lc-muted"
-            data-testid="channels-loading"
-          >
+          <Text as="div" variant="caption"
+            className="px-2 py-3 flex items-center gap-2"
+            data-testid="channels-loading">
             <div className="lc-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
             <span>{t('shell.desktop.channels.loading')}</span>
-          </div>
+          </Text>
         )}
         {vm.groups.length === 0 && vm.channelsVisible && vm.groupMetadataEose && (
-          <div
-            className="px-2 py-3 text-xs text-lc-muted"
-            data-testid="channels-empty"
-          >
+          <Text as="div" variant="caption"
+            className="px-2 py-3"
+            data-testid="channels-empty">
             {t('shell.desktop.channels.empty')}
-          </div>
+          </Text>
         )}
         <ChannelTree
           laidOut={vm.laidOut}

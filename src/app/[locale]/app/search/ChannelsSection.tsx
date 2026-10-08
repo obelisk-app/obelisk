@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useChannelsSection } from '@/hooks/shell/search/useChannelsSection';
@@ -12,9 +13,9 @@ export function ChannelsSection({ matches, t, onClose }: { matches: ReadonlyArra
   if (matches.length === 0) return null;
   return (
     <section data-testid="search-channels-section">
-      <div className="flex items-center px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-b border-lc-border">
+      <Text as="div" variant="label" size="11" tone="muted" weight="bold" className="flex items-center px-3 py-2 border-b border-lc-border">
         <span>{t('shell.search.channels')}</span>
-      </div>
+      </Text>
       {vm.shown.map((g) => (
         <Button
           variant="bare"
@@ -34,7 +35,7 @@ export function ChannelsSection({ matches, t, onClose }: { matches: ReadonlyArra
           )}
           <div className="min-w-0 flex-1">
             <div className="text-sm text-lc-white truncate">#{g.name ?? g.id.slice(0, 8)}</div>
-            {g.about && <div className="text-[11px] text-lc-muted truncate">{g.about}</div>}
+            {g.about && <Text as="div" size="11" tone="muted" className="truncate">{g.about}</Text>}
           </div>
         </Button>
       ))}

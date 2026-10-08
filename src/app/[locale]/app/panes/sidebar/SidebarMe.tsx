@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import UserPanel from '../../user-panel/UserPanel';
 import { GearIcon } from '@/assets/icons';
@@ -36,9 +37,9 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
             {vm.name || t('shell.desktop.me.you')}
           </div>
           {/* NIP-05 when there is one, else a short npub - never raw hex. */}
-          <div className="truncate text-[11px] text-lc-muted" data-testid="sidebar-profile-handle">
+          <Text as="div" size="11" tone="muted" className="truncate" data-testid="sidebar-profile-handle">
             {vm.handle}
-          </div>
+          </Text>
         </div>
       </Button>
       <Button

@@ -1,5 +1,8 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+import List from '@/components/ui/layout/List';
+import Link from '@/components/ui/navigation/Link';
 import Card from '@/components/ui/layout/Card';
 import { createPortal } from 'react-dom';
 import Button from '@/components/ui/buttons/Button';
@@ -43,11 +46,11 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
           border. Recessing the scroll area reproduces the page/card
           contrast /help gets for free from the black page behind it. */}
       <div className="overflow-y-auto flex-1 bg-lc-black/50 p-3">
-        <ul className="flex flex-col gap-2">
+        <List marker="none" spacing="none" className="flex flex-col gap-2">
           {HELP_TOPICS.map((topic) => (
             <li key={topic.slug}>
               <Card variant="interactive" padding="md" asChild>
-                <a
+                <Link native
                   href={localizedPath(vm.locale, helpTopicPath(topic))}
                   data-testid={`help-popover-topic-${topic.slug}`}
                   onClick={onClose}
@@ -58,18 +61,18 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
                     <span className="block text-sm font-semibold text-lc-white group-hover:text-lc-green">
                       {t(topic.titleKey)}
                     </span>
-                    <span className="mt-1 block text-xs leading-5 text-lc-muted">
+                    <Text variant="caption" className="mt-1 block leading-5">
                       {t(topic.descriptionKey)}
-                    </span>
+                    </Text>
                   </span>
-                </a>
+                </Link>
               </Card>
             </li>
           ))}
-        </ul>
+        </List>
       </div>
       <div className="space-y-2 border-t border-lc-border px-4 py-3">
-        <a
+        <Link native
           href={localizedPath(vm.locale, guidePath())}
           data-testid="help-popover-view-more"
           onClick={onClose}
@@ -77,7 +80,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
         >
           <BookIcon size={14} />
           {t('help.viewMore')}
-        </a>
+        </Link>
         {/*
           The in-app hints are one-shot by design, so this is the only
           way back to them, and the only honest place for it is where

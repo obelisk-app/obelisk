@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import { setPreference } from '@/services/preferences/preferences';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import AccountBackupExport from '@/components/settings/account/AccountBackupExport';
@@ -21,7 +22,7 @@ export function AdvancedSettingsSection() {
         <AccountBackupExport />
       </Card>
       <section className="space-y-3 border-t border-lc-border pt-4" data-testid="desktop-developer-settings">
-        <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">{t('settings.developer.section')}</div>
+        <Text as="div" variant="label" size="xs" tone="muted" weight="semibold">{t('settings.developer.section')}</Text>
         <ToggleRow
           label={t('settings.developer.relayLogs')}
           description={t('settings.developer.relayLogsHelp')}

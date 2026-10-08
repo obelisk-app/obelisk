@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+import List from '@/components/ui/layout/List';
 import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import { createPortal } from 'react-dom';
@@ -82,13 +84,13 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
       </div>
       <div className="overflow-y-auto flex-1">
         {!tabHasItems ? (
-          <div className="px-4 py-8 text-center text-sm text-lc-muted">
+          <Text as="div" size="sm" tone="muted" className="px-4 py-8 text-center">
             {notifTab === 'mentions'
               ? t('shell.desktop.inbox.caughtUpMentions')
               : t('shell.desktop.inbox.caughtUpDms')}
-          </div>
+          </Text>
         ) : notifTab === 'mentions' ? (
-          <ul className="flex flex-col">
+          <List marker="none" spacing="none" className="flex flex-col">
             {mentions.map((m) => (
               <InboxRow
                 key={m.id}
@@ -99,9 +101,9 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
                 onClick={() => onMentionClick(m)}
               />
             ))}
-          </ul>
+          </List>
         ) : (
-          <ul className="flex flex-col">
+          <List marker="none" spacing="none" className="flex flex-col">
             {lockedDms > 0 && (
               <InboxRow
                 read={false}
@@ -122,7 +124,7 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
                 onClick={() => onDmClick(d)}
               />
             ))}
-          </ul>
+          </List>
         )}
       </div>
     </div>,

@@ -1,11 +1,10 @@
 import Card from '@/components/ui/layout/Card';
-import { buttonClass } from '@/utils/style/button-class';
 import MarketingPageHeader from '@/components/marketing/site/MarketingPageHeader';
 import MarketingCta from '@/components/marketing/site/MarketingCta';
 import Container from '@/components/ui/layout/Container';
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import ShootingStars from '@/components/ui/animations/ShootingStars';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { standardPageMetadata } from '@/utils/seo/standard';
@@ -93,8 +92,8 @@ export default async function FeaturesPage() {
           title={<>{t('marketing.features.headline')}<span className="text-lc-green lc-glow-text"> {t('marketing.features.headlineAccent')}</span></>}
           description={t('marketing.features.subhead')}
         >
-            <Link href="/app" prefetch={false} className={buttonClass({ variant: 'pill', size: 'lg' })}>{t('marketing.features.openApp')}</Link>
-            <a href="https://github.com/obelisk-app/obelisk" className={buttonClass({ variant: 'pillSecondary', size: 'lg' })} target="_blank" rel="noopener noreferrer">{t('marketing.features.viewSource')}</a>
+            <Link href="/app" prefetch={false} variant="button" buttonVariant="pill" size="lg">{t('marketing.features.openApp')}</Link>
+            <Link href="https://github.com/obelisk-app/obelisk" variant="button" buttonVariant="pillSecondary" size="lg" target="_blank">{t('marketing.features.viewSource')}</Link>
         </MarketingPageHeader>
 
         <Container width="6xl" as="section" className="space-y-24 px-6 py-12 lg:space-y-32">
@@ -115,7 +114,7 @@ export default async function FeaturesPage() {
         </Container>
 
         <MarketingCta title={t('marketing.features.ctaTitle')} description={t('marketing.features.ctaBody')}>
-          <Link href="/app" prefetch={false} className={buttonClass({ variant: 'pill', size: 'lg' })}>{t('marketing.features.ctaButton')}</Link>
+          <Link href="/app" prefetch={false} variant="button" buttonVariant="pill" size="lg">{t('marketing.features.ctaButton')}</Link>
         </MarketingCta>
 
       </div>

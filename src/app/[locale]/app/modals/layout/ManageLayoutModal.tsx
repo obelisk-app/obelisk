@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Row from '@/components/ui/layout/Row';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { shortHost } from '@/utils/relay-url/url-host';
@@ -42,7 +43,7 @@ export function ManageLayoutModal({
       <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-6">
         {/* Add category */}
         <section className="space-y-2">
-          <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">{t('mobile.layout.newCategory')}</div>
+          <Text as="div" variant="label" size="xs" tone="muted" weight="bold">{t('mobile.layout.newCategory')}</Text>
           <Row gap="2" align="stretch">
             <Input
               value={vm.newCategoryName}
@@ -61,13 +62,13 @@ export function ManageLayoutModal({
         {/* Categories list */}
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">{t('mobile.layout.categories')}</div>
-            <div className="text-[11px] text-lc-muted">{t('shell.desktop.layout.grabHint')}</div>
+            <Text as="div" variant="label" size="xs" tone="muted" weight="bold">{t('mobile.layout.categories')}</Text>
+            <Text as="div" size="11" tone="muted">{t('shell.desktop.layout.grabHint')}</Text>
           </div>
           {laidOut.categories.length === 0 && (
-            <div className="rounded-lg border border-dashed border-lc-border p-3 text-center text-xs text-lc-muted">
+            <Text as="div" variant="caption" className="rounded-lg border border-dashed border-lc-border p-3 text-center">
               {t('shell.desktop.layout.empty')}
-            </div>
+            </Text>
           )}
           {laidOut.categories.map((cat, idx) => (
             <LayoutCategoryCard
@@ -88,9 +89,9 @@ export function ManageLayoutModal({
 
         {/* Uncategorized channels */}
         <section className="space-y-2">
-          <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">
+          <Text as="div" variant="label" size="xs" tone="muted" weight="bold">
             {t('mobile.layout.uncategorizedCount', { count: laidOut.uncategorized.length })}
-          </div>
+          </Text>
           <div
             className="space-y-1 rounded-lg"
             onDragOver={drag.bucketDragOver}
@@ -98,9 +99,9 @@ export function ManageLayoutModal({
             data-testid="layout-uncategorized"
           >
             {laidOut.uncategorized.length === 0 ? (
-              <div className="rounded border border-dashed border-lc-border px-2 py-2 text-center text-[11px] text-lc-muted">
+              <Text as="div" size="11" tone="muted" className="rounded border border-dashed border-lc-border px-2 py-2 text-center">
                 {t('shell.desktop.layout.allPlaced')}
-              </div>
+              </Text>
             ) : (
               laidOut.uncategorized.map((id, i) => (
                 <ChannelOrderRow

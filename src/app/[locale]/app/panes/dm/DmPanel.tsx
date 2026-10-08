@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import DmThreadMenu from '@/components/chat/dm/thread/DmThreadMenu';
 import PqShield from '@/components/chat/pq/PqShield';
@@ -25,9 +26,9 @@ export function DmPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
 
   if (!peer) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-lc-muted">
+      <Text as="div" size="sm" tone="muted" className="flex h-full items-center justify-center">
         {t('dm.pickConversation')}
-      </div>
+      </Text>
     );
   }
 
@@ -48,9 +49,9 @@ export function DmPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
             {/* An npub, not the raw 64 hex characters. The full key was
                 rendered here in full, which is unreadable, unverifiable at a
                 glance and the widest thing in the header. */}
-            <div className="truncate font-mono text-[10px] text-lc-muted">
+            <Text as="div" size="10" tone="muted" className="truncate font-mono">
               {thread.meta?.nip05 ?? shortNpubLabel(peer)}
-            </div>
+            </Text>
           </div>
         </Button>
         <span className="ml-auto flex items-center gap-1">
@@ -69,7 +70,7 @@ export function DmPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
       <DmProtocolNotice choice={protocolChoice} />
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
         {thread.items.length === 0 ? (
-          <div className="text-sm text-lc-muted">{t('dm.emptyEncrypted')}</div>
+          <Text as="div" size="sm" tone="muted">{t('dm.emptyEncrypted')}</Text>
         ) : (
           thread.items.map((it) => <DmThreadItem key={it.key} item={it} thread={thread} />)
         )}

@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { CloseIcon } from '@/assets/icons';
@@ -29,9 +30,9 @@ export function ComposerAttachments({ urls, uploading, onRemove }: {
         </div>
       ))}
       {uploading && (
-        <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-lc-border text-[10px] uppercase tracking-wider text-lc-muted">
+        <Text as="div" variant="label" size="10" tone="muted" className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-lc-border">
           …
-        </div>
+        </Text>
       )}
     </div>
   );

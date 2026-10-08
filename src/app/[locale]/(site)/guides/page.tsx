@@ -1,5 +1,5 @@
 import Container from '@/components/ui/layout/Container';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { cachedGuideList } from '@/services/guides/cached-guides';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { absoluteUrl } from '@/utils/seo/alternates';

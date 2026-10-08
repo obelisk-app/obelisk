@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import type { JsGroup } from '@/services/nostr-bridge';
 import { ChannelContextMenu } from '@/components/chat/channel/ChannelContextMenu';
@@ -75,12 +76,11 @@ export function GroupNode({
           <ActiveCallBadge groupId={group.id} kind={group.kind} />
           {vm.muted && <span title={t('chat.channelMenu.muted')} aria-label={t('chat.channelMenu.muted')} className="text-[11px]">🔕</span>}
           {vm.unread > 0 && (
-            <span
+            <Text variant="caption"
               aria-label={t('shell.desktop.channels.unread', { count: vm.unread })}
-              className="text-xs tabular-nums text-lc-muted"
-            >
+              className="tabular-nums">
               {vm.unread > 99 ? '99+' : vm.unread}
-            </span>
+            </Text>
           )}
           {vm.mentionsOrReplies > 0 && (
             <span

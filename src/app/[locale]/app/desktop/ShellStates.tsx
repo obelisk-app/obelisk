@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 /**
  * The reconnecting screen. The desktop shell's other small standalone
  * states sit beside it, one per file: `EmptyState`,
@@ -19,7 +20,7 @@ export function RehydratingScreen() {
     >
       <Stack gap="4" align="center">
         <div className="lc-spinner" />
-        <div className="text-sm text-lc-muted">{t('common.reconnecting')}</div>
+        <Text as="div" size="sm" tone="muted">{t('common.reconnecting')}</Text>
       </Stack>
     </div>
   );

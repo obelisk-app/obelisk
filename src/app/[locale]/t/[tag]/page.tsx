@@ -1,3 +1,4 @@
+import List from '@/components/ui/layout/List';
 /**
  * Public hashtag page - `/t/<tag>`.
  *
@@ -83,7 +84,7 @@ export default async function HashtagPage({ params }: Params) {
         </Text>
       </div>
 
-      <ul className="divide-y divide-lc-border border-t border-lc-border" data-testid="hashtag-notes">
+      <List marker="none" spacing="none" className="divide-y divide-lc-border border-t border-lc-border" data-testid="hashtag-notes">
         {notes.map((note) => (
           <HashtagNoteItem
             key={note.id}
@@ -93,7 +94,7 @@ export default async function HashtagPage({ params }: Params) {
             sharedMedia={t('social.viewer.sharedMedia')}
           />
         ))}
-      </ul>
+      </List>
     </HashtagShell>
   );
 }

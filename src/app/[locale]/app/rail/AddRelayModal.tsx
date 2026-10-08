@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
 import { useAddRelayModal } from '@/hooks/shell/rail/useAddRelayModal';
 import Modal from '@/components/ui/overlays/Modal';
@@ -32,7 +33,7 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         {vm.tab === 'suggested' ? (
-          <ul className="flex flex-col gap-2">
+          <List marker="none" spacing="none" className="flex flex-col gap-2">
             {SUGGESTED_RELAYS.map((r) => (
               <SuggestedRelayItem
                 key={r.url}
@@ -41,7 +42,7 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
                 onAdded={onClose}
               />
             ))}
-          </ul>
+          </List>
         ) : (
           <CustomRelayForm onAdded={onClose} />
         )}

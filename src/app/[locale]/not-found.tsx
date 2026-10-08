@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { NOINDEX } from '@/constants/seo/page';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
@@ -23,7 +23,7 @@ export default async function NotFound() {
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
       <Heading as="h1" className="text-3xl font-bold text-lc-white">{t('common.notFound.title')}</Heading>
       <Text as="p" tone="muted" className="max-w-md">{t('common.notFound.body')}</Text>
-      <Link href="/" className="lc-pill lc-pill-primary px-6 py-2 text-sm">{t('common.notFound.home')}</Link>
+      <Link href="/" variant="button" buttonVariant="pill" size="sm">{t('common.notFound.home')}</Link>
     </main>
   );
 }

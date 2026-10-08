@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import { FilterRow } from './FilterRow';
 import Button from '@/components/ui/buttons/Button';
 import type { Translate } from '@/i18n/keys';
@@ -23,13 +24,12 @@ export function FilterAndHistoryPane({
         while the feed's search is the open network. They looked identical.
       */}
       <div className="flex items-center justify-between gap-2 border-b border-lc-border px-3 py-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-lc-muted">{t('shell.search.filters.title')}</span>
-        <span
-          className="shrink-0 truncate rounded-full border border-lc-border px-2 py-0.5 text-[10px] font-semibold text-lc-muted"
-          data-testid="search-scope-badge"
-        >
+        <Text variant="label" size="11" tone="muted" weight="bold">{t('shell.search.filters.title')}</Text>
+        <Text size="10" tone="muted" weight="semibold"
+          className="shrink-0 truncate rounded-full border border-lc-border px-2 py-0.5"
+          data-testid="search-scope-badge">
           {t('shell.search.scopeThisRelay', { server: serverName })}
-        </span>
+        </Text>
       </div>
       <FilterRow icon="👤" title={t('shell.search.filters.fromUser.title')} hint={t('shell.search.filters.fromUser.example')} onClick={() => onPickFilter('from:')} />
       <FilterRow icon="#" title={t('shell.search.filters.inChannel.title')} hint={t('shell.search.filters.inChannel.example')} onClick={() => onPickFilter('in:')} />
@@ -38,13 +38,13 @@ export function FilterAndHistoryPane({
       <FilterRow icon="📅" title={t('shell.search.filters.date.title')} hint={t('shell.search.filters.date.example')} onClick={() => onPickFilter('after:')} />
       {history.length > 0 && (
         <>
-          <div className="flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-t border-lc-border">
+          <Text as="div" variant="label" size="11" tone="muted" weight="bold" className="flex items-center justify-between px-3 py-2 border-t border-lc-border">
             <span>{t('shell.search.history.title')}</span>
             {/* `-my-1` keeps the header row at its old height around the `p-1` button. */}
             <Button variant="ghost" size="icon" onClick={onClearHistory} className="-my-1" aria-label={t('shell.search.history.clear')}>
               <TrashIcon size={13} strokeWidth={2} />
             </Button>
-          </div>
+          </Text>
           {history.map((h) => (
             <Button
               variant="bare"

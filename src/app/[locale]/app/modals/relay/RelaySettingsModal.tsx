@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import Modal from '@/components/ui/overlays/Modal';
 import { useTranslations } from 'next-intl';
@@ -38,7 +39,7 @@ export function RelaySettingsModal(props: {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold text-lc-white">{t(`shell.desktop.server.items.${icon}.title`)}</span>
-              <span className="mt-1 block text-xs text-lc-muted">{t(`shell.desktop.server.items.${icon}.description`)}</span>
+              <Text variant="caption" className="mt-1 block">{t(`shell.desktop.server.items.${icon}.description`)}</Text>
             </span>
             <ChevronRightIcon strokeWidth={2} className="shrink-0 text-lc-muted" />
           </Button>

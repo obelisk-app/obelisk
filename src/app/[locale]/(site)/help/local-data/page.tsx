@@ -1,6 +1,7 @@
+import List from '@/components/ui/layout/List';
 import Container from '@/components/ui/layout/Container';
 import Card from '@/components/ui/layout/Card';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
 import type { MessageKey } from '@/i18n/keys';
 import Section from '@/components/ui/layout/Section';
@@ -38,7 +39,7 @@ export default async function Page() {
     <div className="min-h-screen bg-lc-black lc-grid-bg">
 
       <Container width="3xl" as="main" className="px-6 pb-24 pt-28" data-testid="local-data-help">
-        <Link href="/help" className="text-sm font-medium text-lc-green hover:text-lc-green-dark">
+        <Link href="/help" variant="text" className="text-sm font-medium">
           {t('help.localData.back')}
         </Link>
         <Heading as="h1" variant="page" className="mt-5">
@@ -47,9 +48,9 @@ export default async function Page() {
         <Text as="p" variant="lead" className="mt-3">{t('help.localData.intro')}</Text>
 
         <Section variant="prose" title={t('help.localData.why.title')}>
-          <ul className="list-disc space-y-2 pl-5">
-            {WHY.map((key) => <li key={key}>{t(key)}</li>)}
-          </ul>
+          <List>
+            {WHY.map((key) => <Text as="li" key={key}>{t(key)}</Text>)}
+          </List>
         </Section>
 
         <Section variant="prose" title={t('help.localData.server.title')}>
@@ -73,16 +74,16 @@ export default async function Page() {
         </Section>
 
         <Section variant="prose" title={t('help.localData.other.title')} data-testid="local-data-help-other">
-          <ul className="list-disc space-y-3 pl-5">
-            <li>{t('help.localData.other.logout')}</li>
-            <li>
+          <List spacing="none" className="space-y-3">
+            <Text as="li">{t('help.localData.other.logout')}</Text>
+            <Text as="li">
               {t('help.localData.other.browser')}
-              <ul className="mt-2 list-[circle] space-y-2 pl-5">
-                {BROWSERS.map((key) => <li key={key}>{t(key)}</li>)}
-              </ul>
-            </li>
-            <li>{t('help.localData.other.private')}</li>
-          </ul>
+              <List marker="circle" spacing="normal" className="mt-2">
+                {BROWSERS.map((key) => <Text as="li" key={key}>{t(key)}</Text>)}
+              </List>
+            </Text>
+            <Text as="li">{t('help.localData.other.private')}</Text>
+          </List>
         </Section>
 
         <Section variant="prose" title={t('help.localData.published.title')}>

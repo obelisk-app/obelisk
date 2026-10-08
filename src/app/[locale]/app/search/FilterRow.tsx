@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 
 /** One search filter the empty dropdown offers: its glyph, what it does and an example. */
@@ -9,7 +10,7 @@ export function FilterRow({ icon, title, hint, onClick }: { icon: string; title:
       <span className="mt-0.5 w-6 text-center text-base text-lc-muted">{icon}</span>
       <span className="flex-1 min-w-0">
         <div className="text-sm text-lc-white">{title}</div>
-        <div className="text-xs text-lc-muted">{hint}</div>
+        <Text as="div" variant="caption">{hint}</Text>
       </span>
     </Button>
   );

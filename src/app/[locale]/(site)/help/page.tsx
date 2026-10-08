@@ -1,6 +1,6 @@
 import Container from '@/components/ui/layout/Container';
 import Card from '@/components/ui/layout/Card';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { helpTopicPath } from '@/utils/guides/help-topics';
 import { HELP_TOPICS } from '@/constants/guides/help-topics';
@@ -32,7 +32,7 @@ export default async function Page() {
     <div className="min-h-screen bg-lc-black lc-grid-bg">
 
       <Container width="5xl" as="main" className="px-6 pb-24 pt-28">
-        <Link href="/app" prefetch={false} className="text-sm font-medium text-lc-green hover:text-lc-green-dark">
+        <Link href="/app" prefetch={false} variant="text" className="text-sm font-medium">
           {t('help.back')}
         </Link>
         <Heading as="h1" variant="page" className="mt-5">
@@ -46,7 +46,7 @@ export default async function Page() {
               <Link
                 href={helpTopicPath(topic)}
                 data-testid={`help-topic-${topic.slug}`}
-                className="group transition-colors hover:border-lc-green/50"
+                variant="card" className="group"
               >
                 <Heading as="h2" variant="cardLink">{t(topic.titleKey)}</Heading>
                 <Text as="p" variant="muted" className="mt-2 leading-6">{t(topic.descriptionKey)}</Text>
@@ -57,7 +57,7 @@ export default async function Page() {
 
         <Link
           href={guidePath()}
-          className="lc-pill-primary mt-8 inline-flex px-6 py-3 text-sm font-semibold"
+          variant="button" buttonVariant="pill" size="sm" className="mt-8"
         >
           {t('help.all')}
         </Link>

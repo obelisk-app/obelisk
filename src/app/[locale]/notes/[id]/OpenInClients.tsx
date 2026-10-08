@@ -1,3 +1,5 @@
+import List from '@/components/ui/layout/List';
+import Link from '@/components/ui/navigation/Link';
 /**
  * "Open in" - the other Nostr clients that can display this event.
  *
@@ -26,10 +28,10 @@ export default async function OpenInClients({ identifier }: { identifier: string
         Wraps on a narrow rail and stays a single flowing row on mobile, so
         one list works in both places without a second layout.
       */}
-      <ul className="flex flex-wrap gap-2">
+      <List marker="none" spacing="none" className="flex flex-wrap gap-2">
         {NOSTR_CLIENTS.map((client) => (
           <li key={client.id}>
-            <a
+            <Link
               href={client.event(identifier)}
               // A `nostr:` URI has to stay in this tab for the OS handler to
               // claim it; opening a new tab would just fail to navigate.
@@ -42,10 +44,10 @@ export default async function OpenInClients({ identifier }: { identifier: string
               data-testid={`open-in-${client.id}`}
             >
               {client.nameKey ? t(client.nameKey) : client.name}
-            </a>
+            </Link>
           </li>
         ))}
-      </ul>
+      </List>
     </section>
   );
 }

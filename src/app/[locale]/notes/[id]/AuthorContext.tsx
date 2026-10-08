@@ -1,3 +1,4 @@
+import List from '@/components/ui/layout/List';
 /**
  * Everything on a note page that isn't the note.
  *
@@ -9,7 +10,7 @@
  * Server-rendered along with the note, so it's in the HTML a crawler sees.
  */
 
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { serverLocale } from '@/services/server/i18n/locale';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
@@ -49,11 +50,11 @@ export default async function AuthorContext({
     <div className="min-w-0 space-y-8" data-testid="author-context">
       {notes.length > 0 && (
         <AuthorContextSection title={t('social.viewer.moreFrom', { name })} testId="author-more-notes">
-          <ul className="space-y-2">
+          <List marker="none" spacing="normal">
             {notes.map((note) => (
               <AuthorNoteItem key={note.id} note={note} locale={locale} sharedMedia={t('social.viewer.sharedMedia')} />
             ))}
-          </ul>
+          </List>
         </AuthorContextSection>
       )}
 
@@ -75,7 +76,7 @@ export default async function AuthorContext({
 
       {follows.length > 0 && (
         <AuthorContextSection title={t('social.author.follows')} testId="author-follows">
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
+          <List marker="none" spacing="none" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
             {follows.map((profile) => (
               <li key={profile.pubkey}>
                 <Link
@@ -103,13 +104,13 @@ export default async function AuthorContext({
                 </Link>
               </li>
             ))}
-          </ul>
+          </List>
         </AuthorContextSection>
       )}
 
       {writeRelays.length > 0 && (
         <AuthorContextSection title={t('social.author.publishesTo')} testId="author-relays">
-          <ul className="flex flex-wrap gap-1.5">
+          <List marker="none" spacing="none" className="flex flex-wrap gap-1.5">
             {writeRelays.map((relay) => (
               <li
                 key={relay}
@@ -118,7 +119,7 @@ export default async function AuthorContext({
                 {relayHostLabel(relay)}
               </li>
             ))}
-          </ul>
+          </List>
           <Text as="p" size="10" tone="muted" className="mt-2">
             {t('social.author.relaysHelp')}
           </Text>

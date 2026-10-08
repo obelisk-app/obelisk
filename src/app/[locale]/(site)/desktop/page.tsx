@@ -6,10 +6,9 @@ import { tourJsonLd, tourMetadata, type Tour } from '@/utils/seo/showcase';
 import JsonLd from '@/components/seo/JsonLd';
 import Container from '@/components/ui/layout/Container';
 import PageSection from '@/components/ui/layout/PageSection';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import ShootingStars from '@/components/ui/animations/ShootingStars';
 import { ShowcaseRow, type ShowcaseItem } from '@/components/marketing/showcase/Showcase';
-import { buttonClass } from '@/utils/style/button-class';
 
 
 const TOUR: Tour = {
@@ -84,12 +83,12 @@ export default async function DesktopPage() {
             title={<>{t('showcase.desktop.hero.title')} <span className="text-lc-green lc-glow-text">{t('showcase.desktop.hero.titleHighlight')}</span></>}
             description={t('showcase.desktop.hero.subtitle')}
           >
-                <Link href="/app" prefetch={false} className={buttonClass({ variant: 'pill', size: 'lg' })}>
+                <Link href="/app" prefetch={false} variant="button" buttonVariant="pill" size="lg">
                   {t('showcase.desktop.hero.cta')}
                 </Link>
                 <Link
                   href="/mobile"
-                  className={buttonClass({ variant: 'pillSecondary', size: 'lg' })}
+                  variant="button" buttonVariant="pillSecondary" size="lg"
                 >
                   {t('showcase.desktop.hero.ctaSecondary')}
                 </Link>
@@ -104,7 +103,7 @@ export default async function DesktopPage() {
           </PageSection>
 
           <MarketingCta title={t('showcase.desktop.cta.heading')} description={t('showcase.desktop.cta.subtitle')}>
-            <Link href="/app" prefetch={false} className={buttonClass({ variant: 'pill', size: 'lg' })}>
+            <Link href="/app" prefetch={false} variant="button" buttonVariant="pill" size="lg">
               {t('showcase.desktop.cta.button')}
             </Link>
           </MarketingCta>

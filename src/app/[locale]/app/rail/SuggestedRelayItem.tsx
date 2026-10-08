@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import { useSuggestedRelayItem } from '@/hooks/shell/rail/useSuggestedRelayItem';
 import Button from '@/components/ui/buttons/Button';
 import ErrorState from '@/components/ui/feedback/ErrorState';
@@ -35,8 +36,8 @@ export function SuggestedRelayItem({
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold text-lc-white">{item.name}</div>
-        <div className="truncate font-mono text-xs text-lc-muted">{url}</div>
-        <div className="mt-0.5 truncate text-xs text-lc-muted">{item.description}</div>
+        <Text as="div" variant="caption" className="truncate font-mono">{url}</Text>
+        <Text as="div" variant="caption" className="mt-0.5 truncate">{item.description}</Text>
         {item.error && <ErrorState as="div" className="mt-1">{item.error}</ErrorState>}
       </div>
       <Button onClick={item.add} disabled={alreadyAdded || item.busy} className="shrink-0">

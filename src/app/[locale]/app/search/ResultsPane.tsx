@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import type { JsGroup, JsSearchHit } from '@/services/nostr-bridge';
 import { isEmptyQuery, type ParsedQuery } from '@/utils/chat/search/search-query';
 import { useResultsPane } from '@/hooks/shell/search/useResultsPane';
@@ -49,7 +50,7 @@ export function ResultsPane({
     <>
       {vm.showEntities && <UsersSection query={entityQuery} t={t} onPreviewUser={onPreviewUser} />}
       {vm.showEntities && <ChannelsSection matches={channelMatches} t={t} onClose={onClose} />}
-      <div className="flex items-center gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-lc-muted border-b border-lc-border">
+      <Text as="div" variant="label" size="11" tone="muted" weight="bold" className="flex items-center gap-2 px-3 py-2 border-b border-lc-border">
         <span data-testid="search-messages-header" aria-live="polite">
           {busy ? t('shell.search.messagesSearching') : t('shell.search.messagesHeader', { count: String(results.length) })}
         </span>
@@ -64,7 +65,7 @@ export function ResultsPane({
             {thisChannelOnly ? t('shell.search.scope.channel') : t('shell.search.scope.relay')}
           </Chip>
         )}
-      </div>
+      </Text>
 
       {parsed.unresolved.length > 0 && (
         <div className="px-3 py-2 text-xs text-amber-300/90" data-testid="search-unresolved">
@@ -82,9 +83,9 @@ export function ResultsPane({
       )}
       {error && <div className="px-3 py-2 text-xs text-red-400">{error}</div>}
       {!busy && results.length === 0 && !error && (
-        <div className="px-3 py-3 text-center text-xs text-lc-muted">
+        <Text as="div" variant="caption" className="px-3 py-3 text-center">
           {isEmptyQuery(parsed) ? t('shell.search.messagesPrompt') : t('shell.search.noMatches')}
-        </div>
+        </Text>
       )}
 
       <div role="listbox" aria-label={t('shell.search.messagesHeader', { count: String(results.length) })}>
@@ -115,7 +116,7 @@ export function ResultsPane({
         </Button>
       )}
       {results.length > 0 && !relayFiltered && parsed.terms.length > 0 && (
-        <div className="px-3 py-1.5 text-[10px] text-lc-muted">{t('shell.search.localFilterNote')}</div>
+        <Text as="div" size="10" tone="muted" className="px-3 py-1.5">{t('shell.search.localFilterNote')}</Text>
       )}
     </>
   );

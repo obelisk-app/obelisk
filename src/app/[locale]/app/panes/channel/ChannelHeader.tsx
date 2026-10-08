@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Row from '@/components/ui/layout/Row';
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
@@ -35,7 +36,7 @@ export function ChannelHeader({ groupId, group, isAdmin, showMembers, onToggleMe
               </span>
             )}
           </Row>
-          {group?.about && <div className="truncate text-xs text-lc-muted">{group.about}</div>}
+          {group?.about && <Text as="div" variant="caption" className="truncate">{group.about}</Text>}
         </div>
       </div>
       <Row gap="2" align="center">

@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import { useTranslations } from 'next-intl';
 import { useDmOptInGate } from '@/hooks/shell/dm/useDmOptInGate';
 import Button from '@/components/ui/buttons/Button';
@@ -66,14 +67,14 @@ export default function DmOptInGate({
           </div>
         </div>
 
-        <ul className={compact ? 'space-y-2 text-xs text-lc-muted' : 'space-y-2 text-sm text-lc-muted'}>
+        <List marker="none" spacing="none" className={compact ? 'space-y-2 text-xs text-lc-muted' : 'space-y-2 text-sm text-lc-muted'}>
           {COPY_KEYS.map((key) => (
             <li key={key} className="flex gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-lc-green" aria-hidden="true" />
               <span>{t(key)}</span>
             </li>
           ))}
-        </ul>
+        </List>
 
         <div className={compact ? 'mt-5 space-y-2' : 'mt-6 flex flex-col gap-2 sm:flex-row'}>
           <Button variant="pill" size="sm" onClick={enable} className="min-h-11" data-testid="enable-dms-button">

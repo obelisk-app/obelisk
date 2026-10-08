@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import { type MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
@@ -16,7 +17,7 @@ export function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
     <HoverCardShell
       title={`⚡ ${t('shell.desktop.zaps.sats', { amount: formatNumber(zapTotal.totalSats) })} · ${t('shell.desktop.zaps.count', { count: zapTotal.count })}`}
     >
-      <ul className="space-y-0.5">
+      <List marker="none" spacing="none" className="space-y-0.5">
         {shown.map(([pk, sats]) => (
           <li key={pk} className="flex items-center justify-between gap-2 truncate">
             <span className="truncate"><PubkeyName pubkey={pk} /></span>
@@ -24,7 +25,7 @@ export function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
           </li>
         ))}
         {extra > 0 && <li className="text-lc-muted">{t('shell.desktop.reactions.andMore', { count: String(extra) })}</li>}
-      </ul>
+      </List>
     </HoverCardShell>
   );
 }

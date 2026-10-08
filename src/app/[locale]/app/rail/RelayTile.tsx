@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import HintDot from '@/components/hints/HintDot';
 import { useTranslations } from 'next-intl';
@@ -94,7 +95,7 @@ export function RelayTile({
         <>
           <div className="fixed inset-0 z-40" onClick={closeMenu} />
           <div role="menu" aria-label={url} className={`absolute left-14 top-0 z-50 w-44 ${MENU_PANEL_CLASS}`}>
-            <div className="px-3 py-2 text-[10px] font-mono text-lc-muted truncate">{url}</div>
+            <Text as="div" size="10" tone="muted" className="px-3 py-2 font-mono truncate">{url}</Text>
             <MenuItem label={t('shell.rail.switchTo')} onClick={switchTo} />
             <MenuItem
               label={copied ? t('common.copied') : t('shell.rail.copyShareLink')}

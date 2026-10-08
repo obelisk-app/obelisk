@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import { useTranslations } from 'next-intl';
 import { useReactorHoverCard } from '@/hooks/shell/panes/message/useReactorHoverCard';
 import { HoverCardShell } from './HoverCardShell';
@@ -17,14 +18,14 @@ export function ReactorHoverCard({
   const { shown, extra, total } = useReactorHoverCard(pubkeys);
   return (
     <HoverCardShell title={`${emoji} ${t('shell.desktop.reactions.count', { count: total })}`}>
-      <ul className="space-y-0.5">
+      <List marker="none" spacing="none" className="space-y-0.5">
         {shown.map((pk) => (
           <li key={pk} className="truncate">
             <PubkeyName pubkey={pk} />
           </li>
         ))}
         {extra > 0 && <li className="text-lc-muted">{t('shell.desktop.reactions.andMore', { count: String(extra) })}</li>}
-      </ul>
+      </List>
     </HoverCardShell>
   );
 }

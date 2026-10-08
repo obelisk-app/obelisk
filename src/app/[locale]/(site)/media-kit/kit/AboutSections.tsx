@@ -1,3 +1,4 @@
+import Link from '@/components/ui/navigation/Link';
 import Card from '@/components/ui/layout/Card';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
@@ -62,13 +63,13 @@ export function AboutSections() {
                     {a.src}
                   </div>
                 </div>
-                <a
+                <Link
                   href={a.src}
                   download={a.download}
-                  className="lc-pill-primary text-xs px-3 py-1 shrink-0"
+                  variant="button" buttonVariant="pill" size="xs" className="shrink-0"
                 >
                   {t('mediaKit.download')}
-                </a>
+                </Link>
               </div>
             </Card>
           ))}

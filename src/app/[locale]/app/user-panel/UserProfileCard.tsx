@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import { createPortal } from 'react-dom';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
 import UserAvatar from '@/components/ui/media/UserAvatar';
@@ -54,9 +55,9 @@ export function UserProfileCard({ pubkey, meta, displayName, npub, isMe, style, 
             <div className="text-lg font-semibold text-lc-white">{displayName}</div>
             {meta?.nip05 && <div className="truncate text-xs text-lc-green">{meta.nip05}</div>}
             {npub && (
-              <div className="mt-0.5 truncate font-mono text-[10px] text-lc-muted">
+              <Text as="div" size="10" tone="muted" className="mt-0.5 truncate font-mono">
                 {npub.slice(0, 24)}…
-              </div>
+              </Text>
             )}
           </div>
         </div>
@@ -64,10 +65,10 @@ export function UserProfileCard({ pubkey, meta, displayName, npub, isMe, style, 
         {/* About */}
         {meta?.about && (
           <div className="mt-2 px-4">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
+            <Text as="div" variant="label" size="10" tone="muted" weight="semibold">
               {t('shell.user.about')}
-            </div>
-            <div className="mt-0.5 line-clamp-3 text-xs text-lc-muted">{meta.about}</div>
+            </Text>
+            <Text as="div" variant="caption" className="mt-0.5 line-clamp-3">{meta.about}</Text>
           </div>
         )}
 

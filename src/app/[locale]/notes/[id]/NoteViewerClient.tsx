@@ -10,7 +10,7 @@
  * happens when the relays were slow rather than when the note is gone.
  */
 
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
 import NoteCard from '@/components/social/note/NoteCard';
@@ -44,7 +44,7 @@ export default function NoteViewerClient({
       <div className="px-5 py-20 text-center" data-testid="note-viewer-missing">
         <Heading as="h1" variant="card">{t('social.noteNotFoundTitle')}</Heading>
         <Text as="p" variant="muted" className="mt-2">{t('social.noteNotFound')}</Text>
-        <Link href="/app?s=feed" className="lc-pill-primary mt-6 inline-block px-5 py-2 text-xs">
+        <Link href="/app?s=feed" variant="button" buttonVariant="pill" size="xs" className="mt-6">
           {t('social.noteViewer.openApp')}
         </Link>
       </div>

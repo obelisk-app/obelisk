@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Row from '@/components/ui/layout/Row';
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
@@ -78,9 +79,9 @@ export function LayoutCategoryCard({
       </Row>
       <div className="mt-2 space-y-1">
         {cat.channelIds.length === 0 ? (
-          <div className="rounded border border-dashed border-lc-border px-2 py-2 text-center text-[11px] text-lc-muted">
+          <Text as="div" size="11" tone="muted" className="rounded border border-dashed border-lc-border px-2 py-2 text-center">
             {t('shell.desktop.layout.dropHere')}
-          </div>
+          </Text>
         ) : (
           cat.channelIds.map((id, i) => (
             <ChannelOrderRow

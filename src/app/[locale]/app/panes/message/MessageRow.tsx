@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import { memo } from 'react';
 import type { JsMessage } from '@/services/nostr-bridge';
 import MessageContent from '@/components/chat/message/MessageContent';
@@ -71,14 +72,14 @@ export const MessageRow = memo(function MessageRow({
           <div className="flex items-baseline gap-2">
             <Button variant="bare" onClick={vm.openProfile} className="text-sm font-bold text-lc-white hover:underline">{vm.displayName}</Button>
             <RoleBadge pubkey={msg.pubkey} />
-            <span className="text-[10px] text-lc-muted">
+            <Text size="10" tone="muted">
               {formatDateTime(msg.createdAt, {
                 hour: '2-digit',
                 minute: '2-digit',
                 month: 'short',
                 day: 'numeric',
               })}
-            </span>
+            </Text>
             {msg.pending && (
               <span
                 className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-lc-muted/40 border-t-lc-muted"
@@ -90,7 +91,7 @@ export const MessageRow = memo(function MessageRow({
         )}
         {parent && <ReplyPreviewRow parent={parent} onJump={() => flashMessage(parent.id, 1200)} />}
         {msg.replyToId && !parent && (
-          <div className="mb-1 text-xs italic text-lc-muted">↩ {t('shell.desktop.message.replyingToMessage')}</div>
+          <Text as="div" variant="caption" className="mb-1 italic">↩ {t('shell.desktop.message.replyingToMessage')}</Text>
         )}
         <div
           className="break-words text-sm text-lc-white cursor-pointer"

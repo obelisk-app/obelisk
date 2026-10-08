@@ -1,3 +1,5 @@
+import Text from '@/components/ui/layout/Text';
+import List from '@/components/ui/layout/List';
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import Section from '@/components/ui/layout/Section';
@@ -14,31 +16,31 @@ export function GuidelinesSection() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card variant="interactive" padding="xl">
           <div className="text-lc-green font-semibold mb-2">{t('mediaKit.do')}</div>
-          <ul className="space-y-1 text-sm text-lc-white list-disc list-inside">
-            <li>
+          <List marker="inside" spacing="tight" className="text-sm text-lc-white">
+            <Text as="li">
               {t('mediaKit.rule.dark')}
-            </li>
-            <li>{t('mediaKit.rule.clearSpace')}</li>
-            <li>
+            </Text>
+            <Text as="li">{t('mediaKit.rule.clearSpace')}</Text>
+            <Text as="li">
               {t('mediaKit.rule.green')}
-            </li>
-            <li>
+            </Text>
+            <Text as="li">
               {t('mediaKit.rule.capital')}
-            </li>
-          </ul>
+            </Text>
+          </List>
         </Card>
         <Card variant="interactive" padding="xl">
           <div className="text-red-400 font-semibold mb-2">{t('mediaKit.dont')}</div>
-          <ul className="space-y-1 text-sm text-lc-white list-disc list-inside">
-            <li>{t('mediaKit.rule.noSkew')}</li>
-            <li>
+          <List marker="inside" spacing="tight" className="text-sm text-lc-white">
+            <Text as="li">{t('mediaKit.rule.noSkew')}</Text>
+            <Text as="li">
               {t('mediaKit.rule.noColors')}
-            </li>
-            <li>{t('mediaKit.rule.lowContrast')}</li>
-            <li>
+            </Text>
+            <Text as="li">{t('mediaKit.rule.lowContrast')}</Text>
+            <Text as="li">
               {t('mediaKit.rule.noEffects')}
-            </li>
-          </ul>
+            </Text>
+          </List>
         </Card>
       </div>
     </Section>

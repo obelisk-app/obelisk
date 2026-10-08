@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import { useActiveCall, type JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import PulseDot from '@/components/ui/animations/PulseDot';
@@ -17,12 +18,11 @@ export function ActiveCallBadge({ groupId, kind }: { groupId: string; kind: JsGr
   if (kind !== 'voice' && kind !== 'voice-sfu') return null;
   if (!active) return null;
   return (
-    <span
+    <Text variant="label" size="9" weight="bold"
       title={t('shell.desktop.voice.liveTitle')}
-      className="ml-1 inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-300"
-    >
+      className="ml-1 inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-red-300">
       <PulseDot color="bg-red-400" size="xs" />
       {t('shell.desktop.voice.live')}
-    </span>
+    </Text>
   );
 }

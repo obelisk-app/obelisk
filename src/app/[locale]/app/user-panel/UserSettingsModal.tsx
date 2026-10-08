@@ -88,7 +88,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
         </Button>
         <aside className="w-64 shrink-0 bg-lc-dark border-r border-lc-border flex flex-col">
           <div className="px-5 py-5 border-b border-lc-border">
-            <div className="text-[10px] uppercase tracking-wider text-lc-muted font-semibold mb-2">{t('shell.user.settings')}</div>
+            <Text as="div" variant="label" size="10" tone="muted" weight="semibold" className="mb-2">{t('shell.user.settings')}</Text>
             <div className="flex items-center gap-2 min-w-0">
               <UserAvatar pubkey={pubkey} picture={meta?.picture ?? null} size={8} name={displayName} initialClassName="text-sm" />
               <div className="min-w-0">
@@ -102,9 +102,9 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
               <div key={group.label} className="mb-3">
                 {/* The header card above already says "User settings". */}
                 {group.label !== 'settings.group.user' && (
-                  <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-lc-muted">
+                  <Text as="div" variant="label" size="10" tone="muted" weight="semibold" className="px-3 pb-1 pt-2">
                     {t(group.label)}
-                  </div>
+                  </Text>
                 )}
                 <div className="space-y-0.5">
                   {group.items.map(({ id, Icon }) => (

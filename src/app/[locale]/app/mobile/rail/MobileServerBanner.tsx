@@ -1,5 +1,6 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
@@ -85,9 +86,9 @@ export function MobileServerBanner({
           <Heading as="h2">{label}</Heading>
           {/* The host is the relay's own page - its rules and operator. */}
           {vm.host && (vm.website ? (
-            <a href={vm.website} target="_blank" rel="noopener noreferrer" data-testid="mobile-relay-website">
+            <Link href={vm.website} target="_blank" data-testid="mobile-relay-website">
               {vm.host}
-            </a>
+            </Link>
           ) : (
             <span>{vm.host}</span>
           ))}

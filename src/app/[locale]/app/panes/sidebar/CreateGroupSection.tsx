@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Row from '@/components/ui/layout/Row';
 import { useTranslations } from 'next-intl';
 import { useCreateGroupSection } from '@/hooks/shell/panes/sidebar/useCreateGroupSection';
@@ -21,13 +22,13 @@ export function CreateGroupSection({ count, onCreated }: { count: number; onCrea
 
   return (
     <div className="mt-2 shrink-0">
-      <div className="flex items-center justify-between px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted">
+      <Text as="div" variant="label" size="10" tone="muted" weight="bold" className="flex items-center justify-between px-3 py-1">
         <span className="truncate">{t('shell.channel.create.header', { count: String(count) })}</span>
         {/* Icons rather than the `×` / `+` glyphs, which rendered in the OS font. */}
         <Button variant="ghost" size="icon" onClick={toggle} className="-my-0.5 shrink-0" title={toggleLabel} aria-label={toggleLabel}>
           {open ? <CloseIcon size={12} /> : <PlusIcon size={12} />}
         </Button>
-      </div>
+      </Text>
       {open && (
         <Form form={form} className="mb-1 flex flex-col gap-1 px-3 pb-1">
           <Row gap="1" align="center">

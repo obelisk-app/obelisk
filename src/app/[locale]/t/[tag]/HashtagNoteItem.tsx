@@ -1,5 +1,5 @@
 import type { Event as NostrEvent } from 'nostr-tools';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import type { Locale } from '@/i18n';
 import { displayNameFor, type ViewerProfile } from '@/services/server/viewer/nostr-fetch';
 import { plainTextForPreview, previewImage } from '@/services/server/viewer/note-preview';
@@ -33,12 +33,12 @@ export default function HashtagNoteItem({
           <span className="truncate text-sm font-semibold">
             {profile ? displayNameFor(profile) : shortNpubLabel(note.pubkey)}
           </span>
-          <time
-            className="ml-auto shrink-0 text-[10px] text-lc-muted"
+          <Text as="time" size="10" tone="muted"
+            className="ml-auto shrink-0"
             dateTime={new Date(note.created_at * 1000).toISOString()}
           >
             {formatDate(locale, note.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}
-          </time>
+          </Text>
         </div>
         <Text as="p" size="sm" tone="default" className="line-clamp-3">{text || sharedMedia}</Text>
         {image && (

@@ -172,12 +172,12 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                     </Row>
                   </div>
                   {sfu.verified && (
-                    <div className="rounded-md border border-lc-green/30 bg-lc-green/5 p-2 text-[11px] text-lc-muted">
+                    <Text as="div" size="11" tone="muted" className="rounded-md border border-lc-green/30 bg-lc-green/5 p-2">
                       <span className="text-lc-green">{t('shell.desktop.sfu.verified')}</span>
                       {sfu.verified.region ? ` · ${sfu.verified.region}` : ''}
                       {sfu.verified.cap ? ` · ${t('shell.desktop.sfu.capacity', { count: sfu.verified.cap })}` : ''}
                       <div className="mt-1 break-all font-mono text-lc-white/70">{sfu.verified.pubkey}</div>
-                    </div>
+                    </Text>
                   )}
                   <Text as="p" size="10" tone="muted">{t('shell.desktop.sfu.verifyHelp')}</Text>
                 </div>
@@ -210,9 +210,9 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
         <section className="space-y-3 p-5">
           <div className="flex min-w-0 items-center gap-3">
             <SectionHeader title={t('shell.desktop.channel.members')} hint="NIP-29 kind 9000 / 9001" /* i18n-exempt: protocol term, the NIP-29 event kinds */ />
-            <span className="shrink-0 rounded-full bg-lc-card px-2 py-0.5 text-[11px] font-semibold text-lc-muted">
+            <Text size="11" tone="muted" weight="semibold" className="shrink-0 rounded-full bg-lc-card px-2 py-0.5">
               {members.length}
-            </span>
+            </Text>
           </div>
           <Form form={member} layout="row">
             <Input
@@ -244,11 +244,11 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
               <ManageMemberRow key={pk} groupId={group.id} pubkey={pk} isAdmin={adminSet.has(pk)} />
             ))}
             {members.length === 0 && (
-              <div className="rounded-lg border border-dashed border-lc-border px-3 py-4 text-center text-xs text-lc-muted">
+              <Text as="div" variant="caption" className="rounded-lg border border-dashed border-lc-border px-3 py-4 text-center">
                 {access === 'public'
                   ? t('shell.desktop.members.emptyPublic')
                   : t('shell.desktop.members.emptyPrivate')}
-              </div>
+              </Text>
             )}
           </div>
         </section>
