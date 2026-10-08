@@ -29,7 +29,7 @@ export function useMobileNavState(currentRelayUrl: string | null | undefined) {
       navRef.current = next;
       if (typeof window !== 'undefined') {
         try {
-          window.history.pushState({ nav: next }, '', urlFor(next, relayRef.current));
+          window.history.pushState({ ...window.history.state, guard: false, nav: next, phoneHistory: true }, '', urlFor(next, relayRef.current));
         } catch { /* ignore */ }
       }
       return next;

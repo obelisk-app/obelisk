@@ -376,3 +376,9 @@ When you add a new screen or transition, the order of operations is:
 ## Transient exit feedback
 
 The back-to-exit prompt is produced by `useMobileHistorySync` and displayed by the root ToastStack rather than a phone-only overlay. Its two-second display lifetime is separate from the history guard's exit-arming state. The hook owns cleanup when navigation, account/relay state or mount lifetime changes. See [feedback ownership](README.md#feedback-ownership).
+
+## Responsive destination handoff
+
+The phone stack and desktop panes remain distinct layouts. Both use `url-state.ts` for channel, feed and DM destinations; `src/utils/shell/desktop/navigation.ts` maps those destinations into the desktop view. Desktop preserves an inherited phone-only screen in history while showing its available parent (the associated channel or DM, the feed, or the server view). Resizing back restores that screen until the user explicitly chooses another desktop destination, which replaces the inherited state and clears obsolete query parameters. Desktop skips the phone exit sentinel when navigating Back.
+
+Phone history entries carry `phoneHistory` so a viewport remount reuses the existing stack rather than adding another guard and parent. The first phone visit still seeds that stack. Desktop retains custom history fields when updating its destination. Desktop reader stacks, article panes and profile panes remain local to that shell; their open state does not transfer across the breakpoint.

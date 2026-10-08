@@ -55,7 +55,9 @@ export function useMobileHistorySync({
     if (!isLoggedIn) return;
     if (typeof window === 'undefined') return;
     didInitRef.current = true;
-    const { nav: parsed, relay } = parseUrl(window.location.search);
+    const { nav: fromUrl, relay } = parseUrl(window.location.search);
+    const saved = window.history.state?.nav as NavState | undefined;
+    const parsed = saved ? restoredNav(saved) : fromUrl;
     // A relay outside the user's list is confirmed first; see
     // `useRelayDeepLink` for why the order matters. The seeded history
     // only carries the linked relay when the switch is immediate: a relay
@@ -80,11 +82,12 @@ export function useMobileHistorySync({
     // also seeds the parent tab between the guard and the sub-screen, so
     // the channel header's back arrow climbs up to the channel list rather
     // than dropping straight onto the guard and showing the exit toast.
+    if (saved && window.history.state?.phoneHistory) return; // The current app entry already has a stack; resizing must not grow it.
     const entries = buildSeedHistory(parsed, seedRelay);
     try {
-      window.history.replaceState(entries[0].state, '', entries[0].url);
+      window.history.replaceState({ ...window.history.state, nav: undefined, phoneHistory: true, ...entries[0].state }, '', entries[0].url);
       for (let i = 1; i < entries.length; i++) {
-        window.history.pushState(entries[i].state, '', entries[i].url);
+        window.history.pushState({ ...entries[i].state, phoneHistory: true }, '', entries[i].url);
       }
     } catch { /* ignore */ }
   }, [isLoggedIn, currentRelayUrl, configuredRelays, dmOptInEnabled, switchFromDeepLink, navRef, setNav]);
@@ -118,7 +121,7 @@ export function useMobileHistorySync({
         exitToastId.current = useToastStore.getState().pushToast({ title: t('mobile.navigation.pressBackAgain'), body: '', durationMs: 2000 });
         // Re-push current nav so the user stays on their screen.
         try {
-          window.history.pushState({ nav: navRef.current }, '', urlFor(navRef.current, relayRef.current));
+          window.history.pushState({ nav: navRef.current, phoneHistory: true }, '', urlFor(navRef.current, relayRef.current));
         } catch { /* ignore */ }
         return;
       }

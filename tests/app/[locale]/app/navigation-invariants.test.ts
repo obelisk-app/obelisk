@@ -121,9 +121,9 @@ describe('desktop navigation invariants', () => {
     // works whichever shell picks it up.
     // The deep-link effect lives in `src/hooks/shell/desktop/useDesktopNavigation.ts`.
     const nav = read('../../../hooks/shell/desktop/useDesktopNavigation.ts');
-    expect(nav).toContain("params.get('s') === 'feed'");
-    // A channel deep-link is more specific and must still win.
-    expect(nav).toContain("if (!c && params.get('s') === 'feed')");
+    expect(nav).toContain('viewForNav(source)');
+    // The shared adapter's channel/feed precedence is covered behaviorally.
+    expect(nav).toContain('parseUrl(search).nav');
   });
 
   it('the shell answers a pendingJump by changing `view`, not the bridge', () => {

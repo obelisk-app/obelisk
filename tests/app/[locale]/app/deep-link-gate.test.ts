@@ -35,7 +35,7 @@ describe('deep-link relay gate', () => {
     expect(read('../../../hooks/shell/desktop/useDesktopShell.ts')).toContain('useDesktopNavigation(relay');
     const shell = read('../../../hooks/shell/desktop/useDesktopNavigation.ts');
     expect(shell).toContain("import { useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink'");
-    const effect = deepLinkEffect(shell, "const r = params.get('relay')", "params.get('s') === 'feed'");
+    const effect = deepLinkEffect(shell, "const r = params.get('relay')", 'viewForNav(source)');
     expect(effect).toContain('switchFromDeepLink(r)');
     expect(effect).not.toContain('switchRelay');
   });

@@ -22,6 +22,7 @@ function mount() {
 }
 const back = () => act(() => { window.dispatchEvent(new PopStateEvent('popstate', { state: { guard: true } })); });
 beforeEach(() => {
+  window.history.replaceState(null, '', '/app');
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-08T12:00:00Z'));
   push.mockClear();
@@ -59,5 +60,43 @@ describe('mobile exit feedback', () => {
     expect(useToastStore.getState().toasts).toHaveLength(1);
     view.unmount();
     expect(useToastStore.getState().toasts).toEqual([]);
+  });
+});
+
+
+describe('responsive history reentry', () => {
+  it('reuses a seeded phone entry without pushing another guard or parent', () => {
+    const nav = { ...initialNav, screen: 'dm-thread' as const, dmPeer: 'alice' };
+    window.history.replaceState({ nav, phoneHistory: true, custom: 42 }, '', '/es/app?s=dm-thread&p=alice');
+    const pushState = vi.spyOn(window.history, 'pushState');
+    const first = mount();
+    first.unmount();
+    mount();
+    expect(pushState).not.toHaveBeenCalled();
+    expect(window.history.state).toMatchObject({ nav, phoneHistory: true, custom: 42 });
+    expect(window.location.pathname).toBe('/es/app');
+    pushState.mockRestore();
+  });
+
+  it('seeds the first phone visit from desktop once, then restores back and forward entries', () => {
+    const dm = { ...initialNav, screen: 'dm-thread' as const, dmPeer: 'alice' };
+    window.history.replaceState({ nav: dm }, '', '/pt/app?s=dm-thread&p=alice');
+    const first = mount();
+    expect(window.history.state).toMatchObject({ nav: dm, phoneHistory: true });
+    first.unmount();
+    const pushState = vi.spyOn(window.history, 'pushState');
+    const navRef = { current: initialNav };
+    const setNav = vi.fn();
+    renderHook(() => useMobileHistorySync({
+      isLoggedIn: true, dmOptInEnabled: true, currentRelayUrl: '', nav: dm, navRef,
+      relayRef: { current: null }, setNav, setSlideDir: vi.fn(), suppressSlideRef: { current: false },
+    }), { wrapper: bridgeWrapper(fakeBridge()) });
+    expect(pushState).not.toHaveBeenCalled();
+    for (const nav of [{ ...initialNav, screen: 'dms-list' as const }, dm]) {
+      act(() => window.dispatchEvent(new PopStateEvent('popstate', { state: { nav, phoneHistory: true } })));
+      expect(setNav).toHaveBeenLastCalledWith(nav);
+      expect(navRef.current).toEqual(nav);
+    }
+    pushState.mockRestore();
   });
 });

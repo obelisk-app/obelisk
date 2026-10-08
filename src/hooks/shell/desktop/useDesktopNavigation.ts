@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { nostrActions, useBridge } from '@/services/nostr-bridge';
-import { shortHost } from '@/utils/relay-url/url-host';
+import { parseUrl, urlFor, restoredNav, type NavState } from '@/utils/shell/mobile/url-state';
+import { viewForNav, navForView } from '@/utils/shell/desktop/navigation';
 import { subscribeVoiceJump } from '@/services/voice/jump-to-voice';
 import { useChatStore } from '@/store/chat';
 import { useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink';
@@ -28,6 +29,8 @@ export function useDesktopNavigation(
   // "previous value" pattern), so it is read in the same render it is set
   // and never from a ref whose write may belong to a discarded render.
   const [view, setView] = useState<View>({ kind: 'empty' });
+  const [restored, setRestored] = useState(false);
+  const inherited = useRef<{ nav: NavState; view: View } | null>(null);
   const [lastGroupId, setLastGroupId] = useState<string | null>(null);
   if (view.kind === 'group' && view.groupId !== lastGroupId) setLastGroupId(view.groupId);
 
@@ -60,6 +63,7 @@ export function useDesktopNavigation(
   }, [view, bridge]);
 
   const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
+  const messageGroup = useRef<string | null>(null);
   const switchFromDeepLink = useRelayDeepLink();
 
   // Search results ask to jump here (see `pendingJump` in the chat store).
@@ -77,7 +81,8 @@ export function useDesktopNavigation(
     // bridge call as a consequence of navigating.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- The rule's shape would be a `useChatStore.subscribe` in a mount effect; the store selector above is already that subscription, the handoff is read once and consumed, and `navigation-invariants.test.ts` pins this effect's text. Re-examined in audits/obelisk/round9/FIX-lint-warnings.md: no stale closure, no loop (consumeJump nulls the trigger).
     setView({ kind: 'group', groupId: pendingJump.groupId });
-    if (pendingJump.messageId) setPendingMessageId(pendingJump.messageId);
+    messageGroup.current = pendingJump.groupId;
+    setPendingMessageId(pendingJump.messageId ?? null);
     useChatStore.getState().consumeJump();
   }, [pendingJump]);
 
@@ -89,34 +94,51 @@ export function useDesktopNavigation(
     if (typeof window === 'undefined') return;
     const search = window.location.search.replace(/;/g, '&');
     const params = new URLSearchParams(search);
-    const c = params.get('c');
     const m = params.get('m');
     const r = params.get('relay');
     // A relay outside the user's list is confirmed first; see
     // `useRelayDeepLink` for why the order matters.
     if (r) void switchFromDeepLink(r);
-    // `?s=feed`, shared by the mobile shell's screen param, so one link
-    // ("Open in Obelisk" from the public viewer) lands on the feed whichever
-    // shell picks it up. A channel deep-link still wins: it is more specific.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Deep-link seam. Lazy initial state is legal here (the shell mounts with ssr:false) but would activate the group on the current relay before `switchFromDeepLink` has been asked for the linked one, reordering the sequence `deep-link-gate.test.ts` protects. Left as a documented exception; see audits/obelisk/round9/FIX-lint-warnings.md.
-    if (!c && params.get('s') === 'feed') setView({ kind: 'feed' });
-    if (c) setView({ kind: 'group', groupId: c });
+    // Keep a phone-only destination intact until a desktop navigation replaces it.
+    const saved = window.history.state?.nav as NavState | undefined;
+    const source = saved ? restoredNav(saved) : parseUrl(search).nav;
+    const next = viewForNav(source);
+    inherited.current = { nav: source, view: next };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore browser navigation only after the relay deep-link confirmation has been requested.
+    setView(next);
+    setRestored(true);
+    messageGroup.current = next.kind === 'group' ? next.groupId : null;
     if (m) setPendingMessageId(m);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep the URL in sync with the active group + relay so refresh / share works.
+  // One URL codec for both shells. Preserve framework/custom history fields and
+  // an inherited phone-only destination until the user chooses a desktop view.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const url = new URL(window.location.href);
-    if (view.kind === 'group') url.searchParams.set('c', view.groupId);
-    else url.searchParams.delete('c');
-    if (view.kind === 'feed') url.searchParams.set('s', 'feed');
-    else url.searchParams.delete('s');
-    if (relay) url.searchParams.set('relay', shortHost(relay));
-    else url.searchParams.delete('relay');
-    window.history.replaceState(null, '', url.pathname + url.search);
-  }, [view, relay]);
+    if (!restored || typeof window === 'undefined') return;
+    const source = inherited.current;
+    const nav = source?.view === view ? source.nav : navForView(view);
+    if (source?.view !== view) inherited.current = null;
+    const url = new URL(urlFor(nav, relay), window.location.origin);
+    if (pendingMessageId && view.kind === 'group' && messageGroup.current === view.groupId) url.searchParams.set('m', pendingMessageId);
+    window.history.replaceState({ ...window.history.state, nav }, '', url.pathname + url.search);
+  }, [view, relay, restored, pendingMessageId]);
+
+  // A history entry created on a phone remains navigable after resizing.
+  useEffect(() => {
+    const onPop = (event: PopStateEvent) => {
+      // The exit sentinel belongs to phone navigation. Desktop Back skips it.
+      if (event.state?.guard) { window.history.back(); return; }
+      const nav = event.state?.nav ? restoredNav(event.state.nav) : parseUrl(window.location.search).nav;
+      const next = viewForNav(nav);
+      inherited.current = { nav, view: next };
+      setView(next);
+      messageGroup.current = next.kind === 'group' ? next.groupId : null;
+      setPendingMessageId(new URLSearchParams(window.location.search).get('m'));
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   // Voice status bar "jump back to call" → switch relay if the call lives
   // on a different one (so `useGroups()` resolves the channel before we set
