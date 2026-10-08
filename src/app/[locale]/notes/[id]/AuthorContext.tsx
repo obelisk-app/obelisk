@@ -23,7 +23,10 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 import { safeNpub } from '@/utils/identity/short-npub';
 import { relayHostLabel } from '@/utils/relay-url/relay-host';
 import AuthorContextSection from './AuthorContextSection';
-import AuthorNoteItem from './AuthorNoteItem';
+import { plainTextForPreview } from '@/services/server/viewer/note-preview';
+import { noteIdentifier } from '@/services/social/note-links';
+import { NOTE_VIEWER_PATH } from '@/constants/social/note-links';
+import { formatDate } from '@/utils/format/format';
 import Text from '@/components/ui/layout/Text';
 
 export default async function AuthorContext({
@@ -52,7 +55,22 @@ export default async function AuthorContext({
         <AuthorContextSection title={t('social.viewer.moreFrom', { name })} testId="author-more-notes">
           <List marker="none" spacing="normal">
             {notes.map((note) => (
-              <AuthorNoteItem key={note.id} note={note} locale={locale} sharedMedia={t('social.viewer.sharedMedia')} />
+              <li key={note.id}>
+                <Link
+                  href={`${NOTE_VIEWER_PATH}/${noteIdentifier(note)}`}
+                  className="block min-w-0 rounded-xl border border-lc-border bg-lc-dark p-3 transition-colors hover:border-lc-green/40"
+                >
+                  <Text as="p" size="sm" tone="default" className="line-clamp-2 break-words">
+                    {plainTextForPreview(note.content) || t('social.viewer.sharedMedia')}
+                  </Text>
+                  <Text as="time" size="10" tone="muted"
+                    className="mt-1 block"
+                    dateTime={new Date(note.created_at * 1000).toISOString()}
+                  >
+                    {formatDate(locale, note.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </Text>
+                </Link>
+              </li>
             ))}
           </List>
         </AuthorContextSection>
