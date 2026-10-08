@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { useEditProfileScreen } from '@/hooks/shell/mobile/screens/profile/useEditProfileScreen';
@@ -22,14 +23,15 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
       <div className="setup-header">
         <BackButton onClick={vm.goBack} disabled={vm.busy} />
         <Heading as="h2">{t('mobile.settings.editProfile')}</Heading>
-        <button
+        <Button
+          variant="bare"
           className="setup-skip save-action"
           onClick={vm.save}
           disabled={vm.saveDisabled}
           data-testid="save-profile"
         >
           {vm.busyLabel ?? t('common.save')}
-        </button>
+        </Button>
       </div>
       <div className="setup-body edit-profile-body">
         {vm.error && <div className="edit-error" role="alert">{vm.error}</div>}
@@ -47,13 +49,14 @@ export function EditProfileScreen({ go }: { go: (s: ScreenName, dir?: 'forward' 
         <EditProfileFields vm={vm} />
       </div>
       <div className="setup-actions">
-        <button
-          className="btn-primary"
+        <Button
+          variant="mobilePrimary"
+
           onClick={vm.save}
           disabled={vm.saveDisabled}
         >
           {vm.busyLabel ?? t('mobile.settings.saveChanges')}
-        </button>
+        </Button>
       </div>
     </div>
   );

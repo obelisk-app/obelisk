@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
@@ -43,15 +44,17 @@ export function ManageMemberRowMobile({
             ? t('mobile.members.confirmDemote', { name })
             : t('mobile.members.confirmKick', { name })}
         </span>
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={cancel}
           style={{ border: '1px solid var(--app-line)', borderRadius: 8, padding: '4px 8px', background: 'transparent', color: 'var(--app-text-dim)', fontSize: 11 }}
           data-testid={`mobile-member-confirm-cancel-${pubkey}`}
         >
           {t('common.cancel')}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="bare"
           type="button"
           onClick={confirmPending}
           style={{
@@ -66,7 +69,7 @@ export function ManageMemberRowMobile({
           data-testid={`mobile-member-confirm-ok-${pubkey}`}
         >
           {demoting ? t('mobile.members.demote') : t('mobile.members.kick')}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -100,7 +103,8 @@ export function ManageMemberRowMobile({
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         {isAdmin && (
-          <button
+          <Button
+            variant="bare"
             type="button"
             onClick={() => ask('demote')}
             style={{
@@ -114,9 +118,10 @@ export function ManageMemberRowMobile({
             aria-label={t('mobile.members.demoteName', { name })}
           >
             {t('mobile.members.demote')}
-          </button>
+          </Button>
         )}
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={() => ask('remove')}
           style={{
@@ -130,7 +135,7 @@ export function ManageMemberRowMobile({
           aria-label={t('mobile.members.kickName', { name })}
         >
           {t('mobile.members.kick')}
-        </button>
+        </Button>
       </div>
     </div>
   );

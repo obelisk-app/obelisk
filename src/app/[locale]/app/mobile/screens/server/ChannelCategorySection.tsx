@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { ReactNode } from 'react';
 import { ChevronRightIcon } from '@/assets/icons';
 
@@ -22,12 +23,12 @@ export function ChannelCategorySection({
   return (
     <div data-cat-id={catId}>
       {showHeader && (
-        <button className="channel-section-label collapsible" onClick={onToggle}>
+        <Button variant="bare" className="channel-section-label collapsible" onClick={onToggle}>
           <span>{label}</span>
           <span className={`cat-caret ${collapsed ? '' : 'expanded'}`} aria-hidden="true">
             <ChevronRightIcon size={null} strokeWidth={2.5} />
           </span>
-        </button>
+        </Button>
       )}
       {!collapsed && children}
     </div>

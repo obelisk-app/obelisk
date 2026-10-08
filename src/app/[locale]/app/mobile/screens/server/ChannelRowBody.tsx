@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { useChannelRowBody } from '@/hooks/shell/mobile/screens/server/useChannelRow';
@@ -39,7 +40,7 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
   const counts = <ChannelRowCounts muted={row.muted} unread={row.unread} mentionsOrReplies={row.mentionsOrReplies} />;
   if (isVoiceKind(group.kind)) {
     return (
-      <button className={`ch-row voice ${active ? 'active' : ''}`} onClick={onClick}>
+      <Button variant="bare" className={`ch-row voice ${active ? 'active' : ''}`} onClick={onClick}>
         <span className="ch-icon" style={{ color: live ? 'var(--accent)' : 'var(--app-text-mute)' }}>
           <MicIcon size={null} />
         </span>
@@ -50,43 +51,44 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
             {live && <span className="ch-meta" style={{ marginLeft: 'auto', color: 'var(--accent)' }}>{t('mobile.channel.live')}</span>}
           </div>
         </div>
-      </button>
+      </Button>
     );
   }
   if (group.kind === 'forum' && expandable && onToggleExpand) {
     return (
       <div className={channelRowClass({ active, unread: row.unread, indent, split: true })} style={row.quietStyle}>
-        <button className="ch-row-body" onClick={onClick}>
+        <Button variant="bare" className="ch-row-body" onClick={onClick}>
           {FORUM_ICON}
           <span className="ch-name">{row.name}</span>
           {counts}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="bare"
           className="ch-chevron-btn"
           onClick={onToggleExpand}
           aria-label={t(expanded ? 'mobile.channel.collapsePublications' : 'mobile.channel.expandPublications')}
           aria-expanded={!!expanded}
         >
           <span className={`ch-chevron ${expanded ? 'expanded' : ''}`} aria-hidden="true">{CHEVRON}</span>
-        </button>
+        </Button>
       </div>
     );
   }
   if (group.kind === 'forum') {
     return (
-      <button className={channelRowClass({ active, unread: row.unread, indent })} onClick={onClick} style={row.quietStyle}>
+      <Button variant="bare" className={channelRowClass({ active, unread: row.unread, indent })} onClick={onClick} style={row.quietStyle}>
         {FORUM_ICON}
         <span className="ch-name">{row.name}</span>
         {counts}
         <span className="ch-chevron" aria-hidden="true">{CHEVRON}</span>
-      </button>
+      </Button>
     );
   }
   return (
-    <button className={channelRowClass({ active, unread: row.unread, indent })} onClick={onClick} style={row.quietStyle}>
+    <Button variant="bare" className={channelRowClass({ active, unread: row.unread, indent })} onClick={onClick} style={row.quietStyle}>
       <span className="ch-icon">#</span>
       <span className="ch-name">{row.name}</span>
       {counts}
-    </button>
+    </Button>
   );
 }

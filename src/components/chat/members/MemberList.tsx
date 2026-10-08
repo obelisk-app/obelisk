@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useMemberList } from '@/hooks/chat/members/useMemberList';
 import Text from '@/components/ui/layout/Text';
 import { useTranslations } from 'next-intl';
@@ -23,7 +24,8 @@ export default function MemberList({ groupId }: { groupId: string }) {
 
         {vm.offline.length > 0 && (
           <div>
-            <button
+            <Button
+              variant="bare"
               type="button"
               onClick={vm.toggleOffline}
               className="flex items-center gap-1.5 px-2 py-1 w-full text-left"
@@ -33,7 +35,7 @@ export default function MemberList({ groupId }: { groupId: string }) {
               <Text size="10" weight="semibold" variant="label" tone="muted">
                 {t('chat.members.offlineGroup')} - {vm.offline.length}
               </Text>
-            </button>
+            </Button>
             {!vm.offlineCollapsed && vm.offline.map((member) => (
               <MemberItem key={member.pubkey} member={member} isOnline={false} />
             ))}

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { ComponentType } from 'react';
 import type { IconProps } from '@/assets/icons';
 
@@ -16,15 +17,15 @@ export function PaneIconButton({
   icon: ComponentType<IconProps>;
 }) {
   return (
-    <button
+    <Button
+      variant="toolIcon"
       type="button"
-      className="lc-icon-btn"
       onClick={onClick}
       aria-label={label}
       title={label}
       data-testid={testId}
     >
       <Icon size={18} strokeWidth={2} />
-    </button>
+    </Button>
   );
 }

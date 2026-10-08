@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useFullscreenButton } from '@/hooks/voice/room/useFullscreenButton';
 import { MinimizeIcon, MaximizeIcon } from '@/assets/icons';
@@ -9,7 +10,8 @@ export default function FullscreenButton({ targetRef }: { targetRef: { current: 
   const t = useTranslations();
   const { isFullscreen, toggle } = useFullscreenButton(targetRef);
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={toggle}
       title={t(isFullscreen ? 'voice.tile.exitFullscreen' : 'voice.tile.fullscreen')}
@@ -23,6 +25,6 @@ export default function FullscreenButton({ targetRef }: { targetRef: { current: 
       }
     >
       {isFullscreen ? <MinimizeIcon size={13} strokeWidth={2} /> : <MaximizeIcon size={13} strokeWidth={2} />}
-    </button>
+    </Button>
   );
 }

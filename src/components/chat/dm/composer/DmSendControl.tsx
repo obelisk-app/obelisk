@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { VoiceNoteButton } from '../../composer/VoiceNoteButton';
 import type { DmComposerState } from '@/hooks/chat/dm/composer/useDmComposer';
@@ -26,9 +27,9 @@ export function DmSendControl({ state, variant }: { state: DmComposerState; vari
     }
     // The mobile skin's stylesheet button (`composer-send` in mobile-shell.css).
     return (
-      <button type="button" onClick={() => state.send()} disabled={!canSend} className="composer-send" aria-label={t('common.send')} data-testid="dm-send">
+      <Button variant="bare" type="button" onClick={() => state.send()} disabled={!canSend} className="composer-send" aria-label={t('common.send')} data-testid="dm-send">
         {icon}
-      </button>
+      </Button>
     );
   }
   return state.mediaAllowed ? <VoiceNoteButton onRecorded={state.onVoiceRecorded} /> : null;

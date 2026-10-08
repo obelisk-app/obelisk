@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
@@ -27,23 +28,25 @@ export function InboxScreen({
     <div className="screen active" data-screen="inbox">
       <div className="app-header">
         <Heading as="h2">{t('shell.inbox.title')}</Heading>
-        <button className="mark-all-read" onClick={vm.markAllRead}>{t('shell.inbox.markAllRead')}</button>
+        <Button variant="bare" className="mark-all-read" onClick={vm.markAllRead}>{t('shell.inbox.markAllRead')}</Button>
       </div>
       <div className="filter-tabs native-scroll-x">
-        <button
+        <Button
+          variant="bare"
           className={`filter-tab ${vm.tab === 'mentions' ? 'active' : ''}`}
           data-testid="inbox-tab-mentions"
           onClick={() => vm.setTab('mentions')}
         >
           {t('shell.inbox.tab.mentions')}{vm.unreadMentions > 0 ? ` · ${vm.unreadMentions}` : ''}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="bare"
           className={`filter-tab ${vm.tab === 'dms' ? 'active' : ''}`}
           data-testid="inbox-tab-dms"
           onClick={() => vm.setTab('dms')}
         >
           {t('shell.inbox.tab.dms')}{vm.unreadDms > 0 ? ` · ${vm.unreadDms}` : ''}
-        </button>
+        </Button>
       </div>
       <div className="activity-list native-scroll-y">
         {vm.isEmpty && (

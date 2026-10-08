@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { MentionText } from '@/components/chat/mentions/MentionText';
 
 /** One card in the bell popover: unread dot, kind and time, and the start of the message. */
@@ -13,7 +14,8 @@ export function InboxRow({ read, label, time, preview, onClick, testId }: {
 }) {
   return (
     <li>
-      <button
+      <Button
+        variant="bare"
         onClick={onClick}
         data-testid={testId}
         className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-lc-card/60 transition-colors ${read ? '' : 'bg-lc-olive/30'}`}
@@ -28,7 +30,7 @@ export function InboxRow({ read, label, time, preview, onClick, testId }: {
             <div className="text-sm text-lc-white truncate"><MentionText content={preview} /></div>
           )}
         </div>
-      </button>
+      </Button>
     </li>
   );
 }

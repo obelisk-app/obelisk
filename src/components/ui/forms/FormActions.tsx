@@ -46,7 +46,7 @@ export default function FormActions({
   return (
     <div className={cn(ROW[variant], className)}>
       {variant === 'sheet' && (
-        <button type="submit" form={form} disabled={off} className="btn-primary" data-testid={submitTestId}>{label}</button>
+        <Button variant="mobilePrimary" type="submit" form={form} disabled={off}  data-testid={submitTestId}>{label}</Button>
       )}
       {variant === 'block' && (
         <Button type="submit" form={form} variant="pill" size="sm" className="w-full" disabled={off} data-testid={submitTestId}>{label}</Button>

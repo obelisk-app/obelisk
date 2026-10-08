@@ -95,7 +95,8 @@ export function ForumChrome({
             ))}
           </div>
         )}
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={onClearTags}
           className={
@@ -108,7 +109,7 @@ export function ForumChrome({
           aria-pressed={vm.allActive}
         >
           {t('mobile.search.all')}
-        </button>
+        </Button>
       </div>
     </div>
   );

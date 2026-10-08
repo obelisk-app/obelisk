@@ -220,3 +220,28 @@ describe('Button pillDanger and the accent open state', () => {
     expect(screen.getByRole('button')).toHaveClass('aria-expanded:bg-lc-green/20', 'aria-pressed:bg-lc-green/20');
   });
 });
+
+describe('Button compound and phone controls', () => {
+  it('bare keeps keyboard focus and native semantics without adding a competing layout', () => {
+    render(<Button variant="bare" className="grid custom-tile">Open</Button>);
+    const el = screen.getByRole('button', { name: 'Open' });
+    expect(el).toHaveAttribute('type', 'button');
+    expect(el).toHaveClass('focus-visible:ring-2', 'grid', 'custom-tile');
+    expect(el.className).not.toMatch(/\b(inline-flex|items-center|justify-center|gap-2|px-4|py-1.5|bg-lc-green)\b/);
+  });
+
+  it.each([
+    ['mobilePrimary', 'btn-primary'],
+    ['mobileSecondary', 'btn-cancel'],
+    ['mobileIcon', 'icon-btn'],
+    ['mobileRow', 'settings-row'],
+    ['mobileDanger', 'settings-btn-danger'],
+  ] as const)('%s owns its phone stylesheet recipe and shared focus behavior', (variant, recipe) => {
+    render(<Button variant={variant} disabled>Action</Button>);
+    const el = screen.getByRole('button');
+    expect(el).toHaveClass(recipe, 'focus-visible:ring-2');
+    expect(el).toBeDisabled();
+    expect(el).toHaveAttribute('type', 'button');
+    expect(el.className).not.toMatch(/\b(px-4|py-1.5|text-sm|inline-flex)\b/);
+  });
+});

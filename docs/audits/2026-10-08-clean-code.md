@@ -33,3 +33,5 @@ Before integration, typecheck and repository-wide lint passed. The related suite
 The final independent review found no actionable issue in the changes. It noted nonblocking gaps in direct coverage for reordered group membership and the pagination fallback's second relay request. These are useful future test cases; the review did not run live relays, browser workflows or independently rerun the test commands.
 
 Release builds, SEO crawls and browser end-to-end checks are reserved for release work by this repository's instructions. Existing documented debt outside these changes remains in `AGENTS.md`; in particular, the two relay-URL functions have different validation contracts and should not be merged mechanically.
+
+After integration into `reorg/pre-launch`, the full suite passed 1,171 files / 7,463 tests. The subsequent shared-UI pass is recorded in [the UI audit](2026-10-08-ui-standardization.md).

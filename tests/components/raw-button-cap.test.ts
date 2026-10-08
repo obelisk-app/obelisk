@@ -2,28 +2,14 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-/**
- * A ratchet on hand-written `<button>` elements in `src/components/` and
- * `src/hooks/`. Each one re-decides the focus ring, the disabled look and
- * `type="button"`; the primitives in `src/components/ui/` decide them once.
- *
- * The cap was the count when round 16 finished (188 at its start), 100
- * after round 30 set it to the count of the day. It may
- * only go down: when you move a button onto a primitive, lower `CAP` to the
- * new count in the same commit. If you truly need a new hand-written one,
- * the failure message lists the files so you can migrate another instead.
- *
- * Inside `ui/` only the primitives themselves may render a raw `<button>`,
- * each no more often than it does now.
- */
+/** Native buttons belong to UI primitives. Feature controls compose those primitives. */
 
-const CAP = 100;
+const CAP = 0;
 
 const UI_PRIMITIVE_BUTTONS: Record<string, number> = {
   'src/components/ui/buttons/Button.tsx': 1,
   'src/components/ui/data/Chip.tsx': 2,
   'src/components/ui/buttons/IconButton.tsx': 1,
-  'src/components/ui/forms/FormActions.tsx': 1,
   'src/components/ui/forms/OptionRow.tsx': 1,
   'src/components/ui/forms/SegmentedControl.tsx': 1,
   'src/components/ui/buttons/TextButton.tsx': 1,

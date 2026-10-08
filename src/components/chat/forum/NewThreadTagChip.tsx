@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { JsForumTag } from '@/services/nostr-bridge';
 import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
 import { TagDot } from './TagDot';
@@ -11,7 +12,8 @@ export function NewThreadTagChip({ tag, choice, onToggle }: {
   onToggle: (id: string) => void;
 }) {
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={() => onToggle(tag.id)}
       disabled={choice.disabled}
@@ -24,6 +26,6 @@ export function NewThreadTagChip({ tag, choice, onToggle }: {
         ? <span className="text-sm leading-none">{tag.emoji}</span>
         : <TagDot tag={tag} />}
       <span className="truncate max-w-[10rem]">{tag.name}</span>
-    </button>
+    </Button>
   );
 }

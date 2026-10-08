@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import { useComposeDmScreen } from '@/hooks/shell/mobile/screens/dm/useComposeDmScreen';
@@ -19,15 +20,16 @@ export function ComposeDmScreen({ back, selectPeer }: { back: () => void; select
   return (
     <div className="screen compose-dm-screen active" data-screen="compose-dm">
       <div className="compose-dm-header">
-        <button className="compose-dm-cancel" onClick={back}>{t('common.cancel')}</button>
+        <Button variant="bare" className="compose-dm-cancel" onClick={back}>{t('common.cancel')}</Button>
         <Heading as="h2">{t('dm.newMessage')}</Heading>
-        <button
+        <Button
+          variant="bare"
           className={`compose-dm-next ${canNext ? 'active' : ''}`}
           disabled={!canNext}
           onClick={next}
         >
           {t('dm.compose.next')}
-        </button>
+        </Button>
       </div>
       <DmUnlock />
       <div className="compose-dm-to">

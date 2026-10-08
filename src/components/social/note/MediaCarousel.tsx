@@ -13,6 +13,7 @@
  * is no transform state to get out of sync with the DOM.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { Lightbox } from '@/components/chat/gallery/Lightbox';
 import { useMediaCarousel } from '@/hooks/social/note/useMediaCarousel';
 import type { CarouselItem } from '@/utils/social/media-carousel';
@@ -60,7 +61,8 @@ export default function MediaCarousel({ items }: { items: readonly CarouselItem[
 
       <div className="mt-1.5 flex justify-center gap-1.5">
         {items.map((item, dot) => (
-          <button
+          <Button
+            variant="bare"
             key={item.url}
             type="button"
             onClick={() => goTo(dot)}

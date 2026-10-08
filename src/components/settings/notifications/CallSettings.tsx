@@ -5,6 +5,7 @@
  * and which relays carry the call's setup. See docs/voice/dm-calls.md.
  */
 
+import Section from '@/components/ui/layout/Section';
 import { useTranslations } from 'next-intl';
 import type { CallIpProtection, CallsFrom } from '@/services/preferences/preferences';
 import Text from '@/components/ui/layout/Text';
@@ -61,10 +62,9 @@ export default function CallSettings({ mobile = false }: { mobile?: boolean }) {
   );
 
   return mobile ? (
-    <div className="settings-section" data-testid="call-settings">
-      <div className="settings-section-title">{t('settings.calls.title')}</div>
+    <Section variant="mobile" headingAs="h3" title={t('settings.calls.title')} data-testid="call-settings">
       <div className="settings-row !block">{body}</div>
-    </div>
+    </Section>
   ) : (
     <div className="space-y-3 border-t border-lc-border pt-4" data-testid="call-settings">
       <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">{t('settings.calls.title')}</Text>

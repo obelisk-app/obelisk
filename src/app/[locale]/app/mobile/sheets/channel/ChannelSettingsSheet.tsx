@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useId } from 'react';
 import { type JsGroup } from '@/services/nostr-bridge';
 import type { MessageKey } from '@/i18n/keys';
@@ -95,21 +96,21 @@ export function ChannelSettingsSheet({
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <Label variant="sheet">{t('mobile.channel.access')}</Label>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" data-testid="mobile-channel-access-public" style={accessPillStyle(access === 'public')} onClick={() => meta.set('access', 'public')}>
+          <Button variant="bare" type="button" data-testid="mobile-channel-access-public" style={accessPillStyle(access === 'public')} onClick={() => meta.set('access', 'public')}>
             <div style={{ fontSize: 16 }}>🌐</div>
             <div>{t('mobile.channel.public')}</div>
             <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.publicHint')}</div>
-          </button>
-          <button type="button" data-testid="mobile-channel-access-read-only" style={accessPillStyle(access === 'read-only')} onClick={() => meta.set('access', 'read-only')}>
+          </Button>
+          <Button variant="bare" type="button" data-testid="mobile-channel-access-read-only" style={accessPillStyle(access === 'read-only')} onClick={() => meta.set('access', 'read-only')}>
             <div style={{ fontSize: 16 }}>👁</div>
             <div>{t('mobile.channel.readOnly')}</div>
             <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.readOnlyHint')}</div>
-          </button>
-          <button type="button" data-testid="mobile-channel-access-private" style={accessPillStyle(access === 'private')} onClick={() => meta.set('access', 'private')}>
+          </Button>
+          <Button variant="bare" type="button" data-testid="mobile-channel-access-private" style={accessPillStyle(access === 'private')} onClick={() => meta.set('access', 'private')}>
             <div style={{ fontSize: 16 }}>🔒</div>
             <div>{t('mobile.channel.private')}</div>
             <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.privateHint')}</div>
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -118,14 +119,15 @@ export function ChannelSettingsSheet({
         <Label variant="sheet">{t('mobile.channel.type')}</Label>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {(['text', 'voice', 'voice-sfu', 'forum'] as const).map((k) => (
-            <button
+            <Button
+              variant="bare"
               key={k}
               type="button"
               onClick={() => meta.set('kind', k)}
               style={kindPillStyle(channelKind === k)}
             >
               {t(KIND_LABEL[k])}
-            </button>
+            </Button>
           ))}
         </div>
         {channelKind === 'voice-sfu' && (
@@ -148,16 +150,17 @@ export function ChannelSettingsSheet({
                   data-testid="mobile-sfu-url"
                 />
               </div>
-              <button
+              <Button
+                variant="mobileSecondary"
                 type="button"
                 onClick={() => { void sfu.verify().catch(() => undefined); }}
                 disabled={sfu.checking}
-                className="btn-cancel"
+
                 style={{ width: 'auto', padding: '0 14px', flexShrink: 0 }}
                 data-testid="mobile-sfu-verify"
               >
                 {sfu.checking ? t('mobile.sfu.checking') : t('mobile.sfu.verify')}
-              </button>
+              </Button>
             </div>
             {sfu.verified && (
               <div style={{ fontSize: 11, color: 'var(--app-text-dim)' }} data-testid="mobile-sfu-verified">
@@ -179,15 +182,16 @@ export function ChannelSettingsSheet({
       )}
 
       <FormError variant="sheet">{meta.error}</FormError>
-      <button
+      <Button
+        variant="mobilePrimary"
         type="button"
         onClick={() => void meta.submit()}
         disabled={meta.submitting}
-        className="btn-primary"
+
         data-testid="mobile-channel-settings-save"
       >
         {meta.submitting ? t('common.saving') : t('mobile.channel.save')}
-      </button>
+      </Button>
 
       {/* Members */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -214,14 +218,15 @@ export function ChannelSettingsSheet({
             {t('mobile.members.promote')}
           </Label>
           <FormError variant="sheet">{member.error}</FormError>
-          <button
+          <Button
+            variant="mobilePrimary"
             type="submit"
             disabled={!member.canSubmit}
-            className="btn-primary"
+
             style={{ width: 'auto', alignSelf: 'flex-start', padding: '0 18px', boxShadow: 'none' }}
           >
             {member.submitting ? t('mobile.members.adding') : t('mobile.members.add')}
-          </button>
+          </Button>
         </Form>
       </section>
 

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import HintDot from '@/components/hints/HintDot';
@@ -51,7 +52,8 @@ export function BottomNav({
   return (
     <nav className="bottom-nav">
       {tabs.map((t) => (
-        <button
+        <Button
+          variant="bare"
           key={t.id}
           className={`nav-item ${activeTab === t.id ? 'active' : ''}`}
           onClick={() => onTabPress(t.id)}
@@ -64,7 +66,7 @@ export function BottomNav({
           <span>{t.label}</span>
           {NAV_HINT_ID[t.id] && <HintDot hintId={NAV_HINT_ID[t.id] as string} />}
           {badgeLabel(t.badge) && <span className="nav-badge">{badgeLabel(t.badge)}</span>}
-        </button>
+        </Button>
       ))}
     </nav>
   );

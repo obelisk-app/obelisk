@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
 import { useTranslations } from 'next-intl';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
@@ -28,23 +29,23 @@ export function DmsListScreen({
         <Heading as="h2">{t('dm.title')}</Heading>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <MobileSigningIndicator />
-          <button className="icon-btn action-search" onClick={() => go('compose-dm')} aria-label={t('common.search')}>
+          <Button variant="mobileIcon" className="action-search" onClick={() => go('compose-dm')} aria-label={t('common.search')}>
             <SearchIcon size={20} strokeWidth={1.5} />
-          </button>
-          <button className="icon-btn action-create" onClick={() => go('compose-dm')} aria-label={t('dm.newMessage')}>
+          </Button>
+          <Button variant="mobileIcon" className="action-create" onClick={() => go('compose-dm')} aria-label={t('dm.newMessage')}>
             <PlusIcon size={20} strokeWidth={1.5} />
-          </button>
+          </Button>
         </div>
       </div>
       <DmUnlock />
 
       <div className="dms-tabs native-scroll-x">
-        <button className={`filter-tab ${tab === 'follows' ? 'active' : ''}`} onClick={() => setTab('follows')}>
+        <Button variant="bare" className={`filter-tab ${tab === 'follows' ? 'active' : ''}`} onClick={() => setTab('follows')}>
           {t('dm.follows')} · {followsCount}
-        </button>
-        <button className={`filter-tab ${tab === 'others' ? 'active' : ''}`} onClick={() => setTab('others')}>
+        </Button>
+        <Button variant="bare" className={`filter-tab ${tab === 'others' ? 'active' : ''}`} onClick={() => setTab('others')}>
           {t('dm.others')} · {othersCount}
-        </button>
+        </Button>
       </div>
 
       <div className="dms-list-rows native-scroll-y" ref={listRef}>

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useId } from 'react';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { type ChannelLayout } from '@/services/relay/channel-layout';
@@ -75,15 +76,16 @@ export function ManageCategoriesSheet({
               placeholder={t('mobile.layout.categoryPlaceholder')}
             />
           </div>
-          <button
+          <Button
+            variant="mobilePrimary"
             type="button"
             onClick={addCategory}
             disabled={!newCatName.trim()}
-            className="btn-primary"
+
             style={{ width: 'auto', padding: '0 18px', boxShadow: 'none' }}
           >
             {t('shell.rail.addModal.add')}
-          </button>
+          </Button>
         </div>
       </section>
 

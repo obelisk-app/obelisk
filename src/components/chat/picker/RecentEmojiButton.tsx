@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import MediaThumb from '@/components/media/library/MediaThumb';
 import type { RecentPickerEntry } from '@/utils/chat/picker/custom-emoji-entries';
 import type { EmojiGridClasses } from '@/utils/chat/picker/emoji-picker-classes';
@@ -12,10 +13,10 @@ export function RecentEmojiButton({ entry, mine, classes, onPickRecent }: {
   onPickRecent: (entry: RecentPickerEntry) => void;
 }) {
   return (
-    <button type="button" onClick={() => onPickRecent(entry)} disabled={mine} className={classes.emojiBtnClass}>
+    <Button variant="bare" type="button" onClick={() => onPickRecent(entry)} disabled={mine} className={classes.emojiBtnClass}>
       {entry.custom ? (
         <MediaThumb src={entry.custom.url} alt={entry.char} className={classes.customImageClass} />
       ) : entry.char}
-    </button>
+    </Button>
   );
 }

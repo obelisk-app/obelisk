@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import { useTranslations } from 'next-intl';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
@@ -15,7 +16,8 @@ export default function RolePersonRow({ person, busy, roleName, onClick }: {
   const t = useTranslations();
   return (
     <li>
-      <button
+      <Button
+        variant="bare"
         type="button"
         onClick={onClick}
         disabled={busy}
@@ -38,7 +40,7 @@ export default function RolePersonRow({ person, busy, roleName, onClick }: {
           <span className="shrink-0 rounded-full bg-lc-green/15 px-1.5 py-px text-[9px] font-bold uppercase text-lc-green">{t('admin.roles.adminBadge')}</span>
         )}
         <span className="shrink-0 text-xs font-semibold text-lc-green">{t('admin.roles.grant')}</span>
-      </button>
+      </Button>
     </li>
   );
 }

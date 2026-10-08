@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
@@ -14,7 +15,8 @@ export function StickerImg({ sticker }: { sticker: MessageSticker }) {
 
   return (
     <>
-      <button
+      <Button
+        variant="bare"
         type="button"
         onClick={() => setOpen(true)}
         className="mt-1 block h-44 w-44 max-w-full overflow-hidden rounded-2xl bg-transparent p-1"
@@ -26,7 +28,7 @@ export function StickerImg({ sticker }: { sticker: MessageSticker }) {
           alt={t('chat.sticker.alt', { name: sticker.name })}
           className="block h-full w-full object-contain"
         />
-      </button>
+      </Button>
       {open && <MediaLibraryModal onClose={() => setOpen(false)} initialSelection={selection} />}
     </>
   );

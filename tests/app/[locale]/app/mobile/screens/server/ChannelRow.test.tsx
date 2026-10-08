@@ -25,7 +25,8 @@ describe('ChannelRow (phone)', () => {
     const onClick = vi.fn();
     mount(<ChannelRow group={group({ id: 'g1', name: 'general' })} live={false} onClick={onClick} />);
     const row = screen.getByText('general').closest('button')!;
-    expect(row.className.split(/\s+/)).toEqual(['ch-row']);
+    expect(row).toHaveClass('ch-row');
+    expect(row).not.toHaveClass('active', 'ch-thread');
     expect(row.querySelector('.ch-icon')?.textContent).toBe('#');
     fireEvent.click(row);
     expect(onClick).toHaveBeenCalled();
@@ -33,7 +34,7 @@ describe('ChannelRow (phone)', () => {
 
   it('marks the active row and an indented thread', () => {
     mount(<ChannelRow group={group({ id: 'g1', name: 'general' })} live={false} active indent onClick={vi.fn()} />);
-    expect(screen.getByText('general').closest('button')!.className.split(/\s+/)).toEqual(['ch-row', 'active', 'ch-thread']);
+    expect(screen.getByText('general').closest('button')).toHaveClass('ch-row', 'active', 'ch-thread');
   });
 
   it('shows a live voice channel without the long-press wrapper', () => {

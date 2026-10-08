@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
@@ -7,7 +8,8 @@ import type { ReactNode } from 'react';
 export function AttachmentMenuItem({ label, icon, onClick, disabled }: { label: string; icon: ReactNode; onClick?: () => void; disabled?: boolean }) {
   const t = useTranslations();
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       role="menuitem"
       disabled={disabled}
@@ -19,6 +21,6 @@ export function AttachmentMenuItem({ label, icon, onClick, disabled }: { label: 
       </span>
       <span>{label}</span>
       {disabled && <span className="ml-auto text-[10px] uppercase tracking-wide text-lc-muted">{t('chat.composer.later')}</span>}
-    </button>
+    </Button>
   );
 }

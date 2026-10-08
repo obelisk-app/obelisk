@@ -7,6 +7,7 @@
  * they can't disagree about which title an article has.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
 import Badge from '@/components/ui/data/Badge';
@@ -49,14 +50,15 @@ export default function ArticleReader({
       )}
 
       <div className="mt-5 flex items-center gap-3 border-y border-lc-border py-3">
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={() => onOpenProfile?.(note.pubkey)}
           className="flex items-center gap-2 text-left"
         >
           <UserAvatar pubkey={note.pubkey} picture={author?.picture} size={9} name={name} alt="" />
           <span className="text-sm font-medium text-lc-white hover:underline">{name}</span>
-        </button>
+        </Button>
         <span className="ml-auto text-[11px] text-lc-muted">
           {published}
           {' · '}

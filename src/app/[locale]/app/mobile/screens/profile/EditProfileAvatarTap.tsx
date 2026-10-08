@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useRef, type ChangeEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import FileInput from '@/components/ui/forms/FileInput';
@@ -25,7 +26,8 @@ export default function EditProfileAvatarTap({
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div className="edit-avatar-row">
-      <button
+      <Button
+        variant="bare"
         type="button"
         className={`edit-avatar-tap ${image ? '' : 'empty'} ${uploading ? 'uploading' : ''}`}
         onClick={() => inputRef.current?.click()}
@@ -41,7 +43,7 @@ export default function EditProfileAvatarTap({
           )}
         </div>
         <FileInput ref={inputRef} accept="image/*" onChange={onFile} />
-      </button>
+      </Button>
       <div className="edit-avatar-tip">
         {t('mobile.settings.uploadTip')}
       </div>

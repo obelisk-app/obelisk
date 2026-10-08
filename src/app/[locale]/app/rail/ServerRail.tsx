@@ -13,6 +13,7 @@
  * Tiles morph from rounded-square to circle on hover.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useServerRail } from '@/hooks/shell/rail/useServerRail';
 import type { RailMode } from '@/utils/shell/desktop/desktop-layout';
@@ -82,7 +83,9 @@ export default function ServerRail({
         />
       ))}
 
-      <button
+      <Button
+
+        variant="bare"
         onClick={vm.openAdd}
         title={t('shell.rail.addRelay')}
         aria-label={t('shell.rail.addRelay')}
@@ -90,7 +93,7 @@ export default function ServerRail({
         className="group/tile relative flex h-12 w-12 items-center justify-center rounded-2xl bg-lc-card text-lc-green ring-1 ring-lc-border transition-all duration-150 hover:rounded-xl hover:bg-lc-green/15 hover:ring-lc-green"
       >
         <PlusIcon size={22} strokeWidth={2.5} />
-      </button>
+      </Button>
 
       {vm.adding && <AddRelayModal onClose={vm.closeAdd} />}
     </div>

@@ -158,7 +158,7 @@ describe('EditProfileScreen saving', () => {
   it('the bottom button saves too, and is labelled Save changes', async () => {
     const { editUserMetadata } = setup();
     const bottom = screen.getByRole('button', { name: 'Save changes' });
-    expect(bottom.className).toBe('btn-primary');
+    expect(bottom).toHaveClass('btn-primary');
     expect(screen.getByTestId('save-profile').textContent).toBe('Save');
     await act(async () => { fireEvent.click(bottom); });
     expect(editUserMetadata).toHaveBeenCalledTimes(1);

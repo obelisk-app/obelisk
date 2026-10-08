@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useVideoTile } from '@/hooks/voice/room/useVideoTile';
 import MuteForMeButton from './MuteForMeButton';
@@ -44,7 +45,8 @@ export default function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTo
       <div className="absolute top-2 right-2 flex items-center gap-1.5">
         {!isLocal && <MuteForMeButton pubkey={pubkey} />}
         <FullscreenButton targetRef={containerRef} />
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={onTogglePin}
           title={t(pinned ? 'voice.tile.unpin' : 'voice.tile.pinToStage')}
@@ -57,7 +59,7 @@ export default function Stage({ pubkey, isLocal, kind, videoStream, pinned, onTo
         >
           <PinIcon size={11} strokeWidth={2} />
           {t(pinned ? 'voice.tile.pinned' : 'voice.tile.pin')}
-        </button>
+        </Button>
       </div>
     </div>
   );

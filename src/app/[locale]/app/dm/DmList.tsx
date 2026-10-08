@@ -106,12 +106,13 @@ export default function DmList({
         {!vm.hasConversations ? (
           <div className="p-4 text-center">
             <Text as="p" variant="muted">{t('dm.noConversations')}</Text>
-            <button
+            <Button
+              variant="bare"
               onClick={vm.startComposing}
               className="mt-2 text-xs text-lc-green hover:underline"
             >
               {t('dm.startConversation')}
-            </button>
+            </Button>
           </div>
         ) : vm.visible.length === 0 ? (
           <div className="p-4 text-center">

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
 import { useTranslations } from 'next-intl';
 import { useAddRelaySheet } from '@/hooks/shell/mobile/sheets/relay/useAddRelaySheet';
@@ -21,12 +22,12 @@ export function AddRelaySheet({ close }: { close: () => void }) {
         title={t('mobile.rail.addTitle')}
       />
       <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
-        <button className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
+        <Button variant="bare" className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}
-        </button>
-        <button className={`filter-tab ${tab === 'custom' ? 'active' : ''}`} onClick={() => setTab('custom')}>
+        </Button>
+        <Button variant="bare" className={`filter-tab ${tab === 'custom' ? 'active' : ''}`} onClick={() => setTab('custom')}>
           {t('shell.rail.addModal.custom')}
-        </button>
+        </Button>
       </div>
       <div style={{ overflowY: 'auto', maxHeight: '54vh', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
         {tab === 'suggested' ? (

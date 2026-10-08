@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
 import RelayStatusPill from '@/components/relay/RelayStatusPill';
@@ -56,20 +57,21 @@ export function MobileServerBanner({
           compact
         />
         <MobileSigningIndicator />
-        <button className="icon-btn action-search" aria-label={t('mobile.header.search')} onClick={onSearch}>
+        <Button variant="mobileIcon" className="action-search" aria-label={t('mobile.header.search')} onClick={onSearch}>
           <SearchIcon size={20} strokeWidth={1.5} />
-        </button>
-        <button
-          className="icon-btn action-create"
+        </Button>
+        <Button
+          variant="mobileIcon"
+          className="action-create"
           aria-label={t('mobile.header.createChannel')}
           data-testid="mobile-create-channel-btn"
           onClick={onCreateChannel}
         >
           <PlusIcon size={20} />
-        </button>
-        <button className="icon-btn action-menu" aria-label={t('mobile.header.spaceMenu')} onClick={onOpenMenu}>
+        </Button>
+        <Button variant="mobileIcon" className="action-menu" aria-label={t('mobile.header.spaceMenu')} onClick={onOpenMenu}>
           <MoreIcon size={20} strokeWidth={1.5} />
-        </button>
+        </Button>
       </div>
       <div className="server-banner-meta">
         <div className="server-banner-icon" style={iconUrl ? undefined : avatarStyle(relayUrl || label)}>

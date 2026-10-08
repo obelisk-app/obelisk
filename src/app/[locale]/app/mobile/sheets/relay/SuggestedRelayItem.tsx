@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useSuggestedRelayItem } from '@/hooks/shell/mobile/sheets/relay/useSuggestedRelayItem';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
@@ -45,7 +46,8 @@ export function SuggestedRelayItem({
         )}
         {err && <div style={{ fontSize: 11, color: 'var(--presence-dnd)', marginTop: 2 }}>{err}</div>}
       </div>
-      <button
+      <Button
+        variant="bare"
         onClick={() => void add()}
         disabled={alreadyAdded || busy}
         style={{
@@ -61,7 +63,7 @@ export function SuggestedRelayItem({
         }}
       >
         {alreadyAdded ? t('mobile.rail.added') : busy ? '…' : t('mobile.rail.add')}
-      </button>
+      </Button>
     </div>
   );
 }

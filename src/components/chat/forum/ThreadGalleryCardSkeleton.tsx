@@ -1,3 +1,4 @@
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import type { JsGroup } from '@/services/nostr-bridge';
 import Skeleton from '@/components/ui/animations/Skeleton';
@@ -11,7 +12,8 @@ export function ThreadGalleryCardSkeleton({
 }) {
   const t = useTranslations();
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onOpen}
       className="lc-card flex flex-col overflow-hidden opacity-70 hover:opacity-100 hover:border-lc-green/40 transition-all text-left"
@@ -27,6 +29,6 @@ export function ThreadGalleryCardSkeleton({
         <Skeleton className="h-3 w-3/4" />
         <Skeleton className="h-2 w-1/2" />
       </div>
-    </button>
+    </Button>
   );
 }

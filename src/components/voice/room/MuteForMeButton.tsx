@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useMuteForMeButton } from '@/hooks/voice/room/useMuteForMeButton';
 import { MicIcon, MicOffIcon } from '@/assets/icons';
@@ -9,7 +10,8 @@ export default function MuteForMeButton({ pubkey, compact = false }: { pubkey: s
   const t = useTranslations();
   const { muted, toggle } = useMuteForMeButton(pubkey);
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={toggle}
       title={t(muted ? 'voice.tile.unmuteForMe' : 'voice.tile.muteForMe')}
@@ -24,6 +26,6 @@ export default function MuteForMeButton({ pubkey, compact = false }: { pubkey: s
       }
     >
       {muted ? <MicOffIcon size={compact ? 12 : 11} strokeWidth={2} /> : <MicIcon size={compact ? 12 : 11} strokeWidth={2} />}
-    </button>
+    </Button>
   );
 }

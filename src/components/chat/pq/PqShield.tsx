@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import type { PqProtectionLevel } from '@/services/chat/pq/status';
@@ -51,7 +52,8 @@ export default function PqShield({
       onMouseEnter={show}
       onMouseLeave={hide}
     >
-      <button
+      <Button
+        variant="bare"
         type="button"
         data-testid="pq-shield"
         data-level={level}
@@ -66,7 +68,7 @@ export default function PqShield({
         className={`rounded p-1 transition-colors ${TONE[level]}`}
       >
         {level === 'quantum' ? <ShieldCheckIcon /> : level === 'wrapped' ? <ShieldIcon /> : <LockIcon />}
-      </button>
+      </Button>
 
       {open && (
         <span

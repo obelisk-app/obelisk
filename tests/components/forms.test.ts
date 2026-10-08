@@ -32,13 +32,22 @@ function parse(source: string, file: string): ts.SourceFile {
   return ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
 }
 
+/** Native form controls belong to the UI kit, including mobile routes. */
+export function rawControls(source: string, file: string): string[] {
+  return rawElements(source, file, new Set(['input', 'textarea', 'select']));
+}
+
 /** Every raw `<form>` opening in a source, as `line: <form>`. */
 export function rawForms(source: string, file: string): string[] {
+  return rawElements(source, file, new Set(['form']));
+}
+
+function rawElements(source: string, file: string, tags: Set<string>): string[] {
   const sf = parse(source, file);
   const out: string[] = [];
   const visit = (n: ts.Node) => {
-    if ((ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n)) && n.tagName.getText(sf) === 'form') {
-      out.push(`${sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1}: <form>`);
+    if ((ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n)) && tags.has(n.tagName.getText(sf))) {
+      out.push(`${sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1}: <${n.tagName.getText(sf)}>`);
     }
     ts.forEachChild(n, visit);
   };
@@ -87,6 +96,13 @@ describe('forms: one form element, one form hook', () => {
     expect(offenders, 'render Form from @/components/ui/forms (docs/conventions.md#forms)').toEqual([]);
   });
 
+  it('all inputs, selects and textareas use the UI kit', () => {
+    const offenders = COMPONENT_SCOPE.flatMap((dir) => files(join(ROOT, dir)))
+      .filter((f) => /\.(tsx|jsx)$/.test(f) && !f.startsWith(UI_KIT))
+      .flatMap((f) => rawControls(readFileSync(join(ROOT, f), 'utf8'), f).map((hit) => `${f}: ${hit}`));
+    expect(offenders, 'use Input, TextArea and Select from @/components/ui/forms').toEqual([]);
+  });
+
   it('every use...Form hook composes the common useForm', () => {
     const offenders = files(join(ROOT, 'src'))
       .filter((f) => /\.(ts|tsx)$/.test(f))
@@ -126,4 +142,9 @@ describe('forms: the rule', () => {
   it('leaves other names alone (useForm itself, useFormat)', () => {
     expect(formHooksWithoutUseForm('export function useForm() {}\nexport function useFormat() {}', 'a.ts')).toEqual([]);
   });
+});
+
+it('detects native controls without counting comments or UI components', () => {
+  expect(rawControls('const a = <><input /><textarea /><select /><Input />{/* <input /> */}</>;', 'a.tsx'))
+    .toEqual(['1: <input>', '1: <textarea>', '1: <select>']);
 });

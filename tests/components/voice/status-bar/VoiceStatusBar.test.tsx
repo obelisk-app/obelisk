@@ -176,11 +176,10 @@ describe('VoiceStatusBar details', () => {
   it('keeps the look of each small button for its state', () => {
     useVoiceStore.setState({ isMuted: true, isDeafened: false, isCameraOn: true, isScreenSharing: false });
     renderBar();
-    expect(screen.getByTitle('Unmute').className).toBe(SMALL + 'bg-red-600/20 text-red-400 hover:bg-red-600/30');
-    expect(screen.getByTitle('Deafen').className).toBe(SMALL + 'bg-lc-green/20 text-lc-green hover:bg-lc-green/30');
-    expect(screen.getByTestId('voice-bar-camera').className).toBe(SMALL + 'bg-lc-green/20 text-lc-green hover:bg-lc-green/30');
-    expect(screen.getByTestId('voice-bar-screenshare').className)
-      .toBe(SMALL + 'bg-lc-border/40 hover:bg-lc-border/60 text-lc-muted hover:text-lc-white');
+    expect(screen.getByTitle('Unmute')).toHaveClass(SMALL + 'bg-red-600/20 text-red-400 hover:bg-red-600/30');
+    expect(screen.getByTitle('Deafen')).toHaveClass(SMALL + 'bg-lc-green/20 text-lc-green hover:bg-lc-green/30');
+    expect(screen.getByTestId('voice-bar-camera')).toHaveClass(SMALL + 'bg-lc-green/20 text-lc-green hover:bg-lc-green/30');
+    expect(screen.getByTestId('voice-bar-screenshare')).toHaveClass(SMALL + 'bg-lc-border/40 hover:bg-lc-border/60 text-lc-muted hover:text-lc-white');
     expect(screen.getByTestId('voice-bar-camera').title).toBe('Turn off camera');
     expect(screen.getByTestId('voice-bar-screenshare').title).toBe('Share screen');
   });

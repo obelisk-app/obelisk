@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { useCurrentRelayUrl } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
@@ -71,14 +72,15 @@ export function ForumScreen({
                 : t('mobile.forum.noMatchesTags')}
             </div>
             {query && (
-              <button
+              <Button
+                variant="bare"
                 type="button"
                 className="forum-new-pill"
                 onClick={() => forum.openNewThread(query)}
                 style={{ marginTop: 10 }}
               >
                 {t('mobile.forum.createNamed', { title: query })}
-              </button>
+              </Button>
             )}
           </div>
         ) : (

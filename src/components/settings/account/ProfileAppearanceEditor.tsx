@@ -20,6 +20,7 @@
  * abandoned.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { useRef } from 'react';
 import FileInput from '@/components/ui/forms/FileInput';
 import RemoteImage from '@/components/ui/media/RemoteImage';
@@ -63,7 +64,8 @@ export default function ProfileAppearanceEditor({
   return (
     <div data-testid="profile-appearance-editor">
       <div className="relative mb-14 aspect-[4/1] overflow-visible rounded-xl border border-lc-border bg-lc-black">
-        <button
+        <Button
+          variant="bare"
           type="button"
           className="group absolute inset-0 h-full w-full overflow-hidden rounded-xl"
           onClick={() => bannerInput.current?.click()}
@@ -79,9 +81,11 @@ export default function ProfileAppearanceEditor({
             {uploading === 'banner' ? <Spinner size="sm" /> : <EditIcon size={18} strokeWidth={2} />}
             {t(bannerSrc ? 'settings.profileAppearance.changeBanner' : 'settings.profileAppearance.addBanner')}
           </span>
-        </button>
+        </Button>
 
-        <button
+        <Button
+
+          variant="bare"
           type="button"
           className="group absolute -bottom-11 left-5 h-24 w-24 overflow-hidden rounded-full border-4 border-lc-dark bg-lc-card"
           onClick={() => pictureInput.current?.click()}
@@ -99,7 +103,7 @@ export default function ProfileAppearanceEditor({
           <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
             {uploading === 'picture' ? <Spinner size="sm" /> : <EditIcon size={18} strokeWidth={2} />}
           </span>
-        </button>
+        </Button>
       </div>
 
       <FileInput

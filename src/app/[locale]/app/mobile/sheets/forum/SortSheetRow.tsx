@@ -1,5 +1,7 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
+
 /** One radio-style row in the forum sort sheet: a label and a filled dot when checked. */
 export function SortSheetRow({
   label,
@@ -13,7 +15,8 @@ export function SortSheetRow({
   testId: string;
 }) {
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onClick}
       data-testid={testId}
@@ -42,6 +45,6 @@ export function SortSheetRow({
           flexShrink: 0,
         }}
       />
-    </button>
+    </Button>
   );
 }

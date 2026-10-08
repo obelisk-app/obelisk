@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
@@ -24,20 +25,22 @@ export function ReactionPills({ actions, zapTotal, isAdmin }: {
     <div className="mt-1 flex flex-wrap gap-1">
       {vm.zap && (
         <div className="group/pill relative">
-          <button
+          <Button
+            variant="bare"
             onClick={actions.onZapClick}
             disabled={actions.isOwn}
             className="inline-flex items-center gap-1 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-200 hover:border-yellow-500 disabled:opacity-50"
           >
             <ZapIcon filled size={11} />
             {formatNumber(vm.zap.totalSats)}
-          </button>
+          </Button>
           <ZapperHoverCard zapTotal={vm.zap} />
         </div>
       )}
       {vm.pills.map((pill) => (
         <div key={pill.emoji} className="group/pill relative">
-          <button
+          <Button
+            variant="bare"
             onClick={() => vm.toggle(pill)}
             title={t(pill.titleKey)}
             className={
@@ -53,7 +56,7 @@ export function ReactionPills({ actions, zapTotal, isAdmin }: {
               <span>{pill.resolved.char}</span>
             )}
             <span>{pill.count}</span>
-          </button>
+          </Button>
           {pill.pubkeys.size > 0 && (
             <ReactorHoverCard emoji={pill.emoji} pubkeys={pill.pubkeys} />
           )}

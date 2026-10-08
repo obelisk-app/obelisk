@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useRef } from 'react';
 import type { JsMediaKind } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
@@ -28,7 +29,8 @@ export function CreateMediaControl({
       aria-label={t('media.upload')}
       onChange={onChange}
     />
-    <button
+    <Button
+      variant="bare"
       type="button"
       disabled={uploading}
       onClick={() => fileRef.current?.click()}
@@ -37,6 +39,6 @@ export function CreateMediaControl({
     >
       <span className="text-3xl font-light leading-none" aria-hidden="true">+</span>
       <span className="text-xs">{t(uploading ? 'chat.mediaPicker.creating' : 'chat.mediaPicker.create')}</span>
-    </button>
+    </Button>
   </>;
 }

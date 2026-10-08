@@ -32,10 +32,10 @@ export default function PackCard({ pack, mine, favorite, itemFavorites, busy, se
     <Card as="article" surface="translucent" padding="none" className="overflow-hidden">
       <div className="flex min-h-24 items-center gap-2 bg-lc-black p-3">
         {pack.items.slice(0, 5).map((item) => (
-          <button key={item.url} type="button" onClick={() => onOpenItem(item)} title={t('media.openActions')} aria-label={t('media.item.open', { name: item.name })} className="group relative flex h-14 min-w-0 flex-1 items-center justify-center rounded-lg bg-lc-dark p-1">
+          <Button variant="bare" key={item.url} type="button" onClick={() => onOpenItem(item)} title={t('media.openActions')} aria-label={t('media.item.open', { name: item.name })} className="group relative flex h-14 min-w-0 flex-1 items-center justify-center rounded-lg bg-lc-dark p-1">
             <MediaThumb src={item.url} alt={":" + item.name + ":"} className="max-h-full max-w-full object-contain" />
             {!server && isFavoriteItem(itemFavorites, item) && <span className="absolute right-1 top-1 text-xs text-lc-green">★</span>}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="p-3">

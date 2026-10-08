@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { LazyVoiceRoom } from '../../../mounts/lazy-mounts';
 import BackButton from '../../chrome/BackButton';
@@ -22,9 +23,9 @@ export function VoiceRoomScreen({ groupId, back, openChat }: { groupId: string; 
           </div>
           {sub && <div className="voice-room-sub">{sub}</div>}
         </div>
-        <button className="back-btn" onClick={back} aria-label={t('mobile.voice.minimize')} data-testid="minimize-call-btn">
+        <Button variant="bare" className="back-btn" onClick={back} aria-label={t('mobile.voice.minimize')} data-testid="minimize-call-btn">
           <MinusIcon size={null} strokeWidth={2} />
-        </button>
+        </Button>
       </div>
       <div className="voice-room-stage">
         <LazyVoiceRoom

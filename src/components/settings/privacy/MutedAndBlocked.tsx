@@ -17,6 +17,7 @@
  * destroyed by another app.
  */
 
+import Section from '@/components/ui/layout/Section';
 import { useTranslations } from 'next-intl';
 import Text from '@/components/ui/layout/Text';
 import { useMutedAndBlocked } from '@/hooks/settings/privacy/useMutedAndBlocked';
@@ -40,10 +41,9 @@ export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }
   );
 
   return mobile ? (
-    <div className="settings-section" data-testid="muted-and-blocked">
-      <div className="settings-section-title">{t('settings.moderation.title')}</div>
+    <Section variant="mobile" headingAs="h3" title={t('settings.moderation.title')} data-testid="muted-and-blocked">
       <div className="settings-row !block space-y-2">{body}</div>
-    </div>
+    </Section>
   ) : (
     <div className="space-y-2 border-t border-lc-border pt-4" data-testid="muted-and-blocked">
       <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">

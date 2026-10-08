@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { JsForumTag, JsGroup } from '@/services/nostr-bridge';
 import { useLocale, useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
@@ -33,7 +34,8 @@ export function ThreadGalleryCard({
   const opName = posterName(opMeta, op.pubkey);
   const heroUrl = thread.banner || thread.picture || opMeta?.picture || null;
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onOpen}
       className="lc-card flex flex-col text-left overflow-hidden hover:border-lc-green/40 transition-colors"
@@ -73,6 +75,6 @@ export function ThreadGalleryCard({
           </span>
         </div>
       </div>
-    </button>
+    </Button>
   );
 }

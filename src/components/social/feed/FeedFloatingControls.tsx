@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { RefObject } from 'react';
 import { useFeedFloatingControls } from '@/hooks/social/feed/useFeedFloatingControls';
 import { useTranslations } from 'next-intl';
@@ -42,7 +43,8 @@ export default function FeedFloatingControls({
         both reports the count and takes them there.
       */}
       {showBackToTop && (
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={backToTop}
           aria-label={t('social.backToTop')}
@@ -54,7 +56,7 @@ export default function FeedFloatingControls({
         >
           <ArrowUpIcon size={18} strokeWidth={2.5} />
           {pendingCount > 0 && <span>{pendingCount}</span>}
-        </button>
+        </Button>
       )}
 
       {showCompose && (

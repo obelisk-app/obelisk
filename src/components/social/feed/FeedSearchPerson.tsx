@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { UserHit } from '@/constants/identity/user-search';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
@@ -14,7 +15,8 @@ export default function FeedSearchPerson({ hit, onOpen }: { hit: UserHit; onOpen
   const nip05 = author.nip05 || hit.nip05;
 
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={() => onOpen(hit.pubkey)}
       className="flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
@@ -31,6 +33,6 @@ export default function FeedSearchPerson({ hit, onOpen }: { hit: UserHit; onOpen
         <span className="block truncate text-sm font-semibold text-lc-white">{name}</span>
         {nip05 && <span className="block truncate text-[11px] text-lc-green">{nip05}</span>}
       </span>
-    </button>
+    </Button>
   );
 }

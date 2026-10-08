@@ -1,5 +1,7 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
+
 /** One tab of the add-relay dialog, underlined in green while active. */
 export function AddRelayTabButton({
   active,
@@ -11,7 +13,8 @@ export function AddRelayTabButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
+    <Button
+      variant="bare"
       onClick={onClick}
       className={
         'relative -mb-px flex-1 px-4 py-3 text-sm font-semibold transition-colors ' +
@@ -25,6 +28,6 @@ export function AddRelayTabButton({
           (active ? 'bg-lc-green opacity-100' : 'opacity-0')
         }
       />
-    </button>
+    </Button>
   );
 }

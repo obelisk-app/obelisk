@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { UserHit } from '@/constants/identity/user-search';
 import { useComposeDmResultRow } from '@/hooks/shell/dm/useComposeDmResultRow';
 import UserAvatar from '@/components/ui/media/UserAvatar';
@@ -9,7 +10,8 @@ import { CheckBadgeIcon } from '@/assets/icons';
 export function ComposeDmResultRow({ hit, active, onPick, onHover }: { hit: UserHit; active: boolean; onPick: () => void; onHover: () => void }) {
   const row = useComposeDmResultRow(hit);
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       role="option"
       aria-selected={active}
@@ -30,6 +32,6 @@ export function ComposeDmResultRow({ hit, active, onPick, onHover }: { hit: User
           <span className="truncate">{row.sub}</span>
         </span>
       </span>
-    </button>
+    </Button>
   );
 }

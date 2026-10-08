@@ -7,6 +7,7 @@
  * it in a reserved slot so the row doesn't reflow when one appears.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import type { ReactNode } from 'react';
 import { formatCount } from '@/utils/format/format-count';
 
@@ -67,7 +68,8 @@ export default function ActionButton({
 }) {
   const accent = ACCENT[kind];
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       // `group/act` is named so the hover pad and the count can both react
       // without the nested NoteCard hover states interfering.
@@ -92,6 +94,6 @@ export default function ActionButton({
       >
         {count !== undefined && count > 0 ? formatCount(count) : ''}
       </span>
-    </button>
+    </Button>
   );
 }

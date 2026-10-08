@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
 import { relativeTime } from '@/utils/format/relative-time';
 import { useUserMetadata } from '@/services/nostr-bridge';
@@ -35,7 +36,8 @@ export function NotificationCard({
   const meta = useUserMetadata(senderPubkey);
   const name = displayNameFor(senderPubkey, meta);
   return (
-    <button
+    <Button
+      variant="bare"
       className={`mention-card ${urgent ? 'urgent' : ''}`}
       style={isRead ? { opacity: 0.65 } : undefined}
       onClick={onJump}
@@ -56,6 +58,6 @@ export function NotificationCard({
           <div className="mc-text" style={{ color: 'var(--app-text-dim)' }}><MentionText content={preview} /></div>
         </div>
       </div>
-    </button>
+    </Button>
   );
 }

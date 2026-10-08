@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { memo } from 'react';
 import { gameIcon, gameName } from '@/lib/games/core/catalog';
 import { useGameCard } from '@/hooks/games/card/useGameCard';
@@ -26,7 +27,8 @@ function GameCard({ gameId }: { gameId: string }) {
   }
 
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={open}
       className="mt-1 flex w-full max-w-sm items-center gap-3 rounded-lg border border-lc-border bg-lc-dark p-3 text-left transition-colors hover:border-lc-green/60"
@@ -51,7 +53,7 @@ function GameCard({ gameId }: { gameId: string }) {
       <span className="shrink-0 rounded-full border border-lc-border px-2 py-0.5 text-[10px] text-lc-white">
         <ActionLabel session={session} myPubkey={myPubkey} />
       </span>
-    </button>
+    </Button>
   );
 }
 

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { ReactNode } from 'react';
 
 /** One round button in the call view's control row. */
@@ -14,7 +15,8 @@ export default function CallControlButton({
       ? 'bg-white/10 text-lc-white hover:bg-white/20'
       : 'bg-lc-white text-lc-black hover:brightness-95';
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onClick}
       className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${cls}`}
@@ -24,6 +26,6 @@ export default function CallControlButton({
       data-testid={testId}
     >
       {children}
-    </button>
+    </Button>
   );
 }

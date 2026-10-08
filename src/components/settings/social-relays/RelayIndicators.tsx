@@ -1,3 +1,4 @@
+import Button from '@/components/ui/buttons/Button';
 import type { RelayState, RelayStatus } from '@/services/social/relay-status';
 
 const DOT_CLASS: Record<RelayState, string> = {
@@ -22,7 +23,8 @@ export function RelayDot({ status, onRetry }: { status?: RelayStatus; onRetry?: 
   // friction for a one-click action.
   if (state === 'failed' && onRetry) {
     return (
-      <button
+      <Button
+        variant="bare"
         type="button"
         onClick={onRetry}
         className={`h-2.5 w-2.5 shrink-0 rounded-full ${className}`}

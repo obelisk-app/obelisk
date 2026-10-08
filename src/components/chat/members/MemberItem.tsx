@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { avatarInitials } from '@/utils/identity/display-name';
 import { useChatStore } from '@/store/chat';
 import type { JsMemberInfo } from '@/services/nostr-bridge';
@@ -16,7 +17,8 @@ export function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnlin
   const openProfilePopup = useChatStore((state) => state.openProfilePopup);
 
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={(event) => openProfilePopup(member.pubkey, { x: event.clientX, y: event.clientY })}
       className="w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group cursor-pointer"
@@ -44,6 +46,6 @@ export function MemberItem({ member, isOnline }: { member: JsMemberInfo; isOnlin
         {name}
       </span>
       <RoleBadge pubkey={member.pubkey} className="ml-auto max-w-[42%]" />
-    </button>
+    </Button>
   );
 }

@@ -17,6 +17,7 @@
  * storage.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import type { JsDirectMessage } from '@/services/nostr-bridge';
 import { useDmMessageMenu } from '@/hooks/chat/dm/message/useDmMessageMenu';
@@ -45,7 +46,8 @@ export function DmMessageMenu({ message, className = '' }: { message: JsDirectMe
 
   return (
     <>
-      <button
+      <Button
+        variant="bare"
         ref={triggerRef}
         type="button"
         onClick={toggle}
@@ -57,7 +59,7 @@ export function DmMessageMenu({ message, className = '' }: { message: JsDirectMe
         data-testid="dm-message-menu"
       >
         <MoreIcon size={18} />
-      </button>
+      </Button>
       <AnchoredMenu
         open={open}
         onClose={close}

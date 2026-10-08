@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import UserPanel from '../../user-panel/UserPanel';
 import { GearIcon } from '@/assets/icons';
 import { useTranslations } from 'next-intl';
@@ -20,7 +21,8 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
     : 'flex';
   return (
     <div className="relative flex w-full items-center gap-2">
-      <button
+      <Button
+        variant="bare"
         type="button"
         onClick={vm.openProfile}
         className="flex min-w-0 flex-1 items-center gap-2 rounded text-left hover:bg-lc-card/50"
@@ -38,8 +40,9 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
             {vm.handle}
           </div>
         </div>
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="bare"
         onClick={vm.openPreferences}
         className={`shrink-0 rounded-md p-1.5 text-lc-white/80 transition-colors hover:bg-lc-green/15 hover:text-lc-green ${
           collapsible ? 'hidden group-hover/me:block group-focus-within/me:block' : ''
@@ -49,7 +52,7 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
         data-testid="user-settings-button"
       >
         <GearIcon size={18} />
-      </button>
+      </Button>
       {vm.editing && (
         <UserPanel
           pubkey={vm.myPubkey}

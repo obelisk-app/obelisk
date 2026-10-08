@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import HintDot from '@/components/hints/HintDot';
 import { useTranslations } from 'next-intl';
 import { useRelayTile } from '@/hooks/shell/rail/useRelayTile';
@@ -34,7 +35,8 @@ export function RelayTile({
           (active ? 'opacity-100' : 'opacity-0 group-hover/tile:opacity-50')
         }
       />
-      <button
+      <Button
+        variant="bare"
         onClick={onClick}
         onContextMenu={openMenu}
         title={url}
@@ -68,7 +70,7 @@ export function RelayTile({
         ) : (
           <span className="relative">{initials}</span>
         )}
-      </button>
+      </Button>
       {backgroundUnread > 0 && (
         <span
           aria-label={t('shell.rail.backgroundUnread', { count: String(backgroundUnread) })}

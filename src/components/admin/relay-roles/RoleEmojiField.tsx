@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import EmojiPicker from '@/components/chat/picker/EmojiPicker';
 import { CloseIcon } from '@/assets/icons';
 import { useTranslations } from 'next-intl';
@@ -27,14 +28,15 @@ export default function RoleEmojiField({ role, onPick }: { role: RelayRole; onPi
         {role.emoji || <span className="text-xs text-lc-muted">+</span>}
       </IconButton>
       {role.emoji && (
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={clear}
           aria-label={t('admin.roles.clearEmoji', { role: role.id })}
           className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border border-lc-border bg-lc-dark text-lc-muted hover:text-lc-white"
         >
           <CloseIcon size={8} strokeWidth={2.5} />
-        </button>
+        </Button>
       )}
       {anchor && (
         <>

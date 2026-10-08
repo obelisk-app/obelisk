@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import Modal from '@/components/ui/overlays/Modal';
 import { useTranslations } from 'next-intl';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
@@ -33,7 +34,8 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
             <li key={row.action} className="flex items-center gap-2">
               <span className="flex-1 text-xs text-lc-white">{t(`games.stacker.action.${row.action}`)}</span>
               {row.keys.map((key) => (
-                <button
+                <Button
+                  variant="bare"
                   key={key.code}
                   type="button"
                   onClick={() => vm.unbind(key.code)}
@@ -41,7 +43,7 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
                   className="rounded border border-lc-border px-1.5 py-0.5 font-mono text-[10px] text-lc-muted hover:border-red-400 hover:text-red-400"
                 >
                   {key.label}
-                </button>
+                </Button>
               ))}
               <Chip
                 size="10"

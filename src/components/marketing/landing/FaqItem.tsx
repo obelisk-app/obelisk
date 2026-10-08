@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useState } from 'react';
 import Heading from '@/components/ui/layout/Heading';
 
@@ -16,7 +17,8 @@ export default function FaqItem({ id, question, answer }: Props) {
       className="lc-card overflow-hidden"
       data-testid={`faq-item-${id}`}
     >
-      <button
+      <Button
+        variant="bare"
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="w-full px-6 py-5 flex items-start justify-between gap-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-lc-green/60 rounded-xl"
@@ -34,7 +36,7 @@ export default function FaqItem({ id, question, answer }: Props) {
         >
           +
         </span>
-      </button>
+      </Button>
       <div
         id={`faq-${id}-answer`}
         role="region"

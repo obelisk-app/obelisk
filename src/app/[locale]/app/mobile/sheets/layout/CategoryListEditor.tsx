@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { categoryLabel } from '@/utils/relay/category-label';
 import Input from '@/components/ui/forms/Input';
@@ -50,12 +51,12 @@ export function CategoryListEditor({ categories, moveCategory, renameCategory, d
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <button type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, -1)} disabled={i === 0} aria-label={t('mobile.layout.moveUp')}>
+              <Button variant="bare" type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, -1)} disabled={i === 0} aria-label={t('mobile.layout.moveUp')}>
                 <ChevronUpIcon size={14} strokeWidth={2.5} />
-              </button>
-              <button type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, 1)} disabled={i === categories.length - 1} aria-label={t('mobile.layout.moveDown')}>
+              </Button>
+              <Button variant="bare" type="button" style={arrowBtnStyle} onClick={() => moveCategory(c.id, 1)} disabled={i === categories.length - 1} aria-label={t('mobile.layout.moveDown')}>
                 <ChevronDownIcon size={14} strokeWidth={2.5} />
-              </button>
+              </Button>
             </div>
             <Input
               variant="mobile"
@@ -65,7 +66,8 @@ export function CategoryListEditor({ categories, moveCategory, renameCategory, d
               aria-label={t('shell.desktop.layout.categoryName')}
               onChange={(e) => renameCategory(c.id, e.target.value)}
             />
-            <button
+            <Button
+              variant="bare"
               type="button"
               onClick={() => deleteCategory(c.id)}
               style={{
@@ -79,7 +81,7 @@ export function CategoryListEditor({ categories, moveCategory, renameCategory, d
               aria-label={t('mobile.layout.deleteCategory')}
             >
               {t('mobile.layout.delete')}
-            </button>
+            </Button>
           </div>
         ))
       )}

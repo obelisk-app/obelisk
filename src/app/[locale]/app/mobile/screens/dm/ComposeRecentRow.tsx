@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
@@ -11,7 +12,7 @@ export function ComposeRecentRow({ peer, onClick }: { peer: string; onClick: () 
   const meta = useAuthor(peer);
   const name = displayNameFor(peer, meta);
   return (
-    <button className="dm-row" onClick={onClick}>
+    <Button variant="bare" className="dm-row" onClick={onClick}>
       <div className="dm-ava-list" style={avatarStyle(peer)}>
         {meta?.picture ? <RemoteImage src={meta.picture} alt="" /> : avatarInitials(name, peer)}
       </div>
@@ -21,6 +22,6 @@ export function ComposeRecentRow({ peer, onClick }: { peer: string; onClick: () 
         </div>
         <div className="dm-preview">{meta?.nip05 ?? shortNpubLabel(peer)}</div>
       </div>
-    </button>
+    </Button>
   );
 }

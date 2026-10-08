@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { ReactNode } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import type { AuthorIdentity } from '@/hooks/social/profile/useAuthor';
@@ -67,7 +68,7 @@ export default function NoteHeader({
 
   return (
     <header className="mb-2 flex items-start gap-3">
-      <button type="button" className="shrink-0" onClick={() => onOpenProfile?.(note.pubkey)} aria-label={displayName}>
+      <Button variant="bare" type="button" className="shrink-0" onClick={() => onOpenProfile?.(note.pubkey)} aria-label={displayName}>
         <UserAvatar
           pubkey={note.pubkey}
           picture={meta.picture}
@@ -75,7 +76,7 @@ export default function NoteHeader({
           name={displayName}
           alt={displayName}
         />
-      </button>
+      </Button>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-1.5">
           <TextButton tone="plain" className="min-w-0 truncate text-[15px] font-semibold text-lc-white"

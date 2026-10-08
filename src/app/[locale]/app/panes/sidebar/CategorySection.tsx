@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { ChevronRightIcon } from '@/assets/icons';
 
 /** A foldable category header in the channel tree, with its channels under it while open. */
@@ -18,7 +19,8 @@ export function CategorySection({
 }) {
   return (
     <div className="mt-2">
-      <button
+      <Button
+        variant="bare"
         onClick={onToggle}
         className="flex w-full items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-lc-muted hover:text-lc-white"
       >
@@ -27,7 +29,7 @@ export function CategorySection({
         </span>
         <span className="truncate">{name}</span>
         <span className="ml-auto text-[10px] font-normal opacity-60">{channelCount}</span>
-      </button>
+      </Button>
       {!collapsed && <div>{children}</div>}
     </div>
   );

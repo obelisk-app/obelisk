@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { forwardRef, type InputHTMLAttributes } from 'react';
 import { MESSAGE_INPUT_PROPS } from '@/constants/chat/composer';
 import MessageMediaPicker from '@/components/chat/picker/MessageMediaPicker';
@@ -53,7 +54,8 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
           onNewSticker={() => composer.openPicker('sticker')}
         />
         <div ref={vm.emojiBtnRef} className="relative">
-          <button
+          <Button
+            variant="bare"
             type="button"
             onClick={vm.toggleEmoji}
             className="flex h-9 w-9 items-center justify-center rounded-full text-lc-muted hover:bg-white/5 hover:text-lc-white"
@@ -62,7 +64,7 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
             aria-expanded={composer.emojiOpen}
           >
             <StickerIcon size={null} className="h-5 w-5" />
-          </button>
+          </Button>
           {composer.emojiOpen && (
             <MessageMediaPicker
               initialTab={composer.pickerTab}
@@ -114,14 +116,15 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
           />
         </div>
         {vm.canSend ? (
-          <button
+          <Button
+            variant="bare"
             type="submit"
             disabled={composer.uploading}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lc-green text-lc-black disabled:opacity-30"
             aria-label={t("common.send")}
           >
             <SendIcon size={null} strokeWidth={2} className="h-5 w-5" />
-          </button>
+          </Button>
         ) : (
           <VoiceNoteButton disabled={composer.uploading} onRecorded={(file, duration) => void composer.onVoiceRecorded(file, duration)} />
         )}

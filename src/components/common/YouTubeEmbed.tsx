@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useState } from 'react';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { PlayIcon } from '@/assets/icons';
@@ -45,7 +46,8 @@ export default function YouTubeEmbed({
 
   if (!loaded) {
     return (
-      <button
+      <Button
+        variant="bare"
         type="button"
         onClick={() => setLoaded(true)}
         className={`relative block rounded-lg overflow-hidden border border-lc-border hover:border-lc-green/40 transition-colors group/yt ${className}`}
@@ -64,7 +66,7 @@ export default function YouTubeEmbed({
             <PlayIcon size={20} fill="white" />
           </div>
         </div>
-      </button>
+      </Button>
     );
   }
 

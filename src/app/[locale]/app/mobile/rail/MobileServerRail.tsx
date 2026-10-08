@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { isActiveRelay } from '@/utils/shell/mobile/rail';
 import type { RelayLongPressInfo } from '@/hooks/shell/mobile/rail/useMobileRelayTile';
@@ -32,10 +33,10 @@ export function MobileServerRail({
             onLongPress={onLongPress}
           />
         ))}
-        <button className="space space-add" onClick={onAddRelay} aria-label={t('mobile.rail.addRelay')}>
+        <Button variant="bare" className="space space-add" onClick={onAddRelay} aria-label={t('mobile.rail.addRelay')}>
           <div className="space-icon s-add">+</div>
           <span className="space-name">&nbsp;</span>
-        </button>
+        </Button>
       </div>
     </aside>
   );

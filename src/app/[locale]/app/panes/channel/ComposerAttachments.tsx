@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { CloseIcon } from '@/assets/icons';
 import RemoteImage from '@/components/ui/media/RemoteImage';
@@ -16,14 +17,15 @@ export function ComposerAttachments({ urls, uploading, onRemove }: {
       {urls.map((url) => (
         <div key={url} className="group relative h-16 w-16 overflow-hidden rounded-lg bg-lc-black">
           <RemoteImage src={url} alt="" className="h-full w-full object-cover" />
-          <button
+          <Button
+            variant="bare"
             type="button"
             onClick={() => onRemove(url)}
             className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[11px] text-lc-white opacity-90 hover:bg-black"
             aria-label={t('shell.desktop.composer.removeAttachment')}
           >
             <CloseIcon size={12} strokeWidth={2.5} />
-          </button>
+          </Button>
         </div>
       ))}
       {uploading && (

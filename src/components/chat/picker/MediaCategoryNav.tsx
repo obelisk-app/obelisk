@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import type { MediaCategory } from '@/utils/chat/picker/media-catalog';
 import { MEDIA_CATEGORIES, MEDIA_CATEGORY_LABEL } from '@/constants/chat/picker';
@@ -17,7 +18,8 @@ export function MediaCategoryNav({
   return (
     <nav className="mb-2 grid shrink-0 grid-cols-9 border-b border-lc-border px-1 pb-1" aria-label={t('chat.mediaPicker.categories')}>
       {MEDIA_CATEGORIES.map((value) => (
-        <button
+        <Button
+          variant="bare"
           type="button"
           key={value}
           onClick={() => onCategory(value)}
@@ -27,7 +29,7 @@ export function MediaCategoryNav({
           className={['flex h-10 min-w-0 items-center justify-center rounded-lg border-b-2', category === value ? 'border-lc-green bg-lc-green/10 text-lc-green' : 'border-transparent text-lc-white/80 hover:bg-lc-border/60 hover:text-lc-white'].join(' ')}
         >
           <MediaCategoryGlyph category={value} />
-        </button>
+        </Button>
       ))}
     </nav>
   );

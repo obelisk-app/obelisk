@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { JsForumTag } from '@/services/nostr-bridge';
 import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
 import { TagDot } from './TagDot';
@@ -15,7 +16,8 @@ export function TagChip({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onClick}
       // Color is per-tag (admin-chosen or derived from the id), so it has to
@@ -30,6 +32,6 @@ export function TagChip({
         ? <span className="text-sm leading-none">{tag.emoji}</span>
         : <TagDot tag={tag} />}
       <span className="truncate max-w-[10rem]">{tag.name}</span>
-    </button>
+    </Button>
   );
 }

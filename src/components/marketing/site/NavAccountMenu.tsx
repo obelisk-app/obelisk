@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { RefObject } from 'react';
 import { useTranslations } from 'next-intl';
 import UserAvatar from '@/components/ui/media/UserAvatar';
@@ -28,7 +29,8 @@ export default function NavAccountMenu({
   return (
     <div className="relative">
       {/* The account pill: avatar and name in one rounded trigger, a look of its own. */}
-      <button
+      <Button
+        variant="bare"
         ref={triggerRef}
         type="button"
         onClick={menu.toggle}
@@ -49,7 +51,7 @@ export default function NavAccountMenu({
         <span className="text-sm text-lc-white font-medium max-w-[120px] truncate">
           {name}
         </span>
-      </button>
+      </Button>
 
       {menu.open && (
         <div ref={menuRef} role="menu" className={`absolute right-0 z-50 mt-2 w-56 ${MENU_PANEL_CLASS}`}>

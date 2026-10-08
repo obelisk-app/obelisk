@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { gameCatalog, type GameInfo } from '@/lib/games/core/catalog';
 import { gameDescription, gameSummary } from '@/utils/games/copy/game-copy';
 import { useTranslations } from 'next-intl';
@@ -14,7 +15,8 @@ export default function GamePickList({ onChoose }: {
   return (
     <div className="space-y-2" data-testid="game-list">
       {catalog.map((info) => (
-        <button
+        <Button
+          variant="bare"
           key={info.type}
           type="button"
           onClick={() => onChoose(info)}
@@ -29,7 +31,7 @@ export default function GamePickList({ onChoose }: {
             <span className="mt-0.5 block text-xs text-lc-muted">{gameDescription(t, info.type)}</span>
             <span className="mt-1 block text-[11px] text-lc-muted">{gameSummary(t, info)}</span>
           </span>
-        </button>
+        </Button>
       ))}
     </div>
   );

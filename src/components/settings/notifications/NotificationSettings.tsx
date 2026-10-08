@@ -1,5 +1,6 @@
 'use client';
 
+import Section from '@/components/ui/layout/Section';
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import SettingRow from '@/components/ui/forms/SettingRow';
@@ -20,14 +21,13 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
 
   if (mobile) {
     return (
-      <div className="settings-section" data-testid="notification-settings">
-        <div className="settings-section-title">{t('settings.preferences.notifications.title')}</div>
+      <Section variant="mobile" headingAs="h3" title={t('settings.preferences.notifications.title')} data-testid="notification-settings">
         {vm.rows.map((row) => (
-          <button
+          <Button
+            variant="mobileRow"
             key={row.key}
             type="button"
-            className="settings-row action"
-            onClick={row.onToggle}
+           onClick={row.onToggle}
             disabled={row.disabled}
           >
             <span style={{ minWidth: 0, flex: 1 }}>
@@ -40,22 +40,22 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
               className={`toggle ${row.on ? 'on' : ''}`}
               role="switch"
               aria-checked={row.on}
-              data-testid={`notif-toggle-${row.key}`}
+             data-testid={`notif-toggle-${row.key}`}
             />
-          </button>
+          </Button>
         ))}
         {vm.soundsOn && (
           <div className="settings-row !block"><RingtonePicker value={vm.ringtone} onPick={vm.pickRingtone} mobile /></div>
         )}
-        <button
+        <Button
+          variant="mobileRow"
           type="button"
-          className="settings-row action"
-          onClick={vm.testSound}
-          data-testid="notif-test-sound"
+         onClick={vm.testSound}
+         data-testid="notif-test-sound"
         >
           <span>{t('settings.preferences.notifications.test')}</span>
-        </button>
-      </div>
+        </Button>
+      </Section>
     );
   }
 
@@ -68,8 +68,8 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
         <Button
           variant="outlinePill"
           size="xs"
-          onClick={vm.testSound}
-          data-testid="notif-test-sound"
+         onClick={vm.testSound}
+         data-testid="notif-test-sound"
         >
           {t('settings.preferences.notifications.test')}
         </Button>
@@ -86,7 +86,7 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
               aria-label={row.label}
               aria-describedby={descriptionId}
               disabled={row.disabled}
-              data-testid={`notif-toggle-${row.key}`}
+             data-testid={`notif-toggle-${row.key}`}
             />
           )}
         />

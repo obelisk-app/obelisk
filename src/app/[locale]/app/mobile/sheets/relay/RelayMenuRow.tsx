@@ -1,5 +1,7 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
+
 const rowStyle: React.CSSProperties = {
   width: '100%',
   display: 'flex',
@@ -35,7 +37,8 @@ export function RelayMenuRow({
   danger?: boolean;
 }) {
   return (
-    <button
+    <Button
+      variant="bare"
       onClick={onClick}
       style={{ ...rowStyle, color: danger ? 'var(--presence-dnd, #ef4444)' : rowStyle.color }}
     >
@@ -46,6 +49,6 @@ export function RelayMenuRow({
       {hint && (
         <span style={{ fontSize: 11, color: 'var(--app-text-mute)' }}>{hint}</span>
       )}
-    </button>
+    </Button>
   );
 }

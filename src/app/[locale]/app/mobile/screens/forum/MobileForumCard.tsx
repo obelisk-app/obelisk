@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { avatarInitials } from '@/utils/identity/display-name';
 import { type JsForumTag, type JsGroup } from '@/services/nostr-bridge';
 import { useMobileForumCard } from '@/hooks/shell/mobile/screens/forum/useMobileForumCard';
@@ -27,7 +28,7 @@ export function MobileForumCard({
     // Skeleton-ish: render the card with whatever we have so the user knows
     // the thread exists and is incoming.
     return (
-      <button className="forum-card" onClick={onClick} data-testid="mobile-forum-card-skeleton" data-thread-id={group.id}>
+      <Button variant="bare" className="forum-card" onClick={onClick} data-testid="mobile-forum-card-skeleton" data-thread-id={group.id}>
         <div className="forum-card-row">
           <div className="dm-ava-list" style={{ ...avatarStyle(group.id), width: 36, height: 36, fontSize: 12 }}>
             {group.picture ? <RemoteImage src={group.picture} alt="" /> : avatarInitials(card.initialsSeed, group.id)}
@@ -37,11 +38,12 @@ export function MobileForumCard({
             <div className="forum-card-preview" style={{ opacity: 0.6 }}>{t('common.loading')}</div>
           </div>
         </div>
-      </button>
+      </Button>
     );
   }
   return (
-    <button
+    <Button
+      variant="bare"
       className="forum-card"
       onClick={onClick}
       data-testid="mobile-forum-card"
@@ -82,6 +84,6 @@ export function MobileForumCard({
           </div>
         </div>
       </div>
-    </button>
+    </Button>
   );
 }

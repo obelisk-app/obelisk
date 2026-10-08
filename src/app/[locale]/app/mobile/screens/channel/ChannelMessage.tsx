@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { avatarInitials } from '@/utils/identity/display-name';
 import { memo } from 'react';
 import { type JsMessage } from '@/services/nostr-bridge';
@@ -68,7 +69,8 @@ export const ChannelMessage = memo(function ChannelMessage({
           <RoleBadge pubkey={msg.pubkey} />
           <span className="msg-time">{timeOfDay(msg.createdAt, locale)}</span>
           {msg.pending && <span className="msg-spinner" aria-label={t('common.sending')} role="status" />}
-          <button
+          <Button
+            variant="bare"
             type="button"
             className="msg-more"
             aria-label={t('mobile.message.actions')}
@@ -76,7 +78,7 @@ export const ChannelMessage = memo(function ChannelMessage({
             onClick={() => onLongPress(msg)}
           >
             <MoreIcon size={null} />
-          </button>
+          </Button>
         </div>
         <div
           className="msg-text"
@@ -100,22 +102,24 @@ export const ChannelMessage = memo(function ChannelMessage({
         {msg.failed && (
           <div className="msg-failed" data-testid="mobile-msg-failed">
             <span className="msg-failed-label">{t('mobile.message.failed')}</span>
-            <button
+            <Button
+              variant="bare"
               type="button"
               className="msg-retry"
               onClick={vm.retry}
               data-testid="mobile-msg-retry"
             >
               {t('common.retry')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="bare"
               type="button"
               className="msg-dismiss"
               onClick={vm.dismissFailed}
               aria-label={t('mobile.message.dismissFailed')}
             >
               ✕
-            </button>
+            </Button>
           </div>
         )}
         {vm.grouped.length > 0 && (

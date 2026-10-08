@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
@@ -53,13 +54,13 @@ export function VoiceMessage({
         onTimeUpdate={(event) => setCurrent(event.currentTarget.currentTime)}
         onLoadedMetadata={onLoadedMetadata}
       />
-      <button type="button" onClick={toggle} className={`flex shrink-0 items-center justify-center text-white ${compact ? "h-11 w-9" : "h-14 w-10"}`} aria-label={t(playing ? 'chat.voiceNote.pause' : 'chat.voiceNote.play')}>
+      <Button variant="bare" type="button" onClick={toggle} className={`flex shrink-0 items-center justify-center text-white ${compact ? "h-11 w-9" : "h-14 w-10"}`} aria-label={t(playing ? 'chat.voiceNote.pause' : 'chat.voiceNote.play')}>
         {playing ? (
           <PauseIcon size={null} className="h-5 w-5" />
         ) : (
           <PlayIcon size={null} className="ml-0.5 h-6 w-6" />
         )}
-      </button>
+      </Button>
       <span className={`min-w-0 flex-1 ${compact ? "" : "relative h-16 pr-2"}`}>
         <span className={compact ? "relative block h-9" : "absolute left-0 right-3 top-1/2 block h-9 -translate-y-1/2"} data-testid="voice-waveform">
           <span className="flex h-full items-center gap-[2px]" aria-hidden="true">
@@ -108,7 +109,8 @@ export function VoiceMessage({
             <MicIcon size={null} strokeWidth={2} className="h-5 w-5" />
           </span>
           {playing && (
-            <button
+            <Button
+              variant="bare"
               type="button"
               onClick={cyclePlaybackRate}
               className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-black/60 text-sm font-bold text-white backdrop-blur-[1px]"
@@ -116,7 +118,7 @@ export function VoiceMessage({
               title={t('chat.voiceNote.speed')}
             >
               {playbackRate}x
-            </button>
+            </Button>
           )}
         </span>
       )}

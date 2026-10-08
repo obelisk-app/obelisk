@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import type { ScreenName } from '@/utils/shell/mobile/url-state';
 
@@ -10,9 +11,9 @@ export function EmptyScreen({ go, title }: { go: (s: ScreenName) => void; title:
     <div className="screen active">
       <div className="empty-state">
         <div className="empty-state-title">{title}</div>
-        <button className="btn-primary" style={{ width: 'auto', padding: '10px 18px' }} onClick={() => go('server')}>
+        <Button variant="mobilePrimary" style={{ width: 'auto', padding: '10px 18px' }} onClick={() => go('server')}>
           {t('mobile.empty.backHome')}
-        </button>
+        </Button>
       </div>
     </div>
   );

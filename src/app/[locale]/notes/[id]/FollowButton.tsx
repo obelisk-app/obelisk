@@ -14,6 +14,7 @@
  * profile is already there, and Obelisk's own surfaces do have one.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useFollowButton } from '@/hooks/social/viewer/useFollowButton';
 
@@ -30,7 +31,8 @@ export default function FollowButton({
   if (vm.hidden) return null;
 
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={vm.onClick}
       disabled={vm.disabled}
@@ -43,6 +45,6 @@ export default function FollowButton({
       data-testid="follow-button"
     >
       {vm.busy ? '…' : t(vm.labelKey)}
-    </button>
+    </Button>
   );
 }

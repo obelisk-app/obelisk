@@ -1,5 +1,7 @@
 'use client';
 
+import Section from '@/components/ui/layout/Section';
+import Button from '@/components/ui/buttons/Button';
 import LanguagePreference from '@/components/settings/appearance/LanguagePreference';
 import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
 import AppearancePreferenceControls from '@/components/settings/appearance/AppearancePreferenceControls';
@@ -49,38 +51,37 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
         <Heading as="h2">{t('settings.preferencesTitle')}</Heading>
       </div>
       <div className="settings-body">
-        <div className="settings-section">
-          <div className="settings-section-title">{t('settings.preferences.mobile.app')}</div>
+        <Section variant="mobile" headingAs="h3" title={t('settings.preferences.mobile.app')} >
           <LanguagePreference variant="mobile" />
-          <button
+          <Button
+            variant="mobileRow"
             type="button"
-            className="settings-row action"
-            onClick={() => vm.openView('appearance')}
-            data-testid="mobile-appearance-submenu"
+           onClick={() => vm.openView('appearance')}
+           data-testid="mobile-appearance-submenu"
           >
             <span>{t('settings.preferences.appearance.title')}</span>
             <span className="settings-row-meta muted" aria-hidden="true">›</span>
-          </button>
+          </Button>
           {/* The hints are one-shot, so this is the only way back to them. */}
-          <button
+          <Button
+            variant="mobileRow"
             type="button"
-            className="settings-row action"
-            onClick={vm.replayHints}
-            data-testid="mobile-replay-hints"
+           onClick={vm.replayHints}
+           data-testid="mobile-replay-hints"
           >
             <span>{t('shell.hints.replay')}</span>
-          </button>
-          <button type="button" className="settings-row action" onClick={vm.openMediaLibrary} data-testid="mobile-media-library">
+          </Button>
+          <Button variant="mobileRow" type="button" onClick={vm.openMediaLibrary} data-testid="mobile-media-library">
             <span style={{ minWidth: 0, flex: 1 }}>
               <span style={{ display: 'block' }}>{t('mobile.settings.packs')}</span>
               <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>{t('mobile.settings.packsHint')}</span>
             </span>
             <span className="settings-row-meta muted" aria-hidden="true">›</span>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="mobileRow"
             type="button"
-            className="settings-row action"
-            onClick={vm.toggleDms}
+           onClick={vm.toggleDms}
           >
             <span style={{ minWidth: 0, flex: 1 }}>
               <span style={{ display: 'block' }}>{t('settings.preferences.directMessages.label')}</span>
@@ -92,47 +93,46 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
               className={`toggle ${vm.dmOptInEnabled ? 'on' : ''}`}
               role="switch"
               aria-checked={vm.dmOptInEnabled}
-              data-testid="mobile-dm-opt-in-toggle"
+             data-testid="mobile-dm-opt-in-toggle"
             />
-          </button>
+          </Button>
           <div className="settings-row">
             <span>{t("settings.preferences.mobile.version")}</span>
             <span className="settings-row-meta muted">obelisk · mobile</span>{/* i18n-exempt: product build name */}
           </div>
-        </div>
-        <div className="settings-section">
-          <div className="settings-section-title">{t("settings.preferences.backup.advanced")}</div>
+        </Section>
+        <Section variant="mobile" headingAs="h3" title={t("settings.preferences.backup.advanced")} >
           <AccountBackupExport mobile />
-          <button
+          <Button
+            variant="mobileRow"
             type="button"
-            className="settings-row action"
-            onClick={() => vm.openView('data')}
-            data-testid="mobile-local-data-submenu"
+           onClick={() => vm.openView('data')}
+           data-testid="mobile-local-data-submenu"
           >
             <span style={{ minWidth: 0, flex: 1 }}>
               <span style={{ display: 'block' }}>{t('settings.section.data.label')}</span>
               <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>{t('settings.section.data.desc')}</span>
             </span>
             <span className="settings-row-meta muted" aria-hidden="true">›</span>
-          </button>
-        </div>
+          </Button>
+        </Section>
         <NotificationSettings mobile />
         <SocialRelaySettings mobile />
         <CallSettings mobile />
         <WalletSettings mobile />
         <MutedAndBlocked mobile />
         <DeveloperSignatureTest mobile />
-        <div className="settings-section">
-          <div className="settings-section-title">{t("mobile.settings.identity")}</div>
-          <button
-            className="settings-btn-danger"
-            onClick={vm.askLogout}
-            data-testid="disconnect-btn"
+        <Section variant="mobile" headingAs="h3" title={t("mobile.settings.identity")} >
+          <Button
+            variant="mobileDanger"
+
+           onClick={vm.askLogout}
+           data-testid="disconnect-btn"
           >
             <LogOutIcon size={null} strokeWidth={2} />
             {t("mobile.settings.disconnect")}
-          </button>
-        </div>
+          </Button>
+        </Section>
       </div>
     </div>
       {vm.mediaLibraryOpen && <MediaLibraryModal onClose={vm.closeMediaLibrary} />}

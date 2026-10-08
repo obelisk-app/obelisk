@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { HTMLAttributes, ReactNode } from 'react';
 import { smallVoiceButtonClass } from '@/utils/voice/control-button-class';
 
@@ -14,8 +15,8 @@ type SmallBtnProps = {
 /** A small square toggle in the sidebar's voice status bar. */
 export default function SmallBtn({ active, danger, onClick, title, children, ...rest }: SmallBtnProps) {
   return (
-    <button {...rest} onClick={onClick} title={title} className={smallVoiceButtonClass(active, danger)}>
+    <Button variant="bare" {...rest} onClick={onClick} title={title} className={smallVoiceButtonClass(active, danger)}>
       {children}
-    </button>
+    </Button>
   );
 }

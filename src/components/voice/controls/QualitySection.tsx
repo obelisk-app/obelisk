@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { VideoQuality } from '@/services/voice/quality';
 import { VIDEO_QUALITIES } from '@/constants/voice/quality';
 
@@ -20,7 +21,8 @@ export default function QualitySection({
       <div className="text-xs uppercase tracking-wider text-white/50 mb-1.5">{label}</div>
       <div className="grid grid-cols-3 gap-1">
         {VIDEO_QUALITIES.map((q) => (
-          <button
+          <Button
+            variant="bare"
             key={q}
             onClick={() => onChange(q)}
             data-testid={`${testid}-${q}`}
@@ -32,7 +34,7 @@ export default function QualitySection({
             }
           >
             {q}
-          </button>
+          </Button>
         ))}
       </div>
     </div>

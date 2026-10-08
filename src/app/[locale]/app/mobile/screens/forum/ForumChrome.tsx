@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
 import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';
@@ -28,17 +29,19 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
             data-testid="mobile-forum-search-input"
           />
           {searchQuery && (
-            <button
+            <Button
+              variant="bare"
               type="button"
               className="search-clear"
               onClick={() => setSearchQuery('')}
               aria-label={t('mobile.forum.clearSearch')}
             >
               ✕
-            </button>
+            </Button>
           )}
         </div>
-        <button
+        <Button
+          variant="bare"
           type="button"
           className="forum-new-pill"
           // The placeholder tells the user to "Tap + to create", so + has
@@ -49,10 +52,11 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
           aria-label={t('chat.forum.new')}
         >
           <PlusIcon size={null} strokeWidth={2} />
-        </button>
+        </Button>
       </Form>
       <div className="forum-filter-row">
-        <button
+        <Button
+          variant="bare"
           type="button"
           className="forum-chip muted"
           onClick={() => forum.setShowSort(true)}
@@ -60,9 +64,10 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
         >
           <SortIcon size={null} strokeWidth={2} />
           {t('chat.forum.sort')}
-        </button>
+        </Button>
         {forum.forumTags.map((tag) => (
-          <button
+          <Button
+            variant="bare"
             key={tag.id}
             type="button"
             className="forum-chip"
@@ -75,9 +80,10 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
           >
             {tag.emoji ? <span>{tag.emoji}</span> : <MobileTagDot tag={tag} />}
             <span>{tag.name}</span>
-          </button>
+          </Button>
         ))}
-        <button
+        <Button
+          variant="bare"
           type="button"
           className={`forum-chip ${allActive ? '' : 'muted'}`}
           onClick={forum.clearTags}
@@ -85,7 +91,7 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
           aria-pressed={allActive}
         >
           {t('mobile.search.all')}
-        </button>
+        </Button>
       </div>
     </div>
   );

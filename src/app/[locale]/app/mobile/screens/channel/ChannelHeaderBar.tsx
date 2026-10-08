@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
 import { useTranslations } from 'next-intl';
 import BackButton from '../../chrome/BackButton';
@@ -31,22 +32,23 @@ export function ChannelHeaderBar({ header, back, onSearch, isChannelAdmin, onOpe
         </div>
         <div className="chat-actions">
           <MobileSigningIndicator />
-          <button className="icon-btn action-search" onClick={onSearch} aria-label={t('common.search')}>
+          <Button variant="mobileIcon" className="action-search" onClick={onSearch} aria-label={t('common.search')}>
             <SearchIcon size={null} />
-          </button>
+          </Button>
           {isChannelAdmin && (
-            <button
-              className="icon-btn action-menu"
+            <Button
+              variant="mobileIcon"
+              className="action-menu"
               onClick={onOpenSettings}
               aria-label={t('shell.desktop.channel.settings')}
               data-testid="mobile-channel-settings-btn"
             >
               <GearIcon size={null} strokeWidth={1.5} />
-            </button>
+            </Button>
           )}
-          <button className="icon-btn action-members" onClick={openMembers} aria-label={t('mobile.members.members')}>
+          <Button variant="mobileIcon" className="action-members" onClick={openMembers} aria-label={t('mobile.members.members')}>
             <UsersIcon size={null} />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

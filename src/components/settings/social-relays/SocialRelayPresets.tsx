@@ -1,3 +1,4 @@
+import Button from '@/components/ui/buttons/Button';
 import Text from '@/components/ui/layout/Text';
 import { SOCIAL_RELAY_PRESETS } from '@/constants/social/relays';
 import { socialRelayPresetChips } from '@/utils/settings/social-relays';
@@ -22,7 +23,8 @@ export default function SocialRelayPresets({
       </Text>
       <div className="flex flex-wrap gap-1.5" data-testid="social-relay-presets">
         {socialRelayPresetChips(SOCIAL_RELAY_PRESETS, draft, canAdd).map((chip) => (
-          <button
+          <Button
+            variant="bare"
             key={chip.url}
             type="button"
             onClick={() => onAdd(chip.url)}
@@ -41,7 +43,7 @@ export default function SocialRelayPresets({
             <span className="hidden text-lc-muted/70 sm:inline">
               {t(`settings.preferences.socialRelays.preset.${chip.note}`)}
             </span>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

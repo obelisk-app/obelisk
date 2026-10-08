@@ -18,3 +18,7 @@ export { default as Stack } from './Stack';
 export * from './Stack';
 export { default as Text } from './Text';
 export * from './Text';
+export { default as Section } from './Section';
+export * from './Section';
+export { default as Panel } from './Panel';
+export * from './Panel';

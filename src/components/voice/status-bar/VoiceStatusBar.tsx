@@ -9,6 +9,7 @@
  * active VoiceClient). Clicking the channel pill jumps the AppShell view back
  * to the voice channel.
  */
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useVoiceStatusBar } from '@/hooks/voice/status-bar/useVoiceStatusBar';
 import SmallBtn from './SmallBtn';
@@ -24,7 +25,8 @@ export default function VoiceStatusBar() {
     <div className="px-2 pt-2" data-testid="voice-status-bar">
       <div className="bg-lc-black/60 border border-lc-border rounded-xl p-2 space-y-2">
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="bare"
             onClick={vm.jump}
             className="flex-1 min-w-0 flex items-center gap-2 text-left hover:bg-lc-border/30 rounded-md px-1.5 py-1 transition"
             title={t('voice.goToChannel')}
@@ -44,15 +46,16 @@ export default function VoiceStatusBar() {
                 {vm.channelLabel}
               </span>
             </span>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="bare"
             onClick={vm.leave}
             className="w-7 h-7 rounded-md bg-red-600 hover:bg-red-700 flex items-center justify-center text-white transition-colors"
             title={t('voice.disconnect')}
             data-testid="voice-bar-leave"
           >
             <PhoneOffIcon size={14} strokeWidth={2} />
-          </button>
+          </Button>
         </div>
 
         <div className="flex items-center gap-1 w-full">

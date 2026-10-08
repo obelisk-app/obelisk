@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useChannelsSection } from '@/hooks/shell/search/useChannelsSection';
 import RemoteImage from '@/components/ui/media/RemoteImage';
@@ -15,7 +16,8 @@ export function ChannelsSection({ matches, t, onClose }: { matches: ReadonlyArra
         <span>{t('shell.search.channels')}</span>
       </div>
       {vm.shown.map((g) => (
-        <button
+        <Button
+          variant="bare"
           key={g.id}
           type="button"
           onClick={() => vm.pick(g)}
@@ -34,7 +36,7 @@ export function ChannelsSection({ matches, t, onClose }: { matches: ReadonlyArra
             <div className="text-sm text-lc-white truncate">#{g.name ?? g.id.slice(0, 8)}</div>
             {g.about && <div className="text-[11px] text-lc-muted truncate">{g.about}</div>}
           </div>
-        </button>
+        </Button>
       ))}
     </section>
   );

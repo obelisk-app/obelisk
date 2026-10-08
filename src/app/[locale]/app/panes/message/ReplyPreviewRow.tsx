@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { useUserMetadata as useProfile, type JsMessage } from '@/services/nostr-bridge';
 import { MentionText } from '@/components/chat/mentions/MentionText';
@@ -18,7 +19,8 @@ export function ReplyPreviewRow({
   const name = displayNameFor(parent.pubkey, meta);
   const preview = parent.content.replace(/\s+/g, ' ').slice(0, 120);
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onJump}
       className="mb-1 flex max-w-full items-center gap-2 truncate text-xs text-lc-muted hover:text-lc-white"
@@ -27,6 +29,6 @@ export function ReplyPreviewRow({
       <span className="text-lc-green">↩</span>
       <span className="font-semibold text-lc-white/80">{name}</span>
       <span className="truncate text-lc-muted"><MentionText content={preview} /></span>
-    </button>
+    </Button>
   );
 }

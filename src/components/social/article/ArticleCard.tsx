@@ -14,6 +14,7 @@
  * title an article has.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
@@ -34,7 +35,8 @@ export function ArticleCard({
   const { meta, minutes, excerpt } = useArticleCard(note);
 
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onOpen}
       // Side-by-side above `sm`. Stacked with a 2:1 banner, one article on a
@@ -87,6 +89,6 @@ export function ArticleCard({
           </div>
         )}
       </div>
-    </button>
+    </Button>
   );
 }

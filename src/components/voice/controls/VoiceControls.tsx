@@ -6,6 +6,7 @@
  * absolutely or in a flex column footer. State and toggles come from
  * `useVoiceControls`; the quality popover's open flag is local.
  */
+import Button from '@/components/ui/buttons/Button';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useVoiceControls } from '@/hooks/voice/controls/useVoiceControls';
@@ -114,14 +115,16 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
 
         <div className="w-px h-6 bg-white/10 mx-1" aria-hidden />
 
-        <button
+        <Button
+
+          variant="bare"
           onClick={onLeave}
           className="w-11 h-11 rounded-full bg-red-600 hover:bg-red-500 active:bg-red-700 flex items-center justify-center text-white transition-colors shadow-lg shadow-red-900/40"
           title={t('voice.disconnect')}
           data-testid="leave-voice-btn"
         >
           <PhoneOffIcon size={18} strokeWidth={2} />
-        </button>
+        </Button>
       </div>
     </div>
   );

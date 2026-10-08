@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import MediaThumb from '@/components/media/library/MediaThumb';
 import { StarIcon } from '@/assets/icons';
@@ -17,7 +18,8 @@ export function MediaSectionTile({ entry, favorite, onPick, onFavorite, onMediaL
   const t = useTranslations();
   return (
     <div className="relative h-full min-h-0 min-w-0">
-      <button
+      <Button
+        variant="bare"
         type="button"
         onClick={() => onPick(entry)}
         className="flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-lc-border bg-lc-black/60 p-2 transition-colors hover:border-lc-green/50 hover:bg-lc-black"
@@ -29,8 +31,9 @@ export function MediaSectionTile({ entry, favorite, onPick, onFavorite, onMediaL
           onError={() => onMediaError(entry)}
           className="block max-h-full max-w-full object-contain"
         />
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="bare"
         type="button"
         onClick={() => onFavorite(entry)}
         aria-label={t(favorite ? 'chat.mediaPicker.removeFavorite' : 'chat.mediaPicker.addFavorite', { name: entry.name })}
@@ -38,7 +41,7 @@ export function MediaSectionTile({ entry, favorite, onPick, onFavorite, onMediaL
         className={"absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full border bg-lc-black/85 transition-colors " + (favorite ? "border-lc-green text-lc-green" : "border-lc-border text-lc-white hover:border-lc-green/50")}
       >
         <StarIcon size={14} filled={favorite} />
-      </button>
+      </Button>
     </div>
   );
 }

@@ -6,6 +6,7 @@
  * `useWalletSettings`; the rule for which wallet pays is
  * `src/services/wallet/wallet.ts`. See docs/bitcoin-zaps-nwc.md.
  */
+import Section from '@/components/ui/layout/Section';
 import { useTranslations } from 'next-intl';
 import Text from '@/components/ui/layout/Text';
 import { useWalletSettings } from '@/hooks/settings/wallet/useWalletSettings';
@@ -55,10 +56,9 @@ export default function WalletSettings({ mobile = false }: { mobile?: boolean })
   );
 
   return mobile ? (
-    <div className="settings-section" data-testid="wallet-settings">
-      <div className="settings-section-title">{t('settings.wallet.title')}</div>
+    <Section variant="mobile" headingAs="h3" title={t('settings.wallet.title')} data-testid="wallet-settings">
       <div className="settings-row !block space-y-3">{body}</div>
-    </div>
+    </Section>
   ) : (
     <div className="space-y-3" data-testid="wallet-settings">
       <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">{t('settings.wallet.title')}</Text>

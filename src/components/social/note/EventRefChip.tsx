@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import type { NostrRef } from '@/services/social/nip27';
 import { useEventRefChip } from '@/hooks/social/note/useEventRefChip';
@@ -27,7 +28,8 @@ export default function EventRefChip({
   const { name, snippet, loading } = useEventRefChip(refValue);
 
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       className="my-1 flex w-full max-w-full flex-col gap-0.5 rounded-lg border border-lc-border bg-lc-dark/60 px-2.5 py-1.5 text-left text-xs transition-colors hover:border-lc-green/40"
       onClick={() => onOpenNote?.(refValue.id)}
@@ -47,6 +49,6 @@ export default function EventRefChip({
       ) : snippet ? (
         <span className="line-clamp-2 min-w-0 text-lc-white/75">{snippet}</span>
       ) : null}
-    </button>
+    </Button>
   );
 }

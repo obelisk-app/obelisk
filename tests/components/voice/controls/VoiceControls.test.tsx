@@ -247,18 +247,18 @@ describe('VoiceControls details', () => {
     useVoiceStore.setState({ isMuted: true, isDeafened: false, isCameraOn: true, isScreenSharing: true });
     renderLocalized(<VoiceControls onLeave={() => {}} onToggleChat={() => {}} isChatOpen />);
     const mute = screen.getByTestId('mute-btn');
-    expect(mute.className).toBe(CIRCLE + DANGER);
+    expect(mute).toHaveClass(CIRCLE + DANGER);
     expect(mute.title).toBe('Unmute');
     expect(mute.getAttribute('aria-label')).toBe('Unmute');
-    expect(screen.getByTestId('deafen-btn').className).toBe(CIRCLE + ACTIVE);
+    expect(screen.getByTestId('deafen-btn')).toHaveClass(CIRCLE + ACTIVE);
     expect(screen.getByTestId('deafen-btn').title).toBe('Deafen');
-    expect(screen.getByTestId('camera-btn').className).toBe(CIRCLE + ACTIVE);
+    expect(screen.getByTestId('camera-btn')).toHaveClass(CIRCLE + ACTIVE);
     expect(screen.getByTestId('camera-btn').title).toBe('Turn off camera');
-    expect(screen.getByTestId('screen-share-btn').className).toBe(CIRCLE + ACTIVE + ' hidden sm:flex');
+    expect(screen.getByTestId('screen-share-btn')).toHaveClass(CIRCLE + ACTIVE + ' hidden sm:flex');
     expect(screen.getByTestId('screen-share-btn').title).toBe('Stop sharing');
-    expect(screen.getByTestId('voice-chat-toggle').className).toBe(CIRCLE + ACTIVE);
+    expect(screen.getByTestId('voice-chat-toggle')).toHaveClass(CIRCLE + ACTIVE);
     expect(screen.getByTestId('voice-chat-toggle').title).toBe('Hide chat');
-    expect(screen.getByTestId('quality-btn').className).toBe(CIRCLE + IDLE);
+    expect(screen.getByTestId('quality-btn')).toHaveClass(CIRCLE + IDLE);
     expect(screen.getByTestId('quality-btn').getAttribute('aria-label')).toBe('Video quality');
   });
 
@@ -267,7 +267,7 @@ describe('VoiceControls details', () => {
     expect(screen.queryByTestId('voice-chat-toggle')).toBeNull();
     unmount();
     renderLocalized(<VoiceControls onLeave={() => {}} onToggleChat={() => {}} />);
-    expect(screen.getByTestId('voice-chat-toggle').className).toBe(CIRCLE + IDLE);
+    expect(screen.getByTestId('voice-chat-toggle')).toHaveClass(CIRCLE + IDLE);
     expect(screen.getByTestId('voice-chat-toggle').title).toBe('Show chat');
   });
 
@@ -287,7 +287,7 @@ describe('VoiceControls details', () => {
   it('the gear closes the quality popover on a second click and lights up while it is open', () => {
     renderLocalized(<VoiceControls onLeave={() => {}} />);
     fireEvent.click(screen.getByTestId('quality-btn'));
-    expect(screen.getByTestId('quality-btn').className).toBe(CIRCLE + ACTIVE);
+    expect(screen.getByTestId('quality-btn')).toHaveClass(CIRCLE + ACTIVE);
     fireEvent.click(screen.getByTestId('quality-btn'));
     expect(screen.queryByTestId('quality-popover')).toBeNull();
   });

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import Modal from '@/components/ui/overlays/Modal';
 import { useTranslations } from 'next-intl';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
@@ -22,7 +23,8 @@ export function RelaySettingsModal(props: {
       <ModalHeader title={t('shell.desktop.server.settings')} subtitle={t('shell.desktop.server.settingsHelp')} onClose={props.onClose} />
       <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto px-5 py-4">
         {items.map(({ kind: icon, open }) => (
-          <button
+          <Button
+            variant="bare"
             key={icon}
             onClick={open}
             className="flex items-center gap-4 rounded-lg border border-lc-border p-4 text-left hover:border-lc-green/50 hover:bg-lc-card"
@@ -39,7 +41,7 @@ export function RelaySettingsModal(props: {
               <span className="mt-1 block text-xs text-lc-muted">{t(`shell.desktop.server.items.${icon}.description`)}</span>
             </span>
             <ChevronRightIcon strokeWidth={2} className="shrink-0 text-lc-muted" />
-          </button>
+          </Button>
         ))}
       </div>
     </Modal>

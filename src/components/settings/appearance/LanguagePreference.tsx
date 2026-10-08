@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useLocale, useTranslations } from 'next-intl';
 import { useSwitchLocale } from '@/hooks/i18n/useSwitchLocale';
 import type { Locale } from '@/i18n/index';
@@ -24,7 +25,8 @@ export default function LanguagePreference({ variant = 'desktop' }: Props) {
   const controls = (
     <div className="flex shrink-0 overflow-hidden rounded-full border border-lc-border bg-lc-black/60 p-0.5" data-testid="language-preference-control">
       {OPTIONS.map((option) => (
-        <button
+        <Button
+          variant="bare"
           key={option.locale}
           type="button"
           onClick={() => switchLocale(option.locale)}
@@ -35,7 +37,7 @@ export default function LanguagePreference({ variant = 'desktop' }: Props) {
           }`}
         >
           {option.label}
-        </button>
+        </Button>
       ))}
     </div>
   );

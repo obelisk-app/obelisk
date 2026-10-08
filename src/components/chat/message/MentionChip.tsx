@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useChatStore } from '@/store/chat';
 import { useUserMetadata } from '@/services/nostr-bridge';
 
@@ -14,7 +15,8 @@ export function MentionChip({ pubkey, displayName }: { pubkey: string; displayNa
   const meta = useUserMetadata(pubkey);
   const resolvedName = meta?.displayName || meta?.name || displayName;
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={(event) => openProfilePopup(pubkey, { x: event.clientX, y: event.clientY })}
       // Same reason as the hashtag anchor in the markdown components: a
@@ -26,6 +28,6 @@ export function MentionChip({ pubkey, displayName }: { pubkey: string; displayNa
       data-testid="mention-highlight"
     >
       @{resolvedName}
-    </button>
+    </Button>
   );
 }

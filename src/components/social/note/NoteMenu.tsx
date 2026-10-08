@@ -10,6 +10,7 @@
  * look it up anywhere else.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { useRef } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
@@ -35,7 +36,8 @@ export default function NoteMenu({
 
   return (
     <div className="relative ml-auto">
-      <button
+      <Button
+        variant="bare"
         ref={triggerRef}
         type="button"
         className="group/act -m-1 flex items-center rounded-full p-1 text-lc-muted transition-colors"
@@ -47,7 +49,7 @@ export default function NoteMenu({
         <span className="flex h-7 w-7 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
           <MoreIcon size={18} />
         </span>
-      </button>
+      </Button>
 
       <AnchoredMenu
         open={vm.open}

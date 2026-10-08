@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { type JsForumTag } from '@/services/nostr-bridge';
 import { tagChipStyle } from '@/utils/chat/forum/forum-tag-colors';
 import { threadTagState } from '@/utils/shell/mobile/thread-tags';
@@ -19,7 +20,8 @@ export function NewThreadTagChip({
 }) {
   const { active, disabled } = threadTagState(selectedTagIds, tag.id, max);
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onToggle}
       disabled={disabled}
@@ -30,6 +32,6 @@ export function NewThreadTagChip({
     >
       {tag.emoji ? <span>{tag.emoji}</span> : <MobileTagDot tag={tag} />}
       <span>{tag.name}</span>
-    </button>
+    </Button>
   );
 }

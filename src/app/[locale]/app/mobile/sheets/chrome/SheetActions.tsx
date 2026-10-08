@@ -1,8 +1,8 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { cn } from '@/utils/style/cn';
 
 export interface SheetPrimaryAction {
   label: string;
@@ -31,8 +31,6 @@ export interface SheetActionsProps {
   cancelClassName?: string;
 }
 
-const PRIMARY_CLASS = { primary: 'btn-primary', danger: 'settings-btn-danger' } as const;
-
 /**
  * The footer that ends a mobile sheet: the full-width `.btn-primary` (or the
  * red `.settings-btn-danger` of a destructive confirmation) and the quiet
@@ -45,21 +43,21 @@ export default function SheetActions({ primary, onCancel, dismiss = 'cancel', ca
   return (
     <>
       {primary && (
-        <button
+        <Button
+          variant={primary.tone === 'danger' ? 'mobileDanger' : 'mobilePrimary'}
           type={primary.form ? 'submit' : 'button'}
           form={primary.form}
           onClick={primary.onClick}
           disabled={primary.disabled || primary.busy}
-          className={PRIMARY_CLASS[primary.tone ?? 'primary']}
           data-testid={primary.testId}
         >
           {primary.icon}
           {primary.busy && primary.busyLabel ? primary.busyLabel : primary.label}
-        </button>
+        </Button>
       )}
-      <button type="button" className={cn('btn-cancel', cancelClassName)} onClick={onCancel}>
+      <Button variant="mobileSecondary" type="button" className={cancelClassName} onClick={onCancel}>
         {dismiss === 'close' ? t('common.close') : t('common.cancel')}
-      </button>
+      </Button>
     </>
   );
 }

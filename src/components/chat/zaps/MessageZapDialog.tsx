@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { ZapTarget } from '@/store/chat/message-zap';
 import { ZAP_QUICK_AMOUNTS_SATS } from '@/constants/wallet/zap';
 import { useMessageZapForm } from '@/hooks/chat/zaps/useMessageZapForm';
@@ -44,7 +45,8 @@ export default function MessageZapDialog({ target, close }: { target: ZapTarget;
           />
           <div className="mb-3 flex flex-wrap gap-2">
             {ZAP_QUICK_AMOUNTS_SATS.map((a) => (
-              <button
+              <Button
+                variant="bare"
                 key={a}
                 type="button"
                 onClick={() => vm.setAmount(a)}
@@ -55,7 +57,7 @@ export default function MessageZapDialog({ target, close }: { target: ZapTarget;
                 }`}
               >
                 {formatNumber(a)}
-              </button>
+              </Button>
             ))}
           </div>
           <Label htmlFor={vm.commentId} className="mb-2 block text-xs text-lc-muted">{t('chat.zap.comment')}</Label>

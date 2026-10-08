@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import DmThreadMenu from '@/components/chat/dm/thread/DmThreadMenu';
 import PqShield from '@/components/chat/pq/PqShield';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
@@ -35,7 +36,8 @@ export function DmPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
       {/* Fixed height, matching the DM list header (`DmList`) so their
           bottom borders line up; padding-derived height drifted from it. */}
       <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-lc-border bg-lc-dark px-5" data-testid="dm-thread-header">
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={openPeerProfile}
           className="flex min-w-0 items-center gap-3 rounded-lg text-left hover:opacity-80"
@@ -50,7 +52,7 @@ export function DmPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
               {thread.meta?.nip05 ?? shortNpubLabel(peer)}
             </div>
           </div>
-        </button>
+        </Button>
         <span className="ml-auto flex items-center gap-1">
           <DmProtocolSwitch choice={protocolChoice} className="mr-1" />
           <DmCallButtons peer={peer} />

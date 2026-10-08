@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import UserAvatar from '@/components/ui/media/UserAvatar';
@@ -18,7 +19,8 @@ export default function WhoToFollowRow({
 
   return (
     <li className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5" data-testid="who-to-follow-row">
-      <button
+      <Button
+        variant="bare"
         type="button"
         onClick={() => onOpenProfile?.(pubkey)}
         className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -30,7 +32,7 @@ export default function WhoToFollowRow({
             <span className="block truncate text-[10px] text-lc-muted">{meta.nip05}</span>
           )}
         </span>
-      </button>
+      </Button>
       <FollowButton pubkey={pubkey} />
     </li>
   );

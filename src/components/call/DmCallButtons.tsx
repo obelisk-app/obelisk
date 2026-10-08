@@ -8,6 +8,7 @@
  * are disabled rather than hidden, so the header doesn't jump.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useDmCallButtons } from '@/hooks/call/useDmCallButtons';
 import { PhoneIcon, VideoIcon } from '@/assets/icons';
@@ -30,7 +31,8 @@ export function DmCallButtons({ peer, variant = 'desktop' }: { peer: string; var
   return (
     // Pointing at the buttons starts the call stack's download (load-session.ts).
     <span className={GROUP_CLASS[variant]} role="group" aria-label={t('calls.call.voice')} onPointerEnter={prefetchDmCallSession} onFocus={prefetchDmCallSession}>
-      <button
+      <Button
+        variant="bare"
         type="button"
         className={btn}
         onClick={vm.startVoice}
@@ -40,8 +42,9 @@ export function DmCallButtons({ peer, variant = 'desktop' }: { peer: string; var
         data-testid="dm-call-voice"
       >
         <PhoneIcon size={variant === 'desktop' ? 15 : 19} />
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="bare"
         type="button"
         className={btn}
         onClick={vm.startVideo}
@@ -51,7 +54,7 @@ export function DmCallButtons({ peer, variant = 'desktop' }: { peer: string; var
         data-testid="dm-call-video"
       >
         <VideoIcon size={variant === 'desktop' ? 16 : 20} />
-      </button>
+      </Button>
     </span>
   );
 }

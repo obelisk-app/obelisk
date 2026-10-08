@@ -265,3 +265,11 @@ Round 34. Every form is the same three things: the `Form` element, the one `useF
 
 **When a hook stays.** A `use...Form` hook exists only for behaviour a spec cannot hold, and composes `useForm`: `useChannelSettingsForm` (the SFU `/info` check, seeded from the pin), `useProfileEditorForm` (the late profile, upload progress), `useNewGameForm` (the two steps, reading a save file), `useMessageZapForm` (sending stays with `useSendZap`'s double-pay guard).
 
+
+## Shared controls and layout
+
+Every route, including mobile and development screens, uses the controls in `src/components/ui/`: `Button` or its specialized button primitives, `Input`, `Select`, and `TextArea`. Native controls are implemented only inside the UI kit. The guards enforce zero raw buttons and form controls outside it.
+
+Choose an existing visual button variant first. Phone actions use `mobilePrimary`, `mobileSecondary`, `mobileDanger`, `mobileIcon`, or `mobileRow`; their stylesheet recipes stay scoped to the phone shell. `bare` is for compound controls whose geometry belongs to their feature, such as game cells, media tiles, and navigational rows. It supplies the shared keyboard focus and safe default button type without injecting padding, display, or disabled opacity that changes those controls. Do not use it to duplicate an existing action recipe.
+
+Use `Card` for repeated surfaces, `Panel` for cards with a separated title/action header, and `Section` for titled content groups (`article`, `prose`, or `mobile`). Use `Row` and `Stack` for reusable alignment and spacing. Plain `div` and semantic elements remain appropriate for unique structural markup; extracting every wrapper into a component adds indirection without centralizing a responsibility. Screen components should retain meaningful composition rather than only forwarding props.

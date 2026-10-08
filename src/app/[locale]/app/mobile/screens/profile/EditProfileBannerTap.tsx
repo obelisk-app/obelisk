@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useRef, type ChangeEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import FileInput from '@/components/ui/forms/FileInput';
@@ -20,7 +21,8 @@ export default function EditProfileBannerTap({
   const t = useTranslations();
   const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       className={`edit-banner-tap ${image ? '' : 'empty'} ${uploading ? 'uploading' : ''}`}
       onClick={() => inputRef.current?.click()}
@@ -39,6 +41,6 @@ export default function EditProfileBannerTap({
         )}
       </div>
       <FileInput ref={inputRef} accept="image/*" onChange={onFile} />
-    </button>
+    </Button>
   );
 }

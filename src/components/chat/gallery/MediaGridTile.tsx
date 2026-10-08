@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import type { MediaGridTileModel } from '@/utils/chat/gallery/gallery-layout';
@@ -10,7 +11,8 @@ export function MediaGridTile({ tile, onOpen }: { tile: MediaGridTileModel; onOp
   const t = useTranslations();
   const { item, featured, video } = tile;
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={() => onOpen(item.url, item.noteId)}
       className={`group relative aspect-square overflow-hidden bg-lc-dark ${
@@ -52,6 +54,6 @@ export function MediaGridTile({ tile, onOpen }: { tile: MediaGridTileModel; onOp
           )}
         </span>
       )}
-    </button>
+    </Button>
   );
 }

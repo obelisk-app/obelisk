@@ -13,6 +13,7 @@
  * suggestion chips are in `./social-relays/`.
  */
 
+import Section from '@/components/ui/layout/Section';
 import { RELAY_SETTINGS_ANCHOR } from '@/constants/settings/open-settings';
 import { useTranslations } from 'next-intl';
 import { useSocialRelayDraft, type SocialRelayDraftStatus } from '@/hooks/settings/social-relays/useSocialRelayDraft';
@@ -51,9 +52,9 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
         <Button
           variant="pillSecondary"
           size="xs"
-          onClick={relays.addBlank}
+         onClick={relays.addBlank}
           disabled={!relays.canAdd}
-          data-testid="social-relay-add"
+         data-testid="social-relay-add"
         >
           + {t('settings.preferences.socialRelays.add')}
         </Button>
@@ -61,8 +62,8 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
           <Button
             variant="pillSecondary"
             size="xs"
-            onClick={() => void relays.importFromNip65()}
-            data-testid="social-relay-import"
+           onClick={() => void relays.importFromNip65()}
+           data-testid="social-relay-import"
           >
             {t('settings.preferences.socialRelays.import')}
           </Button>
@@ -91,10 +92,9 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
   );
 
   return mobile ? (
-    <div className="settings-section" id={RELAY_SETTINGS_ANCHOR} data-testid="social-relay-settings">
-      <div className="settings-section-title">{t('settings.preferences.socialRelays.title')}</div>
+    <Section variant="mobile" headingAs="h3" title={t('settings.preferences.socialRelays.title')} id={RELAY_SETTINGS_ANCHOR} data-testid="social-relay-settings">
       <div className="settings-row !block space-y-3">{fields}</div>
-    </div>
+    </Section>
   ) : (
     <div className="space-y-3 border-t border-lc-border pt-4" id={RELAY_SETTINGS_ANCHOR} data-testid="social-relay-settings">
       <Text as="div" variant="label" size="xs" weight="semibold" tone="muted">

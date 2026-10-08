@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { ChevronLeftIcon, CloseIcon, MaximizeIcon, MinimizeIcon } from '@/assets/icons';
 import { PaneIconButton } from './PaneIconButton';
@@ -30,16 +31,17 @@ export function ReaderPaneHeader({
   const t = useTranslations();
   return (
     <div className="lc-header-surface flex h-14 shrink-0 items-center gap-2 border-b border-lc-border px-4">
-      <button
+      <Button
+        variant="toolIcon"
         type="button"
-        className="lc-icon-btn -ml-1"
+        className="-ml-1"
         onClick={onBack}
         aria-label={t('common.back')}
         title={t('common.back')}
         data-testid="desktop-thread-back"
       >
         <ChevronLeftIcon size={20} strokeWidth={2.5} />
-      </button>
+      </Button>
       <Heading as="h2" variant="panel">{title}</Heading>
       <div className="ml-auto flex items-center gap-0.5">
         <PaneIconButton

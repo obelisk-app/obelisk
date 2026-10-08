@@ -61,15 +61,15 @@ export const MessageRow = memo(function MessageRow({
     <div data-msg-id={msg.id} className={'group relative flex gap-3 rounded px-2 py-0.5 hover:bg-lc-card/40 ' + (grouped ? 'mt-0' : 'mt-3') + (msg.pending ? ' opacity-60' : '')}>
       <div className="w-10 shrink-0">
         {!grouped && (
-          <button onClick={vm.openProfile} className="rounded-full transition hover:opacity-80">
+          <Button variant="bare" onClick={vm.openProfile} className="rounded-full transition hover:opacity-80">
             <Avatar pubkey={msg.pubkey} size={10} picture={meta?.picture ?? null} />
-          </button>
+          </Button>
         )}
       </div>
       <div className="min-w-0 flex-1">
         {!grouped && (
           <div className="flex items-baseline gap-2">
-            <button onClick={vm.openProfile} className="text-sm font-bold text-lc-white hover:underline">{vm.displayName}</button>
+            <Button variant="bare" onClick={vm.openProfile} className="text-sm font-bold text-lc-white hover:underline">{vm.displayName}</Button>
             <RoleBadge pubkey={msg.pubkey} />
             <span className="text-[10px] text-lc-muted">
               {formatDateTime(msg.createdAt, {

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { ForumPrefs } from '@/services/chat/forum/forum-prefs';
 import { useTranslations } from 'next-intl';
 import Sheet from '@/components/ui/overlays/Sheet';
@@ -49,14 +50,15 @@ export function ForumSortSheet({
         />
       </section>
       <div className="setup-actions">
-        <button
+        <Button
+          variant="bare"
           type="button"
           className="forum-new-pill"
           onClick={close}
           style={{ width: '100%', justifyContent: 'center' }}
         >
           {t('common.done')}
-        </button>
+        </Button>
       </div>
     </Sheet>
   );

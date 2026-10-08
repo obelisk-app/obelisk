@@ -1,5 +1,7 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
+
 /** One Unicode emoji in a grid; disabled (and titled so) when already reacted. */
 export function EmojiCharButton({
   char,
@@ -18,7 +20,8 @@ export function EmojiCharButton({
   onPick: (char: string) => void;
 }) {
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={() => onPick(char)}
       disabled={disabled}
@@ -26,6 +29,6 @@ export function EmojiCharButton({
       title={disabled ? disabledTitle : keyword}
     >
       {char}
-    </button>
+    </Button>
   );
 }

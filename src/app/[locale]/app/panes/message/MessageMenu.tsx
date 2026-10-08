@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { JsMessage } from '@/services/nostr-bridge';
 import {
   BellOffIcon,
@@ -39,7 +40,8 @@ export function MessageMenu({ msg, actions, menus, isAdmin, onReply }: {
       >
         <div className="mb-1 grid grid-cols-4 gap-1.5 p-0.5">
           {vm.slots.map(({ emoji: e, mine }) => (
-            <button
+            <Button
+              variant="bare"
               key={e.char}
               type="button"
               onClick={() => vm.react(e)}
@@ -49,7 +51,7 @@ export function MessageMenu({ msg, actions, menus, isAdmin, onReply }: {
               data-testid="message-menu-quick-reaction"
             >
               {e.url ? <RemoteImage src={e.url} alt={e.char} className="h-6 w-6 object-contain" /> : e.char}
-            </button>
+            </Button>
           ))}
         </div>
         <MenuItem

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import MediaThumb from '@/components/media/library/MediaThumb';
 import type { CustomEmojiEntry, PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
@@ -15,7 +16,8 @@ export function CustomEmojiButton({ entry, mine, classes, onPickCustom }: {
   const t = useTranslations();
   const shortcode = `:${entry.name}:`;
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={() => onPickCustom(entry)}
       disabled={mine}
@@ -23,6 +25,6 @@ export function CustomEmojiButton({ entry, mine, classes, onPickCustom }: {
       title={mine ? t('chat.emoji.alreadyReacted') : shortcode}
     >
       <MediaThumb src={entry.url} alt={shortcode} className={classes.customImageClass} />
-    </button>
+    </Button>
   );
 }

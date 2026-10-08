@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { sectionTitle, type BotProfiles, type SlashCommandSection } from '@/utils/chat/slash/slash-commands';
 import { keepingFocus } from '@/utils/chat/slash/slash-rows';
@@ -13,7 +14,8 @@ export function SlashRailItem({ item, botProfiles, onFilter }: {
 }) {
   const t = useTranslations();
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       title={sectionTitle(item.section, t('chat.slash.recent'), botProfiles)}
       aria-pressed={item.active}
@@ -22,6 +24,6 @@ export function SlashRailItem({ item, botProfiles, onFilter }: {
       data-testid="slash-rail-item"
     >
       <RailBadge sec={item.section} profiles={botProfiles} />
-    </button>
+    </Button>
   );
 }

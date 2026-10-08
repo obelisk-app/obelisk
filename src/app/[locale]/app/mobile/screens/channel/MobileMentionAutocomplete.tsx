@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { MemberInfo } from '@/utils/message-text/mentions';
 import { useMentionAutocomplete } from '@/hooks/chat/mentions/useMentionAutocomplete';
 import RemoteImage from '@/components/ui/media/RemoteImage';
@@ -26,7 +27,8 @@ export function MobileMentionAutocomplete({
   return (
     <div ref={rootRef} className="composer-mention-popup" data-testid="mobile-mention-autocomplete">
       {rows.map(({ member, active, keyLabel, initials, props }) => (
-        <button
+        <Button
+          variant="bare"
           key={member.pubkey}
           type="button"
           {...props}
@@ -40,7 +42,7 @@ export function MobileMentionAutocomplete({
           )}
           <span className="composer-mention-name">{member.displayName}</span>
           <span className="composer-mention-key">{keyLabel}</span>
-        </button>
+        </Button>
       ))}
     </div>
   );

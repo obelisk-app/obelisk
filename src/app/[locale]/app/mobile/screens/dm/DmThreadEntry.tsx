@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import PqMessageMark from '@/components/chat/pq/PqMessageMark';
 import { useLocale, useTranslations } from 'next-intl';
 import { DmMessageBody } from '@/components/chat/dm/message/DmMessageBody';
@@ -43,22 +44,24 @@ export function DmThreadEntry({
       {msg.failed && msg.clientTag && (
         <div className="dm-bubble-failed" data-testid="mobile-dm-failed">
           <span className="dm-bubble-failed-label">{t('dm.failedSend')}</span>
-          <button
+          <Button
+            variant="bare"
             type="button"
             className="dm-bubble-retry"
             onClick={() => onRetry(msg.clientTag!)}
             data-testid="mobile-dm-retry"
           >
             {t('common.retry')}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="bare"
             type="button"
             className="dm-bubble-dismiss"
             onClick={() => onDismiss(msg.clientTag!)}
             aria-label={t('dm.dismissFailed')}
           >
             ✕
-          </button>
+          </Button>
         </div>
       )}
     </div>

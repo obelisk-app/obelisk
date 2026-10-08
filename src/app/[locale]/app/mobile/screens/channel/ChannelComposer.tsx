@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { forwardRef, type InputHTMLAttributes } from 'react';
 import { type JsGroup, type JsMessage } from '@/services/nostr-bridge';
 import { MentionText } from '@/components/chat/mentions/MentionText';
@@ -45,14 +46,15 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
             </span>
             <span className="composer-reply-text"><MentionText content={replyingTo.content.slice(0, 80)} /></span>
           </div>
-          <button
+          <Button
+            variant="bare"
             type="button"
             className="composer-reply-close"
             onClick={() => setReplyingTo(null)}
             aria-label={t('mobile.channel.cancelReply')}
           >
             <CloseIcon size={null} />
-          </button>
+          </Button>
         </div>
       )}
       {composer.sendError && (
@@ -80,14 +82,15 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
           onContact={composer.onContact}
           onNewSticker={() => composer.openPicker('sticker')}
         />
-        <button
+        <Button
+          variant="bare"
           type="button"
           className="composer-emoji"
           aria-label={t('mobile.composer.openPicker')}
           onClick={() => composer.openPicker('emoji')}
         >
           <StickerIcon size={null} className="h-5 w-5" />
-        </button>
+        </Button>
         </>)}
         {composer.draftVoiceNote && (
           <VoiceNoteDraft note={composer.draftVoiceNote} onDiscard={composer.discardVoiceNote} />
@@ -107,9 +110,9 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
         />
         <div className="composer-btns">
           {composer.draft.trim() ? (
-            <button className="composer-send" onClick={() => void composer.send()} aria-label={t("common.send")}>
+            <Button variant="bare" className="composer-send" onClick={() => void composer.send()} aria-label={t("common.send")}>
               <SendIcon size={null} />
-            </button>
+            </Button>
           ) : (
             <VoiceNoteButton disabled={composer.uploading} onRecorded={(file, duration) => void composer.onVoiceRecorded(file, duration)} />
           )}

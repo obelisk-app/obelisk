@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { GameSession } from '@/lib/games/session/session';
 import { useTranslations } from 'next-intl';
 import type { CSSVars } from '@/utils/games/chain-reaction/css-vars';
@@ -55,7 +56,8 @@ export default function ChainReactionBoard({ maxWidth = 320, ...props }: Props) 
         } as CSSVars}
       >
         {vm.cells.map((cell, i) => (
-          <button
+          <Button
+            variant="bare"
             key={i}
             type="button"
             onClick={() => vm.click(i)}
@@ -70,7 +72,7 @@ export default function ChainReactionBoard({ maxWidth = 320, ...props }: Props) 
           >
             {cell.hex && <Orbs count={cell.count} hex={cell.hex} orbit={cell.count >= 2} orb={vm.orb} />}
             {cell.burst && <Explosion key={cell.burst.id} hex={cell.burst.hex} />}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="flex flex-wrap gap-2 justify-center text-[10px]">

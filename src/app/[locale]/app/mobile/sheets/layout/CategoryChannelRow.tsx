@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import Select from '@/components/ui/forms/Select';
@@ -73,7 +74,8 @@ export function CategoryChannelRow({
         ))}
       </Select>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={() => onMove(channel.id, -1)}
           disabled={first}
@@ -81,8 +83,9 @@ export function CategoryChannelRow({
           aria-label={t('mobile.layout.moveChannelUp', { name })}
         >
           <ChevronUpIcon size={12} strokeWidth={2.5} />
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="bare"
           type="button"
           onClick={() => onMove(channel.id, 1)}
           disabled={last}
@@ -90,7 +93,7 @@ export function CategoryChannelRow({
           aria-label={t('mobile.layout.moveChannelDown', { name })}
         >
           <ChevronDownIcon size={12} strokeWidth={2.5} />
-        </button>
+        </Button>
       </div>
     </div>
   );

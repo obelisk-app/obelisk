@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useState } from 'react';
 import type { GameState as VestaState } from 'vesta';
 import ChainReactionBoard from '@/components/games/chain-reaction/ChainReactionBoard';
@@ -32,14 +33,15 @@ export default function Harness() {
       {/* The dev-tools badge is a real element in the corner of the page and
           lands inside a full-page screenshot. Nothing else needs it hidden. */}
       <style>{'nextjs-portal { display: none !important; }'}</style>
-      <button
+      <Button
+        variant="bare"
         type="button"
         data-open-picker
         onClick={() => setPicker(true)}
         className="fixed bottom-2 right-2 z-10 rounded-full border border-lc-border px-3 py-1 text-xs text-lc-muted"
       >
         picker
-      </button>
+      </Button>
 
       {/* The three games in one landscape frame, for the /features page. */}
       <Frame name="games-feature" width={1180}>

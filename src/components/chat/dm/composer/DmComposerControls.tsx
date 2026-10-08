@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import MessageMediaPicker from '../../picker/MessageMediaPicker';
@@ -50,14 +51,15 @@ export function DmComposerActions({ state, variant }: { state: DmComposerState; 
           )}
         </div>
       ) : (
-        <button
+        <Button
+          variant="bare"
           type="button"
           className="composer-emoji"
           aria-label={t('mobile.composer.openPicker')}
           onClick={() => state.openPicker('emoji')}
         >
           <StickerIcon size={null} className="h-5 w-5" />
-        </button>
+        </Button>
       )}
     </>
   );

@@ -83,7 +83,8 @@ export default function FilterSheet({
         </Heading>
         <div className="grid grid-cols-2 gap-2">
           {CONTENT_FILTERS.map((value) => (
-            <button
+            <Button
+              variant="bare"
               key={value}
               type="button"
               aria-pressed={filter === value}
@@ -96,7 +97,7 @@ export default function FilterSheet({
               data-testid={`feed-filter-${value}`}
             >
               {t(`social.filter.${value}`)}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -105,7 +106,8 @@ export default function FilterSheet({
           Articles, it isn't a fifth thing to choose between.
         */}
         {filter === 'articles' && (
-          <button
+          <Button
+            variant="bare"
             type="button"
             onClick={onToggleHighlights}
             aria-pressed={showHighlights}
@@ -132,10 +134,11 @@ export default function FilterSheet({
                 }`}
               />
             </span>
-          </button>
+          </Button>
         )}
 
         <Button
+
           variant="pillSecondary"
           size="sm"
           onClick={dismiss}

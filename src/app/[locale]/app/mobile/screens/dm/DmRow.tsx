@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { relativeTime } from '@/utils/format/relative-time';
@@ -31,7 +32,7 @@ export function DmRow({
   const unreadCount = useDMUnreadCount(peer);
   const name = displayNameFor(peer, meta);
   return (
-    <button className={`dm-row ${unreadCount > 0 ? 'unread' : ''}`} onClick={onClick}>
+    <Button variant="bare" className={`dm-row ${unreadCount > 0 ? 'unread' : ''}`} onClick={onClick}>
       <div className="dm-ava-list" style={avatarStyle(peer)}>
         {meta?.picture ? <RemoteImage src={meta.picture} alt="" /> : avatarInitials(name, peer)}
       </div>
@@ -46,6 +47,6 @@ export function DmRow({
         </div>
       </div>
       {unreadCount > 0 && <span className="unread-dot" />}
-    </button>
+    </Button>
   );
 }

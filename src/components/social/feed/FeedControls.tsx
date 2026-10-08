@@ -18,6 +18,7 @@
  * a button duplicating a gesture people already make was just chrome.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import { EditIcon } from '@/assets/icons';
@@ -39,7 +40,8 @@ export function ComposeButton({
 }) {
   const t = useTranslations();
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onClick}
       className="group flex w-full items-center gap-2.5 border-b border-lc-border px-4 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
@@ -71,7 +73,7 @@ export function ComposeButton({
       >
         <EditIcon size={15} strokeWidth={2} />
       </span>
-    </button>
+    </Button>
   );
 }
 

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { usePlainNoteCard } from '@/hooks/social/note/usePlainNoteCard';
 import NoteHeader from './NoteHeader';
@@ -51,7 +52,8 @@ export default function PlainNoteCard({
       />
 
       {vm.hidden ? (
-        <button
+        <Button
+          variant="bare"
           type="button"
           className="w-full rounded-xl border border-lc-border bg-lc-dark px-4 py-6 text-center text-xs text-lc-muted"
           onClick={vm.reveal}
@@ -60,7 +62,7 @@ export default function PlainNoteCard({
           {vm.warning.reason
             ? `${t('social.sensitive')} · ${vm.warning.reason}`
             : t('social.sensitive')}
-        </button>
+        </Button>
       ) : (
         <NoteBody
           note={note}

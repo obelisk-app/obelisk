@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { SyntheticEvent } from 'react';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import type { GalleryTileModel } from '@/utils/chat/gallery/gallery-layout';
@@ -11,7 +12,8 @@ export function GalleryTile({ tile, onOpen, onError }: {
   onError: (e: SyntheticEvent<HTMLImageElement>) => void;
 }) {
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={() => onOpen(tile.index)}
       className={`relative overflow-hidden bg-lc-black/50 ${tile.spanClass}`}
@@ -26,6 +28,6 @@ export function GalleryTile({ tile, onOpen, onError }: {
           +{tile.more}
         </div>
       )}
-    </button>
+    </Button>
   );
 }

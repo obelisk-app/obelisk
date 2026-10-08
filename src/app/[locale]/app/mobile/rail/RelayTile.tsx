@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useMobileRelayTile, type RelayLongPressInfo } from '@/hooks/shell/mobile/rail/useMobileRelayTile';
@@ -25,7 +26,8 @@ export function RelayTile({
   const t = useTranslations();
   const vm = useMobileRelayTile(url, active, onClick, onLongPress);
   return (
-    <button
+    <Button
+      variant="bare"
       className={`space ${active ? 'active' : ''}`}
       onClick={vm.onClick}
       onTouchStart={vm.startPress}
@@ -51,6 +53,6 @@ export function RelayTile({
         </span>
       )}
       <span className="space-name">{vm.label}</span>
-    </button>
+    </Button>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useDeveloperSignatureTest } from '@/hooks/settings/account/useDeveloperSignatureTest';
 
@@ -13,9 +14,9 @@ export default function DeveloperSignatureTest({ mobile = false }: { mobile?: bo
         {t('settings.developer.title')}
       </summary>
       {mobile && (
-        <button
+        <Button
+          variant="mobileRow"
           type="button"
-          className="settings-row action"
           onClick={vm.toggleRelayDebug}
         >
           <span style={{ minWidth: 0, flex: 1 }}>
@@ -28,13 +29,14 @@ export default function DeveloperSignatureTest({ mobile = false }: { mobile?: bo
             aria-checked={vm.relayDebug}
             data-testid="mobile-developer-relay-debug-toggle"
           />
-        </button>
+        </Button>
       )}
       <div className={mobile ? 'settings-row !block' : 'mt-3 space-y-3'}>
         <div className={mobile ? 'settings-row-meta muted' : 'text-xs text-lc-muted'}>
           {t('settings.developer.signatureHelp')}
         </div>
-        <button
+        <Button
+          variant="bare"
           type="button"
           disabled={!vm.signerReady || vm.running}
           onClick={vm.run}
@@ -44,7 +46,7 @@ export default function DeveloperSignatureTest({ mobile = false }: { mobile?: bo
           {vm.running
             ? t('settings.developer.waiting', { done: vm.accepted + vm.rejected, total: vm.total })
             : t('settings.developer.requestAll', { count: vm.total })}
-        </button>
+        </Button>
         {vm.requested > 0 && !vm.running && (
           <div className={mobile ? 'settings-row-meta muted mt-2' : 'text-xs text-lc-muted'} role="status">
             {t('settings.developer.results', { accepted: vm.accepted, rejected: vm.rejected })}

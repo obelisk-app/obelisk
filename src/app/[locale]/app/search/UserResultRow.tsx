@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { UserHit } from '@/constants/identity/user-search';
 import { useUserResultRow } from '@/hooks/shell/search/useUserResultRow';
 import { CheckBadgeIcon } from '@/assets/icons';
@@ -9,7 +10,8 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 export function UserResultRow({ hit, badge, onPick }: { hit: UserHit; badge?: string; onPick: () => void }) {
   const row = useUserResultRow(hit);
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onPick}
       className="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-lc-card border-b border-lc-border/40 last:border-b-0"
@@ -41,6 +43,6 @@ export function UserResultRow({ hit, badge, onPick }: { hit: UserHit; badge?: st
           <span className="truncate">{row.sub}</span>
         </div>
       </div>
-    </button>
+    </Button>
   );
 }

@@ -25,7 +25,18 @@ import { cn } from '@/utils/style/cn';
  */
 export type ButtonVariant =
   | 'primary' | 'secondary' | 'ghost' | 'danger' | 'pill' | 'pillSecondary' | 'outline' | 'outlinePill'
-  | 'pillDanger' | 'tool' | 'toolIcon' | 'zap';
+  | 'pillDanger' | 'tool' | 'toolIcon' | 'zap' | CompoundButtonVariant;
+
+/** Compound controls own their geometry; phone recipes are scoped by the mobile shell. */
+type CompoundButtonVariant = 'bare' | 'mobilePrimary' | 'mobileSecondary' | 'mobileIcon' | 'mobileRow' | 'mobileDanger';
+const COMPOUND_CLASS: Record<CompoundButtonVariant, string> = {
+  bare: '',
+  mobilePrimary: 'btn-primary',
+  mobileSecondary: 'btn-cancel',
+  mobileIcon: 'icon-btn',
+  mobileRow: 'settings-row action',
+  mobileDanger: 'settings-btn-danger',
+};
 /**
  * `icon` is the square `p-1` footprint of the list-row icon buttons.
  * `icon-md` (`p-2`) and `icon-touch` (`p-2.5`, `p-1.5` from `md` up) are the
@@ -52,7 +63,7 @@ export type ButtonTone = 'default' | 'danger' | 'accent';
  * Every variant gets the same keyboard focus ring; the hand-rolled copies had
  * one in 10 places and none in the rest.
  */
-const VARIANT_CLASS: Record<Exclude<ButtonVariant, 'ghost' | 'outline' | 'outlinePill'>, string> = {
+const VARIANT_CLASS: Record<Exclude<ButtonVariant, 'ghost' | 'outline' | 'outlinePill' | CompoundButtonVariant>, string> = {
   primary: 'rounded-lg bg-lc-green font-semibold text-lc-black hover:brightness-110 focus-visible:ring-lc-green/60',
   secondary: 'rounded-md border border-lc-border text-lc-white hover:bg-lc-border/40 focus-visible:ring-lc-green/60',
   danger: 'rounded-full bg-red-600 font-semibold text-white hover:bg-red-500 focus-visible:ring-red-400/70',
@@ -77,7 +88,7 @@ const OUTLINE_TONE_CLASS: Record<ButtonTone, string> = {
   accent: 'border border-lc-green/50 bg-lc-green/10 font-medium text-lc-green hover:border-lc-green hover:bg-lc-green/20 aria-expanded:border-lc-green aria-expanded:bg-lc-green/20 aria-pressed:border-lc-green aria-pressed:bg-lc-green/20 focus-visible:ring-lc-green/60',
 };
 
-function variantClass(variant: ButtonVariant, tone: ButtonTone): string {
+function variantClass(variant: Exclude<ButtonVariant, CompoundButtonVariant>, tone: ButtonTone): string {
   if (variant === 'ghost') return GHOST_TONE_CLASS[tone];
   if (variant === 'outline') return `rounded-lg ${OUTLINE_TONE_CLASS[tone]}`;
   if (variant === 'outlinePill') return `rounded-full ${OUTLINE_TONE_CLASS[tone]}`;
@@ -122,9 +133,12 @@ function isStylesheetSized(variant: ButtonVariant): boolean {
 
 /** The class string for a Button look: the Button primitive's own, and the rare element that must stay an `<a>`. */
 export function buttonClass({ variant = 'primary', size = 'md', tone = 'default' }: { variant?: ButtonVariant; size?: ButtonSize; tone?: ButtonTone }): string {
+  if (variant in COMPOUND_CLASS) {
+    return cn('focus:outline-none focus-visible:ring-2 focus-visible:ring-lc-green/60 disabled:cursor-not-allowed', COMPOUND_CLASS[variant as CompoundButtonVariant]);
+  }
   return cn(
     'inline-flex items-center justify-center gap-2 transition-colors focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50',
-    variantClass(variant, tone),
+    variantClass(variant as Exclude<ButtonVariant, CompoundButtonVariant>, tone),
     isStylesheetSized(variant) ? undefined : isPill(variant) ? PILL_SIZE_CLASS[size] : SIZE_CLASS[size],
   );
 }

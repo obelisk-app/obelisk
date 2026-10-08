@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { JsGroup } from '@/services/nostr-bridge';
 import { ChannelContextMenu } from '@/components/chat/channel/ChannelContextMenu';
 import { useTranslations } from 'next-intl';
@@ -57,7 +58,8 @@ export function GroupNode({
           />
         )}
         {depth > 0 && !vm.isCollapsible && <span className="pl-1 text-lc-muted lc-tree-marker">↳</span>}
-        <button
+        <Button
+          variant="bare"
           onClick={() => onSelect(group.id)}
           className="flex flex-1 items-center gap-2 truncate px-1 py-1.5 text-left"
         >
@@ -88,16 +90,17 @@ export function GroupNode({
               {vm.mentionsOrReplies > 99 ? '99+' : vm.mentionsOrReplies}
             </span>
           )}
-        </button>
+        </Button>
         {vm.isCollapsible && (
-          <button
+          <Button
+            variant="bare"
             onClick={vm.toggleCollapsed}
             className="flex shrink-0 items-center justify-center px-2 py-1.5 text-lc-white/70 hover:text-lc-green"
             aria-label={vm.collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
             title={vm.collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
           >
             <ChevronRightIcon size={null} strokeWidth={2.5} className={`h-3.5 w-3.5 transition-transform duration-150 ${vm.collapsed ? '' : 'rotate-90'}`} />
-          </button>
+          </Button>
         )}
       </div>
       {!vm.collapsed && (group.kind === 'forum' ? (

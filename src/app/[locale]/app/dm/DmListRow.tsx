@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { JsDirectMessage } from '@/services/nostr-bridge';
 import { useDmListRow } from '@/hooks/shell/dm/useDmListRow';
 import UserAvatar from '@/components/ui/media/UserAvatar';
@@ -21,7 +22,8 @@ export function DmListRow({
 }) {
   const row = useDmListRow(pubkey, last, youPrefix);
   return (
-    <button
+    <Button
+      variant="bare"
       onClick={onClick}
       className={
         'flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors ' +
@@ -53,6 +55,6 @@ export function DmListRow({
           </Text>
         )}
       </div>
-    </button>
+    </Button>
   );
 }

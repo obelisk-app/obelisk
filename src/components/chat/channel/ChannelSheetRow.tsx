@@ -1,5 +1,7 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
+
 /** One row of the phone channel sheet: a label, an optional hint, a chevron for a drill-in or a radio toggle. */
 export function ChannelSheetRow({ label, onClick, hint, testId, disabled, chevron, checked }: {
   label: string;
@@ -11,9 +13,9 @@ export function ChannelSheetRow({ label, onClick, hint, testId, disabled, chevro
   checked?: boolean;
 }) {
   return (
-    <button
+    <Button
+      variant="mobileRow"
       type="button"
-      className="settings-row action"
       style={{ width: '100%', opacity: disabled ? 0.45 : 1 }}
       disabled={disabled}
       onClick={onClick}
@@ -27,6 +29,6 @@ export function ChannelSheetRow({ label, onClick, hint, testId, disabled, chevro
       </span>
       {chevron && <span className="settings-row-meta muted" aria-hidden="true">›</span>}
       {checked !== undefined && <span className={`toggle ${checked ? 'on' : ''}`} aria-hidden="true" />}
-    </button>
+    </Button>
   );
 }

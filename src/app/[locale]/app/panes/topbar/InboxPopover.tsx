@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { createPortal } from 'react-dom';
 import {
   isDmNotificationRead,
@@ -40,7 +41,8 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
             not invite a reflexive click. */}
         <div className="flex items-center gap-1.5">
           {tabHasItems && tabUnread > 0 && (
-            <button
+            <Button
+              variant="bare"
               onClick={inbox.handleMarkRead}
               data-testid="notif-mark-read"
               className="rounded-full border border-lc-green/40 bg-lc-green/10 px-2.5 py-1 text-[11px] font-semibold leading-none text-lc-green transition-colors hover:border-lc-green/70 hover:bg-lc-green/20"
@@ -49,17 +51,18 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
                 : t('shell.desktop.inbox.markReadDmsTitle')}
             >
               {t('shell.desktop.inbox.markRead')}
-            </button>
+            </Button>
           )}
           {tabHasItems && (
-            <button
+            <Button
+              variant="bare"
               onClick={inbox.handleClear}
               data-testid="notif-clear"
               className="rounded-full border border-lc-border bg-lc-card px-2.5 py-1 text-[11px] font-medium leading-none text-lc-muted transition-colors hover:border-lc-muted/50 hover:text-lc-white"
               title={t('common.clear')}
             >
               {t('common.clear')}
-            </button>
+            </Button>
           )}
         </div>
       </div>

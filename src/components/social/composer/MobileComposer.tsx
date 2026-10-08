@@ -22,6 +22,7 @@
  * differ in presentation only.
  */
 
+import TextArea from '@/components/ui/forms/TextArea';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useMyPubkey, useUserMetadata } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
@@ -128,13 +129,13 @@ export default function MobileComposer({
             a focused input's font is under 16px, and the page never zooms
             back out.
           */}
-          <textarea
+          <TextArea variant="bare" resize="none"
             ref={textareaRef}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onPaste={onPaste}
             placeholder={placeholder}
-            className="min-h-40 w-full flex-1 resize-none bg-transparent text-base leading-relaxed text-lc-white outline-none placeholder:text-lc-muted"
+            className="min-h-40 w-full flex-1 bg-transparent text-base leading-relaxed text-lc-white outline-none placeholder:text-lc-muted"
             data-testid="composer-input"
           />
 

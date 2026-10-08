@@ -46,14 +46,15 @@ export function FilterAndHistoryPane({
             </Button>
           </div>
           {history.map((h) => (
-            <button
+            <Button
+              variant="bare"
               key={h}
               onClick={() => onPickHistory(h)}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-lc-white hover:bg-lc-card"
             >
               <span className="text-lc-muted shrink-0"><SearchIcon size={14} strokeWidth={2} /></span>
               <span className="truncate">{h}</span>
-            </button>
+            </Button>
           ))}
         </>
       )}

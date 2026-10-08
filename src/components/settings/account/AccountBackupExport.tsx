@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useAccountBackupExport } from '@/hooks/settings/account/useAccountBackupExport';
 import Text from '@/components/ui/layout/Text';
@@ -10,7 +11,8 @@ export default function AccountBackupExport({ mobile = false }: { mobile?: boole
 
   return (
     <div>
-      <button
+      <Button
+        variant="bare"
         type="button"
         className={mobile
           ? 'settings-row action'
@@ -28,7 +30,7 @@ export default function AccountBackupExport({ mobile = false }: { mobile?: boole
           </span>
         </span>
         <span className={mobile ? 'settings-row-meta muted' : 'text-lc-muted'} aria-hidden="true">↓</span>
-      </button>
+      </Button>
       {message && (
         <Text as="p" className={mobile ? 'px-4 py-2 text-xs' : 'mt-2 px-1 text-xs'} role={status === 'error' ? 'alert' : 'status'}>
           {message}

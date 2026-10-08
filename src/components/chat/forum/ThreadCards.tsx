@@ -8,6 +8,7 @@
  * the gallery card observe this rule (see `ThreadCard`). The gallery, the
  * states and the skeletons sit beside this file.
  */
+import Button from '@/components/ui/buttons/Button';
 import { useUserMetadata, type JsForumTag, type JsGroup } from '@/services/nostr-bridge';
 import { useLocale, useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
@@ -55,7 +56,8 @@ export function ThreadCard({
   const opName = posterName(opMeta, op.pubkey);
   const lastName = posterName(lastMeta, lastMsg.pubkey);
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onOpen}
       className="lc-card w-full text-left p-3 hover:border-lc-green/40 transition-colors"
@@ -96,6 +98,6 @@ export function ThreadCard({
           />
         )}
       </div>
-    </button>
+    </Button>
   );
 }

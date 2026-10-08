@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { dismissActivity, type ActivityEntry } from '@/services/feedback/activity-log';
 import { CloseIcon } from '@/assets/icons';
@@ -34,14 +35,15 @@ export default function ActivityRow({ entry }: { entry: ActivityEntry }) {
         ) : null}
       </div>
       {entry.status === 'error' ? (
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={() => dismissActivity(entry.id)}
           className="-mr-1 -mt-0.5 rounded p-0.5 text-red-200/80 hover:bg-red-500/20 hover:text-red-100"
           aria-label={t('common.dismiss')}
         >
           <CloseIcon size={12} strokeWidth={2} />
-        </button>
+        </Button>
       ) : null}
     </div>
   );

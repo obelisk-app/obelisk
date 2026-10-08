@@ -10,6 +10,7 @@
  * note by id instead.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useRepostCard } from '@/hooks/social/note/useRepostCard';
 import PlainNoteCard from './PlainNoteCard';
@@ -56,13 +57,14 @@ export default function RepostCard(props: NoteCardProps) {
         // target has to be fetched. Rather than block the row, link out to
         // what we know; the thread view fetches by id through the pool,
         // which verifies it.
-        <button
+        <Button
+          variant="bare"
           type="button"
           className="w-full rounded-xl border border-lc-border bg-lc-dark p-3 text-left text-xs text-lc-muted"
           onClick={openTarget}
         >
           {t('social.openRepostedNote')}
-        </button>
+        </Button>
       )}
     </article>
   );

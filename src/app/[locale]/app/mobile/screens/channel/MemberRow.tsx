@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
@@ -14,7 +15,7 @@ export function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; r
   const meta = useUserMetadata(pubkey);
   const name = displayNameFor(pubkey, meta);
   return (
-    <button className="member-row" onClick={onClick}>
+    <Button variant="bare" className="member-row" onClick={onClick}>
       <div className={`dm-ava-list ${online ? '' : 'offline'}`} style={{ ...avatarStyle(pubkey), width: 36, height: 36, fontSize: 12 }}>
         {meta?.picture ? <RemoteImage src={meta.picture} alt="" /> : avatarInitials(name, pubkey)}
       </div>
@@ -25,6 +26,6 @@ export function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; r
       <RoleBadge pubkey={pubkey} />
       {role === 'admin' && <span className="role-badge b-core">{t('mobile.members.admin')}</span>}
       <span className={`member-row-presence ${online ? 'on' : 'off'}`} />
-    </button>
+    </Button>
   );
 }

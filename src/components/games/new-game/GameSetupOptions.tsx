@@ -23,7 +23,8 @@ export default function GameSetupOptions({ form }: { form: NewGameForm }) {
           <Text as="p" size="10" variant="label" tone="muted" className="mt-4">{t('games.board')}</Text>
           <div className="mt-1 grid grid-cols-3 gap-2">
             {sizes.map((key) => (
-              <button
+              <Button
+                variant="bare"
                 key={key}
                 type="button"
                 onClick={() => setSize(key)}
@@ -33,7 +34,7 @@ export default function GameSetupOptions({ form }: { form: NewGameForm }) {
                 data-testid={`game-size-${key}`}
               >
                 {t(`games.size.${key}`, { cols: CR_SIZES[key].cols, rows: CR_SIZES[key].rows })}
-              </button>
+              </Button>
             ))}
           </div>
         </>

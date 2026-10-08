@@ -107,7 +107,8 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
                 )}
                 <div className="space-y-0.5">
                   {group.items.map(({ id, Icon }) => (
-                    <button
+                    <Button
+                      variant="bare"
                       key={id}
                       type="button"
                       onClick={() => setSettingsTab(id)}
@@ -117,14 +118,15 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
                     >
                       <Icon size={16} />
                       <span>{t(`settings.section.${id}.label`)}</span>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
             ))}
           </nav>
           <div className="border-t border-lc-border p-2">
-            <button
+            <Button
+              variant="bare"
               type="button"
               onClick={onLogout}
               className="flex w-full items-center gap-2.5 rounded-md bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/30"
@@ -132,7 +134,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
             >
               <LogOutIcon size={16} />
               <span>{t('shell.user.logOut')}</span>
-            </button>
+            </Button>
           </div>
         </aside>
         <main className={`flex-1 min-w-0 ${settingsTab === 'media' ? 'overflow-hidden' : 'overflow-y-auto'}`}>

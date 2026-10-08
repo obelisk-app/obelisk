@@ -11,6 +11,7 @@
  * and there is no reason to pull a 25 MB zip the reader may never want.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { dmFileCategory, type JsDmFile } from '@/utils/attachments/dm-file';
 import { useDecryptedDmFile } from '@/hooks/chat/dm/message/useDecryptedDmFile';
 import { formatBytes } from '@/utils/format/format-bytes';
@@ -101,7 +102,8 @@ export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFi
           {t('dm.file.download')}
         </a>
       ) : (
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={load}
           disabled={state.status === 'loading'}
@@ -110,7 +112,7 @@ export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFi
         >
           <DownloadIcon size={14} />
           {state.status === 'loading' ? t('dm.file.decrypting') : t('dm.file.open')}
-        </button>
+        </Button>
       )}
     </div>
   );

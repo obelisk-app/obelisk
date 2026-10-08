@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { JsForumTag } from '@/services/nostr-bridge';
 import { TAG_PALETTES } from '@/utils/chat/forum/forum-tag-colors';
 import { useTagColorPicker } from '@/hooks/chat/forum/useTagColorPicker';
@@ -24,7 +25,8 @@ export function TagColorPicker({
   } = useTagColorPicker(tag, onPick);
   return (
     <div className="relative shrink-0" ref={ref}>
-      <button
+      <Button
+        variant="bare"
         type="button"
         onClick={toggle}
         className="flex h-7 w-7 items-center justify-center rounded-md border border-lc-border bg-lc-dark hover:border-lc-muted"
@@ -38,7 +40,7 @@ export function TagColorPicker({
           className="h-3.5 w-3.5 rounded-full"
           style={{ background: current.text }}
         />
-      </button>
+      </Button>
       {open && (
         <div
           role="menu"
@@ -47,7 +49,8 @@ export function TagColorPicker({
         >
           <div className="grid grid-cols-5 gap-1.5">
             {TAG_PALETTES.map((p) => (
-              <button
+              <Button
+                variant="bare"
                 key={p.key}
                 type="button"
                 onClick={() => pick(p.key)}
@@ -63,7 +66,8 @@ export function TagColorPicker({
               />
             ))}
           </div>
-          <button
+          <Button
+            variant="bare"
             type="button"
             onClick={() => pick(null)}
             className={
@@ -73,7 +77,7 @@ export function TagColorPicker({
             data-testid={`forum-tag-color-auto-${tag.id}`}
           >
             {t(tag.color === null ? 'chat.forum.autoInUse' : 'chat.forum.auto')}
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -21,3 +21,12 @@ describe('Section', () => {
     expect(screen.getByTestId('section').querySelector('p')).toBeNull();
   });
 });
+
+it('shares the phone section recipe and renders a semantic heading', () => {
+  render(<Section variant="mobile" headingAs="h3" title="Preferences" id="prefs"><button>Change</button></Section>);
+  const title = screen.getByRole('heading', { name: 'Preferences', level: 3 });
+  expect(title).toHaveClass('settings-section-title');
+  expect(title.parentElement).toHaveClass('settings-section');
+  expect(title.parentElement).toHaveAttribute('id', 'prefs');
+  expect(screen.getByRole('button', { name: 'Change' }).parentElement).toBe(title.parentElement);
+});

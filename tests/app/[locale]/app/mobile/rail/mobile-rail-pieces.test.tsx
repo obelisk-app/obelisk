@@ -98,7 +98,7 @@ describe('RelayTile label and icon', () => {
 
   it('marks the active tile and leaves the others plain', () => {
     renderLocalized(<RelayTile url="wss://relay.example" active onClick={() => {}} />);
-    expect(screen.getByRole('button').className).toBe('space active');
+    expect(screen.getByRole('button')).toHaveClass('space active');
   });
 });
 

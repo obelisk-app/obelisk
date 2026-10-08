@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { Nip05State } from '@/services/identity/nip05-verify';
 import { useTranslations } from 'next-intl';
 import { CheckBadgeIcon, CopyIcon } from '@/assets/icons';
@@ -59,7 +60,8 @@ export function PopoverIdentity({
           </span>
         )}
         {npub ? (
-          <button
+          <Button
+            variant="bare"
             type="button"
             onClick={onCopyNpub}
             className="flex max-w-full items-center gap-1.5 rounded-full border border-lc-border bg-lc-black/60 px-2 py-0.5 font-mono text-[11px] text-lc-white/85 transition-colors hover:border-lc-green/50 hover:text-lc-white"
@@ -68,7 +70,7 @@ export function PopoverIdentity({
           >
             <span className="truncate">{npubShort}</span>
             <CopyIcon size={12} />
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>

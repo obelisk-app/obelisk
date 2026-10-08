@@ -13,6 +13,7 @@
  * can't drift on what actually gets published.
  */
 
+import TextArea from '@/components/ui/forms/TextArea';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
@@ -61,11 +62,11 @@ export default function NoteComposer({
         shown on the card (`.lc-composer:focus-within`) rather than here,
         so the whole thing lights up as one surface.
       */}
-      <textarea
+      <TextArea variant="bare" resize="y"
         ref={textareaRef}
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
-        className="min-h-24 w-full resize-y border-0 bg-transparent px-1 py-1 text-[15px] leading-6 text-lc-white outline-none placeholder:text-lc-muted/70"
+        className="min-h-24 w-full border-0 bg-transparent px-1 py-1 text-[15px] leading-6 text-lc-white outline-none placeholder:text-lc-muted/70"
         placeholder={placeholder}
         data-testid="composer-input"
       />
@@ -92,6 +93,7 @@ export default function NoteComposer({
         </div>
 
         <Button
+
           variant="tool"
           onClick={() => fileRef.current?.click()}
           disabled={busy}

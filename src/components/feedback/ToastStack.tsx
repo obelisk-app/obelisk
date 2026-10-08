@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { CloseIcon } from '@/assets/icons';
 import { useToastStack } from '@/hooks/feedback/useToastStack';
@@ -17,7 +18,8 @@ export default function ToastStack() {
       data-testid="toast-stack"
     >
       {vm.toasts.map((toast) => (
-        <button
+        <Button
+          variant="bare"
           key={toast.id}
           type="button"
           onClick={() => vm.open(toast)}
@@ -40,7 +42,7 @@ export default function ToastStack() {
               <CloseIcon size={16} />
             </span>
           </div>
-        </button>
+        </Button>
       ))}
     </div>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { RINGTONES } from '@/services/notifications/sound';
 import type { Preferences } from '@/services/preferences/preferences';
@@ -18,7 +19,8 @@ export default function RingtonePicker({ value, onPick, mobile }: {
       </div>
       <div className={mobile ? '' : 'mt-1.5 grid grid-cols-2 gap-2'} style={mobile ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } : undefined}>
         {RINGTONES.map((id) => (
-          <button
+          <Button
+            variant="bare"
             key={id}
             type="button"
             role="radio"
@@ -34,7 +36,7 @@ export default function RingtonePicker({ value, onPick, mobile }: {
             <span className={mobile ? 'settings-row-meta muted' : 'block text-[11px] text-lc-muted'}>
               {t(`settings.preferences.notifications.ringtone.${id}.hint`)}
             </span>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

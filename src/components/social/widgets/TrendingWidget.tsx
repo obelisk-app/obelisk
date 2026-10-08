@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTrendingWidget } from '@/hooks/social/widgets/useTrendingWidget';
 import { useTranslations } from 'next-intl';
@@ -32,7 +33,8 @@ export default function TrendingWidget({
         <ul>
           {tags.map(({ tag, count, authors }) => (
             <li key={tag} className="group/tag flex items-center gap-1 rounded-lg pr-1.5 hover:bg-white/5">
-              <button
+              <Button
+                variant="bare"
                 type="button"
                 onClick={() => onOpenTag?.(tag)}
                 className="flex min-w-0 flex-1 items-baseline justify-between gap-2 px-2 py-1.5 text-left"
@@ -43,7 +45,7 @@ export default function TrendingWidget({
                 <span className="shrink-0 text-[11px] tabular-nums text-lc-muted" title={`${authors}`}>
                   {count}
                 </span>
-              </button>
+              </Button>
               {/*
                 Revealed on hover so the list reads as tags first. It stays
                 visible once followed: that is state, not an affordance.

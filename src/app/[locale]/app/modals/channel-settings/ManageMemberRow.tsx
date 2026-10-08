@@ -62,7 +62,8 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           <span className="truncate text-sm text-lc-white">{name}</span>
           <MemberRoleBadge isAdmin={isAdmin} />
         </div>
-        <button
+        <Button
+          variant="bare"
           type="button"
           onClick={() => copy(npub)}
           title={npub}
@@ -70,7 +71,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           data-testid={`member-npub-${pubkey}`}
         >
           {copied ? t('shell.desktop.members.copied') : npub}
-        </button>
+        </Button>
       </div>
       {/* Dimmed until the row is hovered or something inside it has focus, so
           a long member list isn't a wall of red text. `focus-within` keeps it

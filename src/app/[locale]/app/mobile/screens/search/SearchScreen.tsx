@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { useCurrentRelayUrl, useMyPubkey, type JsGroup } from '@/services/nostr-bridge';
 import { useSearchScreen } from '@/hooks/shell/mobile/screens/search/useSearchScreen';
@@ -53,18 +54,18 @@ export function SearchScreen({
             onKeyDown={onKeyDown}
             autoFocus
           />
-          {search.raw && <button className="search-clear" onClick={() => search.setRaw('')}>×</button>}
+          {search.raw && <Button variant="bare" className="search-clear" onClick={() => search.setRaw('')}>×</Button>}
         </div>
       </div>
       <div className="search-context-pill">in:{shortHost(relay)}</div>
       <div className="search-filter-chips">
-        <button className="search-chip" onClick={() => search.setRaw('')} data-testid="mobile-search-chip-all">{t('mobile.search.all')}</button>
-        <button className="search-chip" onClick={() => addToken('from:')} data-testid="mobile-search-chip-from">from:</button>
-        <button className="search-chip" onClick={() => addToken('in:')} data-testid="mobile-search-chip-in">in:#channel</button>
+        <Button variant="bare" className="search-chip" onClick={() => search.setRaw('')} data-testid="mobile-search-chip-all">{t('mobile.search.all')}</Button>
+        <Button variant="bare" className="search-chip" onClick={() => addToken('from:')} data-testid="mobile-search-chip-from">from:</Button>
+        <Button variant="bare" className="search-chip" onClick={() => addToken('in:')} data-testid="mobile-search-chip-in">in:#channel</Button>
         {myPubkey && (
-          <button className="search-chip" onClick={() => addToken(`mentions:${myPubkey}`)} data-testid="mobile-search-chip-mentions">mentions:@you</button>
+          <Button variant="bare" className="search-chip" onClick={() => addToken(`mentions:${myPubkey}`)} data-testid="mobile-search-chip-mentions">mentions:@you</Button>
         )}
-        <button className="search-chip" onClick={() => addToken('has:image')} data-testid="mobile-search-chip-has">has:image</button>
+        <Button variant="bare" className="search-chip" onClick={() => addToken('has:image')} data-testid="mobile-search-chip-has">has:image</Button>
       </div>
 
       <div className="search-body">
@@ -83,10 +84,10 @@ export function SearchScreen({
 
         {showChannels && <div className="search-section-label">{t('shell.search.channels')}</div>}
         {search.channelMatches.map((g) => (
-          <button key={g.id} className="ch-row" onClick={() => selectGroup(g.id, g.kind)}>
+          <Button variant="bare" key={g.id} className="ch-row" onClick={() => selectGroup(g.id, g.kind)}>
             <span className="ch-icon">#</span>
             <span className="ch-name">{g.name ?? g.id.slice(0, 8)}</span>
-          </button>
+          </Button>
         ))}
 
         {!empty && (
@@ -98,14 +99,15 @@ export function SearchScreen({
             </div>
             {search.error && <div className="search-empty" data-testid="mobile-search-error">{search.error}</div>}
             {search.results.map((h) => (
-              <button
+              <Button
+                variant="bare"
                 key={h.id}
                 className="ch-row"
                 onClick={() => openHit(h)}
                 data-testid="mobile-search-message-row"
               >
                 <span className="ch-name">{h.content.slice(0, 120)}</span>
-              </button>
+              </Button>
             ))}
             {!search.busy && !search.error && search.results.length === 0 && (
               <div className="search-empty" data-testid="mobile-search-no-matches">
@@ -113,7 +115,8 @@ export function SearchScreen({
               </div>
             )}
             {search.results.length > 0 && search.partial && search.loadMore && (
-              <button
+              <Button
+                variant="bare"
                 type="button"
                 className="ch-row"
                 onClick={search.loadMore}
@@ -121,7 +124,7 @@ export function SearchScreen({
                 data-testid="mobile-search-load-more"
               >
                 <span className="ch-name">{search.loadingMore ? t('shell.search.searching') : t('shell.search.loadMore')}</span>
-              </button>
+              </Button>
             )}
           </>
         )}

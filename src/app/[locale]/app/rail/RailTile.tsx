@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import HintDot from '@/components/hints/HintDot';
 
 /** An account-wide rail entry (DMs, the feed): an icon tile with the active pill. */
@@ -28,7 +29,8 @@ export function RailTile({
           (active ? 'opacity-100' : 'opacity-0')
         }
       />
-      <button
+      <Button
+        variant="bare"
         onClick={onClick}
         title={title}
         aria-label={title}
@@ -45,7 +47,7 @@ export function RailTile({
         }
       >
         {icon}
-      </button>
+      </Button>
     </div>
   );
 }

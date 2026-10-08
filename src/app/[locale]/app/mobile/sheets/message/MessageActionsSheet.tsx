@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import EmojiPicker from '@/components/chat/picker/EmojiPicker';
 import { useTranslations } from 'next-intl';
 import { useMessageActionsSheet, type MobileActionMessage } from '@/hooks/shell/mobile/sheets/message/useMessageActionsSheet';
@@ -32,7 +33,7 @@ export function MessageActionsSheet({
         <div className="sheet-handle" />
         <div className="ma-quick-reactions">
           {QUICK_REACTIONS.map((e) => (
-            <button key={e} className="ma-quick-react" onClick={() => vm.quickReact(e)}>{e}</button>
+            <Button variant="bare" key={e} className="ma-quick-react" onClick={() => vm.quickReact(e)}>{e}</Button>
           ))}
         </div>
         {vm.pickerOpen && (
@@ -45,35 +46,37 @@ export function MessageActionsSheet({
           </EmojiSheet>
         )}
         <div className="ma-action-list native-scroll-y">
-          <button
+          <Button
+            variant="bare"
             className="ma-action"
             data-testid="mobile-msg-actions-reply"
             onClick={vm.reply}
           >
             <ReplyIcon size={null} />
             {t('social.reply')}
-          </button>
-          <button className="ma-action" onClick={vm.copyText}>
+          </Button>
+          <Button variant="bare" className="ma-action" onClick={vm.copyText}>
             <CopyIcon size={null} />
             {t('social.copyText')}
-          </button>
-          <button className="ma-action zap" onClick={onZap}>
+          </Button>
+          <Button variant="bare" className="ma-action zap" onClick={onZap}>
             <ZapIcon size={null} />
             {t('mobile.message.zap')}
-          </button>
-          <button className="ma-action" onClick={vm.copyId}>
+          </Button>
+          <Button variant="bare" className="ma-action" onClick={vm.copyId}>
             <CopyIcon size={null} />
             {t('social.copyEventId')}
-          </button>
+          </Button>
           {vm.canDelete && (
-            <button
+            <Button
+              variant="bare"
               className="ma-action danger"
               data-testid="mobile-msg-actions-delete"
               onClick={() => void vm.deleteMessage()}
             >
               <TrashIcon size={null} />
               {msg.canModerate ? t('mobile.message.deleteEveryone') : t('mobile.message.deleteMessage')}
-            </button>
+            </Button>
           )}
         </div>
       </div>

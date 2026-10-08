@@ -1,5 +1,7 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
+
 /** A selectable card: icon, title and subtitle, with a radio dot that fills when active. */
 export function ToggleCard({
   active,
@@ -15,7 +17,8 @@ export function ToggleCard({
   subtitle: string;
 }) {
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       onClick={onClick}
       className={
@@ -36,6 +39,6 @@ export function ToggleCard({
           (active ? 'border-lc-green bg-lc-green' : 'border-lc-border')
         }
       />
-    </button>
+    </Button>
   );
 }

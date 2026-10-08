@@ -65,9 +65,9 @@ export default function AppearancePreferenceControls({ variant = 'desktop' }: Ap
       </div>
       {isMobile ? (
         // The mobile shell's stylesheet button; it stays off the desktop primitives.
-        <button type="button" onClick={resetAppearancePreferences} className="settings-btn-secondary">
+        <Button variant="bare" type="button" onClick={resetAppearancePreferences} className="settings-btn-secondary">
           {t('settings.preferences.appearance.reset')}
-        </button>
+        </Button>
       ) : (
         <Button variant="secondary" size="sm" onClick={resetAppearancePreferences} className="bg-lc-black">
           {t('settings.preferences.appearance.reset')}

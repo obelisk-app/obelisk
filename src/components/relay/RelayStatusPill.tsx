@@ -23,6 +23,7 @@
  * rank it against the page instead.
  */
 
+import Button from '@/components/ui/buttons/Button';
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import AnchoredMenu from '../common/AnchoredMenu';
@@ -72,7 +73,8 @@ export default function RelayStatusPill({
 
   return (
     <>
-      <button
+      <Button
+        variant="bare"
         ref={triggerRef}
         type="button"
         onClick={vm.toggle}
@@ -89,7 +91,7 @@ export default function RelayStatusPill({
       >
         <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${RELAY_STATE_DOT[vm.dotState]}`} aria-hidden="true" />
         {vm.showCount && <span className="tabular-nums">{vm.summary.connected}/{vm.summary.total}</span>}
-      </button>
+      </Button>
 
       <AnchoredMenu
         open={vm.open}

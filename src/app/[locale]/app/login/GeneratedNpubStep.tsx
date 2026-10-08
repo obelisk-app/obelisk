@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import { Modal } from '@nostr-wot/ui';
 import { nip19 } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
@@ -28,9 +29,9 @@ export function GeneratedNpubStep({ pubkey, onClose, onBack, shared, onShare, fi
       aria-label={t('shell.login.shareProfile')}
       classes={{ modal: 'obelisk-login-modal obelisk-share-modal' }}
     >
-      <button type="button" className="nui-back obelisk-flow-back" aria-label={t('common.back')} onClick={onBack}>
+      <Button variant="bare" type="button" className="nui-back obelisk-flow-back" aria-label={t('common.back')} onClick={onBack}>
         ‹
-      </button>
+      </Button>
       <div className="nui-form obelisk-npub-share" data-testid="generated-npub-step">
         <div className="nui-form-head">
           <span className="obelisk-step-done" aria-hidden="true">✓</span>
@@ -39,32 +40,34 @@ export function GeneratedNpubStep({ pubkey, onClose, onBack, shared, onShare, fi
         </div>
         <div className="nui-key-display">{npub}</div>
         <div className="obelisk-share-actions">
-          <button
+          <Button
+            variant="bare"
             type="button"
             className="nui-back obelisk-copy-npub"
             onClick={() => { void Promise.resolve(navigator.clipboard?.writeText(npub)).catch(() => {}); }}
           >
             {t('shell.login.copyNpub')}
-          </button>
+          </Button>
           {/*
             An npub is the address; a link is what people can actually open.
             Same share path as a note, the Obelisk profile viewer, which
             renders OG metadata so the link previews wherever it's pasted,
             instead of landing the recipient on a third-party site.
           */}
-          <button
+          <Button
+            variant="bare"
             type="button"
             className="nui-back obelisk-share-profile"
             onClick={onShare}
             data-testid="share-generated-profile"
           >
             {shared ? t('shell.login.linkCopied') : t('shell.login.shareMyProfile')}
-          </button>
+          </Button>
         </div>
         {finishError && <Text as="p" className="nui-error" role="alert">{finishError}</Text>}
-        <button type="button" className="nui-login-button" disabled={finishing} onClick={onFinish}>
+        <Button variant="bare" type="button" className="nui-login-button" disabled={finishing} onClick={onFinish}>
           {finishing ? t('shell.login.connecting') : t('shell.login.enter')}
-        </button>
+        </Button>
       </div>
     </Modal>
   );

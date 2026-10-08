@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/ui/buttons/Button';
 import type { CSSProperties } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/utils/style/cn';
@@ -24,7 +25,8 @@ export interface BackButtonProps {
 export default function BackButton({ onClick, label, className, style, disabled, 'data-testid': testId }: BackButtonProps) {
   const t = useTranslations();
   return (
-    <button
+    <Button
+      variant="bare"
       type="button"
       className={cn('back-btn', className)}
       onClick={onClick}
@@ -34,6 +36,6 @@ export default function BackButton({ onClick, label, className, style, disabled,
       data-testid={testId}
     >
       <ChevronLeftIcon strokeWidth={2} />
-    </button>
+    </Button>
   );
 }
