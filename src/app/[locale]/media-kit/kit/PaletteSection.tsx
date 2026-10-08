@@ -1,5 +1,3 @@
-'use client';
-
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import { COLORS } from '@/constants/media-kit/content';

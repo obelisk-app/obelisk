@@ -1,8 +1,12 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-const toPng = vi.fn();
-vi.mock('html-to-image', () => ({ toPng: (...a: unknown[]) => toPng(...a) }));
+const image = vi.hoisted(() => ({ loads: 0, toPng: vi.fn() }));
+const toPng = image.toPng;
+vi.mock('html-to-image', () => {
+  image.loads++;
+  return { toPng: image.toPng };
+});
 
 import { usePngDownload } from '@/hooks/media-kit/kit/usePngDownload';
 
@@ -13,6 +17,12 @@ function nodeOfWidth(width: number) {
 }
 
 describe('usePngDownload', () => {
+  it('does not load the rasterizer merely to display an export control', () => {
+    const { result } = renderHook(() => usePngDownload({ current: nodeOfWidth(300) }, 'preview.png'));
+    expect(result.current.busy).toBe(false);
+    expect(image.loads).toBe(0);
+  });
+
   it('upscales to the export width and downloads under the given name', async () => {
     toPng.mockResolvedValueOnce('data:image/png;base64,AAAA');
     const clicks: string[] = [];

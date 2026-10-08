@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { toPng } from 'html-to-image';
 
 /**
  * Rasterize a DOM node to PNG and trigger a download. `pixelWidth` lets us
@@ -19,6 +18,7 @@ export function usePngDownload(
     if (!node) return;
     setBusy(true);
     try {
+      const { toPng } = await import('html-to-image');
       const rect = node.getBoundingClientRect();
       const pixelRatio = pixelWidth
         ? Math.max(1, pixelWidth / rect.width)

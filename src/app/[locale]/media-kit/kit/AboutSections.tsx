@@ -1,5 +1,3 @@
-'use client';
-
 import Card from '@/components/ui/layout/Card';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
