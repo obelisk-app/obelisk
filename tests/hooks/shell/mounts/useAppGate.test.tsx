@@ -2,6 +2,8 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const initSocial = vi.fn();
+const initializeWot = vi.hoisted(() => vi.fn());
+vi.mock('@/services/wot', () => ({ initializeWot }));
 vi.mock('@/services/social/pool', () => ({ initSocial: (relays: string[]) => initSocial(relays) }));
 
 import { useAppGate } from '@/hooks/shell/mounts/useAppGate';
@@ -16,6 +18,7 @@ function stubViewport(matches: boolean) {
 describe('useAppGate', () => {
   beforeEach(() => {
     initSocial.mockClear();
+    initializeWot.mockClear();
   });
 
   it('reports the phone viewport once matchMedia has answered, and the session', async () => {
@@ -30,6 +33,12 @@ describe('useAppGate', () => {
     const { result } = renderHook(() => useAppGate(), { wrapper: bridgeWrapper(fakeBridge({ isLoggedIn: false })) });
     await waitFor(() => expect(result.current.isMobile).toBe(false));
     expect(result.current.loggedIn).toBe(false);
+  });
+
+  it.each([true, false])('initializes persisted trust settings for mobile=%s', (mobile) => {
+    stubViewport(mobile);
+    renderHook(() => useAppGate(), { wrapper: bridgeWrapper(fakeBridge()) });
+    expect(initializeWot).toHaveBeenCalledTimes(1);
   });
 
   it('points the social SDK at the configured social relays', () => {

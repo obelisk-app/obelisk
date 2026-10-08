@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useIsLoggedIn } from '@/services/nostr-bridge';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
+import { initializeWot } from '@/services/wot';
 import { initSocial } from '@/services/social/pool';
 import { useIsMobile } from '@/hooks/common/useIsMobile';
 import { useSessionNoticeToast } from '@/hooks/shell/login/useSessionNoticeToast';
@@ -20,6 +21,9 @@ export function useAppGate() {
   const loggedIn = useIsLoggedIn();
   const socialRelays = usePreferences().socialRelays;
   useSessionNoticeToast();
+
+  // Initialize persisted trust settings for either responsive shell.
+  useEffect(() => { initializeWot(); }, []);
 
   useEffect(() => {
     initSocial(socialRelays);

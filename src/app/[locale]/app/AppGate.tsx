@@ -20,6 +20,7 @@ import './mobile/mobile-shell.css';
 import BackgroundVoiceAudio from '@/components/voice/audio/BackgroundVoiceAudio';
 import ReadStateRoot from '@/components/read-state/ReadStateRoot';
 import ActivityIndicator from '@/components/feedback/ActivityIndicator';
+import { LazyDmCallLayer } from './mounts/lazy-mounts';
 import { useAppGate } from '@/hooks/shell/mounts/useAppGate';
 
 const AppShell = dynamic(() => import('./desktop/DesktopShell'), { ssr: false });
@@ -32,6 +33,7 @@ export default function AppGate() {
     <>
       {loggedIn ? <ReadStateRoot /> : null}
       {loggedIn ? <BackgroundVoiceAudio /> : null}
+      {loggedIn ? <LazyDmCallLayer /> : null}
       {isMobile ? <MobileShell /> : <AppShell />}
       {!isMobile && <ActivityIndicator />}
     </>

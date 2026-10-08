@@ -3,6 +3,7 @@
 import { lazy, Suspense, type ComponentProps } from 'react';
 import type NewGameModalComponent from '@/components/games/new-game/NewGameModal';
 import Modal from '@/components/ui/overlays/Modal';
+import { useDmCallStore } from '@/store/call/dm-call';
 import { useGamesStore } from '@/store/games';
 import { useTranslations } from 'next-intl';
 import { useDmCallListener } from '@/hooks/call/useDmCallListener';
@@ -68,13 +69,15 @@ export function LazyNewGameModal(props: ComponentProps<typeof NewGameModalCompon
 }
 
 /**
- * Listens for incoming calls from the moment the shell mounts: the listener
+ * Listens for incoming calls from the moment the authenticated app mounts: the listener
  * ships with the shell, so an invite never waits on this download (nor on
  * the media stack, which loads only when a call starts or rings). The layer
- * draws nothing until a call starts, so it needs no placeholder.
+ * downloads only when a call starts, so it needs no placeholder.
  */
 export function LazyDmCallLayer() {
   useDmCallListener();
+  const status = useDmCallStore((s) => s.status);
+  if (status === 'idle') return null;
   return (
     <Suspense fallback={null}>
       <DmCallLayer />

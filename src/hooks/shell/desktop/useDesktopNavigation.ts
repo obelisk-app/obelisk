@@ -2,7 +2,6 @@
 
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { nostrActions, useBridge } from '@/services/nostr-bridge';
-import { initializeWot } from '@/services/wot';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { subscribeVoiceJump } from '@/services/voice/jump-to-voice';
 import { useChatStore } from '@/store/chat';
@@ -59,13 +58,6 @@ export function useDesktopNavigation(
       useChatStore.setState({ activeChannelId: null });
     }
   }, [view, bridge]);
-
-  // Probe the nostr-wot extension on mount (and on visibility change). Without
-  // this the engine stays disabled until the user opens the Preferences tab,
-  // so a persisted "WoT on" toggle wouldn't take effect on cold load.
-  useEffect(() => {
-    initializeWot();
-  }, []);
 
   const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
   const switchFromDeepLink = useRelayDeepLink();

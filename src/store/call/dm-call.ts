@@ -115,7 +115,7 @@ let unsubscribe: (() => void) | null = null;
 
 /**
  * Start listening for call control messages. Idempotent; mounted once per
- * shell by `DmCallLayer`. Ends any call in flight on logout/account switch.
+ * authenticated app by `LazyDmCallLayer`. Ends any call in flight on logout/account switch.
  */
 export async function initDmCalls(): Promise<() => void> {
   if (unsubscribe) return unsubscribe;

@@ -7,6 +7,16 @@ vi.mock('@/components/feedback/ActivityIndicator', () => ({
   default: () => <div data-testid="desktop-activity-indicator" />,
 }));
 
+const calls = vi.hoisted(() => ({ off: vi.fn(), init: vi.fn() }));
+vi.mock('@/store/call/dm-call', async (original) => ({
+  ...await original<typeof import('@/store/call/dm-call')>(),
+  initDmCalls: calls.init,
+}));
+vi.mock('@/components/call/DmCallLayer', () => ({
+  DmCallLayer: () => <audio data-testid="dm-call-audio" />,
+}));
+
+import { useDmCallStore } from '@/store/call/dm-call';
 import { setActiveVoiceClient } from '@/services/voice/active-client';
 import type { RemoteTrack, VoiceClient } from '@/services/voice/client';
 
@@ -19,9 +29,12 @@ describe('AppGate shared runtime', () => {
   afterEach(() => {
     cleanup();
     setActiveVoiceClient(null);
+    useDmCallStore.setState({ status: 'idle' });
     vi.restoreAllMocks();
   });
   beforeEach(() => {
+    calls.off.mockClear();
+    calls.init.mockReset().mockResolvedValue(calls.off);
     vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
       matches: true,
@@ -58,6 +71,29 @@ describe('AppGate shared runtime', () => {
     act(() => fake.stores.isLoggedIn.set(false));
     expect(container.querySelector('audio')).toBeNull();
     expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the DM listener and audio across shell swaps, but terminates on logout', async () => {
+    const query = { matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    vi.mocked(window.matchMedia).mockReturnValue(query as unknown as MediaQueryList);
+    const hangup = vi.spyOn(useDmCallStore.getState(), 'hangup').mockImplementation(() => {});
+    useDmCallStore.setState({ status: 'active' });
+    const fake = fakeBridge({ isLoggedIn: true });
+    renderWithBridge(<LocaleProvider initialLocale="en"><AppGate /></LocaleProvider>, fake);
+    const audio = await screen.findByTestId('dm-call-audio');
+    await waitFor(() => expect(calls.init).toHaveBeenCalledTimes(1));
+    const onChange = query.addEventListener.mock.calls.find(([event]) => event === 'change')![1];
+    for (const mobile of [false, true]) {
+      act(() => { query.matches = mobile; onChange(); });
+      expect(screen.getByTestId('dm-call-audio')).toBe(audio);
+      expect(calls.init).toHaveBeenCalledTimes(1);
+      expect(calls.off).not.toHaveBeenCalled();
+      expect(hangup).not.toHaveBeenCalled();
+    }
+    act(() => fake.stores.isLoggedIn.set(false));
+    expect(screen.queryByTestId('dm-call-audio')).toBeNull();
+    expect(calls.off).toHaveBeenCalledTimes(1);
+    expect(hangup).toHaveBeenCalledTimes(1);
   });
 
   it('does not mount the desktop activity notification stack on mobile', async () => {

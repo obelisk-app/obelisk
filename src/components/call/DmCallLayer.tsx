@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Everything a DM call puts on screen, mounted once per shell:
+ * Everything a DM call puts on screen, mounted above the responsive shells:
  *
  * - the incoming-call banner (ringing is done by the store, through the
  *   notification stack - `ringIncomingCall`);

@@ -4,7 +4,7 @@ import Text from '@/components/ui/layout/Text';
 /**
  * The reconnecting screen. The desktop shell's other small standalone
  * states sit beside it, one per file: `EmptyState`,
- * `DirectMessageSubscriptionAnchor` and `MobileVoiceStatusBar`.
+ * `DirectMessageSubscriptionAnchor`.
  */
 import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';

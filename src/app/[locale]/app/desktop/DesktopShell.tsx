@@ -3,13 +3,12 @@
 import HintHost from '@/components/hints/HintHost';
 import ProfilePopover from '@/components/chat/profile/ProfilePopover';
 import MessageZapModal from '@/components/chat/zaps/MessageZapModal';
-import { LazyDmCallLayer, LazyGameModalHost } from '../mounts/lazy-mounts';
+import { LazyGameModalHost } from '../mounts/lazy-mounts';
 import { RelayAccessModal } from '../modals/relay/RelayAccessModal';
 import { FloatingUserPanel } from '../panes/sidebar/FloatingUserPanel';
 import { ProfilePane } from '../panes/reader/ProfilePane';
 import { RelayTopBar } from '../panes/topbar/RelayTopBar';
 import { DirectMessageSubscriptionAnchor } from './DirectMessageSubscriptionAnchor';
-import { MobileVoiceStatusBar } from './MobileVoiceStatusBar';
 import { RehydratingScreen } from './ShellStates';
 import { DesktopDrawer } from './DesktopDrawer';
 import { DesktopMain } from './DesktopMain';
@@ -45,7 +44,6 @@ export default function AppShell() {
       <LazyGameModalHost />
       <RelayAccessModal />
       <DirectMessageSubscriptionAnchor />
-      <LazyDmCallLayer />
       <RelayTopBar
         relay={vm.relay}
         onSocialSurface={vm.onSocialSurface}
@@ -53,7 +51,6 @@ export default function AppShell() {
         onJumpToChannel={vm.jumpToChannel}
         onJumpToDm={vm.openDm}
       />
-      <MobileVoiceStatusBar currentView={vm.view} />
       <div className="flex flex-1 overflow-hidden relative min-h-0">
         <DesktopDrawer
           relay={vm.relay}

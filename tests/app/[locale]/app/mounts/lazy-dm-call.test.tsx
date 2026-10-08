@@ -61,7 +61,7 @@ describe('LazyDmCallLayer', () => {
     setPreference('callsFrom', 'contacts');
     render(<LocaleProvider initialLocale="en"><LazyDmCallLayer /></LocaleProvider>);
     await vi.waitFor(() => expect(bridge.listeners.size).toBe(1));
-    expect(fetched.layer).toBe(1);
+    expect(fetched.layer).toBe(0);
 
     act(() => {
       for (const cb of bridge.listeners) {
@@ -72,6 +72,7 @@ describe('LazyDmCallLayer', () => {
     expect(useDmCallStore.getState()).toMatchObject({ status: 'incoming', peer: BOB });
     // Ringing started the media stack's download, so "Accept" will not wait on it.
     await vi.waitFor(() => expect(fetched.session).toBe(1));
+    await vi.waitFor(() => expect(fetched.layer).toBe(1));
     expect(screen.queryByTestId('dm-incoming-call')).toBeNull();
   });
 });

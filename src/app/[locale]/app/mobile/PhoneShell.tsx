@@ -13,7 +13,7 @@ import ProfilePopover from '@/components/chat/profile/ProfilePopover';
 import HintHost from '@/components/hints/HintHost';
 import MessageZapModal from '@/components/chat/zaps/MessageZapModal';
 import { usePhoneShell } from '@/hooks/shell/mobile/nav/usePhoneShell';
-import { LazyDmCallLayer, LazyGameModalHost } from '../mounts/lazy-mounts';
+import { LazyGameModalHost } from '../mounts/lazy-mounts';
 import { BottomNav } from './chrome/BottomNav';
 import { MobileVoiceStatusSlot } from './chrome/MobileVoiceStatusSlot';
 import { MobileScreensHost } from './carousel/MobileScreensHost';
@@ -48,7 +48,6 @@ export default function MobileShell() {
     >
       <MessageZapModal />
       <LazyGameModalHost />
-      <LazyDmCallLayer />
       <MobileScreensHost
         hostRef={screensHostRef}
         dragLayerRef={dragLayerRef}
