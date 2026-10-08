@@ -64,7 +64,8 @@ const WEIGHT_CLASS: Record<TextWeight, string> = {
 };
 
 export interface TextProps extends HTMLAttributes<HTMLElement> {
-  as?: 'span' | 'p' | 'div' | 'li' | 'dt' | 'dd';
+  as?: 'span' | 'p' | 'div' | 'li' | 'dt' | 'dd' | 'time';
+  dateTime?: string;
   size?: TextSize;
   tone?: TextTone;
   weight?: TextWeight;
