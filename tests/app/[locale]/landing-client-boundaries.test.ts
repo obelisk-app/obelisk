@@ -6,7 +6,7 @@ const page = 'src/app/[locale]/page.tsx';
 const staticSections = [
   'LandingHero', 'HeroProductPreview', 'LandingHeroAnimation', 'PreviewSection',
   'FeaturesSection', 'StepsSection', 'RoadmapSection', 'RoadmapPhase',
-  'LearnSection', 'StackSection', 'CtaSection', 'FaqSection', 'DemoVideoSection',
+  'LearnSection', 'StackSection', 'PostQuantumSection', 'CtaSection', 'FaqSection', 'DemoVideoSection',
 ];
 
 describe('landing client boundaries', () => {
@@ -26,7 +26,9 @@ describe('landing client boundaries', () => {
   it('owns the page composition directly and retains explicit app navigation', () => {
     const source = readFileSync(page, 'utf8');
     expect(source).toContain('<main');
-    expect(source).toContain('marketing.pqc.heading');
+    expect(source).toContain('<PostQuantumSection />');
+    const postQuantum = readFileSync('src/components/marketing/landing/PostQuantumSection.tsx', 'utf8');
+    expect(postQuantum).toContain('marketing.pqc.heading');
     expect(source).not.toContain('LandingPage');
     for (const site of ['Navbar', 'Footer']) {
       expect(readFileSync(`src/components/marketing/site/${site}.tsx`, 'utf8')).toMatch(/href="\/app"\s+prefetch=\{false\}/);
