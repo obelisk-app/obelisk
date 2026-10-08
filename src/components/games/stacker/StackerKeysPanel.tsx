@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import Button from '@/components/ui/buttons/Button';
 import Modal from '@/components/ui/overlays/Modal';
 import { useTranslations } from 'next-intl';
@@ -29,7 +30,7 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
       <ModalHeader title={t('games.controls')} subtitle={t('games.controlsHelp')} onClose={onClose} />
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-        <ul className="space-y-1.5" data-testid="stacker-key-list">
+        <List marker="none" spacing="none" className="space-y-1.5" data-testid="stacker-key-list">
           {vm.rows.map((row) => (
             <li key={row.action} className="flex items-center gap-2">
               <span className="flex-1 text-xs text-lc-white">{t(`games.stacker.action.${row.action}`)}</span>
@@ -55,7 +56,7 @@ export default function StackerKeysPanel({ onClose }: { onClose: () => void }) {
               </Chip>
             </li>
           ))}
-        </ul>
+        </List>
       </div>
 
       <ModalFooter

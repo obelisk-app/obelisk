@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import { useTranslations } from 'next-intl';
 import { useRelaysWidget } from '@/hooks/social/widgets/useRelaysWidget';
 import { relayLatencyLabel } from '@/utils/social/relay-status-rows';
@@ -35,7 +36,7 @@ export default function RelaysWidget() {
         </TextButton>
       )}
     >
-      <ul>
+      <List marker="none" spacing="none">
         {vm.rows.map(({ relay, status, state }) => (
           <li
             key={relay}
@@ -58,7 +59,7 @@ export default function RelaysWidget() {
             )}
           </li>
         ))}
-      </ul>
+      </List>
     </Panel>
   );
 }

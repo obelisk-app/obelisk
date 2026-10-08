@@ -28,6 +28,12 @@ describe('List', () => {
     expect(list).toHaveClass('list-[lower-alpha]');
     expect(list).not.toHaveClass('list-decimal');
   });
+  it('allows prose to supply margin indentation without additional padding or row spacing', () => {
+    render(<List indent={false} spacing="none" className="ml-6"><li>Detail</li></List>);
+    const list = screen.getByRole('list');
+    expect(list).toHaveClass('list-disc', 'ml-6');
+    expect(list).not.toHaveClass('pl-5', 'space-y-2');
+  });
   it('preserves an explicit role override', () => {
     render(<List marker="none" role="menu"><li role="menuitem">Open</li></List>);
     expect(screen.getByRole('menu')).toHaveAttribute('role', 'menu');

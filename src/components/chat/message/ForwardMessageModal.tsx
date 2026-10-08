@@ -10,6 +10,7 @@
  * `publishGroupMessage`) and ping them on every forward.
  */
 
+import List from '@/components/ui/layout/List';
 import Modal from '@/components/ui/overlays/Modal';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import Input from '@/components/ui/forms/Input';
@@ -51,7 +52,7 @@ export default function ForwardMessageModal({
           className="mb-2"
           data-testid="forward-search"
         />
-        <ul className="max-h-72 space-y-0.5 overflow-y-auto" role="menu" aria-label={t('chat.message.forwardTitle')}>
+        <List marker="none" spacing="none" className="max-h-72 space-y-0.5 overflow-y-auto" role="menu" aria-label={t('chat.message.forwardTitle')}>
           {vm.targets.length === 0 && (
             <EmptyState as="li" padding="md" className="px-3">{t('chat.message.forwardEmpty')}</EmptyState>
           )}
@@ -67,7 +68,7 @@ export default function ForwardMessageModal({
               />
             </li>
           ))}
-        </ul>
+        </List>
       </div>
     </Modal>
   );

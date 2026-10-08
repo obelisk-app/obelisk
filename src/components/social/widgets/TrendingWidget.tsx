@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import Button from '@/components/ui/buttons/Button';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTrendingWidget } from '@/hooks/social/widgets/useTrendingWidget';
@@ -30,7 +31,7 @@ export default function TrendingWidget({
       {tags.length === 0 ? (
         <WidgetEmpty testId="feed-trending-empty">{t('social.trendingEmpty')}</WidgetEmpty>
       ) : (
-        <ul>
+        <List marker="none" spacing="none">
           {tags.map(({ tag, count, authors }) => (
             <li key={tag} className="group/tag flex items-center gap-1 rounded-lg pr-1.5 hover:bg-white/5">
               <Button
@@ -55,7 +56,7 @@ export default function TrendingWidget({
               </span>
             </li>
           ))}
-        </ul>
+        </List>
       )}
     </Panel>
   );

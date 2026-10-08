@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
 import { useWhoToFollowWidget } from '@/hooks/social/widgets/useWhoToFollowWidget';
@@ -29,11 +30,11 @@ export default function WhoToFollowWidget({
       {people.length === 0 ? (
         <WidgetEmpty testId="who-to-follow-empty">{t('social.whoToFollowEmpty')}</WidgetEmpty>
       ) : (
-        <ul>
+        <List marker="none" spacing="none">
           {people.map((person) => (
             <WhoToFollowRow key={person.pubkey} pubkey={person.pubkey} onOpenProfile={onOpenProfile} />
           ))}
-        </ul>
+        </List>
       )}
     </Panel>
   );

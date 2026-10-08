@@ -1,3 +1,4 @@
+import List from '@/components/ui/layout/List';
 import type { ComponentPropsWithoutRef } from 'react';
 import Link from '@/components/ui/navigation/Link';
 import Callout from './Callout';
@@ -23,10 +24,10 @@ function P(props: ComponentPropsWithoutRef<'p'>) {
   return <Text as="p" className="my-4 text-[15px] leading-7 text-lc-white/85" {...props} />;
 }
 function UL(props: ComponentPropsWithoutRef<'ul'>) {
-  return <ul className="my-4 ml-6 list-disc text-[15px] leading-7 text-lc-white/85 marker:text-lc-green" {...props} />;
+  return <List spacing="none" indent={false} className="my-4 ml-6 text-[15px] leading-7 text-lc-white/85 marker:text-lc-green" {...props} />;
 }
 function OL(props: ComponentPropsWithoutRef<'ol'>) {
-  return <ol className="my-4 ml-6 list-decimal text-[15px] leading-7 text-lc-white/85 marker:text-lc-green" {...props} />;
+  return <List as="ol" spacing="none" indent={false} className="my-4 ml-6 text-[15px] leading-7 text-lc-white/85 marker:text-lc-green" {...props} />;
 }
 function LI(props: ComponentPropsWithoutRef<'li'>) {
   return <li className="my-1" {...props} />;

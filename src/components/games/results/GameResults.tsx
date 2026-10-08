@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import type { GameSession } from '@/lib/games/session/session';
 import { gameIcon, gameName } from '@/lib/games/core/catalog';
 import { scoreDetail, scoreLabel } from '@/utils/games/copy/game-copy';
@@ -38,7 +39,7 @@ export default function GameResults({
         </div>
       </div>
 
-      <ol className="space-y-1.5" data-testid="results-standings">
+      <List as="ol" marker="none" spacing="none" className="space-y-1.5" data-testid="results-standings">
         {rows.map((row, i) => (
           <li
             key={row.seat}
@@ -59,7 +60,7 @@ export default function GameResults({
             </span>
           </li>
         ))}
-      </ol>
+      </List>
 
       {detail && (
         <Text as="p" size="10" tone="muted" className="text-center">{scoreDetail(t, detail)}</Text>

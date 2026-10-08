@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import Link from '@/components/ui/navigation/Link';
@@ -25,7 +26,7 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
     <div className={mobile ? 'space-y-3 px-4 py-3' : 'space-y-4'} data-testid="local-data-panel">
       <Text as="p" variant="muted" className="leading-6">{t('settings.localData.intro')}</Text>
       <AnalyticsSetting />
-      <ul className="divide-y divide-lc-border overflow-hidden rounded-lg border border-lc-border">
+      <List marker="none" spacing="none" className="divide-y divide-lc-border overflow-hidden rounded-lg border border-lc-border">
         {categories.map((category) => (
           <LocalDataCategoryRow
             key={category.id}
@@ -35,7 +36,7 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
             onRemove={() => void removeCategory(category.id)}
           />
         ))}
-      </ul>
+      </List>
       <Card as="section" surface="transparent" radius="lg" tone="danger" data-testid="local-data-everything">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">

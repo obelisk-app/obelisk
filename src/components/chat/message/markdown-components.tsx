@@ -11,6 +11,7 @@
  * the logic (links in `MarkdownLink`, images in `MarkdownImage`, code in
  * `MarkdownCode`, placeholder chips in `MarkdownInline`).
  */
+import List from '@/components/ui/layout/List';
 import type { ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import type { MentionMap } from '@/utils/message-text/placeholder-segments';
@@ -57,8 +58,8 @@ export function buildMarkdownComponents({
     em: ({ children }) => <em className="italic text-lc-white/80"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></em>,
     del: ({ children }) => <del className="line-through text-lc-muted"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></del>,
     // Lists
-    ul: ({ children }) => <ul className="list-disc list-inside my-1 text-lc-white/90">{children}</ul>,
-    ol: ({ children }) => <ol className="list-decimal list-inside my-1 text-lc-white/90">{children}</ol>,
+    ul: ({ children }) => <List marker="inside" spacing="none" className="my-1 text-lc-white/90">{children}</List>,
+    ol: ({ children }) => <List as="ol" marker="inside" spacing="none" className="my-1 text-lc-white/90">{children}</List>,
     li: ({ children }) => <li className="text-sm"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></li>,
     // Paragraph: swap mention placeholders
     p: ({ children }) => <Text as="p" className="my-0"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,

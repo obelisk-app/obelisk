@@ -1,3 +1,4 @@
+import List from '@/components/ui/layout/List';
 import Card from '@/components/ui/layout/Card';
 import Image from 'next/image';
 import { CheckIcon } from '@/assets/icons';
@@ -78,14 +79,14 @@ export function ShowcaseRow({ item, index }: { item: ShowcaseItem; index: number
             {item.description}
           </Text>
           {item.features.length > 0 && (
-            <ul className="mt-6 space-y-2.5">
+            <List marker="none" spacing="relaxed" className="mt-6">
               {item.features.map((f) => (
                 <li key={f} className="flex items-start gap-3 text-sm md:text-base text-lc-muted">
                   <CheckIcon size={18} strokeWidth={2.5} className="text-lc-green mt-1 shrink-0" />
                   <span>{f}</span>
                 </li>
               ))}
-            </ul>
+            </List>
           )}
         </div>
       </div>

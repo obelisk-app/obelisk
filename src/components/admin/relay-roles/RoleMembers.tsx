@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import Button from '@/components/ui/buttons/Button';
 import Input from '@/components/ui/forms/Input';
 import Text from '@/components/ui/layout/Text';
@@ -38,7 +39,7 @@ export default function RoleMembers({ role, holders, busy, onGrant, onRevoke, on
       )}
 
       <div className="mt-2 max-h-56 overflow-y-auto" data-testid={`role-candidates-${role.id}`}>
-        <ul className="grid gap-1">
+        <List marker="none" spacing="none" className="grid gap-1">
           {vm.matches.map((person) => (
             <RolePersonRow
               key={person.pubkey}
@@ -53,19 +54,19 @@ export default function RoleMembers({ role, holders, busy, onGrant, onRevoke, on
               {t(vm.loadingPeople ? 'admin.roles.loadingMembers' : 'admin.roles.noMembersMatch')}
             </li>
           )}
-        </ul>
+        </List>
       </div>
 
       <div className="mt-3 border-t border-lc-border/60 pt-2">
         <Text as="div" variant="label" size="10" weight="semibold" tone="muted" className="mb-1">
           {t('admin.roles.holders', { count: holders.length })}
         </Text>
-        <ul className="grid gap-1">
+        <List marker="none" spacing="none" className="grid gap-1">
           {holders.map((pubkey) => (
             <RoleHolderRow key={pubkey} pubkey={pubkey} roleName={role.name} busy={busy} onRevoke={() => onRevoke(pubkey)} />
           ))}
           {holders.length === 0 && <li className="py-2 text-xs text-lc-muted">{t('admin.roles.nobody')}</li>}
-        </ul>
+        </List>
       </div>
     </div>
   );

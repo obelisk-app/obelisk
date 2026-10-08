@@ -1,3 +1,4 @@
+import List from '@/components/ui/layout/List';
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import type { ROADMAP_PHASES } from '@/constants/marketing/landing';
@@ -29,7 +30,7 @@ export default function RoadmapPhase({ phase }: { phase: Phase }) {
           </span>
         </div>
         <Heading as="h3" variant="card" className="mb-2">{t(`marketing.roadmap.${phase.key}.title`)}</Heading>
-        <ul className="space-y-1">
+        <List marker="none" spacing="tight">
           {items.map((item) => (
             <li key={item} className="text-sm text-lc-muted flex items-start gap-2">
               {done ? (
@@ -40,7 +41,7 @@ export default function RoadmapPhase({ phase }: { phase: Phase }) {
               {item}
             </li>
           ))}
-        </ul>
+        </List>
       </Card>
     </div>
   );

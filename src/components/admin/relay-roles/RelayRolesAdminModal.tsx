@@ -1,5 +1,6 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import Modal from '@/components/ui/overlays/Modal';
 import Button from '@/components/ui/buttons/Button';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
@@ -54,11 +55,11 @@ export default function RelayRolesAdminModal({
           <EmptyState as="p">{t('admin.roles.empty')}</EmptyState>
         )}
 
-        <ul className="grid gap-2">
+        <List marker="none" spacing="none" className="grid gap-2">
           {draft.draft.map((role, index) => (
             <RoleRow key={role.id} role={role} index={index} holders={roles.holders[role.id] ?? []} roles={draft} />
           ))}
-        </ul>
+        </List>
       </div>
 
       {draft.message && <div className="border-t border-lc-border px-5 py-2 text-xs text-lc-green" role="status">{draft.message}</div>}
