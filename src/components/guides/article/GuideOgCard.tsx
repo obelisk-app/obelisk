@@ -1,12 +1,12 @@
-import type { GuideCardText } from '@/utils/seo/card-layout';
+import type { GuideCardProps } from '@/utils/seo/card-layout';
 import ObeliskOgMark from '@/assets/brand/ObeliskOgMark';
 
 /**
  * A guide's 1200x630 preview card: the obelisk mark and wordmark, the
  * "guide" label, the title and description at the sizes `guideCardText`
- * picked for them, up to four tags and the guides section's address. The
- * route (`src/app/[locale]/guides/[slug]/opengraph-image.tsx`) calls it as a
- * function and hands the result to `ImageResponse`.
+ * picked for them, up to four tags and the guides section's address
+ * (`guideCardProps`). `npm run snap-og` calls it as a function for every
+ * guide in every language and writes the PNG under `public/og/cards/`.
  */
 export default function GuideOgCard({
   label,
@@ -16,7 +16,7 @@ export default function GuideOgCard({
   descFontSize,
   tags,
   footer,
-}: GuideCardText & { label: string; title: string; tags: string[]; footer: string }) {
+}: GuideCardProps) {
   return (
     <div
       style={{

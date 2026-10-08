@@ -2,8 +2,10 @@
 
 import { useId } from 'react';
 import { shortHost } from '@/utils/relay-url/url-host';
-import { useRelayBrandingForm } from '@/hooks/relay/branding/useRelayBrandingForm';
+import { useForm } from '@/hooks/common/useForm';
 import { type RelayBranding } from '@/services/relay/relay-branding';
+import { relayBrandingForm } from '@/services/relay/branding-form';
+import FormError from '@/components/ui/forms/FormError';
 import BlossomImageInput from '@/components/media/upload/BlossomImageInput';
 import { useTranslations } from 'next-intl';
 import Sheet from '@/components/ui/overlays/Sheet';
@@ -29,10 +31,7 @@ export function EditBrandingSheet({
   const t = useTranslations();
   const nameId = useId();
   const descriptionId = useId();
-  const {
-    icon, banner, name, description, saving, error: err,
-    setIcon, setBanner, setName, setDescription, save,
-  } = useRelayBrandingForm(relayUrl, branding, close);
+  const form = useForm(relayBrandingForm(relayUrl, branding, close));
 
   return (
     <Sheet onClose={close} screen="edit-branding" label={t('mobile.branding.edit')} zIndex={20} maxHeight="94%">
@@ -44,15 +43,15 @@ export function EditBrandingSheet({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <BlossomImageInput
           label={t('mobile.branding.iconAlt')}
-          value={icon}
-          onChange={setIcon}
+          value={form.values.icon}
+          onChange={(value) => form.set('icon', value)}
           shape="square"
           hint={t('mobile.branding.iconHint')}
         />
         <BlossomImageInput
           label={t('mobile.branding.bannerAlt')}
-          value={banner}
-          onChange={setBanner}
+          value={form.values.banner}
+          onChange={(value) => form.set('banner', value)}
           shape="wide"
           hint={t('mobile.branding.bannerHint')}
         />
@@ -64,8 +63,7 @@ export function EditBrandingSheet({
             <Input
               variant="mobile"
               id={nameId}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...form.field('name')}
               placeholder={shortHost(relayUrl)}
             />
           </div>
@@ -78,17 +76,16 @@ export function EditBrandingSheet({
             <TextArea
               variant="mobile"
               id={descriptionId}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              {...form.field('description')}
               rows={2}
               placeholder={t('mobile.branding.descriptionPlaceholder')}
             />
           </div>
         </div>
       </div>
-      {err && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{err}</div>}
+      <FormError variant="sheet">{form.error}</FormError>
       <SheetActions
-        primary={{ label: t('mobile.branding.save'), busyLabel: t('common.saving'), busy: saving, onClick: () => void save(), testId: 'mobile-branding-save' }}
+        primary={{ label: t('mobile.branding.save'), busyLabel: t('common.saving'), busy: form.submitting, onClick: () => void form.submit(), testId: 'mobile-branding-save' }}
         onCancel={close}
       />
     </Sheet>

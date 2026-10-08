@@ -32,12 +32,13 @@ describe('guide metadata', () => {
     expect(m.description).toBe(fm.seoDescription);
     const [image] = (m.openGraph as { images: Array<{ url: string; width: number; height: number }> }).images;
     // The 1200x630 card, not the 2:1 hero that previews would crop.
-    expect(image).toMatchObject({ url: 'https://obelisk.ar/es/guides/vesta/opengraph-image', width: 1200, height: 630 });
+    expect(image).toMatchObject({ width: 1200, height: 630, type: 'image/png' });
+    expect(image.url).toMatch(/^https:\/\/obelisk\.ar\/og\/cards\/es\/guides\/vesta\.png\?v=/);
     expect(m.alternates?.canonical).toBe('https://obelisk.ar/es/guides/vesta');
   });
 
-  it('a guide with no snapshot falls back to its generated card at the public URL', () => {
-    expect(guideHero({ ...fm, heroComponent: 'none' }, 'pt', 'x', translator('pt')).url).toBe('https://obelisk.ar/pt/guides/x/opengraph-image');
+  it('a guide with no snapshot falls back to its own card file', () => {
+    expect(guideHero({ ...fm, heroComponent: 'none' }, 'pt', 'x', translator('pt')).url).toBe('https://obelisk.ar/og/cards/pt/guides/x.png');
   });
 });
 

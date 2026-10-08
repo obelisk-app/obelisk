@@ -17,7 +17,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
-import { cardAlt, cardImage } from '@/utils/seo/og';
+import { ogImage } from '@/utils/seo/og';
 import { Link } from '@/i18n/navigation';
 import { serverLocale } from '@/services/server/i18n/locale';
 import { parseIdentifier } from '@/services/social/identifier';
@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const profile = await fetchAuthorForViewer(target.pubkey);
   if (!profile) {
     const title = t('seo.profile.notFound');
-    return noindexMetadata({ locale, path, title, image: cardImage(locale, path, cardAlt(t, renderedTitle(title))) });
+    return noindexMetadata({ locale, path, title, image: ogImage(t, locale, { live: 'profile', id }, renderedTitle(title)) });
   }
 
   const name = displayNameFor(profile);
@@ -67,7 +67,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: name,
     description: profile.about?.trim().slice(0, 200) || t('seo.profile.onNostr', { name }),
     type: 'profile',
-    image: cardImage(locale, path, cardAlt(t, renderedTitle(name))),
+    image: ogImage(t, locale, { live: 'profile', id }, renderedTitle(name)),
   });
 }
 

@@ -23,7 +23,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:related": "vitest related --run",
-    "test:guards": "vitest run tests/eslint-config.test.ts tests/no-em-dash.test.ts tests/import-cycles.test.ts tests/hooks/hooks-layer.test.ts tests/assets/assets-only.test.ts tests/components/markup-only.test.ts tests/components/typography.test.ts tests/components/modal-chrome.test.ts tests/components/components-only.test.ts tests/components/raw-button-cap.test.ts tests/app/raw-buttons.test.ts tests/structure tests/services/nostr-bridge/front-door.test.ts tests/bridge-in-react-files.test.ts tests/app/bridge-provider-routes.test.ts tests/bridge-mock-count.test.ts tests/i18n tests/constants/nostr/nip-kinds.test.ts tests/hooks-after-early-return.test.ts tests/services/local-data/inventory-guard.test.ts",
+    "test:guards": "vitest run tests/eslint-config.test.ts tests/no-em-dash.test.ts tests/import-cycles.test.ts tests/hooks/hooks-layer.test.ts tests/assets/assets-only.test.ts tests/components/markup-only.test.ts tests/components/typography.test.ts tests/components/modal-chrome.test.ts tests/components/components-only.test.ts tests/components/raw-button-cap.test.ts tests/app/raw-buttons.test.ts tests/structure tests/services/nostr-bridge/front-door.test.ts tests/bridge-in-react-files.test.ts tests/app/bridge-provider-routes.test.ts tests/bridge-mock-count.test.ts tests/i18n tests/constants/nostr/nip-kinds.test.ts tests/hooks-after-early-return.test.ts tests/services/local-data/inventory-guard.test.ts tests/app/og-images.test.ts tests/services/server/og/static-cards.test.ts tests/app/og-cache.test.ts tests/components/forms.test.ts tests/app/route-imports.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test --config=scripts/e2e/playwright.config.ts",
@@ -31,6 +31,7 @@
     "test:e2e:voice": "playwright test --config=scripts/e2e/playwright.config.ts scripts/e2e/voice/",
     "test:e2e:voice:headed": "HEADED=1 playwright test --config=scripts/e2e/playwright.config.ts scripts/e2e/voice/",
     "snap-guides": "tsx scripts/snap-guide-svgs.ts",
+    "snap-og": "tsx scripts/og/snap-og.ts",
     "snap-games": "node scripts/snap-game-shots.mjs",
     "seo:check": "tsx scripts/seo/check.ts"
   },

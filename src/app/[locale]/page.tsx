@@ -10,7 +10,7 @@ import JsonLd from '@/components/seo/JsonLd';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
-  return standardPageMetadata(await getTranslations({ locale }), locale, 'site', '/', { absoluteTitle: true });
+  return standardPageMetadata(await getTranslations({ locale }), locale, 'landing', { absoluteTitle: true });
 }
 
 export default async function Page() {

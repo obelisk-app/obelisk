@@ -38,19 +38,19 @@ describe('useProfileEditorForm', () => {
       wrapper,
       initialProps: { initial: null as typeof INITIAL | null },
     });
-    expect(result.current.name).toBe('');
+    expect(result.current.values.name).toBe('');
     rerender({ initial: INITIAL });
-    expect(result.current.name).toBe('Alice');
-    expect(result.current.nip05).toBe('alice@x');
-    act(() => result.current.setName('Alicia'));
+    expect(result.current.values.name).toBe('Alice');
+    expect(result.current.values.nip05).toBe('alice@x');
+    act(() => result.current.set('name', 'Alicia'));
     rerender({ initial: { ...INITIAL, displayName: 'Relay says Alice' } });
-    expect(result.current.name).toBe('Alicia');
+    expect(result.current.values.name).toBe('Alicia');
   });
 
   it('refuses to save an empty name with the dictionary message', async () => {
     const { result } = renderHook(() => useProfileEditorForm({ ...INITIAL, displayName: '', name: '' }, () => {}), { wrapper });
     expect(result.current.nameValid).toBe(false);
-    await act(() => result.current.save());
+    await act(() => result.current.submit());
     expect(result.current.error).toBe('Name is required');
     expect(editUserMetadata).not.toHaveBeenCalled();
   });
@@ -61,8 +61,8 @@ describe('useProfileEditorForm', () => {
     signerReady = false;
     const onSaved = vi.fn();
     const { result } = renderHook(() => useProfileEditorForm(INITIAL, onSaved), { wrapper });
-    act(() => result.current.setPictureFile(file('a.png')));
-    await act(() => result.current.save());
+    act(() => result.current.set('pictureFile', file('a.png')));
+    await act(() => result.current.submit());
     expect(uploadToBlossom).not.toHaveBeenCalled();
     expect(editUserMetadata).not.toHaveBeenCalled();
     expect(result.current.error).toBe('Not signed in');
@@ -74,12 +74,9 @@ describe('useProfileEditorForm', () => {
     const onSaved = vi.fn();
     const { result } = renderHook(() => useProfileEditorForm(INITIAL, onSaved), { wrapper });
     act(() => {
-      result.current.setName('  Alice B  ');
-      result.current.setPictureFile(file('p.png'));
-      result.current.setBannerFile(file('b.png'));
-      result.current.setWebsite(' https://alice.example ');
+      result.current.setValues({ name: '  Alice B  ', pictureFile: file('p.png'), bannerFile: file('b.png'), website: ' https://alice.example ' });
     });
-    await act(() => result.current.save());
+    await act(() => result.current.submit());
     expect(uploadToBlossom).toHaveBeenCalledTimes(2);
     expect(editUserMetadata).toHaveBeenCalledWith({
       name: 'Alice B',
@@ -99,19 +96,19 @@ describe('useProfileEditorForm', () => {
   it('keeps a typed URL when no file was picked, and shows a publish failure', async () => {
     editUserMetadata.mockRejectedValueOnce(new Error('relay refused'));
     const { result } = renderHook(() => useProfileEditorForm(INITIAL, () => {}), { wrapper });
-    act(() => result.current.setPicture('https://cdn/new.png'));
-    await act(() => result.current.save());
+    act(() => result.current.set('picture', 'https://cdn/new.png'));
+    await act(() => result.current.submit());
     expect(uploadToBlossom).not.toHaveBeenCalled();
     expect(editUserMetadata).toHaveBeenCalledWith(expect.objectContaining({ picture: 'https://cdn/new.png' }));
     expect(result.current.error).toBe('Failed to publish');
-    expect(result.current.saving).toBe(false);
+    expect(result.current.submitting).toBe(false);
   });
 
   it('names a failed upload as an upload, not a publish', async () => {
     uploadToBlossom.mockRejectedValueOnce(new BlossomUploadError(['blossom.example: HTTP 413']));
     const { result } = renderHook(() => useProfileEditorForm(INITIAL, () => {}), { wrapper });
-    act(() => result.current.setPictureFile(file('a.png')));
-    await act(() => result.current.save());
+    act(() => result.current.set('pictureFile', file('a.png')));
+    await act(() => result.current.submit());
     expect(result.current.error).toBe('Upload failed.');
     expect(editUserMetadata).not.toHaveBeenCalled();
   });

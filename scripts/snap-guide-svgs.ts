@@ -12,7 +12,6 @@
  *
  * Run:  npm run snap-guides
  */
-import { readFileSync } from 'node:fs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import React from 'react';
@@ -20,22 +19,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { NextIntlClientProvider } from 'next-intl';
 import { Resvg } from '@resvg/resvg-js';
 import { DEFAULT_LOCALE, LOCALES, type Locale } from '@/i18n';
-import { MODULES } from '@/i18n/modules';
+import { messagesFor } from './i18n/messages';
 
 import { HERO_REGISTRY, DIAGRAM_REGISTRY } from '../src/assets/illustrations/guides';
 import type { GuideAssetMeta } from '@/utils/guides/asset-meta';
 import { HERO_ASSET_META, DIAGRAM_ASSET_META } from '@/constants/guides/asset-meta';
 
 const OUT_DIR = join(process.cwd(), 'public', 'og', 'guides');
-const MESSAGES_DIR = join(process.cwd(), 'src', 'i18n', 'messages');
-
-/** Every module of one language, read from disk the way the server loads them. */
-function messagesFor(locale: Locale): Record<string, unknown> {
-  return Object.fromEntries(
-    MODULES.map((m) => [m, JSON.parse(readFileSync(join(MESSAGES_DIR, locale, `${m}.json`), 'utf8'))]),
-  );
-}
-
 function outDirFor(locale: Locale): string {
   return locale === DEFAULT_LOCALE ? OUT_DIR : join(OUT_DIR, locale);
 }

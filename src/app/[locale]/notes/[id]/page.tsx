@@ -17,7 +17,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
-import { cardAlt, cardImage } from '@/utils/seo/og';
+import { ogImage } from '@/utils/seo/og';
 import { parseIdentifier } from '@/services/social/identifier';
 import {
   displayNameFor,
@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   // Not found on the relays this time; it may be there on the next request.
   if (!note) {
     const title = t('seo.notes.notFound');
-    return noindexMetadata({ locale, path, title, image: cardImage(locale, path, cardAlt(t, renderedTitle(title))) });
+    return noindexMetadata({ locale, path, title, image: ogImage(t, locale, { live: 'note', id }, renderedTitle(title)) });
   }
 
   const author = await fetchAuthorForViewer(note.pubkey);
@@ -79,9 +79,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: preview.title,
     description: preview.description,
     type: preview.isArticle ? 'article' : 'website',
-    // Its own card, not the note's picture: a picture in a note can be any
-    // size or format (WebP, a tall screenshot) and most previews drop it.
-    image: cardImage(locale, path, cardAlt(t, renderedTitle(preview.title))),
+    // Its own card, drawn on request, not the note's picture: a picture in a
+    // note can be any size or format (WebP, a tall screenshot) and most
+    // previews drop it.
+    image: ogImage(t, locale, { live: 'note', id }, renderedTitle(preview.title)),
   });
 }
 

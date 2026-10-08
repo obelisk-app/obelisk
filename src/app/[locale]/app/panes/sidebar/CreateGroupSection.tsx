@@ -2,13 +2,15 @@
 
 import { useTranslations } from 'next-intl';
 import { useCreateGroupSection } from '@/hooks/shell/panes/sidebar/useCreateGroupSection';
+import Form from '@/components/ui/forms/Form';
+import FormError from '@/components/ui/forms/FormError';
 import Input from '@/components/ui/forms/Input';
 import Button from '@/components/ui/buttons/Button';
 import { CloseIcon, PlusIcon } from '@/assets/icons';
 
 /**
  * Desktop skin of the new-channel form: a `+` in the channels header that
- * unfolds a one-line form. The form itself is `useCreateChannelForm`, shared
+ * unfolds a one-line form. The form itself is `createChannelForm`, shared
  * with the phone's `CreateChannelSheet`.
  */
 export function CreateGroupSection({ count, onCreated }: { count: number; onCreated: (groupId: string) => void }) {
@@ -26,13 +28,12 @@ export function CreateGroupSection({ count, onCreated }: { count: number; onCrea
         </Button>
       </div>
       {open && (
-        <form onSubmit={form.submit} className="mb-1 flex flex-col gap-1 px-3 pb-1">
+        <Form form={form} className="mb-1 flex flex-col gap-1 px-3 pb-1">
           <div className="flex items-center gap-1">
             <Input
               size="xs"
               autoFocus
-              value={form.name}
-              onChange={(e) => form.setName(e.target.value)}
+              {...form.field('name')}
               placeholder={t('shell.desktop.channel.namePlaceholder')}
               aria-label={t('shell.desktop.channel.namePlaceholder')}
               className="min-w-0 flex-1"
@@ -45,11 +46,11 @@ export function CreateGroupSection({ count, onCreated }: { count: number; onCrea
               className="shrink-0"
               data-testid="create-channel-submit"
             >
-              {form.busy ? '…' : t('shell.channel.create.submitShort')}
+              {form.submitting ? '…' : t('shell.channel.create.submitShort')}
             </Button>
           </div>
-          {form.error && <span className="break-words text-[10px] text-red-400">{form.error}</span>}
-        </form>
+          <FormError>{form.error}</FormError>
+        </Form>
       )}
     </div>
   );

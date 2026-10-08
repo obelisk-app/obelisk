@@ -85,7 +85,7 @@ export async function checkIndexable(page: Page, ctx: Ctx): Promise<void> {
   }
   r.expect(JSON.stringify(sortKeys(got)) === JSON.stringify(sortKeys(want)), url, C.hreflang, `alternates ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`);
 
-  await checkSocial(page, ctx, canonical);
+  await checkSocial(page, ctx, canonical, { card: 'file' });
   checkJsonLd(page, ctx, canonical);
 
   // 8: robots

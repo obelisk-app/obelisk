@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newForumTagId, removeTagAt, tagEmojiValue, threadTagChoice, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
+import { newForumTagId, removeTagAt, tagEmojiValue, threadTagChoice, toggleThreadTag, updateTagAt, withNewTag } from '@/utils/chat/forum/forum-tags';
 import { MAX_FORUM_TAGS } from '@/constants/chat/forum';
 
 const tag = (id: string) => ({ id, name: id, emoji: null, color: null });
@@ -35,5 +35,13 @@ describe('threadTagChoice', () => {
     expect(threadTagChoice(['a'], 'b', 2)).toEqual({ active: false, disabled: false });
     expect(threadTagChoice(['a', 'c'], 'b', 2)).toEqual({ active: false, disabled: true });
     expect(threadTagChoice(['a', 'c'], 'a', 2)).toEqual({ active: true, disabled: false });
+  });
+});
+
+describe('toggleThreadTag', () => {
+  it('picks up to the maximum and unpicks a picked one', () => {
+    expect(toggleThreadTag([], 'a', 2)).toEqual(['a']);
+    expect(toggleThreadTag(['a', 'b'], 'c', 2)).toEqual(['a', 'b']);
+    expect(toggleThreadTag(['a', 'b'], 'a', 2)).toEqual(['b']);
   });
 });

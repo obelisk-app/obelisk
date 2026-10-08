@@ -9,7 +9,7 @@ import VoiceRoomForm from './VoiceRoomForm';
  */
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
-  return standardNoindexMetadata(await getTranslations({ locale }), locale, 'voice', '/voice');
+  return standardNoindexMetadata(await getTranslations({ locale }), locale, 'voice');
 }
 
 export default async function Page() {

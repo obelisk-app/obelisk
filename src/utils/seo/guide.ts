@@ -20,7 +20,7 @@ import { absoluteUrl } from './alternates';
 import { SITE_URL, HREFLANG } from '@/constants/seo/alternates';
 import { breadcrumbJsonLd, websiteId } from './jsonld';
 import { ORGANIZATION_ID, SCHEMA } from '@/constants/seo/jsonld';
-import { cardAlt, cardImage } from './og';
+import { ogImage } from './og';
 import { pageMetadata, renderedTitle, type PageImage } from './page';
 
 /** The front-matter fields this module reads. */
@@ -45,12 +45,10 @@ export function guideSeoText(fm: GuideSeoFields): { title: string; description: 
   return { title: fm.seoTitle ?? fm.title, description: fm.seoDescription ?? fm.description };
 }
 
-/** The guide's card image: its hero in the guide's language, else the generated card. */
+/** The guide's lead image for JSON-LD: its hero in the guide's language, else its preview card. */
 export function guideHero(fm: GuideSeoFields, locale: Locale, slug: string, t: Translate): PageImage {
   const meta = HERO_ASSET_META[fm.heroComponent];
-  if (!meta) {
-    return { url: `${absoluteUrl(locale, guidePath(slug))}/opengraph-image`, width: 1200, height: 630, alt: fm.title, type: 'image/png' };
-  }
+  if (!meta) return { ...ogImage(t, locale, { guide: slug }, fm.title), alt: fm.title };
   // The snapshots are rendered at twice the artwork's CSS size.
   return { url: `${SITE_URL}${snapshotPaths(fm.heroComponent, locale).png}`, width: meta.width * 2, height: meta.height * 2, alt: t(meta.altKey), type: 'image/png' };
 }
@@ -88,9 +86,9 @@ export function guideMetadata(p: { locale: Locale; slug: string; fm: GuideSeoFie
     path,
     title,
     description,
-    // The guide's own 1200x630 card (`[slug]/opengraph-image.tsx`), in its
-    // language; the hero artwork is 2:1, which previews crop.
-    image: cardImage(p.locale, path, cardAlt(p.t, renderedTitle(title))),
+    // The guide's own 1200x630 card, in its language (drawn by `npm run
+    // snap-og`); the hero artwork is 2:1, which previews crop.
+    image: ogImage(p.t, p.locale, { guide: p.slug }, renderedTitle(title)),
     type: 'article',
     article: { publishedTime: p.fm.publishedAt, modifiedTime: p.fm.updatedAt, tags: p.fm.tags },
     keywords: p.fm.tags,

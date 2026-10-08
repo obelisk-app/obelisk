@@ -17,6 +17,7 @@ import Input from '@/components/ui/forms/Input';
 import Button from '@/components/ui/buttons/Button';
 import CloseButton from '@/components/ui/buttons/CloseButton';
 import { SearchIcon } from '@/assets/icons';
+import Form from '@/components/ui/forms/Form';
 
 export default function SearchBar({
   serverName,
@@ -48,7 +49,7 @@ export default function SearchBar({
           <SearchIcon size={20} strokeWidth={2} />
         </Button>
       )}
-      <form
+      <Form
         onSubmit={vm.submit}
         className={
           'items-center gap-2 rounded-md border border-lc-border bg-lc-dark sm:bg-lc-black/40 focus-within:border-lc-green/60 ' +
@@ -81,7 +82,7 @@ export default function SearchBar({
           label={t('shell.search.close')}
           className="sm:hidden"
         />
-      </form>
+      </Form>
 
       {vm.open && (
         <div

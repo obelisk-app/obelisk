@@ -9,8 +9,10 @@ import ObeliskOgMark from '@/assets/brand/ObeliskOgMark';
  * the green obelisk mark and wordmark, a green label, the page's title and
  * description, its address in the footer, and the page's own illustration.
  *
- * An `opengraph-image.tsx` route calls it as a function and hands the result
- * to `ImageResponse`, so the renderer (satori) receives finished elements.
+ * Called as a function, so the renderer (satori) receives finished
+ * elements: by `npm run snap-og` for the static pages (PNGs under
+ * `public/og/cards/`), and by the live-card route (`/og/<kind>/<id>`) for a
+ * note, a profile or a hashtag.
  */
 
 export default function OgCard({ label, title, subtitle, footer, icon }: OgCardProps) {

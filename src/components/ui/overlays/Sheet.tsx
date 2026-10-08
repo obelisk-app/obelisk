@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties, FormEventHandler, ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useDismiss } from '@/hooks/common/useDismiss';
 
 export type SheetHeight = '88%' | '92%' | '94%';
@@ -16,9 +16,6 @@ export interface SheetProps {
   maxHeight?: SheetHeight;
   /** A sheet opened over another sheet sits above it. */
   zIndex?: number;
-  /** `form` makes the panel a form so Enter submits. */
-  as?: 'div' | 'form';
-  onSubmit?: FormEventHandler<HTMLFormElement>;
   /** If false, Escape does nothing. Default true. */
   closeOnEscape?: boolean;
   /**
@@ -44,31 +41,20 @@ export default function Sheet({
   testId,
   maxHeight,
   zIndex,
-  as = 'div',
-  onSubmit,
   closeOnEscape = true,
   stacked,
   children,
 }: SheetProps) {
   useDismiss({ onDismiss: onClose, enabled: closeOnEscape, outside: 'none' });
   const hostStyle: CSSProperties | undefined = zIndex === undefined ? undefined : { zIndex };
-  const panel = {
-    className: 'sheet native-scroll-y',
-    style: maxHeight === undefined ? undefined : ({ maxHeight } as CSSProperties),
-    role: 'dialog',
-    'aria-modal': true,
-    'aria-label': label,
-  } as const;
-  const body = (
-    <>
-      <div className="sheet-handle" />
-      {children}
-    </>
-  );
+  const panelStyle = maxHeight === undefined ? undefined : ({ maxHeight } as CSSProperties);
   return (
     <div className="sheet-host" data-screen={screen} data-testid={testId} style={hostStyle}>
       <div className="sheet-backdrop" onClick={onClose} />
-      {as === 'form' ? <form {...panel} onSubmit={onSubmit}>{body}</form> : <div {...panel}>{body}</div>}
+      <div className="sheet native-scroll-y" style={panelStyle} role="dialog" aria-modal aria-label={label}>
+        <div className="sheet-handle" />
+        {children}
+      </div>
       {stacked}
     </div>
   );

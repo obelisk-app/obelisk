@@ -30,19 +30,16 @@ describe('Sheet', () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
-  it('applies maxHeight, zIndex, and a form panel', () => {
-    const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+  it('applies maxHeight and zIndex; a form inside it is a Form, never the panel', () => {
     render(
-      <Sheet onClose={() => {}} screen="x" label="X" testId="s" maxHeight="94%" zIndex={20} as="form" onSubmit={onSubmit}>
-        <button type="submit">go</button>
+      <Sheet onClose={() => {}} screen="x" label="X" testId="s" maxHeight="94%" zIndex={20}>
+        <span>body</span>
       </Sheet>,
     );
     expect(screen.getByTestId('s')).toHaveStyle({ zIndex: 20 });
     const panel = screen.getByRole('dialog');
-    expect(panel.tagName).toBe('FORM');
+    expect(panel.tagName).toBe('DIV');
     expect(panel).toHaveStyle({ maxHeight: '94%' });
-    fireEvent.click(screen.getByRole('button', { name: 'go' }));
-    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 });
 

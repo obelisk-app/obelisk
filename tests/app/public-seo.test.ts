@@ -86,7 +86,7 @@ describe('indexed pages: one complete set of tags each', () => {
       expect(m.twitter).toMatchObject({ title: rendered, description: m.description });
       const [image] = og(m).images as Array<{ url: string; width: number; height: number; type: string }>;
       expect(image).toMatchObject({ width: 1200, height: 630, type: 'image/png' });
-      expect(image.url).toMatch(/\/opengraph-image$/);
+      expect(image.url).toMatch(new RegExp(`^${SITE}/og/cards/${locale}/.+\\.png\\?v=[0-9a-f]{16}$`));
     }
   });
 
@@ -127,13 +127,13 @@ describe('pages kept out of search: noindex, follow, and still a card', () => {
     expect(metadata.title).toBe(translator('pt')('seo.voice.title'));
   });
 
-  it('a relay share link: its card image at the public URL, never the internal /en/ one', async () => {
+  it('a relay share link: its card from the live-card route at the public URL, never the internal /en/ one', async () => {
     for (const locale of ['en', 'es'] as const) {
       setRootLocale(locale);
       const metadata = await relayShareMetadata({ params: Promise.resolve({ code: 'lacrypta' }) });
       expect(metadata.robots).toEqual({ index: false, follow: true });
       const [image] = og(metadata).images as Array<{ url: string }>;
-      expect(image.url).toBe(`${local(locale, '/r/lacrypta')}/opengraph-image`);
+      expect(image.url).toBe(local(locale, '/og/relay/lacrypta'));
       expect(image.url).not.toContain('/en/');
       expect(og(metadata).url).toBe(local(locale, '/r/lacrypta'));
     }

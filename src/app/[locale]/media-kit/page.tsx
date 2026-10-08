@@ -7,7 +7,7 @@ import MediaKit from './MediaKit';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const t = await getTranslations({ locale });
-  return standardPageMetadata(t, locale, 'mediaKit', '/media-kit');
+  return standardPageMetadata(t, locale, 'mediaKit');
 }
 
 export default async function Page() {

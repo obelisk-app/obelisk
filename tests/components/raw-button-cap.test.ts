@@ -23,6 +23,7 @@ const UI_PRIMITIVE_BUTTONS: Record<string, number> = {
   'src/components/ui/buttons/Button.tsx': 1,
   'src/components/ui/data/Chip.tsx': 2,
   'src/components/ui/buttons/IconButton.tsx': 1,
+  'src/components/ui/forms/FormActions.tsx': 1,
   'src/components/ui/forms/OptionRow.tsx': 1,
   'src/components/ui/forms/SegmentedControl.tsx': 1,
   'src/components/ui/buttons/TextButton.tsx': 1,

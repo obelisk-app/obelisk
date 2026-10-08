@@ -22,7 +22,7 @@ export type Tour = {
 };
 
 export function tourMetadata(tour: Tour, t: Translate, locale: Locale): Metadata {
-  return standardPageMetadata(t, locale, tour.page, `/${tour.page}`, { keywords: tour.keywords });
+  return standardPageMetadata(t, locale, tour.page, { keywords: tour.keywords });
 }
 
 export function tourJsonLd(tour: Tour, t: Translate, locale: Locale) {

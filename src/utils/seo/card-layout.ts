@@ -1,4 +1,8 @@
+import type { Locale } from '@/i18n';
+import type { Translate } from '@/i18n/keys';
 import type { Guide } from '@/services/guides/guides';
+import { guidePath } from '@/utils/guides/guide-urls';
+import { cardFooter } from './cards';
 import { guideSeoText } from './guide';
 
 /**
@@ -45,5 +49,23 @@ export function guideCardContent(guide: Guide | null): { title: string; descript
     // The search description: written to fit, so the card never cuts it.
     description: guideSeoText(guide.frontmatter).description,
     tags: guide.frontmatter.tags || [],
+  };
+}
+
+/** What `GuideOgCard` draws. */
+export type GuideCardProps = GuideCardText & { label: string; title: string; tags: string[]; footer: string };
+
+/**
+ * A guide's card, in `t`'s language: the "guide" label, its title, search
+ * description and tags, and the guides section's address in the footer.
+ */
+export function guideCardProps(t: Translate, locale: Locale, guide: Guide | null): GuideCardProps {
+  const content = guideCardContent(guide);
+  return {
+    label: t('seo.card.label.guide'),
+    title: content.title,
+    tags: content.tags,
+    ...guideCardText(content.title, content.description),
+    footer: cardFooter(locale, guidePath()),
   };
 }

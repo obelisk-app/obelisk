@@ -35,6 +35,7 @@ import { DmVoiceDraft } from './DmVoiceDraft';
 import { DmComposerActions } from './DmComposerControls';
 import { DmSendControl } from './DmSendControl';
 import Text from '@/components/ui/layout/Text';
+import Form from '@/components/ui/forms/Form';
 
 /** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
 const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
@@ -99,7 +100,7 @@ export function DmComposer({ peer, variant }: { peer: string; variant: 'desktop'
 
   return (
     <FileDropZone disabled={!state.mediaAllowed} onFiles={state.addFiles} className="shrink-0">
-      <form
+      <Form
         onSubmit={state.submit}
         className="px-5 pt-3 pb-3"
         data-testid="dm-composer"
@@ -114,7 +115,7 @@ export function DmComposer({ peer, variant }: { peer: string; variant: 'desktop'
           </div>
           {sendButton}
         </div>
-      </form>
+      </Form>
     </FileDropZone>
   );
 }

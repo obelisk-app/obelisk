@@ -21,6 +21,14 @@ describe('/voice landing page', () => {
     expect(push).toHaveBeenCalledWith('/voice/my%20room');
   });
 
+  it('does nothing for a blank name', () => {
+    push.mockClear();
+    mount();
+    fireEvent.change(screen.getByPlaceholderText('room name'), { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enter room' }));
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it('names the room input for screen readers', () => {
     mount();
     expect(screen.getByRole('textbox', { name: 'room name' })).toBe(screen.getByPlaceholderText('room name'));

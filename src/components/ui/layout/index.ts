@@ -1,11 +1,13 @@
 /**
- * Layout and type: Stack, Row, Card, Divider, Heading, Text.
+ * Layout and type: Stack, Row, Card, CenteredPage, Divider, Heading, Text.
  *
  * The group's public pieces. Import a piece from its file
  * (`@/components/ui/layout/<Piece>`) or several from here (`@/components/ui/layout`).
  */
 export { default as Card } from './Card';
 export * from './Card';
+export { default as CenteredPage } from './CenteredPage';
+export * from './CenteredPage';
 export { default as Divider } from './Divider';
 export * from './Divider';
 export { default as Heading } from './Heading';

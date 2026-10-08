@@ -36,3 +36,10 @@ export function threadTagChoice(selectedTagIds: ReadonlyArray<string>, id: strin
   const active = selectedTagIds.includes(id);
   return { active, disabled: !active && selectedTagIds.length >= max };
 }
+
+/** The picked tag ids after a tap on `id`: unpicked if it was picked, else picked unless `max` are already. */
+export function toggleThreadTag(selectedTagIds: ReadonlyArray<string>, id: string, max: number): ReadonlyArray<string> {
+  if (selectedTagIds.includes(id)) return selectedTagIds.filter((x) => x !== id);
+  if (selectedTagIds.length >= max) return selectedTagIds;
+  return [...selectedTagIds, id];
+}

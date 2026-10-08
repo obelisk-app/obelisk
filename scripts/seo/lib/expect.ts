@@ -107,7 +107,6 @@ export function extraRoutes(): ExtraRoute[] {
     ['/guides/en', '/guides', 308], ['/guides/en/vesta', '/guides/vesta', 308],
     ['/guides/es', '/es/guides', 308], ['/guides/es/vesta', '/es/guides/vesta', 308],
     ['/guides/pt', '/pt/guides', 308], ['/guides/pt/vesta', '/pt/guides/vesta', 308],
-    ['/guides/es/vesta/opengraph-image', '/es/guides/vesta/opengraph-image', 308],
     ['/chat', '/app', 308], ['/es/chat', '/es/app', 308], ['/en/app', '/app', 307], ['/en', '/', 307],
   ];
   for (const [url, to, status] of redirects) out.push({ url, to, status, kind: 'redirect', locale: 'en' });

@@ -1,6 +1,6 @@
 # Code conventions
 
-Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../AGENTS.md#where-code-goes); this page is the detail behind seven of its rules: where a file goes, what each layer holds, component files are markup, every picture lives in `src/assets/`, text goes through the type pieces, shared animations live in `ui/animations/`, and every modal and sheet uses the shared header and footer.
+Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../AGENTS.md#where-code-goes); this page is the detail behind eight of its rules: where a file goes, what each layer holds, component files are markup, every picture lives in `src/assets/`, text goes through the type pieces, shared animations live in `ui/animations/`, every modal and sheet uses the shared header and footer, and forms are built from the common pieces.
 
 ## Where a file goes
 
@@ -11,7 +11,7 @@ The layers are `src/components`, `src/hooks`, `src/services`, `src/utils`, `src/
 3. **A folder with sub-folders keeps only its entry loose.** Beside its sub-folders a folder holds its `index.ts` or its entry component (`components/social/FeedScreen.tsx`, `app/[locale]/app/AppGate.tsx`, `app/[locale]/app/mobile/PhoneShell.tsx`; the list is `ENTRY` in the guard) and nothing else. Files shared by a feature's sub-features go in its own `common/` (`services/nostr-bridge/common/`).
 4. **A lib package is a folder with an `index.ts`** (`lib/nip-59/index.ts`, `lib/games/index.ts`).
 
-The route tree follows rule 3: Next.js files (`page.tsx`, `layout.tsx`, `opengraph-image.tsx`, ...) stay where routing needs them, every other file of a folder with sub-folders sits in one. The app frame under `src/app/[locale]/app/` is the `shell` module: its hooks mirror it under `src/hooks/shell/` (`app/[locale]/app/mobile/rail/` reads `hooks/shell/mobile/rail/`) and its pure helpers are in `src/utils/shell/`.
+The route tree follows rule 3: Next.js files (`page.tsx`, `layout.tsx`, `route.ts`, ...) stay where routing needs them, every other file of a folder with sub-folders sits in one. The app frame under `src/app/[locale]/app/` is the `shell` module: its hooks mirror it under `src/hooks/shell/` (`app/[locale]/app/mobile/rail/` reads `hooks/shell/mobile/rail/`) and its pure helpers are in `src/utils/shell/`.
 
 **Naming.** Component files are PascalCase after their component, an acronym written as a word (`DmThreadMenu.tsx`, `FaqItem.tsx`); a component module of several pieces or of data is kebab-case (`columns.tsx`, `mdx-components.tsx`). Hooks are `useX.ts`. Everything in `services`, `utils`, `store` and `lib` is kebab-case. A store module's main store is its `index.ts` (`@/store/voice`); a second store in the module has its own name (`@/store/chat/dm`).
 
@@ -93,7 +93,7 @@ Only the reasoned list in `scripts/markup-only/multi-component.ts`: the MDX comp
 
 ### Route files
 
-`page.tsx`, `layout.tsx`, `error.tsx`, `not-found.tsx` and the other Next.js files follow the same rule. What Next.js requires a route module to export is allowed as it is: `generateMetadata`, `generateStaticParams`, `generateViewport`, the HTTP handlers of a `route.ts`, and the default export of an image or metadata route (`opengraph-image.tsx`, `sitemap.ts`, `robots.ts`, `manifest.ts`). A page's default export is a component like any other.
+`page.tsx`, `layout.tsx`, `error.tsx`, `not-found.tsx` and the other Next.js files follow the same rule. What Next.js requires a route module to export is allowed as it is: `generateMetadata`, `generateStaticParams`, `generateViewport`, the HTTP handlers of a `route.ts`, and the default export of a metadata route (`sitemap.ts`, `robots.ts`, `manifest.ts`). A page's default export is a component like any other. There are no `opengraph-image` files: a page names its preview card in `generateMetadata` (`ogImage`, [docs/i18n.md](i18n.md#seo)).
 
 ### The guard
 
@@ -144,9 +144,9 @@ Every picture the app draws lives in `src/assets/`, one folder per kind (round 3
 |---|---|
 | `src/assets/icons/` | Every UI icon, one `<Name>Icon.tsx` per icon, each drawn on `IconSvg.tsx`, all re-exported by `index.ts` (`import { CloseIcon } from '@/assets/icons'`) |
 | `src/assets/brand/` | The Obelisk marks: `ObeliskIcon` (the app icon's silhouette), `ObeliskTwoToneMark` (the two-faced Obelisco on the phone login and the media-kit banners), `ObeliskOgMark` (the OG cards' corner mark), `GitHubMark`, and `embed-badge-mark.ts` (the glyph inside the media kit's copy-paste HTML badge, markup because other sites paste it) |
-| `src/assets/illustrations/` | Artwork that is not an icon, by feature: `guides/` (heroes, diagrams, marks and their parts, with the registry `npm run snap-guides` renders), `seo/OgArt.tsx` (the OG card art), `games/` (the new-game picker thumbnails), `marketing/RelayPulse.tsx` |
+| `src/assets/illustrations/` | Artwork that is not an icon, by feature: `guides/` (heroes, diagrams, marks and their parts, with the registry `npm run snap-guides` renders), `seo/OgArt.tsx` (the preview cards' art), `games/` (the new-game picker thumbnails), `marketing/RelayPulse.tsx` |
 | `src/assets/textures/` | Image files a stylesheet references with `url()` (`noise.svg`, the background grain of the desktop and phone shells); webpack serves them from `/_next/static/media/` |
-| `public/` | Not an asset folder in this sense: only what must be served at a fixed URL stays there (favicon and manifest icons, OG PNGs and the guide snapshots, fonts, `sw.js`, the media kit's downloadable files) |
+| `public/` | Not an asset folder in this sense: only what must be served at a fixed URL stays there (favicon and manifest icons, the static pages' preview cards in `og/cards/` and the guide snapshots, fonts, `sw.js`, the media kit's downloadable files) |
 
 **Icons.** `IconSvg` is the frame: a 24-unit `viewBox`, `fill="none"`, a 1.8 `currentColor` stroke with round caps and joins, `aria-hidden="true"` and `focusable="false"`. Every icon takes `IconProps`: any `<svg>` attribute plus
 
@@ -228,3 +228,39 @@ The phone shell has its own sheet design and keeps it, consistent within itself:
 - `src/app/[locale]/app/mobile/sheets/chrome/SheetActions.tsx`: the full-width primary button (or a destructive one, `tone: 'danger'`) and the quiet cancel under it.
 
 `tests/components/modal-chrome.test.ts` enforces it: a file that renders `<Modal>` or `<Sheet>` may not render its own `<h1>` / `<h2>`, `<header>`, `<footer>` or `CloseButton`, nor the phone shell's title classes; the shared pieces render those. Section headings inside a dialog's body use `<h3>` and below.
+
+## Forms
+
+Round 34. Every form is the same three things: the `Form` element, the one `useForm` hook, and a small spec that says what is particular to it. `tests/components/forms.test.ts` holds the first two.
+
+**The element.** `src/components/ui/forms/Form.tsx` renders the `<form>`: `form={form}` wires the id, the submit and `aria-busy` from `useForm`; `noValidate` is on (the spec checks, and says why in the reader's language; `browserValidation` turns the browser's own checks back on); `error` draws a `FormError` as the last child. Its `layout` is picked by role, not per screen:
+
+| Layout | Where |
+|---|---|
+| `bare` | no layout of its own: composers, search rows (the caller's classes) |
+| `stack` | a short desktop form or inline editor |
+| `sections` | a dialog body of titled sections |
+| `sheet` | a phone sheet's fields |
+| `row` | one wrapping line: field, toggle, submit (add a member) |
+| `card` | a standalone form on its own page, inside `CenteredPage` (the voice join page) |
+
+`FormError` (`inline`, `box`, `sheet`) draws nothing while the message is empty, so a form passes `form.error` as it is. `FormActions` is the submit row of a form that is not in a dialog or a sheet: `block` (a page card's full-width pill), `start` (an inline editor: save, then cancel), `end` (a form in a dialog tab), `sheet` (the phone shell's `.btn-primary` in a sheet tab). A dialog's form submits through `ModalFooter` (`actions: [{ form: form.id }]`), a sheet's through `SheetActions` (`primary: { form: form.id }`), so Enter in a field and the button do one thing; `Sheet` itself is never the form.
+
+**The state.** `useForm(spec)` (`src/hooks/common/useForm.ts`) holds the values (`values`, `set`, `setValues`, `field(name)` to spread on an `Input` or `TextArea`), `dirty`, `adopt(values)` for values that arrive late (a profile from a relay; ignored once the person has typed), `submitting`, `error` and `canSubmit`. `submit` refuses a second submit while one is in flight, clears the last error, checks `ready` (not ready: nothing happens, nothing is said) and `validate` (a message key, shown), runs the spec's `submit`, and turns a throw into a sentence with `errorText` and the spec's `failure` key. `reset` goes back to the starting values.
+
+**The spec.** A form keeps only its own description, as a builder next to the service it calls, `src/services/<module>/<name>-form.ts` returning a `FormSpec`: `initial`, `ready`, `validate`, `submit`, `failure`, `onSuccess`, `resetOnSuccess`. The checks several forms repeat are pure functions in `src/utils/common/form-rules.ts` (`filled`, `allFilled`, `isRelayAddress`, `parseMemberKey`, `trimmedValues`). A component calls `useForm(addRelayForm(onAdded))` directly; there is no per-form hook.
+
+| Spec | Form |
+|---|---|
+| `services/voice/join-form.ts` | the `/voice` join page |
+| `services/relay/add-relay-form.ts` | the custom add-relay tab (rail dialog and phone sheet), the suggested-relay Add |
+| `services/relay/branding-form.ts` | relay branding (modal and sheet) |
+| `services/chat/channel/create-channel-form.ts` | a new channel (sidebar and sheet) |
+| `services/chat/channel/channel-settings-form.ts` | channel metadata and adding a member (modal and sheet) |
+| `services/chat/forum/new-thread-form.ts` | a new publication (modal and sheet) |
+| `services/chat/profile/profile-form.ts` | the kind 0 profile (desktop panel and phone screen) |
+| `services/games/new-game-form.ts` | opening a game table |
+| `services/wallet/nwc-connect-form.ts` | connecting a wallet |
+
+**When a hook stays.** A `use...Form` hook exists only for behaviour a spec cannot hold, and composes `useForm`: `useChannelSettingsForm` (the SFU `/info` check, seeded from the pin), `useProfileEditorForm` (the late profile, upload progress), `useNewGameForm` (the two steps, reading a save file), `useMessageZapForm` (sending stays with `useSendZap`'s double-pay guard).
+

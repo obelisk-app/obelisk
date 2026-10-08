@@ -1,62 +1,62 @@
 'use client';
 
-import { useEditProfileForm } from '@/hooks/shell/settings/useEditProfileForm';
+import { useProfileEditorForm } from '@/hooks/chat/profile/useProfileEditorForm';
 import ProfileAppearanceEditor from '@/components/settings/account/ProfileAppearanceEditor';
+import { profileAppearance, profileAppearancePatch, type ProfileEditorInitial } from '@/utils/chat/profile/profile-form-values';
 import { useTranslations } from 'next-intl';
+import Form from '@/components/ui/forms/Form';
+import FormActions from '@/components/ui/forms/FormActions';
+import FormError from '@/components/ui/forms/FormError';
 import Input from '@/components/ui/forms/Input';
 import TextArea from '@/components/ui/forms/TextArea';
-import Button from '@/components/ui/buttons/Button';
 import { ProfileFormField as Field } from './ProfileFormField';
 
+/** The desktop profile editor: picture and banner, the five kind 0 fields, save and cancel. */
 export function EditProfileForm({
   initial,
   onCancel,
   onSaved,
 }: {
-  initial: { displayName: string | null; name: string | null; about: string | null; picture: string | null; banner: string | null; nip05: string | null; lud16?: string | null; website: string | null } | null;
+  initial: ProfileEditorInitial | null;
   onCancel: () => void;
   onSaved: () => void;
 }) {
   const t = useTranslations();
-  const {
-    name, about, nip05, lud16, website, appearance, firstField,
-    setName, setAbout, setNip05, setLud16, setWebsite, setAppearance,
-    uploading, saving, error, saveProfile,
-  } = useEditProfileForm(initial, onSaved);
+  const form = useProfileEditorForm(initial, onSaved);
 
   return (
-    <div className="space-y-3 p-4">
+    <Form form={form} layout="stack" className="p-4">
       <ProfileAppearanceEditor
-        pubkey={name || '0'}
-        displayName={name}
-        value={appearance}
-        uploading={uploading}
-        onChange={setAppearance}
+        pubkey={form.values.name || '0'}
+        displayName={form.values.name}
+        value={profileAppearance(form.values)}
+        uploading={form.uploading}
+        onChange={(next) => form.setValues(profileAppearancePatch(next))}
       />
       <Field label={t('shell.user.field.name')}>
-        <Input ref={firstField} value={name} onChange={(e) => setName(e.target.value)} />
+        <Input autoFocus {...form.field('name')} />
       </Field>
       <Field label={t('shell.user.about')}>
-        <TextArea value={about} onChange={(e) => setAbout(e.target.value)} rows={2} resize="both" />
+        <TextArea {...form.field('about')} rows={2} resize="both" />
       </Field>
       <Field label={t('shell.user.field.nip05')}>
-        <Input value={nip05} onChange={(e) => setNip05(e.target.value)} placeholder="you@example.com" />
+        <Input {...form.field('nip05')} placeholder="you@example.com" />
       </Field>
       <Field label={t('shell.user.field.lud16')}>
-        <Input value={lud16} onChange={(e) => setLud16(e.target.value)} placeholder="you@walletofsatoshi.com" />
+        <Input {...form.field('lud16')} placeholder="you@walletofsatoshi.com" />
       </Field>
       <Field label={t('shell.user.field.website')}>
-        <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://…" />
+        <Input {...form.field('website')} placeholder="https://…" />
       </Field>
-      {error && <div className="text-xs text-red-400">{error}</div>}
-      <div className="flex gap-2 pt-1">
-        <Button variant="pill" size="sm" onClick={saveProfile} disabled={saving} data-testid="save-profile-button">
-          {saving ? t('common.saving') : t('common.save')}
-        </Button>
-        <Button variant="secondary" size="sm" onClick={onCancel} disabled={saving}>
-          {t('common.cancel')}
-        </Button>
-      </div>
-    </div>
+      <FormError>{form.error}</FormError>
+      <FormActions
+        variant="start"
+        submitLabel={t('common.save')}
+        busyLabel={t('common.saving')}
+        busy={form.submitting}
+        cancel={{ label: t('common.cancel'), onClick: onCancel }}
+        submitTestId="save-profile-button"
+      />
+    </Form>
   );
 }

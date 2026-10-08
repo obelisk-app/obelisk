@@ -51,5 +51,10 @@ export async function checkExtra(route: ExtraRoute, ctx: Ctx, sitemap: Map<strin
     r.note(url, C.social, 'sample did not resolve from the relays (offline?); its card was not checked');
     return;
   }
-  await checkSocial(page, ctx, `${SITE}${url === '/' ? '' : url}`, { userContent: route.userContent, record: Boolean(route.share) });
+  await checkSocial(page, ctx, `${SITE}${url === '/' ? '' : url}`, {
+    userContent: route.userContent,
+    record: Boolean(route.share),
+    // Notes, profiles, hashtags and share links are drawn on request; the app and the voice tool are files.
+    card: route.share || route.userContent ? 'live' : 'file',
+  });
 }

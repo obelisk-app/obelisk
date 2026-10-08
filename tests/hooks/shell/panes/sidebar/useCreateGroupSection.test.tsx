@@ -17,17 +17,17 @@ describe('useCreateGroupSection', () => {
     const { result } = setup();
     act(() => result.current.toggle());
     expect(result.current.open).toBe(true);
-    act(() => result.current.form.setName('dev'));
-    expect(result.current.form.name).toBe('dev');
+    act(() => result.current.form.set('name', 'dev'));
+    expect(result.current.form.values.name).toBe('dev');
     act(() => result.current.toggle());
     expect(result.current.open).toBe(false);
-    expect(result.current.form.name).toBe('');
+    expect(result.current.form.values.name).toBe('');
   });
 
   it('creating a channel folds the form and hands the id on', async () => {
     const { result, onCreated } = setup();
     act(() => result.current.toggle());
-    act(() => result.current.form.setName('dev'));
+    act(() => result.current.form.set('name', 'dev'));
     await act(async () => { await result.current.form.submit({ preventDefault: () => {} } as never); });
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('new-id'));
     expect(result.current.open).toBe(false);

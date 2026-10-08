@@ -6,7 +6,10 @@ import { cn } from '@/utils/style/cn';
 
 export interface SheetPrimaryAction {
   label: string;
-  onClick: () => void;
+  /** What the button does; leave out when it submits a form (`form`). */
+  onClick?: () => void;
+  /** Submit the form with this id (`useForm`'s `id`) instead of calling `onClick`, so Enter in a field and the button do one thing. */
+  form?: string;
   /** While true the button is disabled and shows `busyLabel`. */
   busy?: boolean;
   busyLabel?: string;
@@ -43,7 +46,8 @@ export default function SheetActions({ primary, onCancel, dismiss = 'cancel', ca
     <>
       {primary && (
         <button
-          type="button"
+          type={primary.form ? 'submit' : 'button'}
+          form={primary.form}
           onClick={primary.onClick}
           disabled={primary.disabled || primary.busy}
           className={PRIMARY_CLASS[primary.tone ?? 'primary']}

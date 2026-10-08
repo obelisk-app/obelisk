@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Guide } from '@/services/guides/guides';
-import { cardTitleSize, guideCardContent, guideCardText } from '@/utils/seo/card-layout';
+import { translator } from '@tests/support/intl';
+import { cardTitleSize, guideCardContent, guideCardProps, guideCardText } from '@/utils/seo/card-layout';
 
 describe('page card title size', () => {
   it('steps down as the title grows', () => {
@@ -42,5 +43,28 @@ describe('guide card content', () => {
 
   it('falls back to the site name when the guide is missing', () => {
     expect(guideCardContent(null)).toEqual({ title: 'Obelisk', description: '', tags: [] });
+  });
+});
+
+describe('guide card props', () => {
+  const guide = {
+    slug: 'g',
+    frontmatter: { title: 'T', description: 'plain', seoDescription: 'for search', heroComponent: 'vesta', tags: ['a', 'b'] },
+    content: '',
+  } as unknown as Guide;
+
+  it('labels the card as a guide in its language and points at the guides section', () => {
+    const t = translator('es');
+    expect(guideCardProps(t, 'es', guide)).toEqual({
+      label: t('seo.card.label.guide'),
+      title: 'T',
+      tags: ['a', 'b'],
+      ...guideCardText('T', 'for search'),
+      footer: 'obelisk.ar/es/guides',
+    });
+  });
+
+  it('still draws a card for a missing guide', () => {
+    expect(guideCardProps(translator('en'), 'en', null)).toMatchObject({ title: 'Obelisk', tags: [], footer: 'obelisk.ar/guides' });
   });
 });

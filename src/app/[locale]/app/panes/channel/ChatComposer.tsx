@@ -17,6 +17,7 @@ import { ComposerAttachments } from './ComposerAttachments';
 import { ComposerReplyBar } from './ComposerReplyBar';
 import { SendIcon, StickerIcon } from '@/assets/icons';
 import Text from '@/components/ui/layout/Text';
+import Form from '@/components/ui/forms/Form';
 
 /** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
 const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
@@ -32,7 +33,7 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
   const { composer } = vm;
 
   return (
-    <form onSubmit={(e) => void composer.send(e)} className="shrink-0 px-5 pt-3 pb-3">
+    <Form onSubmit={(e) => void composer.send(e)} className="shrink-0 px-5 pt-3 pb-3">
       {props.replyingTo && <ComposerReplyBar replyingTo={props.replyingTo} onCancel={() => props.setReplyingTo(null)} />}
       {composer.sendError && (
         <Text as="p" size="xs" tone="danger" className="mb-2 break-words" data-testid="composer-error">{composer.sendError}</Text>
@@ -125,6 +126,6 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
           <VoiceNoteButton disabled={composer.uploading} onRecorded={(file, duration) => void composer.onVoiceRecorded(file, duration)} />
         )}
       </div>
-    </form>
+    </Form>
   );
 });

@@ -2,7 +2,11 @@
 
 import { useId } from 'react';
 import { useTranslations } from 'next-intl';
-import { useAddRelayForm } from '@/hooks/relay/rail/useAddRelayForm';
+import { useForm } from '@/hooks/common/useForm';
+import { addRelayForm } from '@/services/relay/add-relay-form';
+import Form from '@/components/ui/forms/Form';
+import FormActions from '@/components/ui/forms/FormActions';
+import FormError from '@/components/ui/forms/FormError';
 import Input from '@/components/ui/forms/Input';
 import Label from '@/components/ui/forms/Label';
 import Text from '@/components/ui/layout/Text';
@@ -11,10 +15,10 @@ import Text from '@/components/ui/layout/Text';
 export function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
   const t = useTranslations();
   const urlId = useId();
-  const { url, busy, error: err, setUrl, submit } = useAddRelayForm(onAdded);
+  const form = useForm(addRelayForm(onAdded));
 
   return (
-    <form onSubmit={(e) => void submit(e)} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <Form form={form} layout="sheet">
       <Label variant="sheetMono" htmlFor={urlId}>
         {t('shell.rail.addModal.urlLabel')}
       </Label>
@@ -26,21 +30,19 @@ export function CustomRelayForm({ onAdded }: { onAdded: () => void }) {
           autoFocus
           variant="mobile"
           id={urlId}
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
+          {...form.field('url')}
           spellCheck={false}
           style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}
         />
       </div>
-      {err && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{err}</div>}
-      <button
-        type="submit"
-        disabled={busy || !url.trim()}
-        className="btn-primary"
-        style={{ marginTop: 4 }}
-      >
-        {busy ? t('mobile.rail.adding') : t('mobile.rail.addRelay')}
-      </button>
-    </form>
+      <FormError variant="sheet">{form.error}</FormError>
+      <FormActions
+        variant="sheet"
+        submitLabel={t('mobile.rail.addRelay')}
+        busyLabel={t('mobile.rail.adding')}
+        busy={form.submitting}
+        disabled={!form.canSubmit}
+      />
+    </Form>
   );
 }

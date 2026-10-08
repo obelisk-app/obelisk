@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { LazyVoiceRoom } from '@/app/[locale]/app/mounts/lazy-mounts';
 import BridgeRoute from '@/components/common/BridgeRoute';
-import { cardAlt, cardImage } from '@/utils/seo/og';
+import { ogImage } from '@/utils/seo/og';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     path: `/voice/${encodeURIComponent(decodeURIComponent(channelId))}`,
     title,
     description: t('seo.voice.description'),
-    image: cardImage(locale, '/voice', cardAlt(t, renderedTitle(title))),
+    image: ogImage(t, locale, { page: 'voice' }, renderedTitle(title)),
   });
 }
 

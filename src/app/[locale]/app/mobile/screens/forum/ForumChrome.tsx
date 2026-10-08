@@ -6,6 +6,7 @@ import Input from '@/components/ui/forms/Input';
 import { MobileTagDot } from './MobileTagDot';
 import type { ForumScreenState } from '@/hooks/shell/mobile/screens/forum/useForumScreen';
 import { PlusIcon, SearchIcon, SortIcon } from '@/assets/icons';
+import Form from '@/components/ui/forms/Form';
 
 /** Search-or-create, the + pill, the sort chip and the tag filter chips. */
 export function ForumChrome({ forum }: { forum: ForumScreenState }) {
@@ -14,7 +15,7 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
   const allActive = selectedTagIds.length === 0;
   return (
     <div className="forum-chrome" data-testid="mobile-forum-chrome">
-      <form className="forum-search-row" onSubmit={forum.submitSearch}>
+      <Form className="forum-search-row" onSubmit={forum.submitSearch}>
         <div className="search-input-wrap">
           <SearchIcon size={null} strokeWidth={2} />
           <Input
@@ -49,7 +50,7 @@ export function ForumChrome({ forum }: { forum: ForumScreenState }) {
         >
           <PlusIcon size={null} strokeWidth={2} />
         </button>
-      </form>
+      </Form>
       <div className="forum-filter-row">
         <button
           type="button"

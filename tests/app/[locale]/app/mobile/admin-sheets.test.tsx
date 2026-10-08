@@ -221,7 +221,8 @@ describe('ChannelSettingsSheet access presets', () => {
 
     await vi.waitFor(() => expect(mockEditGroupMetadata).toHaveBeenCalledTimes(1));
     expect(mockEditGroupMetadata).toHaveBeenCalledWith(expect.objectContaining(expected));
-    expect(close).toHaveBeenCalledTimes(1);
+    // The sheet closes once the publish has settled, a tick after the call.
+    await vi.waitFor(() => expect(close).toHaveBeenCalledTimes(1));
   });
 });
 

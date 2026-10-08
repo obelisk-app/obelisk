@@ -13,7 +13,7 @@ describe('useCreateChannelSheet', () => {
     const { result } = renderHook(() => useCreateChannelSheet(onCreated, close), {
       wrapper: bridgeWrapper(fakeBridge({}, { createGroup } as never)),
     });
-    act(() => result.current.setName('  lounge '));
+    act(() => result.current.set('name', '  lounge '));
     await act(() => result.current.submit());
     expect(createGroup).toHaveBeenCalledWith({ name: 'lounge', isPublic: true, isOpen: true });
     expect(onCreated).toHaveBeenCalledWith('g9');
@@ -25,7 +25,7 @@ describe('useCreateChannelSheet', () => {
     const { result } = renderHook(() => useCreateChannelSheet(vi.fn(), close), {
       wrapper: bridgeWrapper(fakeBridge({}, { createGroup: vi.fn().mockRejectedValue(new Error('no')) } as never)),
     });
-    act(() => result.current.setName('x'));
+    act(() => result.current.set('name', 'x'));
     await act(() => result.current.submit());
     expect(close).not.toHaveBeenCalled();
     expect(result.current.error).toBeTruthy();

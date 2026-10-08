@@ -2,13 +2,17 @@
  * Check 6: the link preview. Every tag LinkedIn, WhatsApp, X and Facebook
  * read is present and agrees with the page; the image is the page's own
  * 1200x630 PNG or JPEG, small enough for WhatsApp; no two pages (or two
- * languages of a page) share an image; and each preview bot, with no
+ * languages of a page) share an image; a page whose card cannot change
+ * between deploys serves a versioned file (`/og/cards/<locale>/...png?v=`)
+ * kept for good, a page drawn
+ * from live data names the live-card route `/og/<kind>/<id>` in its
+ * language; and each preview bot, with no
  * cookie, with and without `Accept-Language: es`, gets a 200 with the tags
  * in the server HTML.
  */
 
 import { createHash } from 'node:crypto';
-import { LOCALES, OG_LOCALE, SITE } from './expect';
+import { LOCALES, OG_LOCALE, SITE, localPath } from './expect';
 import { first, parseHead } from './head';
 import { fetchAs, get, mapLimit, sitePath } from './http';
 import { imageSize } from './image-size';
@@ -34,10 +38,15 @@ export const PREVIEW_BOTS = [
 
 /**
  * `record` adds the page to the uniqueness check: every indexed page and
- * every shared link; the app shell and the voice tool are left out.
+ * every shared link; the app shell and the voice tool are left out. `card`
+ * says where the image must come from: a pre-drawn `file`, or the `live`
+ * route.
  */
-export async function checkSocial(page: Page, ctx: Ctx, ogUrl: string, opts: { userContent?: boolean; record?: boolean } = {}): Promise<void> {
-  const { userContent = false, record = true } = opts;
+export async function checkSocial(
+  page: Page, ctx: Ctx, ogUrl: string,
+  opts: { userContent?: boolean; record?: boolean; card?: 'file' | 'live' } = {},
+): Promise<void> {
+  const { userContent = false, record = true, card = 'file' } = opts;
   const { head, url, locale } = page;
   const r = ctx.report;
   for (const key of REQUIRED) r.expect(Boolean(first(head, key)), url, C.social, `missing ${key}`);
@@ -59,15 +68,27 @@ export async function checkSocial(page: Page, ctx: Ctx, ogUrl: string, opts: { u
   const src = images[0];
   if (!src) return;
   r.expect(first(head, 'twitter:image') === src, url, C.social, `twitter:image ${first(head, 'twitter:image')} is not og:image ${src}`);
+  const where = card === 'file' ? `${SITE}/og/cards/${locale}/` : `${SITE}${localPath(locale, '/og/')}`;
+  r.expect(src.startsWith(where) && (card === 'live' || /\.png\?v=[0-9a-f]+$/.test(src)), url, C.social, `og:image ${src} is not a versioned file under ${where}`);
   const declared = {
     width: Number(first(head, 'og:image:width')), height: Number(first(head, 'og:image:height')), type: first(head, 'og:image:type') ?? '',
   };
-  const info = await checkImage(src, url, ctx, declared);
+  const info = await checkImage(src, url, ctx, declared, card);
   if (info && record) ctx.images.set(url, info);
 }
 
-/** The card answers 200 as a PNG or JPEG, is 1200x630 as declared, and is under 300 KB. */
-async function checkImage(src: string, url: string, ctx: Ctx, declared: { width: number; height: number; type: string }) {
+/**
+ * A versioned file is kept for good; a live card (names, pictures and text
+ * change) at most an hour by a client and a day on the CDN, never for good.
+ */
+export function cacheFits(cacheControl: string, card: 'file' | 'live'): boolean {
+  if (card === 'file') return /\bimmutable\b/.test(cacheControl) && /\bmax-age=31536000\b/.test(cacheControl);
+  const age = (key: string) => Number(new RegExp(`(?:^|[\\s,])${key}=(\\d+)`).exec(cacheControl)?.[1] ?? '0');
+  return !/\bimmutable\b/.test(cacheControl) && age('max-age') > 0 && age('max-age') <= 3600 && age('s-maxage') <= 86400;
+}
+
+/** The card answers 200 as a PNG or JPEG, is 1200x630 as declared, under 300 KB, and cached as its kind should be. */
+async function checkImage(src: string, url: string, ctx: Ctx, declared: { width: number; height: number; type: string }, card: 'file' | 'live') {
   const r = ctx.report;
   if (!r.expect(src.startsWith(`${SITE}/`), url, C.social, `og:image is not an absolute https URL on the site: ${src}`)) return null;
   const res = await get(ctx.base, sitePath(src, SITE));
@@ -80,6 +101,7 @@ async function checkImage(src: string, url: string, ctx: Ctx, declared: { width:
   r.expect(dims === '1200x630', url, C.social, `og:image ${src} is ${dims}, not 1200x630`);
   r.expect(declared.width === 1200 && declared.height === 630, url, C.social, `og:image:width/height ${declared.width}x${declared.height}`);
   r.expect(res.body.length < MAX_BYTES, url, C.social, `og:image ${src} is ${Math.round(res.body.length / 1024)} KB (WhatsApp wants under 300 KB)`);
+  r.expect(cacheFits(res.cacheControl, card), url, C.social, `og:image ${src} Cache-Control "${res.cacheControl}" is wrong for a ${card} card`);
   return { image: src, hash: createHash('sha256').update(res.body).digest('hex'), bytes: res.body.length, size: dims };
 }
 

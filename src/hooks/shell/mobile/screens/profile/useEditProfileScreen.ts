@@ -9,8 +9,8 @@ import { profileImageProblem } from '@/utils/identity/profile-image';
 import { takePickedFile } from '@/utils/media/upload/picked-file';
 
 type Go = (s: ScreenName, dir?: 'forward' | 'back') => void;
-type FileSetter = (file: File | null) => void;
 type PreviewSetter = (url: string | null) => void;
+type Image = 'picture' | 'banner';
 
 /**
  * The phone's profile editor (`mobile/screens/profile/EditProfileScreen.tsx`): the
@@ -34,60 +34,61 @@ export function useEditProfileScreen(go: Go) {
   useEffect(() => () => { if (picturePreview) URL.revokeObjectURL(picturePreview); }, [picturePreview]);
   useEffect(() => () => { if (bannerPreview) URL.revokeObjectURL(bannerPreview); }, [bannerPreview]);
 
-  const pick = (file: File, setFile: FileSetter, setPreview: PreviewSetter) => {
+  const pick = (file: File, image: Image, setPreview: PreviewSetter) => {
     const problem = profileImageProblem(file);
     if (problem === 'not-image') { form.setError(t('mobile.settings.imageOnly')); return; }
     if (problem === 'too-large') { form.setError(t('mobile.settings.imageTooLarge')); return; }
     form.setError(null);
-    setFile(file);
+    form.set(image === 'picture' ? 'pictureFile' : 'bannerFile', file);
     setPreview(URL.createObjectURL(file));
   };
   const fromInput = (onFile: (file: File) => void) => (e: ChangeEvent<HTMLInputElement>) => {
     const file = takePickedFile(e.target);
     if (file) onFile(file);
   };
-  const typed = (setFile: FileSetter, setPreview: PreviewSetter, setUrl: (v: string) => void) =>
+  const typed = (image: Image, setPreview: PreviewSetter) =>
     (value: string) => {
-      setFile(null);
       setPreview(null);
-      setUrl(value);
+      form.setValues(image === 'picture' ? { picture: value, pictureFile: null } : { banner: value, bannerFile: null });
     };
+  const text = (name: 'name' | 'about' | 'nip05' | 'lud16' | 'website') => (value: string) => form.set(name, value);
+  const { values } = form;
 
   const uploadingAvatar = form.uploading === 'picture';
   const uploadingBanner = form.uploading === 'banner';
 
   return {
     myPubkey: myPubkey ?? '',
-    name: form.name,
-    about: form.about,
-    nip05: form.nip05,
-    lud16: form.lud16,
-    website: form.website,
-    setName: form.setName,
-    setAbout: form.setAbout,
-    setNip05: form.setNip05,
-    setLud16: form.setLud16,
-    setWebsite: form.setWebsite,
+    name: values.name,
+    about: values.about,
+    nip05: values.nip05,
+    lud16: values.lud16,
+    website: values.website,
+    setName: text('name'),
+    setAbout: text('about'),
+    setNip05: text('nip05'),
+    setLud16: text('lud16'),
+    setWebsite: text('website'),
     /** The URL fields read empty while a picked file stands in for them. */
-    pictureUrl: form.pictureFile ? '' : form.picture,
-    bannerUrl: form.bannerFile ? '' : form.banner,
-    pictureFilePicked: form.pictureFile !== null,
-    bannerFilePicked: form.bannerFile !== null,
-    setPictureUrl: typed(form.setPictureFile, setPicturePreview, form.setPicture),
-    setBannerUrl: typed(form.setBannerFile, setBannerPreview, form.setBanner),
-    onPictureFile: fromInput((file) => pick(file, form.setPictureFile, setPicturePreview)),
-    onBannerFile: fromInput((file) => pick(file, form.setBannerFile, setBannerPreview)),
+    pictureUrl: values.pictureFile ? '' : values.picture,
+    bannerUrl: values.bannerFile ? '' : values.banner,
+    pictureFilePicked: values.pictureFile !== null,
+    bannerFilePicked: values.bannerFile !== null,
+    setPictureUrl: typed('picture', setPicturePreview),
+    setBannerUrl: typed('banner', setBannerPreview),
+    onPictureFile: fromInput((file) => pick(file, 'picture', setPicturePreview)),
+    onBannerFile: fromInput((file) => pick(file, 'banner', setBannerPreview)),
     /** What the avatar and banner show: the picked file's preview, else the URL. */
-    currentPicture: picturePreview || form.picture,
-    currentBanner: bannerPreview || form.banner,
+    currentPicture: picturePreview || values.picture,
+    currentBanner: bannerPreview || values.banner,
     uploadingAvatar,
     uploadingBanner,
     busy: form.busy,
     error: form.error,
     saveDisabled: !form.nameValid || form.busy,
     /** The save buttons' label while busy, `null` when idle. */
-    busyLabel: form.saving ? t('common.saving') : uploadingAvatar || uploadingBanner ? t('common.uploading') : null,
-    save: () => { void form.save(); },
+    busyLabel: form.submitting ? t('common.saving') : uploadingAvatar || uploadingBanner ? t('common.uploading') : null,
+    save: () => { void form.submit(); },
     goBack,
   };
 }

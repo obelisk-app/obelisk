@@ -62,7 +62,7 @@ const FEATURES = [
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const t = await getTranslations({ locale });
-  return standardPageMetadata(t, locale, 'features', '/features', {
+  return standardPageMetadata(t, locale, 'features', {
     // Search terms, not copy: these are what people type into a search box,
     // and they are typed in English even by readers browsing in Spanish.
     keywords: [

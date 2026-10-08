@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { networkInterfaces } from "os";
 import createNextIntlPlugin from "next-intl/plugin";
 import { buildCsp } from "./src/utils/security/csp";
+import { OG_STATIC_CACHE } from "./src/constants/seo/og";
 
 // next-intl's request config: the URL's locale and its message modules.
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
@@ -9,8 +10,8 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 /**
  * The guides used to live at `/guides/es/...` and `/guides/pt/...` (and
  * `/guides/en/...` redirected to the unprefixed English). Every page now
- * sits under the language prefix (`/es/guides/...`), so the old URLs, their
- * OG images included, answer with a permanent redirect and keep whatever
+ * sits under the language prefix (`/es/guides/...`), so the old URLs answer
+ * with a permanent redirect and keep whatever
  * search ranking and shared links they earned.
  */
 const GUIDE_REDIRECTS = [
@@ -137,7 +138,10 @@ const nextConfig: NextConfig = {
       // navigations skip it entirely.
       //
       // Scoped to "no extension" + the explicit "/" path so we don't
-      // touch JSON/RSC/file-tree responses.
+      // touch JSON/RSC/file-tree responses. The live preview-card route
+      // (`/og/<kind>/<id>`, `/es/og/...`) is left out: it is an image whose
+      // Cache-Control the route sets itself (`OG_LIVE_CACHE`), and a header
+      // set here would win over the route's.
       {
         source: '/',
         headers: [
@@ -145,7 +149,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: '/:path((?!_next/|api/|.*\\.).*)',
+        source: '/:path((?!_next/|api/|(?:es/|pt/)?og/|.*\\.).*)',
         headers: [
           { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
         ],
@@ -165,6 +169,12 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
         ],
+      },
+      // The static pages' preview cards: their URL carries the card's
+      // version (`?v=`, `npm run snap-og`), so a given URL never changes.
+      {
+        source: '/og/cards/:path*',
+        headers: [{ key: 'Cache-Control', value: OG_STATIC_CACHE }],
       },
       // Belt + suspenders: keep hashed Next.js static assets immutable
       // forever in production. In dev the chunk filenames are derived from

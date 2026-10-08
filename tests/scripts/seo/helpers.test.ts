@@ -4,6 +4,7 @@ import { isAllowed, parseRobots } from '../../../scripts/seo/lib/robots-checks';
 import { imageSize } from '../../../scripts/seo/lib/image-size';
 import { parseHead, isNoindex } from '../../../scripts/seo/lib/head';
 import { abs, expectedLastmod, guideFrontMatter, splitLocale } from '../../../scripts/seo/lib/expect';
+import { cacheFits } from '../../../scripts/seo/lib/social-checks';
 
 describe('language check', () => {
   it('flags English in a Spanish or Portuguese page, and Spanish in an English one', () => {
@@ -79,5 +80,17 @@ describe('expectations', () => {
   it('expects a guide lastmod from its front matter and none for a static page', () => {
     expect(expectedLastmod('es', '/guides/vesta')).toBe(guideFrontMatter('es', 'vesta').updatedAt);
     expect(expectedLastmod('en', '/features')).toBeNull();
+  });
+});
+
+describe('preview card caching', () => {
+  it('a versioned card file is kept for good; a live card an hour, a day on the CDN, never immutable', () => {
+    expect(cacheFits('public, max-age=31536000, immutable', 'file')).toBe(true);
+    expect(cacheFits('public, max-age=0', 'file')).toBe(false);
+    expect(cacheFits('public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800', 'live')).toBe(true);
+    expect(cacheFits('public, max-age=60, s-maxage=60', 'live')).toBe(true);
+    expect(cacheFits('public, immutable, no-transform, max-age=31536000', 'live')).toBe(false);
+    expect(cacheFits('no-cache, must-revalidate', 'live')).toBe(false);
+    expect(cacheFits('public, max-age=3600, s-maxage=604800', 'live')).toBe(false);
   });
 });

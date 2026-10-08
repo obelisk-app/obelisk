@@ -22,6 +22,7 @@ import { linkifyHashtags } from '@/services/social/profile-feed';
 import { useNoteDraft, type ComposerMode } from '@/hooks/social/composer/useNoteDraft';
 import ErrorState from '@/components/ui/feedback/ErrorState';
 import FileInput from '@/components/ui/forms/FileInput';
+import Form from '@/components/ui/forms/Form';
 
 export default function NoteComposer({
   mode = { kind: 'note' },
@@ -43,7 +44,7 @@ export default function NoteComposer({
   } = composer;
 
   return (
-    <form
+    <Form
       className="lc-composer p-3"
       data-dragging={dragging || undefined}
       onSubmit={(event) => void submit(event)}
@@ -132,7 +133,7 @@ export default function NoteComposer({
           </Button>
         </div>
       </div>
-    </form>
+    </Form>
   );
 }
 

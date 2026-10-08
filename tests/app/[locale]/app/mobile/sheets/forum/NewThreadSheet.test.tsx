@@ -38,16 +38,28 @@ describe('NewThreadSheet', () => {
     const host = screen.getByTestId('mobile-new-thread-sheet');
     expect(host).toHaveClass('sheet-host');
     expect(host).toHaveAttribute('data-screen', 'new-thread');
-    expect(host.querySelector('form.sheet')).not.toBeNull();
+    expect(host.querySelector('.sheet form')).not.toBeNull();
     expect(screen.getByText('New publication')).toBeInTheDocument();
     expect(screen.getByTestId('mobile-new-thread-title')).toHaveValue('Hello');
     expect(screen.getByTestId('mobile-new-thread-tag-picker')).toBeInTheDocument();
   });
 
-  it('closes on a backdrop tap', () => {
+  it('closes on a backdrop tap and on Cancel', () => {
     const { close } = mount();
     fireEvent.click(screen.getByTestId('mobile-new-thread-sheet').querySelector('.sheet-backdrop')!);
-    expect(close).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(close).toHaveBeenCalledTimes(2);
+  });
+
+  it('ends on the shared sheet actions, whose Create submits the form and waits for a body', () => {
+    mount();
+    const create = screen.getByTestId('mobile-new-thread-submit');
+    expect(create).toHaveClass('btn-primary');
+    expect(create).toHaveAttribute('type', 'submit');
+    expect(create).toHaveAttribute('form', screen.getByTestId('mobile-new-thread-sheet').querySelector('form')!.id);
+    expect(create).toBeDisabled();
+    fireEvent.change(screen.getByTestId('mobile-new-thread-body'), { target: { value: 'hi' } });
+    expect(create).toBeEnabled();
   });
 });
 

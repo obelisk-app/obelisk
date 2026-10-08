@@ -4,6 +4,9 @@ import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import { useCreateChannelSheet } from '@/hooks/shell/mobile/sheets/channel/useCreateChannelSheet';
 import Sheet from '@/components/ui/overlays/Sheet';
+import Form from '@/components/ui/forms/Form';
+import FormActions from '@/components/ui/forms/FormActions';
+import FormError from '@/components/ui/forms/FormError';
 import Input from '@/components/ui/forms/Input';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
@@ -12,7 +15,7 @@ import Label from '@/components/ui/forms/Label';
 
 /**
  * Phone skin of the new-channel form, as a bottom sheet over the channel
- * list. The form itself is `useCreateChannelForm`, shared with the desktop
+ * list. The form itself is `createChannelForm`, shared with the desktop
  * sidebar's `CreateGroupSection`.
  */
 export function CreateChannelSheet({
@@ -35,7 +38,7 @@ export function CreateChannelSheet({
         title={t('mobile.space.newChannel')}
         subtitle={t.rich('shell.channel.create.help', { settings: () => <strong>{t('shell.desktop.channel.settings')}</strong> })}
       />
-      <form onSubmit={form.submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <Form form={form} layout="sheet">
         <Label variant="sheetMono" htmlFor={nameId}>
           {t('shell.channel.create.nameOn', { relay: relayLabel })}
         </Label>
@@ -43,24 +46,22 @@ export function CreateChannelSheet({
           <Input
             variant="mobile"
             id={nameId}
-            value={form.name}
-            onChange={(e) => form.setName(e.target.value)}
+            {...form.field('name')}
             placeholder={t('shell.channel.create.examplePlaceholder')}
             spellCheck={false}
             data-testid="mobile-create-channel-input"
           />
         </div>
-        {form.error && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{form.error}</div>}
-        <button
-          type="submit"
+        <FormError variant="sheet">{form.error}</FormError>
+        <FormActions
+          variant="sheet"
+          submitLabel={t('shell.channel.create.submit')}
+          busyLabel={t('shell.channel.create.creating')}
+          busy={form.submitting}
           disabled={!form.canSubmit}
-          className="btn-primary"
-          style={{ marginTop: 4 }}
-          data-testid="mobile-create-channel-submit"
-        >
-          {form.busy ? t('shell.channel.create.creating') : t('shell.channel.create.submit')}
-        </button>
-      </form>
+          submitTestId="mobile-create-channel-submit"
+        />
+      </Form>
       <SheetActions onCancel={close} />
     </Sheet>
   );

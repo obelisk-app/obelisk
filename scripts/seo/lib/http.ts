@@ -16,6 +16,7 @@ export type Response = {
   status: number;
   location: string | null;
   contentType: string;
+  cacheControl: string;
   body: Buffer;
   text: () => string;
 };
@@ -41,6 +42,7 @@ async function fetchOnce(url: string, attempt = 0): Promise<Response> {
       status: res.status,
       location: res.headers.get('location'),
       contentType: res.headers.get('content-type') ?? '',
+      cacheControl: res.headers.get('cache-control') ?? '',
       body,
       text: () => body.toString('utf8'),
     };

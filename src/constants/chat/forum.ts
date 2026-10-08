@@ -1,5 +1,5 @@
 /**
- * Chat: forum. Values the code in `hooks/chat/forum/useNewThreadForm.ts`,
+ * Chat: forum. Values the code in `services/chat/forum/new-thread-form.ts`,
  * `services/chat/forum/forum-prefs.ts`, `utils/chat/forum/forum-tags.ts`
  * reads, kept here so every reader imports the one copy.
  */

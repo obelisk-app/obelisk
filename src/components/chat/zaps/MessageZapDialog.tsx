@@ -12,6 +12,7 @@ import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import PayingWalletNote from './PayingWalletNote';
 import Label from '@/components/ui/forms/Label';
+import FormError from '@/components/ui/forms/FormError';
 import Text from '@/components/ui/layout/Text';
 
 /** The zap form for one target: amount (with quick picks), comment, and send on the yellow zap pill. */
@@ -61,13 +62,12 @@ export default function MessageZapDialog({ target, close }: { target: ZapTarget;
           <Input
             id={vm.commentId}
             type="text"
-            value={vm.comment}
+            {...vm.comment}
             maxLength={200}
-            onChange={(e) => vm.setComment(e.target.value)}
             placeholder={t('chat.zap.commentPlaceholder')}
             className="mb-3"
           />
-          {vm.error && <Text as="p" size="xs" tone="danger" className="mb-3 break-words">{vm.error}</Text>}
+          <FormError className="mb-3">{vm.error}</FormError>
           {!vm.lud16 && (
             <Text as="p" size="xs" className="mb-3 text-yellow-400">{t('chat.zap.noAddress')}</Text>
           )}

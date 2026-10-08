@@ -12,7 +12,7 @@ import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
 import { NOINDEX } from '@/constants/seo/page';
-import { cardAlt, cardImage } from '@/utils/seo/og';
+import { ogImage } from '@/utils/seo/og';
 import { hashtagFromSegment } from '@/utils/social/hashtag-segment';
 import { fetchHashtagNotes, fetchProfilesForViewer } from '@/services/server/viewer/nostr-fetch';
 import FollowTagButton from '@/components/social/tags/FollowTagButton';
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     path,
     title,
     description: t('seo.tag.description', { tag: clean }),
-    image: cardImage(locale, path, cardAlt(t, renderedTitle(title))),
+    image: ogImage(t, locale, { live: 'tag', id: clean }, renderedTitle(title)),
   });
 }
 

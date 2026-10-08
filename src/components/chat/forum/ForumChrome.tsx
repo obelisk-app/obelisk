@@ -18,6 +18,7 @@ import { SortViewMenu } from './SortViewMenu';
 import { TagChip } from './TagChip';
 import Button from '@/components/ui/buttons/Button';
 import { ChatIcon, SearchIcon } from '@/assets/icons';
+import Form from '@/components/ui/forms/Form';
 
 export function ForumChrome({
   searchQuery,
@@ -49,7 +50,7 @@ export function ForumChrome({
   return (
     <div className="border-b border-lc-border px-3 py-3 shrink-0 space-y-2.5">
       {/* Row 1: search / create */}
-      <form
+      <Form
         onSubmit={vm.submit}
         className="flex items-center gap-2"
         data-testid="forum-search-row"
@@ -77,7 +78,7 @@ export function ForumChrome({
           <ChatIcon size={14} strokeWidth={2} />
           <span className="hidden sm:inline">{t('chat.forum.new')}</span>
         </Button>
-      </form>
+      </Form>
 
       {/* Row 2: sort/view dropdown + tag chips + clear */}
       <div className="flex items-center gap-2 flex-wrap">

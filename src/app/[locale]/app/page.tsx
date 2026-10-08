@@ -12,7 +12,7 @@ import AppGate from './AppGate';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const t = await getTranslations({ locale });
-  return standardNoindexMetadata(t, locale, 'app', '/app');
+  return standardNoindexMetadata(t, locale, 'app');
 }
 
 export default function AppPage() {

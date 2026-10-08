@@ -6,6 +6,8 @@ import Modal from '@/components/ui/overlays/Modal';
 import Button from '@/components/ui/buttons/Button';
 import TextArea from '@/components/ui/forms/TextArea';
 import Input from '@/components/ui/forms/Input';
+import Form from '@/components/ui/forms/Form';
+import FormError from '@/components/ui/forms/FormError';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import { useChannelSettingsForm } from '@/hooks/chat/channel/useChannelSettingsForm';
@@ -23,14 +25,8 @@ import Label from '@/components/ui/forms/Label';
 export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () => void }) {
   const t = useTranslations();
   const sfuUrlId = useId();
-  const {
-    name, about, picture, banner, access, channelKind, forumTags,
-    setName, setAbout, setPicture, setBanner, setAccess, setChannelKind, setForumTags,
-    savingMeta, metaError: metaErr, saveMeta,
-    sfuUrl, setSfuUrl, sfuChecking, sfuVerified, verifySfu,
-    members, adminSet,
-    newMember, setNewMember, makeAdmin, setMakeAdmin, memberBusy, memberError: memberErr, addMember,
-  } = useChannelSettingsForm(group, onClose);
+  const { meta, member, sfu, members, adminSet } = useChannelSettingsForm(group, onClose);
+  const { access, kind: channelKind } = meta.values;
 
   return (
     <Modal
@@ -39,29 +35,28 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
     >
         <ModalHeader title={t('shell.desktop.channel.settingsTitle', { name: group.name ?? group.id.slice(0, 8) })} onClose={onClose} />
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <form onSubmit={(e) => void saveMeta(e)} id="channel-meta-form" className="space-y-7 p-5">
+          <Form form={meta} layout="sections" error={meta.error} errorVariant="box">
             {/* Appearance ----------------------------------------------- */}
             <section className="space-y-4">
               <SectionHeader title={t('shell.desktop.branding.appearance')} />
               <ChannelAppearanceInput
-                picture={picture}
-                banner={banner}
-                onPictureChange={setPicture}
-                onBannerChange={setBanner}
+                picture={meta.values.picture}
+                banner={meta.values.banner}
+                onPictureChange={(value) => meta.set('picture', value)}
+                onBannerChange={(value) => meta.set('banner', value)}
               />
             </section>
 
             {/* Basics --------------------------------------------------- */}
             <section className="space-y-3">
               <Field label={t('mobile.field.name')}>
-                <Input size="sm" value={name} onChange={(e) => setName(e.target.value)} />
+                <Input size="sm" {...meta.field('name')} />
               </Field>
               <Field label={t('mobile.field.description')}>
                 <TextArea
                   size="sm"
                   resize="both"
-                  value={about}
-                  onChange={(e) => setAbout(e.target.value)}
+                  {...meta.field('about')}
                   rows={2}
                   placeholder={t('mobile.channel.descriptionPlaceholder')}
                 />
@@ -74,21 +69,21 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
               <div className="grid gap-2 sm:grid-cols-3">
                 <ToggleCard
                   active={access === 'public'}
-                  onClick={() => setAccess('public')}
+                  onClick={() => meta.set('access', 'public')}
                   icon="🌐"
                   title={t('mobile.channel.public')}
                   subtitle={t('shell.desktop.channel.publicHint')}
                 />
                 <ToggleCard
                   active={access === 'read-only'}
-                  onClick={() => setAccess('read-only')}
+                  onClick={() => meta.set('access', 'read-only')}
                   icon="👁"
                   title={t('mobile.channel.readOnly')}
                   subtitle={t('shell.desktop.channel.readOnlyHint')}
                 />
                 <ToggleCard
                   active={access === 'private'}
-                  onClick={() => setAccess('private')}
+                  onClick={() => meta.set('access', 'private')}
                   icon="🔒"
                   title={t('mobile.channel.private')}
                   subtitle={t('shell.desktop.channel.privateHint')}
@@ -102,28 +97,28 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <ToggleCard
                   active={channelKind === 'text'}
-                  onClick={() => setChannelKind('text')}
+                  onClick={() => meta.set('kind', 'text')}
                   icon="💬"
                   title={t('shell.desktop.channel.kindText')}
                   subtitle={t('shell.desktop.channel.textHint')}
                 />
                 <ToggleCard
                   active={channelKind === 'voice'}
-                  onClick={() => setChannelKind('voice')}
+                  onClick={() => meta.set('kind', 'voice')}
                   icon="🎙️"
                   title={t('shell.desktop.channel.kindVoice')}
                   subtitle={t('shell.desktop.channel.voiceHint')}
                 />
                 <ToggleCard
                   active={channelKind === 'voice-sfu'}
-                  onClick={() => setChannelKind('voice-sfu')}
+                  onClick={() => meta.set('kind', 'voice-sfu')}
                   icon="📡"
                   title={t('shell.desktop.channel.kindSfu')}
                   subtitle={t('shell.desktop.channel.sfuHint')}
                 />
                 <ToggleCard
                   active={channelKind === 'forum'}
-                  onClick={() => setChannelKind('forum')}
+                  onClick={() => meta.set('kind', 'forum')}
                   icon="📋"
                   title={t('shell.desktop.channel.kindForum')}
                   subtitle={t('shell.desktop.channel.forumHint')}
@@ -158,8 +153,8 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                           id={sfuUrlId}
                           size="sm"
                           fontSize="xs"
-                          value={sfuUrl}
-                          onChange={(e) => setSfuUrl(e.target.value)}
+                          value={sfu.url}
+                          onChange={(e) => sfu.setUrl(e.target.value)}
                           spellCheck={false}
                           className="min-w-0 flex-1 font-mono"
                           placeholder="https://sfu.obelisk.ar"
@@ -167,20 +162,20 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                         <Button
                           variant="pillSecondary"
                           size="xs"
-                          onClick={() => { void verifySfu().catch(() => undefined); }}
-                          disabled={sfuChecking}
+                          onClick={() => { void sfu.verify().catch(() => undefined); }}
+                          disabled={sfu.checking}
                           className="shrink-0"
                         >
-                          {sfuChecking ? t('shell.desktop.sfu.checking') : t('shell.desktop.sfu.verify')}
+                          {sfu.checking ? t('shell.desktop.sfu.checking') : t('shell.desktop.sfu.verify')}
                         </Button>
                       </div>
                     </div>
-                    {sfuVerified && (
+                    {sfu.verified && (
                       <div className="rounded-md border border-lc-green/30 bg-lc-green/5 p-2 text-[11px] text-lc-muted">
                         <span className="text-lc-green">{t('shell.desktop.sfu.verified')}</span>
-                        {sfuVerified.region ? ` · ${sfuVerified.region}` : ''}
-                        {sfuVerified.cap ? ` · ${t('shell.desktop.sfu.capacity', { count: sfuVerified.cap })}` : ''}
-                        <div className="mt-1 break-all font-mono text-lc-white/70">{sfuVerified.pubkey}</div>
+                        {sfu.verified.region ? ` · ${sfu.verified.region}` : ''}
+                        {sfu.verified.cap ? ` · ${t('shell.desktop.sfu.capacity', { count: sfu.verified.cap })}` : ''}
+                        <div className="mt-1 break-all font-mono text-lc-white/70">{sfu.verified.pubkey}</div>
                       </div>
                     )}
                     <Text as="p" size="10" tone="muted">{t('shell.desktop.sfu.verifyHelp')}</Text>
@@ -203,14 +198,11 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                   hint={t('shell.desktop.channel.forumTagsHint')}
                 />
                 <Text as="p" size="11" tone="muted">{t('shell.desktop.channel.forumTagsHelp')}</Text>
-                <ForumTagsEditor value={forumTags} onChange={setForumTags} />
+                <ForumTagsEditor value={meta.values.forumTags} onChange={(value) => meta.set('forumTags', value)} />
               </section>
             )}
 
-            {metaErr && (
-              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{metaErr}</div>
-            )}
-          </form>
+          </Form>
 
           <div className="border-t border-lc-border" />
 
@@ -221,11 +213,10 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                 {members.length}
               </span>
             </div>
-            <form onSubmit={(e) => void addMember(e)} className="flex flex-wrap items-center gap-2">
+            <Form form={member} layout="row">
               <Input
                 size="sm"
-                value={newMember}
-                onChange={(e) => setNewMember(e.target.value)}
+                {...member.field('key')}
                 placeholder={t('shell.desktop.members.addPlaceholder')}
                 spellCheck={false}
                 aria-label={t('shell.desktop.members.addLabel')}
@@ -235,18 +226,18 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                   reads as the role the new member will get. */}
               <Chip
                 size="touch"
-                state={makeAdmin ? 'selected' : 'idle'}
-                onClick={() => setMakeAdmin(!makeAdmin)}
+                state={member.values.admin ? 'selected' : 'idle'}
+                onClick={() => member.set('admin', !member.values.admin)}
                 data-testid="add-member-admin-toggle"
                 className="shrink-0 whitespace-nowrap font-medium"
               >
-                {makeAdmin ? `👑 ${t('shell.desktop.members.asAdmin')}` : t('shell.desktop.members.asAdmin')}
+                {member.values.admin ? `👑 ${t('shell.desktop.members.asAdmin')}` : t('shell.desktop.members.asAdmin')}
               </Chip>
-              <Button type="submit" variant="pill" size="sm" disabled={memberBusy || !newMember.trim()} className="shrink-0">
-                {memberBusy ? t('shell.desktop.members.adding') : t('shell.desktop.members.add')}
+              <Button type="submit" variant="pill" size="sm" disabled={!member.canSubmit} className="shrink-0">
+                {member.submitting ? t('shell.desktop.members.adding') : t('shell.desktop.members.add')}
               </Button>
-            </form>
-            {memberErr && <div className="text-sm text-red-400">{memberErr}</div>}
+            </Form>
+            <FormError>{member.error}</FormError>
             <div className="space-y-1 max-h-64 overflow-y-auto">
               {members.map((pk) => (
                 <ManageMemberRow key={pk} groupId={group.id} pubkey={pk} isAdmin={adminSet.has(pk)} />
@@ -265,9 +256,9 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
           meta={t('shell.desktop.channel.saveHelp')}
           cancel={{ onClick: onClose }}
           actions={[{
-            label: savingMeta ? t('shell.desktop.channel.saving') : t('shell.desktop.channel.saveChanges'),
-            form: 'channel-meta-form',
-            disabled: savingMeta,
+            label: meta.submitting ? t('shell.desktop.channel.saving') : t('shell.desktop.channel.saveChanges'),
+            form: meta.id,
+            disabled: meta.submitting,
           }]}
         />
     </Modal>

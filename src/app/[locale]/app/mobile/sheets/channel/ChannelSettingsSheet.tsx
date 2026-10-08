@@ -10,6 +10,8 @@ import { useTranslations } from 'next-intl';
 import { ManageMemberRowMobile } from './ManageMemberRowMobile';
 import Sheet from '@/components/ui/overlays/Sheet';
 import Input from '@/components/ui/forms/Input';
+import Form from '@/components/ui/forms/Form';
+import FormError from '@/components/ui/forms/FormError';
 import TextArea from '@/components/ui/forms/TextArea';
 import Checkbox from '@/components/ui/forms/Checkbox';
 import SheetActions from '../chrome/SheetActions';
@@ -45,14 +47,8 @@ export function ChannelSettingsSheet({
   const aboutId = useId();
   const sfuUrlId = useId();
   const newMemberId = useId();
-  const {
-    name, about, picture, banner, access, channelKind, forumTags,
-    setName, setAbout, setPicture, setBanner, setAccess, setChannelKind, setForumTags,
-    savingMeta, metaError: metaErr, saveMeta,
-    sfuUrl, setSfuUrl, sfuChecking, sfuVerified, verifySfu,
-    adminSet, allPubkeys,
-    newMember, setNewMember, makeAdmin, setMakeAdmin, memberBusy, memberError: memberErr, addMember,
-  } = useChannelSettingsForm(group, close);
+  const { meta, member, sfu, adminSet, allPubkeys } = useChannelSettingsForm(group, close);
+  const { access, kind: channelKind } = meta.values;
 
   return (
     <Sheet onClose={close} screen="channel-settings" label={t('mobile.channel.settingsTitle', { name: group.name ?? group.id.slice(0, 8) })} maxHeight="94%">
@@ -64,10 +60,10 @@ export function ChannelSettingsSheet({
       {/* Appearance */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <ChannelAppearanceInput
-          picture={picture}
-          banner={banner}
-          onPictureChange={setPicture}
-          onBannerChange={setBanner}
+          picture={meta.values.picture}
+          banner={meta.values.banner}
+          onPictureChange={(value) => meta.set('picture', value)}
+          onBannerChange={(value) => meta.set('banner', value)}
         />
       </section>
 
@@ -78,8 +74,7 @@ export function ChannelSettingsSheet({
           <Input
             variant="mobile"
             id={nameId}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            {...meta.field('name')}
             data-testid="mobile-channel-settings-name"
           />
         </div>
@@ -88,8 +83,7 @@ export function ChannelSettingsSheet({
           <TextArea
             variant="mobile"
             id={aboutId}
-            value={about}
-            onChange={(e) => setAbout(e.target.value)}
+            {...meta.field('about')}
             rows={2}
             placeholder={t('mobile.channel.descriptionPlaceholder')}
           />
@@ -101,17 +95,17 @@ export function ChannelSettingsSheet({
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <Label variant="sheet">{t('mobile.channel.access')}</Label>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" data-testid="mobile-channel-access-public" style={accessPillStyle(access === 'public')} onClick={() => setAccess('public')}>
+          <button type="button" data-testid="mobile-channel-access-public" style={accessPillStyle(access === 'public')} onClick={() => meta.set('access', 'public')}>
             <div style={{ fontSize: 16 }}>🌐</div>
             <div>{t('mobile.channel.public')}</div>
             <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.publicHint')}</div>
           </button>
-          <button type="button" data-testid="mobile-channel-access-read-only" style={accessPillStyle(access === 'read-only')} onClick={() => setAccess('read-only')}>
+          <button type="button" data-testid="mobile-channel-access-read-only" style={accessPillStyle(access === 'read-only')} onClick={() => meta.set('access', 'read-only')}>
             <div style={{ fontSize: 16 }}>👁</div>
             <div>{t('mobile.channel.readOnly')}</div>
             <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.readOnlyHint')}</div>
           </button>
-          <button type="button" data-testid="mobile-channel-access-private" style={accessPillStyle(access === 'private')} onClick={() => setAccess('private')}>
+          <button type="button" data-testid="mobile-channel-access-private" style={accessPillStyle(access === 'private')} onClick={() => meta.set('access', 'private')}>
             <div style={{ fontSize: 16 }}>🔒</div>
             <div>{t('mobile.channel.private')}</div>
             <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{t('mobile.channel.privateHint')}</div>
@@ -127,7 +121,7 @@ export function ChannelSettingsSheet({
             <button
               key={k}
               type="button"
-              onClick={() => setChannelKind(k)}
+              onClick={() => meta.set('kind', k)}
               style={kindPillStyle(channelKind === k)}
             >
               {t(KIND_LABEL[k])}
@@ -146,8 +140,8 @@ export function ChannelSettingsSheet({
                 <Input
                   variant="mobile"
                   id={sfuUrlId}
-                  value={sfuUrl}
-                  onChange={(e) => setSfuUrl(e.target.value)}
+                  value={sfu.url}
+                  onChange={(e) => sfu.setUrl(e.target.value)}
                   spellCheck={false}
                   placeholder="https://sfu.obelisk.ar"
                   style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}
@@ -156,21 +150,21 @@ export function ChannelSettingsSheet({
               </div>
               <button
                 type="button"
-                onClick={() => { void verifySfu().catch(() => undefined); }}
-                disabled={sfuChecking}
+                onClick={() => { void sfu.verify().catch(() => undefined); }}
+                disabled={sfu.checking}
                 className="btn-cancel"
                 style={{ width: 'auto', padding: '0 14px', flexShrink: 0 }}
                 data-testid="mobile-sfu-verify"
               >
-                {sfuChecking ? t('mobile.sfu.checking') : t('mobile.sfu.verify')}
+                {sfu.checking ? t('mobile.sfu.checking') : t('mobile.sfu.verify')}
               </button>
             </div>
-            {sfuVerified && (
+            {sfu.verified && (
               <div style={{ fontSize: 11, color: 'var(--app-text-dim)' }} data-testid="mobile-sfu-verified">
                 <span style={{ color: 'var(--accent)' }}>{t('shell.desktop.sfu.verified')}</span>
-                {sfuVerified.region ? ` · ${sfuVerified.region}` : ''}
-                {sfuVerified.cap ? ` · ${t('mobile.sfu.cap', { cap: sfuVerified.cap })}` : ''}
-                <div style={{ marginTop: 4, fontFamily: "'JetBrains Mono', monospace", wordBreak: 'break-all' }}>{sfuVerified.pubkey}</div>
+                {sfu.verified.region ? ` · ${sfu.verified.region}` : ''}
+                {sfu.verified.cap ? ` · ${t('mobile.sfu.cap', { cap: sfu.verified.cap })}` : ''}
+                <div style={{ marginTop: 4, fontFamily: "'JetBrains Mono', monospace", wordBreak: 'break-all' }}>{sfu.verified.pubkey}</div>
               </div>
             )}
           </div>
@@ -180,19 +174,19 @@ export function ChannelSettingsSheet({
       {channelKind === 'forum' && (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }} data-testid="mobile-forum-tags-editor">
           <Label variant="sheet">{t('shell.desktop.channel.forumTags')}</Label>
-          <ForumTagsEditor value={forumTags} onChange={setForumTags} />
+          <ForumTagsEditor value={meta.values.forumTags} onChange={(value) => meta.set('forumTags', value)} />
         </section>
       )}
 
-      {metaErr && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{metaErr}</div>}
+      <FormError variant="sheet">{meta.error}</FormError>
       <button
         type="button"
-        onClick={() => void saveMeta()}
-        disabled={savingMeta}
+        onClick={() => void meta.submit()}
+        disabled={meta.submitting}
         className="btn-primary"
         data-testid="mobile-channel-settings-save"
       >
-        {savingMeta ? t('common.saving') : t('mobile.channel.save')}
+        {meta.submitting ? t('common.saving') : t('mobile.channel.save')}
       </button>
 
       {/* Members */}
@@ -200,13 +194,12 @@ export function ChannelSettingsSheet({
         <Label variant="sheet" htmlFor={newMemberId}>
           {t('mobile.members.addHelp')}
         </Label>
-        <form onSubmit={(e) => void addMember(e)} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Form form={member} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="setup-input-wrap">
             <Input
               variant="mobile"
               id={newMemberId}
-              value={newMember}
-              onChange={(e) => setNewMember(e.target.value)}
+              {...member.field('key')}
               placeholder={t('mobile.members.addPlaceholder')}
               spellCheck={false}
               style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}
@@ -214,22 +207,22 @@ export function ChannelSettingsSheet({
           </div>
           <Label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--app-text-dim)' }}>
             <Checkbox
-              checked={makeAdmin}
-              onChange={(e) => setMakeAdmin(e.target.checked)}
+              checked={member.values.admin}
+              onChange={(e) => member.set('admin', e.target.checked)}
               aria-label={t('mobile.members.promote')}
             />
             {t('mobile.members.promote')}
           </Label>
-          {memberErr && <div style={{ fontSize: 12, color: 'var(--presence-dnd)' }}>{memberErr}</div>}
+          <FormError variant="sheet">{member.error}</FormError>
           <button
             type="submit"
-            disabled={memberBusy || !newMember.trim()}
+            disabled={!member.canSubmit}
             className="btn-primary"
             style={{ width: 'auto', alignSelf: 'flex-start', padding: '0 18px', boxShadow: 'none' }}
           >
-            {memberBusy ? t('mobile.members.adding') : t('mobile.members.add')}
+            {member.submitting ? t('mobile.members.adding') : t('mobile.members.add')}
           </button>
-        </form>
+        </Form>
       </section>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

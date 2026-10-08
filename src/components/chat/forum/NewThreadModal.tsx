@@ -1,18 +1,21 @@
 'use client';
 
-import type { JsForumTag } from '@/services/nostr-bridge';
-import { threadTagChoice } from '@/utils/chat/forum/forum-tags';
+import { useMyPubkey, useSignerReady, type JsForumTag } from '@/services/nostr-bridge';
+import { newThreadForm } from '@/services/chat/forum/new-thread-form';
+import { threadTagChoice, toggleThreadTag } from '@/utils/chat/forum/forum-tags';
 import { useTranslations } from 'next-intl';
-import { useNewThreadForm } from '@/hooks/chat/forum/useNewThreadForm';
+import { useForm } from '@/hooks/common/useForm';
 import { MAX_THREAD_TAGS } from '@/constants/chat/forum';
 import { NewThreadTagChip } from './NewThreadTagChip';
+import Form from '@/components/ui/forms/Form';
 import Input from '@/components/ui/forms/Input';
 import TextArea from '@/components/ui/forms/TextArea';
-import Button from '@/components/ui/buttons/Button';
-import CloseButton from '@/components/ui/buttons/CloseButton';
+import Modal from '@/components/ui/overlays/Modal';
+import ModalHeader from '@/components/ui/overlays/ModalHeader';
+import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import Text from '@/components/ui/layout/Text';
-import Heading from '@/components/ui/layout/Heading';
 
+/** The desktop new-publication dialog: title, first message and topic tags, over `newThreadForm`. */
 export function NewThreadModal({
   forumGroupId,
   forumTags,
@@ -35,40 +38,32 @@ export function NewThreadModal({
   onCreated: (childId: string) => void;
 }) {
   const t = useTranslations();
-  const {
-    title, body, selectedTagIds, submitting, error, canSubmit,
-    setTitle, setBody, toggleTag, submit,
-  } = useNewThreadForm(forumGroupId, { isPublic, isHidden, isRestricted, isOpen }, initialTitle, onCreated);
-  const MAX_TAGS = MAX_THREAD_TAGS;
+  const signerReady = useSignerReady();
+  const myPubkey = useMyPubkey();
+  const form = useForm(newThreadForm({
+    forumGroupId, access: { isPublic, isHidden, isRestricted, isOpen }, initialTitle, signerReady, myPubkey, onCreated,
+  }));
+  const { tagIds } = form.values;
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-      onClick={onClose}
-      data-testid="new-thread-modal"
+    <Modal
+      onClose={onClose}
+      testId="new-thread-modal"
+      panelClassName="lc-card mx-4 flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden"
     >
-      <form
-        onSubmit={(e) => void submit(e)}
-        onClick={(e) => e.stopPropagation()}
-        className="lc-card w-full max-w-xl max-h-[85vh] overflow-y-auto p-4 space-y-3"
-      >
-        <div className="flex items-center justify-between">
-          <Heading as="h3" variant="panel">{t('chat.forum.new')}</Heading>
-          <CloseButton onClick={onClose} />
-        </div>
+      <ModalHeader title={t('chat.forum.new')} onClose={onClose} />
+      <Form form={form} layout="stack" className="min-h-0 flex-1 overflow-y-auto p-4" error={form.error}>
         <Input
           autoFocus
           type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          {...form.field('title')}
           placeholder={t('chat.forum.titlePlaceholder')}
           aria-label={t('chat.forum.titleLabel')}
           maxLength={140}
           data-testid="new-thread-title"
         />
         <TextArea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
+          {...form.field('body')}
           placeholder={t('chat.forum.firstMessagePlaceholder')}
           aria-label={t('mobile.forum.firstMessage')}
           rows={6}
@@ -77,31 +72,30 @@ export function NewThreadModal({
         {forumTags.length > 0 && (
           <div className="space-y-1.5" data-testid="new-thread-tag-picker">
             <Text as="div" size="11" variant="label" tone="muted">
-              {t('chat.forum.tagsCount', { count: selectedTagIds.length, max: MAX_TAGS })}
+              {t('chat.forum.tagsCount', { count: tagIds.length, max: MAX_THREAD_TAGS })}
             </Text>
             <div className="flex flex-wrap gap-1.5">
               {forumTags.map((tag) => (
-                <NewThreadTagChip key={tag.id} tag={tag} choice={threadTagChoice(selectedTagIds, tag.id, MAX_TAGS)} onToggle={toggleTag} />
+                <NewThreadTagChip
+                  key={tag.id}
+                  tag={tag}
+                  choice={threadTagChoice(tagIds, tag.id, MAX_THREAD_TAGS)}
+                  onToggle={(id) => form.set('tagIds', toggleThreadTag(tagIds, id, MAX_THREAD_TAGS))}
+                />
               ))}
             </div>
           </div>
         )}
-        {error && <div className="text-xs text-red-400">{error}</div>}
-        <div className="flex justify-end gap-2">
-          <Button variant="pillSecondary" size="xs" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            variant="pill"
-            size="xs"
-            disabled={!canSubmit}
-            data-testid="new-thread-submit"
-          >
-            {t(submitting ? 'chat.forum.creating' : 'chat.forum.create')}
-          </Button>
-        </div>
-      </form>
-    </div>
+      </Form>
+      <ModalFooter
+        cancel={{ onClick: onClose }}
+        actions={[{
+          label: t(form.submitting ? 'chat.forum.creating' : 'chat.forum.create'),
+          form: form.id,
+          disabled: !form.canSubmit,
+          testId: 'new-thread-submit',
+        }]}
+      />
+    </Modal>
   );
 }

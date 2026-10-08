@@ -14,6 +14,7 @@ import type { Metadata } from 'next';
 import type { Locale } from '@/i18n';
 import type { Translate } from '@/i18n/keys';
 import { ogLocales } from './alternates';
+import { ogImage } from './og';
 import { SITE_URL } from '@/constants/seo/alternates';
 import { organizationNode, websiteNode } from './jsonld';
 import { SCHEMA } from '@/constants/seo/jsonld';
@@ -47,16 +48,17 @@ export function siteMetadata(t: Translate, locale: Locale): Metadata {
       apple: '/icon-512.png',
     },
     manifest: '/manifest.webmanifest',
-    // The fallback for a page that sets none of its own (a 404); the
-    // image comes from `[locale]/opengraph-image.tsx`. Every real page
-    // builds its full card through `pageMetadata`, because Next replaces
-    // `openGraph` and `twitter` wholesale rather than merging these in.
+    // The fallback for a page that sets none of its own (a 404), with the
+    // landing page's card. Every real page builds its full card through
+    // `pageMetadata`, because Next replaces `openGraph` and `twitter`
+    // wholesale rather than merging these in.
     openGraph: {
       title: t('seo.site.title'),
       description: t('seo.site.description'),
       siteName: SITE_NAME,
       ...ogLocales(locale),
       type: 'website',
+      images: [ogImage(t, locale, { page: 'landing' }, t('seo.site.title'))],
     },
     twitter: { card: 'summary_large_image', site: X_HANDLE, creator: X_HANDLE },
     // Indexing is the default and needs no tag; a page that must stay out

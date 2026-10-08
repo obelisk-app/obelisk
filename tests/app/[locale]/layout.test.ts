@@ -16,11 +16,12 @@ const at = (locale: string) => {
 };
 
 describe('root social metadata', () => {
-  it('a fallback card for pages with none of their own (a 404): site copy, the X account, the image from the file route', async () => {
+  it('a fallback card for pages with none of their own (a 404): site copy, the X account, the landing page\'s card', async () => {
     const metadata = await at('pt');
     expect(metadata.openGraph).toMatchObject({ title: translator('pt')('seo.site.title'), siteName: 'Obelisk' });
-    // `[locale]/opengraph-image.tsx` supplies the image; naming one here would be overridden anyway.
-    expect((metadata.openGraph as { images?: unknown }).images).toBeUndefined();
+    const [image] = (metadata.openGraph as { images: Array<{ url: string }> }).images;
+    expect(image).toMatchObject({ width: 1200, height: 630, type: 'image/png' });
+    expect(image.url).toMatch(/^https:\/\/obelisk\.ar\/og\/cards\/pt\/home\.png\?v=/);
     expect(metadata.twitter).toMatchObject({ card: 'summary_large_image', site: '@lacryptaar' });
   });
 

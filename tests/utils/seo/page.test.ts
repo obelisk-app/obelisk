@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { noindexMetadata, pageMetadata, renderedTitle } from '@/utils/seo/page';
 import { NOINDEX, X_HANDLE } from '@/constants/seo/page';
-import { cardImage, excerpt } from '@/utils/seo/og';
+import { excerpt } from '@/utils/seo/og';
 
-const image = cardImage('es', '/help', 'Tarjeta: Ayuda');
+const image = { url: 'https://obelisk.ar/og/cards/es/help.png', width: 1200, height: 630, type: 'image/png', alt: 'Tarjeta: Ayuda' };
 
 describe('pageMetadata: an indexed page', () => {
   const m = pageMetadata({ locale: 'es', path: '/help', title: 'Ayuda', description: 'Ayuda con Obelisk.', image });
@@ -22,10 +22,9 @@ describe('pageMetadata: an indexed page', () => {
     expect(m.robots).toBeUndefined();
   });
 
-  it('shows the page\'s own 1200x630 PNG card, at its public URL, with alt text', () => {
-    expect(og.images).toEqual([{ url: 'https://obelisk.ar/es/help/opengraph-image', width: 1200, height: 630, type: 'image/png', alt: 'Tarjeta: Ayuda' }]);
-    expect((m.twitter as { images: unknown }).images).toEqual([{ url: 'https://obelisk.ar/es/help/opengraph-image', alt: 'Tarjeta: Ayuda' }]);
-    expect(cardImage('en', '/', 'x').url).toBe('https://obelisk.ar/opengraph-image');
+  it('shows the card it is given, on the open graph and the twitter card alike', () => {
+    expect(og.images).toEqual([image]);
+    expect((m.twitter as { images: unknown }).images).toEqual([{ url: image.url, alt: 'Tarjeta: Ayuda' }]);
   });
 
   it('an article carries its dates as given, and the landing page can skip the title template', () => {
