@@ -28,7 +28,8 @@ const APP = join(process.cwd(), 'src/app');
 const PUBLIC = join(process.cwd(), 'public');
 
 async function metadataOf(route: string, locale: Locale, params: Record<string, string> = {}): Promise<Metadata> {
-  const file = join(APP, '[locale]', route, 'page.tsx');
+  const siteFile = join(APP, '[locale]', '(site)', route, 'page.tsx');
+  const file = existsSync(siteFile) ? siteFile : join(APP, '[locale]', route, 'page.tsx');
   const mod = (await import(/* @vite-ignore */ file)) as MetadataModule;
   setRootLocale(locale);
   return mod.generateMetadata({ params: Promise.resolve(params) });
