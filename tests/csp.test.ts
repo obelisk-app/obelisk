@@ -1,9 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { proxy } from '@/proxy';
 import { LOCALE_COOKIE } from '@/i18n';
 import { buildCsp } from '@/utils/security/csp';
 import nextConfig from '../next.config';
+
+const staticPolicy = vi.hoisted(() => vi.fn(() => ({ hashes: null as string[] | null, fallback: [] as string[] })));
+vi.mock('@/services/server/security/static-csp', () => ({ staticPagePolicy: staticPolicy }));
+afterEach(() => { vi.unstubAllEnvs(); staticPolicy.mockReset().mockReturnValue({ hashes: null, fallback: [] }); });
 
 describe('CSP', () => {
   beforeEach(() => {
@@ -42,6 +46,36 @@ describe('CSP', () => {
     expect(csp).toBe(buildCsp({ nonce, isDev: process.env.NODE_ENV !== 'production' }));
     // The nonce the page reads (layout.tsx, serverLocale) is the one in the header.
     expect(res.headers.get('x-middleware-request-x-nonce')).toBe(nonce);
+  });
+
+  it('forwards the real CSP to Next and overrides a caller-supplied nonce', () => {
+    const res = proxy(new NextRequest('https://obelisk.test/app', { headers: { 'x-nonce': 'untrusted', 'content-security-policy': "script-src 'nonce-untrusted'" } }));
+    expect(res.headers.get('x-middleware-request-content-security-policy')).toBe(res.headers.get('Content-Security-Policy'));
+    expect(res.headers.get('x-middleware-request-x-nonce')).not.toBe('untrusted');
+  });
+
+  it('uses immutable hashes without generating a nonce for a prerendered production page', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const token = `'sha256-${'a'.repeat(43)}='`;
+    staticPolicy.mockReturnValue({ hashes: [token], fallback: [] });
+    const uuid = vi.spyOn(crypto, 'randomUUID');
+    uuid.mockClear();
+    const res = proxy(new NextRequest('https://obelisk.test/features'));
+    expect(res.headers.get('Content-Security-Policy')).toContain(token);
+    expect(res.headers.get('Content-Security-Policy')).not.toMatch(/nonce-|unsafe-inline.*googletagmanager/);
+    expect(res.headers.get('x-middleware-request-x-nonce')).toBe('');
+    expect(uuid).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the production build policy is unavailable', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    staticPolicy.mockImplementation(() => { throw new Error('missing build'); });
+    const res = proxy(new NextRequest('https://obelisk.test/features'));
+    expect(res.status).toBe(503);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(res.headers.get('Content-Security-Policy')?.split(';').find((d) => d.trim().startsWith('script-src'))).not.toContain('unsafe-inline');
+    error.mockRestore();
   });
 
   it('next.config.ts sends the static floor on every path for the requests the proxy never sees', async () => {

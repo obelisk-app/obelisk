@@ -4,9 +4,10 @@ import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALES, detectLocale, isLocale } from '
 import { routing } from './i18n/routing';
 import { buildCsp } from './utils/security/csp';
 import { isCrawler } from './utils/seo/crawler';
+import { staticPagePolicy } from './services/server/security/static-csp';
 
 /**
- * Per-request CSP nonce, first-visit language, and URL locales.
+ * Build hashes for static pages, request nonces for dynamic pages, and URL locales.
  *
  * Renamed from middleware to proxy per Next 16's deprecation. Three jobs,
  * in this order:
@@ -20,9 +21,8 @@ import { isCrawler } from './utils/seo/crawler';
  *      link-preview bot is never redirected (it must read the URL it asked
  *      for), and a prefixed URL never is either: the URL is the language.
  *   3. next-intl maps the URL to the `[locale]` route and keeps the cookie
- *      in step with the URL's language; we add the nonce to the request
- *      headers it forwards, so `headers()` in the layout reads it, and set
- *      the CSP on whatever it returns. The policy itself is in src/utils/security/csp.ts,
+ *      in step with the URL's language; we forward the CSP so Next can stamp
+ *      its dynamic scripts with the nonce, and send the same response policy. The policy itself is in src/utils/security/csp.ts,
  *      shared with the static floor next.config.ts sends.
  */
 
@@ -61,14 +61,27 @@ export function proxy(request: NextRequest) {
     response.headers.set('Service-Worker-Allowed', '/');
     return response;
   }
-  // A UUIDv4 carries 122 random bits; the 32 hex characters left after
-  // stripping dashes are base64-encoded into a 44-character nonce token.
-  const nonce = btoa(crypto.randomUUID().replace(/-/g, ''));
-  const csp = buildCsp({ nonce, isDev: process.env.NODE_ENV !== 'production' });
+  const isDev = process.env.NODE_ENV !== 'production';
+  let policy: ReturnType<typeof staticPagePolicy> = { hashes: null, fallback: [] };
+  if (!isDev) {
+    try {
+      policy = staticPagePolicy(request.nextUrl.pathname);
+    } catch (error) {
+      console.error('[CSP] Build policy unavailable', error);
+      return new NextResponse('Site build unavailable', {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store', 'Content-Security-Policy': buildCsp({ nonce: null, hashes: [], isDev: false }) },
+      });
+    }
+  }
+  // Only dynamic documents need a fresh token. Static documents authorize
+  // exactly the inline scripts emitted into their immutable build artifact.
+  const nonce = policy.hashes ? null : btoa(crypto.randomUUID().replace(/-/g, ''));
+  const csp = buildCsp({ nonce, isDev, hashes: [...new Set([...(policy.hashes ?? []), ...policy.fallback])] });
 
   // 307, not 308: the target depends on who is asking, so no cache may keep it.
   const redirect = preferredRedirect(request);
-  const response = redirect ? NextResponse.redirect(redirect, 307) : withNonce(intlMiddleware(request), nonce);
+  const response = redirect ? NextResponse.redirect(redirect, 307) : withPolicy(intlMiddleware(request), nonce, csp);
   // An unprefixed URL with no cookie was English by default, not by choice:
   // next-intl would still write `locale=en`, which would then outrank the
   // visitor's country and browser language on every later visit.
@@ -79,19 +92,14 @@ export function proxy(request: NextRequest) {
   return response;
 }
 
-/**
- * Hand the nonce to the page as a request header. next-intl answers a page
- * request with `NextResponse.next`/`rewrite` carrying the full request
- * header list (`x-middleware-override-headers`); adding `x-nonce` to that
- * list is how `headers()` in the layout sees it. (Re-creating the request
- * with the header instead made next-intl's rewrite URL use the server's
- * internal host, which Next then treated as an external proxy.)
- */
-function withNonce(response: NextResponse, nonce: string): NextResponse {
+/** Next reads the nonce from the request CSP, not from the convenience x-nonce header. */
+function withPolicy(response: NextResponse, nonce: string | null, csp: string): NextResponse {
   const overrides = response.headers.get('x-middleware-override-headers');
   if (overrides === null) return response;
-  response.headers.set('x-middleware-override-headers', `${overrides},x-nonce`);
-  response.headers.set('x-middleware-request-x-nonce', nonce);
+  const names = new Set([...overrides.split(','), 'x-nonce', 'content-security-policy']);
+  response.headers.set('x-middleware-override-headers', [...names].join(','));
+  response.headers.set('x-middleware-request-x-nonce', nonce ?? '');
+  response.headers.set('x-middleware-request-content-security-policy', csp);
   return response;
 }
 

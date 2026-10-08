@@ -1,8 +1,8 @@
 /**
- * The one Content-Security-Policy, built two ways.
+ * The one Content-Security-Policy, built for static hashes, dynamic nonces, and the fallback floor.
  *
- * `src/proxy.ts` mints a nonce per HTML request and sends the policy with
- * `'nonce-<n>'` in script-src. `next.config.ts` sends a static floor on
+ * `src/proxy.ts` authorizes build-time scripts by hash on immutable public
+ * pages and mints a nonce for dynamic documents. `next.config.ts` sends a static floor on
  * every response through `headers()`, for the requests the proxy never
  * sees: a matcher gap, or a framework bug of the "Middleware / Proxy
  * bypass" class that next@16.2.x shipped several of. Both come from here so
@@ -65,9 +65,9 @@ const CSP_FRAME_SRC: readonly string[] = [
 
 export type CspOptions = {
   /**
-   * The per-request nonce, or `null` for the static floor. The floor
+   * The per-request nonce, or `null` for hashes or the static floor. The floor
    * substitutes `'unsafe-inline'`, the only token that is a superset of
-   * any nonce; see the module comment.
+   * any nonce or hash; omitted hashes select the floor. See the module comment.
    */
   nonce: string | null;
   /**
@@ -77,11 +77,16 @@ export type CspOptions = {
    * origin.
    */
   isDev: boolean;
+  /** Exact inline scripts from this build; an empty list permits no inline script. */
+  hashes?: readonly string[];
 };
 
 /** The policy as a list of directives, in the order they are sent. */
-export function cspDirectives({ nonce, isDev }: CspOptions): string[] {
-  const inlineScripts = nonce === null ? "'unsafe-inline'" : `'nonce-${nonce}'`;
+export function cspDirectives({ nonce, isDev, hashes }: CspOptions): string[] {
+  const inlineScripts = [
+    ...(nonce ? [`'nonce-${nonce}'`] : hashes === undefined ? ["'unsafe-inline'"] : []),
+    ...(hashes ?? []),
+  ].join(' ');
   const evalSrc = isDev ? " 'unsafe-eval'" : '';
   return [
     "default-src 'self'",

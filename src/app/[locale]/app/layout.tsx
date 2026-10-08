@@ -3,6 +3,9 @@ import type { ReactNode } from 'react';
 import IntlScope from '@/i18n/IntlScope';
 import AppProviders from './mounts/AppProviders';
 
+/** Request-specific CSP nonces require a fresh document. */
+export const dynamic = 'force-dynamic';
+
 /**
  * The chat shell manages its own gestures (swipes, pinch on media, the
  * composer that iOS would zoom into), so it alone turns off page zoom; the

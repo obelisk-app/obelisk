@@ -143,7 +143,7 @@ export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
   {
     id: 'sw-version', area: LS, key: 'obelisk-sw-version', match: 'exact', category: 'offline',
     holds: 'The service worker version the page last reloaded for.', why: 'Reloads once per worker update, not in a loop.',
-    perAccount: false, sensitive: false, source: 'src/app/[locale]/layout.tsx',
+    perAccount: false, sensitive: false, source: 'public/pwa-register.js',
   },
   // ---- language -----------------------------------------------------------
   {

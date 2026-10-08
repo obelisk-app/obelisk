@@ -34,10 +34,7 @@ const LITERAL = /(['"])((?:\\.|(?!\1)[^\\\n])*)\1|`([^`]*)`/g;
 const KEY_LIKE = /^(?:obelisk|@nostr-wot\/[\w-]+:|nostr-wot-sdk|chat:lastSeen)/;
 
 /** Literals that look like keys in storage files but are not stored. */
-const NOT_STORAGE = new Set([
-  'obelisk-pwa-route-guard', // layout.tsx: a <Script> id
-  'obelisk-pwa-register', // layout.tsx: a <Script> id
-]);
+const NOT_STORAGE = new Set<string>();
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -64,7 +61,7 @@ interface Found { readonly key: string; readonly file: string }
 
 function scanAll(): Found[] {
   const found: Found[] = [];
-  for (const path of walk(SRC)) {
+  for (const path of [...walk(SRC), join(process.cwd(), 'public/pwa-register.js')]) {
     const file = relative(SRC, path);
     if (SKIP.test(file)) continue;
     const source = stripComments(readFileSync(path, 'utf8'));

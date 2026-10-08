@@ -2,14 +2,12 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { locale as segmentLocale } from 'next/root-params';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { LOCALES, isLocale } from '@/i18n';
 import IntlScope from '@/i18n/IntlScope';
 import { siteJsonLd, siteMetadata } from '@/utils/seo/site';
-import { PWA_ROUTE_GUARD } from '@/constants/seo/site';
 import ToastStack from '@/components/feedback/ToastStack';
 import { ConfirmDialogHost } from '@/components/ui/overlays/ConfirmDialog';
 import AppearancePreferencesRoot from '@/components/settings/appearance/AppearancePreferencesRoot';
@@ -64,11 +62,6 @@ export const viewport: Viewport = {
 export default async function LocaleLayout({ children }: { children: ReactNode }) {
   const locale = await segmentLocale();
   if (!isLocale(locale)) notFound();
-  // Per-request CSP nonce minted by src/proxy.ts. Stamping it on every
-  // inline <Script>/<script> we render keeps the strict CSP green; any
-  // injected upstream script (Cloudflare, browser extensions) without
-  // this nonce is correctly blocked.
-  const nonce = (await headers()).get('x-nonce') ?? undefined;
   const jsonLd = siteJsonLd(await getTranslations({ locale }), locale);
 
   return (
@@ -76,55 +69,14 @@ export default async function LocaleLayout({ children }: { children: ReactNode }
       <head>
         <script
           type="application/ld+json"
-          nonce={nonce}
-          // React 19 strips the nonce attribute from DOM nodes after CSP
-          // evaluation (security: prevents JS from reading the nonce). The
-          // SSR HTML keeps it (browser uses it during initial parse) but
-          // hydration sees nonce="" on the live element. This is intended;
-          // suppress the otherwise-confusing warning.
-          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
         />
-        {/* PWA route guard (see PWA_ROUTE_GUARD): an installed app opened
-            on the landing page jumps to the chat shell in the same
-            language. Rendered as a
-            native <script> in <head> (not next/script) so it runs as the
-            HTML is parsed (earlier than `beforeInteractive`) and
-            sidesteps React 19's nonce-stripping hydration warning, same
-            pattern as the JSON-LD block above. */}
-        <script
-          id="obelisk-pwa-route-guard"
-          nonce={nonce}
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: PWA_ROUTE_GUARD }}
-        />
-        {/* Register the minimal service worker so Chrome / Edge / Brave
-            offer the "Install app" prompt. The worker itself is
-            pass-through (see /public/sw.js); registering it is the
-            installability gate, not a behavior change. */}
-        <Script id="obelisk-pwa-register" strategy="afterInteractive" nonce={nonce}>
-          {`
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.addEventListener('message', function (event) {
-                if (!event.data || event.data.type !== 'OBELISK_SW_UPDATED') return;
-                var key = 'obelisk-sw-version';
-                var nextVersion = String(event.data.version || '');
-                try {
-                  if (nextVersion && localStorage.getItem(key) === nextVersion) return;
-                  if (nextVersion) localStorage.setItem(key, nextVersion);
-                } catch (e) {}
-                window.location.reload();
-              });
-              window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).then(function (registration) {
-                  registration.update().catch(function () {});
-                }).catch(function () {
-                  /* swallow: installability is a UX bonus, not a hard requirement */
-                });
-              });
-            }
-          `}
-        </Script>
+        {/* Native blocking script: redirects an installed PWA before the landing paints.
+            No inline next/script wrapper, so the same root can be prerendered. */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts -- Must redirect installed PWAs before first paint, without an inline bootstrap. */}
+        <script id="obelisk-pwa-route-guard" src="/pwa-route-guard.js" />
+        <Script id="obelisk-pwa-register" strategy="afterInteractive" src="/pwa-register.js" />
+
       </head>
       <body
         className={`${inter.className} bg-lc-black text-lc-white antialiased`}
