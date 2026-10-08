@@ -6,14 +6,18 @@ import { MobileScreenBody } from '@/app/[locale]/app/mobile/carousel/MobileScree
 import { TopLevelScreen } from '@/app/[locale]/app/mobile/carousel/TopLevelScreen';
 import type { MobileScreenProps } from '@/hooks/shell/mobile/nav/usePhoneShell';
 
-const { stub } = vi.hoisted(() => ({ stub: (name: string) => (p: Record<string, unknown>) => (
+const { stub, counts } = vi.hoisted(() => ({ counts: { feed: 0 }, stub: (name: string) => (p: Record<string, unknown>) => (
   <div data-testid={name} data-props={JSON.stringify(Object.fromEntries(Object.entries(p).filter(([, v]) => typeof v !== 'function')))}>
     {Object.entries(p).filter(([, v]) => typeof v === 'function').map(([k, v]) => (
       <button key={k} data-testid={`${name}:${k}`} onClick={() => (v as (...a: unknown[]) => void)('arg')} />
     ))}
   </div>
 ) }));
-vi.mock('@/components/social/FeedScreen', () => ({ default: stub('feed') }));
+vi.mock('@/components/social/FeedScreen', async () => {
+  const { memo } = await import('react');
+  const Feed = stub('feed');
+  return { default: memo((props: Record<string, unknown>) => { counts.feed += 1; return <Feed {...props} />; }) };
+});
 vi.mock('@/app/[locale]/app/mobile/screens/channel/ChannelScreen', () => ({ ChannelScreen: stub('channel') }));
 vi.mock('@/app/[locale]/app/mobile/screens/channel/MemberListScreen', () => ({ MemberListScreen: stub('members') }));
 vi.mock('@/app/[locale]/app/mobile/screens/dm/ComposeDmScreen', () => ({ ComposeDmScreen: stub('compose') }));
@@ -67,6 +71,14 @@ describe('the phone screen table', () => {
     sub.unmount();
   });
 
+  it('keeps the profile callback stable across unrelated shell renders', () => {
+    const p = props();
+    const view = top('feed', p);
+    const before = counts.feed;
+    view.rerender(<TopLevelScreen screen="feed" p={{ ...p }} />);
+    expect(counts.feed).toBe(before);
+  });
+
   it('opens the feed profile with exploreProfile', () => {
     const p = props();
     top('feed', p);
@@ -74,7 +86,7 @@ describe('the phone screen table', () => {
     expect(p.exploreProfile).toHaveBeenCalledWith('arg');
   });
 
-  it('mounts the sub-screen for its target, or the empty screen without one', () => {
+  it('mounts the sub-screen for its target, or the empty screen without one', async () => {
     const cases: Array<[Partial<NavState>, string]> = [
       [{ screen: 'channel', groupId: 'g' }, 'channel'],
       [{ screen: 'channel' }, 'empty'],
@@ -97,6 +109,7 @@ describe('the phone screen table', () => {
     ];
     for (const [n, id] of cases) {
       const { unmount } = body(n);
+      if (id === 'prefs') await screen.findByTestId(id);
       expect([n.screen, shown()]).toEqual([n.screen, id]);
       unmount();
     }

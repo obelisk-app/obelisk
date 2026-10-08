@@ -53,12 +53,14 @@ vi.mock('@/components/media/library/MediaLibraryModal', () => ({
 }));
 
 // Every test imports UserPanel lazily (so the mocks above are in place).
-// The first import compiles the whole settings graph: about two seconds
+// Precompile the now-lazy settings graph: about two seconds
 // alone, and far more under a full parallel run, which the first test used
 // to pay inside its own time limit. Pay it once here, under a limit meant
 // for compiling.
 beforeAll(async () => {
   await import('@/app/[locale]/app/user-panel/UserPanel');
+  await import('@/app/[locale]/app/user-panel/UserSettingsModal');
+  await import('@/app/[locale]/app/settings/PreferencesPanel');
 }, 120_000);
 
 beforeEach(() => {
@@ -77,9 +79,10 @@ describe('UserPanel personal media access', () => {
         <UserPanel pubkey={'a'.repeat(64)} isMe initialEditing onClose={() => {}} />
       </LocaleProvider>,
     );
+    await screen.findByTestId('user-edit-modal');
 
     fireEvent.click(screen.getByTestId('desktop-media-library'));
-    expect(screen.getByTestId('media-library-stub')).toHaveAttribute('data-embedded', 'true');
+    expect(await screen.findByTestId('media-library-stub')).toHaveAttribute('data-embedded', 'true');
     expect(screen.getByTestId('user-edit-modal')).toContainElement(screen.getByTestId('media-library-stub'));
   });
 
@@ -91,6 +94,7 @@ describe('UserPanel personal media access', () => {
         <UserPanel pubkey={'a'.repeat(64)} isMe initialEditing onClose={onClose} />
       </LocaleProvider>,
     );
+    await screen.findByTestId('user-edit-modal');
 
     // The banner and avatar are now a single clickable header: tapping
     // either opens the file picker, and the URL fields stay below it for
@@ -117,6 +121,7 @@ describe('UserPanel personal media access', () => {
         <UserPanel pubkey={'a'.repeat(64)} isMe initialEditing onClose={onClose} />
       </LocaleProvider>,
     );
+    await screen.findByTestId('user-edit-modal');
 
     fireEvent.keyDown(document, { key: 'Escape' });
 
@@ -311,6 +316,7 @@ describe('settings modal sections', () => {
         <UserPanel pubkey={'a'.repeat(64)} isMe initialEditing initialTab={initialTab} onClose={() => {}} />
       </LocaleProvider>,
     );
+    await screen.findByTestId('user-edit-modal');
   };
 
   it('lists every section in the sidebar and switches between them', async () => {

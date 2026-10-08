@@ -19,7 +19,7 @@ export function TopLevelScreen({ screen, p }: { screen: ScreenName; p: MobileScr
     case 'server':
       return <ServerScreen go={p.go} selectGroup={p.selectGroup} />;
     case 'feed':
-      return <FeedScreen mobile onOpenProfile={(pubkey) => p.exploreProfile(pubkey)} />;
+      return <FeedScreen mobile onOpenProfile={p.exploreProfile} />;
     case 'dms-list':
       return p.dmOptInEnabled
         ? <DmsListScreen go={p.go} selectPeer={p.selectPeer} myFollows={p.myFollows} />

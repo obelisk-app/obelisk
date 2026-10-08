@@ -92,10 +92,10 @@ describe('SidebarMe', () => {
     expect(handle).not.toContain('a'.repeat(12));
   });
 
-  it('the gear opens settings on Preferences (General), not the profile editor', () => {
+  it('the gear opens settings on Preferences (General), not the profile editor', async () => {
     renderLocalized(<SidebarMe />);
     fireEvent.click(screen.getByTestId('user-settings-button'));
-    expect(screen.getByTestId('settings-section-general')).toBeInTheDocument();
+    expect(await screen.findByTestId('settings-section-general')).toBeInTheDocument();
     expect(screen.getByTestId('user-settings-button').querySelector('svg')).not.toBeNull();
   });
 

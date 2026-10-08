@@ -3,9 +3,10 @@
 import type { RefObject } from 'react';
 import type { NavState, ScreenName } from '@/utils/shell/mobile/url-state';
 import type { MobileScreenProps } from '@/hooks/shell/mobile/nav/usePhoneShell';
-import { carouselSlots, overlayScreenKeyFor, showsOverlay } from '@/utils/shell/mobile/carousel-slots';
+import { overlayScreenKeyFor, showsOverlay } from '@/utils/shell/mobile/carousel-slots';
 import { MessageActionsSheet } from '../sheets/message/MessageActionsSheet';
 import { MobileScreenBody } from './MobileScreenBody';
+import { useCarouselSlots } from '@/hooks/shell/mobile/carousel/useCarouselSlots';
 import { TopLevelScreen } from './TopLevelScreen';
 
 type Props = {
@@ -20,23 +21,19 @@ type Props = {
   openZap: MobileScreenProps['openZap'];
 };
 
-/** The carousel: four persistent tab slots, the sub-screen overlay, and the sheets. */
+/** Tabs mount on first exposure and retain their state; sub-screens and sheets overlay them. */
 export function MobileScreensHost({
   hostRef, dragLayerRef, isDragging, nav, dragNeighbors, screenProps, slideClass, closeSheet, openZap,
 }: Props) {
+  const slots = useCarouselSlots(nav, dragNeighbors, isDragging);
   return (
     <div className="screens-host" ref={hostRef}>
       <div ref={dragLayerRef} className={`drag-layer ${isDragging ? 'is-dragging' : ''}`}>
-        {/* All four top-level screens are persistently mounted with stable
-         * keys per screen name. Their on-screen position is controlled by a
-         * role class (drag-prev / drag-curr / drag-next / drag-hidden), so a
-         * swipe-commit only flips classes, it does NOT remount any screen.
-         * Without this, every commit unmounted the neighbor (key changed)
-         * and remounted the new active screen, which caused titles +
-         * skeleton states to flash on every horizontal nav. */}
-        {carouselSlots(nav, dragNeighbors).map((slot) => (
+        {/* Slot keys stay stable after a tab is first shown or revealed by a
+         * swipe. Unvisited tabs do not fetch feeds or mount profile trees. */}
+        {slots.map((slot) => (
           <div key={slot.screen} className={`drag-slot ${slot.role}`} aria-hidden={slot.role !== 'drag-curr'}>
-            <TopLevelScreen screen={slot.screen} p={screenProps} />
+            {slot.mounted && <TopLevelScreen screen={slot.screen} p={screenProps} />}
           </div>
         ))}
         {/* Sub-screens (channel, forum, voice-room, dm-thread, profile-view,

@@ -31,8 +31,8 @@ subs + connection lifecycle) and [`read-state.md`](../architecture/read-state.md
 │  │ 1. Top-level tab carousel (`.drag-layer`)          │  │
 │  │    server | feed | dms-list | inbox |              │  │
 │  │    settings-profile                                │  │
-│  │    All five always mounted; role classes shift     │  │
-│  │    them between drag-prev / drag-curr / drag-next  │  │
+│  │    Mount on first exposure, then retain state     │  │
+│  │    Roles: drag-prev / drag-curr / drag-next         │  │
 │  └────────────────────────────────────────────────────┘  │
 │  ┌────────────────────────────────────────────────────┐  │
 │  │ Bottom-nav (5 buttons + active highlight)          │  │
@@ -40,18 +40,9 @@ subs + connection lifecycle) and [`read-state.md`](../architecture/read-state.md
 └──────────────────────────────────────────────────────────┘
 ```
 
-Layer 1 never remounts during a session: the five `<ServerScreen />`
-/ `<FeedScreen />` / `<DmsListScreen />` / `<InboxScreen />` /
-`<SettingsProfileScreen />` instances live in `.drag-slot` divs that flip
-CSS roles. Layer 2
-remounts whenever the sub-screen changes (different `key` on
-`.drag-overlay`). Layer 3 is a separate React subtree that mounts/un-
-mounts on `nav.screen === 'msg-actions'`. The zap button (on a message,
-or "zap" in the actions sheet) opens the shared `MessageZapModal` through
-`useMessageZapStore`, the same modal the desktop uses; it is not a screen
-and pushes no history entry. An entry saved by an older build that still
-names a `zap-modal` screen restores the screen under it (`restoredNav` in
-`url-state.ts`).
+Layer 1 keeps five stable `.drag-slot` containers, but mounts each tab's contents only when it is first active, is the parent behind a sub-screen, or is revealed as a neighbor during a drag or adjacent-tab animation. `useCarouselSlots` then retains that tab for the shell's lifetime, including cancelled swipes, preserving drafts and scroll position. Unvisited feed and profile tabs do not start their fetches, live tails, or engagement lookups. DM and inbox badge subscriptions remain in the shell, independently of whether their tabs have been visited.
+
+Layer 2 remounts whenever the sub-screen changes (different `key` on `.drag-overlay`). Layer 3 is a separate React subtree that mounts/unmounts on `nav.screen === 'msg-actions'`. The zap button (on a message, or "zap" in the actions sheet) opens the shared `MessageZapModal` through `useMessageZapStore`, the same modal the desktop uses; it is not a screen and pushes no history entry. An entry saved by an older build that still names a `zap-modal` screen restores the screen under it (`restoredNav` in `url-state.ts`).
 
 ## 2. Screen catalog
 
@@ -322,7 +313,7 @@ src/app/[locale]/app/mobile/
 ├── mobile-shell.css     (.drag-layer, .drag-slot.*, .drag-overlay,
 │                         .screen-anim slide keyframes, sheet keyframes)
 ├── carousel/            (MobileScreensHost: the slots; TopLevelScreen: the
-│                         four persistent tabs; MobileScreenBody: the
+│                         five retained tab slots; MobileScreenBody: the
 │                         sub-screen for `nav.screen`)
 ├── chrome/              (BottomNav, the voice status slot)
 ├── common/              (NameAvatar, shared by screens and sheets)

@@ -22,17 +22,20 @@ import { MemberListScreen } from '../screens/channel/MemberListScreen';
 import NostrProfile from '@/components/chat/profile/NostrProfile';
 import { SearchScreen } from '../screens/search/SearchScreen';
 import { ServerScreen } from '../screens/server/ServerScreen';
-import { SettingsPrefsScreen } from '../screens/settings/SettingsPrefsScreen';
+import { lazy, Suspense } from 'react';
+import Skeleton from '@/components/ui/animations/Skeleton';
 import { SettingsProfileScreen } from '../screens/settings/SettingsProfileScreen';
 import { EmptyScreen } from '../screens/status/EmptyScreen';
 import { VoiceRoomScreen } from '../screens/voice/VoiceRoomScreen';
+
+const SettingsPrefsScreen = lazy(() => import('../screens/settings/SettingsPrefsScreen').then((module) => ({ default: module.SettingsPrefsScreen })));
 
 export function MobileScreenBody({ nav, p }: { nav: NavState; p: MobileScreenProps }) {
   switch (nav.screen) {
     case 'server':
       return <ServerScreen go={p.go} selectGroup={p.selectGroup} />;
     case 'feed':
-      return <FeedScreen mobile onOpenProfile={(pubkey) => p.exploreProfile(pubkey)} />;
+      return <FeedScreen mobile onOpenProfile={p.exploreProfile} />;
     case 'channel':
       return nav.groupId ? (
         <ChannelScreen
@@ -87,7 +90,11 @@ export function MobileScreenBody({ nav, p }: { nav: NavState; p: MobileScreenPro
     case 'settings-profile':
       return <SettingsProfileScreen go={p.go} />;
     case 'settings-prefs':
-      return <SettingsPrefsScreen go={p.go} />;
+      return (
+        <Suspense fallback={<Skeleton className="screen active" data-testid="mobile-settings-loading" />}>
+          <SettingsPrefsScreen go={p.go} />
+        </Suspense>
+      );
     case 'profile-edit':
       return <EditProfileScreen go={p.go} />;
     case 'msg-actions':
