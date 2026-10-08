@@ -29,13 +29,13 @@ const localIPs = Object.values(networkInterfaces())
   .filter((iface) => iface && !iface.internal && iface.family === 'IPv4')
   .map((iface) => iface!.address);
 
-// The real, nonce-bearing CSP is set per request in src/proxy.ts. This is
+// The document CSP (build hashes or a nonce) is set in src/proxy.ts. This is
 // the static floor for the responses the proxy does not see: its matcher
 // skips /api, /_next/static, /_next/image and files with an extension, and
 // next@16.2.x shipped several "Middleware / Proxy bypass" advisories that
 // let a page request skip it too. Without this header such a response
 // carried no CSP at all. The floor is built from the same directive list
-// as the proxy's policy with 'unsafe-inline' in place of the nonce, which
+// as the proxy's policy with 'unsafe-inline' in place of hashes/nonces, which
 // makes it a strict superset: wherever both headers reach a browser the
 // intersection is exactly the proxy policy, and alone it still pins script
 // and frame hosts, blocks plugins, framing, base-uri and form-action. See

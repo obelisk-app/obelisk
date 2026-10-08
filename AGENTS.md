@@ -6,7 +6,7 @@ This is the one instruction file for every agent in this repo; `CLAUDE.md` only 
 
 ## Stack
 
-- Next.js 16 (App Router) + TypeScript + Tailwind v4 (La Crypta design system). Pages are client-rendered over the bridge; the server side is small: `src/proxy.ts` (CSP nonce, first-visit locale), server metadata and the public `/notes`, `/p` viewers (`src/services/server/`), one API route, `src/app/api/link-preview/route.ts` (OpenGraph unfurl, so a link a reader only *views* never reaches a third-party OG service), and the live preview-card route `src/app/[locale]/og/[kind]/[id]/route.ts` (the cards of notes, profiles, hashtags and relay share links; every other card is a committed PNG). No database, no session server.
+- Next.js 16 (App Router) + TypeScript + Tailwind v4 (La Crypta design system). Pages are client-rendered over the bridge; the server side is small: `src/proxy.ts` (static script hashes, dynamic CSP nonces, first-visit locale), server metadata and the public `/notes`, `/p` viewers (`src/services/server/`), one API route, `src/app/api/link-preview/route.ts` (OpenGraph unfurl, so a link a reader only *views* never reaches a third-party OG service), and the live preview-card route `src/app/[locale]/og/[kind]/[id]/route.ts` (the cards of notes, profiles, hashtags and relay share links; every other card is a committed PNG). No database, no session server.
 - `nostr-tools` for events, signing and sockets. The RelayHub (`src/lib/relay-hub/`) owns the app's relay sockets; the exceptions are the NIP-46 `BunkerSigner` (its own connection to the bunker's relays) and the SFU's direct WebSocket RPC (`src/services/voice/sfu-rpc-direct.ts`).
 - `@nostr-wot/*`: `data` and `ui` (WoT-aware profiles, the login widget), `dm` (NIP-17 wire format), `pq` (post-quantum DM scheme), `signers`, `wallet` (NIP-57 zap requests and receipt validation).
 - Zustand stores in `src/store/<module>/` (a module's main store is its `index.ts`): `chat` (with `chat/dm`, `chat/channel-prefs`, `chat/message-zap`), `call/dm-call` (with `dm-call-store`, `-policy`, `-runtime`), `voice`, `notifications`, `read-state`, `games`, `hints`, `moderation`, `feedback/toast`, `wallet/invoice-payments`, `wallet/nwc-wallet`, and the per-account plumbing in `common/` (`multi-account`, `persist-version`). Identity is not a store: it lives on the bridge.
@@ -29,7 +29,7 @@ npm run test:related -- <src files>         # every test that imports those file
 npm run test:guards     # the structural guard tests only (~20 s)
 bash scripts/agents/link-deps.sh            # agent worktree: link the canonical node_modules (see Testing)
 npm run test:e2e        # Playwright (test:e2e:voice for the voice set; *:headed variants)
-npm run build           # next build --webpack
+npm run build           # next build --webpack, then immutable public-page CSP hashes
 npm run seo:check       # build, start, crawl every route as search and preview bots do; fails on any SEO problem (docs/i18n.md#seo)
 npm run snap-og         # draw the static pages' preview cards into public/og/cards/ (after changing seo copy, a guide's front matter or the card design)
 bash scripts/check-source-bytes.sh          # rejects raw control bytes in tracked files
@@ -37,6 +37,8 @@ npx tsx scripts/i18n/hardcoded-baseline.ts  # regenerate the hardcoded-strings b
 npx tsx scripts/markup-only/baseline.ts     # regenerate the markup-only baseline (--list <folder>, --top 20)
 npx tsx scripts/layers/scan.ts [folder]     # what breaks the layer-contents rule (constants, hooks, utils, services)
 ```
+
+Public document caching and the build-bound script policy are documented in [docs/static-public-pages.md](docs/static-public-pages.md).
 
 CI (`.github/workflows/ci.yml`) runs: `npm ci`, `check-source-bytes.sh`, `lint`, `typecheck`, `test`, then `build` in a second job.
 

@@ -7,6 +7,7 @@ Detailed specs, plans and references for Obelisk subsystems. Start with [../AGEN
 - [conventions.md](conventions.md) - component files are markup (view-model hooks, utils, services, one component per file, the markup-only ratchet) and the shared modal and sheet chrome.
 - [data-system.md](data-system.md) - priority tiers (P0/P1/P2/P3), login → connect contract, whitelist preflight, connection banner, bridgeCache, NIP-42 AUTH, watchdog tunables, UI loading states, local data (the inventory, Settings > Data on this device, the write fence).
 - [read-state.md](read-state.md) - per-channel and per-DM cursors, mention/reply detection, MentionNavigator, encrypted multi-device sync via NIP-59 gift wrap, deferred-mount gating for relay-sync subs.
+- [static-public-pages.md](static-public-pages.md) - immutable public HTML, dynamic nonces, build-bound script hashes and deployment requirements.
 - [i18n.md](i18n.md) - the three languages: URL locales, message modules and route scopes, `errorText`, the hardcoded-string ratchet, adding a language.
 - [direct-messages.md](direct-messages.md) - where the DM code is, NIP-17 by default and NIP-04 per thread, the inbox ladder, encrypted uploads.
 - [dm-metadata-privacy.md](dm-metadata-privacy.md) - what gift-wrapped DMs still leak, the relay ladder, AUTH modes, the rules for changing DM routing.

@@ -4,7 +4,7 @@ This pass follows the UI-efficiency audit. It corrects an over-broad rule from t
 
 ## Structure and browser work
 
-The landing route now contains its composition and post-quantum section. The single-use LandingPage component and unused navigation hook are removed. Static landing sections render on the server; FAQ disclosure, video activation, navigation, consent actions and animations retain their client boundaries.
+The landing route now owns its composition; the post-quantum block is a peer section component. The single-use LandingPage component and unused navigation hook are removed. Static landing sections render on the server; FAQ disclosure, video activation, navigation, consent actions and animations retain their client boundaries.
 
 Desktop and mobile showcase routes now own their content directly and render it on the server. Features and both tours use MarketingPageHeader and MarketingCta for their repeated introductory and closing structures, built on shared Container, Card, PageSection and typography primitives. Screenshot frames also use Card. The existing shared Navbar and Footer remain. Four scope-only layouts are removed: features, desktop, mobile and media-kit. Guides/help still share scopes across multiple pages; viewers and relay-share keep persistent bridge boundaries; voice shares viewport settings while each page selects its own messages.
 
@@ -34,9 +34,11 @@ The app retains the dictionaries required by its feature surfaces. Features, hel
 
 The landing page's static client import closure falls from 184 local source files / 211,942 raw source bytes to 158 / 155,522. This measures the code moved out of client reachability, not a production bundle size. Server-rendered text and translated props still contribute to HTML/RSC output.
 
-## Features caching decision
+## Initial Features caching decision
 
 Features has no request-specific content or live data fetching. However, the shared locale root reads headers to stamp a freshly generated CSP nonce into the document. That makes the full response request-rendered; adding `revalidate = false` to Features would not make it static. Following the user's explicit choice, this pass preserves that policy and does not claim once-per-locale HTML generation. A future full-page cache requires a static-compatible security design and production verification. Guide data's existing content-version cache is separate from full-document caching.
+
+The subsequent approved [static-public-pages change](../static-public-pages.md) supersedes this initial caching decision: public documents use build-bound script hashes while dynamic routes retain per-request nonces. Public pages now share navbar/footer and the public translation scope through `[locale]/(site)/layout.tsx`; URLs are unchanged.
 
 ## Regression coverage and review
 
