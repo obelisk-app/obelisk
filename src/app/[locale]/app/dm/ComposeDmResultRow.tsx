@@ -1,6 +1,6 @@
 'use client';
 
-import type { UserHit } from '@/hooks/identity/useNostrUserSearch';
+import type { UserHit } from '@/constants/identity/user-search';
 import { useComposeDmResultRow } from '@/hooks/shell/dm/useComposeDmResultRow';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import { CheckBadgeIcon } from '@/assets/icons';

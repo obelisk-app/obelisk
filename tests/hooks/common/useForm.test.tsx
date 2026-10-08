@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider, translator } from '@tests/support/intl';
 import { CodedError } from '@/utils/errors/codes';
-import { useForm, type FormSpec } from '@/hooks/common/useForm';
+import { useForm } from '@/hooks/common/useForm';
+import type { FormSpec } from '@/constants/common/form';
 
 const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
 

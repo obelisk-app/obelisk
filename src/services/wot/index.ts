@@ -3,5 +3,6 @@
  * should import from here, never from the internal modules directly.
  */
 export { isAllowed, wotEngine, type WotEngineConfig } from './engine';
-export { useWotStore, initializeWot } from './store';
+export { useWotStore } from '@/store/wot';
+export { initializeWot } from './initialize';
 export type { WotStatus } from './extension';

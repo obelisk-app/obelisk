@@ -1,7 +1,7 @@
 'use client';
 
 import { formatPubkey } from '@nostr-wot/data';
-import type { UserHit } from '@/hooks/identity/useNostrUserSearch';
+import type { UserHit } from '@/constants/identity/user-search';
 import { useNip05Status } from '@/hooks/identity/useNip05Status';
 import { nameInitial } from '@/utils/shell/desktop/search-results';
 

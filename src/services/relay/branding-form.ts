@@ -1,4 +1,4 @@
-import type { FormSpec } from '@/hooks/common/useForm';
+import type { FormSpec } from '@/constants/common/form';
 import { trimmedValues } from '@/utils/common/form-rules';
 import { publishBranding, type RelayBranding } from './relay-branding';
 

@@ -22,7 +22,7 @@
  * The placeholder is per message and per reader: tapping it reveals that
  * message's media only. The setting itself is changed in Settings (see
  * `setRemoteMediaMode`). This module is pure state and policy; the React
- * gate that joins it to the bridge lives in `./remote-media-gate.ts`.
+ * gate that joins it to the bridge lives in `src/hooks/media/remote/useRemoteMediaGate.ts`.
  *
  * Why not a proxy: moving the fetch to our own server would remove the leak
  * entirely, but it is a new server route with the same SSRF surface as

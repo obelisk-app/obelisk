@@ -84,15 +84,11 @@ export function useFeed(
   const [nonce, setNonce] = useState(0);
 
   const seededKey = useRef<string | null>(null);
-  const liveRef = useRef(false);
-  // Which feed is on screen right now. An in-flight page resolves into
-  // whatever the hook is showing *then*, not what it was showing when the
-  // request went out: switching tabs mid-page-load merged Following notes
-  // into Global, and the next write persisted them there.
-  const keyRef = useRef(key);
-  useLayoutEffect(() => {
-    keyRef.current = key;
-  }, [key]);
+  // A request belongs to this visit, not merely a feed key: navigating
+  // away and back must not revive an older page. The ref also closes the
+  // same-tick gap before React paints the loading flag.
+  const pageRequest = useRef<symbol | null>(null);
+  useLayoutEffect(() => () => { pageRequest.current = null; }, [key]);
   // Whether this feed has already fallen back to the wider relay set. Reset
   // with the feed key below: widening is per view, not per session.
   const widenedRef = useRef(false);
@@ -147,6 +143,7 @@ export function useFeed(
       .filter((note) => awaitingFollows || noteMatchesSource(note, feedSource, allowedAuthors, filter));
     setNotes(cached);
     setPending([]);
+    setLoadingMore(false);
     setExhausted(false);
     widenedRef.current = false;
     setLoading(cached.length === 0);
@@ -189,10 +186,10 @@ export function useFeed(
   // jump under a reading user.
   useEffect(() => {
     if (awaitingFollows) return;
-    liveRef.current = true;
+    let live = true;
     const since = Math.floor(Date.now() / 1000);
     const stop = subscribeSocial(liveTailFilters(feedSource, filter, since), (event) => {
-      if (!liveRef.current) return;
+      if (!live) return;
       // The coalescer delivers every event from every consumer sharing this
       // relay set, so an unguarded handler fills the Following feed with
       // whoever happened to reply to anything. See `noteMatchesSource`.
@@ -204,7 +201,7 @@ export function useFeed(
       ));
     }, { relays: relayList });
     return () => {
-      liveRef.current = false;
+      live = false;
       stop();
     };
   }, [awaitingFollows, feedSource, filter, allowedAuthors, relayList]);
@@ -212,11 +209,12 @@ export function useFeed(
   useFeedSignals(notes, sort);
 
   const loadMore = useCallback(() => {
-    if (loadingMore || exhausted) return;
+    if (pageRequest.current || exhausted) return;
     const until = nextCursor(notes);
     if (until === undefined) return;
     setLoadingMore(true);
-    const requestedFor = key;
+    const requestedFor = Symbol(key);
+    pageRequest.current = requestedFor;
 
     /**
      * Page, and if the configured relays have nothing left, widen once.
@@ -241,7 +239,7 @@ export function useFeed(
         // The reader switched feeds while this page was in flight. Merging it
         // now would splice these notes into a different feed's list, and the
         // next write would persist them into that feed's cache.
-        if (keyRef.current !== requestedFor) return;
+        if (pageRequest.current !== requestedFor) return;
         if (widened) widenedRef.current = true;
         setNotes((current) => {
           const guarded = filterForSource(events, feedSource, allowedAuthors, filter);
@@ -255,9 +253,15 @@ export function useFeed(
           return merged;
         });
       })
-      .catch(() => setExhausted(true))
-      .finally(() => setLoadingMore(false));
-  }, [notes, loadingMore, exhausted, key, feedSource, relayList, filter, allowedAuthors, persist]);
+      .catch(() => {
+        if (pageRequest.current === requestedFor) setExhausted(true);
+      })
+      .finally(() => {
+        if (pageRequest.current !== requestedFor) return;
+        pageRequest.current = null;
+        setLoadingMore(false);
+      });
+  }, [notes, exhausted, key, feedSource, relayList, filter, allowedAuthors, persist]);
 
   const showPending = useCallback(() => {
     setPending((buffered) => {

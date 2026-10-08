@@ -1,6 +1,6 @@
 /**
  * The checks several forms repeat, as pure functions over typed text. A form
- * spec's `ready` and `validate` (`FormSpec`, `src/hooks/common/useForm.ts`)
+ * spec's `ready` and `validate` (`FormSpec`, `src/constants/common/form.ts`)
  * are built from these, so "blank", "a relay address" and "a member's key"
  * mean the same thing in every form.
  */

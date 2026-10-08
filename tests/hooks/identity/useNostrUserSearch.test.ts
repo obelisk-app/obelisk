@@ -121,6 +121,7 @@ describe('useNostrUserSearch', () => {
     expect(result.current.nip05Hit?.pubkey).toBe(alice);
 
     rerender({ q: 'bob@example.com' });
+    expect(result.current.nip05Hit).toBeNull();
     seen.length = 0;
     await act(async () => { await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS + 1); });
     expect(seen.length).toBeGreaterThan(0);
@@ -138,4 +139,35 @@ describe('useNostrUserSearch', () => {
     expect(result.current.nip05Hit).toBeNull();
     expect(result.current.nostrResults).toEqual([]);
   });
+
+  it('does not expose a previous direct hit while the new query is debouncing', () => {
+    const { result, rerender } = renderHook(({ q }) => useNostrUserSearch(q), {
+      initialProps: { q: 'a'.repeat(64) },
+    });
+    expect(result.current.directHit?.pubkey).toBe('a'.repeat(64));
+    rerender({ q: 'bob' });
+    expect(result.current.directHit).toBeNull();
+  });
+
+  it('discards non-text profile fields before they reach search rows', () => {
+    mockUseNostrQuery.mockReturnValue({ events: [{
+      kind: 0, pubkey: 'a'.repeat(64), created_at: 1,
+      content: JSON.stringify({ displayName: { bad: true }, name: 'Alice', picture: [], nip05: 12 }),
+    }], loading: false });
+    const { result } = renderHook(() => useNostrUserSearch('alice'));
+    expect(result.current.nostrResults).toEqual([{
+      pubkey: 'a'.repeat(64), displayName: 'Alice', picture: null, nip05: null,
+    }]);
+  });
+
+  it('uses the newest profile event for a person regardless of relay delivery order', () => {
+    mockUseNostrQuery.mockReturnValue({ events: [
+      { kind: 0, pubkey: 'a'.repeat(64), created_at: 1, content: '{"name":"Old"}' },
+      { kind: 0, pubkey: 'a'.repeat(64), created_at: 2, content: '{"name":"Current"}' },
+    ], loading: false });
+    const { result } = renderHook(() => useNostrUserSearch('alice'));
+    expect(result.current.nostrResults).toHaveLength(1);
+    expect(result.current.nostrResults[0].displayName).toBe('Current');
+  });
+
 });

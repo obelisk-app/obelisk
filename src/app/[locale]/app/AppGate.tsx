@@ -18,7 +18,7 @@ import dynamic from 'next/dynamic';
 // in practice means the first paint of the mobile UI is unstyled (SVG
 // icons render at default browser size, etc.).
 import './mobile/mobile-shell.css';
-import ReadStateRoot from '@/services/read-state/root';
+import ReadStateRoot from '@/components/read-state/ReadStateRoot';
 import ActivityIndicator from '@/components/feedback/ActivityIndicator';
 import { useAppGate } from '@/hooks/shell/mounts/useAppGate';
 

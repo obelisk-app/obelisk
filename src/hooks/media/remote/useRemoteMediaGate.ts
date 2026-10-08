@@ -1,20 +1,15 @@
 'use client';
 
 /**
- * React side of `./remote-media.ts`: joins the policy to the bridge (own
+ * React side of `services/media/remote-media.ts`: joins the policy to the bridge (own
  * pubkey, follows) and the WoT engine, and gives a message component one
  * boolean plus a per-message reveal.
  */
 
 import { useCallback, useEffect, useState } from 'react';
-// From the hook files rather than the `@/services/nostr-bridge` index on
-// purpose: several component tests partially mock the index for the hooks
-// their component uses, and a gate that reached for the mock would throw on
-// the exports they left out.
-import { useMyPubkey } from '@/services/nostr-bridge/hooks/session';
-import { useMyFollows } from '@/services/nostr-bridge/hooks/lists';
+import { useMyPubkey, useMyFollows } from '@/services/nostr-bridge';
 import { wotEngine } from '@/services/wot/engine';
-import { mayAutoLoadRemoteMedia, type RemoteMediaSurface } from './remote-media';
+import { mayAutoLoadRemoteMedia, type RemoteMediaSurface } from '@/services/media/remote-media';
 import { useRemoteMediaSettings } from '@/hooks/media/remote/useRemoteMediaSettings';
 
 export interface RemoteMediaGate {

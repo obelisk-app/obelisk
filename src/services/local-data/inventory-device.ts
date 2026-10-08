@@ -24,7 +24,7 @@ export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
   pref('preferences', 'obelisk:preferences', 'exact', 'App settings: sounds, notifications, feed, call and social relays, DM opt-in, post-quantum, appearance.', 'src/services/preferences/preferences.ts'),
   pref('remote-media', 'obelisk:remote-media', 'exact', 'Whether to load images and embeds from other servers.', 'src/services/media/remote-media.ts'),
   pref('voice-quality', 'obelisk:voice:quality', 'exact', 'Voice and video quality choice.', 'src/store/voice/index.ts'),
-  pref('wot', 'obelisk:wot', 'exact', 'Web of trust on or off, hops and minimum paths.', 'src/services/wot/store.ts'),
+  pref('wot', 'obelisk:wot', 'exact', 'Web of trust on or off, hops and minimum paths.', 'src/store/wot/index.ts'),
   pref('hints', 'obelisk:hints:', 'prefix', 'Which tips this account has seen, or that tips are off.', 'src/store/hints/index.ts'),
   pref('hints-base', 'obelisk:hints', 'exact', 'The unscoped key of the hints store.', 'src/store/common/multi-account.ts'),
   pref('sidebar-width', 'obelisk-dex/sidebar-width', 'exact', 'Desktop channel sidebar width.', 'src/utils/shell/desktop/desktop-layout.ts'),

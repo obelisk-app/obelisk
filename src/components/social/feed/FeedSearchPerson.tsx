@@ -1,6 +1,6 @@
 'use client';
 
-import type { UserHit } from '@/hooks/identity/useNostrUserSearch';
+import type { UserHit } from '@/constants/identity/user-search';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import UserAvatar from '@/components/ui/media/UserAvatar';

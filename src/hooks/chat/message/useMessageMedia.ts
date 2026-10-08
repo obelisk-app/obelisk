@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import type { Components } from 'react-markdown';
 import { useChatStore } from '@/store/chat';
-import { useRemoteMediaGate, type RemoteMediaGate } from '@/services/media/remote-media-gate';
+import { useRemoteMediaGate, type RemoteMediaGate } from '@/hooks/media/remote/useRemoteMediaGate';
 import { mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import { buildMarkdownComponents } from '@/components/chat/message/markdown-components';
 import type { MentionMap } from '@/utils/message-text/placeholder-segments';

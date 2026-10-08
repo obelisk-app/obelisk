@@ -199,7 +199,7 @@ export function resetSignerQueue(): void {
 
 /**
  * Expose stats for manual inspection: `window.__obeliskSignerQueue.stats()`.
- * Mirrors the `window.wot = wotEngine` precedent in `src/services/wot/store.ts`.
+ * Mirrors the `window.wot = wotEngine` precedent in `src/services/wot/initialize.ts`.
  */
 export function installSignerQueueDebug(): void {
   if (typeof window === 'undefined') return;

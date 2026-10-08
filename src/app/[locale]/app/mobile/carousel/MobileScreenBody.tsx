@@ -19,7 +19,7 @@ import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
 import { ForumScreen } from '../screens/forum/ForumScreen';
 import { InboxScreen } from '../screens/inbox/InboxScreen';
 import { MemberListScreen } from '../screens/channel/MemberListScreen';
-import { ProfileViewScreen } from '../screens/profile/ProfileViewScreen';
+import NostrProfile from '@/components/chat/profile/NostrProfile';
 import { SearchScreen } from '../screens/search/SearchScreen';
 import { ServerScreen } from '../screens/server/ServerScreen';
 import { SettingsPrefsScreen } from '../screens/settings/SettingsPrefsScreen';
@@ -68,7 +68,7 @@ export function MobileScreenBody({ nav, p }: { nav: NavState; p: MobileScreenPro
       return <InboxScreen go={p.go} selectGroup={p.selectGroup} selectPeer={p.selectPeer} />;
     case 'profile-view':
       return nav.profilePubkey ? (
-        <ProfileViewScreen pubkey={nav.profilePubkey} back={p.backFromProfile} openDm={p.selectPeer} />
+        <NostrProfile mobile pubkey={nav.profilePubkey} onClose={p.backFromProfile} onMessage={p.selectPeer} />
       ) : <EmptyScreen go={p.go} title={p.t('mobile.empty.noProfileSelected')} />;
     case 'member-list':
       return nav.groupId ? (

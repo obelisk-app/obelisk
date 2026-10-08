@@ -15,7 +15,7 @@
  *     (default) on @mentions/replies, `'nothing'` never, not even a card.
  *
  * Persisted per account (`obelisk-channel-prefs:{pubkey}`), wired into
- * `PER_ACCOUNT_STORES` in `src/services/read-state/root.tsx`.
+ * `PER_ACCOUNT_STORES` in `src/services/read-state/account-stores.ts`.
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';

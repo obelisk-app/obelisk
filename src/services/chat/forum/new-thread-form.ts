@@ -1,6 +1,6 @@
 import { nostrActions } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
-import type { FormSpec } from '@/hooks/common/useForm';
+import type { FormSpec } from '@/constants/common/form';
 import { allFilled } from '@/utils/common/form-rules';
 import { emojiTagsForContent } from '@/utils/media/tags/custom-emoji-tags';
 

@@ -3,7 +3,7 @@ import type { GameInfo } from '@/lib/games/core/catalog';
 import { gameMarker, localSeatId } from '@/lib/games/protocol/protocol';
 import { publishCreate, publishStart } from '@/services/games/transport';
 import { useGamesStore } from '@/store/games';
-import type { FormSpec } from '@/hooks/common/useForm';
+import type { FormSpec } from '@/constants/common/form';
 import { gameCreateOptions, type ResumeSave } from '@/utils/games/new-game/game-options';
 
 export type NewGameValues = {

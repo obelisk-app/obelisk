@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/dynamic', () => ({ default: () => () => <div data-testid="shell" /> }));
-vi.mock('@/services/read-state/root', () => ({ default: () => null }));
+vi.mock('@/components/read-state/ReadStateRoot', () => ({ default: () => null }));
 vi.mock('@/components/feedback/ActivityIndicator', () => ({
   default: () => <div data-testid="desktop-activity-indicator" />,
 }));

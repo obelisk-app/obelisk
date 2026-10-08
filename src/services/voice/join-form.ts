@@ -1,4 +1,4 @@
-import type { FormSpec } from '@/hooks/common/useForm';
+import type { FormSpec } from '@/constants/common/form';
 import { filled } from '@/utils/common/form-rules';
 
 export type VoiceJoinValues = { room: string };

@@ -134,4 +134,76 @@ describe('useFeed', () => {
     await waitFor(() => expect(result.current.loadingMore).toBe(false));
     expect(ids(result.current.notes)).toEqual(['p1']);
   });
+
+  it('does not let an old failed page exhaust the newly selected feed', async () => {
+    const { result, rerender } = renderHook(({ source }) => useFeed(source, ['wss://r']), {
+      initialProps: { source: { kind: 'global' } as FeedSource },
+    });
+    await act(async () => t.pages[0].resolve([note('global', BOB, 10)]));
+    act(() => result.current.loadMore());
+    const oldPage = t.pages[1];
+    rerender({ source: { kind: 'profile', pubkey: ALICE } });
+    await act(async () => t.pages[2].resolve([note('profile', ALICE, 3)]));
+    await act(async () => oldPage.reject(new Error('old relay failed')));
+    expect(result.current.exhausted).toBe(false);
+    act(() => result.current.loadMore());
+    expect(t.pages.at(-1)?.until).toBe(NOW - 3);
+  });
+
+  it('starts pagination in a new feed without waiting for the old feed and ignores old cleanup', async () => {
+    const { result, rerender } = renderHook(({ source }) => useFeed(source, ['wss://r']), {
+      initialProps: { source: { kind: 'global' } as FeedSource },
+    });
+    await act(async () => t.pages[0].resolve([note('global', BOB, 10)]));
+    act(() => result.current.loadMore());
+    const oldPage = t.pages[1];
+    rerender({ source: { kind: 'profile', pubkey: ALICE } });
+    await act(async () => t.pages[2].resolve([note('profile', ALICE, 3)]));
+    expect(result.current.loadingMore).toBe(false);
+    act(() => result.current.loadMore());
+    expect(result.current.loadingMore).toBe(true);
+    await act(async () => oldPage.resolve([note('old', BOB, 30)]));
+    expect(result.current.loadingMore).toBe(true);
+    await act(async () => t.pages[3].resolve([note('older-profile', ALICE, 20)]));
+    expect(result.current.loadingMore).toBe(false);
+    expect(ids(result.current.notes)).toEqual(['profile', 'older-profile']);
+  });
+
+  it('starts only one older-page request when triggered twice before rendering', async () => {
+    const { result } = renderHook(() => useFeed({ kind: 'global' }, ['wss://r']));
+    await act(async () => t.pages[0].resolve([note('first', ALICE, 10)]));
+    act(() => {
+      result.current.loadMore();
+      result.current.loadMore();
+    });
+    expect(t.pages).toHaveLength(2);
+  });
+
+  it('discards a page from a previous visit to the same feed', async () => {
+    const { result, rerender } = renderHook(({ source }) => useFeed(source, ['wss://r']), {
+      initialProps: { source: { kind: 'global' } as FeedSource },
+    });
+    await act(async () => t.pages[0].resolve([note('first', ALICE, 10)]));
+    act(() => result.current.loadMore());
+    const oldPage = t.pages[1];
+    rerender({ source: { kind: 'profile', pubkey: ALICE } });
+    rerender({ source: { kind: 'global' } });
+    await act(async () => t.pages[3].resolve([note('fresh', ALICE, 5)]));
+    await act(async () => oldPage.resolve([note('stale', BOB, 30)]));
+    expect(ids(result.current.notes)).toEqual(['fresh']);
+  });
+
+
+  it('ignores a queued live event from a subscription closed by a feed switch', () => {
+    const { result, rerender } = renderHook(({ source }) => useFeed(source, ['wss://r']), {
+      initialProps: { source: { kind: 'global' } as FeedSource },
+    });
+    const oldDelivery = t.live[0];
+    rerender({ source: { kind: 'profile', pubkey: ALICE } });
+    act(() => oldDelivery(note('old-global-live', BOB, -1)));
+    expect(result.current.pendingCount).toBe(0);
+    act(() => result.current.showPending());
+    expect(result.current.notes).toEqual([]);
+  });
+
 });

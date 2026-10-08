@@ -4,7 +4,7 @@
  * Without per-account namespacing, persisted state (read cursors, mutes,
  * DM protocol overrides, ...) leaks across logins on the same browser.
  * Each store calls this factory once and exports the returned `ensure`
- * function; `ReadStateRoot` (src/services/read-state/root.tsx) invokes them all
+ * function; `ReadStateRoot` (src/services/read-state/account-stores.ts) invokes them all
  * when `myPubkey` changes, and the bridge calls two of them early in
  * `finalizeLogin` so the first ingest lands under the right key.
  *

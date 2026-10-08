@@ -1,6 +1,6 @@
 'use client';
 
-import type { UserHit } from '@/hooks/identity/useNostrUserSearch';
+import type { UserHit } from '@/constants/identity/user-search';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { useNip05Status } from '@/hooks/identity/useNip05Status';
 import { displayNameFor } from '@/utils/identity/display-name';

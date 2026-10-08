@@ -21,15 +21,15 @@ import {
   ZapIcon,
 } from '@/assets/icons';
 import { EditProfileForm } from '../settings/EditProfileForm';
-import { LocalDataSection } from '../settings/LocalDataSection';
+import LocalDataPanel from '@/components/settings/privacy/LocalDataPanel';
 import type { SettingsSection } from '@/services/settings/open-settings';
 import { AdvancedSettingsSection } from '../settings/AdvancedSettingsSection';
-import { AppearanceSettingsSection } from '../settings/AppearanceSettingsSection';
+import AppearancePreferenceControls from '@/components/settings/appearance/AppearancePreferenceControls';
 import { GeneralSettingsSection } from '../settings/GeneralSettingsSection';
-import { NotificationsSettingsSection } from '../settings/NotificationsSettingsSection';
+import NotificationSettings from '@/components/settings/notifications/NotificationSettings';
 import { PrivacySettingsSection } from '../settings/PrivacySettingsSection';
-import { RelaysSettingsSection } from '../settings/RelaysSettingsSection';
-import { WalletSettingsSection } from '../settings/WalletSettingsSection';
+import SocialRelaySettings from '@/components/settings/social-relays/SocialRelaySettings';
+import WalletSettings from '@/components/settings/wallet/WalletSettings';
 import type { MessageKey } from '@/i18n/keys';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
@@ -152,12 +152,12 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
                 />
               )}
               {settingsTab === 'general' && <GeneralSettingsSection />}
-              {settingsTab === 'appearance' && <AppearanceSettingsSection />}
-              {settingsTab === 'notifications' && <NotificationsSettingsSection />}
-              {settingsTab === 'relays' && <RelaysSettingsSection />}
+              {settingsTab === 'appearance' && <AppearancePreferenceControls />}
+              {settingsTab === 'notifications' && <NotificationSettings />}
+              {settingsTab === 'relays' && <SocialRelaySettings />}
               {settingsTab === 'privacy' && <PrivacySettingsSection />}
-              {settingsTab === 'wallet' && <WalletSettingsSection />}
-              {settingsTab === 'data' && <LocalDataSection />}
+              {settingsTab === 'wallet' && <WalletSettings />}
+              {settingsTab === 'data' && <LocalDataPanel />}
               {settingsTab === 'advanced' && <AdvancedSettingsSection />}
             </div>
           )}

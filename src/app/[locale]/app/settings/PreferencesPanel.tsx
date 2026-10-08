@@ -1,13 +1,13 @@
 'use client';
 
 import { AdvancedSettingsSection } from './AdvancedSettingsSection';
-import { AppearanceSettingsSection } from './AppearanceSettingsSection';
+import AppearancePreferenceControls from '@/components/settings/appearance/AppearancePreferenceControls';
 import { GeneralSettingsSection } from './GeneralSettingsSection';
-import { LocalDataSection } from './LocalDataSection';
-import { NotificationsSettingsSection } from './NotificationsSettingsSection';
+import LocalDataPanel from '@/components/settings/privacy/LocalDataPanel';
+import NotificationSettings from '@/components/settings/notifications/NotificationSettings';
 import { PrivacySettingsSection } from './PrivacySettingsSection';
-import { RelaysSettingsSection } from './RelaysSettingsSection';
-import { WalletSettingsSection } from './WalletSettingsSection';
+import SocialRelaySettings from '@/components/settings/social-relays/SocialRelaySettings';
+import WalletSettings from '@/components/settings/wallet/WalletSettings';
 
 /**
  * Every app section stacked - for surfaces with no sidebar. The desktop
@@ -17,12 +17,12 @@ export function PreferencesPanel() {
   return (
     <div className="space-y-8 p-4">
       <GeneralSettingsSection />
-      <AppearanceSettingsSection />
-      <NotificationsSettingsSection />
-      <RelaysSettingsSection />
+      <AppearancePreferenceControls />
+      <NotificationSettings />
+      <SocialRelaySettings />
       <PrivacySettingsSection />
-      <WalletSettingsSection />
-      <LocalDataSection />
+      <WalletSettings />
+      <LocalDataPanel />
       <AdvancedSettingsSection />
     </div>
   );

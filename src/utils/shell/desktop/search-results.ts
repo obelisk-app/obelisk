@@ -1,5 +1,5 @@
 import type { JsGroup } from '@/services/nostr-bridge';
-import type { UserHit } from '@/hooks/identity/useNostrUserSearch';
+import type { UserHit } from '@/constants/identity/user-search';
 
 /** One person in the search dropdown, with the badge saying how they were found. */
 export interface UserSearchRow {

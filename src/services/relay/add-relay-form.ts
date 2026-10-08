@@ -1,5 +1,5 @@
 import { nostrActions } from '@/services/nostr-bridge';
-import type { FormSpec } from '@/hooks/common/useForm';
+import type { FormSpec } from '@/constants/common/form';
 import { filled, isRelayAddress } from '@/utils/common/form-rules';
 import { normalizeRelayInput } from '@/utils/relay-url/relay-url-input';
 

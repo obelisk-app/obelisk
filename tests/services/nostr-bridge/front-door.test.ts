@@ -45,12 +45,7 @@ const SIDE_ENTRANCE_ALLOW_LIST: Readonly<Record<string, { paths: readonly string
       'runs pageRelayHub() at import time and wants only the hub, not the index ' +
       '(which loads the whole client); untangle by giving the page hub its own public home',
   },
-  'src/services/media/remote-media-gate.ts': {
-    paths: ['@/services/nostr-bridge/hooks/session', '@/services/nostr-bridge/hooks/lists'],
-    why:
-      'documented in the file: component suites partially mock the index for their own hooks ' +
-      'and leave useMyFollows/useMyPubkey out; moving needs those mocks onto bridgeMock first',
-  },
+
 };
 
 /** `from '...'`, `import '...'` and `import('...')`, across line breaks. */

@@ -386,16 +386,16 @@ See [`data-system.md` §4](./data-system.md) for the full priority table.
 ```
 src/app/[locale]/app/AppGate.tsx
 └── <ReadStateRoot/>  (gated on useIsLoggedIn)
-    │  src/services/read-state/root.tsx
-    ├── ensureReadStateStoreForAccount(myPubkey)
-    ├── ensureDMStoreForAccount(myPubkey)
-    ├── ensureModerationStoreForAccount(myPubkey)
-    ├── ensureForumFollowForAccount(myPubkey)
-    ├── [no gate] startGroupsRelaySync(activeRelay, groupIds)
-    ├── fetchRelayList(...) → setDmRelays  (NIP-65 read+write union)
-    ├── [gated by useReadyToSync] startDMRelaySync(dmRelays)
-    ├── useAutoMarkRead()
-    └── useFaviconBadge()
+    │  src/components/read-state/ReadStateRoot.tsx
+    └── useReadStateRuntime()  (src/hooks/read-state/)
+        ├── ensureReadStateAccount(myPubkey)  (services/read-state/account-stores.ts)
+        ├── armNotificationPermissionPrompt()
+        ├── [no gate] startGroupsRelaySync(activeRelay, groupIds)
+        ├── [useReadyToSync] startAccountDmSync(myPubkey, relays, activeRelay)
+        │   └── NIP-65 lookup + startDMRelaySync, cancelled together on account/relay change
+        ├── useAutoMarkRead()
+        ├── useMentionSeen()
+        └── useFaviconBadge()
 ```
 
 ## 10. LocalStorage conventions

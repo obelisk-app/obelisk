@@ -26,7 +26,7 @@
  * open and pin the UI in "checking" for as long as it likes), it does not
  * validate that the returned value is a 64-hex pubkey, and it binds `fetch`
  * at import time, which makes it awkward to test. The fetch here is ~20
- * lines and mirrors `resolveNip05` in `hooks/identity/useNostrUserSearch.ts`. The
+ * lines and mirrors `resolveNip05` in `services/identity/user-search.ts`. The
  * identifier grammar is still the library's `NIP05_REGEX`.
  *
  * ## Privacy

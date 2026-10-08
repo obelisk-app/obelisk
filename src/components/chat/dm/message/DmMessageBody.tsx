@@ -25,7 +25,7 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 import { EncryptedDmAttachment } from '@/components/chat/dm/message/EncryptedDmAttachment';
 import { RemoteMediaPlaceholder } from '@/components/chat/message/RemoteMediaPlaceholder';
 import { dmFileCategory } from '@/utils/attachments/dm-file';
-import { useRemoteMediaGate } from '@/services/media/remote-media-gate';
+import { useRemoteMediaGate } from '@/hooks/media/remote/useRemoteMediaGate';
 import type { JsDirectMessage } from '@/services/nostr-bridge';
 import { TextWithEmoji } from './TextWithEmoji';
 import { useDmEmojis } from '@/hooks/chat/dm/message/useDmEmojis';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useMobileServerRail } from '@/hooks/shell/mobile/rail/useMobileServerRail';
+import { isActiveRelay } from '@/utils/shell/mobile/rail';
 import type { RelayLongPressInfo } from '@/hooks/shell/mobile/rail/useMobileRelayTile';
 import { RelayTile } from './RelayTile';
 
@@ -20,7 +20,6 @@ export function MobileServerRail({
   onLongPress?: (info: RelayLongPressInfo) => void;
 }) {
   const t = useTranslations();
-  const vm = useMobileServerRail(activeRelay);
   return (
     <aside className="spaces-rail" data-testid="mobile-server-rail" aria-label={t('mobile.nav.servers')}>
       <div className="spaces-rail-scroll native-scroll-y" data-no-swipe>
@@ -28,7 +27,7 @@ export function MobileServerRail({
           <RelayTile
             key={url}
             url={url}
-            active={vm.isActive(url)}
+            active={isActiveRelay(url, activeRelay)}
             onClick={() => onSelectRelay(url)}
             onLongPress={onLongPress}
           />

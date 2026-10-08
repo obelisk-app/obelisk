@@ -2,7 +2,7 @@
 
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
-import { type UserHit } from '@/hooks/identity/useNostrUserSearch';
+import { type UserHit } from '@/constants/identity/user-search';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 

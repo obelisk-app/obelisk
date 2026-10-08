@@ -1,6 +1,6 @@
 'use client';
 
-import type { UserHit } from '@/hooks/identity/useNostrUserSearch';
+import type { UserHit } from '@/constants/identity/user-search';
 import { useUserResultRow } from '@/hooks/shell/search/useUserResultRow';
 import { CheckBadgeIcon } from '@/assets/icons';
 import RemoteImage from '@/components/ui/media/RemoteImage';

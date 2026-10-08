@@ -157,7 +157,7 @@ Implementation notes:
   only) fires unconditionally: it must land before messages paint so the
   unread badges don't flash on then off when cursors arrive. The **DM
   scope** (NIP-65 read+write union) is still gated by `useReadyToSync()`
-  in `src/services/read-state/root.tsx`. See [`read-state.md`](./read-state.md).
+  in `src/hooks/read-state/useReadStateRuntime.ts`. See [`read-state.md`](./read-state.md).
 - **Architectural rule (single-relay groups, cross-relay DMs):**
   every background subscription except DMs and DM-state sync runs on
   `this.relays = [activeRelay]` only. Fanning a non-DM REQ across
