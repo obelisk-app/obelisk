@@ -24,7 +24,7 @@ describe('route message inheritance', () => {
     expect(screen.getByTestId('copy')).toHaveTextContent('es:Vale:Inicio:common,marketing');
   });
 
-  it('sends navigation and clip controls without serializing article or help bodies', () => {
+  it('adds only clip controls under the shared site navigation scope', () => {
     const messages = {
       common: { close: 'OK' },
       marketing: { nav: { home: 'Home' }, learn: { card: { title: 'Guide' }, body: 'Server copy' }, footer: { about: 'About' }, hero: 'Server copy' },
@@ -32,7 +32,6 @@ describe('route message inheritance', () => {
     };
     const before = JSON.stringify(messages);
     expect(scopeMessages(messages, 'guides', true)).toEqual({
-      marketing: { nav: messages.marketing.nav, learn: { card: messages.marketing.learn.card }, footer: messages.marketing.footer },
       guides: { clip: messages.guides.clip },
     });
     expect(scopeMessages(messages, 'public')).toHaveProperty('common.close', 'OK');

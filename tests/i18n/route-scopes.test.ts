@@ -164,7 +164,7 @@ describe('route message scopes', () => {
   it('keeps the chat and app modules off the landing page', () => {
     expect(SCOPES.public).not.toContain('chat');
     expect(SCOPES.public).not.toContain('shell');
-    expect(scopeOf(`${LOCALE_ROOT}/page.tsx`)).toBe('public');
+    expect(scopeOf(`${LOCALE_ROOT}/(site)/page.tsx`)).toBe('public');
   });
 
   it('never ships the server-only seo module', () => {

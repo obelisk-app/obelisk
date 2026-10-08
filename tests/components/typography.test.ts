@@ -70,7 +70,7 @@ describe('typography: no raw text elements outside the ui kit', () => {
   it('reads the files it means to', () => {
     const all = scanned();
     expect(all).toContain('src/components/marketing/landing/RoadmapSection.tsx');
-    expect(all).toContain('src/app/[locale]/features/page.tsx');
+    expect(all).toContain('src/app/[locale]/(site)/features/page.tsx');
     expect(all.some((f) => f.startsWith('src/components/ui/'))).toBe(false);
     expect(all.some((f) => f.startsWith('src/app/[locale]/app/mobile/sheets/chrome/'))).toBe(false);
   });

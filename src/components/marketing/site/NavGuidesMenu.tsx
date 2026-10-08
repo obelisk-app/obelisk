@@ -26,6 +26,7 @@ export default function NavGuidesMenu({ guides }: { guides: NavbarModel['guides'
     >
       <Link
         href={guidePath()}
+        onClick={guides.hide}
         className="px-3 py-1.5 rounded-lg text-sm font-medium text-lc-muted hover:text-lc-white transition-colors inline-flex items-center gap-1"
         aria-haspopup="true"
         aria-expanded={guides.open}
@@ -45,6 +46,7 @@ export default function NavGuidesMenu({ guides }: { guides: NavbarModel['guides'
               <Link
                 key={g.slug}
                 href={guidePath(g.slug)}
+                onClick={guides.hide}
                 className="block px-4 py-3 text-sm text-lc-muted hover:bg-lc-border/50 hover:text-lc-white transition"
               >
                 {t(g.tKey)}
@@ -52,6 +54,7 @@ export default function NavGuidesMenu({ guides }: { guides: NavbarModel['guides'
             ))}
             <Link
               href={guidePath()}
+              onClick={guides.hide}
               className="block px-4 py-3 text-sm font-semibold text-lc-green hover:bg-lc-border/50 border-t border-lc-border/50"
             >
               {t('marketing.footer.allGuides')} →

@@ -77,7 +77,7 @@ The owner's folder rules, enforced by the guard tests listed under Testing (deta
 - A props type used only by its component stays in the component file; a type shared with logic lives beside the logic.
 - Files in `src/` stay at or under 300 lines (blank and comment lines not counted). Split by responsibility; do not raise the limit.
 - No em dash (U+2014) in any file, code, comments or docs. Write `\u2014` when code must handle the character as data.
-- Pages live under `src/app/[locale]/`. The chat surface is `src/app/[locale]/app/`: `AppGate.tsx` picks `desktop/DesktopShell.tsx` or `mobile/PhoneShell.tsx` by `useIsMobile()`; `mounts/AppProviders.tsx` mounts the bridge provider and the runtime translator.
+- Pages live under `src/app/[locale]/`. Public marketing, guides, help, and media-kit routes share navbar/footer and navigation translations in `src/app/[locale]/(site)/layout.tsx`; the route group does not change URLs. The chat surface is `src/app/[locale]/app/`: `AppGate.tsx` picks `desktop/DesktopShell.tsx` or `mobile/PhoneShell.tsx` by `useIsMobile()`; `mounts/AppProviders.tsx` mounts the bridge provider and the runtime translator.
 
 ## The relay layer
 

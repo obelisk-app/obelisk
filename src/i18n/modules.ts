@@ -30,7 +30,7 @@ export const SCOPES = {
   /** Public pages: navigation copy; other client islands receive translated props. */
   public: ['common', 'marketing'],
   /** `/guides`, `/guides/<slug>`. */
-  guides: ['common', 'marketing', 'guides'],
+  guides: ['common', 'guides'],
   /** `/media-kit`. */
   mediaKit: ['common', 'mediaKit'],
   /**
@@ -71,7 +71,7 @@ export function pickModules<T extends Record<string, unknown>>(
 const NAVIGATION_PATHS = ['marketing.nav', 'marketing.learn.card', 'marketing.footer'] as const;
 const CLIENT_PATHS: Partial<Record<Scope, readonly string[]>> = {
   public: ['common', ...NAVIGATION_PATHS],
-  guides: ['common', ...NAVIGATION_PATHS, 'guides.clip'],
+  guides: ['common', 'guides.clip'],
   mediaKit: ['common', 'mediaKit.copy', 'mediaKit.copied', 'mediaKit.rendering', 'mediaKit.downloadPng'],
   voiceJoin: ['common', 'voice.voicePage', 'errors'],
   relayShare: ['common', 'settings.relayShare', 'errors'],

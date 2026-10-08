@@ -261,7 +261,7 @@ describe('component folders hold components only', () => {
     expect(isBarrel("export * from './Button';\nexport const LIMIT = 4;", 'src/components/ui/buttons/index.ts')).toBe(false);
     expect(isBarrel("export * from './Button';", 'src/components/ui/buttons/helpers.ts')).toBe(false);
     expect(isNextConvention('src/app/robots.ts')).toBe(true);
-    expect(isNextConvention('src/app/[locale]/guides/[slug]/opengraph-image.tsx')).toBe(true);
+    expect(isNextConvention('src/app/[locale]/(site)/guides/[slug]/opengraph-image.tsx')).toBe(true);
     expect(isNextConvention('src/app/[locale]/app/feed-pane.ts')).toBe(false);
     expect(isNextConvention('src/components/chat/page.ts')).toBe(false);
   });

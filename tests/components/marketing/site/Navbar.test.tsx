@@ -102,6 +102,16 @@ describe('Navbar account menu', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
+  it('closes the persistent guides dropdown when choosing a site page', () => {
+    renderNavbar();
+    fireEvent.focus(screen.getByTestId('nav-guides-link'));
+    const dropdown = screen.getByTestId('nav-guides-dropdown');
+    const link = dropdown.querySelector('a')!;
+    link.addEventListener('click', (event) => event.preventDefault());
+    fireEvent.click(link);
+    expect(screen.queryByTestId('nav-guides-dropdown')).toBeNull();
+  });
+
   it('the trigger toggles the menu closed again', () => {
     renderNavbar();
     const trigger = screen.getByTestId('nav-account-menu');

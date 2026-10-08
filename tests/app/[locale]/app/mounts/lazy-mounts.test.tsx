@@ -27,7 +27,7 @@ const SHELLS = [
   'src/app/[locale]/app/desktop/DesktopShell.tsx',
   'src/app/[locale]/app/mobile/PhoneShell.tsx',
   'src/app/[locale]/app/AppGate.tsx',
-  'src/app/[locale]/page.tsx',
+  'src/app/[locale]/(site)/page.tsx',
 ];
 
 const ON_DEMAND = [

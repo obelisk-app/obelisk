@@ -34,13 +34,13 @@ const WITHOUT_PROVIDER: Record<string, string> = {
 
 /** Pages that must keep shipping without the bridge: the landing and the marketing pages. */
 const NO_BRIDGE = [
-  'src/app/[locale]/page.tsx',
-  'src/app/[locale]/features/page.tsx',
-  'src/app/[locale]/desktop/page.tsx',
-  'src/app/[locale]/mobile/page.tsx',
-  'src/app/[locale]/help/page.tsx',
-  'src/app/[locale]/guides/page.tsx',
-  'src/app/[locale]/media-kit/page.tsx',
+  'src/app/[locale]/(site)/page.tsx',
+  'src/app/[locale]/(site)/features/page.tsx',
+  'src/app/[locale]/(site)/desktop/page.tsx',
+  'src/app/[locale]/(site)/mobile/page.tsx',
+  'src/app/[locale]/(site)/help/page.tsx',
+  'src/app/[locale]/(site)/guides/page.tsx',
+  'src/app/[locale]/(site)/media-kit/page.tsx',
 ];
 
 function pages(dir: string): string[] {

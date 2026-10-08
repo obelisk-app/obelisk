@@ -13,7 +13,7 @@
 export const MULTI_COMPONENT: Readonly<Record<string, string>> = {
   'src/components/guides/mdx/mdx-components.tsx':
     'the MDX component map: one styled element per Markdown tag, handed to the MDX renderer as one object',
-  'src/app/[locale]/media-kit/kit/banners.tsx':
+  'src/app/[locale]/(site)/media-kit/kit/banners.tsx':
     'the media-kit banner variants: the same artwork at each social network size, drawn from one shared layout',
   'src/app/[locale]/app/mounts/lazy-mounts.tsx':
     'the shell\'s lazy boundaries in one place, so tests/app/[locale]/app/mounts/lazy-mounts.test.tsx can see every heavy import stays out of the first download',
