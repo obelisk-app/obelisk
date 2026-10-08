@@ -53,7 +53,7 @@ describe('string props of any JSX attribute', () => {
   });
 });
 
-/** The documented skip list (docs/i18n.md, The ratchet), written out so dropping a name fails here. */
+/** The documented skip list (docs/architecture/i18n.md, The ratchet), written out so dropping a name fails here. */
 const NOT_READER_FACING = [
   'className', 'class', 'style', 'id', 'key', 'testId',
   'href', 'src', 'srcSet', 'allow',

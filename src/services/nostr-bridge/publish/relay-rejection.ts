@@ -67,7 +67,7 @@ export function parseRelayRejection(reason: string): RelayAccessState | null {
  * reaching us on such a sub can only be the *resubscribed* REQ's answer: the
  * relay accepted our AUTH and still refused us. That is a whitelist refusal,
  * not an authentication problem: obelisk-relay's read path answers both
- * cases with the same `auth-required:` string (see docs/data-system.md
+ * cases with the same `auth-required:` string (see docs/architecture/data-system.md
  * "Relay-side contract for access rejection").
  */
 export function classifyAccessClose(reason: string, hadOnAuth: boolean): RelayAccessState | null {

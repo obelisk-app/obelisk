@@ -5,7 +5,7 @@
  * production) with a fresh nsec identity, log everything the client does
  * (console, websocket frames, relay-access state transitions, activity
  * indicator entries, toasts), and assert each step against the contract
- * documented in `docs/data-system.md`.
+ * documented in `docs/architecture/data-system.md`.
  *
  * The harness skips the LoginModal: it seeds the bridge's persisted-
  * session shape directly into `localStorage` before the page loads, so

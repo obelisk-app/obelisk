@@ -6,7 +6,7 @@
  * incoming-DM subscription, and the kind-10050 we publish so others can
  * find us. Pure move from `client.ts`; the two per-peer caches are the
  * bounded `RelayListCache` (hub step 8). The privacy reasoning on each
- * method is the one that was in the facade; `docs/dm-metadata-privacy.md`
+ * method is the one that was in the facade; `docs/features/dm-metadata-privacy.md`
  * is the long form.
  */
 import type { Event as NostrEvent } from 'nostr-tools';

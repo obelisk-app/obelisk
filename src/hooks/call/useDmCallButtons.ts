@@ -8,7 +8,7 @@ import { dmCallBusy } from '@/utils/call/call-status';
 /**
  * The DM header's call buttons' view model: disabled with DMs off or while
  * any call is in progress, a tooltip that says why, and the two starts
- * (docs/conventions.md#component-files).
+ * (docs/ui/conventions.md#component-files).
  */
 export function useDmCallButtons(peer: string) {
   const t = useTranslations();

@@ -253,7 +253,7 @@ export const useNotificationsStore = create<NotificationsStore>()(
         mentionsByRelay: state.mentionsByRelay,
         mentionCursorByRelay: state.mentionCursorByRelay,
         // A DM card is saved without its preview: DM text is only ever on
-        // disk inside the encrypted DM store (docs/direct-messages.md).
+        // disk inside the encrypted DM store (docs/features/direct-messages.md).
         dmNotifications: state.dmNotifications.map(({ id, senderPubkey, createdAt }) => ({ id, senderPubkey, createdAt })),
       }),
       ...versionedPersist<NotificationsStore, NotificationsPersisted>({

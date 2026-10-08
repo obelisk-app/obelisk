@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * The owner's rule: every dialog's header and footer look the same, because
- * they are the same components (docs/conventions.md#modal-and-sheet-chrome).
+ * they are the same components (docs/ui/conventions.md#modal-and-sheet-chrome).
  *
  *   desktop  `<Modal>` with `ModalHeader` and `ModalFooter` (src/components/ui/)
  *   phone    `<Sheet>` with `SheetHeader` and `SheetActions`

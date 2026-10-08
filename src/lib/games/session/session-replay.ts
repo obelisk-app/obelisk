@@ -84,7 +84,7 @@ export function replayLog(events: readonly ParsedGameEvent[]): GameSession | nul
   // Entropy chain for engines that need a die roll. It is seeded by the table
   // id and advanced by every accepted event, so the value for turn N is fixed
   // by events published BEFORE that turn - the player about to roll cannot
-  // grind it. See docs/games.md.
+  // grind it. See docs/features/games.md.
   let lastAcceptedId = create.id;
 
   const setTurn = (pubkey: string | null, at: number) => {

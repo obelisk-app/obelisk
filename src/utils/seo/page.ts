@@ -66,7 +66,7 @@ export type PageSeo = {
   image: PageImage;
   type?: 'website' | 'article';
   article?: { publishedTime: string; modifiedTime: string; tags?: readonly string[] };
-  /** Search terms, not copy: they stay English (docs/i18n.md). */
+  /** Search terms, not copy: they stay English (docs/architecture/i18n.md). */
   keywords?: readonly string[];
 };
 

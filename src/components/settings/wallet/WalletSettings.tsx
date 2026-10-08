@@ -4,7 +4,7 @@
  * Settings > Wallet: connect a Nostr Wallet Connect (NIP-47) wallet, see it,
  * disconnect it, and which wallet pays right now. The state and actions are
  * `useWalletSettings`; the rule for which wallet pays is
- * `src/services/wallet/wallet.ts`. See docs/bitcoin-zaps-nwc.md.
+ * `src/services/wallet/wallet.ts`. See docs/features/bitcoin-zaps-nwc.md.
  */
 import Section from '@/components/ui/layout/Section';
 import { useTranslations } from 'next-intl';

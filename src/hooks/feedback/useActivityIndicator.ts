@@ -6,7 +6,7 @@ import { visibleActivity } from '@/utils/feedback/activity';
 /**
  * The desktop activity stack's view model: the row to show from the
  * activity log, honouring the "show activity" preference
- * (docs/conventions.md#component-files).
+ * (docs/ui/conventions.md#component-files).
  */
 export function useActivityIndicator(hideSigning: boolean): ActivityEntry[] {
   const items = useActivityLog();

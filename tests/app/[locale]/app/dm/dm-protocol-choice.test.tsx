@@ -6,7 +6,7 @@ import { LocaleProvider } from '@tests/support/intl';
 /**
  * The per-thread NIP-17 / NIP-04 choice, on both DM headers.
  *
- * NIP-04 is a per-thread opt-out the user picks (docs/direct-messages.md),
+ * NIP-04 is a per-thread opt-out the user picks (docs/features/direct-messages.md),
  * but the prompt that called `setProtocolOverride` was deleted with an old DM
  * view and never replaced, so nobody could pick it. Both shells share
  * `useDmProtocolChoice`; these tests drive each shell's header.

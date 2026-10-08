@@ -8,7 +8,7 @@ import {
 /**
  * The room's floating control bar's view model: the call's state and error
  * from the voice store, whether to offer the camera flip, and the toggles
- * (docs/conventions.md#component-files).
+ * (docs/ui/conventions.md#component-files).
  */
 export function useVoiceControls() {
   const isMuted = useVoiceStore((s) => s.isMuted);

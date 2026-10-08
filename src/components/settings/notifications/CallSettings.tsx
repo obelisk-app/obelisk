@@ -2,7 +2,7 @@
 
 /**
  * DM call privacy settings: who can ring you, whether calls hide your IP,
- * and which relays carry the call's setup. See docs/voice/dm-calls.md.
+ * and which relays carry the call's setup. See docs/features/voice/dm-calls.md.
  */
 
 import Section from '@/components/ui/layout/Section';

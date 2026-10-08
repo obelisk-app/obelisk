@@ -25,7 +25,7 @@ const NO_CHILDREN: ReadonlyArray<string> = [];
  * The desktop Publications list's view model: the child publications, the
  * search and tag filters, the shared sort / view / tag-match prefs, which
  * body to show and the new-publication composer. `ForumView` only renders
- * what this returns (docs/conventions.md#component-files).
+ * what this returns (docs/ui/conventions.md#component-files).
  */
 export function useForumView(groupId: string, onSelectThread: (childGroupId: string) => void) {
   const childrenByParent = useChildrenByParent();

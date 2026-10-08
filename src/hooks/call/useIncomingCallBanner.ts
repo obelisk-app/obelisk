@@ -6,7 +6,7 @@ import { useDmCallStore } from '@/store/call/dm-call';
 
 /**
  * The incoming-call banner's view model: who is calling, whether they
- * asked for video, and the answers (docs/conventions.md#component-files).
+ * asked for video, and the answers (docs/ui/conventions.md#component-files).
  */
 export function useIncomingCallBanner() {
   const peer = useDmCallStore((s) => s.peer);

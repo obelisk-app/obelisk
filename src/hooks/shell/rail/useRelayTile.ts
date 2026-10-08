@@ -31,7 +31,7 @@ export function useRelayTile(
   const myPubkey = useMyPubkey();
   // The bridge only has message data for the currently-active relay, so the
   // highlights signal is meaningful on the active tile only. Cross-relay
-  // mention surveillance ships in a follow-up, see docs/read-state.md.
+  // mention surveillance ships in a follow-up, see docs/architecture/read-state.md.
   const hasHighlights = useHasAnyHighlights(myPubkey);
   const activeCards = useUnreadMentionCount(active ? normalizeRelayUrl(url) : null);
   const showHighlight = active && (hasHighlights || activeCards > 0);

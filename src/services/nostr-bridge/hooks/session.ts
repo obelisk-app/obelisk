@@ -42,7 +42,7 @@ function useMounted(): boolean {
  * `true` while a stored session is being rehydrated on cold load. The bridge
  * has parsed credentials out of localStorage and is awaiting `connect()`'s
  * relay handshake, but {@link useIsLoggedIn} stays `false` until that
- * resolves (see `docs/data-system.md` §3 for the contract).
+ * resolves (see `docs/architecture/data-system.md` §3 for the contract).
  *
  * UI consumers use this to suppress the login modal during that window,
  * without it, users navigating from the landing page back to `/app` see a

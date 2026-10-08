@@ -15,7 +15,7 @@ const HINT_LOOKUP_ATTEMPTS = 6;
  * The hint host's view model: the first unseen hint for the surface whose
  * anchor is on screen, the handlers that retire it, and the one delegated
  * `pointerdown` listener that counts using a control as learning it
- * (docs/conventions.md#component-files).
+ * (docs/ui/conventions.md#component-files).
  */
 export function useHintHost(surface: SurfaceId | null, shell: Shell) {
   const seen = useHintsStore((state) => state.seen);

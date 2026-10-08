@@ -90,7 +90,7 @@ Every button is gated by the engine's own validator, and the board highlights ex
 
 ## For the curious
 
-Everything travels as kind `2390` events in the channel's NIP-29 group and is replayed by `deriveSession`. The sequencing upstream keeps in its client (flipping setup steps, handing out second-round resources, deciding when the robber may move) happens deterministically on every replay instead, under a namespaced key inside the state so it survives a round-trip through upstream's reducers. The details are in [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+Everything travels as kind `2390` events in the channel's NIP-29 group and is replayed by `deriveSession`. The sequencing upstream keeps in its client (flipping setup steps, handing out second-round resources, deciding when the robber may move) happens deterministically on every replay instead, under a namespaced key inside the state so it survives a round-trip through upstream's reducers. The details are in [docs/features/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/features/games.md).
 
 <RelatedGuides items={[
   { slug: "chain-reaction", note: "the small one: one click, one cascade" },

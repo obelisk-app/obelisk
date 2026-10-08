@@ -14,7 +14,7 @@ import { voiceChannelLabel } from '@/utils/voice/channel-label';
  * voice store, the channel's label, whether to offer the camera flip, and
  * the toggles, leave and jump-back handlers. `channelId` is null when there
  * is no call, and the bar then renders nothing
- * (docs/conventions.md#component-files).
+ * (docs/ui/conventions.md#component-files).
  */
 export function useVoiceStatusBar() {
   const channelId = useVoiceStore((s) => s.currentVoiceChannelId);

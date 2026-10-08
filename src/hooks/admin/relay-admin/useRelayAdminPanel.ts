@@ -12,7 +12,7 @@ import { confirmAndRunRelayAdminBulk, type RelayAdminBulkAction } from '@/servic
  * The relay admin panel's view model: every admin and member of every
  * channel on the relay, the toolbar's three filters, the row selection and
  * the two bulk actions. The panel and its parts only render what this
- * returns (docs/conventions.md#component-files).
+ * returns (docs/ui/conventions.md#component-files).
  */
 export function useRelayAdminPanel() {
   const t = useTranslations();

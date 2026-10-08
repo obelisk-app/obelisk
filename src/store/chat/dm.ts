@@ -36,7 +36,7 @@ export interface DMThread {
 interface DMPersistedState {
   /**
    * Per-peer wire protocol the user chose for a thread. NIP-17 is the
-   * default; NIP-04 is a per-thread opt-out (docs/direct-messages.md).
+   * default; NIP-04 is a per-thread opt-out (docs/features/direct-messages.md).
    * Nothing in the UI writes it today: the protocol prompt that called
    * `setProtocolOverride` was deleted with the old DM view, so this is
    * always empty and every reader falls back to NIP-17.

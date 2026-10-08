@@ -44,7 +44,7 @@ export const MAX_TOMBSTONES = 5000;
 // events are pulled into `messagesByGroup` on the live REQ; older messages
 // are paged in on demand via `loadMoreMessages`. Keeps the initial fan-out
 // cheap when the user belongs to many channels and trims memory growth on
-// long-lived sessions. See docs/data-system.md.
+// long-lived sessions. See docs/architecture/data-system.md.
 export const BACKGROUND_MESSAGE_LIMIT = 50;
 
 export const LOAD_MORE_PAGE_SIZE = 50;

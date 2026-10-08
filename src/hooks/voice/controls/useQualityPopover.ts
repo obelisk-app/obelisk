@@ -4,7 +4,7 @@ import { setVoiceReceivedQuality, setVoiceVideoQuality } from '@/services/voice/
 
 /**
  * The quality popover's view model: the two settings from the voice store
- * and their setters (docs/conventions.md#component-files).
+ * and their setters (docs/ui/conventions.md#component-files).
  */
 export function useQualityPopover() {
   const videoQuality = useVoiceStore((s) => s.videoQuality);

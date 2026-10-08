@@ -1,6 +1,6 @@
 /**
  * Files allowed to define more than one component, each with its reason.
- * Everything else is one component per file (docs/conventions.md#component-files).
+ * Everything else is one component per file (docs/ui/conventions.md#component-files).
  *
  * Shrink-only: tests/components/markup-only.test.ts fails on an entry whose
  * file no longer defines more than one component, and on a list longer than

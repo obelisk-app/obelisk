@@ -21,7 +21,7 @@ import { isVoiceDebugOn, passiveCallCount, voiceRoomDisplayName } from '@/utils/
  * The voice room's view model: the membership gate, the room's VoiceClient
  * (through `useVoiceRoomClient`), the stage layout worked out by the pure
  * rules in `stage-layout.ts`, and what the header and the pre-join landing
- * show (docs/conventions.md#component-files).
+ * show (docs/ui/conventions.md#component-files).
  */
 export function useVoiceRoom(channelId: string, channelName: string | undefined) {
   const router = useRouter();

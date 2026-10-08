@@ -56,12 +56,12 @@ mirror the pieces each repo owns.
 
 ## 🔥 Active priorities
 
-- [ ] **App-wide i18n + per-user language**: extend landing i18n infra to chat/admin/moderation/forum/settings/errors, IP-based default on first login, `User.language` persisted, hot-swap from /settings. See [docs/i18n-plan.md](docs/i18n-plan.md).
-- [ ] **Pinned messages + DB-editable channel content (seed paridad)**: migrate `prisma/seed.ts` hardcoded content (welcome, foro índice, méritos posts, channel info) to pinned messages and forum posts editable from /admin. See [docs/content-migration-plan.md](docs/content-migration-plan.md).
+- [ ] **App-wide i18n + per-user language**: extend landing i18n infra to chat/admin/moderation/forum/settings/errors, IP-based default on first login, `User.language` persisted, hot-swap from /settings. See [docs/history/plans/i18n-plan.md](docs/history/plans/i18n-plan.md).
+- [ ] **Pinned messages + DB-editable channel content (seed paridad)**: migrate `prisma/seed.ts` hardcoded content (welcome, foro índice, méritos posts, channel info) to pinned messages and forum posts editable from /admin. See [docs/history/plans/content-migration-plan.md](docs/history/plans/content-migration-plan.md).
 - [ ] **Forum post parity with chat**: once forums are reintroduced on the relay-only stack, replies should reuse the same NIP-29 message pipeline as chat so reactions, edits, pagination and mentions work inside posts.
-- [ ] **WoT admin UI**: data layer is shipped; finish the /admin tab with referente preview, "Refrescar WoT" action, auto-authorized list and manual whitelist overrides. See [docs/wot-and-invite-credits.md](docs/wot-and-invite-credits.md).
+- [ ] **WoT admin UI**: data layer is shipped; finish the /admin tab with referente preview, "Refrescar WoT" action, auto-authorized list and manual whitelist overrides. See [docs/proposals/wot-and-invite-credits.md](docs/proposals/wot-and-invite-credits.md).
 - [ ] **Wizard de setup inicial / instance owner desde UI**: remove the `INSTANCE_OWNER_PUBKEY` env hardcode; first authenticated NIP-07 user claims instance ownership, persisted in DB. Improves self-hosting UX.
-- [ ] **Browser & PWA notifications + sound (Phase 1.5 of notifications redesign)**: desktop `Notification` API, PWA service worker, Discord-style chime. Foundation in `docs/read-state.md` Phase 1.5 section; gates on the same `isUserWatching` predicate already used for inbox cards. Per-channel mute settings (All / Mentions only / Nothing) ride along.
+- [ ] **Browser & PWA notifications + sound (Phase 1.5 of notifications redesign)**: desktop `Notification` API, PWA service worker, Discord-style chime. Foundation in `docs/architecture/read-state.md` Phase 1.5 section; gates on the same `isUserWatching` predicate already used for inbox cards. Per-channel mute settings (All / Mentions only / Nothing) ride along.
 
 ## ✅ Shipped
 
@@ -79,16 +79,16 @@ mirror the pieces each repo owns.
 - Forum channels (list + detail + tags) using the shared `MessageInput`.
 - Welcome channel with configurable `welcomeChannelId` + banner.
 - Pinned messages (`Message.pinnedAt` + pins panel).
-- Message search (Discord-style): see [docs/search.md](docs/search.md).
+- Message search (Discord-style): see [docs/features/search.md](docs/features/search.md).
 
 ### Voice
-- Audio, video, and screen sharing over Nostr-signaled WebRTC: `simple-peer` full mesh (4 people, 4 cameras, 1 screen share) plus the mediasoup SFU engine. See [docs/voice/](docs/voice/README.md) and [docs/sfu-system.md](docs/sfu-system.md).
+- Audio, video, and screen sharing over Nostr-signaled WebRTC: `simple-peer` full mesh (4 people, 4 cameras, 1 screen share) plus the mediasoup SFU engine. See [docs/features/voice/](docs/features/voice/README.md) and [docs/features/sfu-system.md](docs/features/sfu-system.md).
 
 ### Uploads & media
 - Multi-file upload (paste + drag-and-drop), dynamic image gallery, lightbox with zoom / pan, videos, audio, documents.
 - Per-server configurable size limits per mime category.
 - Custom emojis per server + shortcode autocomplete (`:name:`) + bilingual emoji picker.
-- See [docs/uploads.md](docs/uploads.md).
+- See [docs/features/uploads.md](docs/features/uploads.md).
 
 ### Admin & moderation
 - Multi-server admin panel with server picker + CRUD of channels / categories / members / invitations.
@@ -104,7 +104,7 @@ mirror the pieces each repo owns.
 - Zaps (NIP-57) from a message or with `/zap`, with custom amounts or presets and an optional comment; per-message totals from zap receipts.
 - Pay a Lightning invoice posted in chat, through the same wallet path, with a confirm step and a double-pay guard.
 - One wallet path for both: a Nostr Wallet Connect (NIP-47) wallet connected in Settings > Wallet (desktop and phone), else a WebLN browser extension. The connection link is sealed per account with the session vault, rides the relay hub under its own client-key identity, and is deleted on disconnect and logout. The zap modal and the invoice confirm say which wallet pays.
-- See [docs/bitcoin-zaps-nwc.md](docs/bitcoin-zaps-nwc.md).
+- See [docs/features/bitcoin-zaps-nwc.md](docs/features/bitcoin-zaps-nwc.md).
 
 ### Testing & ops
 - 146+ Vitest + RTL tests across 47+ files (auth / chat / voice / DM / search / admin / moderation / i18n stores / favicon-badge / read-tracker / mention extractor).
@@ -224,7 +224,7 @@ Pivot/parallel track: Obelisk gains a **bundled NIP-29 relay** that any user can
 
 ## 🐛 Known bugs & tech debt
 
-See [docs/known-bugs.md](docs/known-bugs.md).
+See [docs/operations/known-bugs.md](docs/operations/known-bugs.md).
 
 ## 🧪 Test suite
 

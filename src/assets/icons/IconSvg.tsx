@@ -21,7 +21,7 @@ export type IconProps = Omit<SVGProps<SVGSVGElement>, 'children'> & {
  * `currentColor` with round caps and joins, no fill, hidden from screen
  * readers unless it is named. Icons inherit colour and size from the text
  * around them, so hover, active and danger colours reach them; a glyph or
- * an emoji would not (docs/conventions.md#assets).
+ * an emoji would not (docs/ui/conventions.md#assets).
  *
  * An icon passes its own drawing as children and any default it changes
  * (a filled glyph sets `fill` and `stroke`); the caller's props come last.

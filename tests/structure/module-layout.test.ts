@@ -3,7 +3,7 @@ import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The owner's folder rules (round 28, docs/conventions.md#where-a-file-goes):
+ * The owner's folder rules (round 28, docs/ui/conventions.md#where-a-file-goes):
  *
  * 1. Nothing loose at a layer's root. Code used across features goes in
  *    `common/` (or a clearly named shared topic folder), the rest in its

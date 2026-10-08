@@ -5,7 +5,7 @@ import { toastRemainingMs } from '@/utils/feedback/toast';
 /**
  * The toast stack's view model: the toasts, each dismissed on its own
  * timer; a click on a toast runs its action and closes it, a click on its
- * close icon only closes it (docs/conventions.md#component-files).
+ * close icon only closes it (docs/ui/conventions.md#component-files).
  */
 export function useToastStack() {
   const toasts = useToastStore((s) => s.toasts);

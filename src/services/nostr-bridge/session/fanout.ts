@@ -1,5 +1,5 @@
 /**
- * The session's REQ fan-out on the active relay (docs/data-system.md §4):
+ * The session's REQ fan-out on the active relay (docs/architecture/data-system.md §4):
  * the P0 tier at once, the P2 tier on the next microtask, then the
  * per-group REQs a session or relay reset released, the channel in view
  * first. Pure move from `client.ts` (`openSessionSubscriptions`,

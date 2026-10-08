@@ -2,7 +2,7 @@
  * Geometry shared by the guide drawings (`src/assets/illustrations/guides/`): a
  * point on a circle, a hexagon's corners, and the field of drifting packets
  * three heroes scatter over their background. Pure numbers, so a drawing's
- * markup only places what these return (docs/conventions.md#component-files).
+ * markup only places what these return (docs/ui/conventions.md#component-files).
  *
  * Every formula is the one the drawings used inline, in the same order of
  * operations, so the committed still frames under `public/og/guides/` stay

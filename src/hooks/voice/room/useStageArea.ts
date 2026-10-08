@@ -17,7 +17,7 @@ export interface StageAreaInput {
 /**
  * The stage area's view model: the layout it was given, plus each tile's
  * stream, who is me, the grids' columns and the pin handlers
- * (docs/conventions.md#component-files).
+ * (docs/ui/conventions.md#component-files).
  */
 export function useStageArea(input: StageAreaInput) {
   const { setPinned, selfPubkey, localCamStream, tracksByPubkey, videoPubkeys, audioPubkeys } = input;

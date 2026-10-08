@@ -3,7 +3,7 @@
 Playwright-driven end-to-end tests that drive a real browser against a
 running app, capture every signal the client emits, and assert each
 step against the auth/data-loading contract documented in
-`docs/data-system.md`.
+`docs/architecture/data-system.md`.
 
 The harness skips the LoginModal: it seeds an nsec PersistedSession
 into `localStorage` before the page loads, so `BridgeImpl.initialize()`

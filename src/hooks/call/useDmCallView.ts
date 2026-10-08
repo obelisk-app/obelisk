@@ -11,7 +11,7 @@ import { callStatusKey, canShareScreen } from '@/utils/call/call-status';
 /**
  * The DM call view's view model: the call store, the peer's name and
  * picture, the video elements bound to their streams, fullscreen, and what
- * the status line says (docs/conventions.md#component-files).
+ * the status line says (docs/ui/conventions.md#component-files).
  */
 export function useDmCallView() {
   const s = useDmCallStore();

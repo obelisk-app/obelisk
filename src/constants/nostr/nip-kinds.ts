@@ -76,7 +76,7 @@ export const KIND_DM_FILE_RUMOR = 15;
  * decline / cancel / hangup / busy). Never on the wire in the clear: it only
  * ever travels sealed and gift-wrapped like a kind 14, so a relay sees an
  * ordinary kind 1059. The WebRTC negotiation that follows runs on per-call
- * throwaway keys (kind 25050, NIP-44 content); see docs/voice/dm-calls.md.
+ * throwaway keys (kind 25050, NIP-44 content); see docs/features/voice/dm-calls.md.
  */
 export const KIND_DM_CALL_RUMOR = 25055;
 
@@ -124,7 +124,7 @@ export const KIND_HTTP_AUTH = 27235;
  * Obelisk voice: ephemeral presence beacon for voice-channel rosters.
  * Re-published every ~15s while a peer is in a voice channel; tagged with
  * `["e", channelId]` and `["expiration", now+30]` so any compliant relay
- * drops it shortly after the peer leaves. See docs/voice/mesh-protocol.md.
+ * drops it shortly after the peer leaves. See docs/features/voice/mesh-protocol.md.
  */
 export const KIND_VOICE_PRESENCE = 20078;
 
@@ -151,7 +151,7 @@ export const KIND_VOICE_MOD_ACTION = 25051;
  * Carries `{action, params}` JSON in content; `action` is one of
  * `start | end | reset | drain`. Authorization is the SFU's job: arrival
  * via a trusted-author relay (the relay's write-whitelist is the auth)
- * OR pubkey listed in the SFU's local allow.json. See docs/sfu-system.md.
+ * OR pubkey listed in the SFU's local allow.json. See docs/features/sfu-system.md.
  */
 export const KIND_SFU_CONTROL = 25052;
 
@@ -187,7 +187,7 @@ export const KIND_SFU_ACTIVE_CALL = 31314;
  *
  * 2390 sits in the regular range (1000-9999, relays persist) and is
  * unclaimed by any NIP; 2003/2004 (torrents) are the nearest neighbours.
- * See docs/games.md for the wire format.
+ * See docs/features/games.md for the wire format.
  */
 export const KIND_GAME = 2390;
 
@@ -196,7 +196,7 @@ export const KIND_GAME = 2390;
  * replaceable: its methods and encryption), a client's request (23194) and
  * the wallet's answer (23195), both ephemeral. The protocol itself lives in
  * `src/lib/nwc/` (a mini-package with its own copy, `NWC_KINDS`, pinned
- * equal to these by `tests/lib/nwc/kinds.test.ts`). See docs/bitcoin-zaps-nwc.md.
+ * equal to these by `tests/lib/nwc/kinds.test.ts`). See docs/features/bitcoin-zaps-nwc.md.
  */
 export const KIND_NWC_INFO = 13194;
 export const KIND_NWC_REQUEST = 23194;

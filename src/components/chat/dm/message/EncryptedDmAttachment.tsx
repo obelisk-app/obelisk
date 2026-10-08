@@ -7,7 +7,7 @@ import Link from '@/components/ui/navigation/Link';
  * check it against `x`, decrypt it in memory and show it from an object URL.
  *
  * Nothing decrypted touches disk: the object URL lives only as long as this
- * component and is revoked on unmount (docs/direct-messages.md: no DM
+ * component and is revoked on unmount (docs/features/direct-messages.md: no DM
  * plaintext on disk). Images, video and audio decrypt as soon as they mount;
  * any other file type waits for a click, because it can only be downloaded
  * and there is no reason to pull a 25 MB zip the reader may never want.

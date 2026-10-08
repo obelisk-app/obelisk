@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * The owner's rule (round 31): every picture the app draws lives in
- * `src/assets/` (docs/conventions.md#assets).
+ * `src/assets/` (docs/ui/conventions.md#assets).
  *
  *   src/assets/icons/          every UI icon, one `<Name>Icon.tsx` per icon, drawn on `IconSvg`
  *   src/assets/brand/          the Obelisk marks and other brand marks
@@ -153,7 +153,7 @@ describe('every picture lives in src/assets', () => {
     const found = outside
       .filter((f) => !(f in DATA_DRIVEN))
       .flatMap((f) => svgFindings(readFileSync(join(ROOT, f), 'utf8'), f).map((x) => `${f}:${x}`));
-    expect(found, 'move the drawing to src/assets (docs/conventions.md#assets)').toEqual([]);
+    expect(found, 'move the drawing to src/assets (docs/ui/conventions.md#assets)').toEqual([]);
   });
 
   it('keeps the data-driven list reasoned and every entry still needed', () => {

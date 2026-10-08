@@ -15,7 +15,7 @@
  * nothing on the groups relay, which already authenticates the user over
  * NIP-42 and already publishes their membership as `kind:39002`, while the
  * cost, an unbounded event per cursor advance, is charged in full. See
- * docs/read-state.md.
+ * docs/architecture/read-state.md.
  *
  * Two traps, both hit in production:
  *
@@ -219,5 +219,5 @@ export const __INTERNAL = {
 };
 
 // Part of the public surface the store action accepts, referenced from
-// docs/read-state.md as the apply shape.
+// docs/architecture/read-state.md as the apply shape.
 export type { RemoteReadState };

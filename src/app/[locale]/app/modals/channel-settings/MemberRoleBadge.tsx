@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 /**
  * Admin / member pill for the channel-settings member list. Replaces a bare
  * 👑 emoji, which carried no label. Distinct from the imported `RoleBadge`,
- * which renders operator-defined relay roles (see docs/relay-roles.md).
+ * which renders operator-defined relay roles (see docs/features/relay-roles.md).
  */
 export function MemberRoleBadge({ isAdmin }: { isAdmin: boolean }) {
   const t = useTranslations();

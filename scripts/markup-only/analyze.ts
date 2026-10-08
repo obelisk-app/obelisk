@@ -4,7 +4,7 @@
  * A component file is markup: one component, its state and handlers from a
  * view-model hook (`src/hooks/<module>/use<Component>.ts`), its data from
  * bridge and store hooks. This module counts what does not belong in one,
- * per file, in six kinds (docs/conventions.md#component-files):
+ * per file, in six kinds (docs/ui/conventions.md#component-files):
  *
  *   effects     a call to useEffect, useLayoutEffect, useInsertionEffect or
  *               useImperativeHandle

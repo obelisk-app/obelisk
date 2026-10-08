@@ -65,7 +65,7 @@ export class DmCallsModule {
    * - The wrap carries a NIP-40 `expiration` a few minutes out, so an inbox
    *   relay drops it instead of keeping a record of every call forever. The
    *   cost is that a relay can tell a short-lived wrap from a message wrap,
-   *   see docs/voice/dm-calls.md.
+   *   see docs/features/voice/dm-calls.md.
    * - No self-copy for history. The one exception is `selfNotice`: an accept
    *   or decline is also wrapped to ourselves so our *other* devices stop
    *   ringing ("answered elsewhere").

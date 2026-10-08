@@ -2,7 +2,7 @@
  * Fetch a NIP-17 kind-15 attachment's ciphertext from Blossom, check it
  * against `x`, decrypt it in memory and hand back an object URL.
  *
- * Nothing decrypted touches disk (docs/direct-messages.md: no DM plaintext
+ * Nothing decrypted touches disk (docs/features/direct-messages.md: no DM plaintext
  * on disk). The caller owns the returned URL and must revoke it.
  */
 

@@ -9,7 +9,7 @@ import { BASELINE_PATH, countsByFile, guardedFiles, scanTree } from '../../scrip
  * from one view-model hook (`src/hooks/<module>/use<Component>.ts`), its data
  * from bridge and store hooks; pure shaping lives in `src/utils/<topic>/`,
  * actions with side effects in `src/services/<topic>/`. The full convention
- * is docs/conventions.md#component-files; the precise rule, read from the
+ * is docs/ui/conventions.md#component-files; the precise rule, read from the
  * syntax tree, is the header of scripts/markup-only/analyze.ts.
  *
  * A ratchet, like the i18n baseline: on 2026-10-07 (round 27) the files
@@ -32,7 +32,7 @@ describe('component files are markup', () => {
   it('finds nothing in a file the baseline does not list', () => {
     const fresh = Object.keys(counts).filter((file) => !(file in BASELINE));
     const detail = fresh.map((file) => `${file} ${JSON.stringify(counts[file])}`);
-    expect(detail, 'move the logic into a hook, a util or a service (docs/conventions.md#component-files)').toEqual([]);
+    expect(detail, 'move the logic into a hook, a util or a service (docs/ui/conventions.md#component-files)').toEqual([]);
   });
 
   it('does not grow in any kind in a listed file', () => {

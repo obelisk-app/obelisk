@@ -28,7 +28,7 @@ export default function AppShell() {
   const vm = useDesktopShell();
   // A stored session is being reconnected: a connecting screen, not the
   // LoginModal, so the user isn't told they're logged out when they're not.
-  // See `useIsRehydrating` and docs/data-system.md §3.
+  // See `useIsRehydrating` and docs/architecture/data-system.md §3.
   if (vm.gate === 'rehydrating') return <RehydratingScreen />;
   // The LoginModal waits for mount (a hydration mismatch guard, see the hook).
   if (vm.gate === 'unmounted') return null;

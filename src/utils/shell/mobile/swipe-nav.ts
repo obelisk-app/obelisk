@@ -32,7 +32,7 @@ export function decideSnap(
 // top-level tabs themselves (they have no parent). Sub-screens prefer the
 // dynamic `parentScreen` recorded at navigation time and fall back to the
 // static SUB_TO_NAV map only when that's null - e.g. a cold deep-link reload
-// without the `pr` URL param. See docs/mobile-navigation.md §3.
+// without the `pr` URL param. See docs/ui/mobile-navigation.md §3.
 export function resolveParent(nav: NavState): ScreenName | null {
   if (NAV_ORDER.includes(nav.screen)) return null;
   if (nav.parentScreen) {
@@ -139,7 +139,7 @@ export function buildSeedHistory(parsed: NavState, relay: string | null): SeedHi
 //   • switch - different top-level tab. Direction follows NAV_ORDER spatial
 //              position so tap and swipe agree on what "left/right" means.
 //
-// See docs/mobile-navigation.md §4 for the full transition matrix.
+// See docs/ui/mobile-navigation.md §4 for the full transition matrix.
 export type TabPressAction =
   | { kind: 'noop' }
   | { kind: 'pop'; target: ScreenName }

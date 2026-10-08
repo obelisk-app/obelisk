@@ -34,7 +34,7 @@ export function useMessagesByGroup(): Readonly<Record<string, ReadonlyArray<JsMe
 
 /**
  * Pagination control for a channel. The live REQ caps at the background
- * limit (see docs/data-system.md); this hook exposes a `loadEarlier`
+ * limit (see docs/architecture/data-system.md); this hook exposes a `loadEarlier`
  * action that pulls the next page of older messages on demand and a
  * `reachedStart` flag so the UI can stop offering "Load earlier" once the
  * relay returns no further history.

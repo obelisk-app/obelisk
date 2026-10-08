@@ -14,7 +14,7 @@ const DOT_CLASS: Record<SigningStatus, string> = {
 
 /**
  * The phone top bar's signer dot: the sign activity it explains, its status
- * and the dot's colour (docs/conventions.md#component-files).
+ * and the dot's colour (docs/ui/conventions.md#component-files).
  */
 export function useMobileSigningIndicator() {
   const signing = signingEntry(useActivityLog());

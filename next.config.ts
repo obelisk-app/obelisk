@@ -76,7 +76,7 @@ const nextConfig: NextConfig = {
   // `vesta` is consumed straight from its GitHub source (its package `main`
   // is `src/vesta.ts`), so Next has to compile it like first-party code.
   // That is deliberate: it keeps us tracking upstream by version range
-  // instead of forking the rules into this repo. See docs/games.md.
+  // instead of forking the rules into this repo. See docs/features/games.md.
   transpilePackages: ['@nostr-wot/ui', '@nostr-wot/data', 'vesta'],
   /*
    * The public note/profile viewers (`/notes/[id]`, `/p/[id]`) open real

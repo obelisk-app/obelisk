@@ -39,7 +39,7 @@ export interface NavState {
   // The top-level tab (or sub-screen) the user came from when this screen
   // was opened. Drives the bottom-nav active highlight and swipe-back target
   // for screens reachable from multiple contexts (profile-view, member-list,
-  // search, msg-actions). See docs/mobile-navigation.md §3.
+  // search, msg-actions). See docs/ui/mobile-navigation.md §3.
   parentScreen: ScreenName | null;
 }
 

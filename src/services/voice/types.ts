@@ -1,7 +1,7 @@
 /**
  * Voice channel wire types. v1 ships plaintext signed ephemeral events.
  * See `src/constants/nostr/nip-kinds.ts` (KIND_VOICE_PRESENCE, KIND_VOICE_SIGNAL) and
- * docs/voice/mesh-protocol.md.
+ * docs/features/voice/mesh-protocol.md.
  */
 
 export type VoiceTrackKind = 'audio' | 'camera' | 'screen' | 'screen-audio';
@@ -96,7 +96,7 @@ export interface VoicePresence {
    * itself as a forwarding endpoint for this channel. When any beacon in
    * the roster carries this flag, the local client switches into SFU mode:
    * one PC to that pubkey instead of N PCs to every participant. See
-   * docs/sfu-system.md §3.4.
+   * docs/features/sfu-system.md §3.4.
    */
   isSfu: boolean;
   /**

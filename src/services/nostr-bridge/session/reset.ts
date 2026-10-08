@@ -87,7 +87,7 @@ export function resetSubscriptionState(t: LifecycleTargets): PerGroupReqs {
  * across: A's category nesting stayed visible on B, B's metadata older than
  * A's was dropped by the newest-wins cursor (the same NIP-29 `d`-tag can
  * exist on two relays independently), and A's reactions painted on B's
- * messages. See docs/data-system.md.
+ * messages. See docs/architecture/data-system.md.
  */
 export function resetRelayScopedState(t: LifecycleTargets): void {
   t.metadata.clearGroups();

@@ -1,6 +1,6 @@
 /**
  * NIP-17 DM adoption tests: covers the parts of the
- * `docs/superpowers/specs/2026-08-16-nip17-dms-design.md` migration that
+ * `docs/history/specs/2026-08-16-nip17-dms-design.md` migration that
  * `bridge.test.ts` / `optimistic-send.test.ts` don't already exercise:
  *
  *   - NIP-17 is the default send protocol and routes to the recipient's

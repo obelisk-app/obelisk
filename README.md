@@ -87,11 +87,9 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-No `.env` is required for local development. New installs currently start with
-`wss://public.obelisk.ar` and `wss://lacrypta-relay.obelisk.ar`; optional relay suggestions come
-from `NEXT_PUBLIC_RECOMMENDED_RELAYS`.
+No `.env` is required for local development. New installs currently start with `wss://public.obelisk.ar` and `wss://lacrypta-relay.obelisk.ar`; optional relay suggestions come from `NEXT_PUBLIC_RECOMMENDED_RELAYS`.
 
-For HTTPS dev (needed for NIP-07 / mobile testing): `npm run dev:raise` (requires a Cloudflare tunnel, see [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md)).
+For HTTPS dev (needed for NIP-07 / mobile testing): `npm run dev:raise` (requires a Cloudflare tunnel, see [docs/operations/cloudflare-tunnel.md](docs/operations/cloudflare-tunnel.md)).
 
 ## Architecture
 
@@ -101,14 +99,14 @@ For HTTPS dev (needed for NIP-07 / mobile testing): `npm run dev:raise` (require
 
 <p align="center"><sub>The relay hosts the group. Members, admins, and messages are signed Nostr events; the client just subscribes.</sub></p>
 
-- **Frontend:** Next.js 16 + Tailwind v4, in English, Spanish and Portuguese (next-intl). The pages render on the client over the bridge; the one API route, `/api/link-preview`, unfurls OpenGraph cards so a link you only view never reaches a third-party service.
+- **Frontend:** Next.js 16 + Tailwind v4, in English, Spanish and Portuguese (next-intl). Public site pages are prerendered per deployment; chat and signed-in viewer interactions run over the bridge. Public relay-backed viewers also fetch server-rendered content. The one API route, `/api/link-preview`, unfurls OpenGraph cards so a link you only view never reaches a third-party service.
 - **Relay hub** (`src/lib/relay-hub/`): the one owner of every relay socket: one socket per relay per identity, NIP-42 AUTH once per relay and key, shared subscriptions, bounded caches.
 - **Bridge** (`src/services/nostr-bridge/`): identity, the session, group and DM state, subscriptions, and the React hooks, reached through `@/services/nostr-bridge` and `<BridgeProvider>`. Read this first if you're contributing.
 - **Voice:** P2P mesh by default; switches to mediasoup SFU automatically when one is advertised on the channel ([obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu)).
-- **Cache:** localStorage stale-while-revalidate for instant first paint on reload.
+- **Cache:** immutable public HTML with build-bound CSP hashes; dynamic app/viewer documents use fresh nonces. Browser relay data uses localStorage stale-while-revalidate for fast first paint.
 - **Identity:** comes from the bridge: `useIsLoggedIn`, `useMyPubkey`, `useSignerReady`. **Don't introduce a backend session.**
 
-See [AGENTS.md](AGENTS.md) for the full architecture and conventions.
+See [architecture](docs/architecture/README.md), [UI conventions](docs/ui/conventions.md) and [operations](docs/operations/README.md). [AGENTS.md](AGENTS.md) is the repository rules reference.
 
 ## The Obelisk family
 
@@ -159,7 +157,7 @@ npm run dev:raise         # dev + Cloudflare tunnel
 npm run lint              # eslint
 npm run typecheck         # tsc --noEmit
 npm run test              # vitest
-npm run build             # next build
+npm run build             # Next build + matching static CSP manifest
 npm run raise             # production server + Cloudflare tunnel
 npm run deploy            # production deploy (tests, build, pm2 restart)
 ```
@@ -192,5 +190,5 @@ Obelisk is an individual open-source project. There is no company behind it.
 
 ## Resources
 
-- Docs: [auth & data loading](docs/data-system.md) · [voice (mesh)](docs/voice/README.md) · [SFU](docs/sfu-system.md) · [layout & branding](docs/relay-layout-and-branding.md) · [uploads](docs/uploads.md) · [Cloudflare tunnel](docs/cloudflare-tunnel.md) · [known bugs](docs/known-bugs.md)
+- Docs: [auth & data loading](docs/architecture/data-system.md) · [voice (mesh)](docs/features/voice/README.md) · [SFU](docs/features/sfu-system.md) · [layout & branding](docs/features/relay-layout-and-branding.md) · [uploads](docs/features/uploads.md) · [Cloudflare tunnel](docs/operations/cloudflare-tunnel.md) · [known bugs](docs/operations/known-bugs.md)
 - External: [Nostr](https://nostr.com) · [NIPs](https://github.com/nostr-protocol/nips) · [La Crypta](https://lacrypta.ar)

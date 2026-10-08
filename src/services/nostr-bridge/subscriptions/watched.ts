@@ -94,7 +94,7 @@ export function openWatchedReq(
       // resolves; resolved-deny events are dropped here so they never
       // reach ingest, the cache, or `messagesByGroup`. When the engine
       // is disabled the predicate is a constant `true` and this is a
-      // no-op. See docs/wot-integration-plan.md.
+      // no-op. See docs/history/plans/wot-integration-plan.md.
       if (!options?.bypassWot && !wotEngine.isAllowed(ev.pubkey, ev.kind)) return;
       pushRelayDebug({ kind: "sub-event", relays, filter, eventKind: ev.kind });
       onevent(ev);

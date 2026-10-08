@@ -2,7 +2,7 @@
  * Metadata and `ImageGallery` JSON-LD for the two screenshot tours,
  * `/desktop` and `/mobile`, in the page's language. Copy comes from
  * `seo.desktop.*` / `seo.mobile.*`; the keyword lists stay English (search
- * terms, see docs/i18n.md).
+ * terms, see docs/architecture/i18n.md).
  */
 
 import type { Metadata } from 'next';

@@ -88,7 +88,7 @@ The result is not a separate announcement anybody could forge; it is what the lo
 
 ## For the curious
 
-The whole thing is kind `2390` events in the channel's group, replayed by `src/lib/games/session.ts`. The engine (`chain-reaction.ts`) is a pure function: no clock, no randomness, no mutation. That is the entire reason it can be trusted to a client. If you want the wire format op by op, it lives in [docs/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/games.md).
+The whole thing is kind `2390` events in the channel's group, replayed by `src/lib/games/session.ts`. The engine (`chain-reaction.ts`) is a pure function: no clock, no randomness, no mutation. That is the entire reason it can be trusted to a client. If you want the wire format op by op, it lives in [docs/features/games.md](https://github.com/obelisk-app/obelisk-dex/blob/main/docs/features/games.md).
 
 <RelatedGuides items={[
   { slug: "stacker", note: "the real-time one, where clearing lines buries somebody else" },

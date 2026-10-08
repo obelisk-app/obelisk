@@ -130,7 +130,7 @@ export function useDesktopNavigation(
   // on a different one (so `useGroups()` resolves the channel before we set
   // the view), then set the view to the call's channel. Cross-relay jumps
   // currently tear down voice signaling because the bridge pool resets on
-  // switchRelay, tracked in docs/sfu-known-bugs.md.
+  // switchRelay, tracked in docs/operations/sfu-known-bugs.md.
   useEffect(() => {
     return subscribeVoiceJump(async ({ channelId, relayUrl }) => {
       if (relayUrl && relayUrl !== relay) {

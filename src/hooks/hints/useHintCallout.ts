@@ -6,7 +6,7 @@ import { placeHintCard, type HintPlacement } from '@/utils/hints/placement';
  * The hint card's view model: its position next to `anchor`, measured
  * before paint and again on every scroll (capture phase, so a scrolling
  * container counts) and resize, and Escape to dismiss
- * (docs/conventions.md#component-files). `title` and `body` re-measure,
+ * (docs/ui/conventions.md#component-files). `title` and `body` re-measure,
  * since they change the card's height.
  */
 export function useHintCallout(anchor: HTMLElement, title: string, body: string, onDismiss: () => void) {

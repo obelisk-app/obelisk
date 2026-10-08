@@ -17,7 +17,7 @@ import { standardPageMetadata } from '@/utils/seo/standard';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   return standardPageMetadata(await getTranslations({ locale }), locale, 'help', {
-    // Search terms, not copy (docs/i18n.md): they stay English.
+    // Search terms, not copy (docs/architecture/i18n.md): they stay English.
     keywords: [
       'Obelisk help', 'Nostr chat help', 'Nostr login guide', 'NIP-29 community guide',
       'Nostr relay help', 'Bitcoin zaps guide',

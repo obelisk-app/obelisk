@@ -96,7 +96,7 @@ export class LoginModule {
    * subscribed to admin/member/messages while NIP-42 was still being
    * negotiated, the relay dropped those REQs silently, and the user had to
    * refresh 2-3 times for everything to populate. See
-   * `docs/data-system.md`.
+   * `docs/architecture/data-system.md`.
    */
   async finalizeLogin(): Promise<void> {
     const { t } = this;

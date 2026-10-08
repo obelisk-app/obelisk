@@ -22,7 +22,7 @@
  *
  * Cheating is therefore *detectable*, not *prevented*: garbage lands before
  * the checkpoint that justifies it arrives. That is the deliberate trade for a
- * game that has to feel instant (see docs/games.md).
+ * game that has to feel instant (see docs/features/games.md).
  */
 import { replay, type Input } from './engine';
 

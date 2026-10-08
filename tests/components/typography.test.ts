@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * The owner's rule (round 32): text goes through the ui kit's type pieces
- * (docs/conventions.md#type), so a heading, a paragraph and a form label look
+ * (docs/ui/conventions.md#type), so a heading, a paragraph and a form label look
  * the same wherever their role is the same.
  *
  *   heading     `Heading` (`src/components/ui/layout/Heading.tsx`): `as` h1-h4
@@ -64,7 +64,7 @@ describe('typography: no raw text elements outside the ui kit', () => {
 
   it('no file renders a raw h1-h6, p or label', () => {
     const offenders = [...found].map(([file, hits]) => `${file}: ${hits.join(', ')}`);
-    expect(offenders, 'use Heading, Text as="p" or Label (docs/conventions.md#type)').toEqual([]);
+    expect(offenders, 'use Heading, Text as="p" or Label (docs/ui/conventions.md#type)').toEqual([]);
   });
 
   it('reads the files it means to', () => {

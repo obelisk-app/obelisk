@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * The owner's rule (round 34): forms are built from the common pieces
- * (docs/conventions.md#forms).
+ * (docs/ui/conventions.md#forms).
  *
  *   the element  `Form` (`src/components/ui/forms/Form.tsx`): no raw `<form>`
  *                in JSX under `src/components/` or `src/app/` outside the ui kit
@@ -93,7 +93,7 @@ describe('forms: one form element, one form hook', () => {
     const offenders = COMPONENT_SCOPE.flatMap((dir) => files(join(ROOT, dir)))
       .filter((f) => /\.(tsx|jsx)$/.test(f) && !f.startsWith(UI_KIT))
       .flatMap((f) => rawForms(readFileSync(join(ROOT, f), 'utf8'), f).map((hit) => `${f}: ${hit}`));
-    expect(offenders, 'render Form from @/components/ui/forms (docs/conventions.md#forms)').toEqual([]);
+    expect(offenders, 'render Form from @/components/ui/forms (docs/ui/conventions.md#forms)').toEqual([]);
   });
 
   it('all inputs, selects and textareas use the UI kit', () => {

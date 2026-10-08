@@ -1,5 +1,5 @@
 /**
- * Every UI icon, one per file, each drawn on IconSvg's frame (docs/conventions.md#assets).
+ * Every UI icon, one per file, each drawn on IconSvg's frame (docs/ui/conventions.md#assets).
  * Import from here (`import { CloseIcon } from '@/assets/icons'`); every icon module is
  * side-effect free, so a page bundles only the icons it renders.
  */

@@ -2,7 +2,7 @@
  * Post-quantum DM sending, end to end through the bridge.
  *
  * Complements `dm-nip17.test.ts` (which covers classic NIP-17) with the
- * `docs/superpowers/specs/2026-08-15-post-quantum-dms-design.md` send path:
+ * `docs/history/specs/2026-08-15-post-quantum-dms-design.md` send path:
  * when the preference is on, the session can encrypt post-quantum, and the
  * peer publishes a usable `kind:10203`, the seal carries `@nostr-wot/pq`'s
  * hybrid envelope instead of plain NIP-44 ciphertext, and in every other

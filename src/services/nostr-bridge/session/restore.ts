@@ -84,7 +84,7 @@ export async function restoreSession(t: LifecycleTargets, deps: RestoreDeps): Pr
     // If we set isLoggedIn=true first, AppShell mounts and fires per-group
     // REQs against an unauthenticated socket, relays drop them silently
     // and the user is left needing 2-3 manual refreshes. See finalizeLogin
-    // and docs/data-system.md.
+    // and docs/architecture/data-system.md.
     try {
       await deps.connect();
     } catch {

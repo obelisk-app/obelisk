@@ -1,6 +1,6 @@
 /**
  * What each layer may hold, read from the TypeScript syntax tree
- * (docs/conventions.md#what-each-layer-holds):
+ * (docs/ui/conventions.md#what-each-layer-holds):
  *
  *   src/constants/  values and types only: no function of any kind, no class,
  *                   no JSX, and no value imported from an app layer (other

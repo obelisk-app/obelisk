@@ -12,7 +12,7 @@ import type { Preferences } from '@/services/preferences/preferences-schema';
  * Relays that carry DM call negotiation. They must accept ephemeral events
  * from keys they have never seen, because the negotiation is signed by a
  * throwaway key per call - a whitelist relay (like the group relays) cannot
- * carry a call. See docs/voice/dm-calls.md.
+ * carry a call. See docs/features/voice/dm-calls.md.
  */
 export const DEFAULT_CALL_RELAYS: readonly string[] = ['wss://relay.damus.io', 'wss://nos.lol'];
 

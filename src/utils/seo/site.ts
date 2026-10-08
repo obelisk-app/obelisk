@@ -2,7 +2,7 @@
  * The site-wide metadata and JSON-LD every page inherits from the
  * `[locale]` layout, in the page's language. Every string comes from the
  * `seo` module; the keyword list stays English on purpose (those are the
- * search terms people type, see docs/i18n.md).
+ * search terms people type, see docs/architecture/i18n.md).
  *
  * No `alternates` and no `openGraph.url` here: a layout's values are
  * inherited by every page that does not set its own, so a canonical in the

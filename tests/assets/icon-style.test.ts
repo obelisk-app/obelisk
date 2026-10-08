@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * The owner's round 33 rule, "choose one style for the icons, and reuse it"
- * (docs/conventions.md#icon-style), the sibling of `assets-only.test.ts`.
+ * (docs/ui/conventions.md#icon-style), the sibling of `assets-only.test.ts`.
  * It fails when:
  *   1. two icons are names for one symbol: a variant suffix (`SearchShortIcon`,
  *      `UsersAltIcon`, `Copy2Icon`) or two names from one synonym group
@@ -153,7 +153,7 @@ describe('one icon style, one icon per symbol', () => {
     const found = all
       .filter((f) => f.endsWith('.tsx') && !f.startsWith(`${ASSETS}/`))
       .flatMap((f) => callerStyleProblems(readFileSync(join(ROOT, f), 'utf8'), f));
-    expect(found, 'docs/conventions.md#icon-style').toEqual([]);
+    expect(found, 'docs/ui/conventions.md#icon-style').toEqual([]);
   });
 });
 

@@ -1,7 +1,7 @@
 /**
  * Web-of-Trust gating engine.
  *
- * The contract (see docs/wot-integration-plan.md):
+ * The contract (see docs/history/plans/wot-integration-plan.md):
  *   - `isAllowed(pubkey, kind?)` is synchronous. It is called from the bridge
  *     ingest hot path and must never await.
  *   - When WoT is enabled and the verdict for `pubkey` is unresolved, we

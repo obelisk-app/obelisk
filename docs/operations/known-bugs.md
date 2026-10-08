@@ -1,0 +1,100 @@
+# Known Bugs & Tech Debt
+
+Issue and debt tracking for Obelisk. Entries retain the reports and hypotheses from their original investigation; this documentation pass has not reproduced or recertified every issue. Check current code and reproduction steps before treating an old symptom or proposed fix as current behavior. Larger initiatives belong in [ROADMAP.md](../../ROADMAP.md).
+
+## Open questions from the 2026-09-25 UI pass
+
+- ~~`wss://relay.nostr.band` never completes TLS~~: **resolved 2026-09-25.**
+  Re-measured at an 8s hard timeout while every other relay in the file
+  answered under a second (and `useNostrUserSearch` had already recorded it
+  erroring after ~10s back on 2026-09-17), so it was swapped out of
+  `DEFAULT_SOCIAL_RELAYS` for `relay.snort.social`. It is **not** gone: it
+  remains a one-click preset and a `NIP50_RELAYS` search target, where it is
+  the best index available and its failures are already tolerated.
+  `relay.nostr.bg` was dropped from `WIDER_SOCIAL_RELAYS` in the same pass;
+  it refused the connection outright. Existing feed caches were keyed under
+  the old relay set and re-fetch once; that is expected.
+  *Caveat worth keeping:* this was measured from the app host, and social
+  relays are contacted from the **browser**. The user's own captures showed a
+  persistent 3/4, which corroborates it, but if nostr.band turns out to be
+  reachable from ordinary clients the right response is to re-add it as a
+  fifth relay rather than to revert the swap.
+- **Test content on `public.obelisk.ar`** (`# Stress Test`, channels of
+  `test` / `{}` / `.`). Confirmed **not** a leak: the relay answers
+  unauthenticated and non-whitelisted clients with
+  `auth-required: this relay only accepts whitelisted pubkeys` and serves
+  zero events, so only admitted pubkeys ever see those channels. (The client
+  reads that same string, arriving after a successful AUTH, as "not
+  whitelisted"; the relay should send `restricted:` instead; see
+  [data-system.md §5a](../architecture/data-system.md#5a-relay-side-contract-for-access-rejection).) Tidying them
+  is relay-operator housekeeping, not a client change. Note that filtering
+  `isHidden` groups out of the **live** stream client-side would be wrong:
+  it is how members reach legitimately private channels; the cache-seed skip
+  in `src/services/nostr-bridge/cache/seed.ts` exists only so hidden metadata is never painted from a
+  previous identity's snapshot.
+
+## Realtime & presence
+
+- **Online users not updating**: all users appear online regardless of actual status. Presence state is not driven by socket connect/disconnect events.
+- **Nuevo miembro no aparece en tiempo real en la member list**: when Bob joins a group where Alice is already connected, Alice does not see Bob in the sidebar until she reloads (or sends/receives a message that embeds his profile). Audit the bridge's kind 39002 (members) subscription path against `MemberList.tsx`: members arrive through the relay-wide admin/member REQ the session opens (`src/services/nostr-bridge/groups/membership/membership.ts`; group metadata ingest no longer opens a per-group one), but updates may not be triggering a re-render of the member list when the joiner has no kind:0 cached yet.
+- **Lateral member list does not update per server**: switching servers must reload members, roles and online state for the server the user is now viewing.
+
+## Rendering & UI
+
+- **`UserPanel` ↔ `MessageInput` altura/alineación visual**: the profile bar at the bottom of `ChannelSidebar` does not line up in height with the message input bar (`px-2 md:px-4 pb-3 md:pb-4 pt-2` in both, avatar `h-8` vs textarea `rows=1`). Attempts (`leading-tight`, moving `UserPanel` in/out of the aside, `bg-lc-dark` on wrapper) leave a black strip between the channel list and the profile card. Likely fix: force explicit shared height (e.g. `h-12`) on both inner containers and ensure the `UserPanel` wrapper inherits `bg-lc-dark` from the aside without painting under the `ServerBar`.
+- **Publications channels look like the opened tab even after clicking outside**: navigating from a publications channel to a regular channel does not clear its selected state in the sidebar. Does not happen between regular channels.
+- **Bienvenida channel renders badly on refresh**: initial load in the welcome channel loads elements in the wrong order.
+- **Replies don't link back to the replied message, and show raw npubs for mentions**: inline reply previews render mentions as `npub:kjasd...` instead of the Nostr display name, and clicking the preview does nothing. The target message is not focused/scrolled-to.
+- **Bot role priority in the member list cannot be reordered**: bot sidebar position depends on role order, but /admin → Roles does not expose drag-and-drop or up/down reordering for bot roles. Fix: expose role `position` reordering (including bot-assigned roles) and have the member list respect it.
+- **Anonymous name for users without server membership**: a user who logs in without joining any server shows as "Anonymous" on their own client even when their Nostr metadata has a name and picture. The /admin panel also skips their profile picture when they are not already a server member. Likely cause: profile fetch is gated on membership.
+- **Mentions autocomplete leaks private/hidden channel membership**: `@user` autocomplete must filter results to users who can read the current channel. In private/hidden channels, only members with read access should appear; otherwise membership of hidden channels is inferred and mentions can be created that the target cannot see.
+
+## Voice
+
+- **Voice presence beacons and signaling are plaintext on the relay**: `src/services/voice/transport.ts` publishes presence beacons (kind 20078) and WebRTC signaling (kind 25050) as signed but unencrypted ephemeral events. Beacons leak `{pubkey, channelId, timestamp}` every ~15s while a user is in voice; any relay subscriber can build a real-time roster of who is in which voice channel and reconstruct session timing. Signaling events are worse: `content` is plaintext JSON containing SDP + ICE candidates, so the relay (or any subscriber filtering `kinds:[25050], #e:[channelId]`) sees codec fingerprints and harvested local/public IPs; the `#p` target is only enforced client-side (`transport.ts:144`). Media itself is fine (DTLS-SRTP peer-to-peer in mesh). Fix: wrap both kinds in NIP-59 gift-wrap (or NIP-44 to the addressed peer for signals); the transport file already flags this as a v1 shortcut. Until then, treat voice channel membership and participant IPs as public to anyone watching the relay.
+- **No speaking detector**: voice tiles in `VoiceRoom.tsx` don't react to voice activity because there's no per-peer `AnalyserNode` sampling RMS off incoming audio. Local mute state is reflected; actual speaking is not. Port the `SpeakingDetector` (FFT 512, 20 Hz sampling, threshold ~0.02, 400 ms hangover) and feed `setSpeaking(pubkey, speaking)` into `useVoiceStore`.
+
+
+## Notifications
+
+The current foundation uses per-account client read cursors with encrypted relay synchronization, not an Obelisk server-side `lastReadAt`. Transient action feedback uses the shared ToastStack; persistent notification state, unread markers, mentions, favicon/title indicators and operating-system notifications have separate paths. See [read-state architecture](../architecture/read-state.md) and [feedback ownership](../ui/README.md#feedback-ownership). The reliability report below remains a triage item, not a finding from the toast-host consolidation.
+
+- **General notification reliability**: notifications do not fire consistently. Needs a reproducible audit of relay event delivery, notification/read-state stores and their relevant UI or operating-system outputs against the actual triggers (new message in subscribed channel, @mention, reply to own message, DM). Specific reproduction steps to be added as they are observed.
+
+## Ergonomics / small UX
+
+- **Scroll to last message button** is missing when a channel has many unread messages.
+- **Navigate between mentions**: when a user has several mentions in a long chat, provide a floating `N mentions ↑↓` control (Discord-style) that jumps to prev/next without marking all as read. Keyboard shortcuts `F7` / `Shift+F7` and clicking the unread-mention badge should drive the same navigation.
+
+## Apps (games moving to obelisk-apps, in progress 2026-09-27)
+
+Games are moving out of this repo into [obelisk-apps](https://github.com/obelisk-app/obelisk-apps). They are becoming sandboxed apps that users publish as kind 32390 manifests, with the bundle on Blossom. Nothing below is built yet. These are the host-side risks the switch brings, recorded now so the dex PR lands with them tracked. The full model is in the obelisk-apps repo's security and known-issues docs, and the cross-project policy in obelisk-design's app-sandbox security workflow.
+
+- **Stranger code next to the signer.** An app is written by anyone who can publish to the active relay.
+  - The dex host must mount it as `sandbox="allow-scripts"` (never `allow-same-origin`) with `allow=""`, from `https://frame.obelisk.ar`.
+  - It must build every kind 2390 itself: forced `h`/`e`/`t`/`op`, `n` the only tag an app may add, a host-side rate limit.
+  - It must never pass a signer, relay URL, group id or avatar URL across the port.
+- **Exfiltration the sandbox can't stop:**
+  - An app can navigate its own frame to a URL carrying data. The host must kill the frame on a second `load`, but only after the request has gone out.
+  - An app can open `RTCPeerConnection` to any STUN/TURN server. There's no page-level fix.
+  - What can leak: session events, participant names and avatars, and the user's IP.
+- **Phishing inside the frame** (a fake "paste your nsec"). The only mitigations are host-drawn chrome ("by <name> · third-party app") and app-prefixed toasts.
+- **CPU and battery abuse** lasts until the modal is closed. Frames must never run in the background.
+- **`src/proxy.ts` and obelisk-tauri must agree.** `frame-src` needs `https://frame.obelisk.ar` in both, kept in step by hand. Tauri's embed list has already drifted from dex's.
+- **The Blossom servers in `src/services/media/blossom.ts` reject JS bundles.** They sniff uploads and 415 anything that isn't media, so app bundles live on the Obelisk-run `https://blossom.obelisk.ar` (hzrd149 blossom-server via the `obelisk-app/blossom-server` fork; WoT-gated uploads written by obelisk-apps `packages/blossom-wot` using the obelisk-relay ladder), with `nostr.download` as a secondary hint. Bundle fetches must use the manifest's `server` hints, never the attachment list. That server is a single host with no mirror yet.
+- **The first open of an app is slow** (the bundle is fetched from Blossom, then cached by hash). An app whose blobs are gone can't be opened at all.
+- **Legacy `[[game:<id>]]` tables** are mapped to the official apps and run their *current* bundle, with no version pin. Remove the mapping one week after the switch, once kind 2390 retention has pruned every pre-switch `create`.
+- **Chat cards stop being live boards.** An `AppCard` shows the manifest, participants and the app's `status` line. The board is only in the modal, because mounting an iframe per card is too heavy.
+- **App moderation** is only what the relay operator already has: deleting events and banning authors. There's no per-app hide, no review and no trust signal in the catalog.
+
+## From the classic stack
+
+These were filed against the retired Postgres + Socket.io client ([obelisk-app/obelisk-classic](https://github.com/obelisk-app/obelisk-classic)). The files, endpoints and database tables they name are not in this repo; re-check each one against the relay-only app before working on it.
+
+- **`MessageBubble` ignores the embedded `message.author`**: classic's MessageArea.tsx (lines 213-214) resolves avatar/name only via `profileCache.get(authorPubkey)`, discarding the profile the server already attaches on each `new-message` emit (see `getAuthorProfile` in classic's lib/profile-sync.ts, line 255). The first message from a never-seen user renders with the fallback letter until the seed in classic's chat/page.tsx (lines 426-445) reaches the cache and re-renders. Fix: priority chain `message.author?.picture ?? profileCache.get(pk)?.picture` (same for `displayName`).
+- **Channel load restores `lastSeen` even when not needed**: classic's app/chat/page.tsx (lines 403-418) always queues a pending highlight from `localStorage['chat:lastSeen:<channelId>']` on initial mount. If that message isn't in the latest page, `fetchMessages` refetches with `?around=<id>` (line 1192) and the user lands in old history instead of at the bottom. Restore only when the URL has `?m=`, or fall back to latest page when the stored id is outside it.
+- **`/api/unread` returns a binary count for DMs**: today it returns `1` or `0` per thread instead of the real unread message count.
+- **Welcome message does not fire for existing users joining a new server**: the welcome bot only triggers via the join endpoint; auto-join flows (e.g. WoT auto-registration) bypass it. Verify that auto-join creates a Member record and then invokes the same welcome-message hook as the explicit join route.
+- **No way to delete servers from /admin**: once a server is created there is no UI path to remove it. Schema-wise, `Server` already cascades deletes to its children, so the API/UI is the only missing piece.
+- **`Channel.emoji` should be folded into `Channel.name`**: emoji and name are stored as separate columns in admin, forcing every renderer to stitch them (`<ChannelEmoji value={channel.emoji} /> {channel.name}`) and complicating slugs, share-links and mentions. Migrate admin UX so the emoji is typed inline in the single name input (e.g. `💬 chat-general`), store it inline in `name`, and drop the `emoji` column in a follow-up migration.
+- **Deployed La Crypta server is behind the classic `prisma` seeder**: welcome message in `empezá-acá`, posts of `indice` (reglas/actividades/proyectos/redes), posts of `méritos` (plantillas de reclamo), channel descriptions, emojis, tags, etc. are hardcoded in the seeder and only applied at initial creation. There is no way to edit them from the UI, and re-running the seeder does not update existing rows. Fix tracked in [content-migration-plan.md](../history/plans/content-migration-plan.md).

@@ -22,7 +22,7 @@ export function hintSurfaceFor(screen: ScreenName): SurfaceId | null {
  * The tab to highlight: the screen itself when it is a tab, else the tab the
  * nav resolves to. For sub-screens with dynamic parents (profile-view from
  * inbox, member-list from channel, ...) this respects where the user came
- * from rather than the static map. See docs/mobile-navigation.md §3.
+ * from rather than the static map. See docs/ui/mobile-navigation.md §3.
  */
 export function activeTabFor(nav: NavState): ScreenName | null {
   return NAV_ORDER.includes(nav.screen) ? nav.screen : resolveParent(nav);

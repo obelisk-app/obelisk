@@ -71,7 +71,7 @@ export function getPeerConnectionState(pubkey: string): RTCPeerConnectionState |
 // Server-side this is best-effort only. The SFU MUST also have an
 // ICE/DTLS-timeout-driven cleanup so a peer that drops without any
 // graceful close (network loss, OS kill, browser crash) eventually frees
-// its slot. See docs/sfu-known-bugs.md "Stale peer state on abrupt close".
+// its slot. See docs/operations/sfu-known-bugs.md "Stale peer state on abrupt close".
 if (typeof window !== 'undefined') {
   const onUnload = () => {
     const c = active;

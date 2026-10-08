@@ -22,7 +22,7 @@ export interface JsGroup {
   /**
    * Server banner (image or animated gif URL). Non-standard NIP-29 extension,
    * carried as a `["banner", <url>]` tag on kind 39000/9002. See
-   * docs/server-banner.md.
+   * docs/features/server-banner.md.
    */
   readonly banner: string | null;
   readonly isPublic: boolean;

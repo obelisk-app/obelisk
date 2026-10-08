@@ -1,47 +1,28 @@
-# Obelisk Documentation
+# Obelisk documentation
 
-Detailed specs, plans and references for Obelisk subsystems. Start with [../AGENTS.md](../AGENTS.md) for the architecture and the rules; the roadmap is [../ROADMAP.md](../ROADMAP.md). Dated design specs and implementation plans live under `superpowers/` and are historical.
+Start with [repository setup](../README.md#run-locally) and [AGENTS.md](../AGENTS.md) for the working rules. Current implementation references are organized by responsibility; proposals and historical records are separate so old plans do not become accidental instructions.
 
-## Architecture & platform
+| Need | Start here |
+|---|---|
+| Understand routes, providers and data ownership | [Architecture](architecture/README.md) |
+| Build or simplify UI consistently | [UI and interaction](ui/README.md) |
+| Build, deploy, test or triage an issue | [Operations](operations/README.md) |
+| Work on a feature or protocol integration | [Feature references](features/README.md) |
+| Evaluate a future design | [Proposals](proposals/README.md) and [ROADMAP](../ROADMAP.md) |
+| Trace an earlier decision or measurement | [History](history/README.md) |
 
-- [conventions.md](conventions.md) - component files are markup (view-model hooks, utils, services, one component per file, the markup-only ratchet) and the shared modal and sheet chrome.
-- [data-system.md](data-system.md) - priority tiers (P0/P1/P2/P3), login → connect contract, whitelist preflight, connection banner, bridgeCache, NIP-42 AUTH, watchdog tunables, UI loading states, local data (the inventory, Settings > Data on this device, the write fence).
-- [read-state.md](read-state.md) - per-channel and per-DM cursors, mention/reply detection, MentionNavigator, encrypted multi-device sync via NIP-59 gift wrap, deferred-mount gating for relay-sync subs.
-- [static-public-pages.md](static-public-pages.md) - immutable public HTML, dynamic nonces, build-bound script hashes and deployment requirements.
-- [i18n.md](i18n.md) - the three languages: URL locales, message modules and route scopes, `errorText`, the hardcoded-string ratchet, adding a language.
-- [direct-messages.md](direct-messages.md) - where the DM code is, NIP-17 by default and NIP-04 per thread, the inbox ladder, encrypted uploads.
-- [dm-metadata-privacy.md](dm-metadata-privacy.md) - what gift-wrapped DMs still leak, the relay ladder, AUTH modes, the rules for changing DM routing.
-- [voice/](voice/README.md) - mesh voice and DM calls. Start with `voice/README.md`; deeper material in [voice/mesh-protocol.md](voice/mesh-protocol.md), [voice/mesh-modules.md](voice/mesh-modules.md), [voice/failure-modes.md](voice/failure-modes.md), [voice/dm-calls.md](voice/dm-calls.md) and [voice/testing.md](voice/testing.md).
-- [sfu-system.md](sfu-system.md) - SFU engine (mediasoup, Nostr-RPC signaling). Server lives in the [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) repo. Server-side issues: [sfu-known-bugs.md](sfu-known-bugs.md).
-- [social-feeds.md](social-feeds.md) - the ordinary-Nostr surface (notes, profiles, reposts, zaps) on its own relay tier.
-- [relay-layout-and-branding.md](relay-layout-and-branding.md) - operator-controlled categories, channel order, and relay branding (NIP-78 kind 30078).
-- [relay-roles.md](relay-roles.md) - operator-defined tiered roles and the badge shown next to member names (NIP-78 kind 30078).
-- [media-packs.md](media-packs.md) - unified emoji/GIF/sticker marketplace, user packs and favorites, server favorites, NIP-51/NIP-30 events, and lossless migration.
-- [server-banner.md](server-banner.md) - relay-level banner image.
-- [uploads.md](uploads.md) - Blossom storage, URL format, and voice-note event contract.
-- [chat-composer-attachments.md](chat-composer-attachments.md) - image and video attachments in the channel composer, and the gallery that renders them.
-- [search.md](search.md) - NIP-50 search (`bridge.searchMessages`) and query syntax.
-- [bitcoin-zaps-nwc.md](bitcoin-zaps-nwc.md) - the one wallet path (a connected Nostr Wallet Connect wallet, else WebLN), zaps, and paying invoices posted in chat.
-- [games.md](games.md) - games on the relay (kind 2390, deterministic replay); moving to obelisk-apps.
-- [mobile-navigation.md](mobile-navigation.md) - the phone shell's history-driven screen state machine.
-- [onboarding.md](onboarding.md) - the discovery hints new accounts see.
+## Frequently used references
 
-## Operations
+- [Code conventions](ui/conventions.md): layer ownership, cohesive screens, shared Link/List/Text and other UI primitives.
+- [Rendering and CSP](architecture/static-public-pages.md): immutable public artifacts, dynamic nonces and deployment verification.
+- [Internationalization](architecture/i18n.md): locale URLs, page-owned scopes, translation payloads and SEO.
+- [Data system](architecture/data-system.md): login, relay access, caches, loading priorities and local storage.
+- [Read state](architecture/read-state.md): read cursors, mentions and encrypted synchronization.
+- [Voice](features/voice/README.md), [DMs](features/direct-messages.md), [social feeds](features/social-feeds.md) and [payments](features/bitcoin-zaps-nwc.md).
+- [Client issues](operations/known-bugs.md) and [SFU issues](operations/sfu-known-bugs.md).
 
-- [cloudflare-tunnel.md](cloudflare-tunnel.md) - `npm run dev:raise` exposes localhost via a named Cloudflare tunnel for phone testing of NIP-07 / NIP-46.
-- [nostr-wot-sdk-fork.md](nostr-wot-sdk-fork.md) - working on `@nostr-wot/ui` from a local clone of the SDK fork.
-- [qa/voice-relay-quota-regression.md](qa/voice-relay-quota-regression.md) - QA script for relay subscription quota and voice headroom (written before the relay hub).
-- [screenshots/](screenshots/README.md) - older marketing screenshots, not used by the app or the README.
+## Keeping these docs current
 
-## Plans & proposals
+Update the current reference with a behavior or ownership change and link to it rather than copying a second contract. Keep dated measurements in history and mark their superseded conclusions explicitly. A proposed capability remains a proposal until verified in its owning codebase. Use repository-relative source paths in prose and working relative Markdown links between documents.
 
-- [known-bugs.md](known-bugs.md) - open bugs and tech debt.
-- [wot-and-invite-credits.md](wot-and-invite-credits.md) - Web-of-Trust auto-registration design.
-- [tor-desktop-node.md](tor-desktop-node.md) - one desktop app that is both client and optional server, over Tor.
-- [wot-integration-plan.md](wot-integration-plan.md) - the Web-of-Trust ingest gate and mute revision (historical; implemented in `src/services/wot/`).
-- [i18n-plan.md](i18n-plan.md) - the first translation plan (superseded by [i18n.md](i18n.md)).
-- [content-migration-plan.md](content-migration-plan.md) - pinned messages and editable channel content (written for the classic stack).
-
-## References
-
-- [discord-emoji-export.md](discord-emoji-export.md) - procedure for exporting a Discord emoji set into Obelisk's emoji format.
+Run `python3 scripts/docs/check-links.py` after moving documentation. It checks local Markdown link targets and anchors, plus exact references to moved documentation paths throughout tracked text. This checks navigation and references, not protocol correctness or the accuracy of every historical claim.

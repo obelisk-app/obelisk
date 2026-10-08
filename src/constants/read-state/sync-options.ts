@@ -31,7 +31,7 @@ export const SCHEMA_VERSION = 1;
  * fuzzes `created_at` backwards by up to two days (so `since` would drop live
  * cursors), and the wrap that carries our cursors is a needle in a haystack of
  * DM wraps (so `limit` could cut it off). Tagging our own wraps to make them
- * findable is exactly the metadata leak docs/dm-metadata-privacy.md exists to
+ * findable is exactly the metadata leak docs/features/dm-metadata-privacy.md exists to
  * prevent.
  *
  * So the query is as broad as it has to be, and on a loaded relay it can take

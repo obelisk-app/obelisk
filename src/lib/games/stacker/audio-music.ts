@@ -14,7 +14,7 @@ let musicStep = 0;
  * hackathon project. That repo marks its royalty-free tracks with an `ncc`
  * filename prefix - see `ROYALTY_FREE_PREFIX` in its `src/audio/music.ts`  - 
  * and this is one of them, generated with Suno. Credited in the UI and in
- * docs/games.md.
+ * docs/features/games.md.
  *
  * If it will not load or play, the synthesized bed below takes over, so the
  * game is never silent because of a missing file or an autoplay policy.

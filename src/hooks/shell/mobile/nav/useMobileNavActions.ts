@@ -150,7 +150,7 @@ export function useMobileNavActions({
   // bottom-nav highlight + swipe direction reflect where the user came from.
   // E.g. profile-view from Inbox keeps Inbox as parent; from a channel keeps
   // 'channel' (which resolveParent walks up to 'server'). See
-  // docs/mobile-navigation.md §3.
+  // docs/ui/mobile-navigation.md §3.
   const openProfile = useCallback((pubkey: string) => {
     useChatStore.getState().openProfilePopup(pubkey);
   }, []);

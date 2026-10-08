@@ -187,7 +187,7 @@ export class GroupMetadataModule {
     // admin/member REQs now open lazily on first useAdmins / useMembers
     // call from the chat panel. Tradeoff: the sidebar's "I'm an admin of
     // X" badge no longer paints before opening each channel, acceptable
-    // given the load-time win. See docs/data-system.md.
+    // given the load-time win. See docs/architecture/data-system.md.
     // Per-group creator REQs are intentionally not fanned out here. The
     // global authored-groups subscription covers the only write path that
     // needs this eagerly (claiming admin on groups the local user created).

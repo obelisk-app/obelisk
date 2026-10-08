@@ -5,7 +5,7 @@ import { LAYER_ROOTS, layerProblems } from '../../scripts/layers/analyze';
 import { layerFiles, scanLayers } from '../../scripts/layers/scan';
 
 /**
- * What each layer may hold (round 32, docs/conventions.md#what-each-layer-holds),
+ * What each layer may hold (round 32, docs/ui/conventions.md#what-each-layer-holds),
  * read from the TypeScript syntax tree by `scripts/layers/analyze.ts`:
  *
  *   src/constants/  values and types only: no function, no class, no JSX, and
