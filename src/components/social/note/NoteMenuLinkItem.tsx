@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import type { ReactNode } from 'react';
 
 /**
@@ -18,7 +20,7 @@ export default function NoteMenuLinkItem({
   newTab?: boolean;
 }) {
   return (
-    <a
+    <Link native
       role="menuitem"
       href={href}
       {...(newTab ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
@@ -26,6 +28,6 @@ export default function NoteMenuLinkItem({
       data-testid={testId}
     >
       {children}
-    </a>
+    </Link>
   );
 }

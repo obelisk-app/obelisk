@@ -1,3 +1,4 @@
+import Link from '@/components/ui/navigation/Link';
 import PageSection from '@/components/ui/layout/PageSection';
 import Container from '@/components/ui/layout/Container';
 import Card from '@/components/ui/layout/Card';
@@ -27,11 +28,10 @@ export default function StackSection() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {TECH_STACK.map((tech) => (
             <Card variant="interactive" padding="xl" key={tech.name} asChild>
-              <a
+              <Link
                 href={tech.href}
                 target="_blank"
-                rel="noopener noreferrer"
-                className="group hover:border-lc-green/20 transition-colors"
+                variant="card" className="group"
               >
                 <Row gap="3" align="center">
                   {tech.img ? (
@@ -48,7 +48,7 @@ export default function StackSection() {
                     <Text as="p" variant="caption">{t(tech.descKey)}</Text>
                   </div>
                 </Row>
-              </a>
+              </Link>
             </Card>
           ))}
         </div>

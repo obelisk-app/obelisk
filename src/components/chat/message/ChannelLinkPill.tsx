@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import { useChannelLinkPill } from '@/hooks/chat/message/useChannelLinkPill';
 
 interface Props {
@@ -30,7 +32,7 @@ export default function ChannelLinkPill({ slug, messageId, postId, href }: Props
     : 'bg-lc-green/15 text-lc-green hover:bg-lc-green/25';
 
   return (
-    <a
+    <Link native
       href={href}
       onClick={vm.onClick}
       className={`${baseClass} ${variantClass}`}
@@ -41,6 +43,6 @@ export default function ChannelLinkPill({ slug, messageId, postId, href }: Props
       {vm.noAccess && <span aria-hidden>🔒 </span>}
       {!vm.noAccess && vm.prefix}
       {vm.label}
-    </a>
+    </Link>
   );
 }

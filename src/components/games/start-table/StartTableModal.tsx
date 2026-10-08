@@ -1,5 +1,7 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
+
 import Row from '@/components/ui/layout/Row';
 import Modal from '@/components/ui/overlays/Modal';
 import Input from '@/components/ui/forms/Input';
@@ -56,7 +58,7 @@ export default function StartTableModal({
       <ModalHeader title={t('games.seats')} subtitle={vm.subtitle} onClose={onClose} />
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-        <ul className="space-y-2" data-testid="seat-list">
+        <List marker="none" data-testid="seat-list">
           {vm.rows.map(({ row, shared, chips, mode }, i) => (
             <li key={row.rowId} className="rounded-lg border border-lc-border p-2">
               <Row gap="2" align="center">
@@ -118,7 +120,7 @@ export default function StartTableModal({
               )}
             </li>
           ))}
-        </ul>
+        </List>
 
         {vm.canAdd && (
           <Button

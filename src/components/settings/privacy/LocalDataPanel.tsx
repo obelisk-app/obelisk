@@ -2,7 +2,7 @@
 
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import Button from '@/components/ui/buttons/Button';
 import AnalyticsSetting from './AnalyticsSetting';
 import LocalDataCategoryRow from './LocalDataCategoryRow';
@@ -54,7 +54,7 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
           </Button>
         </div>
       </Card>
-      <Link href="/help/local-data" className="inline-block text-sm text-lc-green hover:underline" data-testid="local-data-learn-more">
+      <Link href="/help/local-data" variant="text" className="inline-block text-sm" data-testid="local-data-learn-more">
         {t('settings.localData.learnMore')}
       </Link>
     </div>

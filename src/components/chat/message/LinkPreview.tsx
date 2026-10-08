@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import { useState } from 'react';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useLinkPreview } from '@/hooks/chat/message/useLinkPreview';
@@ -35,7 +37,7 @@ export default function LinkPreview({ url, showImage = true }: {
   const host = previewHost(preview);
 
   return (
-    <a
+    <Link native
       href={preview.url}
       target="_blank"
       rel="noopener noreferrer nofollow"
@@ -57,6 +59,6 @@ export default function LinkPreview({ url, showImage = true }: {
           <span className="obelisk-link-preview-description">{preview.description}</span>
         )}
       </span>
-    </a>
+    </Link>
   );
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
+
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import type { GameSession } from '@/lib/games/session/session';
 import { SEAT_COLORS } from '@/constants/games/chain-reaction';
@@ -20,7 +22,7 @@ export default function GameRoster({
   const t = useTranslations();
   const roster = session.status === 'waiting' ? session.joined : session.participants;
   return (
-    <ul className="space-y-2" data-testid="game-roster">
+    <List marker="none" data-testid="game-roster">
       {roster.map((pk, i) => (
         <li key={pk} className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: SEAT_COLORS[i]?.hex }} />
@@ -34,6 +36,6 @@ export default function GameRoster({
           )}
         </li>
       ))}
-    </ul>
+    </List>
   );
 }

@@ -1,12 +1,14 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import type { BioSegment } from '@/utils/chat/profile/profile-links';
 
 /** One piece of a bio: text, or a link (a web link opens in a new tab). */
 export function BioSegmentView({ segment }: { segment: BioSegment }) {
   if (segment.type === 'text') return <span>{segment.value}</span>;
   return (
-    <a
+    <Link native
       href={segment.href}
       target={segment.href.startsWith('http') ? '_blank' : undefined}
       rel="noopener noreferrer"
@@ -14,6 +16,6 @@ export function BioSegmentView({ segment }: { segment: BioSegment }) {
       data-testid="profile-bio-link"
     >
       {segment.value}
-    </a>
+    </Link>
   );
 }

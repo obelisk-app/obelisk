@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+
 import Card from '@/components/ui/layout/Card';
 import Stack from '@/components/ui/layout/Stack';
 import Row from '@/components/ui/layout/Row';
@@ -31,7 +33,7 @@ export default function ToastStack() {
           >
             <Row gap="3" align="start">
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-lc-white truncate">{toast.title}</div>
+                <Text as="div" size="sm" weight="semibold" tone="default" truncate="truncate">{toast.title}</Text>
                 <div className="text-sm text-lc-muted mt-0.5 line-clamp-2 break-words">{toast.body}</div>
               </div>
               <span

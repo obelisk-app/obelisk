@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import type { ReactNode } from 'react';
 import { isImageUrl } from '@/utils/message-text/markdown';
 import { isUploadUrl, filenameFromUrl } from '@/utils/attachments/attachments';
@@ -14,7 +16,8 @@ import AttachmentCard from './AttachmentCard';
 /**
  * A markdown link in a message body. Its `href` has already passed
  * react-markdown's default URL sanitizer, so a `javascript:` link arrives
- * here empty and renders as its text alone.
+ * here empty and renders as its text alone. Shared links use `native` here
+ * so message deep-link handlers and media URLs retain their browser behavior.
  */
 export function MarkdownLink({ href, children, mediaShow }: { href?: string; children?: ReactNode; mediaShow: boolean }) {
   if (!href) return <>{children}</>;
@@ -22,7 +25,7 @@ export function MarkdownLink({ href, children, mediaShow }: { href?: string; chi
   // Hashtags link to Obelisk's own /t/<tag> page, not a third party.
   if (href.startsWith('/t/')) {
     return (
-      <a
+      <Link native
         href={href}
         // Not `break-all`: it split `#RUNSTR` across lines as `#RU` /
         // `NSTR`. A hashtag is one token and wraps at its own
@@ -33,7 +36,7 @@ export function MarkdownLink({ href, children, mediaShow }: { href?: string; chi
         data-testid="nostr-hashtag"
       >
         {children}
-      </a>
+      </Link>
     );
   }
 
@@ -41,14 +44,14 @@ export function MarkdownLink({ href, children, mediaShow }: { href?: string; chi
   // remote-media gate is closed it falls through to a plain link.
   if (isImageUrl(href) && mediaShow) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className="block">
+      <Link native href={href} target="_blank" rel="noopener noreferrer" className="block">
         <RemoteImage
           src={href}
           alt=""
           className="mt-1 max-w-sm max-h-80 rounded-lg object-contain bg-lc-black/50"
           onError={hideBrokenImage}
         />
-      </a>
+      </Link>
     );
   }
 
@@ -70,15 +73,15 @@ export function MarkdownLink({ href, children, mediaShow }: { href?: string; chi
   if (chat) {
     // Fallback: other /chat URLs without a slug (e.g. profile deep-links)
     return (
-      <a href={href} className="text-lc-green/80 hover:underline break-all" onClick={(e) => followInAppLink(e, chat.path)}>
+      <Link native href={href} className="text-lc-green/80 hover:underline break-all" onClick={(e) => followInAppLink(e, chat.path)}>
         {children}
-      </a>
+      </Link>
     );
   }
 
   // Regular link
   return (
-    <a
+    <Link native
       href={href}
       target="_blank"
       rel="noopener noreferrer"
@@ -86,6 +89,6 @@ export function MarkdownLink({ href, children, mediaShow }: { href?: string; chi
       className="text-lc-green/80 hover:underline break-all"
     >
       {autolinkLabel(href, children) ?? children}
-    </a>
+    </Link>
   );
 }

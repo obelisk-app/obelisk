@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+
 import Button from '@/components/ui/buttons/Button';
 import type { UserHit } from '@/constants/identity/user-search';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
@@ -30,7 +32,7 @@ export default function FeedSearchPerson({ hit, onOpen }: { hit: UserHit; onOpen
         alt=""
       />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-lc-white">{name}</span>
+        <Text size="sm" weight="semibold" tone="default" truncate="truncate" className="block">{name}</Text>
         {nip05 && <span className="block truncate text-[11px] text-lc-green">{nip05}</span>}
       </span>
     </Button>

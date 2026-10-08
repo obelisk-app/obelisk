@@ -1,5 +1,5 @@
 import type { ComponentPropsWithoutRef } from 'react';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import Callout from './Callout';
 import Shot from './Shot';
 import Clip from './Clip';
@@ -31,7 +31,6 @@ function OL(props: ComponentPropsWithoutRef<'ol'>) {
 function LI(props: ComponentPropsWithoutRef<'li'>) {
   return <li className="my-1" {...props} />;
 }
-const LINK_CLASS = 'text-lc-green underline underline-offset-2 hover:text-lc-green-dark';
 
 /**
  * Internal links are written locale-free in every language
@@ -39,14 +38,12 @@ const LINK_CLASS = 'text-lc-green underline underline-offset-2 hover:text-lc-gre
  * Spanish article links to `/es/guides/web-of-trust`.
  */
 function A({ href = '', ...props }: ComponentPropsWithoutRef<'a'>) {
-  if (href.startsWith('/')) return <Link href={href} className={LINK_CLASS} {...props} />;
   const external = href.startsWith('http');
   return (
-    <a
+    <Link
       href={href}
-      className={LINK_CLASS}
+      variant="prose"
       target={external ? '_blank' : undefined}
-      rel={external ? 'noopener noreferrer' : undefined}
       {...props}
     />
   );

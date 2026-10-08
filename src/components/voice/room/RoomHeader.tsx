@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+
 /**
  * The room header and its topology pill: the SFU upgrade status for a
  * `voice-sfu` channel, or the media-sync badge for a mesh call while peer
@@ -25,7 +27,7 @@ export default function RoomHeader({ name, count, sfuStatus, meshSyncingCount = 
         <PingDot color="bg-lc-green" size="sm" halo={50} className="shrink-0" />
         <div className="min-w-0">
           <div className="text-[10px] uppercase tracking-[0.14em] text-lc-muted leading-none mb-1">{t('voice.channel')}</div>
-          <div className="font-semibold text-lc-white truncate text-sm sm:text-base leading-tight">{name}</div>
+          <Text as="div" size="sm" weight="semibold" tone="default" truncate="truncate" className="sm:text-base leading-tight">{name}</Text>
         </div>
       </div>
       {/* Compact topology status. SFU channels get the SFU badge; mesh

@@ -2,7 +2,7 @@
 
 import Container from '@/components/ui/layout/Container';
 import Row from '@/components/ui/layout/Row';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { useTranslations } from 'next-intl';
 import ObeliskIcon from '@/assets/brand/ObeliskIcon';
 import Button from '@/components/ui/buttons/Button';
@@ -41,13 +41,13 @@ export default function Navbar() {
           {/* Nav links */}
           <div className="hidden md:flex items-center gap-1">
             {SIMPLE_LINKS.map(({ href, key }) => (
-              <a
+              <Link
                 key={href}
                 href={href}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-lc-muted hover:text-lc-white transition-colors"
               >
                 {t(key)}
-              </a>
+              </Link>
             ))}
 
             <NavGuidesMenu guides={vm.guides} />
@@ -68,7 +68,7 @@ export default function Navbar() {
                 <Link
                   href="/app"
                   prefetch={false}
-                  className="lc-pill lc-pill-primary text-sm"
+                  variant="button" buttonVariant="pill" size="sm"
                   data-testid="nav-app-pill"
                 >
                   {t('marketing.nav.app')}

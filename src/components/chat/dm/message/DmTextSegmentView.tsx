@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import type { DmTextSegment } from '@/utils/chat/dm/dm-text-segments';
 
@@ -7,9 +9,9 @@ import type { DmTextSegment } from '@/utils/chat/dm/dm-text-segments';
 export function DmTextSegmentView({ segment, linkClass }: { segment: DmTextSegment; linkClass: string }) {
   if (segment.kind === 'link') {
     return (
-      <a href={segment.url} target="_blank" rel="noopener noreferrer nofollow" className={linkClass}>
+      <Link native href={segment.url} target="_blank" rel="noopener noreferrer nofollow" className={linkClass}>
         {segment.url}
-      </a>
+      </Link>
     );
   }
   if (segment.kind === 'emoji') {

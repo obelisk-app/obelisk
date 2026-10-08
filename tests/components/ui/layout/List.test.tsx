@@ -19,9 +19,23 @@ describe('List', () => {
     expect(nested).toHaveClass('list-[circle]', 'space-y-1');
     expect(nested).not.toHaveClass('list-disc');
   });
+  it('retains ordered start, reversed order and marker type', () => {
+    render(<List as="ol" start={4} reversed type="a"><li>Fourth</li></List>);
+    const list = screen.getByRole('list');
+    expect(list).toHaveAttribute('start', '4');
+    expect(list).toHaveAttribute('reversed');
+    expect(list).toHaveAttribute('type', 'a');
+    expect(list).toHaveClass('list-[lower-alpha]');
+    expect(list).not.toHaveClass('list-decimal');
+  });
+  it('preserves an explicit role override', () => {
+    render(<List marker="none" role="menu"><li role="menuitem">Open</li></List>);
+    expect(screen.getByRole('menu')).toHaveAttribute('role', 'menu');
+  });
   it('supports unmarked navigation lists and semantic time text', () => {
     render(<><List marker="none" spacing="relaxed"><li>Guide</li></List><Text as="time" dateTime="2026-10-08" size="10" tone="muted" className="ml-auto shrink-0">Today</Text></>);
     expect(screen.getByRole('list')).toHaveClass('list-none', 'space-y-2.5');
+    expect(screen.getByRole('list')).toHaveAttribute('role', 'list');
     expect(screen.getByRole('list')).not.toHaveClass('pl-5');
     expect(screen.getByText('Today').tagName).toBe('TIME');
     expect(screen.getByText('Today')).toHaveAttribute('datetime', '2026-10-08');

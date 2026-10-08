@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+
 /**
  * A thread or an article, opened in place of the feed rather than on top of
  * it.
@@ -49,7 +51,7 @@ export default function InlineReader({
         >
           <ChevronLeftIcon size={20} strokeWidth={2.5} />
         </Button>
-        <span className="min-w-0 truncate text-sm font-semibold text-lc-white">{title}</span>
+        <Text size="sm" weight="semibold" tone="default" truncate="truncate" className="min-w-0">{title}</Text>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>

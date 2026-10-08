@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+
 import Card from '@/components/ui/layout/Card';
 import Stack from '@/components/ui/layout/Stack';
 import Button from '@/components/ui/buttons/Button';
@@ -67,9 +69,9 @@ export function ThreadGalleryCard({
           )}
         </div>
         <Stack gap="1.5" className="p-3 flex-1">
-          <div className="text-sm font-semibold text-lc-white truncate">
+          <Text as="div" size="sm" weight="semibold" tone="default" truncate="truncate">
             {thread.name || t('chat.forum.untitled')}
-          </div>
+          </Text>
           <div className="text-xs text-lc-muted line-clamp-3 break-words">{op.content}</div>
           <div className="mt-auto flex items-center justify-between gap-2 text-[11px] text-lc-muted pt-1">
             <span className="truncate">{t('chat.forum.op', { name: opName })}</span>

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import { useTranslations } from 'next-intl';
 import type { NostrRef } from '@/services/social/nip27';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
@@ -30,7 +32,7 @@ export default function AddressRefChip({
   const slug = addressSlug(refValue.identifier);
 
   return (
-    <a
+    <Link native
       href={noteViewerHref(refValue.raw)}
       className="my-1 flex w-full max-w-full flex-col gap-0.5 rounded-lg border border-lc-border bg-lc-dark/60 px-2.5 py-1.5 text-left text-xs no-underline transition-colors hover:border-lc-green/40"
       data-testid="address-ref"
@@ -43,6 +45,6 @@ export default function AddressRefChip({
         <span className="shrink-0">{t('social.article')}</span>
       </span>
       {slug && <span className="line-clamp-2 min-w-0 text-lc-white/75">{slug}</span>}
-    </a>
+    </Link>
   );
 }

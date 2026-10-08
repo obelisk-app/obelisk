@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+
 import Button from '@/components/ui/buttons/Button';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
@@ -27,7 +29,7 @@ export default function WhoToFollowRow({
       >
         <UserAvatar pubkey={pubkey} picture={meta?.picture} size={8} name={name} alt={name} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-semibold text-lc-white">{name}</span>
+          <Text size="13" weight="semibold" tone="default" truncate="truncate" className="block">{name}</Text>
           {meta?.nip05 && (
             <span className="block truncate text-[10px] text-lc-muted">{meta.nip05}</span>
           )}

@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+
 /**
  * The publication cards and the list's loading, empty and no-match states.
  *
@@ -74,9 +76,9 @@ export function ThreadCard({
             <div className="w-8 h-8 rounded-full bg-lc-border shrink-0" />
           )}
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-lc-white truncate">
+            <Text as="div" size="sm" weight="semibold" tone="default" truncate="truncate">
               {thread.name || t('chat.forum.untitled')}
-            </div>
+            </Text>
             <div className="text-xs text-lc-muted line-clamp-2 mt-0.5 break-words">
               {op.content}
             </div>

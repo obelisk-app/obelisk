@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 /**
  * What goes inside a DM bubble. Deliberately smaller than `MessageContent`:
  *
@@ -66,9 +68,9 @@ export function DmMessageBody({ message }: { message: JsDirectMessage }) {
       {images.length > 0 && media.show && (
         <div className={'flex flex-wrap gap-1' + (text ? ' mt-1.5' : '')} data-testid="dm-images">
           {images.map((url) => (
-            <a key={url} href={url} target="_blank" rel="noopener noreferrer nofollow">
+            <Link native key={url} href={url} target="_blank" rel="noopener noreferrer nofollow">
               <RemoteImage src={url} alt="" className="max-h-60 max-w-full rounded-lg object-contain" />
-            </a>
+            </Link>
           ))}
         </div>
       )}

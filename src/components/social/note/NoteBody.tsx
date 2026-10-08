@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
 import type { renderModeFor } from '@/services/social/kinds';
@@ -45,9 +47,9 @@ export default function NoteBody({
       <blockquote className="border-l-2 border-lc-green pl-3 text-[15px] italic leading-relaxed text-lc-white" data-testid="note-highlight">
         {note.content}
         {source && (
-          <a href={source} target="_blank" rel="noreferrer noopener" className="mt-1 block text-[10px] not-italic text-lc-muted underline">
+          <Link native href={source} target="_blank" rel="noreferrer noopener" className="mt-1 block text-[10px] not-italic text-lc-muted underline">
             {source}
-          </a>
+          </Link>
         )}
       </blockquote>
     );
@@ -63,13 +65,13 @@ export default function NoteBody({
           <NoteContent content={note.content} noteId={note.id} onOpenProfile={onOpenProfile} onOpenNote={onOpenNote} onOpenTag={onOpenTag} />
         </div>
         {vm.groupHref && (
-          <a
+          <Link native
             href={vm.groupHref}
             className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-lc-green hover:underline"
             data-testid="note-open-in-group"
           >
             {t('social.openInGroup')} →
-          </a>
+          </Link>
         )}
       </div>
     );

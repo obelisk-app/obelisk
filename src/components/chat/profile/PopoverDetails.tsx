@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import { useTranslations } from 'next-intl';
 import { GlobeIcon, ZapIcon } from '@/assets/icons';
 import type { PopoverMember } from '@/hooks/chat/profile/usePopoverMember';
@@ -28,7 +30,7 @@ export function PopoverDetails({ member }: { member: PopoverMember | undefined }
       {(member?.website || member?.lud16) && (
         <div className="space-y-1.5" data-testid="profile-links">
           {member?.website && (
-            <a
+            <Link native
               href={websiteHref(member.website)}
               target="_blank"
               rel="noopener noreferrer nofollow"
@@ -37,7 +39,7 @@ export function PopoverDetails({ member }: { member: PopoverMember | undefined }
             >
               <GlobeIcon size={14} />
               {member.website.replace(/^https?:\/\//i, '')}
-            </a>
+            </Link>
           )}
           {member?.lud16 && (
             <div className="flex items-center gap-2 break-all text-xs text-lc-white/85" data-testid="profile-lud16">

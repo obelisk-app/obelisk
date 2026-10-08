@@ -2,7 +2,7 @@ import PageSection from '@/components/ui/layout/PageSection';
 import Container from '@/components/ui/layout/Container';
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { LEARN_GUIDES } from '@/constants/marketing/landing';
 import Heading from '@/components/ui/layout/Heading';
@@ -29,6 +29,7 @@ export default function LearnSection() {
             <Card variant="interactive" padding="2xl" key={g.slug} asChild>
               <Link
                 href={guidePath(g.slug)}
+                variant="card"
                 className="group"
               >
                 <Heading as="h3" variant="cardLink">
@@ -47,7 +48,7 @@ export default function LearnSection() {
         <div className="mt-10 text-center">
           <Link
             href={guidePath()}
-            className="lc-pill lc-pill-secondary text-sm inline-flex items-center gap-2"
+            variant="button" buttonVariant="pillSecondary" size="sm" className="inline-flex items-center gap-2"
           >
             {t('marketing.learn.cta')} <span aria-hidden="true">→</span>
           </Link>

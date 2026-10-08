@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import Stack from '@/components/ui/layout/Stack';
 import { MUSIC_CREDIT } from '@/lib/games/stacker/audio';
 import { useStackerTable, type StackerTableInput } from '@/hooks/games/stacker/useStackerTable';
@@ -123,7 +125,7 @@ export default function StackerTable({ seatLabel, ...input }: StackerTableProps)
           {t(vm.muted ? 'games.stacker.muted' : 'games.stacker.sound')}
         </Button>
         {!vm.muted && (
-          <a
+          <Link native
             href={MUSIC_CREDIT.source}
             target="_blank"
             rel="noreferrer noopener"
@@ -132,7 +134,7 @@ export default function StackerTable({ seatLabel, ...input }: StackerTableProps)
             data-testid="stacker-music-credit"
           >
             ♫ {vm.track} - {MUSIC_CREDIT.author}
-          </a>
+          </Link>
         )}
       </div>
 

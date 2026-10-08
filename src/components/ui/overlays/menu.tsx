@@ -1,3 +1,4 @@
+import Link from '@/components/ui/navigation/Link';
 /**
  * Menu building blocks: one look for every popover menu in the app.
  *
@@ -79,9 +80,9 @@ export function MenuLink({
 }) {
   const external = newTab ? { target: '_blank', rel: 'noreferrer noopener' } : {};
   return (
-    <a role="menuitem" href={href} {...external} className={menuRowClass()} data-testid={testId}>
+    <Link native role="menuitem" href={href} {...external} className={menuRowClass()} data-testid={testId}>
       <Body icon={icon} label={label} hint={hint} />
-    </a>
+    </Link>
   );
 }
 

@@ -1,3 +1,4 @@
+import Text from '@/components/ui/layout/Text';
 import Card from '@/components/ui/layout/Card';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
@@ -25,9 +26,9 @@ export function ThreadGalleryCardSkeleton({
       >
         <div className="h-28 w-full bg-lc-black border-b border-lc-border" />
         <div className="p-3 space-y-2">
-          <div className="text-sm font-semibold text-lc-white truncate">
+          <Text as="div" size="sm" weight="semibold" tone="default" truncate="truncate">
             {thread.name || t('chat.forum.loadingTitle')}
-          </div>
+          </Text>
           <Skeleton className="h-3 w-3/4" />
           <Skeleton className="h-2 w-1/2" />
         </div>

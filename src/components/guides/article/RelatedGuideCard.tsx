@@ -1,4 +1,4 @@
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { guidePath } from '@/utils/guides/guide-urls';
 import type { RelatedGuideCard as Card } from '@/utils/guides/related';
 import { HERO_REGISTRY } from '@/assets/illustrations/guides';
@@ -11,9 +11,10 @@ export default function RelatedGuideCard({ guide }: { guide: Card }) {
   return (
     <Link
       href={guidePath(guide.slug)}
+      variant="card"
       role="listitem"
       data-testid={`related-guide-${guide.slug}`}
-      className="group shrink-0 w-[260px] sm:w-[300px] snap-start rounded-xl overflow-hidden border border-lc-border bg-lc-dark hover:border-lc-green transition-colors"
+      className="group shrink-0 w-[260px] sm:w-[300px] snap-start rounded-xl overflow-hidden border border-lc-border bg-lc-dark"
     >
       <div className="aspect-[16/9] bg-lc-black border-b border-lc-border overflow-hidden">
         {Hero ? <Hero /> : <div className="w-full h-full bg-lc-olive-dark" />}

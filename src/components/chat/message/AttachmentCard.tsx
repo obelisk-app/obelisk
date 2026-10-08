@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 import { useState } from 'react';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { DownloadIcon, FileIcon } from '@/assets/icons';
@@ -22,7 +24,7 @@ export default function AttachmentCard({ url, name, thumbnailUrl }: AttachmentCa
   const showThumb = Boolean(thumbnailUrl && !thumbFailed);
 
   return (
-    <a
+    <Link native
       href={url}
       target="_blank"
       rel="noopener noreferrer"
@@ -48,6 +50,6 @@ export default function AttachmentCard({ url, name, thumbnailUrl }: AttachmentCa
         <Text as="p" variant="caption">{ext}</Text>
       </div>
       <DownloadIcon strokeWidth={2} className="text-lc-muted shrink-0" />
-    </a>
+    </Link>
   );
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 /**
  * Renders a NIP-17 kind-15 file message: fetch the ciphertext from Blossom,
  * check it against `x`, decrypt it in memory and show it from an object URL.
@@ -61,9 +63,9 @@ export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFi
     }
     if (category === 'image') {
       return (
-        <a href={state.url} target="_blank" rel="noopener noreferrer" data-testid="dm-file-image">
+        <Link native href={state.url} target="_blank" rel="noopener noreferrer" data-testid="dm-file-image">
           <RemoteImage src={state.url} alt={file.name ?? t('dm.file.attachment')} className="max-h-80 max-w-full rounded-lg" />
-        </a>
+        </Link>
       );
     }
     if (category === 'video') {
@@ -93,7 +95,7 @@ export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFi
         </div>
       </div>
       {state.status === 'ready' ? (
-        <a
+        <Link native
           href={state.url}
           download={file.name ?? 'file'}
           className="flex items-center gap-1 rounded-full border border-current px-3 py-1 text-xs font-semibold"
@@ -101,7 +103,7 @@ export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFi
         >
           <DownloadIcon size={14} />
           {t('dm.file.download')}
-        </a>
+        </Link>
       ) : (
         <Button
           variant="bare"

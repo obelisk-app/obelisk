@@ -1,5 +1,5 @@
 import Container from '@/components/ui/layout/Container';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import type { ReactNode } from 'react';
 import type { Locale } from '@/i18n';
 import type { GuideFrontmatter } from '@/services/guides/guides';
@@ -40,7 +40,7 @@ export default function ArticleShell({
     <Container width="3xl" as="article" className="px-6 pt-28 pb-24" data-testid="article-shell">
       <Link
         href={backHref}
-        className="inline-flex items-center gap-2 text-sm font-medium text-lc-green hover:text-lc-green-dark transition-colors mb-6"
+        variant="text" className="inline-flex items-center gap-2 text-sm font-medium mb-6"
       >
         <span aria-hidden="true">←</span> {backLabel}
       </Link>
@@ -66,13 +66,13 @@ export default function ArticleShell({
             {readMinutes} {readTimeLabel}
           </span>
           <span aria-hidden="true">·</span>
-          <time dateTime={updated.toISOString()}>
+          <Text as="time" dateTime={updated.toISOString()}>
             {updatedLabel} {formatDate(locale, updated, {
               year: 'numeric',
               month: 'short',
               day: 'numeric',
             })}
-          </time>
+          </Text>
         </div>
       </header>
 
@@ -85,7 +85,7 @@ export default function ArticleShell({
       <div className="guide-prose">{children}</div>
 
       <footer className="mt-16 pt-8 border-t border-lc-border text-sm text-lc-muted">
-        <time dateTime={published.toISOString()}>
+        <Text as="time" dateTime={published.toISOString()}>
           {/*
             One key with a {date} slot, not the word "Published" glued onto a
             formatted date: Spanish and Portuguese both need the date
@@ -94,7 +94,7 @@ export default function ArticleShell({
           {t('guides.publishedOn', {
             date: formatDate(locale, published, { year: 'numeric', month: 'long', day: 'numeric' }),
           })}
-        </time>
+        </Text>
       </footer>
     </Container>
   );

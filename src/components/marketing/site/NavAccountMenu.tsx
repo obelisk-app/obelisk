@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+
 import Button from '@/components/ui/buttons/Button';
 import type { RefObject } from 'react';
 import { useTranslations } from 'next-intl';
@@ -56,7 +58,7 @@ export default function NavAccountMenu({
       {menu.open && (
         <div ref={menuRef} role="menu" className={`absolute right-0 z-50 mt-2 w-56 ${MENU_PANEL_CLASS}`}>
           <div className="mb-1 border-b border-lc-border px-3 pb-2 pt-1">
-            <div className="text-sm text-lc-white font-semibold truncate">{name}</div>
+            <Text as="div" size="sm" weight="semibold" tone="default" truncate="truncate">{name}</Text>
             <div className="text-xs text-lc-muted truncate mt-0.5 font-mono">{npub}</div>
           </div>
           <MenuLink

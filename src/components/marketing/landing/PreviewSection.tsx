@@ -2,8 +2,7 @@ import Container from '@/components/ui/layout/Container';
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
-import { Link } from '@/i18n/navigation';
-import { buttonClass } from '@/utils/style/button-class';
+import Link from '@/components/ui/navigation/Link';
 import Reveal from '@/components/ui/animations/Reveal';
 import { LogInIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
@@ -34,6 +33,7 @@ export default function PreviewSection() {
           <Card variant="interactive" padding="2xl" asChild>
             <Link
               href="/desktop"
+              variant="card"
               className="group lg:p-8 flex flex-col lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-10 lg:items-center"
               data-testid="landing-preview-desktop"
             >
@@ -69,6 +69,7 @@ export default function PreviewSection() {
           <Card variant="interactive" padding="2xl" asChild>
             <Link
               href="/mobile"
+              variant="card"
               className="group lg:p-8 flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_220px] lg:gap-10 lg:items-center"
               data-testid="landing-preview-mobile"
             >
@@ -102,7 +103,7 @@ export default function PreviewSection() {
         </Container>
 
         <div className="mt-10 flex justify-center">
-          <Link href="/app" prefetch={false} className={buttonClass({ variant: 'pill', size: 'lg' })}>
+          <Link href="/app" prefetch={false} variant="button" buttonVariant="pill" size="lg">
             <LogInIcon size={18} strokeWidth={2.5} />
             {t('marketing.hero.launchApp')}
           </Link>

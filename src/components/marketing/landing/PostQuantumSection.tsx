@@ -2,7 +2,7 @@ import { useTranslations } from 'next-intl';
 import PageSection from '@/components/ui/layout/PageSection';
 import Container from '@/components/ui/layout/Container';
 import Card from '@/components/ui/layout/Card';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import Image from 'next/image';
 import { guidePath } from '@/utils/guides/guide-urls';
 import Heading from '@/components/ui/layout/Heading';
@@ -37,38 +37,36 @@ export default function PostQuantumSection() {
             the organisation name sits right beside it, so a screen reader would
             otherwise announce it twice. */}
           <Card variant="interactive" padding="2xl" asChild>
-            <a
+            <Link
               href="https://nostr-wot.com"
               target="_blank"
-              rel="noopener noreferrer"
-              className="hover:border-lc-green transition-colors"
+              variant="card"
             >
               <div className="flex items-center gap-3 mb-2">
                 <Image src="/nostr-wot-logo.svg" alt="" aria-hidden="true" width={36} height={36} className="w-9 h-9 shrink-0" />
-                <span className="font-semibold">Nostr WoT</span>
+                <Text weight="semibold">Nostr WoT</Text>
               </div>
-              <span className="block text-sm text-lc-muted">{t('marketing.pqc.nostrwot.desc')}</span>
-            </a>
+              <Text variant="muted" className="block">{t('marketing.pqc.nostrwot.desc')}</Text>
+            </Link>
           </Card>
           <Card variant="interactive" padding="2xl" asChild>
-            <a
+            <Link
               href="https://quantakrypto.com"
               target="_blank"
-              rel="noopener noreferrer"
-              className="hover:border-lc-green transition-colors"
+              variant="card"
             >
               <div className="flex items-center gap-3 mb-2">
                 <Image src="/quantakrypto-mark.svg" alt="" aria-hidden="true" width={36} height={36} className="w-9 h-9 shrink-0" />
-                <span className="font-semibold">QuantaKrypto</span>
+                <Text weight="semibold">QuantaKrypto</Text>
               </div>
-              <span className="block text-sm text-lc-muted">{t('marketing.pqc.quantakrypto.desc')}</span>
-            </a>
+              <Text variant="muted" className="block">{t('marketing.pqc.quantakrypto.desc')}</Text>
+            </Link>
           </Card>
         </div>
         <div className="mt-10">
           <Link
             href={guidePath('quantum-safe-dms')}
-            className="lc-pill lc-pill-secondary text-sm inline-flex items-center gap-2"
+            variant="button" buttonVariant="pillSecondary" size="sm" className="inline-flex items-center gap-2"
           >
             {t('marketing.pqc.guide')} <span aria-hidden="true">→</span>
           </Link>

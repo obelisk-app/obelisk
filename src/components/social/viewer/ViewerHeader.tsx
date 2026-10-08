@@ -8,8 +8,7 @@
  * render throws: every public /notes, /p and /t URL answered 500.
  */
 
-import { Link } from '@/i18n/navigation';
-import { buttonClass } from '@/components/ui/buttons/Button';
+import Link from '@/components/ui/navigation/Link';
 import ObeliskIcon from '@/assets/brand/ObeliskIcon';
 import { useTranslations } from 'next-intl';
 
@@ -39,7 +38,7 @@ export default function ViewerHeader({ maxWidth = 'max-w-2xl' }: { maxWidth?: st
           arriving from a shared note wants more of this, not whichever
           channel they happened to leave open.
         */}
-        <Link href="/app?s=feed" className={`${buttonClass({ variant: 'pill', size: 'xs' })} ml-auto`}>
+        <Link href="/app?s=feed" variant="button" buttonVariant="pill" size="xs" className="ml-auto">
           {t('social.viewer.openInObelisk')}
         </Link>
       </div>

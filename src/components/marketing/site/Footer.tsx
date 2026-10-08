@@ -1,7 +1,9 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
+
 import Container from '@/components/ui/layout/Container';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { useTranslations } from 'next-intl';
 import { guidePath } from '@/utils/guides/guide-urls';
 import ObeliskIcon from '@/assets/brand/ObeliskIcon';
@@ -42,12 +44,12 @@ export default function Footer() {
             <Heading as="h3" id="footer-guides" className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4">
               {t('marketing.footer.col.guides')}
             </Heading>
-            <ul className="space-y-2.5">
+            <List marker="none" spacing="relaxed">
               {GUIDE_SLUGS.map((g) => (
                 <li key={g.slug}>
                   <Link
                     href={guidePath(g.slug)}
-                    className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+                    variant="muted" className="text-sm"
                   >
                     {t(g.tKey)}
                   </Link>
@@ -56,12 +58,12 @@ export default function Footer() {
               <li>
                 <Link
                   href={guidePath()}
-                  className="text-sm text-lc-green hover:underline"
+                  variant="text" className="text-sm"
                 >
                   {t('marketing.footer.allGuides')} →
                 </Link>
               </li>
-            </ul>
+            </List>
           </nav>
 
           {/* Product */}
@@ -69,12 +71,12 @@ export default function Footer() {
             <Heading as="h3" id="footer-product" className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4">
               {t('marketing.footer.col.product')}
             </Heading>
-            <ul className="space-y-2.5">
+            <List marker="none" spacing="relaxed">
               <li>
                 <Link
                   href="/app"
                   prefetch={false}
-                  className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+                  variant="muted" className="text-sm"
                 >
                   {t('marketing.footer.launchApp')}
                 </Link>
@@ -82,7 +84,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/#faq"
-                  className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+                  variant="muted" className="text-sm"
                 >
                   {t('marketing.footer.faq')}
                 </Link>
@@ -90,22 +92,21 @@ export default function Footer() {
               <li>
                 <Link
                   href="/help"
-                  className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+                  variant="muted" className="text-sm"
                 >
                   {t('marketing.footer.help')}
                 </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="https://github.com/obelisk-app/obelisk"
                   target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+                  variant="muted" className="text-sm"
                 >
                   {t('marketing.footer.github')}
-                </a>
+                </Link>
               </li>
-            </ul>
+            </List>
           </nav>
 
           {/* Community */}
@@ -113,28 +114,26 @@ export default function Footer() {
             <Heading as="h3" id="footer-community" className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4">
               {t('marketing.footer.col.community')}
             </Heading>
-            <ul className="space-y-2.5">
+            <List marker="none" spacing="relaxed">
               <li>
-                <a
+                <Link
                   href="https://lacrypta.ar"
                   target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+                  variant="muted" className="text-sm"
                 >
                   {t('marketing.footer.lacrypta')}
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="https://nosta.me/nprofile1qqsdjkgdjkncz8sukvftuehd6ejd0clxa4tcy2ke7gf76cs0ce6gh6qpz3mhxue69uhhyetvv9ujuerpd46hxtnfduqs6amnwvaz7tmwdaejumr0dsvlpy8j"
                   target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+                  variant="muted" className="text-sm"
                 >
                   {t('marketing.footer.nostr')}
-                </a>
+                </Link>
               </li>
-            </ul>
+            </List>
           </nav>
 
           {/* Legal */}
@@ -142,30 +141,30 @@ export default function Footer() {
             <Heading as="h3" id="footer-legal" className="text-xs font-bold uppercase tracking-wider text-lc-white mb-4">
               {t('marketing.footer.col.legal')}
             </Heading>
-            <ul className="space-y-2.5">
+            <List marker="none" spacing="relaxed">
               <li>
-                <a
+                <Link
                   href="https://github.com/obelisk-app/obelisk/blob/main/LICENSE"
-                  className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+                  variant="muted" className="text-sm"
                 >
                   {t('marketing.footer.license')}
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="https://github.com/obelisk-app/obelisk/blob/main/ABUSE.md"
-                  className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+                  variant="muted" className="text-sm"
                 >
                   {t('marketing.footer.abuse')}
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="https://github.com/obelisk-app/obelisk/blob/main/SECURITY.md"
-                  className="text-sm text-lc-muted hover:text-lc-green transition-colors"
+                  variant="muted" className="text-sm"
                 >
                   {t('marketing.footer.security')}
-                </a>
+                </Link>
               </li>
               <li>
                 {/* Reopens the Analytics question so the answer can be changed. */}
@@ -178,7 +177,7 @@ export default function Footer() {
                   {t('marketing.footer.analytics')}
                 </TextButton>
               </li>
-            </ul>
+            </List>
           </nav>
         </div>
 

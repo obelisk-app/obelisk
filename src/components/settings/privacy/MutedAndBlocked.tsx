@@ -1,5 +1,7 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
+
 /**
  * Review and undo mutes and blocks.
  *
@@ -33,11 +35,11 @@ export default function MutedAndBlocked({ mobile = false }: { mobile?: boolean }
       {t('settings.moderation.empty')}
     </Text>
   ) : (
-    <ul className="space-y-1">
+    <List marker="none" spacing="tight">
       {entries.map((entry) => (
         <ModerationRow key={moderationEntryKey(entry)} pubkey={entry.pubkey} kind={entry.kind} />
       ))}
-    </ul>
+    </List>
   );
 
   return mobile ? (

@@ -86,9 +86,9 @@ export default function MobileComposer({
         >
           {t('common.cancel')}
         </Button>
-        <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold text-lc-white">
+        <Text size="sm" weight="semibold" tone="default" truncate="truncate" className="min-w-0 flex-1 text-center">
           {title}
-        </span>
+        </Text>
         {/*
           Post lives in the header, not at the bottom: the keyboard owns the
           bottom of a phone, and a submit button that the keyboard covers is

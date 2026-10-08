@@ -1,5 +1,7 @@
 'use client';
 
+import Link from '@/components/ui/navigation/Link';
+
 /**
  * The linkable half of a kind-0 profile.
  *
@@ -47,7 +49,7 @@ export default function ProfileLinks({
       {(site || lud16) && (
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
           {site && (
-            <a
+            <Link native
               href={site}
               target="_blank"
               rel="noopener noreferrer"
@@ -56,7 +58,7 @@ export default function ProfileLinks({
             >
               <GlobeIcon size={13} strokeWidth={2} />
               {prettyUrl(site)}
-            </a>
+            </Link>
           )}
           {lud16 && (
             <TextButton tone="plain"

@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+
 import Button from '@/components/ui/buttons/Button';
 import type { ReactNode } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -48,9 +50,9 @@ export default function NoteHeader({
   const hasMetaRow = !!replyParent || mode === 'article' || mode === 'highlight';
 
   const time = (
-    <time dateTime={new Date(note.created_at * 1000).toISOString()}>
+    <Text as="time" dateTime={new Date(note.created_at * 1000).toISOString()}>
       {relativeTime(note.created_at, t, locale, 'social.now')}
-    </time>
+    </Text>
   );
 
   // Also the accessible route into the thread, and the only one a `nested`

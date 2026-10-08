@@ -1,3 +1,4 @@
+import Text from '@/components/ui/layout/Text';
 import Card from '@/components/ui/layout/Card';
 import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
@@ -21,9 +22,9 @@ export function ThreadCardSkeleton({ thread, onOpen }: { thread: JsGroup; onOpen
         <Row gap="3" align="start">
           <Skeleton variant="circle" className="w-8 h-8 shrink-0" />
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-lc-white truncate">
+            <Text as="div" size="sm" weight="semibold" tone="default" truncate="truncate">
               {thread.name || t('chat.forum.loadingTitle')}
-            </div>
+            </Text>
             <Skeleton className="h-3 w-3/4 mt-1.5" />
             <div className="flex flex-wrap gap-x-3 mt-2">
               <Skeleton as="span" className="h-2 w-16 inline-block" />

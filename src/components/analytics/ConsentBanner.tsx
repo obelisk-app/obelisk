@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { setAnalyticsConsent, type AnalyticsChoice } from '@/services/analytics/consent';
 import AnalyticsChoiceButtons from './AnalyticsChoiceButtons';
 import Heading from '@/components/ui/layout/Heading';
@@ -36,7 +36,7 @@ export default function ConsentBanner({ choice }: { choice: AnalyticsChoice | nu
       <div className="mt-3">
         <AnalyticsChoiceButtons choice={choice} onChoose={setAnalyticsConsent} testIdPrefix="analytics-consent" />
       </div>
-      <Link href="/help/local-data" className="mt-2 inline-block text-xs text-lc-green hover:underline" data-testid="analytics-consent-more">
+      <Link href="/help/local-data" variant="text" className="mt-2 inline-block text-xs" data-testid="analytics-consent-more">
         {t('common.analyticsConsent.more')}
       </Link>
     </section>

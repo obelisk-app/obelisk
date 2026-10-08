@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+
 import Button from '@/components/ui/buttons/Button';
 import { memo } from 'react';
 import { gameIcon, gameName } from '@/lib/games/core/catalog';
@@ -38,9 +40,9 @@ function GameCard({ gameId }: { gameId: string }) {
         {gameIcon(session.game)}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-semibold text-lc-white" data-testid="game-card-name">
+        <Text size="xs" weight="semibold" tone="default" truncate="truncate" className="block" data-testid="game-card-name">
           {gameName(session.game)}
-        </span>
+        </Text>
         <span className="block text-[11px] text-lc-muted">
           <StatusLabel session={session} myPubkey={myPubkey} />
         </span>

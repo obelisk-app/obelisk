@@ -1,8 +1,7 @@
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import Container from '@/components/ui/layout/Container';
 import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';
-import { buttonClass } from '@/utils/style/button-class';
 import LandingHeroAnimation from './LandingHeroAnimation';
 import HeroProductPreview from './HeroProductPreview';
 import { LogInIcon } from '@/assets/icons';
@@ -39,19 +38,18 @@ export default function LandingHero() {
             {t('marketing.hero.trustLine')}
           </Text>
           <Stack gap="3" className="mt-7 sm:flex-row">
-            <Link href="/app" prefetch={false} className={buttonClass({ variant: 'pill', size: 'lg' })}>
+            <Link href="/app" prefetch={false} variant="button" buttonVariant="pill" size="lg">
               <LogInIcon size={18} strokeWidth={2.5} />
               {t('marketing.hero.launchApp')}
             </Link>
-            <a
+            <Link
               href="https://github.com/obelisk-app/obelisk"
               target="_blank"
-              rel="noopener noreferrer"
-              className={buttonClass({ variant: 'pillSecondary', size: 'lg' })}
+              variant="button" buttonVariant="pillSecondary" size="lg"
             >
               <GitHubMark width="18" height="18" />
               {t('marketing.hero.github')}
-            </a>
+            </Link>
           </Stack>
         </div>
 

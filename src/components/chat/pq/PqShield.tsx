@@ -1,7 +1,7 @@
 'use client';
 
 import Button from '@/components/ui/buttons/Button';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import { useTranslations } from 'next-intl';
 import type { PqProtectionLevel } from '@/services/chat/pq/status';
 import { usePqShield } from '@/hooks/chat/pq/usePqShield';
@@ -83,7 +83,7 @@ export default function PqShield({
           {level !== 'quantum' && (
             <Link
               href={guideHref}
-              className="mt-2 inline-block text-xs font-medium text-lc-green underline underline-offset-2 hover:text-lc-green/80"
+              variant="prose" className="mt-2 inline-block text-xs font-medium"
             >
               {t('chat.pq.learnHow')}
             </Link>

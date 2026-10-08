@@ -1,5 +1,5 @@
 import Card from '@/components/ui/layout/Card';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import type { GuideFrontmatter } from '@/services/guides/guides';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { HERO_REGISTRY } from '@/assets/illustrations/guides';
@@ -18,6 +18,7 @@ export default function GuideCard({ slug, frontmatter }: Props) {
     <Card variant="interactive" padding="none" asChild>
       <Link
         href={guidePath(slug)}
+        variant="card"
         className="group block overflow-hidden"
         data-testid={`guide-card-${slug}`}
       >

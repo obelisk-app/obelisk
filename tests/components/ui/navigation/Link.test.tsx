@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { AnchorHTMLAttributes } from 'react';
 import Link from '@/components/ui/navigation/Link';
@@ -32,6 +32,15 @@ describe('Link', () => {
     expect(screen.getByRole('link', { name: 'Download' })).toHaveAttribute('href', '/logo.svg');
     expect(screen.getByRole('link', { name: 'Download' })).toHaveAttribute('download', 'brand.svg');
     expect(screen.getByRole('link', { name: 'View' })).toHaveAttribute('href', '/logo.svg');
+  });
+
+  it('keeps native protocol handlers in control of navigation', () => {
+    const open = vi.fn((event: React.MouseEvent<HTMLAnchorElement>) => event.preventDefault());
+    const before = localized.mock.calls.length;
+    render(<Link native href="/chat?c=room" onClick={open}>Room</Link>);
+    expect(fireEvent.click(screen.getByRole('link'))).toBe(false);
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(localized.mock.calls.length).toBe(before);
   });
 
   it('protects new tabs while retaining caller rel semantics and card styling', () => {
