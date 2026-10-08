@@ -1,4 +1,5 @@
 import { forwardRef, useId, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { fieldDescriptionIds } from '@/utils/style/field-note';
 import { cn } from '@/utils/style/cn';
 import { selectSurfaceClass, type SelectSize, type SelectTone, type SelectVariant } from '@/utils/style/select-surface';
 import Field, { fieldNoteId } from './Field';
@@ -34,6 +35,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
     status = 'idle',
     className,
     id: idProp,
+    'aria-describedby': describedBy,
     children,
     disabled,
     ...rest
@@ -52,7 +54,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
       disabled={disabled || loading}
       aria-invalid={isInvalid ? true : undefined}
       aria-busy={loading ? true : undefined}
-      aria-describedby={wrapped ? fieldNoteId(id, Boolean(error) || hint !== undefined) : undefined}
+      aria-describedby={fieldDescriptionIds(fieldNoteId(id, Boolean(error) || hint !== undefined), describedBy)}
       className={cn(selectSurfaceClass(size, tone, variant, isInvalid), className)}
       {...rest}
     >

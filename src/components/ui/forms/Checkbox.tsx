@@ -1,4 +1,5 @@
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
+import { fieldDescriptionIds } from '@/utils/style/field-note';
 import { cn } from '@/utils/style/cn';
 import { fieldNoteId } from './Field';
 
@@ -26,12 +27,12 @@ export type CheckboxProps = NativeProps & {
 
 /** Native checkbox in the accent color, always named. */
 const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
-  { label, className, inputClassName, hint, error, fieldClassName, id: idProp, ...rest },
+  { label, className, inputClassName, hint, error, fieldClassName, id: idProp, 'aria-describedby': describedBy, ...rest },
   ref,
 ) {
   const generated = useId();
   if (label === undefined) {
-    return <input ref={ref} id={idProp} type="checkbox" className={cn('accent-lc-green', inputClassName, className)} {...rest} />;
+    return <input ref={ref} id={idProp} type="checkbox" aria-describedby={describedBy} className={cn('accent-lc-green', inputClassName, className)} {...rest} />;
   }
   const hasNote = Boolean(error) || hint !== undefined;
   const id = idProp ?? (hasNote ? generated : undefined);
@@ -47,7 +48,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
         id={id}
         type="checkbox"
         aria-invalid={error ? true : undefined}
-        aria-describedby={id ? fieldNoteId(id, hasNote) : undefined}
+        aria-describedby={fieldDescriptionIds(id ? fieldNoteId(id, hasNote) : undefined, describedBy)}
         className={cn('accent-lc-green', inputClassName)}
         {...rest}
       />

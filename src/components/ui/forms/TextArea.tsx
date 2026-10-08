@@ -1,6 +1,7 @@
 import { forwardRef, useId, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { useAutosizeTextArea, type TextAreaHeight } from '@/hooks/common/useAutosizeTextArea';
 import { useForwardedRef } from '@/hooks/common/useForwardedRef';
+import { fieldDescriptionIds } from '@/utils/style/field-note';
 import { cn } from '@/utils/style/cn';
 import Field, { fieldNoteId } from './Field';
 import { inputSurfaceClass, type InputSize } from './Input';
@@ -48,6 +49,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextAre
     maxRows,
     className,
     id: idProp,
+    'aria-describedby': describedBy,
     onInput,
     ...rest
   },
@@ -68,7 +70,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextAre
       id={id}
       onInput={handleInput}
       aria-invalid={isInvalid ? true : undefined}
-      aria-describedby={wrapped ? fieldNoteId(id, Boolean(error) || hint !== undefined) : undefined}
+      aria-describedby={fieldDescriptionIds(fieldNoteId(id, Boolean(error) || hint !== undefined), describedBy)}
       className={cn(surface, variant !== 'mobile' && RESIZE_CLASS[height === 'auto' ? 'none' : resize], className)}
       {...rest}
     />

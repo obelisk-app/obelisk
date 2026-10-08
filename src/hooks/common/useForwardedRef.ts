@@ -3,8 +3,8 @@
 import { useCallback, useRef, type Ref } from 'react';
 
 /** Hand `node` to a ref, whether it is a callback or an object ref. */
-function assignRef<T>(ref: Ref<T> | undefined, node: T | null): void {
-  if (typeof ref === 'function') ref(node);
+function assignRef<T>(ref: Ref<T> | undefined, node: T | null) {
+  if (typeof ref === 'function') return ref(node);
   else if (ref) ref.current = node;
 }
 
@@ -15,8 +15,14 @@ function assignRef<T>(ref: Ref<T> | undefined, node: T | null): void {
 export function useForwardedRef<T>(forwarded: Ref<T> | undefined) {
   const own = useRef<T | null>(null);
   const setRef = useCallback((node: T | null) => {
-    assignRef(forwarded, node);
     own.current = node;
+    const cleanup = assignRef(forwarded, node);
+    if (node === null) return;
+    return () => {
+      own.current = null;
+      if (typeof cleanup === 'function') cleanup();
+      else assignRef(forwarded, null);
+    };
   }, [forwarded]);
   return { own, setRef };
 }

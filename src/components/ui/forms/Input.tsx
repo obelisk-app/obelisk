@@ -1,4 +1,5 @@
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
+import { fieldDescriptionIds } from '@/utils/style/field-note';
 import { cn } from '@/utils/style/cn';
 import Field, { fieldNoteId } from './Field';
 import InputEnd, { endSlotCount, type InputClear, type InputSecret, type InputStatus } from './InputEnd';
@@ -77,6 +78,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     secret,
     className,
     id: idProp,
+    'aria-describedby': describedBy,
     type,
     ...rest
   },
@@ -115,7 +117,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       type={secret ? (revealed ? 'text' : 'password') : type}
       aria-invalid={isInvalid ? true : undefined}
       aria-busy={status === 'loading' ? true : undefined}
-      aria-describedby={wrapped ? fieldNoteId(id, Boolean(error) || hint !== undefined) : undefined}
+      aria-describedby={fieldDescriptionIds(fieldNoteId(id, Boolean(error) || hint !== undefined), describedBy)}
       className={cn(surface, nsec && 'font-mono', className)}
       {...(nsec ? NSEC_ATTRS : undefined)}
       {...rest}
