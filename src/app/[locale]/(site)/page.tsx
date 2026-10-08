@@ -30,7 +30,7 @@ export default async function Page() {
   return (
     <>
       <JsonLd data={webApplicationNode(locale, t('seo.site.jsonLd.appDescription'))} />
-      <main className="min-h-screen bg-lc-black appearance-bg lc-grid-bg relative">
+      <main className="min-h-screen relative">
         <ShootingStars />
         <div className="relative z-10">
           <LandingHero />

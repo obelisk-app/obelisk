@@ -29,7 +29,7 @@ export default async function Page() {
   const t = await getTranslations();
 
   return (
-    <div className="min-h-screen bg-lc-black lc-grid-bg">
+    <div className="min-h-screen">
 
       <Container width="5xl" as="main" className="px-6 pb-24 pt-28">
         <Link href="/app" prefetch={false} variant="text" className="text-sm font-medium">

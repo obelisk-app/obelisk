@@ -4,6 +4,7 @@ import { readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { JSDOM } from 'jsdom';
+import { LOCALES, isLocale } from '../../src/i18n';
 
 export interface StaticCspManifest {
   version: 1;
@@ -13,7 +14,6 @@ export interface StaticCspManifest {
   fallback: string[];
 }
 
-const LOCALES = ['en', 'es', 'pt'];
 const PUBLIC_PAGES = ['', '/features', '/desktop', '/mobile', '/media-kit', '/help', '/help/local-data', '/guides'];
 const ERROR_HTML = ['app/_not-found.html', 'app/_global-error.html', 'pages/404.html', 'pages/500.html'];
 
@@ -55,8 +55,8 @@ export function publicStaticRoutes(manifest: unknown): string[] {
   // Restrict slugs before constructing filesystem paths; do not accept dynamic
   // templates, encoded paths or directory traversal as prerendered guides.
   for (const route of Object.keys(routes)) {
-    const guide = /^\/(en|es|pt)\/guides\/(.+)$/.exec(route);
-    if (!guide) continue;
+    const guide = /^\/([^/]+)\/guides\/(.+)$/.exec(route);
+    if (!guide || !isLocale(guide[1])) continue;
     const slug = guide[2];
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
       throw new Error(`Invalid public guide route in prerender manifest: ${route}`);

@@ -74,7 +74,7 @@ export default async function DesktopPage() {
   return (
     <>
       <JsonLd data={jsonLd} />
-      <main className="min-h-screen bg-lc-black appearance-bg lc-grid-bg relative">
+      <main className="min-h-screen relative">
         <ShootingStars />
         <div className="relative z-10">
 

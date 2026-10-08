@@ -36,7 +36,7 @@ const BROWSERS: ReadonlyArray<MessageKey> = [
 export default async function Page() {
   const t = await getTranslations();
   return (
-    <div className="min-h-screen bg-lc-black lc-grid-bg">
+    <div className="min-h-screen">
 
       <Container width="3xl" as="main" className="px-6 pb-24 pt-28" data-testid="local-data-help">
         <Link href="/help" variant="text" className="text-sm font-medium">

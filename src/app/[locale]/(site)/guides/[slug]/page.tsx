@@ -54,7 +54,7 @@ export default async function Page({ params }: Params) {
   });
 
   return (
-    <div className="min-h-screen bg-lc-black lc-grid-bg">
+    <div className="min-h-screen">
 
       {jsonLd.map((data, i) => <JsonLd key={i} data={data} />)}
       <ArticleShell

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import Link from '@/components/ui/navigation/Link';
 import type { NavbarModel } from '@/hooks/marketing/useNavbar';
 import { guidePath } from '@/utils/guides/guide-urls';
 import { ChevronDownIcon } from '@/assets/icons';

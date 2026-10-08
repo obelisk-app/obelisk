@@ -19,3 +19,9 @@ Run the complete `npm run build`, including manifest generation, and ship its `.
 Indefinite generation caching refers to Next's server-side build artifacts. Browsers still revalidate HTML so deployments can replace pages promptly; hashed JavaScript assets remain immutable. This does not promise indefinite browser or CDN retention, or that a hosting platform never evicts cached data. User-specific locale redirects also remain request-dependent.
 
 Adding a public route requires adding its base path to the generator's required-page list and checking every supported locale. Any future request-dependent page belongs outside the immutable route set and needs a dynamic render boundary.
+
+## Verification
+
+The production build reports 63 public pages as SSG and app/viewer/voice routes as dynamic. HTTP checks across all 63 public pages confirmed cache hits, identical HTML and CSP on repeated requests, and authorization of every inline script by its response policy. The largest measured CSP header was 1,795 bytes. Dynamic app documents use fresh nonces; encoded paths, missing pages/guides, query strings and spoofed request security headers were also exercised.
+
+A Chromium pass covered landing, Features, guides, help, local-data help, both tours, media kit and localized Features pages. It checked CSP violations and runtime errors, persistent client navigation from the public site into the app and back, and rejection of an unauthorized inline script. Repeat these checks whenever rendering or security policy changes; the manifest remains specific to each completed build.

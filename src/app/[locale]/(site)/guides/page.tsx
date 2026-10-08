@@ -37,7 +37,7 @@ export default async function Page() {
   });
 
   return (
-    <div className="min-h-screen bg-lc-black lc-grid-bg">
+    <div className="min-h-screen">
 
       <JsonLd data={collection} />
       <JsonLd data={breadcrumb} />
