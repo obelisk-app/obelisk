@@ -2,10 +2,11 @@
  * The roster subscription: every live presence beacon in a channel, parsed
  * into `VoicePresence` and swept as beacons expire.
  */
+import { getBridge } from '@/services/nostr-bridge';
 import { KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
 import type { VoicePresence, VideoSlotKind } from '@/types/voice/protocol';
 import { pushVoiceDebug } from './debug';
-import { bridge, subscribeVoice, type VoiceTransportOptions } from './transport-core';
+import { subscribeVoice, type VoiceTransportOptions } from './transport-core';
 import { PRESENCE_TTL_SECONDS } from '@/constants/voice/transport-core';
 
 /**
@@ -22,7 +23,7 @@ export async function subscribeRoster(
   onChange: (roster: VoicePresence[]) => void,
   options: VoiceTransportOptions = {},
 ): Promise<() => void> {
-  const b = await bridge();
+  const b = await getBridge();
   const latest = new Map<string, VoicePresence>();
 
   function emit() {

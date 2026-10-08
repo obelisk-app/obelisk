@@ -4,6 +4,19 @@ import { loadRecentMedia, saveRecentMedia } from '@/services/chat/picker/recent-
 describe('recent media', () => {
   beforeEach(() => localStorage.clear());
 
+  it('drops malformed entries before deduping or rendering recents', () => {
+    const kept = { name: 'kept', url: 'https://x/kept.gif', tab: 'gif', kind: 'gif', packAddress: 'pack', categories: ['Funny'] };
+    localStorage.setItem('obelisk:recent-media', JSON.stringify([
+      null, 4, 'text', {}, { ...kept, name: null }, { ...kept, url: 5 },
+      { ...kept, tab: 'emoji' }, { ...kept, kind: 'unknown' },
+      { ...kept, packAddress: {} }, { ...kept, categories: 'Funny' },
+      { ...kept, categories: ['unknown'] }, kept,
+    ]));
+    const next = { name: 'new', url: 'https://x/new.gif', tab: 'gif' as const };
+    expect(saveRecentMedia(next)).toEqual([next, kept]);
+    expect(loadRecentMedia()).toEqual([next, kept]);
+  });
+
   it('survives bad storage and keeps the newest 24, one per URL', () => {
     localStorage.setItem('obelisk:recent-media', '{not json');
     expect(loadRecentMedia()).toEqual([]);

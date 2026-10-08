@@ -19,7 +19,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Filter } from 'nostr-tools';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
-import { FakeRelaySocket, authPrompts, loginWithNip07Spy, settle, installFakeRelayPage } from '@/services/nostr-bridge/common/test-support';
+import { FakeRelaySocket, authPrompts, loginWithNip07Spy, settle, installFakeRelayPage } from '@tests/services/nostr-bridge/support/fake-relay-page';
 
 const A = 'wss://public.obelisk.ar';
 const B = 'wss://other.example';

@@ -120,3 +120,13 @@ Pattern:
 Keep specs single-purpose: one failure mode per spec, the smallest
 peer count that exercises it. Combined-failure scenarios are
 expensive to debug when they fail.
+
+## Production dependencies
+
+A passing local peer test does not verify TURN reachability or production relay admission. During release verification, check these independently:
+
+- Confirm authenticated TURN allocations succeed from outside the host on the configured UDP and TCP transports. A running coturn process alone does not prove the advertised address and firewall work.
+- Join a mesh channel on each deployed relay with two admitted identities. Check audio RTP flows, repeat with forced TURN, and verify reconnect after a quota or rate-limit close.
+- Check relay AUTH failures and ephemeral subscription budgets separately from client recovery. Relay admission policy, unauthenticated error prefixes and live event delivery belong to the relay deployment; use [mesh protocol](mesh-protocol.md) for the client contract.
+
+These are release checks, not authorization to deploy, restart services or create recurring monitors.

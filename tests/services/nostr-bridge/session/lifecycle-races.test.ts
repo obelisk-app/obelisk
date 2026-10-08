@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { installFakeRelayPage } from '@/services/nostr-bridge/common/test-support';
+import { installFakeRelayPage } from '@tests/services/nostr-bridge/support/fake-relay-page';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 
 warmBridgeModules();

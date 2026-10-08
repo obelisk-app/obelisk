@@ -1,6 +1,6 @@
 # Games on the relay
 
-> **Moving out (2026-09-27).** These games are moving to [obelisk-apps](https://github.com/obelisk-app/obelisk-apps) as sandboxed apps that users publish on a relay (kind 32390 manifest plus a Blossom bundle). This repo will keep only the host, and this doc will be replaced by an apps doc. The spec, security model and known issues are in obelisk-apps `docs/`. The host-side risks are in [known-bugs.md § Apps](../operations/known-bugs.md#apps-games-moving-to-obelisk-apps-in-progress-2026-09-27).
+> **Moving out (2026-09-27).** These games are moving to [obelisk-apps](https://github.com/obelisk-app/obelisk-apps) as sandboxed apps that users publish on a relay (kind 32390 manifest plus a Blossom bundle). This repo will keep only the host, and this doc will be replaced by an apps doc. The spec, security model and known issues are in obelisk-apps `docs/`. The host-side risks are in [known-bugs.md § Apps](../operations/known-bugs.md#proposed-app-integration-risks).
 
 Two games share one runtime: **Chain Reaction**, ported from the classic
 centralized stack, and **Vesta**, consumed as a tracked upstream package. The

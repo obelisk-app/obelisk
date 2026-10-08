@@ -151,5 +151,4 @@ review rounds looked at the same branch and missed it, because they were all
 checking the seal, the signature and the envelope, which were correct the
 whole time.
 
-See `docs/features/direct-messages.md` for how DMs work generally, and
-`docs/history/specs/2026-08-16-nip17-dms-design.md` for the design.
+See [direct messages](direct-messages.md) for the current DM protocol, storage and post-quantum integration.

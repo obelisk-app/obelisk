@@ -1,6 +1,6 @@
 # Obelisk documentation
 
-Start with [repository setup](../README.md#run-locally) and [AGENTS.md](../AGENTS.md) for the working rules. Current implementation references are organized by responsibility; proposals and historical records are separate so old plans do not become accidental instructions.
+Start with [repository setup](../README.md#run-locally) and [AGENTS.md](../AGENTS.md) for the working rules. Current implementation references are organized by responsibility; active proposals are separate from implementation references.
 
 | Need | Start here |
 |---|---|
@@ -9,7 +9,6 @@ Start with [repository setup](../README.md#run-locally) and [AGENTS.md](../AGENT
 | Build, deploy, test or triage an issue | [Operations](operations/README.md) |
 | Work on a feature or protocol integration | [Feature references](features/README.md) |
 | Evaluate a future design | [Proposals](proposals/README.md) and [ROADMAP](../ROADMAP.md) |
-| Trace an earlier decision or measurement | [History](history/README.md) |
 
 ## Frequently used references
 
@@ -24,6 +23,6 @@ Start with [repository setup](../README.md#run-locally) and [AGENTS.md](../AGENT
 
 ## Keeping these docs current
 
-Update the current reference with a behavior or ownership change and link to it rather than copying a second contract. Keep dated measurements in history and mark their superseded conclusions explicitly. A proposed capability remains a proposal until verified in its owning codebase. Use repository-relative source paths in prose and working relative Markdown links between documents.
+Update the current reference with a behavior or ownership change and link to it rather than copying a second contract. Remove completed plans, superseded audit reports and unused screenshots; Git history retains their original evidence. A proposed capability remains a proposal until verified in its owning codebase. Use repository-relative source paths in prose and working relative Markdown links between documents.
 
 Run `python3 scripts/docs/check-links.py` after moving documentation. It checks local Markdown link targets and anchors, plus exact references to moved documentation paths throughout tracked text. This checks navigation and references, not protocol correctness or the accuracy of every historical claim.

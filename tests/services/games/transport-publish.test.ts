@@ -5,13 +5,14 @@ const dropRelayConnection = vi.hoisted(() => vi.fn());
 const ready = vi.hoisted(() => ({ impl: true }));
 
 vi.mock('@/services/nostr-bridge/facade/client', () => ({
-  getBridge: vi.fn(async () => ({})),
-  getBridgeImpl: () => (ready.impl ? { publishEvent, dropRelayConnection, getPublicKey: () => null } : null),
+  getBridge: vi.fn(async () => {
+    if (!ready.impl) throw new Error('nostr bridge not initialized');
+    return { publishEvent, dropRelayConnection, getPublicKey: () => null };
+  }),
 }));
 
 import { findCreateByNonce, publishCancel, publishMove } from '@/services/games/transport-publish';
-import { bridge } from '@/services/games/transport-bridge';
-import { GAME_SUB_WATCHDOG_MS } from '@/constants/games/transport-bridge';
+import { GAME_SUB_WATCHDOG_MS } from '@/constants/games/transport';
 import * as entry from '@/services/games/transport';
 
 const signed = (template: { kind: number; content: string; tags: string[][] }) =>
@@ -63,10 +64,11 @@ describe('transport-publish', () => {
   });
 });
 
-describe('transport-bridge', () => {
+describe('transport readiness', () => {
   it('refuses to hand out a bridge that never initialised', async () => {
     ready.impl = false;
-    await expect(bridge()).rejects.toThrow('nostr bridge not initialized');
+    await expect(publishCancel('ch', 'g'.repeat(64))).rejects.toThrow('nostr bridge not initialized');
+    expect(publishEvent).not.toHaveBeenCalled();
   });
 
   it('keeps the watchdog short enough to notice a dead sub', () => {

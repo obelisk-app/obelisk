@@ -16,11 +16,11 @@
  * caller can decide what to do (newProducer → consume, producerClosed →
  * stop the consumer, etc).
  */
+import { getBridge } from '@/services/nostr-bridge';
 import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
 import { connectDirectRpc } from './sfu-rpc-direct';
 import { subscribeRelayRpc } from './sfu-rpc-relay';
 import {
-  bridge,
   DirectRpcError,
   isRpcTimeout,
   mintClientId,
@@ -188,7 +188,7 @@ export class SfuRpc {
         }
         this.socket.send(JSON.stringify(envelope));
       } else {
-        const b = await bridge();
+        const b = await getBridge();
         await b.publishEvent({
           kind: KIND_VOICE_SIGNAL,
           content: JSON.stringify(envelope),

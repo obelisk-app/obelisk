@@ -1,9 +1,9 @@
 /**
- * What every voice transport call shares: the bridge handle, the publish
+ * What every voice transport call shares: the publish
  * options that pin a call to its relay and survive NIP-42 `restricted:`,
  * and the voice-priority subscription that outlives quota CLOSEs.
  */
-import { getBridge, getBridgeImpl, resubscribeOnQuotaClose } from '@/services/nostr-bridge';
+import { resubscribeOnQuotaClose, type BridgeImpl } from '@/services/nostr-bridge';
 import { pushVoiceDebug } from './debug';
 
 const VOICE_SUB_WATCHDOG_MS = 2500;
@@ -24,14 +24,7 @@ export interface VoiceTransportOptions {
   onSubscriptionDegraded?: (which: 'roster' | 'signals', degraded: boolean) => void;
 }
 
-export type VoiceBridge = Awaited<ReturnType<typeof bridge>>;
-
-export async function bridge() {
-  await getBridge();
-  const impl = getBridgeImpl();
-  if (!impl) throw new Error('nostr bridge not initialized');
-  return impl;
-}
+export type VoiceBridge = BridgeImpl;
 
 // `authRetryOnRestricted`: a whitelist relay refuses an EVENT sent before
 // NIP-42 AUTH completes with `restricted:`, which nostr-tools never retries.

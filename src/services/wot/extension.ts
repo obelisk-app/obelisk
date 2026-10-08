@@ -3,7 +3,7 @@
  *
  * Returns `null` rather than throwing when the extension is absent or any
  * call rejects; callers treat that as "no verdict, fail-open" per the
- * design in docs/history/plans/wot-integration-plan.md.
+ * design in docs/architecture/data-system.md#web-of-trust-filtering.
  *
  * Every call here goes through the `background` lane of the signer queue
  * (`src/services/nostr-bridge/session/signer-queue.ts`). `window.nostr.wot` is the *same*

@@ -34,7 +34,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import type { EventTemplate, Filter, VerifiedEvent } from 'nostr-tools';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
-import { FakeRelaySocket, authPrompts, bytesToHex, settle, installFakeRelayPage } from '@/services/nostr-bridge/common/test-support';
+import { FakeRelaySocket, authPrompts, bytesToHex, settle, installFakeRelayPage } from '@tests/services/nostr-bridge/support/fake-relay-page';
 
 const ACTIVE_RELAY = 'wss://public.obelisk.ar/';
 

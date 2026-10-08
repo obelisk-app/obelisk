@@ -12,4 +12,4 @@ These documents describe feature contracts and code maps. Cross-cutting ownershi
 | Payments | [Bitcoin zaps and Nostr Wallet Connect](bitcoin-zaps-nwc.md) |
 | Games | [Games and migration direction](games.md) |
 
-Feature documents sometimes include roadmap sections. Those sections describe intent, not shipped support; verify current code before relying on a proposed capability. This documentation reorganization verifies the shared route/UI boundaries and link destinations, not every protocol, historical issue or future product proposal.
+Feature roadmap sections describe intent, not shipped support. Verify current source and tests before relying on a proposed capability.

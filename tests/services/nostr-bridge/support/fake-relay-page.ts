@@ -1,7 +1,6 @@
 /**
  * Shared harness for the bridge tests that count what the user would see:
- * signer prompts and sockets. Imports vitest and the bridge's own files,
- * like `relay-hub/test-support.ts` does for the hub. Not a test file.
+ * signer prompts and sockets using the real bridge and a fake WebSocket.
  *
  * No `SimplePool` is faked here. The real nostr-tools pool and relay run
  * over `FakeRelaySocket`, a fake WebSocket that behaves like a NIP-42
@@ -14,7 +13,7 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import type { Event as NostrEvent, EventTemplate, VerifiedEvent } from 'nostr-tools';
-import { unregisterBridge } from '../facade/bridge-slot';
+import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 
 export type Frame = unknown[];
 
@@ -168,7 +167,7 @@ export function installFakeRelayPage(): void {
   });
 
   afterEach(async () => {
-    const { getBridgeImpl } = await import('../facade/client');
+    const { getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
     getBridgeImpl()?.dispose();
     unregisterBridge();
     vi.useRealTimers();
@@ -180,8 +179,8 @@ export interface Nip07Login {
   readonly pk: string;
   /** The NIP-07 spy; `authPrompts(signEvent)` is what the user was asked for. */
   readonly signEvent: ReturnType<typeof vi.fn<(template: EventTemplate) => Promise<VerifiedEvent>>>;
-  readonly bridge: Awaited<ReturnType<typeof import('../facade/client').getBridge>>;
-  readonly impl: NonNullable<ReturnType<typeof import('../facade/client').getBridgeImpl>>;
+  readonly bridge: Awaited<ReturnType<typeof import('@/services/nostr-bridge/facade/client').getBridge>>;
+  readonly impl: NonNullable<ReturnType<typeof import('@/services/nostr-bridge/facade/client').getBridgeImpl>>;
   readonly hub: ReturnType<typeof import('@nostr-wot/relay/hub').getRelayHub>;
 }
 
@@ -194,7 +193,7 @@ export async function loginWithNip07Spy(): Promise<Nip07Login> {
   const pk = getPublicKey(sk);
   const signEvent = vi.fn(async (template: EventTemplate): Promise<VerifiedEvent> => finalizeEvent(template, sk));
   Object.defineProperty(window, 'nostr', { configurable: true, value: { signEvent, getPublicKey: async () => pk } });
-  const { getBridge, getBridgeImpl } = await import('../facade/client');
+  const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
   const { getRelayHub } = await import('@nostr-wot/relay/hub');
   const bridge = await getBridge();
   const login = bridge.loginWithNip07(pk);

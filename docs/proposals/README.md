@@ -6,4 +6,4 @@ These documents explore future or cross-project designs. Their presence here doe
 - [Web of Trust and invite credits](wot-and-invite-credits.md): server admission and activity-based invitations; distinct from the client's existing WoT filtering engine.
 - [Voice remote-signing optimization](voice-remote-signing.md): proposed reductions to account-key signing during mesh presence.
 
-Superseded implementation plans, completed audit snapshots and classic-stack designs are retained under [history](../history/README.md).
+Keep only active proposals here. Once implemented, move the lasting contract into its feature or architecture reference; remove the completed plan.

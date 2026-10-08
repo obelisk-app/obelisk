@@ -1,9 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { hasPlaceholder, type MentionMap } from '@/utils/message-text/placeholder-segments';
 import { PlaceholderText } from './PlaceholderText';
-import { MarkdownInlineChild } from './MarkdownInlineChild';
 
 /**
  * The children of a markdown text element (paragraph, heading, emphasis,
@@ -15,7 +14,13 @@ export function MarkdownInline({ children, mentions, emojis }: { children?: Reac
     return hasPlaceholder(children) ? <PlaceholderText text={children} mentions={mentions} emojis={emojis} /> : <>{children}</>;
   }
   if (Array.isArray(children)) {
-    return <>{children.map((child, i) => <MarkdownInlineChild key={i} child={child} mentions={mentions} emojis={emojis} />)}</>;
+    return <>{children.map((child, i) => (
+      <Fragment key={i}>
+        {typeof child === 'string' && hasPlaceholder(child)
+          ? <span><PlaceholderText text={child} mentions={mentions} emojis={emojis} /></span>
+          : child}
+      </Fragment>
+    ))}</>;
   }
   return <>{children}</>;
 }

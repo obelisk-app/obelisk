@@ -4,7 +4,7 @@ Where a piece of code goes, and what a component file may hold. The folder table
 
 ## Where a file goes
 
-The layers are `src/components`, `src/hooks`, `src/services`, `src/utils`, `src/constants`, `src/types`, `src/schemas`, `src/store` and `src/lib`. All of them are split the same way (round 28; `src/constants` since round 32), and `tests/structure/module-layout.test.ts` holds them to it. `src/assets` (round 31) is a layer too, split by kind of picture rather than by feature ([Assets](#assets)).
+The layers are `src/components`, `src/hooks`, `src/services`, `src/utils`, `src/constants`, `src/types`, `src/schemas`, `src/store` and `src/lib`. They share the module ownership rules below, and `tests/structure/module-layout.test.ts` holds them to it. `src/assets` is a layer too, split by kind of picture rather than by feature ([Assets](#assets)).
 
 1. **Nothing loose at a layer's root.** Every file sits in a module folder. Code used across features goes in `common/` (`hooks/common/useDismiss.ts`, `services/common/clipboard.ts`, `components/common/AnchoredMenu.tsx`, `store/common/multi-account.ts`) or, in `utils`, in a named shared topic (`format/`, `identity/`, `message-text/`, `relay-url/`, `nostr/`, ...).
 2. **The same feature names in every layer.** A layer's top-level folders come from one module map (below; `MODULES` in the guard). A feature that has code in several layers uses the same path in each: `components/chat/dm/thread/DmThreadMenu.tsx`, `hooks/chat/dm/thread/useDmThread.ts`, `services/chat/dm/opt-in.ts`, `utils/chat/dm/pending.ts`, `store/chat/dm.ts`. A small layer may stop a level higher (`services/chat/dm/` is flat), but never renames: one folder name is spelled one way everywhere (no `dm-call` beside `call`, no `messages` beside `message`).
@@ -65,14 +65,13 @@ A runtime schema validates or normalizes actual values. `src/schemas/preferences
 
 **Where a constant goes.** `src/constants/<module>/<name>.ts`, named after the file or sub-feature that owns the values: a flat service's file keeps its name (`services/voice/sfu-rpc-support.ts` -> `constants/voice/sfu-rpc-support.ts`), a sub-feature's code shares one file (`hooks/chat/timeline/*` and `utils/chat/timeline/*` -> `constants/chat/timeline.ts`). A constants file never has sub-folders beside it, so rule 3 above never splits one. The utils' shared topics, the bridge (`nostr-bridge/`) and the server code (`server/`) keep their folder names here (`LAYER_ONLY` in the module-layout guard). Event kinds are `constants/nostr/nip-kinds.ts`, the one source of truth (`tests/constants/nostr/nip-kinds.test.ts`).
 
-**What moved in round 32** (audits/obelisk/round32/layers.md): `nip-kinds.ts` and the other constants-only utils and services; about 340 exported constants out of hooks, utils and services (and 37 that only their own file read are no longer exported); the social tier's local `KIND_*` constants into nip-kinds; the pure helpers hooks exported to utils and their side effects to services; `localStorage`, the open-settings event and the message flash out of utils into services; the landing page's content out of a component folder (`constants/marketing/landing.ts`, its icons picked by `FeatureGlyph` and `StepGlyph`).
 
 ## Component files
 
 A component file is markup. Reading one should tell you what is on the screen, not how the data behind it was worked out.
 
 - **One exported component per file.** It reads its state and handlers from one view-model hook, `src/hooks/<module>/use<Component>.ts`, and its data from bridge and store hooks. Purely visual local state (an open/closed toggle, a hover, a ref to focus) may stay in the component as up to two `useState` / `useRef` calls. Everything else lives in the hook: effects, memos, callbacks, reducers, derived data, handlers with logic.
-- **Cohesive screens.** Extract for reusable markup, a subscription/lifecycle boundary or a substantial independent section. Do not add a wrapper that only forwards props or renders another component: render the feature directly. Small subscription anchors and framework route files have real lifecycle/routing responsibilities and can stay small.
+- **Cohesive screens.** Extract for reusable markup, a subscription/lifecycle boundary or a substantial independent section. Do not add a wrapper that only forwards props or renders another component: render the feature directly. Small subscription anchors and framework route files have real lifecycle/routing responsibilities and can stay small. Group related helpers and constants by responsibility; there is no one-function-per-file requirement. Keep private helpers local to their owning logic module, and do not add forwarding components or hooks solely to mirror folder structure.
 - **No re-exports.** A component file does not hand on another component (`export { Panel } from './Panel'`, `export { default } from ...`), nor, outside the ui kit, a helper: when a piece moves to its own file, its importers move with it. An `index.ts` barrel is the one file made of re-exports. `tests/components/components-only.test.ts` holds this.
 - **Pure data shaping** (build rows, filter, sort, format) goes to `src/utils/<topic>/`, tested on its own.
 - **Actions with side effects** (publishing, removing users, a confirm-then-act flow) go to `src/services/<topic>/`, tested on its own.
@@ -81,7 +80,7 @@ A component file is markup. Reading one should tell you what is on the screen, n
 
 ### The reference: the relay admin panel
 
-`src/components/admin/relay-admin/` is the worked example. Before round 27 it was one 251-line file holding the rows, the filters, the selection, the bulk actions and three cell components.
+`src/components/admin/relay-admin/` is the worked example of separating table markup, state and actions.
 
 | File | What it holds |
 |---|---|
@@ -96,7 +95,7 @@ A component file is markup. Reading one should tell you what is on the screen, n
 
 ### Files that may hold more than one component
 
-Only the reasoned list in `scripts/markup-only/multi-component.ts`: the MDX component map (`guides/mdx/mdx-components.tsx`), the media-kit banner variants (`media-kit/kit/banners.tsx`), the two lazy-boundary modules (`app/mounts/lazy-mounts.tsx`, `games/table/LazyTables.tsx`) and the menu primitive's parts (`ui/overlays/menu.tsx`). Each entry carries its reason; the list only shrinks. The seven icon sets that used to be on it were split into one file per icon in round 31 ([Assets](#assets)).
+Only the reasoned list in `scripts/markup-only/multi-component.ts`: the MDX component map (`guides/mdx/mdx-components.tsx`), the media-kit banner variants (`media-kit/kit/banners.tsx`), the two lazy-boundary modules (`app/mounts/lazy-mounts.tsx`, `games/table/LazyTables.tsx`) and the menu primitive's parts (`ui/overlays/menu.tsx`). Each entry carries its reason; the list only shrinks. Icons follow the [shared asset rules](#assets).
 
 ### Route files
 
@@ -121,7 +120,7 @@ At the top level of a component file every non-component function counts (it is 
 
 The rule's own cases are the second `describe` in the test.
 
-**The baseline.** On 2026-10-07 the files that break the rule were frozen in `tests/components/markup-only-baseline.json`, per file and per kind (865 findings in 272 files when the guard landed, 803 in 266 at the end of round 27; `audits/obelisk/round27/WAVES.md` splits the rest into eight parallel waves). It only shrinks:
+**The baseline.** `tests/components/markup-only-baseline.json` records existing findings by file and kind. It only shrinks:
 
 - a file not in the baseline must have no findings;
 - a listed file may not gain a finding of any kind;
@@ -145,7 +144,7 @@ npx tsx scripts/markup-only/baseline.ts --top 20               # the worst files
 
 ## Assets
 
-Every picture the app draws lives in `src/assets/`, one folder per kind (round 31). A component imports a picture; it never draws one.
+Every picture the app draws lives in `src/assets/`, one folder per kind. A component imports a picture; it never draws one.
 
 | Folder | Holds |
 |---|---|
@@ -172,7 +171,7 @@ A caller passes only what differs: `<ChevronRightIcon size={12} strokeWidth={2.5
 
 ### Icon style
 
-The owner's rule (round 33): "Choose one style for the icons, and reuse it." Every icon is drawn the way most of the set already was:
+Use one shared icon style:
 
 - **Grid:** the frame's 24-unit `viewBox`, the drawing inside about 2 to 22. An icon file never sets its own `viewBox`.
 - **Line:** an outline in `currentColor`, 1.8 wide (the frame's default), round caps and round joins. An icon file sets no stroke width, caps or joins, and no colour but `currentColor`.
@@ -185,7 +184,7 @@ The owner's rule (round 33): "Choose one style for the icons, and reuse it." Eve
 
 ## Type
 
-Every heading, paragraph and form label outside the ui kit goes through one of three pieces (round 32), so text with the same role looks the same everywhere.
+Every heading, paragraph and form label outside the ui kit goes through one of three pieces, so text with the same role looks the same everywhere.
 
 **`Heading`** (`src/components/ui/layout/Heading.tsx`). `as` (h1 to h4) is the level in the page's outline and is required; `variant` is the look, chosen by role, independent of the level. A variant is type only (size, weight, color, tracking): margins and layout stay in the caller's `className`. With no variant the heading adds no class, for one a stylesheet styles (the phone shell's `.app-header h2`, the login modal's `nui-form-title`).
 
@@ -208,13 +207,13 @@ A heading that fits no role keeps its classes on a variant-less `Heading` (the l
 
 **`Label`** (`src/components/ui/forms/Label.tsx`) for every form label; `Field` renders it. Variants: `field` (`text-[11px] font-medium text-lc-muted`), `caps` (`text-xs uppercase tracking-wider text-lc-muted`), and the phone sheet labels `sheet` and `sheetMono`, kept as the inline styles they were so the sheet stylesheet's rules lose to them as before. A label that wraps its control (a toggle row, a file-picker pill) takes no variant and its own layout classes.
 
-**Bundle size.** `Heading`, `Text` and `cn` are in nearly every chunk, so `next.config.ts` gives them one shared client chunk (`type`); without it webpack copied them into the layout chunk and each page chunk (seven copies, about 1.5 kB gzip on each page).
+**Bundle size.** `Heading`, `Text` and `cn` are in nearly every chunk, so `next.config.ts` gives them one shared client chunk (`type`) to avoid duplicating these primitives across page chunks.
 
 `tests/components/typography.test.ts` fails on a raw `<h1>` to `<h6>`, `<p>` or `<label>` in JSX under `src/components/` or `src/app/`, outside the ui kit (including the shared sheet chrome). There is no baseline: it is zero.
 
 ## Animations
 
-Shared motion lives in `src/components/ui/animations/` (round 32); a one-off animation that belongs to one feature stays with that feature (the game-over burst, the hero's floating bubbles).
+Shared motion lives in `src/components/ui/animations/`; a one-off animation that belongs to one feature stays with that feature (the game-over burst, the hero's floating bubbles).
 
 | Piece | What it is |
 |---|---|

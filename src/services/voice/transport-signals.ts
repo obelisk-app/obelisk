@@ -2,10 +2,11 @@
  * Directed signaling (kind 25050): publishing one payload to one peer, and
  * the subscription that receives what is addressed to us.
  */
+import { getBridge } from '@/services/nostr-bridge';
 import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
 import type { VoiceSignalPayload } from '@/types/voice/protocol';
 import { pushVoiceDebug } from './debug';
-import { bridge, publishViaBridge, subscribeVoice, type VoiceTransportOptions } from './transport-core';
+import { publishViaBridge, subscribeVoice, type VoiceTransportOptions } from './transport-core';
 
 const SEEN_SIGNAL_IDS_MAX = 2048;
 /**
@@ -26,7 +27,7 @@ export async function sendSignal(
   payload: VoiceSignalPayload,
   options: VoiceTransportOptions = {},
 ): Promise<void> {
-  const b = await bridge();
+  const b = await getBridge();
   await publishViaBridge(
     b,
     {
@@ -65,7 +66,7 @@ export async function subscribeSignals(
   onSignal: (fromPubkey: string, payload: VoiceSignalPayload) => void,
   options: VoiceTransportOptions = {},
 ): Promise<() => void> {
-  const b = await bridge();
+  const b = await getBridge();
   const since = Math.floor(Date.now() / 1000) - 60;
   const seenIds = new Set<string>();
 

@@ -26,10 +26,6 @@ This directory documents the **mesh** engine in depth. SFU docs are at
   and the handler it routes through, with the metric you'd watch in
   the `?debug=voice` overlay. Read this before opening a "voice
   doesn't work" issue.
-- **[mesh-fixes-2026-09.md](../../history/audits/2026-09-26-voice-mesh.md)**: the 2026-09-26 audit
-  of mesh voice across client, relays, TURN and the SFU test peer, with its
-  fix plan. Phase 3 is done; the ops, relay and client phases were still open
-  when it moved here from the repo root, including TURN being down.
 - **[remote-signing-optimization.md](../../proposals/voice-remote-signing.md)** -
   proposal to reduce mesh beacon pressure on NIP-46 and extension
   signers, followed by an optional scoped voice-session key design.

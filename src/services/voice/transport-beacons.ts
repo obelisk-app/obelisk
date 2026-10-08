@@ -2,9 +2,10 @@
  * Presence beacons (kind 20078): the periodic one that announces the two
  * peer sets and the outbound video, and the terminal one on leave.
  */
+import { getBridge } from '@/services/nostr-bridge';
 import { KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
 import type { VideoSlotKind } from '@/types/voice/protocol';
-import { bridge, publishViaBridge, type VoiceTransportOptions } from './transport-core';
+import { publishViaBridge, type VoiceTransportOptions } from './transport-core';
 import { PRESENCE_TTL_SECONDS } from '@/constants/voice/transport-core';
 
 /**
@@ -35,7 +36,7 @@ export async function publishPresenceBeacon(
   videoTracks: readonly VideoSlotKind[] = [],
   options: VoiceTransportOptions = {},
 ): Promise<void> {
-  const b = await bridge();
+  const b = await getBridge();
   const expiration = Math.floor(Date.now() / 1000) + PRESENCE_TTL_SECONDS;
   const tags: string[][] = [
     ['e', channelId],
@@ -90,7 +91,7 @@ export async function publishLeavePresence(
   channelId: string,
   options: VoiceTransportOptions = {},
 ): Promise<void> {
-  const b = await bridge();
+  const b = await getBridge();
   const now = Math.floor(Date.now() / 1000);
   await publishViaBridge(
     b,

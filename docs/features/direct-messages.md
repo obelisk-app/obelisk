@@ -149,8 +149,6 @@ Without a published kind-10050, no NIP-17 client can reach you, however many wra
 
 ## Post-quantum
 
-Full design: [`docs/history/specs/2026-08-15-post-quantum-dms-design.md`](../history/specs/2026-08-15-post-quantum-dms-design.md).
-
 The post-quantum envelope replaces the **seal's** ciphertext. Everything outside the seal is unchanged, so a relay or a client that has not implemented it still sees an ordinary kind-1059. `@nostr-wot/pq` owns the envelope; `@nostr-wot/dm` passes an opts bag through to the signer; the signer owns the key material. Obelisk holds no post-quantum secrets and cannot derive any: its logins are `nsec | nip07 | bunker` and it never sees a BIP-39 seed.
 
 **Sending.** `resolvePqSend` (`src/services/chat/pq/send.ts`) returns the peer's ML-KEM key plus our own (for the self-copy), or `null` meaning "send classic". All three of these must hold:
@@ -273,12 +271,6 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - **"My own DMs are missing after a reload."** A message sent from this device is kept in the encrypted store when it settles. One sent from another device comes back only through its self-copy. If an outgoing NIP-17 message never comes back, its self-copy did not land: check whether we have a published kind-10050 (`ensureDmInboxRelaysPublished`) and whether the relay accepted the second wrap. Messages sent before the self-copy shipped are gone from the sender's side for good; the recipient still has them.
 - **"The post-quantum toggle is on but nothing is post-quantum."** Almost certainly `capabilityUnknown`: the extension does not advertise `nip44.schemes`. The settings status row says so explicitly.
 - **"Every old message shows a mark."** It should not: marks aggregate to transitions. If you see one per bubble, `threadMarks` is not being used.
-
-## Spec and plans
-
-- NIP-17 adoption: [`docs/history/specs/2026-08-16-nip17-dms-design.md`](../history/specs/2026-08-16-nip17-dms-design.md)
-- Post-quantum: [`docs/history/specs/2026-08-15-post-quantum-dms-design.md`](../history/specs/2026-08-15-post-quantum-dms-design.md)
-- Original (superseded) DM design: [`docs/history/specs/2026-04-26-direct-messages-design.md`](../history/specs/2026-04-26-direct-messages-design.md)
 
 ## Tests
 

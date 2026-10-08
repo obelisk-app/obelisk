@@ -3,15 +3,6 @@
  * `SfuRpc` (`sfu-rpc.ts`, which re-exports the envelope types) and the
  * direct-WebSocket connect (`sfu-rpc-direct.ts`).
  */
-import { getBridge, getBridgeImpl } from '@/services/nostr-bridge';
-
-export async function bridge() {
-  await getBridge();
-  const impl = getBridgeImpl();
-  if (!impl) throw new Error('nostr bridge not initialized');
-  return impl;
-}
-
 /**
  * 8-byte random hex - used as the per-connection identifier the SFU
  * disambiguates devices on. Collisions inside a single user's session

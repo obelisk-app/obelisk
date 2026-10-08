@@ -1,6 +1,6 @@
 # Architecture
 
-This section describes current runtime ownership. Start with [AGENTS.md](../../AGENTS.md) for repository rules, then follow the references below for subsystem contracts. Historical audit measurements and abandoned designs live under [history](../history/README.md).
+This section describes current runtime ownership. Start with [AGENTS.md](../../AGENTS.md) for repository rules, then follow the references below for subsystem contracts. Git history retains prior audit measurements and superseded designs.
 
 ## Documents, scopes and providers
 

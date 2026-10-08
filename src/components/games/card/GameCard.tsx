@@ -6,8 +6,7 @@ import Button from '@/components/ui/buttons/Button';
 import { memo } from 'react';
 import { gameIcon, gameName } from '@/lib/games/core/catalog';
 import { useGameCard } from '@/hooks/games/card/useGameCard';
-import ActionLabel from './ActionLabel';
-import StatusLabel from './StatusLabel';
+import WinnerLabel from './WinnerLabel';
 import Skeleton from '@/components/ui/animations/Skeleton';
 
 /**
@@ -18,7 +17,7 @@ import Skeleton from '@/components/ui/animations/Skeleton';
  * `useGameCard`'s business.
  */
 function GameCard({ gameId }: { gameId: string }) {
-  const { session, myPubkey, dots, open } = useGameCard(gameId);
+  const { session, status, actionLabel, dots, open } = useGameCard(gameId);
 
   if (!session) {
     return (
@@ -44,7 +43,7 @@ function GameCard({ gameId }: { gameId: string }) {
           {gameName(session.game)}
         </Text>
         <span className="block text-[11px] text-lc-muted">
-          <StatusLabel session={session} myPubkey={myPubkey} />
+          {status.winner === null ? status.text : <WinnerLabel session={session} winner={status.winner} />}
         </span>
       </span>
       <span className="flex shrink-0 items-center gap-1">
@@ -53,7 +52,7 @@ function GameCard({ gameId }: { gameId: string }) {
         ))}
       </span>
       <span className="shrink-0 rounded-full border border-lc-border px-2 py-0.5 text-[10px] text-lc-white">
-        <ActionLabel session={session} myPubkey={myPubkey} />
+        {actionLabel}
       </span>
     </Button>
   );

@@ -3,11 +3,9 @@
  * addresses to us on this channel. `SfuRpc.start()` uses it when there is no
  * direct WebSocket, or the direct one failed.
  */
+import { getBridge } from '@/services/nostr-bridge';
 import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
-import {
-  bridge,
-  sleep,
-} from './sfu-rpc-support';
+import { sleep } from './sfu-rpc-support';
 import { SFU_RPC_MAX_SUBSCRIBE_ATTEMPTS, SFU_RPC_WATCHDOG_MS, SUBSCRIBE_SETTLE_MS } from '@/constants/voice/sfu-rpc-support';
 
 export interface RelayRpcHooks {
@@ -23,7 +21,7 @@ export interface RelayRpcHooks {
 
 /** Opens the inbound subscription and resolves once it has had time to settle. */
 export async function subscribeRelayRpc(hooks: RelayRpcHooks): Promise<void> {
-  const b = await bridge();
+  const b = await getBridge();
   const since = Math.floor(Date.now() / 1000) - 30;
   // Subscribe on the SFU's trusted relays in addition to the dex's
   // bridge defaults - the SFU only publishes responses where it itself

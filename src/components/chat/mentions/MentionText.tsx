@@ -1,5 +1,6 @@
 import { parseMentions } from '@/utils/message-text/mentions';
-import { MentionSegmentView } from './MentionSegmentView';
+import { Fragment } from 'react';
+import { MentionName } from './MentionName';
 
 /**
  * Render a content string with `nostr:npub1…` mention tokens replaced by
@@ -8,5 +9,9 @@ import { MentionSegmentView } from './MentionSegmentView';
  * raw npubs.
  */
 export function MentionText({ content }: { content: string }) {
-  return <>{parseMentions(content, []).map((seg, i) => <MentionSegmentView key={i} segment={seg} />)}</>;
+  return <>{parseMentions(content, []).map((segment, i) => (
+    <Fragment key={i}>
+      {segment.type === 'text' ? segment.text : <MentionName pubkey={segment.pubkey} />}
+    </Fragment>
+  ))}</>;
 }

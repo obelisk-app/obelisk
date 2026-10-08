@@ -23,7 +23,7 @@
  * later without changing the transport surface.
  *
  * This module is the surface; the calls live beside it: `transport-core.ts`
- * (the bridge handle and the publish / subscribe options every call
+ * (the publish / subscribe options every call
  * shares), `transport-beacons.ts`, `transport-roster.ts`,
  * `transport-signals.ts`. Tests mock this module by path, so everything the
  * rest of the voice code reaches goes through here.

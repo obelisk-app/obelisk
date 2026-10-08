@@ -10,7 +10,7 @@
  * added later is covered without anyone remembering this file.
  */
 import { describe, expect, it } from 'vitest';
-import { installFakeRelayPage, loginWithNip07Spy, settle } from '@/services/nostr-bridge/common/test-support';
+import { installFakeRelayPage, loginWithNip07Spy, settle } from '@tests/services/nostr-bridge/support/fake-relay-page';
 import { unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 import { warmBridgeModules } from '@tests/support/warm-bridge-modules';
 

@@ -429,30 +429,11 @@ Two tabs on the same account converge automatically:
    stale wraps per month. Future cleanup pass (NIP-09 deletions) is a
    follow-up.
 
-## 13. Phase 1.5 (next): browser + PWA notifications + sound
+## 13. Browser notifications and sound
 
-Once the data layer is stable in production, OS-level notifications get
-layered on top. Same predicate as the notification push at
-`client.ts:ingestMessage` / `ingestDM`:
+`src/services/notifications/alert.ts` and `sound.ts` handle browser notifications and throttled sounds after a notification card has passed the store’s deduplication and read-cursor checks. Freshness and event-id deduplication prevent backfilled messages from sounding new. Account preferences control browser notifications and sounds; browser permission and page visibility determine whether an OS notification is shown.
 
-```
-isNew && !isUserWatching(channel|dm) && (mentioned || isDM)
-```
-
-Per AGENTS.md, background OS notifications are **DM-only**: group
-mentions only notify while the user has that group's relay open as the
-active relay, because that's the only time they're scanned.
-
-When that fires AND the user has opted in:
-
-- `Notification` API for desktop / open-tab PWA delivery.
-- `<audio>` chime, debounced to once per second.
-- `notificationclick` handler (registered by a tiny SW) deep-links to
-  the right channel/DM.
-
-iOS PWA: feature-detect `Notification` and gate the toggle. Sound works
-everywhere. No backend, no Web Push subscriptions; the relay sub stays
-in-page and the browser owns the OS handoff.
+The active relay supplies group mentions; the background watcher supplies DMs. Alerts do not create a second global group scan. Notification clicks currently focus the existing page. Delivery through service-worker registrations and click-to-conversation navigation remain [roadmap work](../../ROADMAP.md#voice-and-notifications), including mobile browsers that reject the page-level `Notification` constructor. There is no backend Web Push service; relay subscriptions remain in the open page.
 
 ## 14. Testing
 

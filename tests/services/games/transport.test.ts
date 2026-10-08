@@ -10,14 +10,13 @@ const getPublicKey = vi.hoisted(() => vi.fn(() => 'pk-me'));
 const relayUrl = vi.hoisted(() => ({ value: 'wss://relay.test' }));
 
 vi.mock('@/services/nostr-bridge/facade/client', () => ({
-  getBridge: vi.fn(async () => ({})),
-  getBridgeImpl: () => ({
+  getBridge: vi.fn(async () => ({
     publishEvent,
     dropRelayConnection,
     subscribeFilterWatched,
     getPublicKey,
     currentRelayUrl: { get: () => relayUrl.value },
-  }),
+  })),
 }));
 
 import {

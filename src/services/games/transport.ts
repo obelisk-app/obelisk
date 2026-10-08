@@ -18,9 +18,8 @@ import {
   type GameEvent,
   type ParsedGameEvent,
 } from '@/lib/games/protocol/protocol';
-import { bridge } from './transport-bridge';
-import { GAME_SUB_WATCHDOG_MS } from '@/constants/games/transport-bridge';
-import { CHANNEL_GAME_LIMIT, TAG_PROBE_MS } from '@/constants/games/transport';
+import { getBridge } from '@/services/nostr-bridge';
+import { CHANNEL_GAME_LIMIT, TAG_PROBE_MS, GAME_SUB_WATCHDOG_MS } from '@/constants/games/transport';
 
 export {
   findCreateByNonce,
@@ -82,7 +81,7 @@ export async function subscribeChannelGames(
   channelId: string,
   onEvent: (ev: ParsedGameEvent) => void,
 ): Promise<() => void> {
-  const b = await bridge();
+  const b = await getBridge();
   const relay = b.currentRelayUrl.get();
   const since = Math.floor(Date.now() / 1000) - GAME_LOG_WINDOW_SECONDS;
   const seen = new Set<string>();

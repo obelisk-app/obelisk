@@ -3,7 +3,7 @@ import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { CallSignalChannel, FLUSH_MS, MAX_ATTEMPTS, RESEND_MS, type CallPoolLike } from '@/services/call/signaling';
 import { DM_CALL_SIGNAL_TAG } from '@/constants/call/signaling';
-import { fakeEphemeralRelay } from '@/services/call/fake-ephemeral-relay';
+import { fakeEphemeralRelay } from '@tests/support/fake-ephemeral-relay';
 import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
 import type { VoiceSignalPayload } from '@/types/voice/protocol';
 

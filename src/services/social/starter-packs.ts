@@ -46,6 +46,7 @@
  * and petnames other clients wrote there) and appends only what's missing.
  */
 
+import { tagValue } from '@/utils/social/note-tags';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { querySocial } from './pool';
 import { KIND_FOLLOW_SET, KIND_STARTER_PACK } from '@/constants/nostr/nip-kinds';
@@ -82,10 +83,6 @@ export type StarterPack = {
   members: string[];
   createdAt: number;
 };
-
-function tagValue(event: NostrEvent, name: string): string | undefined {
-  return event.tags.find((tag) => tag[0] === name)?.[1];
-}
 
 /**
  * Normalise a 39089 or 30000 event into a pack.

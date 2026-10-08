@@ -553,3 +553,9 @@ talking to real relays.
 
 Per-spec retries: 1. Each spec uses `attachClientCapture` (see
 `scripts/e2e/lib.ts`) to dump WebSocket frames on failure for debugging.
+
+## Web of Trust filtering
+
+`src/services/wot/engine.ts` owns synchronous trust decisions, a bounded verdict cache and queued extension lookups; account preferences live in `src/store/wot/`. Unknown verdicts allow content while a batch lookup is pending. Resolved denials can suppress profile lookups and future ingest, but a later trust decision must not delete cached bridge data by itself. Configuration changes invalidate verdicts so policy listeners can reevaluate visible content.
+
+Explicit mutes combine the account’s NIP-51 list and local preferences; explicit blocks remain a hard deny. Those decisions take precedence over own-event, group-metadata and consensual-DM exemptions. The current policy is in `src/services/wot/policy.ts` and `src/constants/wot/policy.ts`; the bridge applies it before ingest in `src/services/nostr-bridge/subscriptions/watched.ts` and avoids resolved-denied metadata requests in `src/services/nostr-bridge/profile/profiles.ts`.

@@ -227,4 +227,4 @@ Confirms). UI: `WalletSettings`, `PayingWalletNote`, `InvoiceCard`,
 
 Paying invoices with no amount over NWC, balance and history, emoji zaps,
 per-server zap emojis, sat leaderboards and zap splits are tracked in
-[ROADMAP.md](../../ROADMAP.md#fase-6---lightning-zaps-remaining).
+[ROADMAP.md](../../ROADMAP.md#lightning).

@@ -6,6 +6,7 @@
 // for validation is read from the receipt's nested zap-request `p` tag, so
 // this hook works for any author (not just the current user).
 
+import { tagValue } from '@/utils/social/note-tags';
 import { useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { sharedCoalescer, getDefaultRelays, parseZapMsats } from '@nostr-wot/data';
@@ -26,10 +27,6 @@ interface ReceiptEntry {
   amountMsat: number;
 }
 
-function tagValue(tags: string[][], name: string): string | null {
-  return tags.find((t) => t[0] === name)?.[1] ?? null;
-}
-
 function tagAmountMsat(tags: string[][], name: string, defaultUnit = 'msat'): number {
   const tag = tags.find((t) => t[0] === name);
   if (!tag?.[1]) return 0;
@@ -43,9 +40,9 @@ function tagAmountMsat(tags: string[][], name: string, defaultUnit = 'msat'): nu
 
 function zapReactionEntry(ev: RawNostrEvent, ids: readonly string[]): ReceiptEntry | null {
   if (ev.kind !== 7 || !ev.content.includes('⚡')) return null;
-  const messageId = tagValue(ev.tags, 'e');
+  const messageId = tagValue(ev, 'e');
   if (!messageId || !ids.includes(messageId)) return null;
-  const recipient = tagValue(ev.tags, 'p');
+  const recipient = tagValue(ev, 'p');
   if (!recipient) return null;
 
   const amountMsat =
@@ -59,7 +56,7 @@ function zapReactionEntry(ev: RawNostrEvent, ids: readonly string[]): ReceiptEnt
   if (amountMsat <= 0) return null;
 
   return {
-    dedupeKey: tagValue(ev.tags, 'bolt11') || ev.id,
+    dedupeKey: tagValue(ev, 'bolt11') || ev.id,
     messageId,
     senderPubkey: ev.pubkey,
     amountMsat,
@@ -110,7 +107,7 @@ export function useMessageZaps(messageIds: ReadonlyArray<string>): Map<string, M
       if (!validated || !validated.messageId) return;
 
       setReceipts((prev) => {
-        const dedupeKey = tagValue(ev.tags, 'bolt11') || validated.receiptId;
+        const dedupeKey = tagValue(ev, 'bolt11') || validated.receiptId;
         if (prev.has(dedupeKey)) return prev;
         const next = new Map(prev);
         next.set(dedupeKey, {

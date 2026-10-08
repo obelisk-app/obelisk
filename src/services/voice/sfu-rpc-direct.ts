@@ -4,7 +4,8 @@
  * RPC. `SfuRpc.start()` tries this first when the SFU advertises a URL and
  * falls back to relays when it fails (unless the SFU refused us outright).
  */
-import { bridge, DirectRpcError } from './sfu-rpc-support';
+import { getBridge } from '@/services/nostr-bridge';
+import { DirectRpcError } from './sfu-rpc-support';
 import { AUTH_KIND, DIRECT_CONNECT_TIMEOUT_MS } from '@/constants/voice/sfu-rpc-support';
 
 export interface DirectRpcHooks {
@@ -67,7 +68,7 @@ export async function connectDirectRpc(hooks: DirectRpcHooks): Promise<void> {
           ) {
             throw new DirectRpcError('Invalid SFU authentication challenge');
           }
-          const b = await bridge();
+          const b = await getBridge();
           const event = await b.signEventTemplate({
             kind: AUTH_KIND,
             content: '',

@@ -62,7 +62,7 @@ export interface DmSendDeps {
  * Which DM wire protocol to use for `recipientPubkey`: the per-thread
  * override from `useDMStore` (`src/store/chat/dm.ts`) if the user has picked
  * one, otherwise NIP-17 by default. NIP-04 is opt-in-per-thread now, not
- * the default, see `docs/history/specs/2026-08-16-nip17-dms-design.md`.
+ * the default, see `docs/features/direct-messages.md`.
  */
 export function resolveDmProtocol(recipientPubkey: string): DMProtocol {
   const override = useDMStore.getState().protocolOverrides[recipientPubkey];

@@ -17,3 +17,6 @@ export const CHANNEL_GAME_LIMIT = 400;
  * for a reason it hasn't.
  */
 export const TAG_PROBE_MS = 2500;
+
+/** Re-open game subscriptions after this long without a response. */
+export const GAME_SUB_WATCHDOG_MS = 4000;

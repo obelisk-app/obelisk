@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import { batchVerdict, verdictsInvalidated } from '@/services/wot/policy';
 import { ALWAYS_ALLOW_KINDS, DEFAULT_WOT_CONFIG } from '@/constants/wot/policy';
-import { KINDS_ALWAYS_ALLOW } from '@/constants/wot/engine';
 
 const cfg = { enabled: true, maxHops: 2, minPaths: 2 };
 
@@ -18,10 +17,9 @@ describe('wot policy', () => {
     expect(DEFAULT_WOT_CONFIG).toEqual({ enabled: false, maxHops: 2, minPaths: 1 });
   });
 
-  it('never gates group structure or voice signaling, and the engine exports the same set', () => {
+  it('never gates group structure or voice signaling', () => {
     for (const kind of [39000, 39001, 39002, 9007]) expect(ALWAYS_ALLOW_KINDS.has(kind)).toBe(true);
     expect(ALWAYS_ALLOW_KINDS.has(1)).toBe(false);
-    expect(KINDS_ALWAYS_ALLOW).toBe(ALWAYS_ALLOW_KINDS);
   });
 
   it('allows within hops with enough paths, or with no path count reported', () => {

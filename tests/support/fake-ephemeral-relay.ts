@@ -6,7 +6,7 @@
  * connect "sometimes instantly, sometimes never".
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import type { CallPoolLike } from './signaling';
+import type { CallPoolLike } from '@/services/call/signaling';
 
 export interface FakeEphemeralRelay {
   pool: CallPoolLike;

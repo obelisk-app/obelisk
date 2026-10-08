@@ -14,8 +14,8 @@ import {
   type GameEvent,
   type SeatSpec,
 } from '@/lib/games/protocol/protocol';
-import { bridge } from './transport-bridge';
-import { GAME_SUB_WATCHDOG_MS } from '@/constants/games/transport-bridge';
+import { getBridge } from '@/services/nostr-bridge';
+import { GAME_SUB_WATCHDOG_MS } from '@/constants/games/transport';
 
 /**
  * Publish, and try once more if the confirmation never came back.
@@ -38,7 +38,7 @@ import { GAME_SUB_WATCHDOG_MS } from '@/constants/games/transport-bridge';
 async function publishResilient(
   template: { kind: number; content: string; tags: string[][] },
 ): Promise<NostrEvent> {
-  const b = await bridge();
+  const b = await getBridge();
   try {
     return echo(await b.publishEvent(template));
   } catch (err) {
@@ -128,7 +128,7 @@ export async function findCreateByNonce(
   nonce: string,
   waitMs = 4000,
 ): Promise<string | null> {
-  const b = await bridge();
+  const b = await getBridge();
   const me = b.getPublicKey();
   if (!me) return null;
 

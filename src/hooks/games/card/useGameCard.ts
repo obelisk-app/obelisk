@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useLayoutEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useMyPubkey } from '@/hooks/session/useSession';
 import { useGamesStore } from '@/store/games';
 import { useGameSession } from '@/hooks/games/channel/useChannelGames';
 import { seedGameFromCache } from '@/services/games/cache';
 import { requestGameLoad } from '@/services/games/resolve';
-import { cardSeatDots } from '@/utils/games/card/card-labels';
+import { cardActionLabel, cardSeatDots, cardStatus } from '@/utils/games/card/card-labels';
 import { RESOLVE_GRACE_MS } from '@/constants/games/card';
 
 /**
@@ -19,6 +20,7 @@ import { RESOLVE_GRACE_MS } from '@/constants/games/card';
  * table older than its 24-hour window) a direct lookup by id.
  */
 export function useGameCard(gameId: string) {
+  const t = useTranslations();
   const session = useGameSession(gameId);
   const myPubkey = useMyPubkey();
   const setOpenGame = useGamesStore((s) => s.setOpenGame);
@@ -42,6 +44,8 @@ export function useGameCard(gameId: string) {
     session,
     myPubkey,
     dots: session ? cardSeatDots(session) : [],
+    actionLabel: session ? cardActionLabel(t, session, myPubkey) : '',
+    status: session ? cardStatus(t, session, myPubkey) : { text: '', winner: null },
     open: () => setOpenGame(gameId),
   };
 }
