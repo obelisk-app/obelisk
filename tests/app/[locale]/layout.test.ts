@@ -65,8 +65,10 @@ describe('root social metadata', () => {
     expect(metadata.description).toBe(translator('en')('seo.site.description'));
     setRootLocale('fr');
     await expect(LocaleLayout({ children: null })).rejects.toThrow('NEXT_HTTP_ERROR_FALLBACK;404');
-    // One of ours gets past the check (and on to the request's headers, which vitest has none of).
+    // A supported locale renders without a request scope, so public pages can prerender.
     setRootLocale('es');
-    await expect(LocaleLayout({ children: null })).rejects.toThrow('`headers` was called outside a request scope');
+    const layout = await LocaleLayout({ children: null });
+    expect(layout.type).toBe('html');
+    expect(layout.props.lang).toBe('es');
   });
 });
