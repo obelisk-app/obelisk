@@ -2,7 +2,7 @@
 
 Public site content is generated per locale during `npm run build`. The build must produce immutable HTML for the landing page, Features, desktop/mobile tours, media kit, help, local-data help, guide index and every guide. Guide slugs reject runtime generation. A deployment updates these artifacts; there is no timed HTML revalidation.
 
-The shared locale root reads its language from `next/root-params`, not request headers. Public pages must not introduce request-specific cookies, headers, search parameters or nonce values into their render tree. The app, voice, public relay-backed viewers, relay-share routes and catch-all error route explicitly remain dynamic.
+The shared locale root reads its language from `next/root-params`, not request headers. Public pages must not introduce request-specific cookies, headers, search parameters or nonce values into their render tree. The app, voice, public relay-backed viewers, relay-share routes and catch-all error route explicitly remain dynamic. Single-page viewers and relay-share routes declare this on the page itself, alongside their scope and bridge provider.
 
 ## CSP follows the document
 
