@@ -19,7 +19,7 @@ export function ToggleRow({
   return (
     <Label className="flex items-start justify-between gap-4 cursor-pointer">
       <div className="min-w-0">
-        <div className="text-sm text-lc-white">{label}</div>
+        <Text as="div" size="sm" tone="default">{label}</Text>
         {description && <Text as="div" variant="caption" className="mt-0.5">{description}</Text>}
       </div>
       <Toggle checked={checked} onChange={onChange} />

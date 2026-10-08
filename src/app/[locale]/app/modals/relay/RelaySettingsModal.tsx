@@ -38,7 +38,7 @@ export function RelaySettingsModal(props: {
                       : <StarIcon size={21} />}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-lc-white">{t(`shell.desktop.server.items.${icon}.title`)}</span>
+              <Text size="sm" tone="default" weight="semibold" className="block">{t(`shell.desktop.server.items.${icon}.title`)}</Text>
               <Text variant="caption" className="mt-1 block">{t(`shell.desktop.server.items.${icon}.description`)}</Text>
             </span>
             <ChevronRightIcon strokeWidth={2} className="shrink-0 text-lc-muted" />

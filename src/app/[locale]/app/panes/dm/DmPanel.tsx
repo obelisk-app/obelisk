@@ -45,7 +45,7 @@ export function DmPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
         >
           <Avatar pubkey={peer} size={9} picture={thread.meta?.picture ?? null} />
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-lc-white">{thread.peerName}</div>
+            <Text as="div" size="sm" tone="default" weight="bold" className="truncate">{thread.peerName}</Text>
             {/* An npub, not the raw 64 hex characters. The full key was
                 rendered here in full, which is unreadable, unverifiable at a
                 glance and the widest thing in the header. */}

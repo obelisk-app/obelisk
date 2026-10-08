@@ -29,7 +29,7 @@ export function UserResultRow({ hit, badge, onPick }: { hit: UserHit; badge?: st
       )}
       <div className="min-w-0 flex-1">
         <Row gap="1.5" align="center">
-          <span className="text-sm text-lc-white truncate">{row.name}</span>
+          <Text size="sm" tone="default" className="truncate">{row.name}</Text>
           {badge && (
             <Text variant="label" size="9" className="px-1.5 py-0.5 rounded-full bg-lc-green/15 text-lc-green border border-lc-green/30 shrink-0">
               {badge}

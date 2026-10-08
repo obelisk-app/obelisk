@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Row from '@/components/ui/layout/Row';
 import { useUserMetadata as useProfile } from '@/services/nostr-bridge';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
@@ -30,9 +31,9 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
         className="flex items-center gap-2 rounded-lg border border-lc-border bg-lc-black px-2 py-1.5"
         data-testid={`member-confirm-${pubkey}`}
       >
-        <span className="min-w-0 flex-1 truncate text-xs text-lc-white">
+        <Text size="xs" tone="default" className="min-w-0 flex-1 truncate">
           {demoting ? t('shell.desktop.members.confirmDemote', { name }) : t('shell.desktop.members.confirmRemove', { name })}
-        </span>
+        </Text>
         <Button
           variant="ghost"
           size="xs"
@@ -60,7 +61,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
       <Avatar pubkey={pubkey} size={7} picture={meta?.picture ?? null} />
       <div className="min-w-0 flex-1">
         <Row gap="1.5" align="center">
-          <span className="truncate text-sm text-lc-white">{name}</span>
+          <Text size="sm" tone="default" className="truncate">{name}</Text>
           <MemberRoleBadge isAdmin={isAdmin} />
         </Row>
         <Button

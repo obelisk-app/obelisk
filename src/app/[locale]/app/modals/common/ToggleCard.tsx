@@ -31,7 +31,7 @@ export function ToggleCard({
     >
       <div className="text-xl leading-none">{icon}</div>
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold">{title}</div>
+        <Text as="div" size="sm" weight="semibold">{title}</Text>
         <Text as="div" size="11" tone="muted">{subtitle}</Text>
       </div>
       <div

@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import { categoryLabel } from '@/utils/relay/category-label';
@@ -56,9 +57,9 @@ export function ChannelOrderRow({
         <DragHandleIcon size={14} />
       </Button>
       <span className="text-lc-muted">#</span>
-      <span className="flex-1 truncate text-sm text-lc-white">
+      <Text size="sm" tone="default" className="flex-1 truncate">
         {channel.name ?? channel.id.slice(0, 12)}
-      </span>
+      </Text>
       <Select
         size="2xs"
         tone="dark"

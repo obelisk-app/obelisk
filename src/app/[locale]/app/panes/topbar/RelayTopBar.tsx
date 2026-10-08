@@ -1,5 +1,7 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
+import Link from '@/components/ui/navigation/Link';
 import RelayStatusPill from '@/components/relay/RelayStatusPill';
 import { useTranslations } from 'next-intl';
 import { HelpPopover } from './HelpPopover';
@@ -31,6 +33,24 @@ export function RelayTopBar({
 }) {
   const t = useTranslations();
   const vm = useRelayTopBar({ relay, onJumpToChannel, onJumpToDm });
+  const identity = (
+    <>
+      {vm.header.icon ? (
+        <RemoteImage
+          src={vm.header.icon}
+          alt=""
+          onError={vm.header.onIconError}
+          className="w-7 h-7 md:w-5 md:h-5 rounded-full shrink-0 object-cover"
+        />
+      ) : (
+        <div className="w-7 h-7 md:w-5 md:h-5 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs md:text-[10px] font-bold shrink-0">
+          {vm.displayName[0]?.toUpperCase() || 'R'}
+        </div>
+      )}
+      <Text size="sm" tone="default" weight="semibold" className="md:text-xs truncate">{vm.displayName}</Text>
+    </>
+  );
+  const identityClass = 'flex items-center gap-2 min-w-0 max-w-[55%] rounded-lg px-1 py-0.5';
   return (
     <div
       className="h-14 md:h-10 shrink-0 px-3"
@@ -95,29 +115,16 @@ export function RelayTopBar({
         rules" actually lives. It was inert text, so the app never answered
         that from inside the app.
       */}
-      <a
-        href={vm.website ?? undefined}
-        {...(vm.website ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-        className={`flex items-center gap-2 min-w-0 max-w-[55%] rounded-lg px-1 py-0.5 ${
-          vm.website ? 'transition-colors hover:bg-lc-border/40' : 'pointer-events-none'
-        }`}
-        title={vm.website ?? vm.displayName}
-        data-testid="relay-topbar-name"
-      >
-        {vm.header.icon ? (
-          <RemoteImage
-            src={vm.header.icon}
-            alt=""
-            onError={vm.header.onIconError}
-            className="w-7 h-7 md:w-5 md:h-5 rounded-full shrink-0 object-cover"
-          />
-        ) : (
-          <div className="w-7 h-7 md:w-5 md:h-5 rounded-full bg-lc-olive flex items-center justify-center text-lc-green text-xs md:text-[10px] font-bold shrink-0">
-            {vm.displayName[0]?.toUpperCase() || 'R'}
-          </div>
-        )}
-        <span className="text-sm md:text-xs font-semibold text-lc-white truncate">{vm.displayName}</span>
-      </a>
+      {vm.website ? (
+        <Link href={vm.website} target="_blank" className={`${identityClass} hover:bg-lc-border/40`}
+          title={vm.website} data-testid="relay-topbar-name">
+          {identity}
+        </Link>
+      ) : (
+        <div className={identityClass} title={vm.displayName} data-testid="relay-topbar-name">
+          {identity}
+        </div>
+      )}
     </div>
   );
 }

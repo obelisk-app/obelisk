@@ -92,7 +92,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
             <div className="flex items-center gap-2 min-w-0">
               <UserAvatar pubkey={pubkey} picture={meta?.picture ?? null} size={8} name={displayName} initialClassName="text-sm" />
               <div className="min-w-0">
-                <div className="text-sm text-lc-white truncate">{displayName}</div>
+                <Text as="div" size="sm" tone="default" className="truncate">{displayName}</Text>
                 {meta?.nip05 && <div className="text-[10px] text-lc-green truncate">{meta.nip05}</div>}
               </div>
             </div>

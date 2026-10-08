@@ -33,7 +33,7 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
       className="fixed right-2 md:right-3 top-[3.75rem] md:top-11 z-[60] w-[min(380px,calc(100vw-1rem))] max-h-[70vh] overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl flex flex-col"
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-lc-border">
-        <span className="text-sm font-semibold text-lc-white">{t('common.help')}</span>
+        <Text size="sm" tone="default" weight="semibold">{t('common.help')}</Text>
       </div>
       {/* One `lc-card` per topic, the same card treatment the /help
           page gives these, just at popover scale. Flat list rows
@@ -58,9 +58,9 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
                 >
                   <HelpTopicBadge slug={topic.slug} />
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-lc-white group-hover:text-lc-green">
+                    <Text size="sm" tone="default" weight="semibold" className="block group-hover:text-lc-green">
                       {t(topic.titleKey)}
-                    </span>
+                    </Text>
                     <Text variant="caption" className="mt-1 block leading-5">
                       {t(topic.descriptionKey)}
                     </Text>

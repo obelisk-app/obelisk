@@ -36,7 +36,7 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
       className="fixed right-2 md:right-3 top-[3.75rem] md:top-11 z-[60] w-[min(380px,calc(100vw-1rem))] max-h-[70vh] overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-2xl flex flex-col"
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-lc-border">
-        <span className="text-sm font-semibold text-lc-white">{t('common.notifications')}</span>
+        <Text size="sm" tone="default" weight="semibold">{t('common.notifications')}</Text>
         {/* Pill affordances, per the La Crypta 9999px-radius convention.
             "Mark read" is an outlined accent pill so it stays secondary
             to the solid green unread badges in the tab strip below;

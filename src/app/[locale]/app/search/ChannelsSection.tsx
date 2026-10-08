@@ -34,7 +34,7 @@ export function ChannelsSection({ matches, t, onClose }: { matches: ReadonlyArra
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <div className="text-sm text-lc-white truncate">#{g.name ?? g.id.slice(0, 8)}</div>
+            <Text as="div" size="sm" tone="default" className="truncate">#{g.name ?? g.id.slice(0, 8)}</Text>
             {g.about && <Text as="div" size="11" tone="muted" className="truncate">{g.about}</Text>}
           </div>
         </Button>

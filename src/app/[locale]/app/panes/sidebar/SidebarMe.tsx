@@ -33,9 +33,9 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
       >
         <Avatar pubkey={vm.myPubkey} size={8} picture={vm.meta?.picture ?? null} />
         <div className={`min-w-0 flex-1 flex-col ${revealed}`}>
-          <div className="truncate text-sm font-semibold text-lc-white">
+          <Text as="div" size="sm" tone="default" weight="semibold" className="truncate">
             {vm.name || t('shell.desktop.me.you')}
-          </div>
+          </Text>
           {/* NIP-05 when there is one, else a short npub - never raw hex. */}
           <Text as="div" size="11" tone="muted" className="truncate" data-testid="sidebar-profile-handle">
             {vm.handle}

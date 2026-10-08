@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import CloseButton from '@/components/ui/buttons/CloseButton';
@@ -24,7 +25,7 @@ export function VoiceChatRail({ width, onResize, onHide, children }: {
         title={t('shell.desktop.voiceChat.dragResize')}
       />
       <div className="h-12 px-4 border-b border-lc-border flex items-center justify-between shrink-0">
-        <span className="text-sm font-semibold text-lc-white">{t('shell.desktop.voiceChat.chat')}</span>
+        <Text size="sm" tone="default" weight="semibold">{t('shell.desktop.voiceChat.chat')}</Text>
         <CloseButton size="sm" onClick={onHide} label={t('shell.desktop.voiceChat.hideChat')} title={t('shell.desktop.voiceChat.hideChat')} />
       </div>
       <div className="flex flex-1 flex-col min-h-0">{children}</div>

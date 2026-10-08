@@ -35,11 +35,11 @@ function mention(id: string, over: Partial<MentionNotification> = {}): MentionNo
   return { id, relay: RELAY, channelId: 'ch1', senderPubkey: SENDER, preview: `ping ${id}`, createdAt: 10_000 + Number(id.slice(1) || 0), ...over } as MentionNotification;
 }
 
-function mount(lock: DmLockState = { status: 'unlocked', unopened: [] }) {
+function mount(lock: DmLockState = { status: 'unlocked', unopened: [] }, relay = RELAY) {
   const onJumpToChannel = vi.fn();
   const onJumpToDm = vi.fn();
   renderWithBridge(
-    <RelayTopBar relay={RELAY} onJumpToChannel={onJumpToChannel} onJumpToDm={onJumpToDm} />,
+    <RelayTopBar relay={relay} onJumpToChannel={onJumpToChannel} onJumpToDm={onJumpToDm} />,
     fakeBridge({ dmLock: lock }),
   );
   return { onJumpToChannel, onJumpToDm };
@@ -128,6 +128,14 @@ describe('RelayTopBar help', () => {
 });
 
 describe('RelayTopBar relay name', () => {
+  it('renders a plain identity when the relay has no valid website', () => {
+    mount(undefined, 'invalid-relay');
+    const identity = screen.getByTestId('relay-topbar-name');
+    expect(identity.tagName).toBe('DIV');
+    expect(identity).not.toHaveAttribute('href');
+    expect(identity.querySelector('a')).toBeNull();
+  });
+
   it('links the relay host to its website, with its initial as the icon', () => {
     mount();
     const link = screen.getByTestId('relay-topbar-name');

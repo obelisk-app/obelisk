@@ -28,7 +28,7 @@ export function InboxRow({ read, label, time, preview, onClick, testId }: {
             {time && <span className="ml-2 text-lc-muted/70 normal-case tracking-normal">{time}</span>}
           </Text>
           {preview && (
-            <div className="text-sm text-lc-white truncate"><MentionText content={preview} /></div>
+            <Text as="div" size="sm" tone="default" className="truncate"><MentionText content={preview} /></Text>
           )}
         </div>
       </Button>

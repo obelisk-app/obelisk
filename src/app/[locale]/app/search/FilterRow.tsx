@@ -9,7 +9,7 @@ export function FilterRow({ icon, title, hint, onClick }: { icon: string; title:
     <Button variant="bare" onClick={onClick} className="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-lc-card">
       <span className="mt-0.5 w-6 text-center text-base text-lc-muted">{icon}</span>
       <span className="flex-1 min-w-0">
-        <div className="text-sm text-lc-white">{title}</div>
+        <Text as="div" size="sm" tone="default">{title}</Text>
         <Text as="div" variant="caption">{hint}</Text>
       </span>
     </Button>

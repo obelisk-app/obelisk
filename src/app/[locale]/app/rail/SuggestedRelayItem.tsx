@@ -35,7 +35,7 @@ export function SuggestedRelayItem({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-lc-white">{item.name}</div>
+        <Text as="div" size="sm" tone="default" weight="semibold" className="truncate">{item.name}</Text>
         <Text as="div" variant="caption" className="truncate font-mono">{url}</Text>
         <Text as="div" variant="caption" className="mt-0.5 truncate">{item.description}</Text>
         {item.error && <ErrorState as="div" className="mt-1">{item.error}</ErrorState>}

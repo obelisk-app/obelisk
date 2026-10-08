@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import type { UserHit } from '@/constants/identity/user-search';
 import { useComposeDmResultRow } from '@/hooks/shell/dm/useComposeDmResultRow';
@@ -22,7 +23,7 @@ export function ComposeDmResultRow({ hit, active, onPick, onHover }: { hit: User
     >
       <UserAvatar pubkey={hit.pubkey} picture={row.picture} name={row.name} size={8} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-lc-white">{row.name}</span>
+        <Text size="sm" tone="default" weight="semibold" className="block truncate">{row.name}</Text>
         <span
           className={`flex items-center gap-1 text-[11px] ${row.verified ? 'text-lc-green' : 'text-lc-muted'}`}
           data-testid="dm-compose-result-sub"
