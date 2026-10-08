@@ -7,7 +7,7 @@
  * sit in `./picker/`; this file keeps the public names other folders import.
  */
 import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
-import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
+import LazyMediaLibraryModal from '@/components/media/library/LazyMediaLibraryModal';
 import { useTranslations } from 'next-intl';
 import EmptyState from '@/components/ui/feedback/EmptyState';
 import EmojiPicker from './EmojiPicker';
@@ -67,7 +67,7 @@ export default function MessageMediaPicker({
             <PickerTabs tab={tab} onTab={setTab} />
           </EmojiPicker>
         </div>
-        {libraryOpen && <MediaLibraryModal onClose={() => setLibraryOpen(null)} initialTab={libraryOpen} initialKind="emoji" />}
+        {libraryOpen && <LazyMediaLibraryModal onClose={() => setLibraryOpen(null)} initialTab={libraryOpen} initialKind="emoji" />}
       </div>
     );
   }
@@ -122,7 +122,7 @@ export default function MessageMediaPicker({
         <span className="text-right text-[10px] text-lc-muted">{t(tab === 'gif' ? 'chat.mediaPicker.poweredByGiphy' : 'chat.mediaPicker.stickersByTwemoji')}</span>
       </div>
       <PickerTabs tab={tab} onTab={setTab} />
-      {libraryOpen && <MediaLibraryModal onClose={() => setLibraryOpen(null)} initialTab={libraryOpen} initialKind={tab} />}
+      {libraryOpen && <LazyMediaLibraryModal onClose={() => setLibraryOpen(null)} initialTab={libraryOpen} initialKind={tab} />}
       </div>
     </div>
   );

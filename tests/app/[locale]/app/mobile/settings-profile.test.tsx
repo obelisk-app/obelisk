@@ -182,11 +182,11 @@ describe("SettingsPrefsScreen", () => {
     expect(screen.getByTestId('developer-signature-test')).toBeInTheDocument();
   });
 
-  it("keeps media management and disconnect in preferences", () => {
+  it("keeps media management and disconnect in preferences", async () => {
     renderWithLocale(<SettingsPrefsScreen go={vi.fn()} />);
 
     fireEvent.click(screen.getByTestId("mobile-media-library"));
-    expect(screen.getByTestId("media-library-stub")).toBeInTheDocument();
+    expect(await screen.findByTestId("media-library-stub")).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("disconnect-btn"));
     expect(mockLogout).not.toHaveBeenCalled();

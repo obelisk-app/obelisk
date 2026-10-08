@@ -1,6 +1,6 @@
 'use client';
 
-import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
+import LazyMediaLibraryModal from '@/components/media/library/LazyMediaLibraryModal';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { Lightbox } from './Lightbox';
 import { useImageGallery } from '@/hooks/chat/gallery/useImageGallery';
@@ -54,7 +54,7 @@ export default function ImageGallery({ urls, wide = false }: ImageGalleryProps) 
             onNext={vm.next}
           />
         )}
-        {vm.selectedMedia && <MediaLibraryModal onClose={vm.closeMedia} initialSelection={vm.selectedMedia} />}
+        {vm.selectedMedia && <LazyMediaLibraryModal onClose={vm.closeMedia} initialSelection={vm.selectedMedia} />}
       </>
     );
   }
@@ -79,7 +79,7 @@ export default function ImageGallery({ urls, wide = false }: ImageGalleryProps) 
           onNext={vm.next}
         />
       )}
-      {vm.selectedMedia && <MediaLibraryModal onClose={vm.closeMedia} initialSelection={vm.selectedMedia} />}
+      {vm.selectedMedia && <LazyMediaLibraryModal onClose={vm.closeMedia} initialSelection={vm.selectedMedia} />}
     </>
   );
 }

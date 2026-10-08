@@ -45,7 +45,7 @@ describe('MessageContent stickers', () => {
     expect(screen.queryByTestId('audio-player')).not.toBeInTheDocument();
   });
 
-  it('renders tagged stickers as large media instead of inline custom emoji', () => {
+  it('renders tagged stickers as large media instead of inline custom emoji', async () => {
     renderLocalized(
       <MessageContent
         content=":party_cat:"
@@ -59,17 +59,17 @@ describe('MessageContent stickers', () => {
     expect(screen.queryByTestId('custom-emoji')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('message-sticker'));
-    expect(screen.getByTestId('media-item-menu')).toBeInTheDocument();
+    expect(await screen.findByTestId('media-item-menu')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'View Shared sticker' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create pack with this item' })).toBeInTheDocument();
   });
 
-  it('opens shared GIFs in the same favorite and pack view as stickers', () => {
+  it('opens shared GIFs in the same favorite and pack view as stickers', async () => {
     renderLocalized(<MessageContent content="https://media.giphy.com/media/abc123/giphy.gif" />);
 
     fireEvent.click(screen.getByTestId('image-gallery'));
 
-    expect(screen.getByTestId('media-item-menu')).toBeInTheDocument();
+    expect(await screen.findByTestId('media-item-menu')).toBeInTheDocument();
     expect(screen.getByText(':abc123:')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add item to favorites' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create pack with this item' })).toBeInTheDocument();

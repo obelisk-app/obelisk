@@ -3,7 +3,7 @@
 import Button from '@/components/ui/buttons/Button';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
+import LazyMediaLibraryModal from '@/components/media/library/LazyMediaLibraryModal';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
 import { useStickerSelection } from '@/hooks/chat/message/useStickerSelection';
@@ -29,7 +29,7 @@ export function StickerImg({ sticker }: { sticker: MessageSticker }) {
           className="block h-full w-full object-contain"
         />
       </Button>
-      {open && <MediaLibraryModal onClose={() => setOpen(false)} initialSelection={selection} />}
+      {open && <LazyMediaLibraryModal onClose={() => setOpen(false)} initialSelection={selection} />}
     </>
   );
 }

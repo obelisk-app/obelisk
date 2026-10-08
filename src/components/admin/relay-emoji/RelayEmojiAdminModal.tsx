@@ -1,6 +1,6 @@
 'use client';
 
-import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
+import LazyMediaLibraryModal from '@/components/media/library/LazyMediaLibraryModal';
 import type { RelayEmojiSet } from '@/services/relay/relay-emojis';
 
 export default function RelayEmojiAdminModal({
@@ -14,7 +14,7 @@ export default function RelayEmojiAdminModal({
   onClose: () => void;
 }) {
   return (
-    <MediaLibraryModal
+    <LazyMediaLibraryModal
       onClose={onClose}
       server={{ relayUrl, emojiSet }}
       initialTab="server"

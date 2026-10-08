@@ -4,7 +4,7 @@ import Container from '@/components/ui/layout/Container';
 import { createPortal } from 'react-dom';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
 import UserAvatar from '@/components/ui/media/UserAvatar';
-import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
+import LazyMediaLibraryModal from '@/components/media/library/LazyMediaLibraryModal';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import {
@@ -140,7 +140,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
         </aside>
         <main className={`flex-1 min-w-0 ${settingsTab === 'media' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           {settingsTab === 'media' ? (
-            <MediaLibraryModal embedded onClose={() => setSettingsTab('profile')} />
+            <LazyMediaLibraryModal embedded onClose={() => setSettingsTab('profile')} />
           ) : (
             <Container width="3xl" className="px-10 py-10" data-testid={`settings-section-${settingsTab}`}>
               <div className="mb-6">

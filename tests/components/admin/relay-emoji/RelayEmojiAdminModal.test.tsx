@@ -1,3 +1,4 @@
+import { LocaleProvider } from '@tests/support/intl';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import RelayEmojiAdminModal from '@/components/admin/relay-emoji/RelayEmojiAdminModal';
@@ -9,16 +10,16 @@ vi.mock('@/components/media/library/MediaLibraryModal', () => ({
 }));
 
 describe('RelayEmojiAdminModal', () => {
-  it('opens server settings directly in the pack library', () => {
+  it('opens server settings directly in the pack library', async () => {
     render(
-      <RelayEmojiAdminModal
+      <LocaleProvider initialLocale="en"><RelayEmojiAdminModal
         relayUrl="wss://relay.example"
         configuredRelays={[]}
         emojiSet={{ title: 'Server media', emojis: [{ name: 'wave', url: 'https://cdn.example/wave.webp' }], updatedAt: 1 }}
         onClose={() => {}}
-      />,
+      /></LocaleProvider>,
     );
 
-    expect(screen.getByTestId('media-library-stub')).toHaveTextContent('server:wss://relay.example:1');
+    expect(await screen.findByTestId('media-library-stub')).toHaveTextContent('server:wss://relay.example:1');
   });
 });

@@ -3,7 +3,7 @@
 import Section from '@/components/ui/layout/Section';
 import Button from '@/components/ui/buttons/Button';
 import LanguagePreference from '@/components/settings/appearance/LanguagePreference';
-import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
+import LazyMediaLibraryModal from '@/components/media/library/LazyMediaLibraryModal';
 import AppearancePreferenceControls from '@/components/settings/appearance/AppearancePreferenceControls';
 import NotificationSettings from '@/components/settings/notifications/NotificationSettings';
 import SocialRelaySettings from '@/components/settings/social-relays/SocialRelaySettings';
@@ -135,7 +135,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
         </Section>
       </div>
     </div>
-      {vm.mediaLibraryOpen && <MediaLibraryModal onClose={vm.closeMediaLibrary} />}
+      {vm.mediaLibraryOpen && <LazyMediaLibraryModal onClose={vm.closeMediaLibrary} />}
       {vm.confirmingLogout && (
         <DisconnectConfirmSheet
           onConfirm={vm.confirmLogout}

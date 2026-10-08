@@ -232,7 +232,7 @@ describe('MessageMediaPicker', () => {
 
     fireEvent.click(screen.getByTestId("manage-media-packs"));
     expect(screen.getByTestId("media-library-modal")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "GIFs" })).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByRole("button", { name: "GIFs" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it.each([
@@ -255,7 +255,7 @@ describe('MessageMediaPicker', () => {
     }));
     expect(savePack).not.toHaveBeenCalled();
     expect(screen.getByTestId("media-library-modal")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Favorites" }).some((button) => button.className.includes("text-lc-green"))).toBe(true);
+    expect((await screen.findAllByRole("button", { name: "Favorites" })).some((button) => button.className.includes("text-lc-green"))).toBe(true);
   });
 
   it('says why creating media failed instead of failing silently', async () => {

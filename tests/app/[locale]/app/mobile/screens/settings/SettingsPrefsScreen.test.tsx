@@ -36,10 +36,10 @@ describe('SettingsPrefsScreen (phone) actions', () => {
     expect(toasts.at(-1)?.title).toBeTruthy();
   });
 
-  it('opens and closes the media library', () => {
+  it('opens and closes the media library', async () => {
     mount();
     fireEvent.click(screen.getByTestId('mobile-media-library'));
-    fireEvent.click(screen.getByTestId('media-library-stub'));
+    fireEvent.click(await screen.findByTestId('media-library-stub'));
     expect(screen.queryByTestId('media-library-stub')).toBeNull();
   });
 
