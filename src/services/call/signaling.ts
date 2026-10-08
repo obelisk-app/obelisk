@@ -41,7 +41,7 @@
 import { finalizeEvent, getPublicKey, type Event as NostrEvent, type Filter } from 'nostr-tools';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
-import type { VoiceSignalPayload } from '@/services/voice/types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 import { createCallPool, pageHubForCalls, type CallPoolLike } from './call-pool';
 import { ReliableOutbox, type Body, type OutboxBatch } from './signal-outbox';
 import { DM_CALL_SIGNAL_TAG, READY_TIMEOUT_MS } from '@/constants/call/signaling';

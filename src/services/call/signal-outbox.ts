@@ -5,7 +5,7 @@
  * why: kind 25050 is ephemeral, and a relay forwards it only to the
  * subscriptions open at that instant.
  */
-import type { VoiceSignalPayload } from '@/services/voice/types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 import { FLUSH_MS, RESEND_MS, MAX_ATTEMPTS } from '@/constants/call/signal-outbox';
 
 /** NIP-44 caps plaintext at 64 KiB; stay well clear of it. */

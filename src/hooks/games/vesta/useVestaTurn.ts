@@ -5,7 +5,7 @@ import type { GameState, TradeResource } from 'vesta';
 import { getRobbableVertices, computeRates } from 'vesta';
 import type { GameSession } from '@/lib/games/session/session';
 import { vesta, isRobberPending, isStealPending, type VestaAction } from '@/lib/games/vesta/definition';
-import type { PickMode } from '@/utils/games/vesta/pick-mode';
+import type { PickMode } from '@/types/games/vesta/pick-mode';
 import { RESOURCES, TRADE_TAKE_MAX } from '@/constants/games/vesta';
 import { useCappedDraft } from '@/hooks/games/vesta/useCappedDraft';
 

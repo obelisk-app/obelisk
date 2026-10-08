@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeFeedWidgets,
   toggleFeedWidget,
-} from '@/services/social/widgets';
+} from '@/utils/social/widgets';
 import { DEFAULT_FEED_WIDGETS, FEED_WIDGET_MAX } from '@/constants/social/widgets';
 
 describe('feed widgets', () => {

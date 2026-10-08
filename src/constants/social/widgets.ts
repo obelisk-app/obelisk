@@ -5,7 +5,7 @@
  * reads, kept here so every reader imports the one copy.
  */
 
-import type { FeedWidgetId } from '@/services/social/widgets';
+import type { FeedWidgetId } from '@/utils/social/widgets';
 
 /** How many tags the side column lists. */
 export const TRENDING_WIDGET_LIMIT = 8;

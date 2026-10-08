@@ -3,7 +3,7 @@ import {
   invalidRelayIndexes,
   normalizeSocialRelays,
   socialRelayKey,
-} from '@/services/social/relays';
+} from '@/utils/social/relays';
 import { normalizePublicRelayUrl } from '@/utils/relay-url/public-relay';
 import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX, SOCIAL_RELAY_PRESETS, WIDER_SOCIAL_RELAYS } from '@/constants/social/relays';
 

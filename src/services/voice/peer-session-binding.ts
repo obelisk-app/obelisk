@@ -5,8 +5,8 @@
  * other, except an offer, which the owner follows with a fresh Peer.
  */
 import { isOffer } from '@/utils/voice/signal-payload';
-import type { VoiceSignalPayload } from './types';
-import type { PeerEvents } from './peer-types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
+import type { PeerEvents } from '@/types/voice/peer';
 
 export interface SessionBindingHost {
   readonly remotePubkey: string;

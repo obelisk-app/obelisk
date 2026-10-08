@@ -37,7 +37,7 @@
  * memory only, as the session vault does.
  */
 import type { Event as NostrEvent } from 'nostr-tools';
-import type { NipSigner } from '@/constants/nostr/nip-signer';
+import type { NipSigner } from '@/types/nostr/nip-signer';
 import { importRecordKey, newRecordKeyBytes, openRecord, sealRecord } from '@/lib/crypto/record-cipher';
 import { StateStore } from '../common/state-store';
 import { dmStoreDb, pageIndexedDb, type DmStoreDb } from './store-db';

@@ -32,7 +32,7 @@
 import type { Consumer, Device, RtpParameters, Transport } from 'mediasoup-client/types';
 
 import type { SfuRpc } from './sfu-rpc';
-import type { ProducerAppData, SfuReliabilityEvent } from './sfu-types';
+import type { ProducerAppData, SfuReliabilityEvent } from '@/types/voice/sfu';
 import { CONSUME_RETRY_DELAYS_MS } from '@/constants/voice/sfu-consume-queue';
 
 interface PendingConsume {

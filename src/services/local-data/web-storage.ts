@@ -5,7 +5,7 @@
  * private window), and then there is simply nothing to list or remove.
  */
 import { LOCAL_DATA, entryMatches } from './inventory';
-import type { LocalDataCategoryId } from './types';
+import type { LocalDataCategoryId } from '@/types/local-data/inventory';
 
 type WebArea = 'localStorage' | 'sessionStorage';
 

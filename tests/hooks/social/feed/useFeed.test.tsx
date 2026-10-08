@@ -31,8 +31,8 @@ vi.mock('@/services/social/pool', () => ({
     return () => { t.live.splice(t.live.indexOf(onEvent), 1); };
   },
 }));
-vi.mock('@/services/social/relays', async (orig) => ({
-  ...(await orig<typeof import('@/services/social/relays')>()),
+vi.mock('@/utils/social/relays', async (orig) => ({
+  ...(await orig<typeof import('@/utils/social/relays')>()),
   widenedRelays: (relays: readonly string[]) => relays,
 }));
 vi.mock('@/hooks/social/feed/useFeedRanking', () => ({

@@ -8,7 +8,7 @@ import { takePickedFile } from '@/utils/media/upload/picked-file';
 import {
   editorKind, favoriteSelection, favoritesOfKind, isFavoriteItem, isServerPack, libraryEmptyKey, packWithItem,
 } from '@/utils/media/library/library-view';
-import type { LibraryTab, MediaFilter, SelectedMedia } from '@/utils/media/library/types';
+import type { LibraryTab, MediaFilter, SelectedMedia } from '@/types/media/library';
 
 /**
  * The media library modal's view model: `useMediaLibrary`'s state and

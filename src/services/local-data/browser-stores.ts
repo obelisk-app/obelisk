@@ -7,7 +7,7 @@
  */
 import { cookieNamesOn, expireCookie } from '@/services/common/cookies';
 import { LOCAL_DATA, entryMatches } from './inventory';
-import type { LocalDataCategoryId } from './types';
+import type { LocalDataCategoryId } from '@/types/local-data/inventory';
 
 const DATABASES = LOCAL_DATA.filter((e) => e.area === 'indexedDB');
 const CACHE_PREFIXES = LOCAL_DATA.filter((e) => e.area === 'cacheStorage').map((e) => e.key);

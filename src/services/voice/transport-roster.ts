@@ -3,7 +3,7 @@
  * into `VoicePresence` and swept as beacons expire.
  */
 import { KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
-import type { VoicePresence, VideoSlotKind } from './types';
+import type { VoicePresence, VideoSlotKind } from '@/types/voice/protocol';
 import { pushVoiceDebug } from './debug';
 import { bridge, subscribeVoice, type VoiceTransportOptions } from './transport-core';
 import { PRESENCE_TTL_SECONDS } from '@/constants/voice/transport-core';

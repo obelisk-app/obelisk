@@ -1,5 +1,5 @@
 import type { JsMediaKind } from '@/services/nostr-bridge';
-import type { PickedCustomEmoji } from './picker-types';
+import type { PickedCustomEmoji } from '@/types/chat/picker';
 import { MEDIA_CATEGORIES } from '@/constants/chat/picker';
 
 export type MediaPickerTab = 'emoji' | 'gif' | 'sticker';

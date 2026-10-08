@@ -9,8 +9,8 @@
 import type { Consumer, Device, Transport } from 'mediasoup-client/types';
 
 import type { SfuRpc } from './sfu-rpc';
-import type { ProducerAppData, SfuClientEvents, SfuReliabilityEvent, SfuRemoteTrack } from './sfu-types';
-import type { VoiceTrackKind } from './types';
+import type { ProducerAppData, SfuClientEvents, SfuReliabilityEvent, SfuRemoteTrack } from '@/types/voice/sfu';
+import type { VoiceTrackKind } from '@/types/voice/protocol';
 import { ConsumeQueue } from './sfu-consume-queue';
 import { ConsumerHealthWatch } from './sfu-consumer-health';
 

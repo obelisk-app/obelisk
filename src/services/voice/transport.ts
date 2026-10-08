@@ -29,7 +29,7 @@
  * rest of the voice code reaches goes through here.
  */
 import { getBridgeImpl } from '@/services/nostr-bridge';
-import type { VoicePresence, VoiceSignalPayload, VideoSlotKind } from './types';
+import type { VoicePresence, VoiceSignalPayload, VideoSlotKind } from '@/types/voice/protocol';
 import type { VoiceTransportOptions } from './transport-core';
 import { publishLeavePresence, publishPresenceBeacon } from './transport-beacons';
 import { subscribeRoster } from './transport-roster';

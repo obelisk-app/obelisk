@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import type { CustomEmojiEntry, PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
+import type { CustomEmojiEntry, PickedCustomEmoji } from '@/types/chat/picker';
 import type { EmojiGridClasses } from '@/utils/chat/picker/emoji-picker-classes';
 import { CustomEmojiButton } from './CustomEmojiButton';
 

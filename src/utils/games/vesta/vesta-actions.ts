@@ -4,7 +4,7 @@
  */
 import type { HexCoord, TradeResource } from 'vesta';
 import type { VestaAction } from '@/lib/games/vesta/definition';
-import type { PickMode } from '@/utils/games/vesta/pick-mode';
+import type { PickMode } from '@/types/games/vesta/pick-mode';
 import type { EdgePick, VertexPick } from '@/utils/games/vesta/board-pick';
 import type { ResourceCounts } from '@/utils/games/vesta/resources';
 import { RESOURCES } from '@/constants/games/vesta';

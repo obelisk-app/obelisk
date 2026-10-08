@@ -16,7 +16,7 @@
  * prompt on an extension or bunker that asks, none for an nsec login.
  * Making a new key is one `nip44Encrypt` and no decrypt.
  */
-import type { NipSigner } from '@/constants/nostr/nip-signer';
+import type { NipSigner } from '@/types/nostr/nip-signer';
 import { RECORD_KEY_BYTES } from '@/lib/crypto/record-cipher';
 import { fromBase64Url, toBase64Url } from '@/lib/crypto/webcrypto';
 import { KIND_NIP78_APP_DATA } from '@/constants/nostr/nip-kinds';

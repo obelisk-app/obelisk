@@ -23,7 +23,7 @@
 
 import ts from 'typescript';
 
-export const LAYER_ROOTS = ['src/constants', 'src/hooks', 'src/utils', 'src/services'] as const;
+export const LAYER_ROOTS = ['src/constants', 'src/hooks', 'src/utils', 'src/services', 'src/types', 'src/schemas'] as const;
 
 /** Modules a pure helper may not import values from. */
 const IMPURE_IMPORT = /^(react|react-dom|zustand)(\/|$)|^next(\/|$)|^@\/(hooks|services|store|components|app)(\/|$)/;
@@ -205,6 +205,15 @@ function exportedValues(sf: ts.SourceFile): Array<{ name: string; node: ts.Node;
 const isFunctionValue = (init: ts.Expression | undefined) =>
   !!init && (ts.isArrowFunction(unwrap(init)) || ts.isFunctionExpression(unwrap(init)));
 
+/** Literal collection recipes remain constants even when formatted with map/join. */
+function isStaticCollection(node: ts.Expression): boolean {
+  const e = unwrap(node);
+  if (ts.isArrayLiteralExpression(e)) return true;
+  return ts.isCallExpression(e) && ts.isPropertyAccessExpression(e.expression)
+    && ['map', 'join', 'filter', 'concat', 'slice'].includes(e.expression.name.text)
+    && isStaticCollection(e.expression.expression);
+}
+
 /** True for a file that is nothing but constants (and types): it belongs in `src/constants/`. */
 export function isConstantsOnly(sf: ts.SourceFile): boolean {
   const foreign = foreignNames(sf);
@@ -230,6 +239,16 @@ export function layerProblems(file: string, source: string): string[] {
   const line = (node: ts.Node) => sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
   const problems: string[] = [];
   const add = (node: ts.Node, what: string) => problems.push(`${file}:${line(node)}: ${what}`);
+
+  if (layer === 'src/types') {
+    for (const st of sf.statements) {
+      const typeImport = ts.isImportDeclaration(st) && !importsValues(st);
+      if (typeImport || ts.isTypeAliasDeclaration(st) || ts.isInterfaceDeclaration(st)
+        || (ts.isExportDeclaration(st) && st.isTypeOnly)) continue;
+      add(st, 'runtime code in types: only type declarations and type-only imports/exports belong here');
+    }
+    return problems;
+  }
 
   if (layer === 'src/constants') {
     const walk = (node: ts.Node): void => {
@@ -260,23 +279,26 @@ export function layerProblems(file: string, source: string): string[] {
   } else {
     const foreign = foreignNames(sf);
     for (const { name, node, init } of exportedValues(sf)) {
-      if (ts.isVariableDeclaration(node) && init && !isFunctionValue(init) && isLiteralValue(init, foreign)) {
+      if (!ts.isVariableDeclaration(node) || !init || isFunctionValue(init)) continue;
+      const formattedConstant = CONSTANT_NAME.test(name) && ts.isCallExpression(unwrap(init)) && isStaticCollection(unwrap(init));
+      if (isLiteralValue(init, foreign) || formattedConstant) {
         add(node, `exports the constant ${name}: it belongs in src/constants/ (or unexported, if only this file reads it)`);
       }
     }
   }
 
-  if (layer === 'src/utils') {
+  if (layer === 'src/utils' || layer === 'src/schemas') {
+    const description = layer === 'src/schemas' ? 'a schema is pure' : 'a helper in utils is pure';
     for (const st of sf.statements) {
       if (ts.isImportDeclaration(st) && importsValues(st)) {
         const from = (st.moduleSpecifier as ts.StringLiteral).text;
-        if (IMPURE_IMPORT.test(from)) add(st, `imports ${from}: a helper in utils is pure`);
+        if (IMPURE_IMPORT.test(from)) add(st, `imports ${from}: ${description}`);
       }
     }
     const local = declaredNames(sf);
     const walk = (node: ts.Node): void => {
       if (ts.isIdentifier(node) && impureGlobalAt(node, local)) add(node, `uses ${node.text}: storage, network and timers belong in services`);
-      if (isJsx(node)) add(node, 'JSX in utils: a component belongs in src/components/');
+      if (isJsx(node)) add(node, `JSX in ${layer.slice(4)}: a component belongs in src/components/`);
       ts.forEachChild(node, walk);
     };
     walk(sf);

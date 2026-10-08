@@ -15,7 +15,7 @@ import {
   FakeMediaStreamTrack,
   FakeRTCPeerConnection,
 } from '@tests/support/mocks/webrtc';
-import type { VoicePresence, VoiceSignalPayload } from '@/services/voice/types';
+import type { VoicePresence, VoiceSignalPayload } from '@/types/voice/protocol';
 
 // ── transport mock ──────────────────────────────────────────────────────
 const transportFake = vi.hoisted(() => {

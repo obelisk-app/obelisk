@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeMediaStreamTrack, installWebRtcMocks } from '@tests/support/mocks/webrtc';
-import type { VoiceSignalPayload } from '@/services/voice/types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 import { emptyVoiceMetrics } from '@/services/voice/metrics';
 import { DEAD_PEER_TIMEOUT_MS } from '@/constants/voice/control-channel';
 

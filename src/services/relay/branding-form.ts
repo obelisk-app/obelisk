@@ -1,5 +1,5 @@
-import type { FormSpec } from '@/constants/common/form';
-import { trimmedValues } from '@/utils/common/form-rules';
+import type { FormSpec } from '@/types/common/form';
+import { trimmedValues } from '@/utils/common/form-values';
 import { publishBranding, type RelayBranding } from './relay-branding';
 
 export type RelayBrandingValues = Pick<RelayBranding, 'icon' | 'banner' | 'name' | 'description'>;

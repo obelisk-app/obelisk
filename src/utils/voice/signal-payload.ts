@@ -1,4 +1,4 @@
-import type { VoiceSignalPayload } from '@/services/voice/types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 
 /** Recognize both native offers and offers wrapped by the peer transport. */
 export function isOffer(payload: VoiceSignalPayload): boolean {

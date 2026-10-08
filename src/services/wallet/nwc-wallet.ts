@@ -18,7 +18,7 @@ import { registerClientResetHook } from '@/services/common/reset';
 import { useNwcWalletStore, type NwcWalletView } from '@/store/wallet/nwc-wallet';
 import { createHubNwcTransport, type HubNwcTransport } from './nwc-transport';
 import { deleteNwcWallet, destroyNwcVaultKey, forgetNwcRecords, hasNwcRecord, openNwcWallet, sealNwcWallet } from './nwc-storage';
-import type { WalletConnection } from './wallet-types';
+import type { WalletConnection } from '@/types/wallet/wallet';
 
 interface ActiveWallet {
   readonly account: string;

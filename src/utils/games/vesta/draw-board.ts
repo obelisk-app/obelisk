@@ -6,7 +6,7 @@ import {
 } from 'vesta';
 import { edgeAt, hexCenter, hexPolygon, vertexAt } from '@/lib/games/vesta/geometry';
 import { DOT_COUNTS, RESOURCE_COLORS, TILE_EMOJI, VESTA_PLAYER_COLORS } from '@/constants/games/vesta';
-import type { PickMode } from './pick-mode';
+import type { PickMode } from '@/types/games/vesta/pick-mode';
 
 /**
  * Paint the whole board: tiles, number tokens, ports, the robber, every

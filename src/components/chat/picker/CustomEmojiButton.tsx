@@ -3,7 +3,7 @@
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import MediaThumb from '@/components/media/library/MediaThumb';
-import type { CustomEmojiEntry, PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
+import type { CustomEmojiEntry, PickedCustomEmoji } from '@/types/chat/picker';
 import type { EmojiGridClasses } from '@/utils/chat/picker/emoji-picker-classes';
 
 /** One custom emoji in a grid; disabled (and titled so) when already reacted. */

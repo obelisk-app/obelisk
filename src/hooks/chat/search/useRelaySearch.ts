@@ -48,11 +48,11 @@ import { fetchRelayInfo, supportsSearch } from '@/services/relay/relay-info';
 import { useChatStore } from '@/store/chat';
 import { npubToHex } from '@nostr-wot/data';
 import { loadHistory, pushHistory, wipeHistory } from '@/services/chat/search/search-history';
-import type { RelaySearch, RelaySearchOptions } from './types';
+import type { RelaySearch, RelaySearchOptions } from '@/types/chat/search';
 import { errorText } from '@/utils/errors/error-text';
 import { SEARCH_DEBOUNCE_MS } from '@/constants/chat/search';
 
-export type { RelaySearch, RelaySearchOptions } from './types';
+export type { RelaySearch, RelaySearchOptions } from '@/types/chat/search';
 
 const PAGE_SIZE = 30;
 

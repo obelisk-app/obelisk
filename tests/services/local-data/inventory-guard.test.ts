@@ -24,8 +24,8 @@ import { stripComments } from '../../../scripts/i18n/hardcoded/strip';
 import { LOCAL_DATA, type LocalDataEntry } from '@/services/local-data';
 
 const SRC = join(process.cwd(), 'src');
-/** The inventory itself and the message files are not storage code. */
-const SKIP = /^(?:services\/local-data\/|i18n\/messages\/)/;
+/** The inventory, type-only contracts (enforced by the layer guard), and messages are not storage code. */
+const SKIP = /^(?:services\/local-data\/|types\/|i18n\/messages\/)/;
 
 const STORAGE_USE = /\b(?:localStorage|sessionStorage|indexedDB|caches\.|document\.cookie|createLocalStore\b|persist\(|createEnsureForAccount\()/;
 const KEY_CONSTANT = /\b(?:const|let)\s+[A-Z0-9_]*(?:KEY|KEYS|PREFIX|PREFIXES|_DB|NAMESPACE)\b[^=]*=\s*([^;]+);/g;

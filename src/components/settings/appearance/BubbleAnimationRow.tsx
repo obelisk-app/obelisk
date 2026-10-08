@@ -1,6 +1,7 @@
 'use client';
 
-import { setPreference, type Preferences } from '@/services/preferences/preferences';
+import { setPreference } from '@/services/preferences/preferences';
+import type { Preferences } from '@/types/preferences/preferences';
 import Select from '@/components/ui/forms/Select';
 import type { Translate } from '@/i18n/keys';
 

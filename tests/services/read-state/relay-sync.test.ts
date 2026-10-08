@@ -41,7 +41,7 @@ const bridgeFake = {
 beforeEach(() => registerBridge(bridgeFake));
 afterEach(() => unregisterBridge());
 
-import type { NipSigner } from '@/constants/nostr/nip-signer';
+import type { NipSigner } from '@/types/nostr/nip-signer';
 import { wrapForSelf } from '@/services/read-state/gift-wrap';
 import { startGroupsRelaySync, startDMRelaySync, D_TAG_GROUPS, READ_STATE_WATCHDOG_MS, __INTERNAL } from '@/services/read-state/relay-sync';
 import { useReadStateStore, READ_STATE_INITIAL } from '@/store/read-state';

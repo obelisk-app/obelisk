@@ -9,7 +9,7 @@
  * page's route, which does not ship `settings`.
  */
 import type { MessageKey } from '@/i18n/keys';
-import type { LocalDataCategoryId } from './types';
+import type { LocalDataCategoryId } from '@/types/local-data/inventory';
 import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
 
 /**

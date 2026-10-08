@@ -35,7 +35,7 @@
 
 import { Peer, type PeerOptions } from '@/services/voice/peer';
 import { emptyVoiceMetrics } from '@/services/voice/metrics';
-import type { VoiceSignalPayload, VoiceTrackKind } from '@/services/voice/types';
+import type { VoiceSignalPayload, VoiceTrackKind } from '@/types/voice/protocol';
 import { getPublicKey } from 'nostr-tools';
 import { CallSignalChannel } from './signaling';
 import { DmLocalMedia } from './local-media';

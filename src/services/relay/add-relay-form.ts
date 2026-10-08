@@ -1,6 +1,6 @@
 import { nostrActions } from '@/services/nostr-bridge';
-import type { FormSpec } from '@/constants/common/form';
-import { filled, isRelayAddress } from '@/utils/common/form-rules';
+import type { FormSpec } from '@/types/common/form';
+import { filled, isRelayAddress } from '@/schemas/common/form';
 import { normalizeRelayInput } from '@/utils/relay-url/relay-url-input';
 
 export type AddRelayValues = { url: string };

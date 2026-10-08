@@ -3,7 +3,7 @@
  * the subscription that receives what is addressed to us.
  */
 import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
-import type { VoiceSignalPayload } from './types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 import { pushVoiceDebug } from './debug';
 import { bridge, publishViaBridge, subscribeVoice, type VoiceTransportOptions } from './transport-core';
 

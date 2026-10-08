@@ -3,7 +3,7 @@
  * video quality preset meeting the remote's `qualityhint` at the lower of
  * the two, and the fixed Opus ceiling for audio.
  */
-import type { VoiceQualityHint } from './types';
+import type { VoiceQualityHint } from '@/types/voice/protocol';
 import { AUDIO_MAX_BITRATE } from '@/constants/voice/quality';
 
 export interface VideoCap {

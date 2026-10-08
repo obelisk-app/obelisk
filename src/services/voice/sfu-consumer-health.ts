@@ -11,7 +11,7 @@
  * dex notices and rebuilds the consumer instead of waiting for the
  * user to leave and rejoin.
  */
-import type { ProducerAppData, SfuRemoteTrack } from './sfu-types';
+import type { ProducerAppData, SfuRemoteTrack } from '@/types/voice/sfu';
 import {
   STALE_CHECK_INTERVAL_MS,
   STALE_TIMEOUT_MS,

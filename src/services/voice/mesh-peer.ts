@@ -14,7 +14,7 @@ import type { LocalMedia } from './local-media';
 import type { DiscoveryEngine } from './discovery';
 import type { VoiceTransport } from './transport';
 import type { VoiceMetrics } from './metrics';
-import type { VoicePresence, VoiceSignalPayload } from './types';
+import type { VoicePresence, VoiceSignalPayload } from '@/types/voice/protocol';
 import { pushVoiceDebug } from './debug';
 import { SELF_BUILD_TAG, SIGNER_PEER_BUDGET, type VoiceSigner } from '@/constants/voice/client';
 import { withRateLimitBackoff } from './failure-handlers';

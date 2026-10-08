@@ -14,7 +14,7 @@
  */
 import type { Peer } from './peer';
 import type { RoomState } from './room-state';
-import type { VideoSlotKind, VoicePresence } from './types';
+import type { VideoSlotKind, VoicePresence } from '@/types/voice/protocol';
 import type { VideoQuality } from './quality';
 import { MIC_CONSTRAINTS } from '@/constants/voice/quality';
 import { LocalVideo } from './local-video';

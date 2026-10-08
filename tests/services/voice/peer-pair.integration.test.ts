@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { VoicePresence } from '@/services/voice/types';
+import type { VoicePresence } from '@/types/voice/protocol';
 import { transitiveParticipants } from '@/services/voice/transport';
 
 function presence(pubkey: string, connectedTo: string[], knownPeers: string[] = []): VoicePresence {

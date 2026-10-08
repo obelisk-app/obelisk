@@ -8,7 +8,7 @@
 import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
 import { cookiesIn, databasesBytes, offlineFilesBytes } from './browser-stores';
 import { keysIn, localStorageBytes } from './web-storage';
-import type { LocalDataCategoryId } from './types';
+import type { LocalDataCategoryId } from '@/types/local-data/inventory';
 
 export interface CategoryUsage {
   /** Approximate bytes, or `null` when it cannot be measured. */

@@ -1,7 +1,7 @@
 import { nostrActions } from '@/services/nostr-bridge';
 import { BlossomUploadError, uploadToBlossom } from '@/services/media/blossom';
-import type { FormSpec } from '@/constants/common/form';
-import { filled } from '@/utils/common/form-rules';
+import type { FormSpec } from '@/types/common/form';
+import { filled } from '@/schemas/common/form';
 import { profileFormValues, type ProfileEditorInitial, type ProfileFormValues } from '@/utils/chat/profile/profile-form-values';
 
 /** Which picked image is uploading now. */

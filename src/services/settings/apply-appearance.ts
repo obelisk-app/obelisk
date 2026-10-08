@@ -1,4 +1,5 @@
-import { getAppearanceCssVariables, type Preferences } from '@/services/preferences/preferences';
+import { getAppearanceCssVariables } from '@/services/preferences/preferences';
+import type { Preferences } from '@/types/preferences/preferences';
 
 /** Paint the appearance preferences on the page root: the colour variables and the bubble animation. */
 export function applyAppearance(root: HTMLElement, prefs: Preferences): void {

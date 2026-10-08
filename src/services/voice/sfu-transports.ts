@@ -9,7 +9,7 @@
 import type { DtlsParameters, Transport } from 'mediasoup-client/types';
 
 import type { SfuRpc } from './sfu-rpc';
-import type { SfuClientEvents } from './sfu-types';
+import type { SfuClientEvents } from '@/types/voice/sfu';
 import { ICE_SERVERS } from './ice-config';
 import { STARTUP_RPC_RETRY } from '@/constants/voice/sfu-transports';
 

@@ -29,7 +29,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { generateSecretKey, getPublicKey, type Event as NostrEvent } from 'nostr-tools';
 import { installWebRtcMocks, installMediaDevicesMocks, flushMicrotasks } from '@tests/support/mocks/webrtc';
-import type { VoicePresence, VoiceSignalPayload } from '@/services/voice/types';
+import type { VoicePresence, VoiceSignalPayload } from '@/types/voice/protocol';
 
 // ── FakeRelay + mocked transport ───────────────────────────────────────
 

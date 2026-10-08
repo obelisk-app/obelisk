@@ -3,7 +3,7 @@
  * peer sets and the outbound video, and the terminal one on leave.
  */
 import { KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
-import type { VideoSlotKind } from './types';
+import type { VideoSlotKind } from '@/types/voice/protocol';
 import { bridge, publishViaBridge, type VoiceTransportOptions } from './transport-core';
 import { PRESENCE_TTL_SECONDS } from '@/constants/voice/transport-core';
 

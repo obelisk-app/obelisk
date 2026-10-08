@@ -5,7 +5,7 @@
  * 20078 watcher. Pure knowledge: it decides nothing and dials nobody.
  * `MeshSession` reads it on every signal, dial and beacon.
  */
-import type { VoicePresence } from './types';
+import type { VoicePresence } from '@/types/voice/protocol';
 
 export class MeshRoster {
   /**

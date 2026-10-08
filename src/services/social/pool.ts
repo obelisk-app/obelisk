@@ -28,7 +28,7 @@ import {
 import type { SimplePool, Event as NostrEvent, Filter } from 'nostr-tools';
 import { SESSION_IDENTITY_ID } from '@nostr-wot/relay/hub';
 import { pageRelayHub } from '@/services/nostr-bridge/facade/page-hub';
-import { normalizeSocialRelays } from './relays';
+import { normalizeSocialRelays } from '@/utils/social/relays';
 import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX } from '@/constants/social/relays';
 
 /** localStorage namespace for the SDK's own TTL cache. Listed in the local-data inventory (`sdk-data-cache`). */

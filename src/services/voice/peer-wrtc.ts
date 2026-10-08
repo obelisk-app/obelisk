@@ -8,7 +8,7 @@
 import SimplePeer from 'simple-peer';
 import { CONTROL_CHANNEL_LABEL } from '@/constants/voice/control-channel';
 import { ICE_SERVERS } from './ice-config';
-import type { VoiceSignalPayload } from './types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 
 export function newSimplePeer(config: {
   initiator: boolean;

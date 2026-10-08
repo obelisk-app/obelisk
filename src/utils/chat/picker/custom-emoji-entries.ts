@@ -2,7 +2,7 @@ import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media/tag
 import { inferMediaKind } from '@/utils/media/tags/media-kind';
 import type { JsMediaKind } from '@/services/nostr-bridge';
 import type { RecentEmoji } from '@/services/chat/picker/recent-emojis';
-import type { CustomEmojiEntry, PickedCustomEmoji } from './picker-types';
+import type { CustomEmojiEntry, PickedCustomEmoji } from '@/types/chat/picker';
 import { SEARCH_LIMIT } from '@/constants/chat/picker';
 
 /**

@@ -5,7 +5,7 @@
  * does not ship.
  */
 import type { MessageKey } from '@/i18n/keys';
-import type { LocalDataCategoryId } from '@/services/local-data/types';
+import type { LocalDataCategoryId } from '@/types/local-data/inventory';
 
 export const CONFIRM_KEYS: Record<LocalDataCategoryId, MessageKey> = {
   channels: 'settings.localData.confirm.channels',

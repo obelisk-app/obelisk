@@ -17,7 +17,7 @@ import LibraryPackViewer from './LibraryPackViewer';
 import LibraryItemMenu from './LibraryItemMenu';
 import { useMediaLibraryModal } from '@/hooks/media/library/useMediaLibraryModal';
 import type { LibraryServer } from '@/hooks/media/library/useMediaLibrary';
-import type { LibraryTab, MediaFilter, SelectedMedia } from '@/utils/media/library/types';
+import type { LibraryTab, MediaFilter, SelectedMedia } from '@/types/media/library';
 
 /**
  * Media packs: browse the marketplace, your own packs and favourites, or

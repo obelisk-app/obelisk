@@ -5,7 +5,7 @@
  */
 import { VAULT_DB } from '@/lib/crypto/session-vault';
 import { GA_COOKIE, GA_COOKIE_PREFIX } from '@/constants/analytics/gtag';
-import type { LocalDataEntry } from './types';
+import type { LocalDataEntry } from '@/types/local-data/inventory';
 
 const LS = 'localStorage' as const;
 const SS = 'sessionStorage' as const;

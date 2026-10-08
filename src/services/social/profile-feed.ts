@@ -5,7 +5,7 @@ import { extractUrls, isImageUrl } from '@/utils/message-text/markdown';
 export type ProfileFeedTab = 'posts' | 'replies' | 'media' | 'articles';
 
 /**
- * Relay configuration moved to `src/services/social/relays.ts`, which allows 1–8
+ * Relay configuration moved to `src/utils/social/relays.ts`, which allows 1–8
  * relays instead of exactly three and validates via the SDK's
  * `isPublicWssUrl`. Reply detection moved to `src/services/social/feed.ts`
  * (`isReplyNote`), which honours NIP-10 markers; the old version here

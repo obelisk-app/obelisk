@@ -1,7 +1,7 @@
 import { sealAndGiftWrapForSelf, unwrapGiftWrapForSelf, type GiftWrapRumor, type SelfGiftWrapTemplate } from '@nostr-wot/dm';
 import type { NostrSigner } from '@nostr-wot/signers';
 import type { Event as NostrEvent } from 'nostr-tools';
-import type { NipSigner } from '@/constants/nostr/nip-signer';
+import type { NipSigner } from '@/types/nostr/nip-signer';
 
 /** Adapt the bridge's captured session key to the SDK's async signer interface. */
 function sdkSigner(signer: NipSigner): NostrSigner {

@@ -3,7 +3,7 @@
  * single audio stream that the mic and a shared screen's audio play through.
  * Owned by `DmCallSession`, which emits after every change.
  */
-import type { VoiceTrackKind } from '@/services/voice/types';
+import type { VoiceTrackKind } from '@/types/voice/protocol';
 
 export interface DmRemoteMediaSnapshot {
   remoteAudio: MediaStream | null;

@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import Chip from '@/components/ui/data/Chip';
-import type { MediaFilter } from '@/utils/media/library/types';
+import type { MediaFilter } from '@/types/media/library';
 
 const MEDIA_FILTERS: readonly MediaFilter[] = ['all', 'emoji', 'gif', 'sticker'];
 

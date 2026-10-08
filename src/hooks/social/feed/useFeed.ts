@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { filterForSource, noteMatchesSource, mergeNotes, nextCursor } from '@/services/social/feed';
-import { widenedRelays } from '@/services/social/relays';
+import { widenedRelays } from '@/utils/social/relays';
 import { readFeedCache, writeFeedCache } from '@/services/social/cache';
 import type { ContentFilter } from '@/services/social/kinds';
 import type { FeedSort } from '@/services/social/rank';

@@ -7,7 +7,7 @@
  */
 import type { Consumer } from 'mediasoup-client/types';
 
-import type { VoiceTrackKind } from './types';
+import type { VoiceTrackKind } from '@/types/voice/protocol';
 
 export interface SfuRemoteTrack {
   /** Origin pubkey (the *producer's* author, not the SFU). */

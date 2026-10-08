@@ -3,7 +3,7 @@ import { generateSecretKey, getPublicKey } from 'nostr-tools';
 import { DmCallSession, type DmCallMediaState, type DmCallPhase } from '@/services/call/session';
 import { fakeEphemeralRelay, type FakeEphemeralRelay } from '@/services/call/fake-ephemeral-relay';
 import type { Peer, PeerOptions } from '@/services/voice/peer';
-import type { VoiceSignalPayload } from '@/services/voice/types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 
 class FakeTrack {
   enabled = true;

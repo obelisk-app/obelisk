@@ -26,7 +26,7 @@ import type { RoomState } from './room-state';
 import type { LocalMedia } from './local-media';
 import type { MeshSessionDeps } from './mesh-session-deps';
 import type { VoiceMetrics } from './metrics';
-import type { VoicePresence, VoiceSignalPayload } from './types';
+import type { VoicePresence, VoiceSignalPayload } from '@/types/voice/protocol';
 import { transitiveParticipants, type VoiceTransport } from './transport';
 import { DiscoveryEngine } from './discovery';
 import { MeshAnnouncer } from './mesh-announce';

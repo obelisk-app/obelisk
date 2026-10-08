@@ -179,3 +179,29 @@ describe('the rule, case by case', () => {
     ]))).toEqual(['src/utils/nostr/kinds.ts:2: only constants: the file belongs in src/constants/']);
   });
 });
+
+
+describe('shared types and runtime schemas', () => {
+  it('keeps runtime values out of type contracts', () => {
+    expect(layerProblems('src/types/common/data.ts', "import type { ReactNode } from 'react'; export interface Row { content: ReactNode }")).toEqual([]);
+    expect(layerProblems('src/types/common/data.ts', 'export const LIMIT = 10;')).toEqual([
+      expect.stringContaining('runtime code in types'),
+    ]);
+    expect(layerProblems('src/types/common/data.ts', "import { useState } from 'react'; export type Row = string;")).toEqual([
+      expect.stringContaining('runtime code in types'),
+    ]);
+  });
+
+  it('keeps runtime schemas independent of state and network services', () => {
+    expect(layerProblems('src/schemas/common/data.ts', 'export function isText(value: unknown): value is string { return typeof value === "string"; }')).toEqual([]);
+    expect(layerProblems('src/schemas/common/data.ts', 'export async function parse() { return fetch("/data"); }')).toEqual([
+      expect.stringContaining('uses fetch'),
+    ]);
+  });
+
+  it('detects formatted literal collections exported as constants from utils', () => {
+    expect(layerProblems('src/utils/nostr/permissions.ts', "export const PERMISSIONS = ['nip04_encrypt', ...[1, 2].map((nip) => 'nip:' + nip)].join(',');")).toEqual([
+      expect.stringContaining('exports the constant PERMISSIONS'),
+    ]);
+  });
+});

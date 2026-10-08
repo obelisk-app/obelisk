@@ -19,7 +19,7 @@ import type { VoiceErrorCode } from '@/utils/voice/errors';
 import type { Peer } from './peer';
 import { SpeakingDetector } from './speaking-detector';
 import type { VoiceUiSink } from './ui-sink';
-import type { VoiceTrackKind } from './types';
+import type { VoiceTrackKind } from '@/types/voice/protocol';
 
 export interface RemoteTrack {
   /**

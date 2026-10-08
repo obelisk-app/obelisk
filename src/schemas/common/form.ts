@@ -1,6 +1,6 @@
 /**
  * The checks several forms repeat, as pure functions over typed text. A form
- * spec's `ready` and `validate` (`FormSpec`, `src/constants/common/form.ts`)
+ * spec's `ready` and `validate` (`FormSpec`, `src/types/common/form.ts`)
  * are built from these, so "blank", "a relay address" and "a member's key"
  * mean the same thing in every form.
  */
@@ -39,17 +39,4 @@ export function parseMemberKey(value: string): MemberKey {
   }
   if (/^[0-9a-f]{64}$/i.test(trimmed)) return { ok: true, hex: trimmed.toLowerCase() };
   return { ok: false, problem: 'notKey' };
-}
-
-/** The same values with every text field trimmed: what most forms publish. */
-export function trimmedValues<V extends Record<string, unknown>>(values: V): V {
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(values)) out[key] = typeof value === 'string' ? value.trim() : value;
-  return out as V;
-}
-
-/** The same fields holding the same values (`Object.is` per field): a form that adopts these need not re-render. */
-export function sameValues(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
-  const keys = Object.keys(a);
-  return keys.length === Object.keys(b).length && keys.every((key) => Object.is(a[key], b[key]));
 }

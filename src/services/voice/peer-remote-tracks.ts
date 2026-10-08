@@ -4,8 +4,8 @@
  * the track), and the grace period a muted remote video gets before it is
  * reported ended.
  */
-import type { VoiceTrackKind } from './types';
-import type { PeerEvents } from './peer-types';
+import type { VoiceTrackKind } from '@/types/voice/protocol';
+import type { PeerEvents } from '@/types/voice/peer';
 import { REMOTE_VIDEO_MUTE_GRACE_MS } from '@/constants/voice/peer-remote-tracks';
 
 export class PeerRemoteTracks {

@@ -1,6 +1,6 @@
 import { setPreference } from '@/services/preferences/preferences';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
-import { normalizeFeedWidgets, toggleFeedWidget, type FeedWidgetId } from '@/services/social/widgets';
+import { normalizeFeedWidgets, toggleFeedWidget, type FeedWidgetId } from '@/utils/social/widgets';
 import { feedWidgetOptions } from '@/utils/social/feed-widget-options';
 
 /**

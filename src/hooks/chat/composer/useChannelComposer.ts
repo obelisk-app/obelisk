@@ -26,7 +26,7 @@ import { pushRecentSlashCommand } from '@/services/chat/slash/recent-slash-comma
 import type { SlashCommand } from '@/utils/chat/slash/slash-commands';
 import { scaffoldMentionSlotQuery, scaffoldMentionSlotRange } from '@/utils/chat/slash/slash-scaffold';
 import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
-import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
+import type { PickedCustomEmoji } from '@/types/chat/picker';
 import {
   builtinCommandOf,
   pastedMediaFiles,
@@ -35,14 +35,14 @@ import {
   withPickedMedia,
 } from '@/utils/chat/composer/draft-text';
 import { navigatePicker } from '@/utils/chat/composer/picker-keys';
-import { type ChannelComposer, type ChannelComposerOptions } from './types';
+import { type ChannelComposer, type ChannelComposerOptions } from '@/types/chat/composer';
 import { MAX_COMPOSER_ATTACHMENTS } from '@/constants/chat/composer';
 import { useComposerMetadata, useMentionCandidates } from './useComposerPeople';
 import { useComposerSend } from './useComposerSend';
 import { useComposerUploads } from './useComposerUploads';
 import { useSlashCatalog } from './useSlashCatalog';
 
-export type { ChannelComposer, ChannelComposerOptions, ComposerHandle } from './types';
+export type { ChannelComposer, ChannelComposerOptions, ComposerHandle } from '@/types/chat/composer';
 
 /**
  * The channel composer, headless: draft, attachments, stickers, voice

@@ -5,7 +5,7 @@ import { usePreferences } from '@/hooks/preferences/usePreferences';
 import {
   invalidRelayIndexes,
   normalizeSocialRelays,
-} from '@/services/social/relays';
+} from '@/utils/social/relays';
 import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX } from '@/constants/social/relays';
 import { applySocialRelays, importNip65Relays } from '@/services/social/pool';
 import { getRelayStatuses, subscribeRelayStatus, watchRelays } from '@/services/social/relay-status';

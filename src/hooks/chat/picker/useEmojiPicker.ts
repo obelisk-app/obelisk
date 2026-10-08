@@ -8,7 +8,7 @@ import type { JsMediaKind } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
 import { customEntriesFrom, filterByName, resolveRecentEntries } from '@/utils/chat/picker/custom-emoji-entries';
 import { SEARCH_LIMIT } from '@/constants/chat/picker';
-import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
+import type { PickedCustomEmoji } from '@/types/chat/picker';
 import type { RecentPickerEntry } from '@/utils/chat/picker/custom-emoji-entries';
 
 /**

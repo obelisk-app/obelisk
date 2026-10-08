@@ -13,7 +13,7 @@ import {
   FakeMediaStream,
   FakeMediaStreamTrack,
 } from '@tests/support/mocks/webrtc';
-import type { VoicePresence, VoiceSignalPayload } from '@/services/voice/types';
+import type { VoicePresence, VoiceSignalPayload } from '@/types/voice/protocol';
 
 type Deferred<T> = { promise: Promise<T>; resolve: (v: T) => void };
 function deferred<T>(): Deferred<T> {

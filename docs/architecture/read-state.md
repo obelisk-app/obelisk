@@ -346,7 +346,7 @@ its scope. On any change:
 
 ### NIP-44 + signing
 
-`wrapForSelf` and `unwrapForSelf` in `src/services/read-state/gift-wrap.ts` adapt the bridge's `NipSigner` (`src/constants/nostr/nip-signer.ts`) to the SDK signer interface. `@nostr-wot/dm` owns self-addressed NIP-59 encryption, seal signature verification, rumor author/hash validation, and rejection of other authors in the mixed inbox. The bridge builds its signing capability for the active session via `getNipSigner()`:
+`wrapForSelf` and `unwrapForSelf` in `src/services/read-state/gift-wrap.ts` adapt the bridge's `NipSigner` (`src/types/nostr/nip-signer.ts`) to the SDK signer interface. `@nostr-wot/dm` owns self-addressed NIP-59 encryption, seal signature verification, rumor author/hash validation, and rejection of other authors in the mixed inbox. The bridge builds its signing capability for the active session via `getNipSigner()`:
 
 - nsec → `finalizeEvent(template, sk)` + raw `nostr-tools/nip44`
 - NIP-07 → `window.nostr.signEvent` + `window.nostr.nip44.{encrypt,decrypt}`

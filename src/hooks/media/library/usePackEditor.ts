@@ -8,7 +8,7 @@ import { nostrActions } from '@/services/nostr-bridge';
 import type { JsMediaItem, JsMediaKind } from '@/services/nostr-bridge';
 import { uniqueName } from '@/utils/media/library/pack-utils';
 import { isHttpUrl } from '@/utils/url/http-url';
-import type { EditablePack } from '@/utils/media/library/types';
+import type { EditablePack } from '@/types/media/library';
 import { takePickedFiles } from '@/utils/media/upload/picked-file';
 
 /**

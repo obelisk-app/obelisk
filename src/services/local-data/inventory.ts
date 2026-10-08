@@ -10,9 +10,9 @@
  */
 import { CACHE_ENTRIES } from './inventory-cache';
 import { DEVICE_ENTRIES } from './inventory-device';
-import type { LocalDataArea, LocalDataCategoryId, LocalDataEntry } from './types';
+import type { LocalDataArea, LocalDataCategoryId, LocalDataEntry } from '@/types/local-data/inventory';
 
-export type { LocalDataArea, LocalDataCategoryId, LocalDataEntry } from './types';
+export type { LocalDataArea, LocalDataCategoryId, LocalDataEntry } from '@/types/local-data/inventory';
 export { isProfileCacheKey, isReadStateCacheKey } from './inventory-cache';
 
 export const LOCAL_DATA: ReadonlyArray<LocalDataEntry> = [...CACHE_ENTRIES, ...DEVICE_ENTRIES];

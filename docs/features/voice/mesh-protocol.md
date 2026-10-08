@@ -123,7 +123,7 @@ non-admin viewers. This is for operator diagnostics and synthetic media tests.
 }
 ```
 
-`content` is a `VoiceSignalPayload` (see `src/services/voice/types.ts`).
+`content` is a `VoiceSignalPayload` (see `src/types/voice/protocol.ts`).
 Variants:
 
 | `type` | Carries |

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { setPreference, type Preferences } from '@/services/preferences/preferences';
+import { setPreference } from '@/services/preferences/preferences';
+import type { Preferences } from '@/types/preferences/preferences';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { desktopNotificationPermission, requestDesktopNotificationPermission } from '@/services/notifications/alert';
 import { previewRingtone } from '@/services/notifications/sound';

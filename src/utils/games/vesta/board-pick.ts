@@ -6,7 +6,7 @@ import {
   type EdgeNode,
   type VertexNode,
 } from '@/lib/games/vesta/geometry';
-import type { PickMode } from './pick-mode';
+import type { PickMode } from '@/types/games/vesta/pick-mode';
 
 const CLICK_THRESHOLD = 26;
 const EDGE_CLICK_THRESHOLD = 24;

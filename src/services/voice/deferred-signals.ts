@@ -8,7 +8,7 @@
  * membership and voice signals race through the bridge. Bounded per peer
  * and in total so a malicious flood cannot blow memory.
  */
-import type { VoiceSignalPayload } from './types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 import type { VoiceMetrics } from './metrics';
 import { pushVoiceDebug } from './debug';
 import {

@@ -1,12 +1,12 @@
 /**
- * Preferences: preferences schema. Values the code in
+ * Default preferences and validation limits. Values the code in
  * `services/preferences/preferences-schema.ts` reads, kept here so every
  * reader imports the one copy.
  */
 
 import { DEFAULT_SOCIAL_RELAYS } from '@/constants/social/relays';
 import { DEFAULT_FEED_WIDGETS } from '@/constants/social/widgets';
-import type { Preferences } from '@/services/preferences/preferences-schema';
+import type { Preferences } from '@/types/preferences/preferences';
 
 /**
  * Relays that carry DM call negotiation. They must accept ephemeral events

@@ -1,12 +1,8 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import {
-  getPreferences,
-  PREFERENCE_DEFAULTS,
-  subscribePreferences,
-  type Preferences,
-} from '@/services/preferences/preferences';
+import { getPreferences, PREFERENCE_DEFAULTS, subscribePreferences } from '@/services/preferences/preferences';
+import type { Preferences } from '@/types/preferences/preferences';
 
 /** The persisted app settings, re-rendering on every change. The server snapshot is the defaults. */
 export function usePreferences(): Preferences {

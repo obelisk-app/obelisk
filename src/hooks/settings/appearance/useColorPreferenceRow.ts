@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { setPreference, type Preferences } from '@/services/preferences/preferences';
+import { setPreference } from '@/services/preferences/preferences';
+import type { Preferences } from '@/types/preferences/preferences';
 import { completeHexColor } from '@/utils/settings/appearance-color';
 
 export type AppearanceColorKey = 'accentColor' | 'backgroundColor' | 'buttonColor' | 'bubbleColor';

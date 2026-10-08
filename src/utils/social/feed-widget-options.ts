@@ -1,4 +1,4 @@
-import type { FeedWidgetId } from '@/services/social/widgets';
+import type { FeedWidgetId } from '@/utils/social/widgets';
 import { FEED_WIDGETS } from '@/constants/social/widgets';
 
 export interface FeedWidgetOption {

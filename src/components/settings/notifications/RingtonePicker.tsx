@@ -3,7 +3,7 @@
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { RINGTONES } from '@/services/notifications/sound';
-import type { Preferences } from '@/services/preferences/preferences';
+import type { Preferences } from '@/types/preferences/preferences';
 
 /** The ringtones as radio buttons, each with its hint; picking one plays it. */
 export default function RingtonePicker({ value, onPick, mobile }: {

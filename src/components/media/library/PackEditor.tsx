@@ -13,7 +13,7 @@ import Input from '@/components/ui/forms/Input';
 import Select from '@/components/ui/forms/Select';
 import { useTranslations } from 'next-intl';
 import { usePackEditor } from '@/hooks/media/library/usePackEditor';
-import type { EditablePack } from '@/utils/media/library/types';
+import type { EditablePack } from '@/types/media/library';
 import PackKindOptions from './PackKindOptions';
 
 /** Create or edit a pack: name, description, and one row per item. */

@@ -5,7 +5,7 @@ import { CallSignalChannel, FLUSH_MS, MAX_ATTEMPTS, RESEND_MS, type CallPoolLike
 import { DM_CALL_SIGNAL_TAG } from '@/constants/call/signaling';
 import { fakeEphemeralRelay } from '@/services/call/fake-ephemeral-relay';
 import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
-import type { VoiceSignalPayload } from '@/services/voice/types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 
 const CALL = 'f'.repeat(64);
 const sig = (type: VoiceSignalPayload['type'], extra: Partial<VoiceSignalPayload> = {}): VoiceSignalPayload => ({

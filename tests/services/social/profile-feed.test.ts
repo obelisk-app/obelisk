@@ -72,7 +72,7 @@ describe('profile feed helpers', () => {
 });
 
 /*
- * Relay-list parsing moved to `tests/services/social/relays.test.ts`; the exactly
+ * Relay-list parsing moved to `tests/utils/social/relays.test.ts`; the exactly
  * three relay rule is gone, replaced by an editable 1–8 list. Reply tag
  * construction moved to `tests/services/social/publish.test.ts`, which asserts the
  * marked NIP-10 form (the old `profileReplyTags` emitted root AND reply

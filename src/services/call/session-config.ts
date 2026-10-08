@@ -5,7 +5,7 @@
  */
 import { isOffer } from '@/utils/voice/signal-payload';
 import type { Peer, PeerOptions } from '@/services/voice/peer';
-import type { VoiceSignalPayload } from '@/services/voice/types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 import type { CallPoolLike } from './signaling';
 
 export type DmCallPhase = 'connecting' | 'connected' | 'reconnecting' | 'ended';

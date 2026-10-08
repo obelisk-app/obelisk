@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { setPreference, type CallIpProtection, type CallsFrom } from '@/services/preferences/preferences';
+import { setPreference } from '@/services/preferences/preferences';
+import type { CallIpProtection, CallsFrom } from '@/types/preferences/preferences';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import type { CallRelayStatus } from '@/hooks/settings/notifications/useCallRelayEditor';
 

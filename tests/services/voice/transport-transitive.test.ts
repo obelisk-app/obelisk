@@ -79,7 +79,7 @@ import {
   subscribeRoster,
   transitiveParticipants,
 } from '@/services/voice/transport';
-import type { VoicePresence } from '@/services/voice/types';
+import type { VoicePresence } from '@/types/voice/protocol';
 
 beforeEach(() => {
   bridgeFake.reset();

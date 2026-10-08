@@ -3,7 +3,7 @@
 import { useImperativeHandle, useRef, type ChangeEvent, type ForwardedRef, type SyntheticEvent } from 'react';
 import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
 import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
-import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
+import type { PickedCustomEmoji } from '@/types/chat/picker';
 import { useChannelComposer, type ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 import { useDismiss } from '@/hooks/common/useDismiss';
 

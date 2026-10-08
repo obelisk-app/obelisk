@@ -4,7 +4,7 @@
  * (removes). Surfaced via `events.onPeersChange` on every mutation. A peer
  * who leaves takes its forwarded tracks with it (`dropTracksFor`).
  */
-import type { SfuClientEvents } from './sfu-types';
+import type { SfuClientEvents } from '@/types/voice/sfu';
 
 export interface SfuPeerRosterHost {
   events: Pick<SfuClientEvents, 'onPeersChange'>;

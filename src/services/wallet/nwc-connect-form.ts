@@ -1,4 +1,4 @@
-import type { FormSpec } from '@/constants/common/form';
+import type { FormSpec } from '@/types/common/form';
 import { connectNwcWallet, previewNwcUri } from './nwc-wallet';
 
 export type NwcConnectValues = { draft: string };

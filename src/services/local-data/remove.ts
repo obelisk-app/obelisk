@@ -11,7 +11,7 @@ import { categoryById } from './categories';
 import { deleteDatabases, removeCookies, removeOfflineFiles } from './browser-stores';
 import { clearWebStorage, keyMatcher, removeWebStorageKeys } from './web-storage';
 import { raiseWriteFence } from './write-fence';
-import type { LocalDataCategoryId } from './types';
+import type { LocalDataCategoryId } from '@/types/local-data/inventory';
 
 export interface RemovalEnv {
   /** End the session (the bridge's logout). */

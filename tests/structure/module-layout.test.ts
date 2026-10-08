@@ -35,7 +35,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const ROOT = process.cwd();
-const LAYERS = ['src/components', 'src/hooks', 'src/services', 'src/utils', 'src/store', 'src/lib', 'src/assets', 'src/constants'] as const;
+const LAYERS = ['src/components', 'src/hooks', 'src/services', 'src/utils', 'src/store', 'src/lib', 'src/assets', 'src/constants', 'src/types', 'src/schemas'] as const;
 /** Layers whose top-level folders are their own kinds, not features: lib packages and asset kinds. */
 const OWN_LIST_ONLY = new Set<string>(['src/lib', 'src/assets']);
 /** Rule 3 also covers the route tree, where only its non-route files are held to it. */
@@ -65,12 +65,14 @@ export const LAYER_ONLY: Readonly<Record<string, Readonly<Record<string, string>
     'link-preview': 'shared topic: the preview record the chat card and the server route both read',
     'message-text': 'shared topic: markdown, mentions, emoji shortcodes and links in chat and social text',
     nip46: 'shared topic: NIP-46 signer links',
-    nostr: 'shared topic: event kinds and the kinds a signer may be asked to sign',
     'relay-url': 'shared topic: normalising, sharing and styling relay URLs',
     security: 'shared topic: the Content-Security-Policy the proxy sends',
     storage: 'shared topic: safe JSON parsing of the strings storage hands back',
     style: 'shared topic: class-name joining',
     url: 'shared topic: http(s) URL checks',
+  },
+  'src/types': {
+    nostr: 'shared signer contracts and browser Nostr declarations; protocol implementations belong to the SDK',
   },
   'src/constants': {
     'nostr-bridge': 'the bridge\'s tunables and storage keys, named like its folder in services',

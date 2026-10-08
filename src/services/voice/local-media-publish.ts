@@ -7,7 +7,7 @@
 import type { Peer } from './peer';
 import type { SfuClient } from './sfu-client';
 import type { RoomState } from './room-state';
-import type { VoiceQualityHint } from './types';
+import type { VoiceQualityHint } from '@/types/voice/protocol';
 import { getPreset, type VideoQuality } from './quality';
 
 /** The slice of `SfuClient` local media publishes through. */

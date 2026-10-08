@@ -10,7 +10,7 @@ import {
   PING_INTERVAL_MS,
   type ControlMessage,
 } from '@/constants/voice/control-channel';
-import type { PeerEvents, PeerOptions } from './peer-types';
+import type { PeerEvents, PeerOptions } from '@/types/voice/peer';
 
 export function decodeControl(data: unknown): ControlMessage | null {
   try {

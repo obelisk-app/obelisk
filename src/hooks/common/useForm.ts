@@ -2,9 +2,9 @@
 
 import { useCallback, useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import type { FormSpec, FormValues } from '@/constants/common/form';
+import type { FormSpec, FormValues } from '@/types/common/form';
 import { errorText } from '@/utils/errors/error-text';
-import { sameValues } from '@/utils/common/form-rules';
+import { sameValues } from '@/utils/common/form-values';
 
 /** The fields of `V` that hold text, the ones `field(name)` can bind to an input. */
 export type TextFieldOf<V> = { [K in keyof V]: V[K] extends string ? K : never }[keyof V];

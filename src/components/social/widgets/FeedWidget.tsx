@@ -1,7 +1,7 @@
 'use client';
 
 import type { Event as NostrEvent } from 'nostr-tools';
-import type { FeedWidgetId } from '@/services/social/widgets';
+import type { FeedWidgetId } from '@/utils/social/widgets';
 import TrendingWidget from './TrendingWidget';
 import WhoToFollowWidget from './WhoToFollowWidget';
 import FollowedTagsWidget from './FollowedTagsWidget';

@@ -1,5 +1,5 @@
 import type { JsMediaItem, JsMediaKind, JsMediaPack } from '@/services/nostr-bridge';
-import type { EditablePack, LibraryTab, MediaFilter, SelectedMedia } from '@/utils/media/library/types';
+import type { EditablePack, LibraryTab, MediaFilter, SelectedMedia } from '@/types/media/library';
 
 /** Whether an item is among the saved favourites (matched by URL). */
 export function isFavoriteItem(favorites: readonly JsMediaItem[], item: Pick<JsMediaItem, 'url'>): boolean {

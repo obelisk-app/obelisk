@@ -1,7 +1,7 @@
 'use client';
 
 import type { MediaLibraryModel } from '@/hooks/media/library/useMediaLibraryModal';
-import type { SelectedMedia } from '@/utils/media/library/types';
+import type { SelectedMedia } from '@/types/media/library';
 import MediaItemMenu from './MediaItemMenu';
 
 /** The selected item's menu wired to the library. */

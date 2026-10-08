@@ -7,7 +7,7 @@
  * split three ways by `when`: kind 0 and 3 entries are profiles, the two
  * read-state d tags are read positions, everything else is channel cache.
  */
-import type { LocalDataEntry } from './types';
+import type { LocalDataEntry } from '@/types/local-data/inventory';
 
 const BRIDGE_CACHE = 'obelisk-cache-v4/';
 /** Kind 0 (profile) and kind 3 (follow list) entries, keyed by a hex pubkey. */

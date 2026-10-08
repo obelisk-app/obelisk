@@ -15,7 +15,7 @@ import { pushVoiceDebug } from './debug';
 import { wotEngine } from '@/services/wot/engine';
 import { KIND_VOICE_SIGNAL } from '@/constants/nostr/nip-kinds';
 import { MAX_PARTICIPANTS } from '@/constants/voice/client';
-import type { VoiceSignalPayload } from './types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 
 /** What the signal path needs from the session that owns it. */
 export interface MeshSignalHost extends MeshPeerHost {

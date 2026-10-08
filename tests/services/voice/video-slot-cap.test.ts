@@ -13,7 +13,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installWebRtcMocks, installMediaDevicesMocks, flushMicrotasks } from '@tests/support/mocks/webrtc';
-import type { VoicePresence, VoiceSignalPayload } from '@/services/voice/types';
+import type { VoicePresence, VoiceSignalPayload } from '@/types/voice/protocol';
 
 const transportFake = vi.hoisted(() => {
   let rosterCb: ((roster: VoicePresence[]) => void) | null = null;

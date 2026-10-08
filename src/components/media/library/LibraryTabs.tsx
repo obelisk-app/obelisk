@@ -3,7 +3,7 @@
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import type { MessageKey } from '@/i18n/keys';
-import type { LibraryTab } from '@/utils/media/library/types';
+import type { LibraryTab } from '@/types/media/library';
 
 const tabClass = 'w-full rounded-lg px-3 py-2 text-left text-sm transition';
 

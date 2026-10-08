@@ -1,8 +1,8 @@
 import { isWebLNAvailable } from '@nostr-wot/wallet';
 import { ensureNwcWalletLoaded, hasNwcWallet, nwcPayerFor } from './nwc-wallet';
-import type { WalletConnection, WalletKind } from './wallet-types';
+import type { WalletConnection, WalletKind } from '@/types/wallet/wallet';
 
-export type { WalletConnection, WalletKind } from './wallet-types';
+export type { WalletConnection, WalletKind } from '@/types/wallet/wallet';
 
 /**
  * The one way the app reaches a Lightning wallet. Zaps (`./send-zap`) and

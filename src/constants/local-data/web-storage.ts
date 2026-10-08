@@ -4,7 +4,7 @@
  * imports the one copy.
  */
 
-import type { LocalDataCategoryId } from '@/services/local-data/types';
+import type { LocalDataCategoryId } from '@/types/local-data/inventory';
 
 /** What the error panel's "clear cache" wipes: everything the relays send again. */
 export const CACHE_CATEGORIES: ReadonlyArray<LocalDataCategoryId> = ['channels', 'profiles', 'readState', 'dms'];

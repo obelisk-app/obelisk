@@ -1,8 +1,8 @@
 import { nostrActions, type JsForumTag, type JsGroup } from '@/services/nostr-bridge';
 import type { SfuEndpointInfo } from '@/services/voice/sfu-pin';
-import type { FormSpec } from '@/constants/common/form';
+import type { FormSpec } from '@/types/common/form';
 import { accessFlags, accessOf, type ChannelAccess } from '@/utils/chat/channel/channel-access';
-import { filled, parseMemberKey } from '@/utils/common/form-rules';
+import { filled, parseMemberKey } from '@/schemas/common/form';
 
 export type ChannelMetaValues = {
   name: string;

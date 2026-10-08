@@ -3,10 +3,14 @@ import {
   normalizePreferenceValue,
   normalizePreferences,
   sanitizeHexColor,
-} from '@/services/preferences/preferences-schema';
-import { DEFAULTS } from '@/constants/preferences/preferences-schema';
+} from '@/schemas/preferences/preferences';
+import { DEFAULTS } from '@/constants/preferences/defaults';
 
-describe('preferences-schema', () => {
+describe('preferences schema', () => {
+  it.each([null, undefined, false, 42, 'bad data', []])('defaults malformed stored input: %j', (value) => {
+    expect(normalizePreferences(value)).toEqual(DEFAULTS);
+  });
+
   it('fills every field from defaults when storage is empty', () => {
     expect(normalizePreferences({})).toEqual(DEFAULTS);
   });
@@ -18,7 +22,7 @@ describe('preferences-schema', () => {
       callsFrom: 'strangers',
       callIpProtection: 'sometimes',
       accentColor: 'red',
-    } as unknown as Parameters<typeof normalizePreferences>[0];
+    };
     const prefs = normalizePreferences(raw);
     expect(prefs.notificationSounds).toBe(DEFAULTS.notificationSounds);
     expect(prefs.notificationRingtone).toBe(DEFAULTS.notificationRingtone);
@@ -29,7 +33,7 @@ describe('preferences-schema', () => {
 
   it('reads the legacy profileFeedRelays key when socialRelays is absent', () => {
     const legacy = ['wss://a.example', 'wss://b.example', 'wss://c.example'];
-    const raw = { profileFeedRelays: legacy } as unknown as Parameters<typeof normalizePreferences>[0];
+    const raw = { profileFeedRelays: legacy };
     expect(normalizePreferences(raw).socialRelays).toEqual(expect.arrayContaining(legacy));
   });
 

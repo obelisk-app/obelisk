@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSignerReady } from '@/services/nostr-bridge';
 import { profileForm, type ProfileUploading } from '@/services/chat/profile/profile-form';
 import { useForm } from '@/hooks/common/useForm';
-import { filled } from '@/utils/common/form-rules';
+import { filled } from '@/schemas/common/form';
 import { profileFormValues, type ProfileEditorInitial } from '@/utils/chat/profile/profile-form-values';
 
 /**

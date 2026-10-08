@@ -9,7 +9,7 @@
  * is stopped on the spot.
  */
 import type { RoomState } from './room-state';
-import type { VideoSlotKind, VoicePresence } from './types';
+import type { VideoSlotKind, VoicePresence } from '@/types/voice/protocol';
 import { getPreset } from './quality';
 import { MAX_CAMERAS } from '@/constants/voice/client';
 import { VoiceError } from '@/utils/voice/errors';

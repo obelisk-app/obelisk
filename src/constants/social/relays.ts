@@ -3,7 +3,7 @@
  * here so every reader imports the one copy.
  */
 
-import type { RelayPreset } from '@/services/social/relays';
+import type { RelayPreset } from '@/utils/social/relays';
 
 export const SOCIAL_RELAY_MIN = 1;
 

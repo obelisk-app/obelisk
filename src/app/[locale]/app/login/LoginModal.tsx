@@ -27,7 +27,7 @@ import { LoginModal as SdkLoginModal, NostrSessionProvider, type LoginMethodId }
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePastedKeyStep } from '@/hooks/shell/login/usePastedKeyStep';
-import { OBELISK_NIP46_PERMISSIONS } from '@/utils/nostr/nostr-signing-kinds';
+import { OBELISK_NIP46_PERMISSIONS } from '@/constants/nostr/nip46-permissions';
 import GeneratedProfileEnhancements from './GeneratedProfileEnhancements';
 import { GeneratedNpubStep } from './GeneratedNpubStep';
 import { PastedKeyNoticeStep } from './PastedKeyNoticeStep';
@@ -37,8 +37,6 @@ import { copyText } from '@/services/common/clipboard';
 import { signerAppHref } from '@/utils/nip46/signer-link';
 import { useLoginFlow } from '@/hooks/shell/login/useLoginFlow';
 import { KeyIcon, LockIcon, ShieldIcon, SparklesIcon } from '@/assets/icons';
-
-const NIP46_PERMS = OBELISK_NIP46_PERMISSIONS;
 
 const NIP46_METADATA = {
   name: 'Obelisk',
@@ -113,7 +111,7 @@ export default function LoginModal({
           showRememberToggle={false}
           profileSetup
           nip46Relays={['wss://public.obelisk.ar']}
-          nip46Perms={NIP46_PERMS}
+          nip46Perms={OBELISK_NIP46_PERMISSIONS}
           nip46Connection={{
             signerHref: signerAppHref,
             copyUri: copyText,

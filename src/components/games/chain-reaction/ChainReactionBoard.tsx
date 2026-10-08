@@ -3,7 +3,7 @@
 import Button from '@/components/ui/buttons/Button';
 import type { GameSession } from '@/lib/games/session/session';
 import { useTranslations } from 'next-intl';
-import type { CSSVars } from '@/utils/games/chain-reaction/css-vars';
+import type { CSSVars } from '@/types/games/chain-reaction/css-vars';
 import { useChainReactionBoard } from '@/hooks/games/chain-reaction/useChainReactionBoard';
 import Orbs from './Orbs';
 import Explosion from './Explosion';

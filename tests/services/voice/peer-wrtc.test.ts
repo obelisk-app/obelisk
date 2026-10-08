@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type SimplePeer from 'simple-peer';
 import { feedSimplePeer } from '@/services/voice/peer-wrtc';
-import type { VoiceSignalPayload } from '@/services/voice/types';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
 
 function fakeSimple() {
   const signal = vi.fn();

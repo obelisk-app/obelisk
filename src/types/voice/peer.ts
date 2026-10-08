@@ -3,9 +3,9 @@
  * `mesh-peer.ts`, or a `DmCallSession`): what the owner hears, and what it
  * hands the Peer at construction.
  */
-import type { VoiceSignalPayload, VoiceTrackKind } from './types';
-import type { QualitySample } from './stats';
-import type { VoiceMetrics } from './metrics';
+import type { VoiceSignalPayload, VoiceTrackKind } from '@/types/voice/protocol';
+import type { QualitySample } from '../../services/voice/stats';
+import type { VoiceMetrics } from '../../services/voice/metrics';
 
 export interface PeerEvents {
   onRemoteTrack(track: MediaStreamTrack, stream: MediaStream, kind: VoiceTrackKind, originPubkey?: string): void;

@@ -4,7 +4,7 @@
  * channel through a window event (`obelisk-mobile:react`, picked up by
  * `useMobileReactionSender`; `obelisk-mobile:reply`, by `useReplyTarget`).
  */
-import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
+import type { PickedCustomEmoji } from '@/types/chat/picker';
 import { REACT_EVENT, REPLY_EVENT } from '@/constants/shell/mobile';
 
 /** Ask the shell to react to `msg` with `emoji` (a custom one carries its image). */

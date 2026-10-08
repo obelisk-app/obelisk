@@ -1,6 +1,6 @@
 import type { JsMediaPack } from '@/services/nostr-bridge';
 import { normalizeCustomEmojiName } from '@/utils/media/tags/custom-emoji-tags';
-import type { EditablePack, LibraryTab, MediaFilter } from './types';
+import type { EditablePack, LibraryTab, MediaFilter } from '@/types/media/library';
 
 /** A normalised shortcode not yet in `used`, suffixed `_2`, `_3`... on collision. Adds it to `used`. */
 export function uniqueName(raw: string, used: Set<string>): string {

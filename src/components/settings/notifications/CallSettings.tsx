@@ -7,7 +7,7 @@
 
 import Section from '@/components/ui/layout/Section';
 import { useTranslations } from 'next-intl';
-import type { CallIpProtection, CallsFrom } from '@/services/preferences/preferences';
+import type { CallIpProtection, CallsFrom } from '@/types/preferences/preferences';
 import Text from '@/components/ui/layout/Text';
 import { useCallSettings } from '@/hooks/settings/notifications/useCallSettings';
 import CallChoice from './CallChoice';

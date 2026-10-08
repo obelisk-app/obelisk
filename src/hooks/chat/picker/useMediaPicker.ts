@@ -7,7 +7,7 @@ import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media/tag
 import { nostrActions, useMediaPacks, useMyMediaFavorites, useMyPubkey, type JsMediaItem, type JsMediaKind } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
 import { detectGifPresentation, inferMediaKind } from '@/utils/media/tags/media-kind';
-import type { PickedCustomEmoji } from '@/utils/chat/picker/picker-types';
+import type { PickedCustomEmoji } from '@/types/chat/picker';
 import type { MediaCategory, MediaEntry, MediaPickerTab, RecentMediaEntry } from '@/utils/chat/picker/media-catalog';
 import { loadRecentMedia, saveRecentMedia } from '@/services/chat/picker/recent-media';
 import { useGiphyResults } from './useGiphyResults';

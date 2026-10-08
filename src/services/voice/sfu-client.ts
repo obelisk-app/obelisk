@@ -29,8 +29,8 @@ import type { AppData, Producer, RtpCapabilities, Transport } from 'mediasoup-cl
 
 import { SfuRpc } from './sfu-rpc';
 import type { RpcNotification } from './sfu-rpc';
-import type { VoiceTrackKind } from './types';
-import type { ProducerAppData, SfuClientEvents, SfuReliabilityEvent } from './sfu-types';
+import type { VoiceTrackKind } from '@/types/voice/protocol';
+import type { ProducerAppData, SfuClientEvents, SfuReliabilityEvent } from '@/types/voice/sfu';
 import { SfuConsumers } from './sfu-consumers';
 import { SfuPeerRoster } from './sfu-peers';
 import {
@@ -41,7 +41,7 @@ import {
 } from './sfu-transports';
 import { STARTUP_RPC_RETRY } from '@/constants/voice/sfu-transports';
 
-export type { SfuClientEvents, SfuReliabilityEvent, SfuRemoteTrack } from './sfu-types';
+export type { SfuClientEvents, SfuReliabilityEvent, SfuRemoteTrack } from '@/types/voice/sfu';
 export { CONSUME_RETRY_DELAYS_MS } from '@/constants/voice/sfu-consume-queue';
 export { STALE_CHECK_INTERVAL_MS, STALE_TIMEOUT_MS, STALE_WARMUP_MS } from '@/constants/voice/sfu-consumer-health';
 

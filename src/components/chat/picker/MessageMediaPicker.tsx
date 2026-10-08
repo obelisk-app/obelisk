@@ -12,7 +12,7 @@ import { useTranslations } from 'next-intl';
 import EmptyState from '@/components/ui/feedback/EmptyState';
 import EmojiPicker from './EmojiPicker';
 import { MediaPickerSearch } from './MediaPickerSearch';
-import { type PickedCustomEmoji } from '../../../utils/chat/picker/picker-types';
+import { type PickedCustomEmoji } from '@/types/chat/picker';
 import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
 import { useMediaPicker } from '@/hooks/chat/picker/useMediaPicker';
 import { CreateMediaControl } from './CreateMediaControl';

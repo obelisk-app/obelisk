@@ -1,7 +1,7 @@
 import { nostrActions } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
-import type { FormSpec } from '@/constants/common/form';
-import { allFilled } from '@/utils/common/form-rules';
+import type { FormSpec } from '@/types/common/form';
+import { allFilled } from '@/schemas/common/form';
 import { emojiTagsForContent } from '@/utils/media/tags/custom-emoji-tags';
 
 export type NewThreadValues = { title: string; body: string; tagIds: ReadonlyArray<string> };

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { finalizeEvent, type Event as NostrEvent } from 'nostr-tools';
-import type { NipSigner } from '@/constants/nostr/nip-signer';
+import type { NipSigner } from '@/types/nostr/nip-signer';
 import { wrapForSelf, unwrapForSelf } from '@/services/read-state/gift-wrap';
 
 /**

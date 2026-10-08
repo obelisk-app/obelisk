@@ -17,7 +17,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { cacheGet, cacheSet } from '@/services/nostr-bridge';
 import { KIND_TEXT_NOTE } from '@/constants/nostr/nip-kinds';
 import { mergeNotes } from './feed';
-import { socialRelayKey } from './relays';
+import { socialRelayKey } from '@/utils/social/relays';
 import { FEED_CACHE_VERSION, FEED_CACHE_LIMIT } from '@/constants/social/cache';
 
 const WRITE_DEBOUNCE_MS = 200;

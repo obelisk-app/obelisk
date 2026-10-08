@@ -12,10 +12,10 @@
  * encoder caps, `peer-wrtc.ts` supplies the WebRTC constructors.
  */
 import type SimplePeer from 'simple-peer';
-import type { VoiceSignalPayload, VoiceTrackKind, VoiceQualityHint } from './types';
+import type { VoiceSignalPayload, VoiceTrackKind, VoiceQualityHint } from '@/types/voice/protocol';
 import { startStatsMonitor, type StatsMonitorHandle } from './stats';
 import { ICE_TRANSPORT_POLICY } from './ice-config';
-import type { PeerEvents, PeerOptions } from './peer-types';
+import type { PeerEvents, PeerOptions } from '@/types/voice/peer';
 import { feedSimplePeer, newSimplePeer } from './peer-wrtc';
 import { PeerControlChannel, decodeControl } from './peer-control';
 import { PeerRemoteTracks } from './peer-remote-tracks';
@@ -24,7 +24,7 @@ import { applyAudioSenderParams, applyVideoSenderParams, type VideoCap } from '.
 import type { ControlMessage } from '@/constants/voice/control-channel';
 import { INITIAL_CONNECT_TIMEOUT_MS } from '@/constants/voice/peer';
 
-export type { PeerEvents, PeerOptions } from './peer-types';
+export type { PeerEvents, PeerOptions } from '@/types/voice/peer';
 export { REMOTE_VIDEO_MUTE_GRACE_MS } from '@/constants/voice/peer-remote-tracks';
 
 type SimplePeerInstance = SimplePeer.Instance;
