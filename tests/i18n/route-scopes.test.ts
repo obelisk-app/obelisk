@@ -153,9 +153,9 @@ describe('route message scopes', () => {
     }
   });
 
-  it('uses a layout for a scope-only wrapper only when it serves multiple pages', () => {
+  it('uses scope/provider-only layouts only when they serve multiple pages', () => {
     for (const layout of routes.filter((file) => file.endsWith('/layout.tsx'))) {
-      if (!/return\s+(?:\(\s*)?<IntlScope scope="\w+">\{children\}<\/IntlScope>/.test(readFileSync(layout, 'utf8'))) continue;
+      if (!/return\s+(?:\(\s*)?<IntlScope scope="\w+">\s*(?:<BridgeRoute>)?\{children\}(?:<\/BridgeRoute>)?\s*<\/IntlScope>/.test(readFileSync(layout, 'utf8'))) continue;
       const pages = files(dirname(layout)).filter((file) => file.endsWith('/page.tsx'));
       expect(pages.length, layout).toBeGreaterThan(1);
     }

@@ -1,3 +1,5 @@
+import IntlScope from '@/i18n/IntlScope';
+import BridgeRoute from '@/components/common/BridgeRoute';
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { decodeRelayShareCode } from '@/utils/relay-url/relay-share-link';
@@ -5,6 +7,9 @@ import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
 import { ogImage } from '@/utils/seo/og';
 import { BRANDED_RELAYS } from '@/constants/seo/relay';
 import RelayShareLanding from './RelayShareLanding';
+
+/** Request-specific CSP nonces require a fresh document. */
+export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -32,5 +37,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function Page({ params }: Params) {
   const { code } = await params;
-  return <RelayShareLanding code={code} />;
+  return (
+    <IntlScope scope="relayShare">
+      <BridgeRoute>
+        <RelayShareLanding code={code} />
+      </BridgeRoute>
+    </IntlScope>
+  );
 }

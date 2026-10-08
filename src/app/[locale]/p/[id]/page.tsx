@@ -13,6 +13,8 @@
  * context the note viewer builds.
  */
 
+import IntlScope from '@/i18n/IntlScope';
+import BridgeRoute from '@/components/common/BridgeRoute';
 import Container from '@/components/ui/layout/Container';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -38,7 +40,9 @@ import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
 export const runtime = 'nodejs';
-export const revalidate = 300;
+
+/** Request-specific CSP nonces require a fresh document. */
+export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -82,17 +86,21 @@ export default async function ProfileViewerPage({ params }: Params) {
 
   if (!profile) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-lc-black px-5 text-center text-lc-white">
-        <div>
-          <Heading as="h1" variant="card">{t('social.profileViewer.notFound')}</Heading>
-          <Text as="p" variant="muted" className="mt-2">
-            {t('social.profileViewer.notFoundHelp')}
-          </Text>
-          <Link href="/app" variant="button" buttonVariant="pill" size="xs" className="mt-6">
-            {t('social.viewer.openInObelisk')}
-          </Link>
-        </div>
-      </main>
+      <IntlScope scope="viewer">
+        <BridgeRoute>
+          <main className="flex min-h-screen items-center justify-center bg-lc-black px-5 text-center text-lc-white">
+            <div>
+              <Heading as="h1" variant="card">{t('social.profileViewer.notFound')}</Heading>
+              <Text as="p" variant="muted" className="mt-2">
+                {t('social.profileViewer.notFoundHelp')}
+              </Text>
+              <Link href="/app" variant="button" buttonVariant="pill" size="xs" className="mt-6">
+                {t('social.viewer.openInObelisk')}
+              </Link>
+            </div>
+          </main>
+        </BridgeRoute>
+      </IntlScope>
     );
   }
 
@@ -106,53 +114,57 @@ export default async function ProfileViewerPage({ params }: Params) {
   const follows = followPubkeys.length ? await fetchProfilesForViewer(followPubkeys) : [];
 
   return (
-    <main className="min-h-screen bg-lc-black text-lc-white">
-      <ViewerHeader />
+    <IntlScope scope="viewer">
+      <BridgeRoute>
+        <main className="min-h-screen bg-lc-black text-lc-white">
+          <ViewerHeader />
 
-      <Container width="6xl" className="grid grid-cols-1 gap-x-10 px-0 lg:grid-cols-[minmax(0,1fr)_21rem] lg:px-5">
-        {/*
-          The live profile: the app's component, so the tabs, the outbox
-          reads and the note rendering are the same ones the app uses rather
-          than a second implementation that drifts.
-        */}
-        <div
-          className="min-h-[70vh] min-w-0 lg:border-x lg:border-lc-border"
-          data-testid="profile-viewer"
-        >
-          <ProfileViewerClient
-            pubkey={pubkey}
-            initialMeta={{
-              name: profile.name,
-              displayName: profile.displayName,
-              picture: profile.picture,
-              banner: profile.banner,
-              about: profile.about,
-              nip05: profile.nip05,
-              website: profile.website,
-              lud16: profile.lud16,
-            }}
-          />
-        </div>
+          <Container width="6xl" className="grid grid-cols-1 gap-x-10 px-0 lg:grid-cols-[minmax(0,1fr)_21rem] lg:px-5">
+            {/*
+              The live profile: the app's component, so the tabs, the outbox
+              reads and the note rendering are the same ones the app uses rather
+              than a second implementation that drifts.
+            */}
+            <div
+              className="min-h-[70vh] min-w-0 lg:border-x lg:border-lc-border"
+              data-testid="profile-viewer"
+            >
+              <ProfileViewerClient
+                pubkey={pubkey}
+                initialMeta={{
+                  name: profile.name,
+                  displayName: profile.displayName,
+                  picture: profile.picture,
+                  banner: profile.banner,
+                  about: profile.about,
+                  nip05: profile.nip05,
+                  website: profile.website,
+                  lud16: profile.lud16,
+                }}
+              />
+            </div>
 
-        <aside
-          className="min-w-0 border-t border-lc-border px-5 py-8 lg:border-t-0 lg:px-0"
-          data-testid="profile-sidebar"
-        >
-          <div
-            className="min-w-0 space-y-8 overflow-x-hidden [overflow-wrap:anywhere] lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-2"
-            style={{ scrollbarGutter: 'stable' }}
-          >
-            <AuthorContext
-              author={profile}
-              notes={notes}
-              hashtags={topHashtags(notes)}
-              follows={follows}
-              relays={relays}
-            />
-          </div>
-        </aside>
-      </Container>
-    </main>
+            <aside
+              className="min-w-0 border-t border-lc-border px-5 py-8 lg:border-t-0 lg:px-0"
+              data-testid="profile-sidebar"
+            >
+              <div
+                className="min-w-0 space-y-8 overflow-x-hidden [overflow-wrap:anywhere] lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-2"
+                style={{ scrollbarGutter: 'stable' }}
+              >
+                <AuthorContext
+                  author={profile}
+                  notes={notes}
+                  hashtags={topHashtags(notes)}
+                  follows={follows}
+                  relays={relays}
+                />
+              </div>
+            </aside>
+          </Container>
+        </main>
+      </BridgeRoute>
+    </IntlScope>
   );
 }
 

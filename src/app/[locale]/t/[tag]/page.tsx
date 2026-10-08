@@ -1,3 +1,5 @@
+import IntlScope from '@/i18n/IntlScope';
+import BridgeRoute from '@/components/common/BridgeRoute';
 import List from '@/components/ui/layout/List';
 /**
  * Public hashtag page - `/t/<tag>`.
@@ -25,7 +27,9 @@ import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
 export const runtime = 'nodejs';
-export const revalidate = 120;
+
+/** Request-specific CSP nonces require a fresh document. */
+export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ tag: string }> };
 
@@ -58,12 +62,16 @@ export default async function HashtagPage({ params }: Params) {
 
   if (!clean) {
     return (
-      <HashtagShell>
-        <div className="px-5 py-20 text-center">
-          <Heading as="h1" variant="card">{t('social.tagPage.notFound')}</Heading>
-          <Text as="p" variant="muted" className="mt-2">{t('social.tagPage.notFoundHelp')}</Text>
-        </div>
-      </HashtagShell>
+      <IntlScope scope="hashtag">
+        <BridgeRoute>
+          <HashtagShell>
+            <div className="px-5 py-20 text-center">
+              <Heading as="h1" variant="card">{t('social.tagPage.notFound')}</Heading>
+              <Text as="p" variant="muted" className="mt-2">{t('social.tagPage.notFoundHelp')}</Text>
+            </div>
+          </HashtagShell>
+        </BridgeRoute>
+      </IntlScope>
     );
   }
 
@@ -72,29 +80,33 @@ export default async function HashtagPage({ params }: Params) {
   const byPubkey = new Map(authors.map((profile) => [profile.pubkey, profile]));
 
   return (
-    <HashtagShell>
-      <div className="px-5 pb-4 pt-6">
-        <Row gap="3" align="center">
-          <Heading as="h1" className="min-w-0 truncate text-2xl font-extrabold">#{clean}</Heading>
-          {/* NIP-51 kind 10015, so the follow is portable to other clients. */}
-          <FollowTagButton tag={clean} />
-        </Row>
-        <Text as="p" variant="caption" className="mt-1">
-          {notes.length > 0 ? t('social.tagPage.recent', { count: notes.length }) : t('social.tagPage.none')}
-        </Text>
-      </div>
+    <IntlScope scope="hashtag">
+      <BridgeRoute>
+        <HashtagShell>
+          <div className="px-5 pb-4 pt-6">
+            <Row gap="3" align="center">
+              <Heading as="h1" className="min-w-0 truncate text-2xl font-extrabold">#{clean}</Heading>
+              {/* NIP-51 kind 10015, so the follow is portable to other clients. */}
+              <FollowTagButton tag={clean} />
+            </Row>
+            <Text as="p" variant="caption" className="mt-1">
+              {notes.length > 0 ? t('social.tagPage.recent', { count: notes.length }) : t('social.tagPage.none')}
+            </Text>
+          </div>
 
-      <List marker="none" spacing="none" className="divide-y divide-lc-border border-t border-lc-border" data-testid="hashtag-notes">
-        {notes.map((note) => (
-          <HashtagNoteItem
-            key={note.id}
-            note={note}
-            profile={byPubkey.get(note.pubkey)}
-            locale={locale}
-            sharedMedia={t('social.viewer.sharedMedia')}
-          />
-        ))}
-      </List>
-    </HashtagShell>
+          <List marker="none" spacing="none" className="divide-y divide-lc-border border-t border-lc-border" data-testid="hashtag-notes">
+            {notes.map((note) => (
+              <HashtagNoteItem
+                key={note.id}
+                note={note}
+                profile={byPubkey.get(note.pubkey)}
+                locale={locale}
+                sharedMedia={t('social.viewer.sharedMedia')}
+              />
+            ))}
+          </List>
+        </HashtagShell>
+      </BridgeRoute>
+    </IntlScope>
   );
 }

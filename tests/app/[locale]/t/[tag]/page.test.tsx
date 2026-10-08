@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import IntlScope from '@/i18n/IntlScope';
 import { LocaleProvider, translator } from '@tests/support/intl';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 
@@ -10,6 +11,7 @@ vi.mock('@/services/server/i18n/locale', async () => {
   const { translator: tr } = await import('@tests/support/intl');
   return { serverLocale: async () => ({ locale: 'en', t: tr('en') }) };
 });
+vi.mock('@/components/common/BridgeRoute', () => ({ default: ({ children }: { children: ReactNode }) => children }));
 vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock());
 vi.mock('@/services/server/viewer/nostr-fetch', async (orig) => ({
   ...(await orig<object>()),
@@ -27,7 +29,8 @@ const B = 'b'.repeat(64);
 
 async function show(tag: string) {
   const element = await HashtagPage({ params: Promise.resolve({ tag }) });
-  return render(<LocaleProvider initialLocale="en">{element as ReactElement}</LocaleProvider>);
+  const scoped = await IntlScope(element.props);
+  return render(<LocaleProvider initialLocale="en">{scoped as ReactElement}</LocaleProvider>);
 }
 
 beforeEach(() => {
