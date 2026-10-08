@@ -15,7 +15,20 @@ function hasStoredSession(): boolean {
 
 /** One subscription per session field and one for the current profile, independent of consumer count. */
 export function createSessionController(bridge: BridgeImpl | null, ready: boolean): SessionController {
-  let snapshot: SessionSnapshot = { ...EMPTY_SESSION, ready };
+  // The bridge is already initialized when adopted. Seed synchronously so
+  // the first render cannot briefly mount the login UI for a restored user.
+  const pubkey = bridge?.myPubkey.get() ?? null;
+  const isLoggedIn = bridge?.isLoggedIn.get() ?? false;
+  const loginMethod = bridge?.myLoginMethod.get() ?? null;
+  const bunkerSignerReady = bridge?.bunkerSignerReady.get() ?? false;
+  let snapshot: SessionSnapshot = {
+    ...EMPTY_SESSION, ready, pubkey, isLoggedIn, loginMethod, bunkerSignerReady,
+    generation: bridge?.getSessionGeneration() ?? 0,
+    isRehydrating: bridge?.isRestoringSession.get() ?? false,
+    notice: bridge?.sessionNotice.get() ?? null,
+    profile: pubkey ? bridge?.userMetadata.get()[pubkey] ?? null : null,
+    signerReady: isLoggedIn && loginMethod !== null && (loginMethod !== 'bunker' || bunkerSignerReady),
+  };
   const listeners = new Set<() => void>();
   let profileUnsubscribe: (() => void) | undefined;
   let active = false;

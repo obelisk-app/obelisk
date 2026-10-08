@@ -30,7 +30,7 @@ export class DmModules {
   constructor(private readonly m: BridgeModules) {
     this.dmStore = new DmStoreModule({
       // Interactive lane: the person just opened their DMs and is waiting.
-      nipSigner: () => buildNipSigner(this.m.state.session, this.m.bunker, 'interactive'),
+      nipSigner: () => buildNipSigner(this.m.state.session, this.m.bunker, 'interactive', this.m.state.captureSessionGuard()),
       replay: (params) => this.dmThread.ingest(params, { replay: true }),
       reingest: (ev, kind) => void (kind === 'wrap' ? this.dmInbox.ingestGiftWrap(ev) : this.nip04.ingestIncoming(ev)),
       dmsEnabled: () => getPreferences().directMessagesEnabled,

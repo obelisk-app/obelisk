@@ -34,12 +34,21 @@ export function buildNipSigner(
   session: PersistedSession | null,
   bunker: Pick<BunkerModule, 'run'>,
   lane: SignerLane = 'interactive',
+  assertCurrent: () => void = () => {},
 ): NipSigner | null {
   if (!session) return null;
   const pubkey = session.pubKeyHex;
+  // Guard both dispatch and result delivery, including queue callbacks and
+  // cached decrypt promises that may complete after their session retired.
+  const guarded = async <T,>(operation: () => T | Promise<T>): Promise<T> => {
+    assertCurrent();
+    const result = await operation();
+    assertCurrent();
+    return result;
+  };
   return {
     pubkey,
-    signEvent: async (template) => {
+    signEvent: (template) => guarded(async () => {
       if (session.loginMethod === 'nsec' && session.privKeyHex) {
         const sk = hexToBytes(session.privKeyHex);
         return finalizeEvent({ ...template }, sk);
@@ -47,17 +56,17 @@ export function buildNipSigner(
       if (session.loginMethod === 'nip07') {
         const w = (window as unknown as { nostr?: { signEvent: (e: unknown) => Promise<NostrEvent> } }).nostr;
         if (!w) throw new CodedError('extension-missing', 'NIP-07 extension unavailable');
-        return enqueueSignerOp(lane, `signEvent:${template.kind}`, () => w.signEvent(template));
+        return enqueueSignerOp(lane, `signEvent:${template.kind}`, () => guarded(() => w.signEvent(template)));
       }
       if (session.loginMethod === 'bunker') {
         return bunker.run(
-          (b) => b.signEvent(template) as Promise<NostrEvent>,
+          (b) => guarded(() => b.signEvent(template) as Promise<NostrEvent>),
           { lane, label: `signEvent:${template.kind}` },
         );
       }
       throw new CodedError('signer-unsupported', `Cannot sign with login method ${session.loginMethod}`); // i18n-exempt: developer message; readers get the code
-    },
-    nip44Encrypt: async (recipientPubkey, plaintext) => {
+    }),
+    nip44Encrypt: (recipientPubkey, plaintext) => guarded(async () => {
       if (session.loginMethod === 'nsec' && session.privKeyHex) {
         const sk = hexToBytes(session.privKeyHex);
         const key = nip44.utils.getConversationKey(sk, recipientPubkey);
@@ -68,17 +77,17 @@ export function buildNipSigner(
           nostr?: { nip44?: { encrypt: (p: string, t: string) => Promise<string> } };
         }).nostr;
         if (!w?.nip44?.encrypt) throw new CodedError('extension-no-nip44', 'Extension does not support NIP-44 encryption');
-        return enqueueSignerOp(lane, 'nip44Encrypt', () => w.nip44!.encrypt(recipientPubkey, plaintext));
+        return enqueueSignerOp(lane, 'nip44Encrypt', () => guarded(() => w.nip44!.encrypt(recipientPubkey, plaintext)));
       }
       if (session.loginMethod === 'bunker') {
         return bunker.run(
-          (b) => b.nip44Encrypt(recipientPubkey, plaintext),
+          (b) => guarded(() => b.nip44Encrypt(recipientPubkey, plaintext)),
           { lane, label: 'nip44Encrypt' },
         );
       }
       throw new CodedError('signer-unsupported', `Cannot NIP-44 encrypt with login method ${session.loginMethod}`); // i18n-exempt: developer message; readers get the code
-    },
-    nip44Decrypt: async (senderPubkey, ciphertext) => {
+    }),
+    nip44Decrypt: (senderPubkey, ciphertext) => guarded(async () => {
       if (session.loginMethod === 'nsec' && session.privKeyHex) {
         const sk = hexToBytes(session.privKeyHex);
         const key = nip44.utils.getConversationKey(sk, senderPubkey);
@@ -93,18 +102,18 @@ export function buildNipSigner(
         }).nostr;
         if (!w?.nip44?.decrypt) throw new CodedError('extension-no-nip44', 'Extension does not support NIP-44 decryption');
         return memoizeDecrypt('nip44', senderPubkey, ciphertext, () =>
-          enqueueSignerOp(lane, 'nip44Decrypt', () => w.nip44!.decrypt(senderPubkey, ciphertext)),
+          enqueueSignerOp(lane, 'nip44Decrypt', () => guarded(() => w.nip44!.decrypt(senderPubkey, ciphertext))),
         );
       }
       if (session.loginMethod === 'bunker') {
         return memoizeDecrypt('nip44', senderPubkey, ciphertext, () =>
           bunker.run(
-            (b) => b.nip44Decrypt(senderPubkey, ciphertext),
+            (b) => guarded(() => b.nip44Decrypt(senderPubkey, ciphertext)),
             { lane, label: 'nip44Decrypt' },
           ),
         );
       }
       throw new CodedError('signer-unsupported', `Cannot NIP-44 decrypt with login method ${session.loginMethod}`); // i18n-exempt: developer message; readers get the code
-    },
+    }),
   };
 }

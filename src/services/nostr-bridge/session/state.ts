@@ -9,6 +9,7 @@
 import { DEFAULT_RELAY, DEFAULT_RELAYS } from '@/constants/nostr-bridge/relay';
 import type { PersistedSession } from './session-storage';
 import { StateStore } from '../common/state-store';
+import { clearDecryptCache } from '../cache/decrypt-cache';
 import type { RelayAccessState } from '../common/types';
 import type { SessionNotice } from './vault';
 
@@ -22,11 +23,22 @@ export class SessionState {
   get sessionGeneration(): number { return this.generation.get(); }
 
   beginSessionOperation(): number {
+    clearDecryptCache();
     this.isRestoringSession.set(false);
     this.isLoggedIn.set(false);
     const next = this.sessionGeneration + 1;
     this.generation.set(next);
     return next;
+  }
+
+  /** A retained capability belongs to this exact session, even on same-key relogin. */
+  captureSessionGuard(): () => void {
+    const session = this.session;
+    const generation = this.sessionGeneration;
+    return () => {
+      this.assertSessionOperation(generation);
+      if (this.session !== session) throw new DOMException('Session was replaced', 'AbortError');
+    };
   }
 
   assertSessionOperation(generation: number): void {

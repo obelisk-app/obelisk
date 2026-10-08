@@ -222,7 +222,7 @@ export class BridgeImpl extends BridgeCommands {
 
   /** The NIP-59 signer for read-state sync and NWC; `lane` defaults to interactive on purpose (see `buildNipSigner`). */
   getNipSigner(lane: SignerLane = 'interactive'): NipSigner | null {
-    return buildNipSigner(this.session, this.m.bunker, lane);
+    return buildNipSigner(this.session, this.m.bunker, lane, this.m.state.captureSessionGuard());
   }
 
   /** Best-effort display name for OS popups; never blocks on a fetch. */

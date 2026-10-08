@@ -138,4 +138,14 @@ describe('session operation ownership', () => {
     stop();
   });
 
+  it.each(['logout', 'same-key-login'] as const)('retires a facade signer adapter after %s', async (change) => {
+    const { bridge, connect } = await prepare();
+    connect.mockResolvedValue();
+    await bridge.loginWithNip07('a'.repeat(64));
+    const signer = bridge.getNipSigner()!;
+    if (change === 'logout') await bridge.logout();
+    else await bridge.loginWithNip07('a'.repeat(64));
+    await expect(signer.signEvent({ kind: 1, content: '', tags: [], created_at: 1 })).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
 });

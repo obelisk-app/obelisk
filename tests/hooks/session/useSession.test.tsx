@@ -13,6 +13,15 @@ const ALICE = 'a'.repeat(64);
 const BOB = 'b'.repeat(64);
 
 describe('session ownership', () => {
+  it('never renders a logged-out identity while adopting an already-restored bridge', () => {
+    const bridge = fakeBridge({ myPubkey: ALICE });
+    const seen: Array<string | null> = [];
+    function Probe() { seen.push(useMyPubkey()); return null; }
+    render(<BridgeProvider bridge={bridge}><Probe /></BridgeProvider>);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((pubkey) => pubkey === ALICE)).toBe(true);
+  });
+
   it('shares upstream subscriptions and isolates identity readers from profile updates', () => {
     const bridge = fakeBridge({ myPubkey: ALICE });
     const identitySubscribe = vi.spyOn(bridge, 'subscribeMyPubkey');

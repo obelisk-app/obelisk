@@ -22,7 +22,7 @@ Cleanup removes listeners; it does not log out or dispose the page bridge. Stric
 
 Every login, restore and logout invalidates earlier asynchronous session work. A delayed connection, vault read, signer warmup or remote pairing cannot reinstate an account after logout. A login whose lazy module has not loaded is also cancelled by a newer login or logout intent.
 
-Profile edits capture both the public key and the session generation. Upload authorization, relay lookup, signing and publication check that the same session still owns the operation. Reconnecting with the same public key still creates a different generation. Account changes discard dirty profile drafts and prevent an old save from closing a new editor.
+Profile edits capture both the public key and the session generation. Upload authorization, relay lookup, signing and publication check that the same session still owns the operation. Reconnecting with the same public key still creates a different generation. Account changes discard dirty profile drafts and prevent an old save from closing a new editor. Resetting a form also releases it for a new submission; an older request cannot overwrite its busy state, errors or success callback. Retained signer adapters check session ownership before queued work and after asynchronous results, and a new session operation clears memoized decrypted plaintext.
 
 Before bridge adoption, a saved-session marker keeps the reconnecting screen visible. Once adopted, an explicit bridge restoration state controls the gate: a valid account with no cached shell keeps reconnecting after a failed first relay handshake, while corrupt or unavailable credentials end restoration. A stale storage entry cannot hide the login screen indefinitely.
 
