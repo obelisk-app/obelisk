@@ -81,7 +81,7 @@ describe('desktop navigation invariants', () => {
     // The rail button is a plain toggle; size lives on the pane itself,
     // because three states behind one control meant you had to press it to
     // find out what it would do.
-    expect(read('desktop/DesktopDrawer.tsx')).toContain('onPickFeed={onToggleFeed}');
+    expect(read('desktop/DesktopSidebar.tsx')).toContain('onPickFeed={onToggleFeed}');
     expect(shell).not.toContain('cycleFeed');
     const feedActions = read('panes/reader/FeedPaneActions.tsx');
     expect(feedActions).toContain('feed-pane-expand');

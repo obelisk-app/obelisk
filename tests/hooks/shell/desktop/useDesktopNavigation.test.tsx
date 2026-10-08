@@ -6,9 +6,10 @@ import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { initialNav } from '@/constants/shell/mobile';
 import { navForView, viewForNav } from '@/utils/shell/desktop/navigation';
 import { parseUrl } from '@/utils/shell/mobile/url-state';
+import { requestVoiceJump } from '@/services/voice/jump-to-voice';
 
 function mount() {
-  return renderHook(() => useDesktopNavigation('wss://relay.example', vi.fn()), {
+  return renderHook(() => useDesktopNavigation('wss://relay.example'), {
     wrapper: bridgeWrapper(fakeBridge({}, { setActiveGroup: vi.fn(), switchRelay: vi.fn() })),
   });
 }
@@ -64,6 +65,12 @@ describe('responsive destination handoff', () => {
     expect(new URLSearchParams(window.location.search).get('m')).toBe('message');
     act(() => result.current.setView({ kind: 'group', groupId: 'new' }));
     expect(new URLSearchParams(window.location.search).has('m')).toBe(false);
+  });
+
+  it('still jumps from the voice status bar to its channel', () => {
+    const { result } = mount();
+    act(() => requestVoiceJump({ channelId: 'voice-room', relayUrl: 'wss://relay.example' }));
+    expect(result.current.view).toEqual({ kind: 'group', groupId: 'voice-room' });
   });
 
   it('uses a safe parent for phone-only screens that have no desktop view', () => {

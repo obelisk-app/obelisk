@@ -10,7 +10,7 @@ import { ProfilePane } from '../panes/reader/ProfilePane';
 import { RelayTopBar } from '../panes/topbar/RelayTopBar';
 import { DirectMessageSubscriptionAnchor } from './DirectMessageSubscriptionAnchor';
 import { RehydratingScreen } from './ShellStates';
-import { DesktopDrawer } from './DesktopDrawer';
+import { DesktopSidebar } from './DesktopSidebar';
 import { DesktopMain } from './DesktopMain';
 import { FeedSplitPane } from './FeedSplitPane';
 import { LoggedOutScreen } from './LoggedOutScreen';
@@ -38,7 +38,6 @@ export default function AppShell() {
       className="obelisk-desktop-bg flex w-screen flex-col overflow-hidden text-lc-white"
       data-obelisk-app
       style={{ height: '100dvh' }}
-      {...vm.edgeSwipe}
     >
       <MessageZapModal />
       <LazyGameModalHost />
@@ -47,19 +46,16 @@ export default function AppShell() {
       <RelayTopBar
         relay={vm.relay}
         onSocialSurface={vm.onSocialSurface}
-        onOpenSidebar={vm.openSidebar}
         onJumpToChannel={vm.jumpToChannel}
         onJumpToDm={vm.openDm}
       />
       <div className="flex flex-1 overflow-hidden relative min-h-0">
-        <DesktopDrawer
+        <DesktopSidebar
           relay={vm.relay}
           conn={vm.conn}
           view={vm.view}
           setView={vm.setView}
           railMode={vm.railMode}
-          sidebarOpen={vm.chrome.sidebarOpen}
-          closeDrawer={vm.closeDrawer}
           leaveDms={vm.leaveDms}
           onToggleFeed={vm.toggleFeed}
           onSidebarWidth={vm.chrome.setSidebarWidth}

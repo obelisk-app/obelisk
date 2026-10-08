@@ -27,16 +27,13 @@ describe('useDesktopShell', () => {
     expect(setup({ isLoggedIn: false }).result.current.gate).toBe('logged-out');
   });
 
-  it('opens a channel, then leaving DMs empties the view and closes the drawer', () => {
+  it('opens a DM thread, then leaving DMs empties the view', () => {
     const { result } = setup();
-    act(() => result.current.openSidebar());
-    expect(result.current.chrome.sidebarOpen).toBe(true);
     act(() => result.current.openDm('pk'));
     expect(result.current.view).toEqual({ kind: 'dm', peer: 'pk' });
     expect(result.current.railMode).toEqual({ kind: 'dm' });
     act(() => result.current.leaveDms());
     expect(result.current.view).toEqual({ kind: 'empty' });
-    expect(result.current.chrome.sidebarOpen).toBe(false);
   });
 
   it('hides the member list while a profile is explored, and toggles it otherwise', () => {
@@ -57,11 +54,9 @@ describe('useDesktopShell', () => {
     expect(result.current.exploredProfilePubkey).toBeNull();
   });
 
-  it('the feed toggle closes the drawer and opens the feed', () => {
+  it('the feed toggle opens the feed', () => {
     const { result } = setup();
-    act(() => result.current.openSidebar());
     act(() => result.current.toggleFeed());
-    expect(result.current.chrome.sidebarOpen).toBe(false);
     expect(result.current.feed.feedOpen).toBe(true);
     expect(result.current.onSocialSurface).toBe(true);
   });

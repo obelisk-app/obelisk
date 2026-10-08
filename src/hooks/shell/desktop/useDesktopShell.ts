@@ -8,7 +8,6 @@ import {
   useCurrentRelayUrl,
 } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
-import { useEdgeSwipeOpen } from '@/hooks/shell/desktop/useEdgeSwipeOpen';
 import { useDesktopChrome, useFeedPane } from '@/hooks/shell/desktop/useDesktopLayout';
 import { useDesktopNavigation } from '@/hooks/shell/desktop/useDesktopNavigation';
 import { useExploredProfile, useReaderPane } from '@/hooks/shell/desktop/useShellPanes';
@@ -25,7 +24,7 @@ export type DesktopGate = 'rehydrating' | 'unmounted' | 'logged-out' | 'shell';
 
 /**
  * The desktop chat shell's view model: the session gate, navigation, the
- * drawer, the feed, reader and profile panes, and the handlers the shell's
+ * sidebar, the feed, reader and profile panes, and the handlers the shell's
  * parts are given. Every hook runs on every render, above the shell's
  * early returns.
  */
@@ -37,8 +36,7 @@ export function useDesktopShell() {
   const profilePopupPubkey = useChatStore((state) => state.profilePopupPubkey);
   const closeProfilePopup = useChatStore((state) => state.closeProfilePopup);
   const chrome = useDesktopChrome();
-  const { setSidebarOpen } = chrome;
-  const nav = useDesktopNavigation(relay, setSidebarOpen);
+  const nav = useDesktopNavigation(relay);
   const { view, setView } = nav;
   const feed = useFeedPane(view, setView, nav.lastGroupId);
   // True once this tree is running on the client. During hydration the
@@ -48,13 +46,10 @@ export function useDesktopShell() {
   const mounted = useSyncExternalStore(subscribeToNothing, readTrue, readFalse);
   const reader = useReaderPane();
   const profile = useExploredProfile();
-  const edgeSwipe = useEdgeSwipeOpen(!chrome.sidebarOpen, () => setSidebarOpen(true));
   const { exploredProfilePubkey, setExploredProfilePubkey } = profile;
 
-  const closeDrawer = () => setSidebarOpen(false);
   const leaveDms = () => {
     setView({ kind: 'empty' });
-    closeDrawer();
   };
 
   // A stored session being reconnected (cold load: relay handshake plus an
@@ -75,7 +70,6 @@ export function useDesktopShell() {
     feed,
     reader,
     profile,
-    edgeSwipe,
     exploredProfilePubkey,
     openProfile: setExploredProfilePubkey,
     profilePopupPubkey,
@@ -84,13 +78,8 @@ export function useDesktopShell() {
     railMode: railModeFor(view, feed.splitFeed, relay),
     showMembers: exploredProfilePubkey ? false : chrome.showMembers,
     hintSurface: surfaceForView(view, { feedOpen: feed.feedOpen, exploredProfilePubkey }),
-    closeDrawer,
     leaveDms,
-    openSidebar: () => setSidebarOpen(true),
-    toggleFeed: () => {
-      closeDrawer();
-      feed.toggle();
-    },
+    toggleFeed: feed.toggle,
     toggleMembers: () => chrome.setShowMembers((v) => !v),
     consumePendingMessageId: () => nav.setPendingMessageId(null),
     jumpToChannel: (groupId: string) => setView({ kind: 'group', groupId }),

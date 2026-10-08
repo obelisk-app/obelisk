@@ -16,9 +16,8 @@ import {
   viewForFeedPane,
 } from '@/utils/shell/desktop/desktop-layout';
 
-/** Drawer open state, the sidebar width and the member list toggle, remembered. */
+/** The sidebar width and the member list toggle, remembered. */
 export function useDesktopChrome() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     if (typeof window === 'undefined') return 264;
     return readSidebarWidth(window.localStorage.getItem(SIDEBAR_KEY));
@@ -32,7 +31,7 @@ export function useDesktopChrome() {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(SHOW_MEMBERS_KEY, showMembers ? '1' : '0');
   }, [showMembers]);
-  return { sidebarOpen, setSidebarOpen, sidebarWidth, setSidebarWidth, showMembers, setShowMembers };
+  return { sidebarWidth, setSidebarWidth, showMembers, setShowMembers };
 }
 
 /**

@@ -19,11 +19,7 @@ import type { View } from '@/utils/shell/desktop/view';
  * it directly. `navigation-invariants.test.ts` and `deep-link-gate.test.ts`
  * read this file.
  */
-export function useDesktopNavigation(
-  relay: string,
-  /** Stable setter: the voice jump closes the mobile drawer. */
-  setSidebarOpen: (open: boolean) => void,
-) {
+export function useDesktopNavigation(relay: string) {
   // Remembered so leaving the full-screen feed returns to the room you were
   // in rather than an empty pane. State adjusted during render (the
   // "previous value" pattern), so it is read in the same render it is set
@@ -152,9 +148,8 @@ export function useDesktopNavigation(
         catch (err) { console.warn('[appshell] switchRelay for voice jump failed', err); }
       }
       setView({ kind: 'group', groupId: channelId });
-      setSidebarOpen(false);
     });
-  }, [relay, setSidebarOpen]);
+  }, [relay]);
 
   return { view, setView, lastGroupId, pendingMessageId, setPendingMessageId };
 }

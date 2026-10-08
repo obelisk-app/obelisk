@@ -9,7 +9,7 @@ import { InboxPopover } from './InboxPopover';
 import { useRelayTopBar } from '@/hooks/shell/panes/topbar/useRelayTopBar';
 import Button from '@/components/ui/buttons/Button';
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { BellIcon, HelpCircleIcon, MenuIcon } from '@/assets/icons';
+import { BellIcon, HelpCircleIcon } from '@/assets/icons';
 
 /**
  * The desktop top bar: the relay's name and icon (a link to its website),
@@ -18,13 +18,11 @@ import { BellIcon, HelpCircleIcon, MenuIcon } from '@/assets/icons';
  */
 export function RelayTopBar({
   relay,
-  onOpenSidebar,
   onJumpToChannel,
   onJumpToDm,
   onSocialSurface = false,
 }: {
   relay: string;
-  onOpenSidebar?: () => void;
   onJumpToChannel?: (channelId: string) => void;
   /** Open the DMs on `peer`'s thread, or on the list (`null`). */
   onJumpToDm?: (peer: string | null) => void;
@@ -56,17 +54,6 @@ export function RelayTopBar({
       className="h-14 md:h-10 shrink-0 px-3"
       style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
-      {onOpenSidebar && (
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          onClick={onOpenSidebar}
-          aria-label={t('shell.desktop.header.openMenu')}
-          className="absolute left-2 top-1/2 -translate-y-1/2 p-3 rounded-lg md:hidden"
-        >
-          <MenuIcon size={null} strokeWidth={2} className="w-7 h-7 md:w-5 md:h-5" />
-        </Button>
-      )}
       <div className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
         {/*
           Relay state belongs with the other header state, not in a settings
