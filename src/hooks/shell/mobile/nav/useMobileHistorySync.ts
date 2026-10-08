@@ -43,7 +43,9 @@ export function useMobileHistorySync({
   const exitToastId = useRef<string | null>(null);
   const t = useTranslations();
   useEffect(() => () => {
+    exitArmedRef.current = 0;
     if (exitToastId.current) useToastStore.getState().dismissToast(exitToastId.current);
+    exitToastId.current = null;
   }, [nav, isLoggedIn, currentRelayUrl]);
   const router = useRouter();
 

@@ -48,13 +48,14 @@ describe('mobile exit feedback', () => {
     expect(push).not.toHaveBeenCalled();
     expect(useToastStore.getState().toasts).toHaveLength(1);
   });
-  it('removes the hint on navigation changes and unmount', () => {
+  it('resets exit confirmation on navigation changes and removes the hint on unmount', () => {
     const view = mount();
     back();
     view.rerender({ nav: { ...initialNav, screen: 'inbox' } });
     expect(useToastStore.getState().toasts).toEqual([]);
-    act(() => { vi.advanceTimersByTime(2001); });
+    act(() => { vi.advanceTimersByTime(1000); });
     back();
+    expect(push).not.toHaveBeenCalled();
     expect(useToastStore.getState().toasts).toHaveLength(1);
     view.unmount();
     expect(useToastStore.getState().toasts).toEqual([]);
