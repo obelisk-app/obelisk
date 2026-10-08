@@ -14,6 +14,7 @@ Start with [repository setup](../README.md#run-locally) and [AGENTS.md](../AGENT
 ## Frequently used references
 
 - [Code conventions](ui/conventions.md): layer ownership, cohesive screens, shared Link/List/Text and other UI primitives.
+- [App shell ownership](architecture/app-shells.md): desktop/phone responsibilities, shared behavior and loading boundaries.
 - [Rendering and CSP](architecture/static-public-pages.md): immutable public artifacts, dynamic nonces and deployment verification.
 - [Internationalization](architecture/i18n.md): locale URLs, page-owned scopes, translation payloads and SEO.
 - [Data system](architecture/data-system.md): login, relay access, caches, loading priorities and local storage.

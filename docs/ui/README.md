@@ -20,7 +20,7 @@ List owns `<ul>` and `<ol>` styling while the caller owns the items and their co
 
 Extract a component for reusable markup, a lifecycle boundary or a substantial section with its own responsibility. A component that only renames props or forwards to another component is unnecessary. The public `(site)` layout shares navigation chrome; note/profile author details are reusable social feature content; the notes client viewer remains route-specific.
 
-Desktop and mobile use one `/app` entry point. Their navigation models differ, so `AppGate` mounts one shell at the shared breakpoint. The bridge and background voice audio sit above that choice. Public `/desktop` and `/mobile` routes are product tours, not alternate app implementations. See [mobile navigation](mobile-navigation.md) for carousel/history behavior and [onboarding](onboarding.md) for account-scoped discovery hints.
+Desktop and mobile use one `/app` entry point. Their navigation models differ, so `AppGate` mounts one shell at the shared breakpoint. The bridge, read-state and active call lifetimes sit above that choice. The desktop sidebar is always inline; phone navigation remains a screen stack. Unvisited phone tabs do not mount their feed/profile contents until needed. See [app shell ownership](../architecture/app-shells.md) for the shared behavior and loading boundaries. Public `/desktop` and `/mobile` routes are product tours, not alternate app implementations. See [mobile navigation](mobile-navigation.md) for carousel/history behavior and [onboarding](onboarding.md) for account-scoped discovery hints.
 
 ## Feedback ownership
 

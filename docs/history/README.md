@@ -4,6 +4,8 @@ This material records past decisions, investigations and verification at a parti
 
 ## Audits
 
+- [App shell audit](audits/2026-10-08-app-shells.md): responsive boundaries, shared lifecycle and UI, navigation continuity and lazy loading.
+
 - [Clean code and modularity](audits/2026-10-08-clean-code.md): wrapper removal, layer separation and asynchronous state ownership.
 - [Shared UI standardization](audits/2026-10-08-ui-standardization.md): primitive adoption at that pass.
 - [Further audit](audits/2026-10-08-further-audit.md): follow-up checks and remaining limits.

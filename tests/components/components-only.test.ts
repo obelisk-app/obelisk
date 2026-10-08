@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join, relative, sep } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
+import { buildImportGraph } from '@tests/support/import-graph';
 
 /**
  * The owner's rule: component folders hold components only. Code is placed
@@ -265,4 +266,14 @@ describe('component folders hold components only', () => {
     expect(isNextConvention('src/app/[locale]/app/feed-pane.ts')).toBe(false);
     expect(isNextConvention('src/components/chat/page.ts')).toBe(false);
   });
+});
+
+
+it('shared components do not depend on route-owned implementations', () => {
+  const graph = buildImportGraph();
+  const backwards = graph.files.filter((file) => file.startsWith('src/components/')).flatMap((file) =>
+    [...(graph.staticEdges.get(file) ?? []), ...(graph.dynamicEdges.get(file) ?? [])]
+      .filter((dependency) => dependency.startsWith('src/app/'))
+      .map((dependency) => `${file} -> ${dependency}`));
+  expect(backwards).toEqual([]);
 });
