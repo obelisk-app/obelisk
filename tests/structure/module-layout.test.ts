@@ -43,7 +43,7 @@ const RULE3_ROOTS = [...LAYERS, 'src/app'] as const;
 
 /** The module map: the feature folders, spelled the same in every layer that has code for them. */
 export const MODULES = [
-  'admin', 'analytics', 'call', 'chat', 'common', 'feedback', 'games', 'guides', 'help', 'hints', 'i18n',
+  'admin', 'analytics', 'call', 'chat', 'common', 'feedback', 'games', 'guides', 'hints', 'i18n',
   'identity', 'local-data', 'login', 'marketing', 'media', 'media-kit', 'moderation', 'notifications',
   'preferences', 'read-state', 'relay', 'seo', 'settings', 'shell', 'social', 'voice', 'wallet', 'wot',
 ] as const;
@@ -104,8 +104,6 @@ export const LAYER_ONLY: Readonly<Record<string, Readonly<Record<string, string>
 export const ENTRY: Readonly<Record<string, string>> = {
   'src/app/[locale]/app': 'AppGate.tsx',
   'src/app/[locale]/app/mobile': 'PhoneShell.tsx',
-  'src/app/[locale]/help': 'HelpIndex.tsx',
-  'src/app/[locale]/media-kit': 'MediaKit.tsx',
   'src/app/[locale]/voice': 'VoiceRoomForm.tsx',
   'src/components/marketing': 'LandingPage.tsx',
   'src/components/social': 'FeedScreen.tsx',

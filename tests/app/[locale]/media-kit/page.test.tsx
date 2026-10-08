@@ -1,3 +1,4 @@
+import { setRootLocale } from '@tests/support/root-params';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('html-to-image', () => ({ toPng: vi.fn() }));
@@ -5,7 +6,7 @@ vi.mock('next/image', () => ({ default: () => null }));
 
 import { render, screen } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
-import MediaKit from '@/app/[locale]/media-kit/MediaKit';
+import MediaKit from '@/app/[locale]/media-kit/page';
 import { ASSETS } from '@/constants/media-kit/content';
 
 describe('media kit assets', () => {
@@ -26,10 +27,11 @@ describe('media kit assets', () => {
 });
 
 describe('media kit page', () => {
-  it('renders its labels and the brand copy in the page language only', () => {
+  it('renders its labels and the brand copy in the page language only', async () => {
+    setRootLocale('es');
     render(
       <LocaleProvider initialLocale="es">
-        <MediaKit />
+        {await MediaKit()}
       </LocaleProvider>,
     );
     expect(screen.getByText(/^Logos, banners, íconos, paleta y textos/)).toBeInTheDocument();
@@ -46,10 +48,11 @@ describe('media kit page', () => {
     expect(document.body.textContent).not.toMatch(/\((EN|ES)\)|\b(EN|ES) - /);
   });
 
-  it('serves Portuguese pitches, taglines and embed snippets on the Portuguese page', () => {
+  it('serves Portuguese pitches, taglines and embed snippets on the Portuguese page', async () => {
+    setRootLocale('pt');
     render(
       <LocaleProvider initialLocale="pt">
-        <MediaKit />
+        {await MediaKit()}
       </LocaleProvider>,
     );
     expect(screen.getByText(/^Obelisk é um chat em grupo no estilo Discord/)).toBeInTheDocument();

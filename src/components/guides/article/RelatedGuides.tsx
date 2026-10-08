@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import type { Locale } from '@/i18n';
-import { readGuide } from '@/services/guides/guides';
+import { cachedGuide } from '@/services/guides/cached-guides';
 import { relatedGuideCards, type RelatedGuideItem } from '@/utils/guides/related';
 import RelatedGuideCard from './RelatedGuideCard';
 import Heading from '@/components/ui/layout/Heading';
@@ -12,7 +12,7 @@ interface Props {
 
 /** The "keep reading" strip under an article: one card per related guide that exists; nothing when none does. */
 export default async function RelatedGuides({ locale, items }: Props) {
-  const guides = await Promise.all(items.map((item) => readGuide(locale, item.slug).catch(() => null)));
+  const guides = await Promise.all(items.map((item) => cachedGuide(locale, item.slug)));
   const resolved = relatedGuideCards(items, guides);
 
   if (resolved.length === 0) return null;

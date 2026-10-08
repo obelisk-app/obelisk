@@ -1,7 +1,8 @@
+import { setRootLocale } from '@tests/support/root-params';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider, translator } from '@tests/support/intl';
-import LocalDataHelp from '@/components/help/LocalDataHelp';
+import LocalDataHelp from '@/app/[locale]/help/local-data/page';
 import FaqSection from '@/components/marketing/landing/FaqSection';
 import { FAQ_IDS } from '@/constants/marketing/landing';
 import { LOCAL_DATA_CATEGORIES } from '@/constants/local-data/categories';
@@ -12,9 +13,10 @@ vi.mock('@/components/marketing/site/Footer', () => ({ default: () => <footer />
 const LOCALES = ['en', 'es', 'pt'] as const;
 
 describe('the local data help page', () => {
-  it.each(LOCALES)('explains what is kept, why, and every way to remove it (%s)', (locale) => {
+  it.each(LOCALES)('explains what is kept, why, and every way to remove it (%s)', async (locale) => {
+    setRootLocale(locale);
     const t = translator(locale);
-    render(<LocaleProvider initialLocale={locale}><LocalDataHelp /></LocaleProvider>);
+    render(<LocaleProvider initialLocale={locale}>{await LocalDataHelp()}</LocaleProvider>);
     const page = screen.getByTestId('local-data-help');
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(t('help.localData.title'));
     for (const c of LOCAL_DATA_CATEGORIES) expect(page).toHaveTextContent(t(c.titleKey));
