@@ -3,7 +3,7 @@
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
 import { useWhoToFollowWidget } from '@/hooks/social/widgets/useWhoToFollowWidget';
-import WidgetCard from './WidgetCard';
+import Panel from '@/components/ui/layout/Panel';
 import WidgetEmpty from './WidgetEmpty';
 import WhoToFollowRow from './WhoToFollowRow';
 
@@ -25,7 +25,7 @@ export default function WhoToFollowWidget({
   const { people } = useWhoToFollowWidget(notes);
 
   return (
-    <WidgetCard title={t('social.whoToFollow')} testId="widget-who-to-follow">
+    <Panel title={t('social.whoToFollow')} data-testid="widget-who-to-follow">
       {people.length === 0 ? (
         <WidgetEmpty testId="who-to-follow-empty">{t('social.whoToFollowEmpty')}</WidgetEmpty>
       ) : (
@@ -35,6 +35,6 @@ export default function WhoToFollowWidget({
           ))}
         </ul>
       )}
-    </WidgetCard>
+    </Panel>
   );
 }

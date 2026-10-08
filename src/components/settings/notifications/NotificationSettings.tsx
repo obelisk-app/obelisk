@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import SettingRow from '@/components/ui/forms/SettingRow';
 import Toggle from '@/components/ui/forms/Toggle';
@@ -59,7 +60,7 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-lc-border bg-lc-dark/30 p-3" data-testid="notification-settings">
+    <Card as="section" surface="subtle" radius="lg" className="space-y-3" data-testid="notification-settings">
       <div className="flex items-center justify-between gap-2">
         <Heading as="h3" variant="label">
           {t('settings.preferences.notifications.title')}
@@ -94,6 +95,6 @@ export default function NotificationSettings({ mobile = false }: { mobile?: bool
         )}
         </div>
       ))}
-    </section>
+    </Card>
   );
 }

@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useShortCopy } from '@/hooks/media-kit/kit/useShortCopy';
 import { CopyButton } from './CopyButton';
-import { Section } from './Section';
+import Section from '@/components/ui/layout/Section';
 
 /** Quick-use phrases. */
 export function ShortCopySection() {

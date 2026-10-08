@@ -9,7 +9,7 @@
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { LINKS, NAV_LINKS } from '@/constants/media-kit/content';
-import { Section } from './kit/Section';
+import Section from '@/components/ui/layout/Section';
 import { AboutSections } from './kit/AboutSections';
 import { BannersSection } from './kit/BannersSection';
 import { EmbedSections } from './kit/EmbedSections';

@@ -4,7 +4,7 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { useTrendingWidget } from '@/hooks/social/widgets/useTrendingWidget';
 import { useTranslations } from 'next-intl';
 import FollowTagButton from '../tags/FollowTagButton';
-import WidgetCard from './WidgetCard';
+import Panel from '@/components/ui/layout/Panel';
 import WidgetEmpty from './WidgetEmpty';
 
 /**
@@ -25,7 +25,7 @@ export default function TrendingWidget({
   const { tags } = useTrendingWidget(notes);
 
   return (
-    <WidgetCard title={t('social.trending')} testId="widget-trending">
+    <Panel title={t('social.trending')} data-testid="widget-trending">
       {tags.length === 0 ? (
         <WidgetEmpty testId="feed-trending-empty">{t('social.trendingEmpty')}</WidgetEmpty>
       ) : (
@@ -55,6 +55,6 @@ export default function TrendingWidget({
           ))}
         </ul>
       )}
-    </WidgetCard>
+    </Panel>
   );
 }

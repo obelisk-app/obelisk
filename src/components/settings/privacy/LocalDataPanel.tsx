@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Button from '@/components/ui/buttons/Button';
@@ -35,7 +36,7 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
           />
         ))}
       </ul>
-      <section className="rounded-lg border border-red-500/30 p-3" data-testid="local-data-everything">
+      <Card as="section" surface="transparent" radius="lg" tone="danger" data-testid="local-data-everything">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <Heading as="h3" variant="panel">{t('settings.localData.removeAll.title')}</Heading>
@@ -52,7 +53,7 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
             {busy === 'all' ? t('settings.localData.removing') : t('settings.localData.removeAll.button')}
           </Button>
         </div>
-      </section>
+      </Card>
       <Link href="/help/local-data" className="inline-block text-sm text-lc-green hover:underline" data-testid="local-data-learn-more">
         {t('settings.localData.learnMore')}
       </Link>

@@ -6,7 +6,7 @@ import { relayLatencyLabel } from '@/utils/social/relay-status-rows';
 import { RELAY_STATE_DOT } from '@/constants/social/relay-status-rows';
 import { shortHost } from '@/utils/relay-url/url-host';
 import TextButton from '@/components/ui/buttons/TextButton';
-import WidgetCard from './WidgetCard';
+import Panel from '@/components/ui/layout/Panel';
 
 /**
  * Where the feed's notes are coming from, and whether it is working.
@@ -23,9 +23,9 @@ export default function RelaysWidget() {
   const vm = useRelaysWidget();
 
   return (
-    <WidgetCard
+    <Panel
       title={t('social.relays')}
-      testId="widget-relays"
+      data-testid="widget-relays"
       action={(
         <TextButton
           onClick={vm.manage} className="shrink-0 text-[11px] font-medium"
@@ -59,6 +59,6 @@ export default function RelaysWidget() {
           </li>
         ))}
       </ul>
-    </WidgetCard>
+    </Panel>
   );
 }

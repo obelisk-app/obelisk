@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import Range from '@/components/ui/forms/Range';
 import Toggle from '@/components/ui/forms/Toggle';
@@ -18,7 +19,7 @@ export default function WotSettings() {
   const vm = useWotSettings();
 
   return (
-    <section className="space-y-3 rounded-xl border border-lc-border bg-lc-dark p-4">
+    <Card as="section" padding="lg" className="space-y-3">
       <header className="flex items-center justify-between">
         <div>
           <div className="text-sm font-semibold text-lc-white">{t('settings.wot.title')}</div>
@@ -87,6 +88,6 @@ export default function WotSettings() {
         </>
       )}
       {vm.active && <WotStatsPanel stats={vm.stats} />}
-    </section>
+    </Card>
   );
 }

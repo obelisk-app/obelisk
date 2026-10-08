@@ -2,7 +2,7 @@
 
 import { useInterests } from '@/hooks/social/tags/useInterests';
 import { useTranslations } from 'next-intl';
-import WidgetCard from './WidgetCard';
+import Panel from '@/components/ui/layout/Panel';
 import WidgetEmpty from './WidgetEmpty';
 import Button from '@/components/ui/buttons/Button';
 import Skeleton from '@/components/ui/animations/Skeleton';
@@ -18,7 +18,7 @@ export default function FollowedTagsWidget({ onOpenTag }: { onOpenTag?: (tag: st
   const { tags, ready } = useInterests();
 
   return (
-    <WidgetCard title={t('social.followedTags')} testId="widget-followed-tags">
+    <Panel title={t('social.followedTags')} data-testid="widget-followed-tags">
       {!ready ? (
         <div className="space-y-1.5 p-1.5" aria-hidden="true">
           {[0, 1, 2].map((index) => <Skeleton key={index} className="h-5 rounded" />)}
@@ -40,6 +40,6 @@ export default function FollowedTagsWidget({ onOpenTag }: { onOpenTag?: (tag: st
           ))}
         </div>
       )}
-    </WidgetCard>
+    </Panel>
   );
 }

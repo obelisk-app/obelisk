@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import Text from '@/components/ui/layout/Text';
@@ -24,7 +25,7 @@ export default function NwcConnectedCard({ wallet, busy, onDisconnect }: Props) 
     : null;
 
   return (
-    <div className="space-y-2 rounded-lg border border-lc-border bg-lc-dark/30 p-3" data-testid="nwc-connected">
+    <Card surface="subtle" radius="lg" className="space-y-2" data-testid="nwc-connected">
       <Text as="p" size="xs" weight="semibold" tone="accent">{t('settings.wallet.connected')}</Text>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
         <dt className="text-lc-muted">{t('settings.wallet.walletLabel')}</dt>
@@ -51,6 +52,6 @@ export default function NwcConnectedCard({ wallet, busy, onDisconnect }: Props) 
       <Button variant="outlinePill" tone="danger" size="xs" onClick={onDisconnect} disabled={busy} data-testid="nwc-disconnect">
         {t('settings.wallet.disconnect')}
       </Button>
-    </div>
+    </Card>
   );
 }

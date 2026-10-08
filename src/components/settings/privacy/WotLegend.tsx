@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import { WOT_TIERS } from '@/constants/wot/colors';
 import Text from '@/components/ui/layout/Text';
@@ -8,7 +9,7 @@ import Text from '@/components/ui/layout/Text';
 export default function WotLegend() {
   const t = useTranslations();
   return (
-    <div className="rounded-md border border-lc-border bg-lc-black/40 p-2">
+    <Card surface="translucent" radius="md" padding="sm">
       <Text as="div" variant="label" size="10" weight="semibold" tone="muted" className="mb-1.5">
         {t('settings.wot.channelColors')}
       </Text>
@@ -26,6 +27,6 @@ export default function WotLegend() {
               <span className="flex-1 text-lc-muted">{t('settings.wot.outOfGraph')}</span>
         </li>
       </ul>
-    </div>
+    </Card>
   );
 }

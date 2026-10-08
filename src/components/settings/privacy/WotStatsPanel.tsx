@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import type { WotStats } from '@/services/settings/wot-stats';
 
@@ -7,7 +8,7 @@ import type { WotStats } from '@/services/settings/wot-stats';
 export default function WotStatsPanel({ stats }: { stats: WotStats }) {
   const t = useTranslations();
   return (
-    <div className="rounded-md border border-lc-border bg-lc-black/40 p-2 text-[11px] font-mono text-lc-muted">
+    <Card surface="translucent" radius="md" padding="sm" className="text-[11px] font-mono text-lc-muted">
       <div className="flex justify-between">
         <span>{t('settings.wot.resolvedAllow')}</span>
         <span className="text-lc-green">{stats.allow}</span>
@@ -20,6 +21,6 @@ export default function WotStatsPanel({ stats }: { stats: WotStats }) {
         <span>{t('settings.wot.pending')}</span>
         <span className="text-lc-white">{stats.pending}</span>
       </div>
-    </div>
+    </Card>
   );
 }

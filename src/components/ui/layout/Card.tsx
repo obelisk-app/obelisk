@@ -1,12 +1,16 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/utils/style/cn';
 
-export type CardSurface = 'dark' | 'black' | 'card' | 'translucent';
+export type CardSurface = 'dark' | 'black' | 'card' | 'translucent' | 'subtle' | 'muted' | 'transparent';
+export type CardTone = 'default' | 'danger';
 /** `row` (`px-2 py-1.5`) is the bordered list-row card: one person, one tag, one member. */
 export type CardPadding = 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'row';
 export type CardRadius = 'md' | 'lg' | 'xl' | '2xl';
 
 const SURFACE_CLASS: Record<CardSurface, string> = {
+  transparent: '',
+  subtle: 'bg-lc-dark/30',
+  muted: 'bg-lc-dark/50',
   dark: 'bg-lc-dark',
   black: 'bg-lc-black',
   card: 'bg-lc-card',
@@ -31,6 +35,7 @@ const RADIUS_CLASS: Record<CardRadius, string> = {
 
 export interface CardProps extends HTMLAttributes<HTMLElement> {
   surface?: CardSurface;
+  tone?: CardTone;
   padding?: CardPadding;
   radius?: CardRadius;
   as?: 'div' | 'section' | 'article' | 'li' | 'aside';
@@ -44,6 +49,7 @@ export interface CardProps extends HTMLAttributes<HTMLElement> {
  */
 export default function Card({
   surface = 'dark',
+  tone = 'default',
   padding = 'md',
   radius = 'xl',
   as: Tag = 'div',
@@ -53,7 +59,7 @@ export default function Card({
 }: CardProps) {
   return (
     <Tag
-      className={cn(RADIUS_CLASS[radius], 'border border-lc-border', SURFACE_CLASS[surface], PADDING_CLASS[padding], className)}
+      className={cn(RADIUS_CLASS[radius], 'border', tone === 'danger' ? 'border-red-500/30' : 'border-lc-border', SURFACE_CLASS[surface], PADDING_CLASS[padding], className)}
       {...rest}
     >
       {children}

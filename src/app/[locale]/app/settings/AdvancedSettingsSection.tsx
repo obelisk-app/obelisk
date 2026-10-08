@@ -4,6 +4,7 @@ import { setPreference } from '@/services/preferences/preferences';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import AccountBackupExport from '@/components/settings/account/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/account/DeveloperSignatureTest';
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import { ToggleRow } from './ToggleRow';
 import Heading from '@/components/ui/layout/Heading';
@@ -13,12 +14,12 @@ export function AdvancedSettingsSection() {
   const t = useTranslations();
   return (
     <div className="space-y-4">
-      <section className="space-y-2 rounded-lg border border-lc-border bg-lc-dark/30 p-3">
+      <Card as="section" surface="subtle" radius="lg" className="space-y-2">
         <Heading as="h3" variant="label">
           {t("settings.preferences.backup.advanced")}
         </Heading>
         <AccountBackupExport />
-      </section>
+      </Card>
       <section className="space-y-3 border-t border-lc-border pt-4" data-testid="desktop-developer-settings">
         <div className="text-xs font-semibold uppercase tracking-wider text-lc-muted">{t('settings.developer.section')}</div>
         <ToggleRow

@@ -9,6 +9,8 @@ describe('Card', () => {
   });
 
   it.each([
+    ['subtle', 'bg-lc-dark/30'],
+    ['muted', 'bg-lc-dark/50'],
     ['black', 'bg-lc-black'],
     ['card', 'bg-lc-card'],
     ['translucent', 'bg-lc-black/40'],
@@ -29,6 +31,11 @@ describe('Card', () => {
     const el = screen.getByTestId('c');
     expect(el.tagName).toBe('LI');
     expect(el.className).toBe('rounded-lg border border-lc-border bg-lc-black px-2 py-1.5');
+  });
+
+  it('supports a danger border without painting over the parent surface', () => {
+    render(<Card as="section" surface="transparent" tone="danger" data-testid="c" />);
+    expect(screen.getByTestId('c').className).toBe('rounded-xl border border-red-500/30 p-3');
   });
 
   it('merges className', () => {

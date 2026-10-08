@@ -5,7 +5,7 @@ import { embedBadge, embedHtmlBanner, embedOg } from '@/utils/media-kit/content'
 import { OG_IMAGE_URL } from '@/constants/media-kit/content';
 import { CodeBlock } from './CodeBlock';
 import { EmbedPreview } from './EmbedPreview';
-import { Section } from './Section';
+import Section from '@/components/ui/layout/Section';
 
 /** The HTML embed snippets and the Open Graph preview with its meta tags. */
 export function EmbedSections() {

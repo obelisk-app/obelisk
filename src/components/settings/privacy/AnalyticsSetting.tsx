@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import AnalyticsChoiceButtons from '@/components/analytics/AnalyticsChoiceButtons';
 import { useAnalyticsConsent } from '@/hooks/analytics/useAnalyticsConsent';
@@ -22,7 +23,7 @@ export default function AnalyticsSetting() {
       ? t('settings.localData.analytics.denied')
       : t('settings.localData.analytics.unset');
   return (
-    <section className="rounded-lg border border-lc-border p-3" data-testid="analytics-setting">
+    <Card as="section" surface="transparent" radius="lg" data-testid="analytics-setting">
       <Heading as="h3" variant="panel">{t('settings.localData.analytics.title')}</Heading>
       {known ? (
         <Text as="p" variant="caption" className="mt-0.5 leading-5" data-testid="analytics-setting-status">{status}</Text>
@@ -32,6 +33,6 @@ export default function AnalyticsSetting() {
       <div className="mt-3 sm:max-w-xs">
         <AnalyticsChoiceButtons choice={choice} onChoose={setAnalyticsConsent} testIdPrefix="analytics-setting" />
       </div>
-    </section>
+    </Card>
   );
 }

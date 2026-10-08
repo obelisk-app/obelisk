@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { ASSETS, PITCHES } from '@/constants/media-kit/content';
 import { CopyButton } from './CopyButton';
-import { Section } from './Section';
+import Section from '@/components/ui/layout/Section';
 import Text from '@/components/ui/layout/Text';
 
 /** The pitches (short and long, in the page language) and the downloadable logos and icons. */

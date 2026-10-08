@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { COLORS } from '@/constants/media-kit/content';
 import { CopyButton } from './CopyButton';
-import { Section } from './Section';
+import Section from '@/components/ui/layout/Section';
 
 /** The palette tokens, each with its HEX to copy. */
 export function PaletteSection() {
