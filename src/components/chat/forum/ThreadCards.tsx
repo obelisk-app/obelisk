@@ -8,6 +8,7 @@
  * the gallery card observe this rule (see `ThreadCard`). The gallery, the
  * states and the skeletons sit beside this file.
  */
+import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import { useUserMetadata, type JsForumTag, type JsGroup } from '@/services/nostr-bridge';
 import { useLocale, useTranslations } from 'next-intl';
@@ -64,7 +65,7 @@ export function ThreadCard({
       data-testid="thread-card"
       data-thread-id={thread.id}
     >
-      <div className="flex items-start gap-3">
+      <Row gap="3" align="start">
         {opMeta?.picture ? (
           <RemoteImage src={opMeta.picture} alt="" className="w-8 h-8 rounded-full shrink-0 object-cover" />
         ) : (
@@ -97,7 +98,7 @@ export function ThreadCard({
             className="w-12 h-12 rounded-lg object-cover shrink-0"
           />
         )}
-      </div>
+      </Row>
     </Button>
   );
 }

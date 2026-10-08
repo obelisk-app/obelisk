@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';
 import Button, { buttonClass } from '@/components/ui/buttons/Button';
 import LandingHeroAnimation from './LandingHeroAnimation';
@@ -37,7 +38,7 @@ export default function LandingHero({ onLaunch }: { onLaunch: () => void }) {
           <Text as="p" variant="muted" className="mt-3 md:text-base max-w-2xl leading-relaxed">
             {t('marketing.hero.trustLine')}
           </Text>
-          <div className="mt-7 flex flex-col sm:flex-row gap-3">
+          <Stack gap="3" className="mt-7 sm:flex-row">
             <Button variant="pill" size="lg" onClick={() => onLaunch()}>
               <LogInIcon size={18} strokeWidth={2.5} />
               {t('marketing.hero.launchApp')}
@@ -51,7 +52,7 @@ export default function LandingHero({ onLaunch }: { onLaunch: () => void }) {
               <GitHubMark width="18" height="18" />
               {t('marketing.hero.github')}
             </a>
-          </div>
+          </Stack>
         </div>
 
         <div className="w-full lg:col-span-2">

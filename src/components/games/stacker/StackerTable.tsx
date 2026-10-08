@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import { MUSIC_CREDIT } from '@/lib/games/stacker/audio';
 import { useStackerTable, type StackerTableInput } from '@/hooks/games/stacker/useStackerTable';
 import StackerBoard from './StackerBoard';
@@ -33,7 +34,7 @@ export default function StackerTable({ seatLabel, ...input }: StackerTableProps)
     <div className="space-y-3" data-testid="stacker-table">
       <div className="flex items-start justify-center gap-3">
         {/* Left rail: hold and the numbers that matter */}
-        <div className="flex w-[68px] shrink-0 flex-col gap-2">
+        <Stack gap="2" className="w-[68px] shrink-0">
           <div className="rounded-lg border border-lc-border bg-lc-black/40 p-1.5">
             <PieceChip kind={runner.state.hold} label={t('games.hold')} dim={!runner.state.hold} />
           </div>
@@ -42,7 +43,7 @@ export default function StackerTable({ seatLabel, ...input }: StackerTableProps)
           <StackerStat label={t('games.level')} value={stats.level} accent="#22d3ee" testId="stacker-level" />
           {stats.combo > 1 && <StackerStat label={t('games.combo')} value={`${stats.combo}×`} accent="#facc15" />}
           {stats.backToBack > 0 && <StackerStat label="B2B" value={stats.backToBack} accent="#a855f7" />}
-        </div>
+        </Stack>
 
         {/* Board, with the incoming-garbage meter running up its left side */}
         <div className="relative flex items-stretch gap-1.5">
@@ -83,7 +84,7 @@ export default function StackerTable({ seatLabel, ...input }: StackerTableProps)
         </div>
 
         {/* Right rail: what's coming */}
-        <div className="flex w-[68px] shrink-0 flex-col gap-1.5">
+        <Stack gap="1.5" className="w-[68px] shrink-0">
           <div className="rounded-lg border border-lc-border bg-lc-black/40 p-1.5">
             <PieceChip kind={runner.state.queue[0] ?? null} label={t('games.next')} />
             <div className="mt-1 space-y-1 opacity-80">
@@ -92,7 +93,7 @@ export default function StackerTable({ seatLabel, ...input }: StackerTableProps)
               ))}
             </div>
           </div>
-        </div>
+        </Stack>
       </div>
 
       {/* Opponents */}

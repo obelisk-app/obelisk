@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import SearchBar from '../../search/SearchBar';
@@ -24,7 +25,7 @@ export function ChannelHeader({ groupId, group, isAdmin, showMembers, onToggleMe
       <div className="flex min-w-0 items-center gap-3">
         <span className="text-xl text-lc-muted">#</span>
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          <Row gap="2" align="center">
             <span className="truncate text-base font-bold text-lc-white">
               {group?.name ?? groupId.slice(0, 12)}
             </span>
@@ -33,11 +34,11 @@ export function ChannelHeader({ groupId, group, isAdmin, showMembers, onToggleMe
                 {t('mobile.members.admin')}
               </span>
             )}
-          </div>
+          </Row>
           {group?.about && <div className="truncate text-xs text-lc-muted">{group.about}</div>}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <Row gap="2" align="center">
         {isAdmin && (
           <Button
             variant="ghost"
@@ -68,7 +69,7 @@ export function ChannelHeader({ groupId, group, isAdmin, showMembers, onToggleMe
           serverName={group?.name ?? t('common.channel')}
           activeGroupId={groupId}
         />
-      </div>
+      </Row>
     </header>
   );
 }

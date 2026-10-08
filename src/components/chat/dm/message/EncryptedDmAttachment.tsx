@@ -11,6 +11,7 @@
  * and there is no reason to pull a 25 MB zip the reader may never want.
  */
 
+import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import { dmFileCategory, type JsDmFile } from '@/utils/attachments/dm-file';
 import { useDecryptedDmFile } from '@/hooks/chat/dm/message/useDecryptedDmFile';
@@ -82,7 +83,7 @@ export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFi
 
   const label = file.name ?? t('dm.file.attachment');
   return (
-    <div className="flex items-center gap-3" data-testid="dm-file-card">
+    <Row gap="3" align="center" data-testid="dm-file-card">
       <FileIcon size={22} className="shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="truncate font-semibold">{label}</div>
@@ -114,6 +115,6 @@ export function EncryptedDmAttachment({ file, onAccent = false }: { file: JsDmFi
           {state.status === 'loading' ? t('dm.file.decrypting') : t('dm.file.open')}
         </Button>
       )}
-    </div>
+    </Row>
   );
 }

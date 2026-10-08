@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';
 import { useDmCallView } from '@/hooks/call/useDmCallView';
 import UserAvatar from '@/components/ui/media/UserAvatar';
@@ -58,13 +59,13 @@ export default function DmCallView() {
         {vm.showRemoteVideo ? (
           <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-contain" data-testid="dm-call-remote-video" />
         ) : (
-          <div className="flex flex-col items-center gap-3 px-6 text-center">
+          <Stack gap="3" align="center" className="px-6 text-center">
             <UserAvatar pubkey={s.peer} picture={vm.picture} name={vm.name} size={24} />
             <div className="text-lg font-bold text-lc-white">{vm.name}</div>
             <div className="text-sm text-lc-muted" role="status">
               <CallStatusText ended={ended} endedKey={vm.endedKey} lineKey={vm.lineKey} connectedAt={s.connectedAt} />
             </div>
-          </div>
+          </Stack>
         )}
         {s.media.localVideo && !ended && (
           <video
@@ -76,7 +77,7 @@ export default function DmCallView() {
             data-testid="dm-call-local-video"
           />
         )}
-        <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
+        <Stack gap="1.5" align="start" className="absolute left-3 top-3">
           {vm.showRemoteVideo && (
             <span className="rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-lc-white">
               {vm.name}
@@ -94,7 +95,7 @@ export default function DmCallView() {
               {t('calls.call.ipHidden')}
             </span>
           )}
-        </div>
+        </Stack>
       </div>
       {/* Shown on the ended card too: "Call failed" alone doesn't say that the
           microphone permission was refused. */}

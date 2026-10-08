@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import type { ReactNode } from 'react';
 import { useSignerReady } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
@@ -18,8 +19,8 @@ export function NoMatchingThreads({
   const ready = useSignerReady();
   const quoted = (chunks: ReactNode) => <span className="text-lc-white">{chunks}</span>;
   return (
-    <div
-      className="flex flex-col items-center justify-center h-full text-center text-lc-muted py-12 gap-2"
+    <Stack
+      gap="2" align="center" className="justify-center h-full text-center text-lc-muted py-12"
       data-testid="forum-no-matches"
     >
       <div className="text-sm">
@@ -38,6 +39,6 @@ export function NoMatchingThreads({
           {t('chat.forum.createFromSearch', { query })}
         </Button>
       )}
-    </div>
+    </Stack>
   );
 }

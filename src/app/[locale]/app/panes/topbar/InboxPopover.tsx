@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import { createPortal } from 'react-dom';
 import {
@@ -39,7 +40,7 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
             to the solid green unread badges in the tab strip below;
             "Clear" is neutral because it is destructive-ish and should
             not invite a reflexive click. */}
-        <div className="flex items-center gap-1.5">
+        <Row gap="1.5" align="center">
           {tabHasItems && tabUnread > 0 && (
             <Button
               variant="bare"
@@ -64,7 +65,7 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
               {t('common.clear')}
             </Button>
           )}
-        </div>
+        </Row>
       </div>
       <div className="px-2 py-2 border-b border-lc-border" data-testid="notif-tabs" data-tour="inbox-tabs">
         <SegmentedControl

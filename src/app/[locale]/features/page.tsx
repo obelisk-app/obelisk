@@ -1,3 +1,4 @@
+import Stack from '@/components/ui/layout/Stack';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
@@ -96,10 +97,10 @@ export default async function FeaturesPage() {
           <Text as="p" variant="lead" className="mx-auto mt-6 max-w-2xl leading-relaxed md:text-xl">
             {t('marketing.features.subhead')}
           </Text>
-          <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+          <Stack gap="3" className="mt-9 justify-center sm:flex-row">
             <Link href="/app" className="lc-pill lc-pill-primary px-8 py-3 text-base">{t('marketing.features.openApp')}</Link>
             <a href="https://github.com/obelisk-app/obelisk" className="lc-pill lc-pill-secondary px-8 py-3 text-base" target="_blank" rel="noopener noreferrer">{t('marketing.features.viewSource')}</a>
-          </div>
+          </Stack>
         </header>
 
         <section className="mx-auto max-w-6xl space-y-24 px-6 py-12 lg:space-y-32">

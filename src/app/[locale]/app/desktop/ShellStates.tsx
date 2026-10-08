@@ -5,6 +5,7 @@
  * states sit beside it, one per file: `EmptyState`,
  * `DirectMessageSubscriptionAnchor` and `MobileVoiceStatusBar`.
  */
+import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';
 
 export function RehydratingScreen() {
@@ -16,10 +17,10 @@ export function RehydratingScreen() {
       role="status"
       aria-live="polite"
     >
-      <div className="flex flex-col items-center gap-4">
+      <Stack gap="4" align="center">
         <div className="lc-spinner" />
         <div className="text-sm text-lc-muted">{t('common.reconnecting')}</div>
-      </div>
+      </Stack>
     </div>
   );
 }

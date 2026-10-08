@@ -13,6 +13,7 @@
  * suggestion chips are in `./social-relays/`.
  */
 
+import Row from '@/components/ui/layout/Row';
 import Section from '@/components/ui/layout/Section';
 import { RELAY_SETTINGS_ANCHOR } from '@/constants/settings/open-settings';
 import { useTranslations } from 'next-intl';
@@ -75,7 +76,7 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
 
       <SocialRelayPresets draft={relays.draft} canAdd={relays.canAdd} onAdd={relays.addPreset} t={t} />
 
-      <div className="flex items-center gap-3">
+      <Row gap="3" align="center">
         <Button variant="pill" size="xs" onClick={relays.save} data-testid="social-relay-save">
           {t('common.save')}
         </Button>
@@ -87,7 +88,7 @@ export default function SocialRelaySettings({ mobile = false }: { mobile?: boole
             {t(STATUS_KEY[status])}
           </span>
         )}
-      </div>
+      </Row>
     </>
   );
 

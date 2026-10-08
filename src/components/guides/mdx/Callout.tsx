@@ -1,3 +1,4 @@
+import Row from '@/components/ui/layout/Row';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { MessageKey } from '@/i18n/keys';
@@ -41,7 +42,7 @@ export default function Callout({
       data-testid={`callout-${type}`}
       className={`my-6 rounded-xl border px-5 py-4 ${style.bg} ${style.border}`}
     >
-      <div className="flex items-start gap-3">
+      <Row gap="3" align="start">
         <span
           className="text-lc-green text-lg font-bold leading-none mt-0.5"
           aria-hidden="true"
@@ -56,7 +57,7 @@ export default function Callout({
           )}
           <div className="text-sm text-lc-white/90 leading-relaxed">{children}</div>
         </div>
-      </div>
+      </Row>
     </aside>
   );
 }

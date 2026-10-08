@@ -1,16 +1,17 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';
 
 export function LoadingThreads() {
   const t = useTranslations();
   return (
-    <div
-      className="flex flex-col items-center justify-center h-full text-center text-lc-muted py-12 gap-3"
+    <Stack
+      gap="3" align="center" className="justify-center h-full text-center text-lc-muted py-12"
       data-testid="threads-loading"
     >
       <div className="lc-spinner" aria-hidden="true" />
       <div className="text-sm">{t('chat.forum.loading')}</div>
-    </div>
+    </Stack>
   );
 }

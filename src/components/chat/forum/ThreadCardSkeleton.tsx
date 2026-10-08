@@ -1,3 +1,4 @@
+import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import type { JsGroup } from '@/services/nostr-bridge';
@@ -15,7 +16,7 @@ export function ThreadCardSkeleton({ thread, onOpen }: { thread: JsGroup; onOpen
       data-thread-id={thread.id}
       aria-label={thread.name ? t('chat.forum.openLoading', { name: thread.name }) : t('chat.forum.openLoadingUntitled')}
     >
-      <div className="flex items-start gap-3">
+      <Row gap="3" align="start">
         <Skeleton variant="circle" className="w-8 h-8 shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-lc-white truncate">
@@ -27,7 +28,7 @@ export function ThreadCardSkeleton({ thread, onOpen }: { thread: JsGroup; onOpen
             <Skeleton as="span" className="h-2 w-12 inline-block" />
           </div>
         </div>
-      </div>
+      </Row>
     </Button>
   );
 }

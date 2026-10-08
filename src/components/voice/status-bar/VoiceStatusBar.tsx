@@ -9,6 +9,7 @@
  * active VoiceClient). Clicking the channel pill jumps the AppShell view back
  * to the voice channel.
  */
+import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useVoiceStatusBar } from '@/hooks/voice/status-bar/useVoiceStatusBar';
@@ -24,7 +25,7 @@ export default function VoiceStatusBar() {
   return (
     <div className="px-2 pt-2" data-testid="voice-status-bar">
       <div className="bg-lc-black/60 border border-lc-border rounded-xl p-2 space-y-2">
-        <div className="flex items-center gap-2">
+        <Row gap="2" align="center">
           <Button
             variant="bare"
             onClick={vm.jump}
@@ -56,7 +57,7 @@ export default function VoiceStatusBar() {
           >
             <PhoneOffIcon size={14} strokeWidth={2} />
           </Button>
-        </div>
+        </Row>
 
         <div className="flex items-center gap-1 w-full">
           <SmallBtn active={!vm.isMuted} danger={vm.isMuted} onClick={vm.toggleMute} title={t(vm.isMuted ? 'voice.controls.unmute' : 'voice.controls.mute')}>

@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import Card from '@/components/ui/layout/Card';
@@ -26,7 +27,7 @@ export default function StarterPackCard({
   const { pack, already, remaining, faces, overflow } = row;
   return (
     <Card as="section" data-testid="starter-pack">
-      <div className="flex items-start gap-3">
+      <Row gap="3" align="start">
         <div className="min-w-0 flex-1">
           <Heading as="h3" variant="panel" className="truncate">{pack.title}</Heading>
           {pack.description && (
@@ -51,7 +52,7 @@ export default function StarterPackCard({
               ? t('social.packAllFollowed')
               : `${t('mobile.profile.follow')} ${remaining}`}
         </Button>
-      </div>
+      </Row>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {faces.map((member) => (

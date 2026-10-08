@@ -19,6 +19,7 @@
  *    scrolling.
  */
 
+import Stack from '@/components/ui/layout/Stack';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
@@ -81,14 +82,14 @@ export default function FeedList({
 
   if (notes.length === 0) {
     return (
-      <div className="flex min-h-48 flex-col items-center justify-center gap-3 px-6 text-center" data-testid="feed-empty">
+      <Stack gap="3" align="center" className="min-h-48 justify-center px-6 text-center" data-testid="feed-empty">
         <Text as="p" variant="muted" className="max-w-xs">
           {error ? t('social.loadFailed') : emptyLabel ?? t('social.profileFeed.empty')}
         </Text>
         <Button variant="pillSecondary" size="xs" onClick={state.refresh}>
           {t('social.refresh')}
         </Button>
-      </div>
+      </Stack>
     );
   }
 

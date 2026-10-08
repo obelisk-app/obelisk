@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import { useTranslations } from 'next-intl';
 import { CALL_RELAY_MAX } from '@/services/preferences/preferences';
 import { CloseIcon } from '@/assets/icons';
@@ -19,7 +20,7 @@ export default function CallRelayEditor({
   return (
     <>
       {vm.draft.map((relay, i) => (
-        <div key={i} className="flex items-center gap-2">
+        <Row key={i} gap="2" align="center">
           <Input
             value={relay}
             onChange={(e) => vm.change(i, e.target.value)}
@@ -45,7 +46,7 @@ export default function CallRelayEditor({
           >
             <CloseIcon size={14} />
           </Button>
-        </div>
+        </Row>
       ))}
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="pillSecondary" size="xs" onClick={vm.add} disabled={vm.draft.length >= CALL_RELAY_MAX}>

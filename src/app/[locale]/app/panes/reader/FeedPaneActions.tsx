@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import { type FeedPaneMode } from '@/utils/shell/desktop/feed-pane';
 import { useTranslations } from 'next-intl';
 import { PaneIconButton } from './PaneIconButton';
@@ -35,7 +36,7 @@ export function FeedPaneActions({
   return (
     <>
       <div className="mx-1 h-5 w-px shrink-0 bg-lc-border" aria-hidden="true" />
-      <div className="flex items-center gap-0.5" data-testid="feed-pane-actions">
+      <Row gap="0.5" align="center" data-testid="feed-pane-actions">
         {mode === 'split' ? (
           <PaneIconButton
             label={t('social.expandFeed')}
@@ -52,7 +53,7 @@ export function FeedPaneActions({
           />
         ) : null}
         <PaneIconButton label={t('common.close')} testId="feed-pane-close" onClick={onClose} icon={CloseIcon} />
-      </div>
+      </Row>
     </>
   );
 }

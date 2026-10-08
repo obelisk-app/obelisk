@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import type { StageAreaModel } from '@/hooks/voice/room/useStageArea';
 import VideoTile from './VideoTile';
 import AudioTile from './AudioTile';
@@ -8,7 +9,7 @@ import AudioChip from './AudioChip';
 /** No stage: the cameras in a grid over a strip of audio chips, or the audio-only people in a grid of their own. */
 export default function ParticipantGrid({ vm }: { vm: StageAreaModel }) {
   return (
-    <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+    <Stack gap="3" className="flex-1 min-h-0 overflow-hidden">
       {vm.videoPubkeys.length > 0 && (
         <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center" data-testid="video-grid">
           {vm.videoPubkeys.length === 1 ? (
@@ -69,6 +70,6 @@ export default function ParticipantGrid({ vm }: { vm: StageAreaModel }) {
           ))}
         </div>
       )}
-    </div>
+    </Stack>
   );
 }

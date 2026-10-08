@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import { useMembershipReady } from '@/services/nostr-bridge';
 import MemberList from '@/components/chat/members/MemberList';
 import { useTranslations } from 'next-intl';
@@ -16,13 +17,13 @@ export function MembersPanel({ groupId }: { groupId: string }) {
       {ready ? (
         <MemberList groupId={groupId} />
       ) : (
-        <div
-          className="w-60 h-full bg-lc-dark border-l border-lc-border flex flex-col items-center justify-center gap-3 text-sm text-lc-muted"
+        <Stack
+          gap="3" align="center" className="w-60 h-full bg-lc-dark border-l border-lc-border justify-center text-sm text-lc-muted"
           data-testid="members-loading"
         >
           <div className="lc-spinner" aria-hidden="true" />
           <div>{t('shell.desktop.members.loading')}</div>
-        </div>
+        </Stack>
       )}
     </>
   );

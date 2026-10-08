@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { shortHost } from '@/utils/relay-url/url-host';
 import Modal from '@/components/ui/overlays/Modal';
@@ -42,7 +43,7 @@ export function ManageLayoutModal({
           {/* Add category */}
           <section className="space-y-2">
             <div className="text-xs font-bold uppercase tracking-wider text-lc-muted">{t('mobile.layout.newCategory')}</div>
-            <div className="flex gap-2">
+            <Row gap="2" align="stretch">
               <Input
                 value={vm.newCategoryName}
                 onChange={(e) => vm.setNewCategoryName(e.target.value)}
@@ -54,7 +55,7 @@ export function ManageLayoutModal({
               <Button onClick={vm.addCategory} disabled={!vm.canAddCategory} className="shrink-0">
                 {t('shell.rail.addModal.add')}
               </Button>
-            </div>
+            </Row>
           </section>
 
           {/* Categories list */}

@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import { useTranslations } from 'next-intl';
 import { useCreateGroupSection } from '@/hooks/shell/panes/sidebar/useCreateGroupSection';
 import Form from '@/components/ui/forms/Form';
@@ -29,7 +30,7 @@ export function CreateGroupSection({ count, onCreated }: { count: number; onCrea
       </div>
       {open && (
         <Form form={form} className="mb-1 flex flex-col gap-1 px-3 pb-1">
-          <div className="flex items-center gap-1">
+          <Row gap="1" align="center">
             <Input
               size="xs"
               autoFocus
@@ -48,7 +49,7 @@ export function CreateGroupSection({ count, onCreated }: { count: number; onCrea
             >
               {form.submitting ? '…' : t('shell.channel.create.submitShort')}
             </Button>
-          </div>
+          </Row>
           <FormError>{form.error}</FormError>
         </Form>
       )}

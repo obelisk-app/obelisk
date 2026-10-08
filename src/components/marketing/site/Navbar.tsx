@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import ObeliskIcon from '@/assets/brand/ObeliskIcon';
@@ -60,7 +61,7 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-3">
+          <Row gap="3" align="center">
             <LanguageToggle />
             {vm.account ? (
               <>
@@ -85,7 +86,7 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
                 {t('marketing.nav.launchApp')}
               </Button>
             )}
-          </div>
+          </Row>
         </div>
       </nav>
 

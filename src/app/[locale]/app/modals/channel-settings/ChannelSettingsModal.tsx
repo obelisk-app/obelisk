@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import { useId } from 'react';
 import { type JsGroup } from '@/services/nostr-bridge';
 import Modal from '@/components/ui/overlays/Modal';
@@ -148,7 +149,7 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                     </Text>
                     <div>
                       <Label variant="field" htmlFor={sfuUrlId}>{t('shell.desktop.sfu.url')}</Label>
-                      <div className="flex gap-2">
+                      <Row gap="2" align="stretch">
                         <Input
                           id={sfuUrlId}
                           size="sm"
@@ -168,7 +169,7 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                         >
                           {sfu.checking ? t('shell.desktop.sfu.checking') : t('shell.desktop.sfu.verify')}
                         </Button>
-                      </div>
+                      </Row>
                     </div>
                     {sfu.verified && (
                       <div className="rounded-md border border-lc-green/30 bg-lc-green/5 p-2 text-[11px] text-lc-muted">

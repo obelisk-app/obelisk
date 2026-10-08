@@ -6,6 +6,7 @@
  * absolutely or in a flex column footer. State and toggles come from
  * `useVoiceControls`; the quality popover's open flag is local.
  */
+import Stack from '@/components/ui/layout/Stack';
 import Button from '@/components/ui/buttons/Button';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -27,7 +28,7 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
   const [qualityOpen, setQualityOpen] = useState(false);
 
   return (
-    <div className="flex flex-col items-center gap-2 pointer-events-none" data-testid="voice-controls">
+    <Stack gap="2" align="center" className="pointer-events-none" data-testid="voice-controls">
       {vm.error && (
         <div
           className="pointer-events-auto text-xs text-red-200 bg-red-600/30 backdrop-blur-md border border-red-500/30 px-3 py-1.5 rounded-full shadow-lg"
@@ -126,6 +127,6 @@ export default function VoiceControls({ onLeave, isChatOpen, onToggleChat }: Voi
           <PhoneOffIcon size={18} strokeWidth={2} />
         </Button>
       </div>
-    </div>
+    </Stack>
   );
 }

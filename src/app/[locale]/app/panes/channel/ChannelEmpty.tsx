@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import type { ChannelEmptyStage } from '@/utils/chat/timeline/channel-list-state';
@@ -18,10 +19,10 @@ export function ChannelEmpty({ groupId, group, stage }: {
         data-testid="messages-loading"
         data-stage={stage === 'loading-info' ? 'channel-info' : 'messages'}
       >
-        <div className="flex flex-col items-center gap-3">
+        <Stack gap="3" align="center">
           <div className="lc-spinner" aria-hidden="true" />
           <div>{stage === 'loading-info' ? t('shell.desktop.channel.loadingInfo') : t('shell.desktop.channel.loadingMessages')}</div>
-        </div>
+        </Stack>
       </div>
     );
   }

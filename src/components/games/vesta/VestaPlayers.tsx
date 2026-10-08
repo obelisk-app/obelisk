@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import type { GameState } from 'vesta';
 import { VESTA_PLAYER_COLORS } from '@/constants/games/vesta';
 import type { VestaTurn } from '@/hooks/games/vesta/useVestaTurn';
@@ -25,12 +26,12 @@ export default function VestaPlayers({ state, mySeats, seatLabel, turn }: {
             className={`rounded-lg border p-2 ${tile.onMove ? 'border-lc-white' : 'border-lc-border'}`}
             data-testid={`vesta-player-${tile.index}`}
           >
-            <div className="flex items-center gap-1.5">
+            <Row gap="1.5" align="center">
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: VESTA_PLAYER_COLORS[tile.index] }} />
               <span className={`truncate text-[11px] ${tile.mine ? 'text-lc-white' : 'text-lc-muted'}`}>
                 {seatLabel(tile.seat)}
               </span>
-            </div>
+            </Row>
             <div className="mt-1 flex items-center justify-between text-[10px] text-lc-muted">
               <span>{t('games.score.vp', { count: tile.vp })}</span>
               <span>{tile.cards}</span>

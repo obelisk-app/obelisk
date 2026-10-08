@@ -13,6 +13,7 @@
  * Tiles morph from rounded-square to circle on hover.
  */
 
+import Stack from '@/components/ui/layout/Stack';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { useServerRail } from '@/hooks/shell/rail/useServerRail';
@@ -37,7 +38,7 @@ export default function ServerRail({
   const vm = useServerRail(mode);
 
   return (
-    <div className="flex w-[72px] shrink-0 flex-col items-center gap-2 py-3">
+    <Stack gap="2" align="center" className="w-[72px] shrink-0 py-3">
       <RailTile
         active={mode.kind === 'dm'}
         title={t('shell.rail.directMessages')}
@@ -96,6 +97,6 @@ export default function ServerRail({
       </Button>
 
       {vm.adding && <AddRelayModal onClose={vm.closeAdd} />}
-    </div>
+    </Stack>
   );
 }

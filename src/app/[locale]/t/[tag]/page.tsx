@@ -8,6 +8,7 @@
  * content.
  */
 
+import Row from '@/components/ui/layout/Row';
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
@@ -72,11 +73,11 @@ export default async function HashtagPage({ params }: Params) {
   return (
     <HashtagShell>
       <div className="px-5 pb-4 pt-6">
-        <div className="flex items-center gap-3">
+        <Row gap="3" align="center">
           <Heading as="h1" className="min-w-0 truncate text-2xl font-extrabold">#{clean}</Heading>
           {/* NIP-51 kind 10015, so the follow is portable to other clients. */}
           <FollowTagButton tag={clean} />
-        </div>
+        </Row>
         <Text as="p" variant="caption" className="mt-1">
           {notes.length > 0 ? t('social.tagPage.recent', { count: notes.length }) : t('social.tagPage.none')}
         </Text>

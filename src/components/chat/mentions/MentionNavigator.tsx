@@ -18,6 +18,7 @@
  * `ring-1 ring-lc-green` flash on the focused row.
  */
 
+import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import { useMentionNavigation } from '@/hooks/chat/mentions/useMentionNavigation';
@@ -40,7 +41,7 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
   if (!hasHighlights && !showJumpToLatest) return null;
 
   return (
-    <div className="pointer-events-none absolute bottom-3 right-3 z-30 flex flex-col items-end gap-2">
+    <Stack gap="2" align="end" className="pointer-events-none absolute bottom-3 right-3 z-30">
       {hasHighlights && (
         <div
           className="pointer-events-auto flex items-center gap-1 rounded-full border border-lc-border bg-lc-dark/90 px-2 py-1 text-xs text-lc-white shadow-lg backdrop-blur"
@@ -86,6 +87,6 @@ export default function MentionNavigator({ scrollRef, eventIds }: MentionNavigat
           <ChevronDownIcon strokeWidth={2.5} />
         </IconButton>
       )}
-    </div>
+    </Stack>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';
 import { FileIcon, LockIcon, TrashIcon } from '@/assets/icons';
 import Spinner from '@/components/ui/feedback/Spinner';
@@ -36,10 +37,10 @@ export function DmPendingFiles({
           ) : f.previewUrl && f.mime.startsWith('video/') ? (
             <video src={f.previewUrl} muted className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-1 text-lc-white">
+            <Stack gap="1" align="center" className="h-full w-full justify-center p-1 text-lc-white">
               <FileIcon size={18} />
               <span className="w-full truncate text-center text-[9px]">{f.name}</span>
-            </div>
+            </Stack>
           )}
           {!f.meta && !f.failed && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/55" role="status" aria-label={t('dm.file.uploading')}>

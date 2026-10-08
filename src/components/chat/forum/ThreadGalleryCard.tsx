@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import Button from '@/components/ui/buttons/Button';
 import type { JsForumTag, JsGroup } from '@/services/nostr-bridge';
 import { useLocale, useTranslations } from 'next-intl';
@@ -63,7 +64,7 @@ export function ThreadGalleryCard({
           </div>
         )}
       </div>
-      <div className="p-3 flex-1 flex flex-col gap-1.5">
+      <Stack gap="1.5" className="p-3 flex-1">
         <div className="text-sm font-semibold text-lc-white truncate">
           {thread.name || t('chat.forum.untitled')}
         </div>
@@ -74,7 +75,7 @@ export function ThreadGalleryCard({
             {t('chat.forum.messages', { count: messages.length })} · {relativeTime(lastMsg.createdAt, t, locale)}
           </span>
         </div>
-      </div>
+      </Stack>
     </Button>
   );
 }

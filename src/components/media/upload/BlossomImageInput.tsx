@@ -10,6 +10,7 @@
  * field stays usable.
  */
 
+import Row from '@/components/ui/layout/Row';
 import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import ErrorState from '@/components/ui/feedback/ErrorState';
@@ -61,7 +62,7 @@ export default function BlossomImageInput({
   return (
     <div>
       <Label variant="caps" htmlFor={urlId} className="block mb-1.5">{label}</Label>
-      <div className="flex items-center gap-3">
+      <Row gap="3" align="center">
         {showPreview && (value ? (
           <RemoteImage src={value} alt="" className={thumbCls} />
         ) : (
@@ -82,7 +83,7 @@ export default function BlossomImageInput({
             onChange={(e) => picked(e.target)}
           />
         </Label>
-      </div>
+      </Row>
       {error && <ErrorState className="mt-1.5">{error}</ErrorState>}
       {hint && <Text as="p" size="11" tone="muted" className="mt-1.5">{hint}</Text>}
     </div>

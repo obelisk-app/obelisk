@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import { useUserMetadata as useProfile } from '@/services/nostr-bridge';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { hexToNpub } from '@nostr-wot/data';
@@ -58,10 +59,10 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
     <div className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-lc-card">
       <Avatar pubkey={pubkey} size={7} picture={meta?.picture ?? null} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
+        <Row gap="1.5" align="center">
           <span className="truncate text-sm text-lc-white">{name}</span>
           <MemberRoleBadge isAdmin={isAdmin} />
-        </div>
+        </Row>
         <Button
           variant="bare"
           type="button"

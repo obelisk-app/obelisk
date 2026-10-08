@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import Modal from '@/components/ui/overlays/Modal';
 import Input from '@/components/ui/forms/Input';
 import type { GameSession } from '@/lib/games/session/session';
@@ -58,7 +59,7 @@ export default function StartTableModal({
         <ul className="space-y-2" data-testid="seat-list">
           {vm.rows.map(({ row, shared, chips, mode }, i) => (
             <li key={row.rowId} className="rounded-lg border border-lc-border p-2">
-              <div className="flex items-center gap-2">
+              <Row gap="2" align="center">
                 <span className="w-5 shrink-0 text-center text-[11px] text-lc-muted">{i + 1}</span>
                 <Input
                   variant="ghost"
@@ -91,7 +92,7 @@ export default function StartTableModal({
                     </Button>
                   )}
                 </div>
-              </div>
+              </Row>
 
               {/* Who signs for this seat */}
               <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-7">

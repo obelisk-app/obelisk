@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import { Link } from '@/i18n/navigation';
 import { useRouter } from '@/i18n/navigation';
 import Navbar from '@/components/marketing/site/Navbar';
@@ -72,7 +73,7 @@ export default function DesktopShowcase() {
             <Text as="p" variant="lead" className="mt-6 md:text-xl max-w-2xl mx-auto leading-relaxed">
               {t('showcase.desktop.hero.subtitle')}
             </Text>
-            <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
+            <Stack gap="3" className="mt-10 sm:flex-row justify-center">
               <Button
                 variant="pill"
                 size="lg"
@@ -86,7 +87,7 @@ export default function DesktopShowcase() {
               >
                 {t('showcase.desktop.hero.ctaSecondary')}
               </Link>
-            </div>
+            </Stack>
           </div>
         </section>
 

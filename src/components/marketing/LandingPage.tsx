@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import Navbar from './site/Navbar';
@@ -37,10 +38,10 @@ export default function LandingPage() {
   if (vm.isNavigating) {
     return (
       <div className="h-screen flex items-center justify-center bg-lc-black">
-        <div className="flex flex-col items-center gap-3">
+        <Stack gap="3" align="center">
           <div className="lc-spinner" style={{ width: 32, height: 32 }} />
           <span className="text-sm text-lc-muted">{t('common.loading')}</span>
-        </div>
+        </Stack>
       </div>
     );
   }

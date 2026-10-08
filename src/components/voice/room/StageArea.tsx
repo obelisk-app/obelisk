@@ -6,6 +6,7 @@
  * an audio strip. The rules deciding who is where are `stage-layout.ts`
  * and `stage-grid.ts`; this is their rendering.
  */
+import Stack from '@/components/ui/layout/Stack';
 import { useStageArea, type StageAreaInput } from '@/hooks/voice/room/useStageArea';
 import StageWithRail from './StageWithRail';
 import ParticipantGrid from './ParticipantGrid';
@@ -13,8 +14,8 @@ import ParticipantGrid from './ParticipantGrid';
 export function StageArea(props: StageAreaInput) {
   const vm = useStageArea(props);
   return (
-    <div className="relative z-10 flex-1 min-h-0 flex flex-col md:flex-row gap-2 sm:gap-3 p-2 sm:p-3 pb-24 sm:pb-28 overflow-hidden">
+    <Stack gap="2" className="relative z-10 flex-1 min-h-0 md:flex-row sm:gap-3 p-2 sm:p-3 pb-24 sm:pb-28 overflow-hidden">
       {vm.activeStage ? <StageWithRail vm={vm} stage={vm.activeStage} /> : <ParticipantGrid vm={vm} />}
-    </div>
+    </Stack>
   );
 }

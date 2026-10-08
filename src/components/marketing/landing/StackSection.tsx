@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import Reveal from '@/components/ui/animations/Reveal';
@@ -32,7 +33,7 @@ export default function StackSection() {
               rel="noopener noreferrer"
               className="lc-card p-5 group hover:border-lc-green/20 transition-colors"
             >
-              <div className="flex items-center gap-3">
+              <Row gap="3" align="center">
                 {tech.img ? (
                   <Image src={tech.img} alt={tech.name} width={40} height={40} className="w-10 h-10 rounded-lg shrink-0" />
                 ) : (
@@ -46,7 +47,7 @@ export default function StackSection() {
                   </Heading>
                   <Text as="p" variant="caption">{t(tech.descKey)}</Text>
                 </div>
-              </div>
+              </Row>
             </a>
           ))}
         </div>

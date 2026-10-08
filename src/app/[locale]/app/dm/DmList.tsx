@@ -6,6 +6,7 @@
  * NIP-02 follows to split Follows / Others.
  */
 
+import Row from '@/components/ui/layout/Row';
 import { useTranslations } from 'next-intl';
 import { useDmList } from '@/hooks/shell/dm/useDmList';
 import type { DmListTab } from '@/utils/shell/desktop/dm-list';
@@ -38,7 +39,7 @@ export default function DmList({
           two bottom borders form one line across the whole surface. */}
       <div className="flex h-[60px] shrink-0 items-center justify-between border-b border-lc-border px-4 shadow-sm" data-testid="dm-list-header">
         <Heading as="h3" variant="panel" className="truncate">{t('dm.title')}</Heading>
-        <div className="flex items-center gap-1">
+        <Row gap="1" align="center">
           <Button
             variant="ghost"
             size="icon"
@@ -60,7 +61,7 @@ export default function DmList({
           >
             <SearchIcon size={18} strokeWidth={2} />
           </Button>
-        </div>
+        </Row>
       </div>
 
       <DmUnlock className="shrink-0 border-b border-lc-border" />

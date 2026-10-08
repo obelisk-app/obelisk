@@ -1,3 +1,4 @@
+import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import { CloseIcon } from '@/assets/icons';
 import Input from '@/components/ui/forms/Input';
@@ -26,7 +27,7 @@ export default function SocialRelayRows({
   return (
     <div className="space-y-2">
       {draft.map((relay, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <Row key={index} gap="2" align="center">
           <RelayDot
             status={statuses[relayKey(relay)]}
             onRetry={() => void probeRelay(relay)}
@@ -56,7 +57,7 @@ export default function SocialRelayRows({
           >
             <CloseIcon size={14} />
           </Button>
-        </div>
+        </Row>
       ))}
     </div>
   );

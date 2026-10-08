@@ -1,5 +1,6 @@
 'use client';
 
+import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';
 import type { BotProfiles, SlashCommand, SlashCommandSection } from '@/utils/chat/slash/slash-commands';
 import { useSlashCommandAutocomplete } from '@/hooks/chat/slash/useSlashCommandAutocomplete';
@@ -36,9 +37,9 @@ export default function SlashCommandAutocomplete({
       data-testid="slash-autocomplete"
     >
       {showRail && (
-        <div className="flex shrink-0 flex-col items-center gap-2 overflow-y-auto overscroll-contain border-r border-lc-border bg-lc-black/40 p-2" data-testid="slash-rail">
+        <Stack gap="2" align="center" className="shrink-0 overflow-y-auto overscroll-contain border-r border-lc-border bg-lc-black/40 p-2" data-testid="slash-rail">
           {railItems.map((item) => <SlashRailItem key={item.section.key} item={item} botProfiles={botProfiles} onFilter={setFilter} />)}
-        </div>
+        </Stack>
       )}
       <div className="min-w-0 flex-1 overflow-y-auto overscroll-contain [contain:content]">
         {sections.length === 0 && (

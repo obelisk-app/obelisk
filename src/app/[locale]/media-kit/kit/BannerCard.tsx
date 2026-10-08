@@ -1,5 +1,6 @@
 'use client';
 
+import Row from '@/components/ui/layout/Row';
 import { useRef } from 'react';
 import { DownloadPngButton } from './DownloadPngButton';
 
@@ -27,14 +28,14 @@ export function BannerCard({
         <span>
           <span className="text-lc-white font-semibold">{title}</span> · {spec}
         </span>
-        <div className="flex items-center gap-2">
+        <Row gap="2" align="center">
           {extra}
           <DownloadPngButton
             targetRef={ref}
             filename={filename}
             pixelWidth={pixelWidth}
           />
-        </div>
+        </Row>
       </div>
     </div>
   );

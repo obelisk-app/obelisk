@@ -23,6 +23,7 @@
  * rank it against the page instead.
  */
 
+import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
@@ -107,7 +108,7 @@ export default function RelayStatusPill({
                 {t('social.thisRelay')}
               </Text>
               <div className="px-2.5 py-1.5" data-testid="relay-status-active" data-access={vm.access}>
-                <div className="flex items-center gap-2">
+                <Row gap="2" align="center">
                   <span
                     className={`h-2 w-2 shrink-0 rounded-full ${accessDotClass(vm.access)}`}
                     aria-hidden="true"
@@ -116,7 +117,7 @@ export default function RelayStatusPill({
                     {shortHost(activeRelay)}
                   </span>
                   <span className="shrink-0 text-[10px] text-lc-muted" data-testid="relay-status-connection">{vm.connectionLabel}</span>
-                </div>
+                </Row>
                 {/* AUTH is the difference between "connected" and "can read
                     this relay's groups": a relay can be up and still hand
                     back nothing until the challenge is answered. */}
