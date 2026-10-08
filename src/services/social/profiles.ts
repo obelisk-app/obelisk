@@ -22,6 +22,7 @@
  * filter.
  */
 
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
 import { chunkItems } from '@/utils/common/arrays';
 import { createKeyedObservable, getProfileAggregators, parseKind0 } from '@nostr-wot/data';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -58,7 +59,31 @@ const store = createKeyedObservable<string, SocialProfile>({
   equal: (a, b) => a.fetchedAt === b.fetchedAt,
 });
 
-const inFlight = new Set<string>();
+const inFlight = new Map<string, number>();
+const subscribers = new Map<string, number>();
+let generation = 0;
+let cachedEntries = 0;
+let seedFromPersistence = true;
+
+function remember(profile: SocialProfile): void {
+  if (!store.get(profile.pubkey).value) cachedEntries++;
+  store.set(profile.pubkey, profile);
+}
+
+registerRuntimeCache({
+  id: 'social-profiles', category: 'profiles', scope: 'public', sensitive: false,
+  inspect: () => ({ entries: cachedEntries, pending: inFlight.size }),
+  invalidate: (reason) => {
+    generation++;
+    inFlight.clear();
+    cachedEntries = 0;
+    // Notifications may synchronously read again before category removal deletes disk entries.
+    // A manual clear also promises a fresh lookup, rather than reseeding yesterday's profile.
+    seedFromPersistence = false;
+    store.clear();
+    if (reason === 'manual') void ensureSocialProfiles([...subscribers.keys()]);
+  },
+});
 
 function fromEvent(event: NostrEvent): SocialProfile {
   // `parseKind0` handles the display_name/displayName split and the fact that
@@ -95,9 +120,9 @@ function isFresh(profile: SocialProfile | null): boolean {
 export function getSocialProfile(pubkey: string): SocialProfile | null {
   const known = store.get(pubkey).value;
   if (known) return known;
-  const cached = readCache(pubkey);
+  const cached = seedFromPersistence ? readCache(pubkey) : null;
   if (cached) {
-    store.set(pubkey, cached);
+    remember(cached);
     return cached;
   }
   return null;
@@ -115,7 +140,8 @@ export async function ensureSocialProfiles(pubkeys: readonly string[]): Promise<
   });
   if (wanted.length === 0) return;
 
-  wanted.forEach((pubkey) => inFlight.add(pubkey));
+  const owner = generation;
+  wanted.forEach((pubkey) => inFlight.set(pubkey, owner));
   // Aggregators exist precisely for kind-0 lookup, so ask them alongside the
   // user's own relays rather than instead of them.
   const relays = [...new Set([...socialRelays(), ...getProfileAggregators()])];
@@ -123,6 +149,7 @@ export async function ensureSocialProfiles(pubkeys: readonly string[]): Promise<
   try {
     await Promise.all(chunkItems(wanted, AUTHORS_PER_QUERY).map(async (authors) => {
       const events = await querySocial([{ kinds: [KIND_METADATA], authors }], { relays });
+      if (owner !== generation) return;
       // Newest kind 0 wins; a pubkey legitimately has several in flight.
       const newest = new Map<string, NostrEvent>();
       for (const event of events) {
@@ -130,16 +157,19 @@ export async function ensureSocialProfiles(pubkeys: readonly string[]): Promise<
         if (!existing || event.created_at > existing.created_at) newest.set(event.pubkey, event);
       }
       for (const event of newest.values()) {
+        if (owner !== generation) return;
         const profile = fromEvent(event);
-        store.set(profile.pubkey, profile);
-        writeCache(profile);
+        remember(profile);
+        if (owner === generation) writeCache(profile);
       }
     }));
   } catch {
     // A name is decoration: a failed lookup should leave the npub fallback
     // in place, not break the row.
   } finally {
-    wanted.forEach((pubkey) => inFlight.delete(pubkey));
+    wanted.forEach((pubkey) => {
+      if (inFlight.get(pubkey) === owner) inFlight.delete(pubkey);
+    });
   }
 }
 
@@ -148,11 +178,25 @@ export async function ensureSocialProfiles(pubkeys: readonly string[]): Promise<
  * unsubscribe. The React side is `useSocialProfile` in `src/hooks/social/`.
  */
 export function subscribeSocialProfile(pubkey: string, onChange: (profile: SocialProfile | null) => void): () => void {
-  return store.subscribe(pubkey, (slot) => onChange(slot.value ?? null));
+  subscribers.set(pubkey, (subscribers.get(pubkey) ?? 0) + 1);
+  const unsubscribe = store.subscribe(pubkey, (slot) => onChange(slot.value ?? null));
+  let active = true;
+  return () => {
+    if (!active) return;
+    active = false;
+    unsubscribe();
+    const remaining = (subscribers.get(pubkey) ?? 1) - 1;
+    if (remaining > 0) subscribers.set(pubkey, remaining);
+    else subscribers.delete(pubkey);
+  };
 }
 
 /** Test helper. */
 export function _resetSocialProfiles(): void {
+  generation++;
   store._reset();
   inFlight.clear();
+  subscribers.clear();
+  cachedEntries = 0;
+  seedFromPersistence = true;
 }

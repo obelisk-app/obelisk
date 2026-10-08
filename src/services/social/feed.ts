@@ -6,6 +6,8 @@
  * unit-testable without a DOM. The hooks live in `useFeed.ts`.
  */
 
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
+import { socialRelayKey } from '@/utils/social/relays';
 import { chunkItems } from '@/utils/common/arrays';
 import { findReplyParentId, findRootEventId, relaysForAuthor } from '@nostr-wot/data';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
@@ -156,28 +158,37 @@ export async function loadFollowingFeed(
 /**
  * Where a specific author's notes actually live (outbox model).
  *
- * Cached per pubkey for the session: a profile feed pages, and re-resolving
+ * Cached per pubkey and fallback relay set for the account: a profile feed pages, and re-resolving
  * NIP-65 on every page would cost a round trip per scroll.
  */
 const authorRelayCache = new Map<string, Promise<string[]>>();
+const AUTHOR_RELAY_CACHE_LIMIT = 500;
 
 export function authorOutboxRelays(
   pubkey: string,
   fallback: readonly string[],
 ): Promise<string[]> {
-  const cached = authorRelayCache.get(pubkey);
+  const key = `${pubkey}|${socialRelayKey(fallback)}`;
+  const cached = authorRelayCache.get(key);
   if (cached) return cached;
   // `relaysForAuthor` unions the author's kind-10002 *write* relays with the
   // defaults it's given, and falls back to them when there's no relay list.
   const promise = relaysForAuthor(pubkey, [...fallback]).catch(() => [...fallback]);
-  authorRelayCache.set(pubkey, promise);
+  if (authorRelayCache.size >= AUTHOR_RELAY_CACHE_LIMIT) authorRelayCache.delete(authorRelayCache.keys().next().value!);
+  authorRelayCache.set(key, promise);
   return promise;
 }
 
-/** Test helper; the cache is session-scoped by design. */
+/** Retire memoized routing when the account changes. */
 export function _resetAuthorRelayCache(): void {
   authorRelayCache.clear();
 }
+
+registerRuntimeCache({
+  id: 'social-author-relays', category: 'profiles', scope: 'account', sensitive: true,
+  inspect: () => ({ entries: authorRelayCache.size }),
+  invalidate: _resetAuthorRelayCache,
+});
 
 /**
  * One author's notes, read from where that author publishes.

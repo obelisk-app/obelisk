@@ -27,3 +27,6 @@ export const FEED_CACHE_VERSION = 'v2';
 export const FOLLOWING_FEED_ID = `feed:${FEED_CACHE_VERSION}:following` as FeedCacheId;
 
 export const GLOBAL_FEED_ID = `feed:${FEED_CACHE_VERSION}:global` as FeedCacheId;
+
+/** Bound resolved reply/reference previews, including negative results. */
+export const NOTE_PREVIEW_CACHE_LIMIT = 500;

@@ -1,3 +1,4 @@
+import { invalidateRuntimeCaches } from '@/services/local-data/runtime-caches';
 import { useChatStore } from '@/store/chat';
 import { useReadStateStore } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
@@ -23,6 +24,9 @@ export function registerClientResetHook(fn: () => void): () => void {
   resetHooks.add(fn);
   return () => resetHooks.delete(fn);
 }
+
+// Keep the registry lightweight: only the already-loaded account lifecycle wires this hook.
+registerClientResetHook(() => { invalidateRuntimeCaches({ scope: 'account' }, 'account-change'); });
 
 // Clears all per-identity client state. Called from `BridgeImpl.logout()`
 // so the next user never sees the previous account's servers, channels,

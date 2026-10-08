@@ -442,6 +442,18 @@ sessionStorage, deletes the vault and DM store databases, the offline
 caches and the service worker registration, forgets the Analytics answer, expires the
 language and analytics cookies, and reloads.
 
+### Runtime cache controls
+
+`services/local-data/runtime-caches.ts` is the management entrypoint for disposable in-memory caches. Owners register when their feature loads, supplying an id, local-data category, public/account scope, sensitivity, optional entry/pending counts, and synchronous invalidation. `inspectRuntimeCaches()` exposes only that metadata and counts, never cached keys, contents, account identities or credentials. Inspection does not initialize features, open relays or read storage.
+
+`invalidateRuntimeCaches({ categories, scope }, reason)` targets loaded owners and reports cleared/failed ids; one failed owner does not stop the others. The default reason is `manual`; removals pass `storage-removal`, and account lifecycle teardown passes `account-change` through the existing client-reset hook. Public caches may survive account changes. Category removal invalidates both scopes after fencing storage writes, then follows its existing reload/logout policy. Error-panel recovery uses the same category fence during its delay before reload.
+
+Registered owners are `decrypt-memo` (account-scoped plaintext), `game-cache-writer` (pending game persistence), `social-feed-writes`, `social-author-relays`, and `social-note-previews` (account-scoped reading activity), plus public `social-profiles`, `nip05-verification`, `pq-attestations`, `verified-reposts`, and `relay-info-requests`. Repost verification owns a bounded synchronous memo; relay-info registration cancels only pending requests, leaving its persisted NIP-11 documents to the existing category removal contract. Profile verification and attestations belong to the profiles category; feed previews/writers and game writes belong to channels; decrypted signer results belong to DMs. `gif-presentation` is account-scoped under channels; `wot-verdicts` is account-scoped under profiles and clears verdicts without resetting identity, moderation policy or listeners. The immediate session-generation decrypt invalidation remains in place as a security boundary, independently of later account teardown.
+
+Social profiles clear their SDK observable with subscriber-preserving `clear()`, retire old network generations, and stop seeding from persisted values until reload. Manual invalidation refetches currently subscribed authors, including those whose first request is still pending. Storage removal skips that refetch before reload.
+
+Each owner remains responsible for its cache policy and async lifetime: cancel queued writes, advance its generation, prevent old promises from refilling cleared entries, and preserve active subscribers. Registration does not turn live relay stores, subscriptions, read cursors, notification state, payment guards, encrypted DM databases or vault keys into disposable caches. Those retain their existing lifecycle and removal contracts. SDK RelayHub transport/query state stays SDK-owned; `dispose` and identity removal are not cache-clear operations. Server caches are outside this browser registry.
+
 ### Google Analytics only after consent
 
 Nothing from Google is in any page's HTML. `AnalyticsConsentRoot`

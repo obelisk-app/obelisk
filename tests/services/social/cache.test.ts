@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { invalidateRuntimeCaches } from '@/services/local-data/runtime-caches';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
   flushFeedCacheWrites,
@@ -26,6 +27,24 @@ beforeEach(() => {
 });
 
 describe('feed cache', () => {
+  it('cancels pending writes before account or category invalidation', () => {
+    vi.useFakeTimers();
+    try {
+      for (const filter of [{ scope: 'account' as const }, { categories: ['channels' as const] }]) {
+        writeFeedCache(RELAYS, GLOBAL_FEED_ID, [note('old-account', 100)]);
+        invalidateRuntimeCaches(filter);
+        vi.runAllTimers();
+        flushFeedCacheWrites();
+        expect(readFeedCache(RELAYS, GLOBAL_FEED_ID)).toEqual([]);
+      }
+      writeFeedCache(RELAYS, GLOBAL_FEED_ID, [note('new-account', 200)]);
+      vi.runAllTimers();
+      expect(readFeedCache(RELAYS, GLOBAL_FEED_ID).map((n) => n.id)).toEqual(['new-account']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('round-trips notes so a re-opened feed paints instantly', () => {
     // This is the whole point: before this, every mount started empty and
     // refetched from zero.

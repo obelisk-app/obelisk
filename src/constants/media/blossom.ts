@@ -3,6 +3,13 @@
  * here so every reader imports the one copy.
  */
 
+/** Public profile images, emoji and other recognizable media. */
+export const BLOSSOM_SERVERS = [
+  'https://blossom.primal.net',
+  'https://nostr.build',
+  'https://blossom.band',
+];
+
 /**
  * Servers for encrypted DM attachments, a separate list on purpose.
  *

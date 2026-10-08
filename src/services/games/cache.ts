@@ -29,7 +29,7 @@
 import { cacheGet, cacheSet, cacheDelete, getBridgeImpl } from '@/services/nostr-bridge';
 import { KIND_GAME } from '@/constants/nostr/nip-kinds';
 import { useGamesStore } from '@/store/games';
-import { registerClientResetHook } from '@/services/common/reset';
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
 import { setGameIngestListener } from './ingest';
 import type { GameOp, ParsedGameEvent } from '@/lib/games/protocol/protocol';
 import { GAME_CACHE_EVENT_LIMIT, GAME_CACHE_FLUSH_MS } from '@/constants/games/cache';
@@ -121,7 +121,10 @@ export function resetGameCacheWriter(): void {
 
 // A pending write names a relay and an account. Letting it survive the switch
 // would file the old account's tables under whatever relay came next.
-registerClientResetHook(resetGameCacheWriter);
+registerRuntimeCache({
+  id: 'game-cache-writer', category: 'channels', scope: 'account', sensitive: false,
+  inspect: () => ({ pending: dirty.size }), invalidate: resetGameCacheWriter,
+});
 
 const OPS: ReadonlySet<string> = new Set<GameOp>([
   'create', 'join', 'start', 'move', 'timeout', 'resign', 'cancel',

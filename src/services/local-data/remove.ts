@@ -9,8 +9,9 @@
  */
 import { categoryById } from './categories';
 import { deleteDatabases, removeCookies, removeOfflineFiles } from './browser-stores';
-import { clearWebStorage, keyMatcher, removeWebStorageKeys } from './web-storage';
+import { clearWebStorage, fenceWebStorageCategories, removeWebStorageKeys } from './web-storage';
 import { raiseWriteFence } from './write-fence';
+import { invalidateRuntimeCaches } from './runtime-caches';
 import type { LocalDataCategoryId } from '@/types/local-data/inventory';
 
 export interface RemovalEnv {
@@ -32,13 +33,6 @@ export interface RemovalEnv {
   readonly document?: Document;
 }
 
-function fence(categories: ReadonlyArray<LocalDataCategoryId>): void {
-  const local = keyMatcher('localStorage', categories);
-  const session = keyMatcher('sessionStorage', categories);
-  // Lifted by the reload; a category that does not reload keeps no stale writer.
-  raiseWriteFence((key) => local(key) || session(key));
-}
-
 async function quietly(step: () => Promise<unknown>): Promise<void> {
   try {
     await step();
@@ -49,6 +43,7 @@ async function quietly(step: () => Promise<unknown>): Promise<void> {
 export async function removeLocalDataCategory(id: LocalDataCategoryId, env: RemovalEnv): Promise<void> {
   const { after } = categoryById(id);
   if (after === 'none') {
+    invalidateRuntimeCaches({ categories: [id] }, 'storage-removal');
     if (id === 'offline') await removeOfflineFiles(env.caches, env.serviceWorker);
     if (id === 'analytics') env.forgetAnalytics?.();
     removeCookies([id], env.document);
@@ -56,11 +51,13 @@ export async function removeLocalDataCategory(id: LocalDataCategoryId, env: Remo
     return;
   }
   if (after === 'relocate') {
+    invalidateRuntimeCaches({ categories: [id] }, 'storage-removal');
     removeCookies([id], env.document);
     env.relocate();
     return;
   }
-  fence([id]);
+  fenceWebStorageCategories([id]);
+  invalidateRuntimeCaches({ categories: [id] }, 'storage-removal');
   if (after === 'logout') {
     await quietly(env.logout);
     removeWebStorageKeys([id]);
@@ -83,6 +80,7 @@ export async function removeLocalDataCategory(id: LocalDataCategoryId, env: Remo
 export async function removeEverything(env: RemovalEnv): Promise<void> {
   // Every key on this origin is the app's, so every write is fenced.
   raiseWriteFence(() => true);
+  invalidateRuntimeCaches({}, 'storage-removal');
   env.forgetAnalytics?.();
   await quietly(env.logout);
   clearWebStorage();

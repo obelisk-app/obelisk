@@ -1,7 +1,14 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BridgeImpl } from '@/services/nostr-bridge';
 import { updateSessionProfile } from '@/services/session/profile';
 import { profileFormValues } from '@/utils/chat/profile/profile-form-values';
+
+function descriptor(bytes: Uint8Array) {
+  const hash = bytesToHex(sha256(bytes));
+  return { url: `https://cdn.example/${hash}.png`, sha256: hash, size: bytes.byteLength, type: 'image/png', uploaded: 1_700_000_000 };
+}
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -31,12 +38,13 @@ describe('session profile action', () => {
   it('trims profile fields and uploads images before editing metadata', async () => {
     const { bridge, edit, sign } = setup();
     const uploading = vi.fn();
-    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ url: 'https://cdn.example/picture' }) });
+    const uploaded = descriptor(new Uint8Array([1]));
+    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => uploaded });
     vi.stubGlobal('fetch', fetch);
     const pictureFile = { type: 'image/png', arrayBuffer: async () => new Uint8Array([1]).buffer } as File;
     await updateSessionProfile(bridge, { ...profileFormValues(null), name: ' Alice ', about: ' About ', banner: ' https://cdn.example/banner ', pictureFile }, uploading);
     expect(sign).toHaveBeenCalledOnce();
-    expect(edit).toHaveBeenCalledWith(expect.objectContaining({ name: 'Alice', displayName: 'Alice', about: 'About', picture: 'https://cdn.example/picture', banner: 'https://cdn.example/banner' }), { assertCurrent: expect.any(Function) });
+    expect(edit).toHaveBeenCalledWith(expect.objectContaining({ name: 'Alice', displayName: 'Alice', about: 'About', picture: uploaded.url, banner: 'https://cdn.example/banner' }), { assertCurrent: expect.any(Function) });
     expect(uploading).toHaveBeenCalledWith('picture');
     expect(uploading).toHaveBeenLastCalledWith(null);
   });
@@ -69,10 +77,73 @@ describe('session profile action', () => {
     await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
     account.generation++;
     account.loggedIn = false;
-    response.resolve({ ok: true, json: async () => ({ url: 'https://cdn.example/avatar' }) } as Response);
+    response.resolve({ ok: true, json: async () => descriptor(new Uint8Array([1])) } as Response);
     expect(await result).toBe('AbortError');
     expect(edit).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledOnce();
     expect(uploading).toHaveBeenLastCalledWith(null);
   });
+
+  it('stops after an old account finishes signing, before uploading either image', async () => {
+    const { bridge, account, edit, sign } = setup();
+    const signed = deferred<Awaited<ReturnType<typeof sign>>>();
+    sign.mockImplementationOnce(() => signed.promise);
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    const file = { type: 'image/png', arrayBuffer: async () => new Uint8Array([1]).buffer } as File;
+    const uploading = vi.fn();
+    const pending = updateSessionProfile(bridge, { ...profileFormValues(null), name: 'Alice', pictureFile: file, bannerFile: file }, uploading);
+    const result = pending.catch((error: Error) => error.name);
+    await vi.waitFor(() => expect(sign).toHaveBeenCalledOnce());
+    const template = sign.mock.calls[0][0];
+    const oldPubkey = account.pubkey;
+    account.pubkey = 'c'.repeat(64);
+    account.generation++;
+    signed.resolve({ ...template, pubkey: oldPubkey, id: 'b'.repeat(64), sig: 'b'.repeat(128) });
+    expect(await result).toBe('AbortError');
+    expect(sign).toHaveBeenCalledOnce();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(edit).not.toHaveBeenCalled();
+    expect(uploading).not.toHaveBeenCalledWith('banner');
+    expect(uploading).toHaveBeenLastCalledWith(null);
+  });
+
+  it('does not fall back or start the banner when the account changes during a failed picture upload', async () => {
+    const { bridge, account, edit, sign } = setup();
+    const response = deferred<Response>();
+    const fetch = vi.fn(() => response.promise);
+    vi.stubGlobal('fetch', fetch);
+    const file = { type: 'image/png', arrayBuffer: async () => new Uint8Array([1]).buffer } as File;
+    const uploading = vi.fn();
+    const pending = updateSessionProfile(bridge, { ...profileFormValues(null), name: 'Alice', pictureFile: file, bannerFile: file }, uploading);
+    const result = pending.catch((error: Error) => error.name);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    account.pubkey = 'c'.repeat(64);
+    account.generation++;
+    response.resolve({ ok: false, status: 503, text: async () => 'Unavailable' } as Response);
+    expect(await result).toBe('AbortError');
+    expect(sign).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(edit).not.toHaveBeenCalled();
+    expect(uploading).not.toHaveBeenCalledWith('banner');
+    expect(uploading).toHaveBeenLastCalledWith(null);
+  });
+
+  it('rejects a descriptor resolved after a same-account session replacement', async () => {
+    const { bridge, account, edit } = setup();
+    const parsed = deferred<ReturnType<typeof descriptor>>();
+    const json = vi.fn(() => parsed.promise);
+    const fetch = vi.fn().mockResolvedValue({ ok: true, json });
+    vi.stubGlobal('fetch', fetch);
+    const file = { type: 'image/png', arrayBuffer: async () => new Uint8Array([1]).buffer } as File;
+    const pending = updateSessionProfile(bridge, { ...profileFormValues(null), name: 'Alice', pictureFile: file });
+    const result = pending.catch((error: Error) => error.name);
+    await vi.waitFor(() => expect(json).toHaveBeenCalledOnce());
+    account.generation++;
+    parsed.resolve(descriptor(new Uint8Array([1])));
+    expect(await result).toBe('AbortError');
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(edit).not.toHaveBeenCalled();
+  });
+
 });

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { nip05CacheSize, parseNip05, peekNip05, recordNip05Resolution, resetNip05Cache, verifyNip05 } from '@/services/identity/nip05-verify';
+import { nip05CacheSize, parseNip05, peekNip05, recordNip05Resolution, resetNip05Cache, subscribeNip05, verifyNip05 } from '@/services/identity/nip05-verify';
 import { NIP05_CACHE_MAX, NIP05_UNVERIFIED_TTL_MS, NIP05_VERIFIED_TTL_MS } from '@/constants/identity/nip05-verify';
 
 const PUBKEY = 'a'.repeat(64);
@@ -203,5 +203,29 @@ describe('peekNip05', () => {
   it('is unchecked without a pubkey or identifier', () => {
     expect(peekNip05(null, 'alice@example.com')).toBe('unchecked');
     expect(peekNip05(PUBKEY, null)).toBe('unchecked');
+  });
+});
+
+
+describe('cache invalidation', () => {
+  it('preserves subscribers and rejects stale completions without removing a newer request', async () => {
+    const { invalidateRuntimeCaches } = await import('@/services/local-data/runtime-caches');
+    const responses: Array<(value: Response) => void> = [];
+    fetchMock.mockImplementation(() => new Promise<Response>((resolve) => responses.push(resolve)));
+    const listener = vi.fn();
+    const unsubscribe = subscribeNip05(listener);
+    try {
+      const old = verifyNip05(PUBKEY, 'alice@example.com');
+      invalidateRuntimeCaches({ categories: ['profiles'] });
+      expect(peekNip05(PUBKEY, 'alice@example.com')).toBe('unchecked');
+      const current = verifyNip05(PUBKEY, 'alice@example.com');
+      responses[0](jsonResponse({ names: { alice: PUBKEY } }));
+      expect(await old).toBe('unchecked');
+      expect(peekNip05(PUBKEY, 'alice@example.com')).toBe('checking');
+      responses[1](jsonResponse({ names: { alice: PUBKEY } }));
+      expect(await current).toBe('verified');
+      expect(peekNip05(PUBKEY, 'alice@example.com')).toBe('verified');
+      expect(listener).toHaveBeenCalledTimes(4);
+    } finally { unsubscribe(); }
   });
 });

@@ -13,6 +13,7 @@
  *    it is common enough to matter.
  */
 
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { validateEvent, verifyEvent } from 'nostr-tools/pure';
 import { fetchNote } from '@nostr-wot/data';
@@ -57,6 +58,10 @@ export function repostInnerKind(note: Pick<NostrEvent, 'kind' | 'tags'>): number
  */
 const EMBED_CACHE_MAX = 1000;
 const verifiedEmbeds = new Map<string, NostrEvent | null>();
+registerRuntimeCache({
+  id: 'verified-reposts', category: 'channels', scope: 'public', sensitive: false,
+  inspect: () => ({ entries: verifiedEmbeds.size }), invalidate: () => verifiedEmbeds.clear(),
+});
 
 function parseVerifiedEmbed(raw: string): NostrEvent | null {
   const hit = verifiedEmbeds.get(raw);

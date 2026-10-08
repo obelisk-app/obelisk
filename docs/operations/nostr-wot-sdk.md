@@ -9,6 +9,7 @@ Obelisk consumes published npm packages from [nostr-wot/nostr-wot-sdk](https://g
 | `@nostr-wot/relay` | Relay URL parsing and explicit transport/public-host policies |
 | `@nostr-wot/relay/hub` | Relay connections, identities, authentication, subscriptions, queries and publishing |
 | `@nostr-wot/data` | Nostr identifiers, event collections, hashtags, profiles and event parsers |
+| `@nostr-wot/blossom` | Upload hashing, authorization, server fallback, descriptor validation and ephemeral encrypted-blob uploads |
 | `@nostr-wot/dm` | Gift wrapping, self-addressed envelopes and encrypted attachment payloads |
 | `@nostr-wot/wallet/nwc` | Transport-injected NIP-47 client, connection parsing and payment outcomes |
 | `@nostr-wot/ui` | Native login controls and their customization options |

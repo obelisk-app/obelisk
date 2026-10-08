@@ -16,6 +16,7 @@ vi.mock("@/store/chat/dm", () => ({
   useDMStore: { setState: (...args: unknown[]) => dmSetState(...args) },
 }));
 
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
 import { resetAllClientState, registerClientResetHook } from '@/services/common/reset';
 
 beforeEach(() => {
@@ -112,4 +113,19 @@ describe('registered teardown hooks', () => {
     resetAllClientState();
     expect(useGamesStore.getState().logs.g1).toBeUndefined();
   });
+});
+
+it('invalidates loaded account caches without clearing public caches', () => {
+  const account = vi.fn();
+  const publicCache = vi.fn();
+  const removeAccount = registerRuntimeCache({ id: 'account-test', category: 'channels', scope: 'account', sensitive: true, invalidate: account });
+  const removePublic = registerRuntimeCache({ id: 'public-test', category: 'channels', scope: 'public', sensitive: false, invalidate: publicCache });
+  try {
+    resetAllClientState();
+    expect(account).toHaveBeenCalledOnce();
+    expect(publicCache).not.toHaveBeenCalled();
+  } finally {
+    removeAccount();
+    removePublic();
+  }
 });

@@ -36,6 +36,7 @@
  * decrypted plaintext, so the cache is cleared on logout alongside the rest
  * of the per-identity state.
  */
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
 import { BoundedMap } from '@nostr-wot/relay/hub';
 
 /** Max distinct ciphertexts held. Bounds memory; wrap contents are ~1-3KB. */
@@ -101,3 +102,8 @@ export function clearDecryptCache(): void {
 
 /** @internal test hook */
 export const __INTERNAL = { MAX_ENTRIES, TTL_MS, size: () => entries.size };
+
+registerRuntimeCache({
+  id: 'decrypt-memo', category: 'dms', scope: 'account', sensitive: true,
+  inspect: () => ({ entries: entries.size }), invalidate: clearDecryptCache,
+});

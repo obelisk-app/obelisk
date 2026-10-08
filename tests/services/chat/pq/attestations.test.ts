@@ -143,3 +143,22 @@ describe('hasUsableKeys', () => {
     expect(await hasUsableKeys(PUBKEY)).toBe(false);
   });
 });
+
+
+it('does not let invalidated work populate the cache or remove a newer pending lookup', async () => {
+  const { invalidateRuntimeCaches } = await import('@/services/local-data/runtime-caches');
+  const responses: Array<(value: unknown[]) => void> = [];
+  querySync.mockImplementation(() => new Promise<unknown[]>((resolve) => responses.push(resolve)));
+  const old = getAttestation(PUBKEY);
+  invalidateRuntimeCaches({ categories: ['profiles'] });
+  const current = getAttestation(PUBKEY);
+  responses[0]([attestationEvent()]);
+  expect(await old).toBeNull();
+  const shared = getAttestation(PUBKEY);
+  expect(querySync).toHaveBeenCalledTimes(2);
+  responses[1]([]);
+  expect(await current).toBeNull();
+  expect(await shared).toBeNull();
+  expect(await getAttestation(PUBKEY)).toBeNull();
+  expect(querySync).toHaveBeenCalledTimes(2);
+});

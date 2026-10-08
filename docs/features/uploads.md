@@ -6,15 +6,16 @@ events.
 
 ## Upload flow
 
-`src/services/media/blossom.ts` implements the shared BUD-01 flow:
+`@nostr-wot/blossom` owns the upload protocol (BUD-02 uploads and BUD-11 authorization). `src/services/media/blossom.ts` selects Obelisk’s signer and server lists and passes account-lifecycle checks to the SDK:
 
 1. Hash the file with SHA-256.
 2. Sign a short-lived kind `24242` Blossom authorization event.
 3. `PUT` the bytes to the configured Blossom servers, trying each until one
    succeeds.
-4. Store the returned absolute HTTP(S) URL in the Nostr event.
+4. Validate the returned descriptor against the uploaded hash and size, including the hash in its URL path.
+5. Store the returned absolute HTTP(S) URL in the Nostr event.
 
-The signer is the active Nostr identity. There is no cookie session, API route,
+Public uploads use the active Nostr identity, or the generated key during signup. Account-bound profile uploads stop if their initiating session changes, including during signing or a server response. There is no cookie session, API route,
 Prisma model, SQL backfill, or site-relative `/uploads/...` URL.
 
 ## URL and privacy contract
@@ -31,8 +32,7 @@ of the selected Blossom server.
 
 ## Encrypted DM attachments
 
-DM files and voice notes do not use `uploadToBlossom`. `uploadEncryptedBlob`
-uploads AES-256-GCM **ciphertext** as `application/octet-stream` to its own
+DM files and voice notes use the SDK’s `uploadEncryptedBlob` through the same app adapter. It uploads AES-256-GCM **ciphertext** as `application/octet-stream` to its own
 server list (`ENCRYPTED_BLOSSOM_SERVERS`: nostr.download,
 blossom.yakihonne.com; the media hosts above sniff uploads and refuse bytes
 that aren't a recognisable image/video/audio, which ciphertext never is), signs the

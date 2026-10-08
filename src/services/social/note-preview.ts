@@ -15,6 +15,8 @@
  * The React side is `useNotePreview` in `src/hooks/social/`.
  */
 
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
+import { NOTE_PREVIEW_CACHE_LIMIT } from '@/constants/social/cache';
 import { fetchNote } from '@nostr-wot/data';
 
 export interface NotePreview {
@@ -27,14 +29,22 @@ export interface NotePreview {
 const cache = new Map<string, NotePreview | null>();
 const inflight = new Map<string, Promise<NotePreview | null>>();
 
-/** Exposed for tests; the app has no reason to drop this. */
+let generation = 0;
+
+/** Invalidate results and detach outstanding requests from the next account. */
 export function __resetNotePreviewCache(): void {
+  generation++;
   cache.clear();
   inflight.clear();
 }
 
 export function getCachedNotePreview(id: string): NotePreview | null | undefined {
-  return cache.get(id);
+  const value = cache.get(id);
+  if (value !== undefined) {
+    cache.delete(id);
+    cache.set(id, value);
+  }
+  return value;
 }
 
 /** Fetch (once, shared) the preview of `id`; a miss is cached as `null`. */
@@ -42,22 +52,36 @@ export async function loadNotePreview(id: string, relays?: readonly string[]): P
   const existing = inflight.get(id);
   if (existing) return existing;
 
+  const requestGeneration = generation;
   const promise = fetchNote(id, relays ? [...relays] : undefined)
     .then((entry) => {
       const preview = entry
         ? { id: entry.id, pubkey: entry.pubkey, content: entry.content }
         : null;
-      cache.set(id, preview);
+      if (generation !== requestGeneration) return null;
+      rememberPreview(id, preview);
       return preview;
     })
     .catch(() => {
       // A relay that refused is not proof the note is gone, but retrying on
       // every render would be worse. One attempt per session.
-      cache.set(id, null);
+      if (generation === requestGeneration) rememberPreview(id, null);
       return null;
     })
-    .finally(() => { inflight.delete(id); });
+    .finally(() => { if (inflight.get(id) === promise) inflight.delete(id); });
 
   inflight.set(id, promise);
   return promise;
 }
+
+function rememberPreview(id: string, preview: NotePreview | null): void {
+  cache.delete(id);
+  cache.set(id, preview);
+  while (cache.size > NOTE_PREVIEW_CACHE_LIMIT) cache.delete(cache.keys().next().value!);
+}
+
+registerRuntimeCache({
+  id: 'social-note-previews', category: 'channels', scope: 'account', sensitive: true,
+  inspect: () => ({ entries: cache.size, pending: inflight.size }),
+  invalidate: __resetNotePreviewCache,
+});

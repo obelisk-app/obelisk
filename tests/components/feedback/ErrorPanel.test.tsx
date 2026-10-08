@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ErrorPanel from '@/components/feedback/ErrorPanel';
+import { lowerAllWriteFences } from '@/services/local-data/write-fence';
 import { CodedError } from '@/utils/errors/codes';
 
 const reload = vi.fn();
@@ -17,6 +18,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Reload is mocked, so release the fence that a real navigation would discard.
+  lowerAllWriteFences();
   vi.restoreAllMocks();
   vi.useRealTimers();
 });

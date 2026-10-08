@@ -10,3 +10,5 @@ export { measureLocalData, measureWebStorage, type CategoryUsage, type LocalData
 export { keysIn, removeWebStorageKeys } from './web-storage';
 export { CACHE_CATEGORIES } from '@/constants/local-data/web-storage';
 export { raiseWriteFence, lowerAllWriteFences } from './write-fence';
+
+export { registerRuntimeCache, inspectRuntimeCaches, invalidateRuntimeCaches } from './runtime-caches';

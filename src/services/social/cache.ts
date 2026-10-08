@@ -13,6 +13,7 @@
  * "Clear cache" prefix sweep already covers them.
  */
 
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { cacheGet, cacheSet } from '@/services/nostr-bridge';
 import { KIND_TEXT_NOTE } from '@/constants/nostr/nip-kinds';
@@ -127,3 +128,16 @@ export function flushFeedCacheWrites(): void {
     cacheSet(relayKey, KIND_TEXT_NOTE, id, latest.map(toCached));
   }
 }
+
+/** Cancel queued writes before account replacement or persistent cache deletion. */
+function cancelFeedCacheWrites(): void {
+  for (const timer of timers.values()) clearTimeout(timer);
+  timers.clear();
+  pending.clear();
+}
+
+registerRuntimeCache({
+  id: 'social-feed-writes', category: 'channels', scope: 'account', sensitive: true,
+  inspect: () => ({ pending: pending.size }),
+  invalidate: cancelFeedCacheWrites,
+});

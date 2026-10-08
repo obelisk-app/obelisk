@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { inspectRuntimeCaches, invalidateRuntimeCaches } from '@/services/local-data/runtime-caches';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { finalizeEvent, getPublicKey } from 'nostr-tools/pure';
 
@@ -301,4 +302,15 @@ describe('dedupeReposts', () => {
     const notes = [ev({ id: 'a' }), ev({ id: 'b' })];
     expect(dedupeReposts(notes)).toHaveLength(2);
   });
+});
+
+it('clears verified embeds through the registry and still verifies the next read', () => {
+  invalidateRuntimeCaches({ categories: ['channels'], scope: 'public' });
+  const note = repostOf(signedNote('cache inspection'));
+  expect(embeddedRepostEvent(note)?.content).toBe('cache inspection');
+  expect(inspectRuntimeCaches().find((cache) => cache.id === 'verified-reposts')?.entries).toBe(1);
+  invalidateRuntimeCaches({ categories: ['channels'], scope: 'public' });
+  expect(inspectRuntimeCaches().find((cache) => cache.id === 'verified-reposts')?.entries).toBe(0);
+  expect(embeddedRepostEvent(note)?.content).toBe('cache inspection');
+  expect(embeddedRepostEvent({ ...note, content: JSON.stringify({ ...signedNote(), content: 'forged' }) })).toBeNull();
 });

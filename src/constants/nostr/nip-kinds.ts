@@ -115,7 +115,6 @@ export const KIND_NOSTR_CONNECT = 24133;
 export const KIND_NIP78_APP_DATA = 30078;
 
 /** BUD-01: Blossom auth event for media server uploads. */
-export const KIND_BLOSSOM_AUTH = 24242;
 
 /** NIP-98: HTTP auth event (used by backend challenge/response). */
 export const KIND_HTTP_AUTH = 27235;

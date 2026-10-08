@@ -1,3 +1,4 @@
+import { invalidateRuntimeCaches } from '@/services/local-data/runtime-caches';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 
@@ -38,6 +39,17 @@ beforeEach(() => {
 });
 
 describe('loadProfileFeed - outbox model', () => {
+  it('resolves again for a changed fallback set and after account invalidation', async () => {
+    await loadProfileFeed(AUTHOR, { relays: MINE });
+    const other = ['wss://other.example'];
+    await loadProfileFeed(AUTHOR, { relays: other });
+    expect(mocks.relaysForAuthor).toHaveBeenLastCalledWith(AUTHOR, other);
+    expect(mocks.relaysForAuthor).toHaveBeenCalledTimes(2);
+    invalidateRuntimeCaches({ scope: 'account' });
+    await loadProfileFeed(AUTHOR, { relays: other });
+    expect(mocks.relaysForAuthor).toHaveBeenCalledTimes(3);
+  });
+
   it('reads from where the author publishes, not just the reader’s relays', async () => {
     // The old path passed our relays straight to the SDK, whose signature is
     // `options.relays ?? relaysForAuthor(pubkey)`, so the outbox lookup

@@ -49,7 +49,7 @@ The DM bar is the channel bar (`DmComposer`), with one change: **every file and 
 
 1. `checkDmAttachment`: the channel's mime allowlist and size caps (`src/utils/attachments/attachments.ts`), on the base type (`MediaRecorder` reports `audio/webm;codecs=opus`).
 2. `encryptFile`: AES-256-GCM, fresh random key and 12-byte nonce per file.
-3. `uploadEncryptedBlob`: the **ciphertext** goes to Blossom as `application/octet-stream`, with a BUD-01 auth signed by a **throwaway key minted per upload** and bound to each server with a `server` tag. The server learns the blob's size and hash, not who stored it or what it is.
+3. The SDK’s `uploadEncryptedBlob`, called through the app’s media adapter: the **ciphertext** goes to Blossom as `application/octet-stream`, with a BUD-11 authorization signed by a **throwaway key minted per upload** and bound to each server with a `server` tag. The server learns the blob's size and hash, not who stored it or what it is.
 4. `sendDirectFile`: a kind-15 rumor whose content is the blob URL and whose tags carry `file-type`, `encryption-algorithm: aes-gcm`, `decryption-key`, `decryption-nonce` (hex), `x` (SHA-256 of the ciphertext), `ox`, `size`, `dim`, plus Obelisk's `name` and, for a voice note, `duration`. Sealed, wrapped and routed exactly like a kind 14, including the self-copy and the post-quantum seal.
 
 On receipt `parseDmFileRumor` drops anything we could not decrypt (another algorithm, a non-http URL, a missing key). `EncryptedDmAttachment` fetches the blob, checks `x`, decrypts in memory and shows it from an object URL that is revoked on unmount (images, video and voice notes on mount, other files only on click). Nothing decrypted is written to disk.

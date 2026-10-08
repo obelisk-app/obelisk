@@ -5,6 +5,7 @@
  * private window), and then there is simply nothing to list or remove.
  */
 import { LOCAL_DATA, entryMatches } from './inventory';
+import { raiseWriteFence } from './write-fence';
 import type { LocalDataCategoryId } from '@/types/local-data/inventory';
 
 type WebArea = 'localStorage' | 'sessionStorage';
@@ -81,4 +82,11 @@ export function clearWebStorage(): void {
       storageFor(area)?.clear();
     } catch { /* storage refused */ }
   }
+}
+
+/** Block category writers until reload so removals cannot be undone by stale memory. */
+export function fenceWebStorageCategories(categories: ReadonlyArray<LocalDataCategoryId>): () => void {
+  const local = keyMatcher('localStorage', categories);
+  const session = keyMatcher('sessionStorage', categories);
+  return raiseWriteFence((key) => local(key) || session(key));
 }

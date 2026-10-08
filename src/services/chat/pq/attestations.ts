@@ -1,5 +1,6 @@
 'use client';
 
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
 import { attestationFilter, parseAttestation, type PqAttestation } from '@nostr-wot/pq';
 import { getPool, getDefaultRelays } from '@nostr-wot/data';
 
@@ -11,6 +12,7 @@ const TTL_MS = 6 * 60 * 60 * 1000;
  *  rather than uncached so a persistently unreachable relay cannot be
  *  re-queried on every render. */
 const FAILURE_TTL_MS = 30 * 1000;
+const MAX_ENTRIES = 500;
 
 interface Entry {
   attestation: PqAttestation | null;
@@ -19,8 +21,10 @@ interface Entry {
 
 const cache = new Map<string, Entry>();
 const inflight = new Map<string, Promise<PqAttestation | null>>();
+let generation = 0;
 
 export function clearAttestationCache(): void {
+  generation++;
   cache.clear();
   inflight.clear();
 }
@@ -54,13 +58,17 @@ export async function getAttestation(pubkey: string): Promise<PqAttestation | nu
   const existing = inflight.get(pubkey);
   if (existing) return existing;
 
+  const started = generation;
   const promise = fetchAttestation(pubkey)
     .then((attestation) => {
+      if (started !== generation) return null;
+      cache.delete(pubkey);
+      if (cache.size >= MAX_ENTRIES) cache.delete(cache.keys().next().value!);
       cache.set(pubkey, { attestation, fetchedAt: Date.now() });
       return attestation;
     })
     .finally(() => {
-      inflight.delete(pubkey);
+      if (inflight.get(pubkey) === promise) inflight.delete(pubkey);
     });
 
   inflight.set(pubkey, promise);
@@ -72,3 +80,8 @@ export async function hasUsableKeys(pubkey: string): Promise<boolean> {
   const att = await getAttestation(pubkey);
   return att?.usable === true;
 }
+
+registerRuntimeCache({
+  id: 'pq-attestations', category: 'profiles', scope: 'public', sensitive: false,
+  inspect: () => ({ entries: cache.size, pending: inflight.size }), invalidate: clearAttestationCache,
+});

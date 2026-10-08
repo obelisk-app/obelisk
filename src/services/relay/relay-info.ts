@@ -6,6 +6,7 @@
  * results in localStorage to avoid re-hitting every page load.
  */
 
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
 import { nip19 } from 'nostr-tools';
 
 export type RelayInfo = {
@@ -70,7 +71,25 @@ export function faviconFor(wsUrl: string): string | null {
   }
 }
 
-const inflight = new Map<string, Promise<RelayInfo | null>>();
+const inflight = new Map<string, {
+  promise: Promise<RelayInfo | null>;
+  controller: AbortController;
+  timer: ReturnType<typeof setTimeout>;
+}>();
+let generation = 0;
+
+registerRuntimeCache({
+  id: 'relay-info-requests', category: 'channels', scope: 'public', sensitive: false,
+  inspect: () => ({ pending: inflight.size }),
+  invalidate: () => {
+    generation++;
+    for (const { controller, timer } of inflight.values()) {
+      clearTimeout(timer);
+      controller.abort();
+    }
+    inflight.clear();
+  },
+});
 
 export function operatorPubkeyFromRelayInfo(info: RelayInfo | null): string | null {
   if (info?.contact?.startsWith('npub1')) {
@@ -90,18 +109,22 @@ export async function fetchRelayInfo(wsUrl: string): Promise<RelayInfo | null> {
   if (cached && Date.now() - cached.fetchedAt < TTL_MS) return cached;
 
   const existing = inflight.get(wsUrl);
-  if (existing) return existing;
+  if (existing) return existing.promise;
 
-  const p = (async () => {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), FETCH_TIMEOUT_MS);
+  const owner = generation;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  // Schedule after registering so synchronous fetch failures cannot leave a stale request behind.
+  const promise = Promise.resolve().then(async () => {
     try {
+      if (owner !== generation) return null;
       const res = await fetch(toHttpUrl(wsUrl), {
         headers: { Accept: 'application/nostr+json' },
-        signal: ctl.signal,
+        signal: controller.signal,
       });
-      if (!res.ok) return null;
+      if (owner !== generation || controller.signal.aborted || !res.ok) return null;
       const json = (await res.json()) as { name?: string; description?: string; icon?: string; pubkey?: string; contact?: string; supported_nips?: unknown };
+      if (owner !== generation || controller.signal.aborted) return null;
       const info: RelayInfo = {
         name: typeof json.name === 'string' ? json.name : undefined,
         description: typeof json.description === 'string' ? json.description : undefined,
@@ -115,18 +138,16 @@ export async function fetchRelayInfo(wsUrl: string): Promise<RelayInfo | null> {
           : undefined,
         fetchedAt: Date.now(),
       };
-      const next = cacheStore.load();
-      next[wsUrl] = info;
-      cacheStore.save(next);
+      cacheStore.save({ ...cacheStore.load(), [wsUrl]: info });
       return info;
     } catch {
       return null;
     } finally {
-      clearTimeout(t);
-      inflight.delete(wsUrl);
+      clearTimeout(timer);
+      if (inflight.get(wsUrl)?.controller === controller) inflight.delete(wsUrl);
     }
-  })();
+  });
 
-  inflight.set(wsUrl, p);
-  return p;
+  inflight.set(wsUrl, { promise, controller, timer });
+  return promise;
 }

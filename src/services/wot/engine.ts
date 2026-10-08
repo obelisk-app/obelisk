@@ -19,6 +19,7 @@
  * one-at-a-time lookup queue in `batch-queue.ts`.
  */
 
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
 import { wotBatch } from './extension';
 import { BatchQueue } from './batch-queue';
 import {
@@ -249,7 +250,8 @@ export class WotEngine {
     return { ...this.cache.counts(), pending: this.queue.size };
   }
 
-  private clearVerdicts(): void {
+  /** Drop cached decisions and queued work without changing policy or listeners. */
+  clearVerdicts(): void {
     this.cache.clear();
     // Drops the queue and disowns any batch already on the wire.
     this.queue.cancel();
@@ -284,6 +286,11 @@ export class WotEngine {
 }
 
 export const wotEngine = new WotEngine();
+registerRuntimeCache({
+  id: 'wot-verdicts', category: 'profiles', scope: 'account', sensitive: true,
+  inspect: () => { const stats = wotEngine.stats(); return { entries: stats.allow + stats.deny, pending: stats.pending }; },
+  invalidate: () => wotEngine.clearVerdicts(),
+});
 
 /** Convenience export: the function reference is stable across configs. */
 export function isAllowed(pubkey: string, kind?: number): boolean {

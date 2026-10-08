@@ -50,6 +50,7 @@
  * one request.
  */
 
+import { registerRuntimeCache } from '@/services/local-data/runtime-caches';
 import { NIP05_REGEX } from 'nostr-tools/nip05';
 import {
   NIP05_CACHE_MAX,
@@ -66,6 +67,7 @@ type Entry = { state: Settled; at: number };
 const cache = new Map<string, Entry>();
 const inflight = new Map<string, Promise<Nip05State>>();
 const listeners = new Set<() => void>();
+let generation = 0;
 
 const HEX64 = /^[0-9a-f]{64}$/i;
 
@@ -175,9 +177,11 @@ export function verifyNip05(pubkey: string, nip05: string): Promise<Nip05State> 
   const pending = inflight.get(key);
   if (pending) return pending;
 
+  const started = generation;
   const run = lookup(pubkey, parsed).then((state) => {
+    if (started !== generation) return 'unchecked';
     writeCache(key, state);
-    inflight.delete(key);
+    if (inflight.get(key) === run) inflight.delete(key);
     notify();
     return state;
   });
@@ -208,13 +212,20 @@ export function subscribeNip05(listener: () => void): () => void {
   };
 }
 
-/** Test seam: forget everything. */
+/** Forget cached results while preserving active subscribers. */
 export function resetNip05Cache(): void {
+  generation++;
   cache.clear();
   inflight.clear();
+  notify();
 }
 
 /** Test seam: how many pairs are cached. */
 export function nip05CacheSize(): number {
   return cache.size;
 }
+
+registerRuntimeCache({
+  id: 'nip05-verification', category: 'profiles', scope: 'public', sensitive: false,
+  inspect: () => ({ entries: cache.size, pending: inflight.size }), invalidate: resetNip05Cache,
+});
