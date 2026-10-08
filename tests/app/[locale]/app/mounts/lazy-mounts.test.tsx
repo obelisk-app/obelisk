@@ -50,7 +50,7 @@ const ON_DEMAND = [
 
 /** Who fetches each on-demand module, through `import()`. */
 const LOADED_BY: Record<string, string> = {
-  'src/components/voice/room/VoiceRoom.tsx': 'src/app/[locale]/app/mounts/lazy-mounts.tsx',
+  'src/components/voice/room/VoiceRoom.tsx': 'src/components/voice/room/LazyVoiceRoom.tsx',
   'src/components/games/table/GameModal.tsx': 'src/app/[locale]/app/mounts/lazy-mounts.tsx',
   'src/components/games/new-game/NewGameModal.tsx': 'src/app/[locale]/app/mounts/lazy-mounts.tsx',
   'src/components/call/DmCallLayer.tsx': 'src/app/[locale]/app/mounts/lazy-mounts.tsx',

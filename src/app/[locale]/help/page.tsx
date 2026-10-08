@@ -34,7 +34,7 @@ export default async function Page() {
     <div className="min-h-screen bg-lc-black lc-grid-bg">
       <Navbar />
       <Container width="5xl" as="main" className="px-6 pb-24 pt-28">
-        <Link href="/app" className="text-sm font-medium text-lc-green hover:text-lc-green-dark">
+        <Link href="/app" prefetch={false} className="text-sm font-medium text-lc-green hover:text-lc-green-dark">
           {t('help.back')}
         </Link>
         <Heading as="h1" variant="page" className="mt-5">

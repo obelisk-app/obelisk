@@ -1,3 +1,4 @@
+import ts from 'typescript';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -47,12 +48,29 @@ function scopeOf(file: string): Scope | null {
   return null;
 }
 
-const MODULE_KEY = new RegExp(`['"\`](${MODULES.join('|')})\\.[a-zA-Z0-9_.$\\{\\}]+['"\`]`, 'g');
+const MODULE_KEY = new RegExp(`^(${MODULES.join('|')})\\.`);
+const clientKeys = new Map<string, string[]>();
+
+/** Comments and example snippets are not translation reads. Keep template prefixes. */
+function messagePaths(file: string): string[] {
+  const cached = clientKeys.get(file);
+  if (cached) return cached;
+  const keys = new Set<string>();
+  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+  function visit(node: ts.Node) {
+    if (ts.isStringLiteralLike(node) || ts.isTemplateHead(node)) {
+      if (MODULE_KEY.test(node.text)) keys.add(node.text.replace(/\.$/, ''));
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  const paths = [...keys];
+  clientKeys.set(file, paths);
+  return paths;
+}
 
 function modulesNamedIn(file: string): Set<Module> {
-  const out = new Set<Module>();
-  for (const m of readFileSync(file, 'utf8').matchAll(MODULE_KEY)) out.add(m[1] as Module);
-  return out;
+  return new Set(messagePaths(file).map((path) => path.split('.')[0] as Module));
 }
 
 function messageAt(tree: unknown, path: string): unknown {
@@ -111,8 +129,7 @@ describe('route message scopes', () => {
       if (!scope) continue;
       const selected = scopeMessages(messages, scope);
       for (const file of reachable(route).filter((f) => !f.startsWith('src/i18n/'))) {
-        for (const match of readFileSync(file, 'utf8').matchAll(MODULE_KEY)) {
-          const path = match[0].slice(1, -1).split('${')[0].replace(/\.$/, '');
+        for (const path of messagePaths(file)) {
           if (!path.startsWith('seo.') && messageAt(messages, path) !== undefined && messageAt(selected, path) === undefined) {
             problems.push(`${route} (${scope}) reaches ${file}, which reads "${path}"`);
           }
@@ -136,10 +153,18 @@ describe('route message scopes', () => {
     }
   });
 
+  it('uses a layout for a scope-only wrapper only when it serves multiple pages', () => {
+    for (const layout of routes.filter((file) => file.endsWith('/layout.tsx'))) {
+      if (!/return\s+(?:\(\s*)?<IntlScope scope="\w+">\{children\}<\/IntlScope>/.test(readFileSync(layout, 'utf8'))) continue;
+      const pages = files(dirname(layout)).filter((file) => file.endsWith('/page.tsx'));
+      expect(pages.length, layout).toBeGreaterThan(1);
+    }
+  });
+
   it('keeps the chat and app modules off the landing page', () => {
-    expect(SCOPES.marketing).not.toContain('chat');
-    expect(SCOPES.marketing).not.toContain('shell');
-    expect(scopeOf(`${LOCALE_ROOT}/page.tsx`)).toBe('marketing');
+    expect(SCOPES.public).not.toContain('chat');
+    expect(SCOPES.public).not.toContain('shell');
+    expect(scopeOf(`${LOCALE_ROOT}/page.tsx`)).toBe('public');
   });
 
   it('never ships the server-only seo module', () => {

@@ -16,8 +16,8 @@ import type { JsMessage } from '@/services/nostr-bridge';
 
 const stubs = vi.hoisted(() => ({ pickFiles: null as null | ((files: File[]) => void), zaps: new Map() }));
 
-vi.mock('@/app/[locale]/app/mounts/lazy-mounts', () => ({
-  LazyVoiceRoom: ({ channelName, isChatOpen, onToggleChat, chatSlot }: {
+vi.mock('@/components/voice/room/LazyVoiceRoom', () => ({
+  default: ({ channelName, isChatOpen, onToggleChat, chatSlot }: {
     channelName?: string; isChatOpen: boolean; onToggleChat: () => void; chatSlot: React.ReactNode;
   }) => (
     <div data-testid="voice-room" data-name={channelName}>
@@ -25,6 +25,8 @@ vi.mock('@/app/[locale]/app/mounts/lazy-mounts', () => ({
       {isChatOpen ? chatSlot : null}
     </div>
   ),
+}));
+vi.mock('@/app/[locale]/app/mounts/lazy-mounts', () => ({
   LazyNewGameModal: ({ channelId, onClose, onPostMarker }: { channelId: string; onClose: () => void; onPostMarker: (m: string) => void }) => (
     <div data-testid="new-game" data-channel={channelId}>
       <button type="button" onClick={() => onPostMarker('MARKER')}>post marker</button>

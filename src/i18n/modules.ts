@@ -7,7 +7,7 @@ import type { AbstractIntlMessages } from 'next-intl';
  * as `composer.send`).
  *
  * The split exists so a page ships only the copy it renders, in one
- * language: the landing page gets `common` and `marketing`, never the chat.
+ * language: public pages get common copy and selected navigation keys, never the chat.
  * Which modules each route hands to the browser is `SCOPES` below, and
  * `tests/i18n/route-scopes.test.ts` fails when a client file reachable from
  * a route reads a module that route does not ship.
@@ -27,12 +27,8 @@ export type Module = (typeof MODULES)[number];
 export const SCOPES = {
   /** The `[locale]` layout: toasts, the confirm dialog, appearance. */
   common: ['common'],
-  /** `/`. */
-  marketing: ['common', 'marketing'],
-  /** Server-rendered public pages: only navigation is interactive. */
+  /** Public pages: navigation copy; other client islands receive translated props. */
   public: ['common', 'marketing'],
-  /** `/desktop`, `/mobile`. */
-  showcase: ['common', 'marketing', 'showcase'],
   /** `/guides`, `/guides/<slug>`. */
   guides: ['common', 'marketing', 'guides'],
   /** `/media-kit`. */
@@ -42,9 +38,14 @@ export const SCOPES = {
    * games, and the profile header carries its menus. `errors` because the
    * reply composer names a failed publish by its code.
    */
-  viewer: ['common', 'marketing', 'social', 'chat', 'media', 'games', 'mobile', 'settings', 'errors'],
+  viewer: ['common', 'social', 'chat', 'media', 'games', 'mobile', 'settings', 'errors'],
+  /** Standalone flows never need the complete app dictionary. */
+  voiceJoin: ['common', 'voice', 'errors'],
+  voiceRoom: ['common', 'voice'],
+  relayShare: ['common', 'settings', 'errors'],
+  hashtag: ['common', 'social'],
   /**
-   * `/app`, `/voice`, `/r/<code>`: everything but the public-page modules.
+   * `/app`: everything but the public-page modules.
    * `help` is the help popover's topics (and the category copy of Settings >
    * Data on this device); the rest of `guides` stays out.
    */
@@ -71,7 +72,17 @@ const NAVIGATION_PATHS = ['marketing.nav', 'marketing.learn.card', 'marketing.fo
 const CLIENT_PATHS: Partial<Record<Scope, readonly string[]>> = {
   public: ['common', ...NAVIGATION_PATHS],
   guides: ['common', ...NAVIGATION_PATHS, 'guides.clip'],
-  showcase: ['common', ...NAVIGATION_PATHS, 'showcase'],
+  mediaKit: ['common', 'mediaKit.copy', 'mediaKit.copied', 'mediaKit.rendering', 'mediaKit.downloadPng'],
+  voiceJoin: ['common', 'voice.voicePage', 'errors'],
+  relayShare: ['common', 'settings.relayShare', 'errors'],
+  hashtag: ['common', 'social.viewer', 'social.followTag', 'social.unfollowTag', 'social.actionFailed'],
+  viewer: [
+    'common', 'social', 'media', 'errors', 'settings.preferencesTitle',
+    'mobile.twitter', 'mobile.field', 'mobile.settings', 'mobile.profile',
+    'chat.youtubeTitle', 'chat.invoice', 'chat.composer', 'chat.wallet', 'chat.voiceNote',
+    'chat.sticker', 'chat.spoilerReveal', 'chat.channelLink', 'chat.profilePopover', 'chat.profile',
+    'games.join', 'games.card', 'games.inProgress', 'games.draw', 'games.cancelled',
+  ],
 };
 
 /** Select only the message subtrees a scope renders in the browser. */

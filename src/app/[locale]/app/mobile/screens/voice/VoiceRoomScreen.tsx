@@ -2,7 +2,7 @@
 
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
-import { LazyVoiceRoom } from '../../../mounts/lazy-mounts';
+import LazyVoiceRoom from '@/components/voice/room/LazyVoiceRoom';
 import BackButton from '../../chrome/BackButton';
 import { useVoiceRoomScreen } from '@/hooks/shell/mobile/screens/voice/useVoiceRoomScreen';
 import { MicIcon, MinusIcon } from '@/assets/icons';

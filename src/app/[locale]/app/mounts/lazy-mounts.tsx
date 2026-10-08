@@ -1,10 +1,8 @@
 'use client';
 
 import { lazy, Suspense, type ComponentProps } from 'react';
-import type VoiceRoomComponent from '@/components/voice/room/VoiceRoom';
 import type NewGameModalComponent from '@/components/games/new-game/NewGameModal';
 import Modal from '@/components/ui/overlays/Modal';
-import Spinner from '@/components/ui/feedback/Spinner';
 import { useGamesStore } from '@/store/games';
 import { useTranslations } from 'next-intl';
 import { useDmCallListener } from '@/hooks/call/useDmCallListener';
@@ -26,7 +24,6 @@ import Skeleton from '@/components/ui/animations/Skeleton';
  * these modules directly again.
  */
 
-const VoiceRoom = lazy(() => import('@/components/voice/room/VoiceRoom'));
 const GameModalHost = lazy(() =>
   import('@/components/games/table/GameModal').then((m) => ({ default: m.GameModalHost })),
 );
@@ -34,16 +31,6 @@ const NewGameModal = lazy(() => import('@/components/games/new-game/NewGameModal
 const DmCallLayer = lazy(() =>
   import('@/components/call/DmCallLayer').then((m) => ({ default: m.DmCallLayer })),
 );
-
-/** Fills the stage the room will occupy, so the layout does not shift when it lands. */
-function VoiceRoomLoading() {
-  const t = useTranslations();
-  return (
-    <div className="flex min-h-0 flex-1 items-center justify-center" data-testid="voice-room-loading">
-      <Spinner size="lg" label={t('common.loading')} />
-    </div>
-  );
-}
 
 /** The same skeleton panel `GameModal` shows while its table loads, so the swap is seamless. */
 function ModalLoading({ onClose, label }: { onClose: () => void; label?: string }) {
@@ -56,14 +43,6 @@ function ModalLoading({ onClose, label }: { onClose: () => void; label?: string 
       <Skeleton className="h-40 w-full rounded-lg" />
       {label && <Text as="p" variant="caption" className="mt-3 text-center">{label}</Text>}
     </Modal>
-  );
-}
-
-export function LazyVoiceRoom(props: ComponentProps<typeof VoiceRoomComponent>) {
-  return (
-    <Suspense fallback={<VoiceRoomLoading />}>
-      <VoiceRoom {...props} />
-    </Suspense>
   );
 }
 

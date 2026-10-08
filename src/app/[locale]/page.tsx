@@ -38,7 +38,7 @@ export default async function Page() {
   const locale = await getLocale();
   const t = await getTranslations({ locale });
   return (
-    <IntlScope scope="marketing">
+    <IntlScope scope="public">
       <JsonLd data={webApplicationNode(locale, t('seo.site.jsonLd.appDescription'))} />
       <main className="min-h-screen bg-lc-black appearance-bg lc-grid-bg relative">
         <ShootingStars />

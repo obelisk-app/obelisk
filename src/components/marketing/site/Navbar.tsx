@@ -67,6 +67,7 @@ export default function Navbar() {
               <>
                 <Link
                   href="/app"
+                  prefetch={false}
                   className="lc-pill lc-pill-primary text-sm"
                   data-testid="nav-app-pill"
                 >

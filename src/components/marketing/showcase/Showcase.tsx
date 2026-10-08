@@ -1,5 +1,4 @@
-'use client';
-
+import Card from '@/components/ui/layout/Card';
 import Image from 'next/image';
 import { CheckIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
@@ -42,10 +41,11 @@ export function ShowcaseRow({ item, index }: { item: ShowcaseItem; index: number
             isPortrait ? 'max-w-sm' : 'max-w-3xl'
           }`}
         >
-          <div
-            className={`relative overflow-hidden border border-lc-border bg-lc-dark shadow-[0_40px_120px_-40px_rgba(180,249,83,0.18)] ${
-              isPortrait ? 'rounded-[2.25rem]' : 'rounded-2xl'
-            }`}
+          <Card
+            padding="none"
+            radius="2xl"
+            style={isPortrait ? { borderRadius: '2.25rem' } : undefined}
+            className="relative overflow-hidden shadow-[0_40px_120px_-40px_rgba(180,249,83,0.18)]"
           >
             <Image
               src={item.src}
@@ -61,7 +61,7 @@ export function ShowcaseRow({ item, index }: { item: ShowcaseItem; index: number
               priority={item.priority}
               itemProp="contentUrl"
             />
-          </div>
+          </Card>
           <figcaption className="sr-only" itemProp="description">
             {item.alt}
           </figcaption>

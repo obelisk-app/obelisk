@@ -1,3 +1,4 @@
+import IntlScope from '@/i18n/IntlScope';
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { standardNoindexMetadata } from '@/utils/seo/standard';
@@ -13,5 +14,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Page() {
-  return <VoiceRoomForm />;
+  return <IntlScope scope="voiceJoin"><VoiceRoomForm /></IntlScope>;
 }

@@ -3,7 +3,7 @@
 import ForumView from '@/components/chat/forum/ForumView';
 import { FileDropZone } from '@/components/chat/composer/FileDropZone';
 import { useChatPanel } from '@/hooks/shell/panes/channel/useChatPanel';
-import { LazyVoiceRoom } from '../../mounts/lazy-mounts';
+import LazyVoiceRoom from '@/components/voice/room/LazyVoiceRoom';
 import { ChannelSettingsModal } from '../../modals/channel-settings/ChannelSettingsModal';
 import { MembersPanel } from './MembersPanel';
 import { ChannelHeader } from './ChannelHeader';

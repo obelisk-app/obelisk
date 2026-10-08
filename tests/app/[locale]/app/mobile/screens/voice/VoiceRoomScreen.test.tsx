@@ -5,8 +5,8 @@ import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { VoiceRoomScreen } from '@/app/[locale]/app/mobile/screens/voice/VoiceRoomScreen';
 import { group } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 
-vi.mock('@/app/[locale]/app/mounts/lazy-mounts', () => ({
-  LazyVoiceRoom: (p: { channelId: string; channelName?: string; onToggleChat: () => void }) => (
+vi.mock('@/components/voice/room/LazyVoiceRoom', () => ({
+  default: (p: { channelId: string; channelName?: string; onToggleChat: () => void }) => (
     <button data-testid="voice-room" data-channel={p.channelId} data-name={p.channelName ?? ''} onClick={p.onToggleChat} />
   ),
 }));

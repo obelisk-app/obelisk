@@ -73,6 +73,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/app"
+                  prefetch={false}
                   className="text-sm text-lc-muted hover:text-lc-green transition-colors"
                 >
                   {t('marketing.footer.launchApp')}

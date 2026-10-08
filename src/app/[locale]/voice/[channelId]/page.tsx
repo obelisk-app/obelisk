@@ -1,6 +1,7 @@
+import IntlScope from '@/i18n/IntlScope';
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { LazyVoiceRoom } from '@/app/[locale]/app/mounts/lazy-mounts';
+import LazyVoiceRoom from '@/components/voice/room/LazyVoiceRoom';
 import BridgeRoute from '@/components/common/BridgeRoute';
 import { ogImage } from '@/utils/seo/og';
 import { noindexMetadata, renderedTitle } from '@/utils/seo/page';
@@ -29,8 +30,10 @@ export default async function VoiceChannelPage({ params }: Params) {
   // The provider is here, not in `voice/layout.tsx`: the `/voice` form
   // above this page does not use the bridge and ships without it.
   return (
-    <BridgeRoute>
-      <LazyVoiceRoom channelId={decodeURIComponent(channelId)} />
-    </BridgeRoute>
+    <IntlScope scope="voiceRoom">
+      <BridgeRoute>
+        <LazyVoiceRoom channelId={decodeURIComponent(channelId)} />
+      </BridgeRoute>
+    </IntlScope>
   );
 }

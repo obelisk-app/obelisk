@@ -28,6 +28,9 @@ describe('landing client boundaries', () => {
     expect(source).toContain('<main');
     expect(source).toContain('marketing.pqc.heading');
     expect(source).not.toContain('LandingPage');
+    for (const site of ['Navbar', 'Footer']) {
+      expect(readFileSync(`src/components/marketing/site/${site}.tsx`, 'utf8')).toMatch(/href="\/app"\s+prefetch=\{false\}/);
+    }
     for (const section of ['LandingHero', 'PreviewSection', 'CtaSection']) {
       const source = readFileSync(`src/components/marketing/landing/${section}.tsx`, 'utf8');
       expect(source).toMatch(/href="\/app"\s+prefetch=\{false\}/);
