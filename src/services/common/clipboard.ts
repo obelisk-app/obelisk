@@ -1,13 +1,10 @@
-/**
- * Writing to the clipboard, the one place that does it outside the
- * `useCopyToClipboard` hook (which adds a "copied" flag for a button).
- *
- * Four copies of "write, swallow the rejection, push a toast" used to live in
- * component folders (the DM menus, the profile popover, the note menu's raw
- * event copy) beside a fifth that fell back to a hidden textarea for the
- * NIP-46 signer link. They are one helper each now.
- */
+/** Clipboard writes and the feedback/fallback policies used by their callers. */
 import { useToastStore } from '@/store/feedback/toast';
+
+/** Write through the clipboard API; reject when unavailable or refused. */
+export async function writeClipboardText(text: string): Promise<void> {
+  await navigator.clipboard.writeText(text);
+}
 
 /**
  * Copy `text`, falling back to a hidden textarea and `execCommand('copy')`
@@ -16,8 +13,7 @@ import { useToastStore } from '@/store/feedback/toast';
  */
 export async function copyText(text: string): Promise<boolean> {
   try {
-    // `Promise.resolve`: a clipboard shim may return undefined instead of a promise.
-    await Promise.resolve(navigator.clipboard.writeText(text));
+    await writeClipboardText(text);
     return true;
   } catch {
     const textarea = document.createElement('textarea');
@@ -38,6 +34,6 @@ export async function copyText(text: string): Promise<boolean> {
  * write settles, which is what every menu that uses it expects.
  */
 export function copyWithToast(text: string, title: string, body = ''): void {
-  void Promise.resolve(navigator.clipboard?.writeText(text)).catch(() => {});
+  void writeClipboardText(text).catch(() => {});
   useToastStore.getState().pushToast({ title, body });
 }

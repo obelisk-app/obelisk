@@ -4,6 +4,7 @@
  */
 import { nostrActions } from '@/services/nostr-bridge';
 import { confirmDialog } from '@/services/common/confirm-dialog';
+import { writeClipboardText } from '@/services/common/clipboard';
 import type { Translate } from '@/i18n/keys';
 
 /**
@@ -16,7 +17,7 @@ export async function shareRelayInvite(invite: { title: string; text: string; ur
     await nav.share(invite);
     return 'shared';
   }
-  await navigator.clipboard?.writeText(invite.text);
+  await writeClipboardText(invite.text);
   return 'copied';
 }
 

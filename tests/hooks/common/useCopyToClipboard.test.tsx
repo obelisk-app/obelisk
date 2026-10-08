@@ -2,6 +2,13 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useCopyToClipboard } from '@/hooks/common/useCopyToClipboard';
 
+function deferred() {
+  let resolve!: () => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<void>((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
 describe('useCopyToClipboard', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -106,4 +113,67 @@ describe('useCopyToClipboard', () => {
     act(() => { vi.advanceTimersByTime(500); });
     expect(result.current.copied).toBe(null);
   });
+  it.each(['resolve', 'reject'] as const)('ignores an older %s after the latest copy succeeds', async (settle) => {
+    const first = deferred();
+    const second = deferred();
+    vi.mocked(navigator.clipboard.writeText).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const onReset = vi.fn();
+    const { result } = renderHook(() => useCopyToClipboard({ resetMs: 500, onReset }));
+    let older!: Promise<boolean>;
+    let newer!: Promise<boolean>;
+    act(() => { older = result.current.copy('first', 'first'); newer = result.current.copy('second', 'second'); });
+    await act(async () => { second.resolve(); await newer; });
+    act(() => { vi.advanceTimersByTime(300); });
+    await act(async () => {
+      if (settle === 'resolve') first.resolve();
+      else first.reject(new Error('denied'));
+      expect(await older).toBe(settle === 'resolve');
+    });
+    expect(result.current.copied).toBe('second');
+    expect(result.current.error).toBe(false);
+    act(() => { vi.advanceTimersByTime(200); });
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not let an older success replace the latest failure', async () => {
+    const first = deferred();
+    vi.mocked(navigator.clipboard.writeText).mockReturnValueOnce(first.promise).mockRejectedValueOnce(new Error('denied'));
+    const { result } = renderHook(() => useCopyToClipboard());
+    let older!: Promise<boolean>;
+    act(() => { older = result.current.copy('first'); });
+    await act(async () => { expect(await result.current.copy('second')).toBe(false); });
+    await act(async () => { first.resolve(); expect(await older).toBe(true); });
+    expect(result.current.copied).toBeNull();
+    expect(result.current.error).toBe(true);
+  });
+
+  it('cancels the previous reset while a new copy is pending', async () => {
+    const pending = deferred();
+    const onReset = vi.fn();
+    const { result } = renderHook(() => useCopyToClipboard({ resetMs: 500, onReset }));
+    await act(async () => { await result.current.copy('first'); });
+    vi.mocked(navigator.clipboard.writeText).mockReturnValueOnce(pending.promise);
+    let copy!: Promise<boolean>;
+    act(() => { copy = result.current.copy('second'); vi.advanceTimersByTime(1000); });
+    expect(onReset).not.toHaveBeenCalled();
+    await act(async () => { pending.resolve(); await copy; });
+    act(() => { vi.advanceTimersByTime(500); });
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['resolve', 'reject'] as const)('does not schedule feedback when a pending write %ss after unmount', async (settle) => {
+    const pending = deferred();
+    vi.mocked(navigator.clipboard.writeText).mockReturnValueOnce(pending.promise);
+    const onReset = vi.fn();
+    const { result, unmount } = renderHook(() => useCopyToClipboard({ resetMs: 500, onReset }));
+    const copy = result.current.copy('text');
+    unmount();
+    if (settle === 'resolve') pending.resolve();
+    else pending.reject(new Error('denied'));
+    expect(await copy).toBe(settle === 'resolve');
+    expect(vi.getTimerCount()).toBe(0);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(onReset).not.toHaveBeenCalled();
+  });
+
 });

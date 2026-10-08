@@ -8,6 +8,13 @@ afterEach(() => {
 });
 
 describe('copyWithToast', () => {
+  it('still immediately confirms when a clipboard shim throws synchronously', () => {
+    vi.stubGlobal('navigator', { clipboard: { writeText: () => { throw new Error('denied'); } } });
+    const pushToast = vi.spyOn(useToastStore.getState(), 'pushToast');
+    expect(() => copyWithToast('x', 'Copied')).not.toThrow();
+    expect(pushToast).toHaveBeenCalledWith({ title: 'Copied', body: '' });
+  });
+
   it('writes to the clipboard and pushes a toast', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });

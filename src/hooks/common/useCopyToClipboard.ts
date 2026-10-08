@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { writeClipboardText } from '@/services/common/clipboard';
 
 interface CopyOptions {
   /** How long the `copied` / `error` flag stays set before auto-clearing. */
@@ -25,35 +26,43 @@ export function useCopyToClipboard(options: number | CopyOptions = {}) {
   const [error, setError] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onResetRef = useRef(onReset);
+  const request = useRef(0);
+  const mounted = useRef(false);
 
   useEffect(() => { onResetRef.current = onReset; });
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      request.current += 1;
+      if (timer.current !== null) clearTimeout(timer.current);
+    };
   }, []);
 
-  const scheduleReset = useCallback(() => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      setCopied(null);
-      setError(false);
-      onResetRef.current?.();
-    }, resetMs);
-  }, [resetMs]);
-
   const copy = useCallback(async (text: string, key?: string): Promise<boolean> => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      setError(true);
-      setCopied(null);
-      scheduleReset();
-      return false;
+    const owner = ++request.current;
+    if (timer.current !== null) {
+      clearTimeout(timer.current);
+      timer.current = null;
     }
-    setCopied(key ?? true);
-    setError(false);
-    scheduleReset();
-    return true;
-  }, [scheduleReset]);
+    let success = false;
+    try {
+      await writeClipboardText(text);
+      success = true;
+    } catch { /* The caller receives false, and the current request shows the error. */ }
+    if (mounted.current && owner === request.current) {
+      setCopied(success ? key ?? true : null);
+      setError(!success);
+      timer.current = setTimeout(() => {
+        if (!mounted.current || owner !== request.current) return;
+        timer.current = null;
+        setCopied(null);
+        setError(false);
+        onResetRef.current?.();
+      }, resetMs);
+    }
+    return success;
+  }, [resetMs]);
 
   return { copied, error, copy };
 }

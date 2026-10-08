@@ -11,6 +11,11 @@ afterEach(() => {
 });
 
 describe('shareRelayInvite', () => {
+  it('rejects when neither sharing nor clipboard is available', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    await expect(shareRelayInvite(INVITE)).rejects.toThrow();
+  });
+
   it('uses the system share sheet when there is one', async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'share', { value: share, configurable: true });

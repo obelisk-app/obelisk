@@ -4,6 +4,11 @@ import { shareOrCopyLink } from '@/services/social/share-link';
 afterEach(() => { Object.assign(navigator, { share: undefined, clipboard: undefined }); });
 
 describe('shareOrCopyLink', () => {
+  it('reports failure when neither sharing nor clipboard is available', async () => {
+    Object.assign(navigator, { share: undefined, clipboard: undefined });
+    await expect(shareOrCopyLink({ url: 'u' })).resolves.toBe(false);
+  });
+
   it('uses the share sheet when there is one', async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { share });
