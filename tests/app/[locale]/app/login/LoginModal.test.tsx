@@ -1,7 +1,6 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nip19 } from 'nostr-tools';
-import { Nip46Signer } from '@nostr-wot/signers';
 import LoginModal from '@/app/[locale]/app/login/LoginModal';
 import { isTransientNip46Error, signerAppHref } from '@/utils/nip46/signer-link';
 import { copyText } from '@/services/common/clipboard';
@@ -101,7 +100,6 @@ describe('LoginModal generated identity flow', () => {
     expect(sdkProps.profileSetup).toBe(true);
     expect(sdkProps.closeOnSuccess).toBe(false);
     expect(sdkProps.showRememberToggle).toBe(false);
-    expect(sdkProps.nip46Relays).toEqual(['wss://public.obelisk.ar']);
     const permissions = (sdkProps.nip46Perms as string).split(',');
     expect(permissions).toContain('sign_event:22242');
     expect(permissions).not.toContain('nip:42');
@@ -169,25 +167,10 @@ describe('LoginModal generated identity flow', () => {
     });
   });
 
-  it('uses the nostr-tools handshake and advertises the Obelisk relay', async () => {
+  it('leaves NIP-46 relay selection to the signer SDK defaults', () => {
     renderLocalized(<LoginModal />);
-    const handle = Nip46Signer.startNostrConnect({
-      relays: ['wss://public.obelisk.ar'],
-      clientSecretKey: new Uint8Array(32).fill(3),
-      perms: sdkProps.nip46Perms as string,
-      metadata: sdkProps.nip46Metadata as { name: string; url: string },
-    });
 
-    await handle.ready;
-
-    const params = new URL(handle.uri).searchParams;
-    expect(params.get('relay')).toBe('wss://public.obelisk.ar');
-    expect(params.get('perms')).toBe(sdkProps.nip46Perms);
-    expect(params.get('name')).toBe('Obelisk');
-    expect(params.get('url')).toBe('https://obelisk.ar');
-    expect(params.has('image')).toBe(false);
-    expect(handle.uri.length).toBeLessThan(600);
-    expect(bunkerFromUri).toHaveBeenCalledOnce();
+    expect(sdkProps.nip46Relays).toBeUndefined();
   });
 
   it('hands the SDK-paired remote signer to the bridge', async () => {

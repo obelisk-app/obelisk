@@ -110,7 +110,6 @@ export default function LoginModal({
           flatLayout
           showRememberToggle={false}
           profileSetup
-          nip46Relays={['wss://public.obelisk.ar']}
           nip46Perms={OBELISK_NIP46_PERMISSIONS}
           nip46Connection={{
             signerHref: signerAppHref,
