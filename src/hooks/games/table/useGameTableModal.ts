@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { turnSecondsLeft, seatsControlledBy } from '@/lib/games/session/session';
 import type { SeatSpec } from '@/lib/games/protocol/protocol';
 import { publishStart } from '@/services/games/transport';

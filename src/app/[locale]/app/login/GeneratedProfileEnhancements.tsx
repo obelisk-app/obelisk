@@ -1,6 +1,6 @@
 'use client';
 
-import { useGeneratedProfileEnhancements } from '@/hooks/shell/login/useGeneratedProfileEnhancements';
+import { useGeneratedProfileEnhancements } from '@/hooks/session/useGeneratedProfileEnhancements';
 import type { ProfileDraft } from '@/services/shell/desktop/profile-media-pickers';
 
 /**

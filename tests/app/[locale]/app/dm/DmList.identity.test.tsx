@@ -1,3 +1,10 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = () => null;
+  return sessionMock({
+    useSessionProfile: () => readProfile('f'.repeat(64)),
+  });
+});
 /**
  * Who a DM row says you are talking to.
  *

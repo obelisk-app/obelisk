@@ -1,5 +1,15 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const { fakeBridge } = await import('@tests/support/fake-bridge');
+  const { createSessionActions } = await import('@/services/session/actions');
+  return sessionMock({
+    useMyPubkey: () => mockPubkey,
+    useSessionProfile: () => mockMeta,
+    useSessionActions: () => createSessionActions(fakeBridge({}, { logout: (...args) => mockLogout(...args), editUserMetadata: (...args) => mockPublishProfile(...args) })),
+  });
+});
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, act } from '@testing-library/react';
+import { fireEvent, render, screen, act, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { setDmOptInEnabled } from '@/services/chat/dm/opt-in';
 import { DM_OPT_IN_STORAGE_KEY } from '@/constants/chat/dm';
@@ -24,21 +34,18 @@ let mockPubkey: string | null = null;
 
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({
+  return { ...bridgeMock({
     nostrActions: {
-      logout: (...a: unknown[]) => mockLogout(...a),
       switchRelay: vi.fn(),
       removeRelay: vi.fn(),
       createGroup: vi.fn(),
       signEventTemplate: vi.fn(),
       ensureUserMetadata: vi.fn(),
-      editUserMetadata: (...a: unknown[]) => mockPublishProfile(...a),
     },
-    useMyPubkey: () => mockPubkey,
     useUserMetadata: () => mockMeta,
     useConfiguredRelays: () => ['wss://lacrypta-relay.obelisk.ar'],
     useCurrentRelayUrl: () => 'wss://lacrypta-relay.obelisk.ar',
-  });
+  }), logoutPageSession: (...args: unknown[]) => mockLogout(...args) };
 });
 
 vi.mock('@nostr-wot/data/react', () => ({
@@ -191,7 +198,7 @@ describe("SettingsPrefsScreen", () => {
     fireEvent.click(screen.getByTestId("disconnect-btn"));
     expect(mockLogout).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId("disconnect-confirm"));
-    expect(mockLogout).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
   });
 
   it('opens Data on this device from mobile preferences, and asks before removing', async () => {
@@ -282,7 +289,7 @@ describe('EditProfileScreen', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('save-profile'));
     });
-    expect(mockPublishProfile).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockPublishProfile).toHaveBeenCalledTimes(1));
     const opts = mockPublishProfile.mock.calls[0][0];
     expect(opts.name).toBe('Fabricio v2');
     expect(opts.displayName).toBe('Fabricio v2');
@@ -308,6 +315,7 @@ describe('EditProfileScreen', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('save-profile'));
     });
+    await waitFor(() => expect(mockPublishProfile).toHaveBeenCalledTimes(1));
     expect(mockPublishProfile.mock.calls[0][0].picture).toBe('https://cdn.example/new.png');
   });
 

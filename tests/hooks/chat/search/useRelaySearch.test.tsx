@@ -1,3 +1,7 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock();
+});
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JsGroup, JsSearchHit } from '@/services/nostr-bridge';

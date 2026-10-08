@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useSignerReady: () => true,
+  });
+});
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OBELISK_SIGNING_KINDS } from '@/constants/nostr/nostr-signing-kinds';
@@ -16,7 +22,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
     nostrActions: { signEventTemplate: (...args: unknown[]) => signEventTemplate(...args) },
-    useSignerReady: () => true,
+
   });
 });
 

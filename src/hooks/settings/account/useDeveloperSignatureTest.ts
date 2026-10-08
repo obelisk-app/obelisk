@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useSignerReady } from '@/services/nostr-bridge';
+import { useSignerReady } from '@/hooks/session/useSession';
 import { setPreference } from '@/services/preferences/preferences';
 import { requestMockSignatures } from '@/services/settings/signature-test';
 import { usePreferences } from '@/hooks/preferences/usePreferences';

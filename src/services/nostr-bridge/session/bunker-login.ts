@@ -17,9 +17,10 @@ const NOSTRCONNECT_RELAYS = ['wss://relay.nsec.app', 'wss://relay.damus.io', 'ws
 
 export class BunkerLogin {
   constructor(
-    private readonly state: Pick<SessionState, 'session' | 'currentRelayUrl'>,
+    private readonly state: Pick<SessionState, 'session' | 'currentRelayUrl' | 'sessionGeneration' | 'beginSessionOperation' | 'assertSessionOperation'>,
     private readonly bunker: Pick<BunkerModule, 'signer' | 'onAuth' | 'openAuthUrl' | 'ready'>,
     private readonly finalizeLogin: () => Promise<void>,
+    private readonly cancelInstalledLogin: () => Promise<void>,
   ) {}
 
   /**
@@ -31,7 +32,9 @@ export class BunkerLogin {
     bunkerUrl: string,
     options?: { onAuthUrl?: (url: string) => void; clientSecretHex?: string; signer?: RemoteSigner },
   ): Promise<string> {
+    const generation = this.state.beginSessionOperation();
     const bp = await parseBunkerInput(bunkerUrl);
+    this.state.assertSessionOperation(generation);
     if (!bp) throw new CodedError('invalid-bunker-url', 'Invalid bunker URL');
     if (options?.signer && !options.clientSecretHex) throw new CodedError('bunker-missing-secret', 'Paired remote signer is missing its client secret');
     // When a host pre-paired the remote signer (e.g. the @nostr-wot/ui
@@ -44,7 +47,9 @@ export class BunkerLogin {
       ? hexToBytes(options.clientSecretHex)
       : generateSecretKey();
     this.bunker.onAuth = options?.onAuthUrl ?? null;
-    const signerOptions = { onauth: this.bunker.openAuthUrl };
+    const signerOptions = { onauth: (url: string) => {
+      if (generation === this.state.sessionGeneration) this.bunker.openAuthUrl(url);
+    } };
     const pairedSigner = options?.signer;
     const signer = pairedSigner ?? BunkerSigner.fromBunker(localSecret, bp, signerOptions);
     const connectId = pushActivity('bunkerConnect' satisfies ActivityCode);
@@ -55,8 +60,11 @@ export class BunkerLogin {
       // `connect()` here can send an empty/mismatched secret for QR-created
       // bunker URLs and make remote signers reject with "no secret".
       if (!pairedByHost) await (signer as BunkerSigner).connect();
+      this.state.assertSessionOperation(generation);
       pubKeyHex = await signer.getPublicKey();
+      this.state.assertSessionOperation(generation);
     } catch (e) {
+      if (!pairedSigner) signer.close();
       failActivity(connectId, codeOrMessage(e));
       throw e;
     }
@@ -75,6 +83,7 @@ export class BunkerLogin {
     };
     this.bunker.ready.set(true);
     await this.finalizeLogin();
+    this.state.assertSessionOperation(generation);
     return pubKeyHex;
   }
 
@@ -88,6 +97,7 @@ export class BunkerLogin {
     waitForConnection: () => Promise<string>;
     cancel: () => void;
   } {
+    const generation = this.state.beginSessionOperation();
     const localSecret = generateSecretKey();
     const localPubkey = getPublicKey(localSecret);
     const connectRelay = options?.relay || NOSTRCONNECT_RELAYS[0];
@@ -100,14 +110,17 @@ export class BunkerLogin {
     });
 
     let cancelled = false;
+    let installed = false;
+    let completed = false;
     const scanId = pushActivity('bunkerScan' satisfies ActivityCode);
     const waitForConnection = async (): Promise<string> => {
+      this.state.assertSessionOperation(generation);
       this.bunker.onAuth = options?.onAuthUrl ?? null;
       let signer;
       try {
         signer = await BunkerSigner.fromURI(localSecret, uri, {
           onauth: (url) => {
-            if (this.bunker.onAuth) this.bunker.onAuth(url);
+            if (!cancelled && generation === this.state.sessionGeneration && this.bunker.onAuth) this.bunker.onAuth(url);
           },
         }, 60000);
       } catch (e) {
@@ -115,11 +128,15 @@ export class BunkerLogin {
         throw e;
       }
       resolveActivity(scanId);
-      if (cancelled) {
-        try { signer.close(); } catch { /* ignore */ }
-        throw new CodedError('nostrconnect-cancelled', 'NostrConnect cancelled');
+      let pubKeyHex: string;
+      try {
+        this.state.assertSessionOperation(generation);
+        pubKeyHex = await signer.getPublicKey();
+        this.state.assertSessionOperation(generation);
+      } catch (error) {
+        signer.close();
+        throw error;
       }
-      const pubKeyHex = await signer.getPublicKey();
       // Reconstruct a bunker:// URL from the signer's resolved BunkerPointer
       // so we can persist + rehydrate later.
       const bp = (signer as unknown as { bp: { pubkey: string; relays: string[]; secret?: string } }).bp;
@@ -127,6 +144,7 @@ export class BunkerLogin {
       bp.relays.forEach((r) => params.append('relay', r));
       if (bp.secret) params.set('secret', bp.secret);
       const bunkerUrl = `bunker://${bp.pubkey}?${params.toString()}`;
+      installed = true;
       this.bunker.signer = signer;
       this.state.session = {
         pubKeyHex,
@@ -137,13 +155,23 @@ export class BunkerLogin {
       };
       this.bunker.ready.set(true);
       await this.finalizeLogin();
+      this.state.assertSessionOperation(generation);
+      completed = true;
       return pubKeyHex;
     };
 
     return {
       uri,
       waitForConnection,
-      cancel: () => { cancelled = true; failActivity(scanId, 'nostrconnect-cancelled' satisfies ErrorCode); },
+      cancel: () => {
+        if (completed || cancelled) return;
+        cancelled = true;
+        if (generation === this.state.sessionGeneration) {
+          if (installed) void this.cancelInstalledLogin();
+          else this.state.beginSessionOperation();
+        }
+        failActivity(scanId, 'nostrconnect-cancelled' satisfies ErrorCode);
+      },
     };
   }
 }

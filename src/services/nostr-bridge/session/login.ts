@@ -47,6 +47,7 @@ export class LoginModule {
   }
 
   async loginWithNsec(privKeyHex: string, pubKeyHex: string): Promise<void> {
+    this.t.state.beginSessionOperation();
     this.t.state.session = {
       privKeyHex,
       pubKeyHex,
@@ -60,6 +61,7 @@ export class LoginModule {
     if (typeof window === 'undefined' || !window.nostr) {
       throw new CodedError('extension-missing', 'No NIP-07 browser extension detected');
     }
+    this.t.state.beginSessionOperation();
     this.t.state.session = {
       pubKeyHex: pubkeyHex,
       loginMethod: 'nip07',
@@ -101,6 +103,7 @@ export class LoginModule {
   async finalizeLogin(): Promise<void> {
     const { t } = this;
     const { state } = t;
+    const generation = state.sessionGeneration;
     state.sessionNotice.set(null);
     t.browserEvents.wire();
     const previousPubkey = state.myPubkey.get();
@@ -113,6 +116,7 @@ export class LoginModule {
     }
     const sealing = this.store.seal();
     if (sealing) await sealing;
+    state.assertSessionOperation(generation);
     this.persist();
     // Point the seen-wrap ledger at this account before `connect()` opens the
     // kind-1059 subscriptions, otherwise the first replayed wraps are decrypted
@@ -150,7 +154,11 @@ export class LoginModule {
       ensureChannelPrefsStoreForAccount(state.session.pubKeyHex);
     }
     useNotificationsStore.getState().registerRelay(sessionRelay);
-    await this.deps.connect(perGroup);
+    try {
+      await this.deps.connect(perGroup);
+    } finally {
+      state.assertSessionOperation(generation);
+    }
     state.myPubkey.set(state.session?.pubKeyHex ?? null);
     state.myLoginMethod.set(state.session?.loginMethod ?? null);
     state.isLoggedIn.set(true);
@@ -199,6 +207,7 @@ export class LoginModule {
   }
 
   async logout(): Promise<void> {
+    this.t.state.beginSessionOperation();
     this.t.bunker.close();
     // Queued signer ops close over the outgoing session's signer; running them
     // against the next identity would be wrong. Reject them so their awaiting

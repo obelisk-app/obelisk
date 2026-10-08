@@ -1245,7 +1245,7 @@ button:not(:disabled),
 /* The SDK's "Remember on this device" box: the one unclassed label around a
  * checkbox (the backup acknowledgement is `.nui-warning`). Obelisk keeps the
  * session itself, sealed, and gives the SDK memory-only storage that drops a
- * remembered nsec (src/services/login/signer-storage.ts), so the box could only
+ * remembered nsec (src/services/session/signer-storage.ts), so the box could only
  * promise something that does not happen. The selector is pinned against the
  * real widget by tests/app/app/LoginSdkStorage.integration.test.tsx. */
 .obelisk-login-modal label:not([class]):has(> input[type="checkbox"]) { display: none !important; }

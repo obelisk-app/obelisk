@@ -37,6 +37,7 @@ export abstract class BridgeReads {
   get connectionState(): StateStore<string> { return this.m.state.connectionState; }
   get currentRelayUrl(): StateStore<string> { return this.m.state.currentRelayUrl; }
   get configuredRelays(): StateStore<string[]> { return this.m.state.configuredRelays; }
+  get isRestoringSession(): StateStore<boolean> { return this.m.state.isRestoringSession; }
   get isLoggedIn(): StateStore<boolean> { return this.m.state.isLoggedIn; }
   get myPubkey(): StateStore<string | null> { return this.m.state.myPubkey; }
   get myLoginMethod(): StateStore<LoginMethod | null> { return this.m.state.myLoginMethod; }
@@ -94,6 +95,14 @@ export abstract class BridgeReads {
 
   subscribeBunkerSignerReady(cb: (ready: boolean) => void): Unsubscribe {
     return this.bunkerSignerReady.subscribe(cb);
+  }
+
+  subscribeSessionGeneration(cb: (generation: number) => void): Unsubscribe {
+    return this.m.state.generation.subscribe(cb);
+  }
+
+  subscribeIsRestoringSession(cb: (pending: boolean) => void): Unsubscribe {
+    return this.isRestoringSession.subscribe(cb);
   }
 
   subscribeSessionNotice(cb: (notice: SessionNotice | null) => void): Unsubscribe {

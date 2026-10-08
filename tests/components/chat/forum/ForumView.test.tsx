@@ -1,3 +1,12 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = () => null;
+  return sessionMock({
+    useSignerReady: () => true,
+    useMyPubkey: () => 'a'.repeat(64),
+    useSessionProfile: () => readProfile((() => 'a'.repeat(64))()),
+  });
+});
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import type { JsGroup, JsMessage, JsForumTag } from '@/services/nostr-bridge';
@@ -38,8 +47,8 @@ vi.mock('@/services/nostr-bridge', async () => {
     useMessages: (groupId) => (groupId ? mockMessagesByGroup[groupId] ?? [] : []),
     useMessagesStatus: (groupId) =>
       (groupId ? mockMessagesStatusByGroup.get(groupId) : undefined) ?? 'empty-confirmed',
-    useSignerReady: () => true,
-    useMyPubkey: () => 'a'.repeat(64),
+
+
     useUserMetadata: () => null,
     nostrActions: {
       createGroup: (...a: unknown[]) => mockCreateGroup(...a),

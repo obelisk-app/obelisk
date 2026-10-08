@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { setPreference } from '@/services/preferences/preferences';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import {

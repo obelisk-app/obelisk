@@ -11,7 +11,7 @@
 
 import { useRef, type ReactNode } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/overlays/Modal';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';

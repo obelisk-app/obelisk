@@ -2,27 +2,11 @@
  * Promise-returning action wrappers around the bridge. Components import
  * from here instead of touching getBridge() directly.
  */
-import { getBridge, type RemoteSigner } from './client';
+import { getBridge } from './client';
 import type { JsSearchOptions, JsSearchResponse } from '../common/types';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 
 export const nostrActions = {
-  loginWithNsec: async (privKeyHex: string, pubKeyHex: string) =>
-    (await getBridge()).loginWithNsec(privKeyHex, pubKeyHex),
-
-  loginWithNip07: async (pubkeyHex: string) =>
-    (await getBridge()).loginWithNip07(pubkeyHex),
-
-  loginWithBunker: async (
-    bunkerUrl: string,
-    options?: { onAuthUrl?: (url: string) => void; clientSecretHex?: string; signer?: RemoteSigner },
-  ) => (await getBridge()).loginWithBunker(bunkerUrl, options),
-
-  createNostrConnectSession: async (options?: { relay?: string; onAuthUrl?: (url: string) => void }) =>
-    (await getBridge()).createNostrConnectSession(options),
-
-  logout: async () => (await getBridge()).logout(),
-
   connect: async () => (await getBridge()).connect(),
   switchRelay: async (url: string) => (await getBridge()).switchRelay(url),
   addRelay: async (url: string) => (await getBridge()).addRelay(url),
@@ -72,10 +56,6 @@ export const nostrActions = {
   editGroupMetadata: async (
     opts: Parameters<Awaited<ReturnType<typeof getBridge>>['editGroupMetadata']>[0],
   ) => (await getBridge()).editGroupMetadata(opts),
-  editUserMetadata: async (
-    opts: Parameters<Awaited<ReturnType<typeof getBridge>>['editUserMetadata']>[0],
-    options?: Parameters<Awaited<ReturnType<typeof getBridge>>['editUserMetadata']>[1],
-  ) => (await getBridge()).editUserMetadata(opts, options),
   putUser: async (
     groupId: string,
     pubkey: string,

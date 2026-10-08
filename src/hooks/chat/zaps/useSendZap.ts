@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { useCurrentRelayUrl, useNipSigner } from '@/services/nostr-bridge';
+import { useCurrentRelayUrl } from '@/services/nostr-bridge';
+import { useNipSigner } from '@/hooks/session/useSession';
 import { useToastStore } from '@/store/feedback/toast';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/hooks/common/useFormat';

@@ -24,7 +24,8 @@
 
 import TextArea from '@/components/ui/forms/TextArea';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useMyPubkey, useUserMetadata } from '@/services/nostr-bridge';
+import { useUserMetadata } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useTranslations } from 'next-intl';
 import { useHistoryDismiss } from '@/hooks/common/useHistoryDismiss';
 import Button from '@/components/ui/buttons/Button';

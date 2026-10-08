@@ -2,7 +2,8 @@
 
 import Button from '@/components/ui/buttons/Button';
 import { shortHost } from '@/utils/relay-url/url-host';
-import { useCurrentRelayUrl, useMyPubkey, type JsGroup } from '@/services/nostr-bridge';
+import { useCurrentRelayUrl, type JsGroup } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useSearchScreen } from '@/hooks/shell/mobile/screens/search/useSearchScreen';
 import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';

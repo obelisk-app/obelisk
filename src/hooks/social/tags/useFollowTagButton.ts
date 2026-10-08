@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useInterests } from '@/hooks/social/tags/useInterests';
 import { useToastStore } from '@/store/feedback/toast';
 

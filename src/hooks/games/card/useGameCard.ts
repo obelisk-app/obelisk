@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect } from 'react';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useGamesStore } from '@/store/games';
 import { useGameSession } from '@/hooks/games/channel/useChannelGames';
 import { seedGameFromCache } from '@/services/games/cache';

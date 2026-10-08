@@ -238,7 +238,7 @@ export class BridgeModules {
       ensureRelayInList: (url) => this.rail.ensureRelayInList(url),
       dispose: () => this.seams.dispose(),
     });
-    this.bunkerLogin = new BunkerLogin(this.state, this.bunker, () => this.login.finalizeLogin());
+    this.bunkerLogin = new BunkerLogin(this.state, this.bunker, () => this.login.finalizeLogin(), () => this.login.logout());
     // `window.__obeliskSignerQueue.stats()`, mirrors `window.wot`.
     installSignerQueueDebug();
   }

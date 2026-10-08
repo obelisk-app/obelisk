@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { useSessionNotice, type SessionNotice } from '@/services/nostr-bridge';
+import { useSessionNotice } from '@/hooks/session/useSession';
+import type { SessionNotice } from '@/services/nostr-bridge';
 import { useToastStore } from '@/store/feedback/toast';
 
 /**

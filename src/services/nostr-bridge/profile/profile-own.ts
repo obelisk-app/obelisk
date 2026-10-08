@@ -1,3 +1,4 @@
+import type { ProfileEditOptions } from '@/types/session/profile';
 /**
  * The signed-in user's own kind 0 (round 4 plan, step 16; split from
  * `profiles.ts` for size): the editor behind `bridge.editUserMetadata`,
@@ -55,9 +56,13 @@ export class OwnProfileModule {
     private readonly deps: OwnProfileDeps,
   ) {}
 
-  async edit(opts: EditUserMetadataOptions, options: { create?: boolean } = {}): Promise<void> {
+  async edit(opts: EditUserMetadataOptions, options: ProfileEditOptions = {}): Promise<void> {
     const session = this.ctx.session();
     if (!session) throw new CodedError('not-logged-in', 'Not logged in');
+    const assertCurrent = () => {
+      options.assertCurrent?.();
+      if (this.ctx.session() !== session) throw new DOMException('Session operation was superseded', 'AbortError');
+    };
     const me = session.pubKeyHex;
     const profileRelays = Array.from(new Set([...this.ctx.relays(), ...DEFAULT_PROFILE_LOOKUP_RELAYS]));
 
@@ -74,6 +79,7 @@ export class OwnProfileModule {
         PROFILE_LOOKUP_MAX_WAIT_MS,
         { cache: 'bypass' },
       );
+      assertCurrent();
       existingEvent = newestEvent([
         ...profileQuery.events.filter((e) => e.kind === KIND_METADATA && e.pubkey === me),
         ...(cachedEvent ? [cachedKind0ToEvent(cachedEvent)] : []),
@@ -96,7 +102,9 @@ export class OwnProfileModule {
     const event = await this.ctx.signAndPublish(
       { kind: KIND_METADATA, content: JSON.stringify(merged), tags: [], created_at: Math.floor(Date.now() / 1000) },
       { extraRelays: Array.from(DEFAULT_PROFILE_LOOKUP_RELAYS) },
+      { assertCurrent },
     );
+    assertCurrent();
     setCachedKind0(event);
     this.deps.ingestRelayScoped(event);
     const state = loadProfileSyncState();
@@ -117,6 +125,7 @@ export class OwnProfileModule {
     if (shouldLookup) {
       try {
         const newest = await this.findNewest(me);
+        if (this.ctx.session() !== session) return;
         state.ownProfileLookupAt[me] = now;
         if (newest) {
           setCachedKind0(newest);
@@ -126,6 +135,7 @@ export class OwnProfileModule {
       } catch {
         // Retry on the next sync; a timeout is not an authoritative miss.
       }
+      if (this.ctx.session() !== session) return;
       saveProfileSyncState(state);
     }
     if (!cached) return;
@@ -133,6 +143,7 @@ export class OwnProfileModule {
     const key = profileRelayKey(me, relay);
     if ((state.ownProfileSyncedToRelay[key] ?? 0) >= cached.created_at) return;
     const ok = await this.deps.publishSignedEventToRelays(cachedKind0ToEvent(cached), [relay]);
+    if (this.ctx.session() !== session) return;
     if (ok.length > 0) {
       const next = loadProfileSyncState();
       next.ownProfileLookupAt[me] = state.ownProfileLookupAt[me] ?? lastLookup;

@@ -1,5 +1,5 @@
 /** What the phone preferences screen does beyond reading and writing a preference. */
-import { nostrActions } from '@/services/nostr-bridge';
+import { logoutSession } from '@/services/session/actions';
 import { useHintsStore } from '@/store/hints';
 import { useToastStore } from '@/store/feedback/toast';
 
@@ -11,5 +11,5 @@ export function replayHints(toastTitle: string): void {
 
 /** Sign out of this device (the confirmation sheet has already been answered). */
 export function disconnect(): void {
-  void nostrActions.logout();
+  void logoutSession();
 }

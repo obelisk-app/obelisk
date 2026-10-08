@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useConfiguredRelays, useCurrentRelayUrl, useGroups, useMyPubkey } from '@/services/nostr-bridge';
+import { useConfiguredRelays, useCurrentRelayUrl, useGroups } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useKeyedValue } from '@/hooks/common/useKeyedValue';
 import { useAutoMarkRead } from './useAutoMarkRead';
 import { useMentionSeen } from './useMentionSeen';

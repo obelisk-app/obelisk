@@ -18,7 +18,7 @@
  * (`login/PastedKeyNoticeStep.tsx`).
  *
  * The SDK modal runs inside its own `NostrSessionProvider` with in-memory
- * signer storage (`src/services/login/signer-storage.ts`), so the widget never writes a
+ * signer storage (`src/services/session/signer-storage.ts`), so the widget never writes a
  * pairing key or a "remembered" nsec to localStorage, and `autoRestore` is
  * off: the bridge, not the SDK, restores sessions.
  */
@@ -26,16 +26,16 @@
 import { LoginModal as SdkLoginModal, NostrSessionProvider, type LoginMethodId } from '@nostr-wot/ui';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { usePastedKeyStep } from '@/hooks/shell/login/usePastedKeyStep';
+import { usePastedKeyStep } from '@/hooks/session/usePastedKeyStep';
 import { OBELISK_NIP46_PERMISSIONS } from '@/constants/nostr/nip46-permissions';
 import GeneratedProfileEnhancements from './GeneratedProfileEnhancements';
 import { GeneratedNpubStep } from './GeneratedNpubStep';
 import { PastedKeyNoticeStep } from './PastedKeyNoticeStep';
 import { SessionNoticeBanner } from './SessionNoticeBanner';
-import { loginSignerStorage } from '@/services/login/signer-storage';
+import { loginSignerStorage } from '@/services/session/signer-storage';
 import { copyText } from '@/services/common/clipboard';
 import { signerAppHref } from '@/utils/nip46/signer-link';
-import { useLoginFlow } from '@/hooks/shell/login/useLoginFlow';
+import { useLoginFlow } from '@/hooks/session/useLoginFlow';
 import { KeyIcon, LockIcon, ShieldIcon, SparklesIcon } from '@/assets/icons';
 
 const NIP46_METADATA = {

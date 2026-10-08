@@ -7,6 +7,7 @@
  * `getBridgeImpl()` returns inside any service the component calls, with no
  * module mock. The state lives in `hooks/provider.ts`; this file only renders.
  */
+import SessionProvider from '@/providers/session/SessionProvider';
 import type { ReactNode } from 'react';
 import type { BridgeImpl } from '../facade/client';
 import { BridgeContext, useProvidedBridge } from './provider';
@@ -24,5 +25,5 @@ export interface BridgeProviderProps {
 
 export function BridgeProvider({ bridge, ready = true, children }: BridgeProviderProps) {
   const value = useProvidedBridge(bridge, ready);
-  return <BridgeContext.Provider value={value}>{children}</BridgeContext.Provider>;
+  return <BridgeContext.Provider value={value}><SessionProvider bridge={value.bridge} ready={value.ready}>{children}</SessionProvider></BridgeContext.Provider>;
 }

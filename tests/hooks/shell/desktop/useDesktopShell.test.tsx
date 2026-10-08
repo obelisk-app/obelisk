@@ -15,12 +15,7 @@ describe('useDesktopShell', () => {
   });
 
   it('shows the reconnecting screen while a stored session rehydrates', () => {
-    window.localStorage.setItem('obelisk-dex/session', '{}');
-    try {
-      expect(setup({ isLoggedIn: false }).result.current.gate).toBe('rehydrating');
-    } finally {
-      window.localStorage.removeItem('obelisk-dex/session');
-    }
+    expect(setup({ isLoggedIn: false, isRestoringSession: true }).result.current.gate).toBe('rehydrating');
   });
 
   it('shows the login screen once mounted with no stored session', () => {

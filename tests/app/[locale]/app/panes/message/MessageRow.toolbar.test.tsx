@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => 'b'.repeat(64),
+  });
+});
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
@@ -22,7 +28,7 @@ vi.mock('@/services/nostr-bridge', async (orig) => {
   return {
     ...actual,
     ...bridgeOverrides({
-      useMyPubkey: () => 'b'.repeat(64),
+
       useUserMetadata: () => userMetadataFixture({ displayName: 'Ana' }),
       useCurrentRelayUrl: () => 'wss://relay.example',
       useMyMutes: () => [],

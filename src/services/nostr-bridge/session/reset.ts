@@ -145,6 +145,7 @@ export function resetRelayScopedState(t: LifecycleTargets): void {
 export function clearForLogout(t: LifecycleTargets): void {
   const { state } = t;
   state.isLoggedIn.set(false);
+  state.isRestoringSession.set(false);
   t.pings.stop();
   t.bunker.ready.set(false);
   state.myPubkey.set(null);

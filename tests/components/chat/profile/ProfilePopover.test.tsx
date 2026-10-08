@@ -1,3 +1,11 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = () => bridge.metadata;
+  return sessionMock({
+    useMyPubkey: () => me.pubkey,
+    useSessionProfile: () => readProfile((() => me.pubkey)()),
+  });
+});
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -27,7 +35,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
     useGroupMemberInfo: () => bridge.members,
-    useMyPubkey: () => me.pubkey,
+
     useUserMetadata: () => bridge.metadata,
   });
 });

@@ -24,14 +24,7 @@ import { describe, expect, it } from 'vitest';
 const ROOTS = ['src/components', 'src/app', 'src/assets', 'src/hooks'];
 const NAMES = /\bgetBridge(?:Impl)?\b/;
 
-const EXCEPTIONS: Record<string, string> = {
-  // The marketing navbar's "Disconnect" is the one place outside a provider
-  // that needs the bridge, and only on that click. Its view model loads the
-  // front door with `await import(...)` there, which is why the landing and
-  // marketing pages ship without the bridge (and why they have no provider
-  // to ask). It lived in the navbar's component until round 29.
-  'src/hooks/marketing/useNavbar.ts': 'lazy logout on the marketing pages',
-};
+const EXCEPTIONS: Record<string, string> = {};
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -74,6 +67,6 @@ describe('React files reach the bridge through the provider', () => {
     // A static import of the front door would put the whole bridge in the
     // landing page's first load, which the exception exists to avoid.
     expect(navbar).not.toMatch(/^\s*import\s+(?!type\b)[^;]*from\s+['"]@\/services\/nostr-bridge['"]/m);
-    expect(navbar).toContain("await import('@/services/nostr-bridge')");
+    expect(navbar).toContain("await import('@/services/session/actions')");
   });
 });

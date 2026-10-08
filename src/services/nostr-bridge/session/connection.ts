@@ -9,7 +9,7 @@
  */
 import { CodedError, codeOrMessage, type ActivityCode } from '@/utils/errors/codes';
 import { SESSION_IDENTITY_ID, type AuthLease, type RelayHub, type RelayStatus } from '@nostr-wot/relay/hub';
-import { failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
+import { dismissActivity, failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
 import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '@/constants/nostr-bridge/facade';
 import { pushRelayDebug } from '../relay/relay-debug';
 import { validateRelayUrl } from '../relay/relay-list';
@@ -155,6 +155,7 @@ export class ConnectionModule {
     this.state.myPubkey.set(session.pubKeyHex);
     this.state.myLoginMethod.set(session.loginMethod);
     this.state.isLoggedIn.set(true);
+    this.state.isRestoringSession.set(false);
     if (this.reconnectActivityId !== null) {
       resolveActivity(this.reconnectActivityId, url);
       this.reconnectActivityId = null;
@@ -187,6 +188,8 @@ export class ConnectionModule {
       throw new CodedError('offline', "browser offline");
     }
     const generation = ++this.generation;
+    const sessionGeneration = state.sessionGeneration;
+    const isCurrent = () => generation === this.generation && sessionGeneration === state.sessionGeneration;
     const relaySnapshot = [...state.relays];
     state.connectionState.set('Connecting');
     const activityId = pushActivity('connect' satisfies ActivityCode, relaySnapshot.join(', '), { operation: 'connect' });
@@ -215,7 +218,7 @@ export class ConnectionModule {
           // re-issues them. A handshake that fails here rejects at once
           // (fail-fast) while the supervisor keeps retrying behind it.
           await this.deps.hub.connect(url, { timeoutMs: CONNECT_HANDSHAKE_TIMEOUT_MS });
-          if (generation !== this.generation) return url;
+          if (!isCurrent()) return url;
           pushRelayDebug({ kind: 'handshake-ok', relay: url });
           // The hub reported `connected` before resolving, so this is
           // already recorded unless the socket was up before the call.
@@ -229,7 +232,7 @@ export class ConnectionModule {
       handles.forEach((p, i) => {
         const url = relaySnapshot[i];
         p.catch((e) => {
-          if (generation !== this.generation) return;
+          if (!isCurrent()) return;
           pushRelayDebug({ kind: 'handshake-error', relay: url, reason: e instanceof Error ? e.message : String(e) });
           this.deps.setRelayAccess(url, 'unreachable');
         });
@@ -246,11 +249,16 @@ export class ConnectionModule {
       } catch {
         throw new CodedError('no-relays-connected', 'no relays connected');
       }
+      if (!isCurrent()) throw new DOMException('Session operation was superseded', 'AbortError');
       state.connectionState.set('Connected');
       // The entry keeps the relays it set out for as its detail; slower
       // ones may still be handshaking when the gate flips.
       resolveActivity(activityId);
     } catch (e: unknown) {
+      if (!isCurrent()) {
+        dismissActivity(activityId);
+        throw new DOMException('Session operation was superseded', 'AbortError');
+      }
       // The hub keeps every socket this call reached held and retries it;
       // its registry issues the pending REQs when one opens.
       // `Error:` then the code (the banner translates it) or the error's own words.

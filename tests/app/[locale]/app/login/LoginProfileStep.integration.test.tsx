@@ -6,28 +6,22 @@
  * failure lives in the interaction between our DOM enhancements and the
  * SDK's own React state, and mocking the SDK deletes exactly that.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import LoginModal from '@/app/[locale]/app/login/LoginModal';
-import { LocaleProvider } from '@tests/support/intl';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
-/** The component reads its copy from the dictionary, so it needs a provider. */
-const renderLocalized = (ui: React.ReactElement) => render(
-  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+const renderLocalized = (ui: React.ReactElement) => renderWithBridge(
+  ui, fakeBridge({ isLoggedIn: false, myPubkey: null }, { loginWithNsec: vi.fn(), loginWithNip07: vi.fn(), loginWithBunker: vi.fn() }),
 );
-
 
 const push = vi.hoisted(() => vi.fn());
 const publish = vi.fn(() => [Promise.resolve('ok')]);
 
 vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({ useRouter: () => ({ push }) }));
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({
-    nostrActions: { loginWithNsec: vi.fn(), loginWithNip07: vi.fn(), loginWithBunker: vi.fn() },
-  });
-});
+
 vi.mock('@nostr-wot/data', async (importOriginal) => ({
   ...await importOriginal<typeof import('@nostr-wot/data')>(),
   getPool: () => ({ publish }),

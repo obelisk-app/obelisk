@@ -24,7 +24,7 @@ const revokeObjectURL = vi.fn();
 function setup(go = vi.fn()) {
   const bridge = fakeBridge({ userMetadata: { [BRIDGE_MOCK_PUBKEY]: META } as never });
   const view = renderHook(() => useEditProfileScreen(go), { wrapper: bridgeWrapper(bridge) });
-  return { ...view, go };
+  return { ...view, go, bridge };
 }
 
 /** A file input's change event carrying `file`. */
@@ -55,6 +55,20 @@ describe('useEditProfileScreen', () => {
     expect(result.current.pictureUrl).toBe('https://cdn.example/old.png');
     expect(result.current.busyLabel).toBeNull();
     expect(result.current.saveDisabled).toBe(false);
+  });
+
+  it('revokes picked previews when the same account starts a new session', () => {
+    let emitGeneration: (generation: number) => void = () => {};
+    const bridge = fakeBridge({ userMetadata: { [BRIDGE_MOCK_PUBKEY]: META } }, {
+      subscribeSessionGeneration: (cb) => { emitGeneration = cb; cb(0); return () => {}; },
+    });
+    const { result } = renderHook(() => useEditProfileScreen(vi.fn()), { wrapper: bridgeWrapper(bridge) });
+    act(() => result.current.onPictureFile(picked(image()).event));
+    const oldPreview = result.current.currentPicture;
+    act(() => emitGeneration(1));
+    expect(result.current.currentPicture).toBe(META.picture);
+    expect(result.current.pictureFilePicked).toBe(false);
+    expect(revokeObjectURL).toHaveBeenCalledWith(oldPreview);
   });
 
   it('disables save without a name', () => {

@@ -1,14 +1,8 @@
 'use client';
 
 import { useMemo, useSyncExternalStore } from 'react';
-import {
-  nostrActions,
-  useCurrentRelayUrl,
-  useMyMutes,
-  useMyPubkey,
-  type JsMessage,
-  type JsUserMetadata,
-} from '@/services/nostr-bridge';
+import { nostrActions, useCurrentRelayUrl, useMyMutes, type JsMessage, type JsUserMetadata } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { displayNameFor } from '@/utils/identity/display-name';
 import {
   getRecentEmojisSnapshot,

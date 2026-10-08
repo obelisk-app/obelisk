@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => null,
+  });
+});
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -8,7 +14,7 @@ import TrendingWidget from '@/components/social/widgets/TrendingWidget';
 /** The follow button needs a signed-in identity and the interests store. */
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({ useMyPubkey: () => null });
+  return bridgeMock({  });
 });
 
 const note = (id: string, pubkey: string, tags: string[]): NostrEvent => ({

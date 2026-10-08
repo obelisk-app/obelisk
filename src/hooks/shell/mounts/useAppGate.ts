@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useIsLoggedIn } from '@/services/nostr-bridge';
+import { useIsLoggedIn } from '@/hooks/session/useSession';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { initializeWot } from '@/services/wot';
 import { initSocial } from '@/services/social/pool';
 import { useIsMobile } from '@/hooks/common/useIsMobile';
-import { useSessionNoticeToast } from '@/hooks/shell/login/useSessionNoticeToast';
+import { useSessionNoticeToast } from '@/hooks/session/useSessionNoticeToast';
 
 /**
  * The /app gate's view model: which shell to paint (`isMobile`, `null`

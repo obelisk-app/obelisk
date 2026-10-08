@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useMyPubkey, type JsDirectMessage } from '@/services/nostr-bridge';
+import { type JsDirectMessage } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { copyWithToast } from '@/services/common/clipboard';
 import { safeNpub } from '@/utils/identity/short-npub';
 

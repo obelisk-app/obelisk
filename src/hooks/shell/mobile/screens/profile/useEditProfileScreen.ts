@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { useMyPubkey, useUserMetadata } from '@/services/nostr-bridge';
-import { useProfileEditorForm } from '@/hooks/chat/profile/useProfileEditorForm';
+import { useMyPubkey, useSessionProfile, useSessionGeneration } from '@/hooks/session/useSession';
+import { useProfileEditorForm } from '@/hooks/session/useProfileEditorForm';
 import type { ScreenName } from '@/utils/shell/mobile/url-state';
 import { profileImageProblem } from '@/utils/identity/profile-image';
 import { takePickedFile } from '@/utils/media/upload/picked-file';
@@ -22,11 +22,19 @@ type Image = 'picture' | 'banner';
 export function useEditProfileScreen(go: Go) {
   const t = useTranslations();
   const myPubkey = useMyPubkey();
-  const meta = useUserMetadata(myPubkey);
+  const generation = useSessionGeneration();
+  const meta = useSessionProfile();
   const goBack = () => go('settings-profile', 'back');
   const form = useProfileEditorForm(meta, goBack);
   const [picturePreview, setPicturePreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+
+  const [previewAccount, setPreviewAccount] = useState({ pubkey: myPubkey, generation });
+  if (previewAccount.pubkey !== myPubkey || previewAccount.generation !== generation) {
+    setPreviewAccount({ pubkey: myPubkey, generation });
+    setPicturePreview(null);
+    setBannerPreview(null);
+  }
 
   // Each preview's object URL is revoked when it is replaced or cleared, and
   // on unmount; one effect per preview, so picking an avatar never revokes

@@ -1,13 +1,7 @@
 import { useCallback, useRef, type CSSProperties } from 'react';
 import { useTranslations } from 'next-intl';
-import {
-  useCurrentRelayUrl,
-  useIsLoggedIn,
-  useIsRehydrating,
-  useMyFollows,
-  useMyPubkey,
-  type JsGroup,
-} from '@/services/nostr-bridge';
+import { useCurrentRelayUrl, useMyFollows, type JsGroup } from '@/services/nostr-bridge';
+import { useIsLoggedIn, useIsRehydrating, useMyPubkey } from '@/hooks/session/useSession';
 import type { Translate } from '@/i18n/keys';
 import { useNotificationBadgeCount } from '@/hooks/notifications/useNotificationSelectors';
 import { useTotalDMUnread } from '@/hooks/read-state/useUnreadCounts';

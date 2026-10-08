@@ -129,7 +129,7 @@ export class SessionPersistence {
    * no vault in this browser), so such a restore runs in the same task as it
    * did before the vault; a promise otherwise.
    */
-  load(raw: string): LoadedSession | Promise<LoadedSession> {
+  load(raw: string, isCurrent: () => boolean = () => true): LoadedSession | Promise<LoadedSession> {
     forgetSdkSignerStorage();
     const parsed = parseStoredSession(raw);
     if (parsed.kind === 'plaintext') {
@@ -141,7 +141,7 @@ export class SessionPersistence {
         return session;
       }
       return sealing.then(() => {
-        if (this.state.session !== session) return null;
+        if (!isCurrent() || this.state.session !== session) return null;
         this.persist();
         return session;
       });
@@ -157,11 +157,12 @@ export class SessionPersistence {
     if (!isVaultAvailable()) return this.unopened(new VaultError('unavailable'));
     return openSessionSecrets(box, record.pubKeyHex).then(
       (secrets) => {
+        if (!isCurrent()) return null;
         Object.assign(session, secrets);
         this.sealed = { session, box };
         return session;
       },
-      (err: unknown) => this.unopened(err),
+      (err: unknown) => isCurrent() ? this.unopened(err) : null,
     );
   }
 

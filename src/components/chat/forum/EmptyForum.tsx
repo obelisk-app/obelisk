@@ -1,6 +1,6 @@
 'use client';
 
-import { useSignerReady } from '@/services/nostr-bridge';
+import { useSignerReady } from '@/hooks/session/useSession';
 import { useTranslations } from 'next-intl';
 import TextButton from '@/components/ui/buttons/TextButton';
 

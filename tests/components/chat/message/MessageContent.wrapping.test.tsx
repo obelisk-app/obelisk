@@ -1,3 +1,11 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const { userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = () => userMetadataFixture({ displayName: 'Fabricio' });
+  return sessionMock({
+    useSessionProfile: () => readProfile('f'.repeat(64)),
+  });
+});
 import { render, screen } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { nip19 } from 'nostr-tools';

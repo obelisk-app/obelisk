@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { isWebLNAvailable } from '@nostr-wot/wallet';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { ensureNwcWalletLoaded } from '@/services/wallet/nwc-wallet';
 import type { WalletKind } from '@/services/wallet/wallet';
 import { useNwcWalletStore, type NwcWalletView } from '@/store/wallet/nwc-wallet';

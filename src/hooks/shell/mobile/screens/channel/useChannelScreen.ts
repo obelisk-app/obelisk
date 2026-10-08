@@ -1,16 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import {
-  useAdmins,
-  useCurrentRelayUrl,
-  useGroupById,
-  useGroups,
-  useMessages,
-  useMessagesStatus,
-  useMyPubkey,
-  useReactions,
-  type JsMessage,
-} from '@/services/nostr-bridge';
+import { useAdmins, useCurrentRelayUrl, useGroupById, useGroups, useMessages, useMessagesStatus, useReactions, type JsMessage } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { type ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 import { useChannelHighlights } from '@/hooks/read-state/useChannelHighlights';
 import { useChannelGamesSubscription } from '@/hooks/games/channel/useChannelGames';

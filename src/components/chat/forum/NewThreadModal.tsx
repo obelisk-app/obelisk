@@ -1,6 +1,7 @@
 'use client';
 
-import { useMyPubkey, useSignerReady, type JsForumTag } from '@/services/nostr-bridge';
+import { type JsForumTag } from '@/services/nostr-bridge';
+import { useMyPubkey, useSignerReady } from '@/hooks/session/useSession';
 import { newThreadForm } from '@/services/chat/forum/new-thread-form';
 import { threadTagChoice, toggleThreadTag } from '@/utils/chat/forum/forum-tags';
 import { useTranslations } from 'next-intl';

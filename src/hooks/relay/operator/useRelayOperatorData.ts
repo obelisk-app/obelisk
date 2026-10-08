@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useMediaPacks, useMyPubkey } from '@/services/nostr-bridge';
+import { useMediaPacks } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useChatStore } from '@/store/chat';
 import { relayOperatorAuthors } from '@/services/relay/channel-layout';
 import { useChannelLayout } from '@/hooks/relay/channel-layout/useChannelLayout';

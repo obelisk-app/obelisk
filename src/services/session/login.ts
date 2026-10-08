@@ -1,19 +1,8 @@
-import type { LoginMethodId } from '@nostr-wot/ui';
+import type { LoginArgs, GeneratedProfileDraft } from '@/types/session/login';
+import type { BridgeImpl } from '@/services/nostr-bridge';
 import { finalizeEvent, getPublicKey } from 'nostr-tools/pure';
 import { getPool, nsecToBytes, nsecToHex as sdkNsecToHex } from '@nostr-wot/data';
-import { nostrActions } from '@/services/nostr-bridge';
 import { randomProfileName } from '@/utils/identity/display-name';
-
-export type LoginArgs = {
-  method: LoginMethodId;
-  pubkey: string;
-  nsec?: string;
-  bunkerUri?: string;
-  clientNsec?: string;
-  signer?: unknown;
-};
-
-export type GeneratedProfileDraft = { name?: string; about?: string; picture?: string; banner?: string };
 
 function nsecToHex(nsec: string): { skHex: string; pkHex: string } {
   const sk = nsecToBytes(nsec);
@@ -36,18 +25,18 @@ function nsecToSkHex(nsec: string): string {
  *   - import / generate  → bridge.loginWithNsec(skHex, pkHex) using args.nsec
  *   - nip46              → bridge.loginWithBunker(args.bunkerUri)
  */
-export async function routeToBridge(args: LoginArgs): Promise<void> {
+export async function routeToBridge(bridge: Pick<BridgeImpl, 'loginWithNip07' | 'loginWithNsec' | 'loginWithBunker'>, args: LoginArgs): Promise<void> {
   const { method, pubkey, nsec, bunkerUri, clientNsec, signer } = args;
   switch (method) {
     case 'nip07':
-      await nostrActions.loginWithNip07(pubkey);
+      await bridge.loginWithNip07(pubkey);
       return;
 
     case 'import':
     case 'generate': {
       if (!nsec) throw new Error('SDK did not provide an nsec for the bridge');
       const { skHex, pkHex } = nsecToHex(nsec);
-      await nostrActions.loginWithNsec(skHex, pkHex);
+      await bridge.loginWithNsec(skHex, pkHex);
       return;
     }
 
@@ -57,9 +46,9 @@ export async function routeToBridge(args: LoginArgs): Promise<void> {
       // The SDK has already paired the remote signer with `clientNsec`.
       // We must reuse that client identity, a fresh key would be
       // rejected by the signer ("no secret") since it never authorized it.
-      await nostrActions.loginWithBunker(bunkerUri, {
+      await bridge.loginWithBunker(bunkerUri, {
         ...(clientNsec ? { clientSecretHex: nsecToSkHex(clientNsec) } : {}),
-        signer: signer as NonNullable<Parameters<typeof nostrActions.loginWithBunker>[1]>['signer'],
+        signer: signer as NonNullable<Parameters<typeof bridge.loginWithBunker>[1]>['signer'],
       });
       return;
     }

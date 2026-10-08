@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => ME,
+  });
+});
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { LocaleProvider } from '@tests/support/intl';
@@ -14,7 +20,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
     nostrActions: { sendMessage: (...a: unknown[]) => sendMessage(...(a as [])), joinGroup: (...a: unknown[]) => joinGroup(...(a as [])) },
-    useMyPubkey: () => ME,
+
     useRelayAccess: () => 'ok',
     useAdmins: () => [],
     useMembers: () => members,

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { nip19 } from 'nostr-tools';
+import { buildImportGraph, staticClosure } from '@tests/support/import-graph';
 import { LocaleProvider } from '@tests/support/intl';
 
 const ME = 'd'.repeat(64);
@@ -139,6 +140,11 @@ describe('Navbar bundle', () => {
       expect(src, file).not.toMatch(/^import[^;]*from '@\/services\/nostr-bridge'/m);
     }
     // The logout reaches it on click, through the navbar's view model.
-    expect(readFileSync(resolve(process.cwd(), 'src/hooks/marketing/useNavbar.ts'), 'utf8')).toContain("await import('@/services/nostr-bridge')");
+    expect(readFileSync(resolve(process.cwd(), 'src/hooks/marketing/useNavbar.ts'), 'utf8')).toContain("await import('@/services/session/actions')");
+    const graph = buildImportGraph();
+    for (const entry of ['src/hooks/marketing/useNavbar.ts', 'src/services/session/actions.ts']) {
+      const reachable = [...staticClosure(graph, entry)];
+      expect(reachable.filter((file) => file.startsWith('src/services/nostr-bridge/')), entry).toEqual([]);
+    }
   });
 });

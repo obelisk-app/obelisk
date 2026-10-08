@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useIsLoggedIn: () => true,
+  });
+});
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,7 +30,7 @@ vi.mock('@/services/nostr-bridge', async (orig) => {
   const { bridgeOverrides } = await import('@tests/support/mocks/nostr-bridge');
   return {
     ...(await orig<typeof import('@/services/nostr-bridge')>()),
-    ...bridgeOverrides({ useIsLoggedIn: () => true }),
+    ...bridgeOverrides({  }),
     getBridge: async () => bridge,
     getBridgeImpl: () => bridge,
   };

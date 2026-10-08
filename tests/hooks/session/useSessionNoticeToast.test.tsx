@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useToastStore } from '@/store/feedback/toast';
-import { useSessionNoticeToast } from '@/hooks/shell/login/useSessionNoticeToast';
+import { useSessionNoticeToast } from '@/hooks/session/useSessionNoticeToast';
 import { fakeBridge, type FakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 

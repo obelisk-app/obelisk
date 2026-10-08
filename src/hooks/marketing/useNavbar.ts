@@ -34,14 +34,10 @@ export function useNavbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // The bridge loads only when someone actually disconnects from here. This
-  // is the one React file allowed to call `getBridge()`
-  // (`tests/bridge-in-react-files.test.ts`): the marketing pages have no
-  // provider, so that their first load ships without the bridge.
+  // Marketing loads the session action only when someone disconnects.
   const logout = async () => {
-    const { getBridge } = await import('@/services/nostr-bridge');
-    const bridge = await getBridge();
-    await bridge.logout();
+    const { logoutSession } = await import('@/services/session/actions');
+    await logoutSession();
     notifySavedAccountChanged();
     setShowMenu(false);
     router.push('/');

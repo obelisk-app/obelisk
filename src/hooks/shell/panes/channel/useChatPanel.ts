@@ -1,19 +1,8 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import {
-  useCurrentRelayUrl,
-  useGroupById,
-  useMessages,
-  useMessagesStatus,
-  useGroupMetadataEose,
-  useReactions,
-  useAdmins,
-  useGroupCreator,
-  useRelayAccess,
-  useMyPubkey,
-  type JsMessage,
-} from '@/services/nostr-bridge';
+import { useCurrentRelayUrl, useGroupById, useMessages, useMessagesStatus, useGroupMetadataEose, useReactions, useAdmins, useGroupCreator, useRelayAccess, type JsMessage } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useVoiceStore } from '@/store/voice';
 import { useChannelHighlights } from '@/hooks/read-state/useChannelHighlights';
 import { useVoiceChatPane } from '@/hooks/shell/panes/channel/useVoiceChatPane';

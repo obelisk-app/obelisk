@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useIsLoggedIn, useCurrentRelayUrl, useRelayAccess, useMyLoginMethod } from '@/services/nostr-bridge';
+import { useCurrentRelayUrl, useRelayAccess } from '@/services/nostr-bridge';
+import { useIsLoggedIn, useMyLoginMethod } from '@/hooks/session/useSession';
 import { shortHost } from '@/utils/relay-url/url-host';
 import Modal from '@/components/ui/overlays/Modal';
 import { useTranslations } from 'next-intl';

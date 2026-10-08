@@ -12,7 +12,7 @@ import { useTranslations } from 'next-intl';
 import { useNoteThread } from '@/hooks/social/note/useNoteThread';
 import NoteCard from './NoteCard';
 import NoteComposer from '../composer/NoteComposer';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import EmptyState from '@/components/ui/feedback/EmptyState';
 import Text from '@/components/ui/layout/Text';
 import Skeleton from '@/components/ui/animations/Skeleton';

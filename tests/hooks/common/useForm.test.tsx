@@ -112,6 +112,38 @@ describe('useForm submit', () => {
     expect(result.current.submitting).toBe(false);
   });
 
+  it.each(['resolve', 'reject'] as const)('reset releases a new submit and ignores the previous %s', async (outcome) => {
+    const pending: Array<{ resolve: (value: string) => void; reject: (error: Error) => void }> = [];
+    const submit = vi.fn(() => new Promise<string>((resolve, reject) => pending.push({ resolve, reject })));
+    const onSuccess = vi.fn();
+    const { result } = setup({ submit, onSuccess, resetOnSuccess: true, failure: 'chat.relayForm.addFailed' });
+    let previous!: Promise<void>;
+    let current!: Promise<void>;
+    act(() => { previous = result.current.submit(); });
+    act(() => result.current.reset({ name: 'new account', admin: true }));
+    expect(result.current.submitting).toBe(false);
+    expect(result.current.canSubmit).toBe(true);
+    act(() => result.current.set('name', 'new draft'));
+    act(() => {
+      current = result.current.submit();
+      void result.current.submit();
+    });
+    expect(submit).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      if (outcome === 'resolve') pending[0].resolve('old result');
+      else pending[0].reject(new Error('old failure'));
+      await previous;
+    });
+    expect(result.current.submitting).toBe(true);
+    expect(result.current.values.name).toBe('new draft');
+    expect(result.current.error).toBeNull();
+    expect(onSuccess).not.toHaveBeenCalled();
+    await act(async () => { pending[1].resolve('new result'); await current; });
+    expect(result.current.submitting).toBe(false);
+    expect(result.current.values.name).toBe('new account');
+    expect(onSuccess).toHaveBeenCalledExactlyOnceWith('new result', { name: 'new draft', admin: true });
+  });
+
   it('words an uncoded failure with the spec\'s key, a coded one with its own', async () => {
     const { result } = setup({ submit: vi.fn().mockRejectedValue(new Error('relay down')), failure: 'chat.relayForm.addFailed' });
     await act(() => result.current.submit());

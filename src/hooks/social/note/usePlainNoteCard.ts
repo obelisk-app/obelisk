@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useMyFollowSet, useMyPubkey } from '@/services/nostr-bridge';
+import { useMyFollowSet } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { useNoteEngagement } from '@/hooks/social/note/useNoteEngagement';
 import { replyParentOf } from '@/services/social/feed';

@@ -1,11 +1,15 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => who.pubkey,
+    useMyLoginMethod: () => who.method,
+  });
+});
+import type { LoginMethod } from '@/services/nostr-bridge';
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-const who = vi.hoisted(() => ({ pubkey: 'a'.repeat(64) as string | null, method: 'nip07' }));
-vi.mock('@/services/nostr-bridge', () => ({
-  useMyPubkey: () => who.pubkey,
-  useMyLoginMethod: () => who.method,
-}));
+const who = vi.hoisted(() => ({ pubkey: 'a'.repeat(64) as string | null, method: 'nip07' as LoginMethod }));
 const selfPqState = vi.fn();
 vi.mock('@/services/chat/pq/capability', () => ({ selfPqState: (...a: unknown[]) => selfPqState(...a) }));
 

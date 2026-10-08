@@ -1,6 +1,7 @@
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
-import { nostrActions, useAdmins, useMembers, useMyPubkey, useRelayAccess, type JsGroup, type JsMessage } from '@/services/nostr-bridge';
+import { nostrActions, useAdmins, useMembers, useRelayAccess, type JsGroup, type JsMessage } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { resolveDraftMentions, type DraftMention } from '@/utils/message-text/mentions';
 import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import type { MessageSticker } from '@/utils/media/tags/sticker-tags';

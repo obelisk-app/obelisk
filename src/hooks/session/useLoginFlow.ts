@@ -3,20 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
-import type { LoginMethodId } from '@nostr-wot/ui';
 import { profileUrl } from '@/services/social/note-links';
-import { publishGeneratedProfile, routeToBridge, type GeneratedProfileDraft, type LoginArgs } from '@/services/login/login-bridge';
+import { useSessionActions } from '@/hooks/session/useSession';
+import type { GeneratedProfileDraft, LoginArgs } from '@/types/session/login';
 import { isTransientNip46Error } from '@/utils/nip46/signer-link';
 import { errorText } from '@/utils/errors/error-text';
 
-type SdkLogin = {
-  pubkey: string;
-  method: LoginMethodId;
-  nsec?: string;
-  bunkerUri?: string;
-  clientNsec?: string;
-  signer?: unknown;
-};
+
 
 /**
  * The login modal's flow: route an SDK login to the bridge, hold a generated
@@ -25,6 +18,7 @@ type SdkLogin = {
  * connected" error.
  */
 export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; onClose?: () => void }) {
+  const { login, publishGeneratedProfile } = useSessionActions();
   const router = useRouter();
   const t = useTranslations();
   const [generatedLogin, setGeneratedLogin] = useState<LoginArgs | null>(null);
@@ -61,7 +55,7 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
     }, Math.min(5_000, 250 * 2 ** nip46Retry));
   };
 
-  const onLogin = async ({ pubkey, method, nsec, bunkerUri, clientNsec, signer }: SdkLogin) => {
+  const onLogin = async ({ pubkey, method, nsec, bunkerUri, clientNsec, signer }: LoginArgs) => {
     const args: LoginArgs = {
       method,
       pubkey,
@@ -75,7 +69,7 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
       setGeneratedLogin(args);
       return;
     }
-    await routeToBridge(args);
+    await login(args);
     onSuccess?.();
   };
 
@@ -85,7 +79,7 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
     setFinishing(true);
     setFinishError('');
     try {
-      await routeToBridge(generatedLogin);
+      await login(generatedLogin);
       onSuccess?.();
     } catch (error) {
       setFinishError(errorText(t, error, 'shell.login.finishFailed'));

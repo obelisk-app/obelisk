@@ -47,6 +47,7 @@ const DEFAULTS: { readonly [K in StoreName]: () => StoreValue<K> } = {
   currentRelayUrl: () => BRIDGE_MOCK_RELAY,
   configuredRelays: () => [BRIDGE_MOCK_RELAY],
   isLoggedIn: () => true,
+  isRestoringSession: () => false,
   myPubkey: () => BRIDGE_MOCK_PUBKEY,
   myLoginMethod: () => 'nsec',
   bunkerSignerReady: () => false,
@@ -94,6 +95,8 @@ function reads(s: FakeStores) {
   const status = (m: Readonly<Record<string, MessagesStatus>>, g: string): MessagesStatus => m[g] ?? 'loading';
   return {
     subscribeConfiguredRelays: (cb) => s.configuredRelays.subscribe(cb),
+    subscribeSessionGeneration: (cb) => { cb(0); return () => {}; },
+    subscribeIsRestoringSession: (cb) => s.isRestoringSession.subscribe(cb),
     subscribeIsLoggedIn: (cb) => s.isLoggedIn.subscribe(cb),
     subscribeRelayAccess: (cb) => s.relayAccess.subscribe(cb),
     subscribeConnectionState: (cb) => s.connectionState.subscribe(cb),
@@ -127,6 +130,7 @@ function reads(s: FakeStores) {
     subscribeActiveCallByChannel: (cb) => s.activeCallByChannel.subscribe(cb),
     subscribeDmCallMessages: () => () => {},
     getPublicKey: () => s.myPubkey.get(),
+    getSessionGeneration: () => 0,
     displayNameFor: (pk) => {
       const meta = s.userMetadata.get()[pk];
       return meta?.displayName || meta?.name || `${pk.slice(0, 8)}…`;

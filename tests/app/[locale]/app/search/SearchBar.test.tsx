@@ -1,3 +1,10 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = () => null;
+  return sessionMock({
+    useSessionProfile: () => readProfile('f'.repeat(64)),
+  });
+});
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';

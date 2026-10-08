@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => ME,
+  });
+});
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { LocaleProvider } from '@tests/support/intl';
@@ -33,7 +39,7 @@ vi.mock('@/services/nostr-bridge', async () => {
       sendMessage: (...a: unknown[]) => sendMessage(...a),
       joinGroup: (...a: unknown[]) => joinGroup(...a),
     },
-    useMyPubkey: () => ME,
+
     useCurrentRelayUrl: () => 'wss://relay.example',
     useRelayAccess: () => relayAccess,
     useAdmins: () => admins,

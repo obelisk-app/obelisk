@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => author,
+  });
+});
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MediaLibraryModal from '@/components/media/library/MediaLibraryModal';
@@ -46,7 +52,7 @@ vi.mock('@/services/nostr-bridge', async () => {
       [pack.address]: pack,
     }),
     useMyMediaFavorites: () => ({ items: mocks.favoriteItems, packAddresses: [], createdAt: 0 }),
-    useMyPubkey: () => author,
+
   });
 });
 

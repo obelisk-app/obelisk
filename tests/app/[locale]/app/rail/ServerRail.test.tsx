@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => null,
+  });
+});
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,7 +15,7 @@ vi.mock('@/services/nostr-bridge', async () => {
     nostrActions: {},
     useConfiguredRelays: () => relays.list,
     useCurrentRelayUrl: () => '',
-    useMyPubkey: () => null,
+
   });
 });
 

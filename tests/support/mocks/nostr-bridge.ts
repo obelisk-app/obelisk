@@ -38,7 +38,7 @@ import { cacheDelete, cacheGet, cacheSet } from '@/services/nostr-bridge/cache/c
 import { resubscribeOnQuotaClose } from '@/services/nostr-bridge/relay/quota-resubscribe';
 import { hasSeenWrap, markWrapSeen } from '@/services/nostr-bridge/cache/wrap-ledger';
 
-type Bridge = typeof import('@/services/nostr-bridge');
+type Bridge = typeof import('@/services/nostr-bridge') & Pick<typeof import('@/hooks/session/useSession'), 'useIsLoggedIn' | 'useIsRehydrating' | 'useMyPubkey' | 'useBunkerSignerReady' | 'useMyLoginMethod' | 'useSignerReady' | 'useNipSigner' | 'useSessionNotice' | 'useSessionProfile' | 'useSessionGeneration'>;
 
 /** Default signed-in identity and relay; override per test when it matters. */
 export const BRIDGE_MOCK_PUBKEY = 'f'.repeat(64);
@@ -137,6 +137,8 @@ const hookDefaults = {
   useMyMutes: () => EMPTY_LIST,
   useMyLoginMethod: () => 'nsec' as const,
   useSessionNotice: () => null,
+  useSessionProfile: () => null,
+  useSessionGeneration: () => 0,
   useBunkerSignerReady: () => false,
   useSignerReady: () => true,
   useRelayAccess: () => 'ok' as const,
@@ -156,7 +158,7 @@ const hookDefaults = {
   pageRelayHub: () => {
     throw new Error('pageRelayHub: the bridge is mocked in this suite');
   },
-} satisfies Partial<Bridge> satisfies Required<Omit<Bridge, 'nostrActions' | 'getBridge' | 'getBridgeImpl'>>;
+} satisfies Partial<Bridge> satisfies Required<Omit<Bridge, 'nostrActions' | 'getBridge' | 'getBridgeImpl' | 'logoutPageSession'>>;
 
 /**
  * A complete module mock: every hook has a default, every override is
@@ -174,6 +176,7 @@ export function bridgeMock(overrides: BridgeMock = {}): BridgeMock {
     ...(getBridgeImpl ? { useBridge: () => (getBridgeImpl() as BridgeImpl | null) } : {}),
     ...(getBridge ? { useAwaitBridge: () => getBridge as () => Promise<BridgeImpl> } : {}),
     ...(overrides.useMyFollows ? { useMyFollowSet: () => new Set(overrides.useMyFollows!()) } : {}),
+    ...(overrides.useUserMetadata ? { useSessionProfile: () => overrides.useUserMetadata!(overrides.useMyPubkey?.() ?? BRIDGE_MOCK_PUBKEY) } : {}),
     ...overrides,
     nostrActions: { ...overrides.nostrActions },
   };

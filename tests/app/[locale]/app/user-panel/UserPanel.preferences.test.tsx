@@ -1,3 +1,15 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const { userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
+  const { fakeBridge } = await import('@tests/support/fake-bridge');
+  const { createSessionActions } = await import('@/services/session/actions');
+  return sessionMock({
+    useMyPubkey: () => 'a'.repeat(64),
+    useMyLoginMethod: () => 'nip07',
+    useSessionProfile: () => userMetadataFixture({ displayName: 'Alice', name: 'Alice', picture: 'https://cdn.example/alice.jpg', banner: 'https://cdn.example/banner.jpg' }),
+    useSessionActions: () => createSessionActions(fakeBridge({}, { logout: (...args) => mockLogout(...args) })),
+  });
+});
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
@@ -19,12 +31,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   return bridgeMock({
     nostrActions: {
       ensureUserMetadata: vi.fn().mockResolvedValue(undefined),
-      editUserMetadata: vi.fn(),
-      logout: (...args: unknown[]) => mockLogout(...args),
     },
-    useSignerReady: () => true,
-    useMyPubkey: () => 'a'.repeat(64),
-    useMyLoginMethod: () => 'nip07',
     useUserMetadata: () => ({
       displayName: 'Alice', name: 'Alice',
       picture: 'https://cdn.example/alice.jpg',

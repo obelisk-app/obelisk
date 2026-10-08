@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useChatStore } from '@/store/chat';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useNip05Status } from '@/hooks/identity/useNip05Status';
 import { useDismiss } from '@/hooks/common/useDismiss';
 import { copyWithToast } from '@/services/common/clipboard';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useIsLoggedIn } from '@/services/nostr-bridge';
+import { useIsLoggedIn } from '@/hooks/session/useSession';
 import { initDmCalls, useDmCallStore } from '@/store/call/dm-call';
 
 /**

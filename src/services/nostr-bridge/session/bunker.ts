@@ -34,6 +34,7 @@ export class BunkerModule {
   /** Active NIP-46 signer (when loginMethod === 'bunker'). Reconstructed lazily. */
   signer: RemoteSigner | null = null;
   private recovery: Promise<RemoteSigner> | null = null;
+  private generation = 0;
   /** Set by the modal so it can show the auth-challenge URL. */
   onAuth: ((url: string) => void) | null = null;
   /**
@@ -57,6 +58,8 @@ export class BunkerModule {
 
   /** Close and forget the active signer (logout). */
   close(): void {
+    this.generation++;
+    this.ready.set(false);
     if (this.signer) {
       try { this.signer.close(); } catch { /* ignore */ }
       this.signer = null;
@@ -82,26 +85,39 @@ export class BunkerModule {
   async ensure(): Promise<RemoteSigner> {
     if (this.signer) return this.signer;
     const session = this.ctx.session();
+    const generation = this.generation;
     if (!session || session.loginMethod !== 'bunker' || !session.bunkerUrl || !session.bunkerLocalSecretHex) {
       throw new CodedError('bunker-no-session', 'No bunker session to rehydrate');
     }
+    const assertCurrent = () => {
+      if (this.ctx.session() !== session || generation !== this.generation) {
+        throw new DOMException('Session operation was superseded', 'AbortError');
+      }
+    };
     const bp = await parseBunkerInput(session.bunkerUrl);
+    assertCurrent();
     if (!bp) throw new CodedError('bunker-no-session', 'Invalid stored bunker URL');
-    // Read again after the await, as the facade did: a logout while the URL
-    // was parsing throws here instead of rebuilding the old account's signer.
-    const localSecret = hexToBytes(this.ctx.session()!.bunkerLocalSecretHex!);
+    const localSecret = hexToBytes(session.bunkerLocalSecretHex);
     const signer = BunkerSigner.fromBunker(localSecret, bp, {
-      onauth: (url) => this.openAuthUrl(url),
+      onauth: (url) => {
+        if (this.ctx.session() === session && generation === this.generation) this.openAuthUrl(url);
+      },
     });
-    if (bp.secret) {
-      await signer.connect();
-    } else {
-      // SDK QR logins persist a bunker URL synthesized from the paired signer
-      // and relays; the original nostrconnect secret is not recoverable from
-      // the SDK's public API. The client secret is the durable authorization,
-      // so warm the RPC channel with get_public_key instead of sending a
-      // bogus connect request with an empty secret.
-      await signer.getPublicKey();
+    try {
+      if (bp.secret) {
+        await signer.connect();
+      } else {
+        // SDK QR logins persist a bunker URL synthesized from the paired signer
+        // and relays; the original nostrconnect secret is not recoverable from
+        // the SDK's public API. The client secret is the durable authorization,
+        // so warm the RPC channel with get_public_key instead of sending a
+        // bogus connect request with an empty secret.
+        await signer.getPublicKey();
+      }
+      assertCurrent();
+    } catch (error) {
+      signer.close();
+      throw error;
     }
     this.signer = signer;
     this.ready.set(true);

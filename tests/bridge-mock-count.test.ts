@@ -28,7 +28,7 @@ import { describe, expect, it } from 'vitest';
  * its suite; 95 after round 27 moved the relay admin panel's suite to
  * `fakeBridge`.
  */
-const BUDGET = 91;
+const BUDGET = 85;
 
 const TESTS = join(process.cwd(), 'tests');
 /** The front door itself, not a path inside it (`/client` and friends are counted elsewhere, if at all). */

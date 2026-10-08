@@ -1,12 +1,8 @@
 'use client';
 
 import { useState, type MouseEvent } from 'react';
-import {
-  useBridge,
-  useMyContactList,
-  useMyContactListReady,
-  useMyPubkey,
-} from '@/services/nostr-bridge';
+import { useBridge, useMyContactList, useMyContactListReady } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { toggledFollowTags } from '@/services/social/profile-feed';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { KIND_CONTACT_LIST } from '@/constants/nostr/nip-kinds';

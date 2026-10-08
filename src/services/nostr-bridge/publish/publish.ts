@@ -96,7 +96,7 @@ export class PublishModule {
   async signAndPublish(
     template: SignableTemplate,
     relayOpts: PublishOpts | readonly string[] = {},
-    opts?: { quiet?: boolean },
+    opts?: { quiet?: boolean; assertCurrent?: () => void },
   ): Promise<NostrEvent> {
     // Two call shapes: legacy `string[]` (merge with the active relays) and
     // the `{ extraRelays, mode }` opts. Internal callers still pass arrays;
@@ -110,10 +110,15 @@ export class PublishModule {
     // `quiet`: best-effort background publish (e.g. lazy member self-add).
     // Suppress the activity-bar lifecycle so the user doesn't see a
     // Publishing/Failed toast for a write the relay routinely declines.
+    opts?.assertCurrent?.();
     const event = await signForSession(session, this.deps, template, {
       quiet: opts?.quiet,
       startDeadlineMs: normalized.signStartDeadlineMs,
     });
+    opts?.assertCurrent?.();
+    if (this.ctx.session() !== session || event.pubkey !== session.pubKeyHex) {
+      throw new DOMException('Signing session was replaced', 'AbortError');
+    }
     const targetRelays = (normalized.mode ?? 'merge') === 'replace'
       ? Array.from(new Set(extraRelays))
       : Array.from(new Set([...this.ctx.relays(), ...extraRelays]));

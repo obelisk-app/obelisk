@@ -1,3 +1,12 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const { userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = () => userMetadataFixture({ displayName: 'Alice' });
+  return sessionMock({
+    useMyPubkey: () => 'b'.repeat(64),
+    useSessionProfile: () => readProfile((() => 'b'.repeat(64))()),
+  });
+});
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -21,7 +30,7 @@ vi.mock('@/services/media/blossom', () => ({ uploadToBlossom: mocks.uploadToBlos
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock, userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
-    useMyPubkey: () => 'b'.repeat(64),
+
     useUserMetadata: () => userMetadataFixture({ displayName: 'Alice' }),
   });
 });

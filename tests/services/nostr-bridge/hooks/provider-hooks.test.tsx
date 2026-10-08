@@ -1,3 +1,4 @@
+import { useIsLoggedIn, useMyPubkey, useNipSigner } from '@/hooks/session/useSession';
 /**
  * The real hooks over a fake bridge instance, with no `vi.mock` anywhere:
  * the provider hands the hooks its bridge, so what they return is what that
@@ -5,7 +6,7 @@
  */
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { useGroups, useIsLoggedIn, useLoadEarlier, useMyPubkey, useNipSigner, useUserMetadata } from '@/services/nostr-bridge';
+import { useGroups, useLoadEarlier, useUserMetadata } from '@/services/nostr-bridge';
 import { getBridgeImpl } from '@/services/nostr-bridge/facade/client';
 import type { NipSigner } from '@/types/nostr/nip-signer';
 import { fakeBridge } from '@tests/support/fake-bridge';

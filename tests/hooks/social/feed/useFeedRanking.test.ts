@@ -1,3 +1,7 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock();
+});
 /**
  * The read side of `useFeed`: moderation, repost grouping and the bounded
  * re-rank window.

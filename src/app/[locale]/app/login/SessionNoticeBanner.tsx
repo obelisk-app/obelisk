@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useSessionNotice } from '@/services/nostr-bridge';
+import { useSessionNotice } from '@/hooks/session/useSession';
 import Text from '@/components/ui/layout/Text';
 
 /**

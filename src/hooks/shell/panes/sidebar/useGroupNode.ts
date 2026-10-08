@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, type MouseEvent } from 'react';
-import { useCurrentRelayUrl, useMyPubkey, type JsGroup } from '@/services/nostr-bridge';
+import { useCurrentRelayUrl, type JsGroup } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { wotColorClass } from '@/services/wot/colors';
 import { useUnreadMentionCardsForChannel } from '@/hooks/notifications/useNotificationSelectors';
 import { useCachedChannelHighlights } from '@/hooks/read-state/useChannelHighlights';

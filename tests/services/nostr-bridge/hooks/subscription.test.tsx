@@ -1,3 +1,4 @@
+import { fakeBridge } from '@tests/support/fake-bridge';
 /**
  * `useSubscription` never paints the previous inputs' value (round 16,
  * re-audit item 8). Before the fix, switching a channel from A to B
@@ -16,6 +17,7 @@ const listeners = new Map<string, Set<(msgs: JsMessage[]) => void>>();
 
 // A hand-built instance under the real provider: no module mock.
 const bridge = {
+  ...fakeBridge(),
   subscribeMessages: (groupId: string, cb: (msgs: JsMessage[]) => void) => {
     const set = listeners.get(groupId) ?? new Set();
     listeners.set(groupId, set);

@@ -1,5 +1,6 @@
 import { useRef, useState, type MouseEvent } from 'react';
-import { useCurrentRelayUrl, useMyPubkey, type JsGroup } from '@/services/nostr-bridge';
+import { useCurrentRelayUrl, type JsGroup } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { isChannelMuted, useChannelPref } from '@/store/chat/channel-prefs';
 import { useUnreadMentionCardsForChannel } from '@/hooks/notifications/useNotificationSelectors';
 import { useCachedChannelHighlights } from '@/hooks/read-state/useChannelHighlights';

@@ -1,9 +1,15 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => 'a'.repeat(64),
+  });
+});
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/services/nostr-bridge', async (orig) => {
   const { bridgeOverrides } = await import('@tests/support/mocks/nostr-bridge');
-  return { ...(await orig<typeof import('@/services/nostr-bridge')>()), ...bridgeOverrides({ useMyPubkey: () => 'a'.repeat(64) }) };
+  return { ...(await orig<typeof import('@/services/nostr-bridge')>()), ...bridgeOverrides({  }) };
 });
 
 import { DmMessageMenu } from '@/components/chat/dm/message/DmMessageMenu';

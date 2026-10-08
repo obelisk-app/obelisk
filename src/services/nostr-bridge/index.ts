@@ -1,4 +1,4 @@
-export { getBridge, getBridgeImpl, type BridgeImpl } from './facade/client';
+export { getBridge, getBridgeImpl, logoutPageSession, type BridgeImpl } from './facade/client';
 export { isImportableRelayUrl } from './relay/relay-list';
 // The page's relay hub, for a service that rides it under its own identity (a wallet connection).
 export { pageRelayHub } from './facade/page-hub';
@@ -11,20 +11,7 @@ export { nostrActions } from './facade/actions';
 export { BridgeProvider, type BridgeProviderProps } from './hooks/bridge-provider';
 export { useAwaitBridge, useBridge, useBridgeReady } from './hooks/provider';
 // The React hooks, one file per concern under `./hooks/`.
-export {
-  useIsLoggedIn,
-  useIsRehydrating,
-  useConnectionState,
-  useCurrentRelayUrl,
-  useRelayAccess,
-  useMyPubkey,
-  useBunkerSignerReady,
-  useMyLoginMethod,
-  useSignerReady,
-  useNipSigner,
-  useConfiguredRelays,
-  useSessionNotice,
-} from './hooks/session';
+export { useConnectionState, useCurrentRelayUrl, useRelayAccess, useConfiguredRelays } from './hooks/connection';
 export type { SessionNotice } from './session/vault';
 // What the bridge's errors and activity entries carry. Types only: the
 // runtime helpers (`CodedError`, `errorText`) live in `@/utils/errors/`, so a
@@ -90,3 +77,5 @@ export type {
   RelayAccessState,
   Unsubscribe,
 } from './common/types';
+
+export type { LoginMethod } from './session/state';

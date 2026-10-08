@@ -1,3 +1,14 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const { userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
+  const { fakeBridge } = await import('@tests/support/fake-bridge');
+  const { createSessionActions } = await import('@/services/session/actions');
+  return sessionMock({
+    useMyPubkey: () => 'a'.repeat(64),
+    useSessionProfile: () => userMetadataFixture({ displayName: 'Alice' }),
+    useSessionActions: () => createSessionActions(fakeBridge({}, {})),
+  });
+});
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChatStore } from '@/store/chat';
@@ -27,14 +38,11 @@ const mockRemoveUser = vi.fn();
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock, userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
-    useMyPubkey: () => 'a'.repeat(64),
     // The header carries the relay-status pill now.
     useConnectionState: () => 'Connected',
     useRelayAccess: () => 'ok',
     useUserMetadata: () => userMetadataFixture({ displayName: 'Alice' }),
     getBridgeImpl: () => null,
-    useMyLoginMethod: () => 'nsec',
-    useSignerReady: () => true,
     nostrActions: {
       ensureUserMetadata: () => Promise.resolve(),
       removePermission: (...a: unknown[]) => mockRemovePermission(...a),

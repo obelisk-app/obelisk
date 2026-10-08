@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => 'pk-ana',
+  });
+});
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { GameSession } from '@/lib/games/session/session';
@@ -31,7 +37,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
     useGroupMemberInfo: () => [],
-    useMyPubkey: () => 'pk-ana',
+
   });
 });
 

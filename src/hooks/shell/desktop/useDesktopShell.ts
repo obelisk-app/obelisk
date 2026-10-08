@@ -1,12 +1,8 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import {
-  useIsLoggedIn,
-  useIsRehydrating,
-  useConnectionState,
-  useCurrentRelayUrl,
-} from '@/services/nostr-bridge';
+import { useConnectionState, useCurrentRelayUrl } from '@/services/nostr-bridge';
+import { useIsLoggedIn, useIsRehydrating } from '@/hooks/session/useSession';
 import { useChatStore } from '@/store/chat';
 import { useDesktopChrome, useFeedPane } from '@/hooks/shell/desktop/useDesktopLayout';
 import { useDesktopNavigation } from '@/hooks/shell/desktop/useDesktopNavigation';

@@ -1,3 +1,12 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const { userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = () => userMetadataFixture({ displayName: 'Bob' });
+  return sessionMock({
+    useMyPubkey: () => ME,
+    useSessionProfile: () => readProfile((() => ME)()),
+  });
+});
 /**
  * Post-quantum indicators mounted in the desktop DM thread.
  *
@@ -26,7 +35,7 @@ const hasUsableKeys = vi.hoisted(() => vi.fn());
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock, userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
-    useMyPubkey: () => ME,
+
     useUserMetadata: () => userMetadataFixture({ displayName: 'Bob' }),
     useDirectMessages: () => dms.current,
     getBridgeImpl: () => null,

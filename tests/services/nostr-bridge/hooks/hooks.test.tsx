@@ -20,6 +20,7 @@ const ensured: string[] = [];
 
 // A hand-built instance under the real provider: no module mock.
 const bridge = {
+  ...fakeBridge(),
   subscribeMyContactList: (cb: (e: NostrEvent | null) => void) => { cb(contactList); return () => {}; },
   subscribeActiveCallByChannel: (cb: (m: Record<string, unknown>) => void) => { cb(calls); return () => {}; },
   subscribeAdminsByGroup: (cb: (m: Record<string, string[]>) => void) => { cb(admins); return () => {}; },
@@ -33,7 +34,8 @@ const bridge = {
 const wrapper = bridgeWrapper(bridge);
 
 
-import * as sessionHooks from '@/services/nostr-bridge/hooks/session';
+import * as sessionHooks from '@/services/nostr-bridge/hooks/connection';
+import { fakeBridge } from '@tests/support/fake-bridge';
 import * as listHooks from '@/services/nostr-bridge/hooks/lists';
 import * as groupHooks from '@/services/nostr-bridge/hooks/groups';
 import * as messageHooks from '@/services/nostr-bridge/hooks/messages';
@@ -54,7 +56,7 @@ describe('nostr-bridge hooks', () => {
 
   it('index.ts exports every hook by its old name, the very function its hook file defines', () => {
     for (const name of [
-      'useIsLoggedIn', 'useIsRehydrating', 'useNipSigner', 'useSignerReady', 'useGroups', 'useGroupById',
+      'useGroups', 'useGroupById',
       'useMessages', 'useLoadEarlier', 'useDirectMessages', 'useRelayPeople', 'useGroupMemberInfo',
       'useActiveCall', 'useActiveCallByChannel', 'useMyFollows', 'useMyMutes', 'useRelayAccess',
     ] as const) {

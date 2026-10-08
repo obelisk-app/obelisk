@@ -1,17 +1,16 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nip19 } from 'nostr-tools';
 import { Nip46Signer } from '@nostr-wot/signers';
 import LoginModal from '@/app/[locale]/app/login/LoginModal';
 import { isTransientNip46Error, signerAppHref } from '@/utils/nip46/signer-link';
 import { copyText } from '@/services/common/clipboard';
-import { LocaleProvider } from '@tests/support/intl';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
-/** The component reads its copy from the dictionary, so it needs a provider. */
-const renderLocalized = (ui: React.ReactElement) => render(
-  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
+const renderLocalized = (ui: React.ReactElement) => renderWithBridge(
+  ui, fakeBridge({ isLoggedIn: false, myPubkey: null }, { loginWithNsec, loginWithNip07: vi.fn(), loginWithBunker }),
 );
-
 
 const bunkerFromUri = vi.hoisted(() => vi.fn());
 const push = vi.hoisted(() => vi.fn());
@@ -23,16 +22,7 @@ let sdkProps: Record<string, unknown> = {};
 
 vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({ useRouter: () => ({ push }) }));
 
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({
-    nostrActions: {
-      loginWithNsec: (...args: unknown[]) => loginWithNsec(...args),
-      loginWithNip07: vi.fn(),
-      loginWithBunker: (...args: unknown[]) => loginWithBunker(...args),
-    },
-  });
-});
+
 
 vi.mock('nostr-tools/nip46', async (importOriginal) => {
   const actual = await importOriginal<typeof import('nostr-tools/nip46')>();

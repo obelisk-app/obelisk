@@ -267,7 +267,7 @@ Round 34. Every form is the same three things: the `Form` element, the one `useF
 | `services/chat/channel/create-channel-form.ts` | a new channel (sidebar and sheet) |
 | `services/chat/channel/channel-settings-form.ts` | channel metadata and adding a member (modal and sheet) |
 | `services/chat/forum/new-thread-form.ts` | a new publication (modal and sheet) |
-| `services/chat/profile/profile-form.ts` | the kind 0 profile (desktop panel and phone screen) |
+| `services/session/profile-form.ts` | the kind 0 profile (desktop panel and phone screen) |
 | `services/games/new-game-form.ts` | opening a game table |
 | `services/wallet/nwc-connect-form.ts` | connecting a wallet |
 
@@ -298,3 +298,7 @@ A route owns its single-use page composition and metadata. Public pages share na
 ## Global transient feedback
 
 Use the singleton toast store and the locale-root ToastStack for temporary action feedback, including mobile exit hints and relay-copy results. The mounted polite live region, per-toast lifetime and keyboard controls belong to that shared host. Producers own the meaning, action and any cancellation of stale feedback. Persistent inbox notifications, operating-system notifications, diagnostics and inline validation remain separate. See [UI feedback ownership](README.md#feedback-ownership) for the source map and lifecycle contract.
+
+## Session consumers
+
+Identity and current-user profile hooks live in `src/hooks/session/useSession.ts`; their context and provider live under `src/contexts/session/` and `src/providers/session/`. Use `useSessionActions` for login, logout and profile editing. Other users' profiles and relay content still use the bridge hooks. See [session ownership](../architecture/session.md) for subscription and lifetime contracts.

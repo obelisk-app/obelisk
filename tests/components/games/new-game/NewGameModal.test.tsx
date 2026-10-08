@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => 'pk-host',
+  });
+});
 import '@tests/support/game-engines';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -18,7 +24,7 @@ const publishStart = vi.hoisted(() => vi.fn());
 vi.mock('@/services/games/transport', () => ({ publishCreate, publishStart }));
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({ useMyPubkey: () => 'pk-host', useGroupMemberInfo: () => [] });
+  return bridgeMock({  useGroupMemberInfo: () => [] });
 });
 
 const CH = 'channel-1';

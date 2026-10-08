@@ -35,7 +35,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const ROOT = process.cwd();
-const LAYERS = ['src/components', 'src/hooks', 'src/services', 'src/utils', 'src/store', 'src/lib', 'src/assets', 'src/constants', 'src/types', 'src/schemas'] as const;
+const LAYERS = ['src/components', 'src/hooks', 'src/services', 'src/utils', 'src/store', 'src/lib', 'src/assets', 'src/constants', 'src/types', 'src/schemas', 'src/contexts', 'src/providers'] as const;
 /** Layers whose top-level folders are their own kinds, not features: lib packages and asset kinds. */
 const OWN_LIST_ONLY = new Set<string>(['src/lib', 'src/assets']);
 /** Rule 3 also covers the route tree, where only its non-route files are held to it. */
@@ -44,8 +44,8 @@ const RULE3_ROOTS = [...LAYERS, 'src/app'] as const;
 /** The module map: the feature folders, spelled the same in every layer that has code for them. */
 export const MODULES = [
   'admin', 'analytics', 'call', 'chat', 'common', 'feedback', 'games', 'guides', 'hints', 'i18n',
-  'identity', 'local-data', 'login', 'marketing', 'media', 'media-kit', 'moderation', 'notifications',
-  'preferences', 'read-state', 'relay', 'seo', 'settings', 'shell', 'social', 'voice', 'wallet', 'wot',
+  'identity', 'local-data', 'marketing', 'media', 'media-kit', 'moderation', 'notifications',
+  'preferences', 'read-state', 'relay', 'session', 'seo', 'settings', 'shell', 'social', 'voice', 'wallet', 'wot',
 ] as const;
 
 /** Top-level folders that exist in one layer only, and why they are not modules. */

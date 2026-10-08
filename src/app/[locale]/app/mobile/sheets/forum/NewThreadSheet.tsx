@@ -1,7 +1,8 @@
 'use client';
 
 import { useId } from 'react';
-import { useMyPubkey, useSignerReady, type JsForumTag } from '@/services/nostr-bridge';
+import { type JsForumTag } from '@/services/nostr-bridge';
+import { useMyPubkey, useSignerReady } from '@/hooks/session/useSession';
 import { newThreadForm } from '@/services/chat/forum/new-thread-form';
 import { toggleThreadTag } from '@/utils/chat/forum/forum-tags';
 import { useForm } from '@/hooks/common/useForm';

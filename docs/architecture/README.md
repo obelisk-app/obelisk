@@ -20,12 +20,13 @@ See [app shell ownership](app-shells.md) for the desktop/phone boundary, shared 
 
 ## Data ownership
 
-The bridge owns identity, signing, relay-derived state and subscriptions. React consumers use its provider and public hooks; code without a render tree uses the imperative front door. RelayHub owns sockets, authentication leases, shared subscriptions and bounded caches. Groups bind to the active relay; DMs and their cursor sync can span the account's relay set.
+The bridge owns identity, signing, relay-derived state and subscriptions. React reads identity and the current user's profile through the session provider, and other relay state through bridge hooks; code without a render tree uses the imperative front door. RelayHub owns sockets, authentication leases, shared subscriptions and bounded caches. Groups bind to the active relay; DMs and their cursor sync can span the account's relay set.
 
 Browser storage and immutable HTML solve different problems. Bridge caches speed up reconnects and first paint for live data. Public HTML is generated for a deployment and paired with that build's script hashes; it must not contain request-specific state. Per-account read-state stores switch before synchronization starts, and account DM lookup cleanup owns both pending lookup results and the resulting subscription.
 
 | Reference | Use it for |
 |---|---|
+| [Session and profile](session.md) | Account hooks, profile editing, subscription ownership and account isolation |
 | [Data system](data-system.md) | Login, loading priorities, bridge caches, relay access, local-data inventory |
 | [Read state](read-state.md) | Cursors, unread state, mention navigation and encrypted multi-device sync |
 | [Rendering and CSP](static-public-pages.md) | Static route eligibility, dynamic nonces, build artifacts and verification |

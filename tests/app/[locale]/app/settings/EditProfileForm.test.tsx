@@ -1,12 +1,10 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { LocaleProvider } from '@tests/support/intl';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 
 const editUserMetadata = vi.hoisted(() => vi.fn());
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({ useSignerReady: () => true, nostrActions: { editUserMetadata } });
-});
+
 vi.mock('@/services/media/blossom', () => ({ uploadToBlossom: vi.fn(), BlossomUploadError: class extends Error {} }));
 
 import { EditProfileForm } from '@/app/[locale]/app/settings/EditProfileForm';
@@ -14,7 +12,7 @@ import { EditProfileForm } from '@/app/[locale]/app/settings/EditProfileForm';
 const INITIAL = { displayName: 'Ana', name: 'ana', about: 'hi', picture: null, banner: null, nip05: 'ana@x.io', lud16: null, website: 'https://ana.io' };
 
 function mount(onCancel = vi.fn(), onSaved = vi.fn()) {
-  render(<LocaleProvider initialLocale="en"><EditProfileForm initial={INITIAL} onCancel={onCancel} onSaved={onSaved} /></LocaleProvider>);
+  renderWithBridge(<EditProfileForm initial={INITIAL} onCancel={onCancel} onSaved={onSaved} />, fakeBridge({}, { editUserMetadata }));
   return { onCancel, onSaved };
 }
 
@@ -40,7 +38,8 @@ describe('EditProfileForm', () => {
     const { onSaved } = mount();
     fireEvent.change(screen.getByLabelText('About'), { target: { value: '  new about ' } });
     await act(async () => { fireEvent.click(screen.getByTestId('save-profile-button')); });
-    expect(editUserMetadata).toHaveBeenCalledWith(expect.objectContaining({ name: 'Ana', displayName: 'Ana', about: 'new about' }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(editUserMetadata).toHaveBeenCalledWith(expect.objectContaining({ name: 'Ana', displayName: 'Ana', about: 'new about' }), expect.objectContaining({ assertCurrent: expect.any(Function) }));
     expect(onSaved).toHaveBeenCalled();
   });
 

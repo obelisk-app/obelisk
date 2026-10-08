@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type MouseEvent } from 'react';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { faviconFor } from '@/services/relay/relay-info';
 import { useHasAnyHighlights } from '@/hooks/read-state/useChannelHighlights';
 import { useUnreadMentionCount } from '@/hooks/notifications/useNotificationSelectors';

@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useSignerReady: () => true,
+  });
+});
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
@@ -5,7 +11,7 @@ import { DEFAULT_FORUM_PREFS } from '@/constants/chat/forum';
 
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({ useSignerReady: () => true });
+  return bridgeMock({  });
 });
 
 import { ForumChrome } from '@/components/chat/forum/ForumChrome';

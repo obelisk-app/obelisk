@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useUserPanel } from '@/hooks/shell/user-panel/useUserPanel';
+import { userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 
@@ -10,15 +11,16 @@ function setup(over: Partial<Parameters<typeof useUserPanel>[0]> = {}) {
   const onClose = vi.fn();
   const logout = vi.fn().mockResolvedValue(undefined);
   const ensureUserMetadata = vi.fn().mockResolvedValue(undefined);
-  const wrapper = bridgeWrapper(fakeBridge({}, { logout, ensureUserMetadata }));
+  const wrapper = bridgeWrapper(fakeBridge({ myPubkey: PK, userMetadata: { [PK]: userMetadataFixture({ pubkey: PK, name: 'Alice', displayName: 'Alice' }) } }, { logout, ensureUserMetadata }));
   const view = renderHook(() => useUserPanel({ pubkey: PK, onClose, initialEditing: false, initialTab: 'profile', ...over }), { wrapper });
   return { ...view, onClose, logout, ensureUserMetadata };
 }
 
 describe('useUserPanel', () => {
-  it('fetches the profile and names the person', async () => {
+  it('reads the session profile without starting a duplicate fetch', () => {
     const { result, ensureUserMetadata } = setup();
-    await waitFor(() => expect(ensureUserMetadata).toHaveBeenCalledWith(PK));
+    expect(ensureUserMetadata).not.toHaveBeenCalled();
+    expect(result.current.displayName).toBe('Alice');
     expect(result.current.npub).toMatch(/^npub1/);
     expect(result.current.displayName).not.toBe('');
   });

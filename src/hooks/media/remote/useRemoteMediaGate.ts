@@ -7,7 +7,8 @@
  */
 
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import { useMyPubkey, useMyFollowSet } from '@/services/nostr-bridge';
+import { useMyFollowSet } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { wotEngine } from '@/services/wot/engine';
 import { mayAutoLoadRemoteMedia, type RemoteMediaSurface } from '@/services/media/remote-media';
 import { useRemoteMediaSettings } from '@/hooks/media/remote/useRemoteMediaSettings';

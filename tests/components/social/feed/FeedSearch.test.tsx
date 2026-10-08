@@ -1,3 +1,11 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = () => null;
+  return sessionMock({
+    useMyPubkey: () => 'b'.repeat(64),
+    useSessionProfile: () => readProfile((() => 'b'.repeat(64))()),
+  });
+});
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -36,7 +44,7 @@ vi.mock('@/services/nostr-bridge', async () => {
     getBridge: async () => ({ publishEvent: vi.fn() }),
     nostrActions: { ensureUserMetadata: vi.fn().mockResolvedValue(undefined) },
     useUserMetadata: () => null,
-    useMyPubkey: () => 'b'.repeat(64),
+
     useMyFollows: () => [] as string[],
     useMyContactList: () => null,
     useMyContactListReady: () => true,

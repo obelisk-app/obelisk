@@ -1,6 +1,6 @@
 'use client';
 
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import NostrProfile from '@/components/chat/profile/NostrProfile';
 import { useTranslations } from 'next-intl';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';

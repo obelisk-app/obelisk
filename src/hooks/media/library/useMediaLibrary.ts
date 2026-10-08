@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { uploadToBlossom } from '@/services/media/blossom';
 import { normalizeCustomEmojiName } from '@/utils/media/tags/custom-emoji-tags';
-import { nostrActions, useMediaPacks, useMyMediaFavorites, useMyPubkey } from '@/services/nostr-bridge';
+import { nostrActions, useMediaPacks, useMyMediaFavorites } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import type { JsMediaItem, JsMediaPack } from '@/services/nostr-bridge';
 import { publishRelayEmojiSet, type RelayEmojiSet } from '@/services/relay/relay-emojis';
 import { inferMediaKind } from '@/utils/media/tags/media-kind';

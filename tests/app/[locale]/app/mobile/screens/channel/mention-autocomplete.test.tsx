@@ -1,3 +1,7 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock();
+});
 import { describe, it, expect, vi } from 'vitest';
 import { createEvent, fireEvent, render, screen } from '@testing-library/react';
 

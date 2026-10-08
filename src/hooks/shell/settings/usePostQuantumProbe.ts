@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useMyLoginMethod, useMyPubkey } from '@/services/nostr-bridge';
+import { useMyLoginMethod, useMyPubkey } from '@/hooks/session/useSession';
 import { selfPqState, type SelfPqState } from '@/services/chat/pq/capability';
 
 /**

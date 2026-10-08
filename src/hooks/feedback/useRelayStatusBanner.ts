@@ -1,11 +1,6 @@
 import { useTranslations } from 'next-intl';
-import {
-  useConnectionState,
-  useIsLoggedIn,
-  useMyLoginMethod,
-  useRelayAccess,
-  useCurrentRelayUrl,
-} from '@/services/nostr-bridge';
+import { useConnectionState, useRelayAccess, useCurrentRelayUrl } from '@/services/nostr-bridge';
+import { useIsLoggedIn, useMyLoginMethod } from '@/hooks/session/useSession';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { relayStatus } from '@/utils/relay/relay-status';
 import { relayBannerTestId } from '@/utils/feedback/relay-banner';

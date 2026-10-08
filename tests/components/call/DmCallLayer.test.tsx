@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useIsLoggedIn: () => false,
+  });
+});
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,7 +12,7 @@ vi.mock('@/hooks/social/profile/useAuthor', () => ({
 }));
 vi.mock('@/services/nostr-bridge', async (orig) => {
   const { bridgeOverrides } = await import('@tests/support/mocks/nostr-bridge');
-  return { ...(await orig<typeof import('@/services/nostr-bridge')>()), ...bridgeOverrides({ useIsLoggedIn: () => false }) };
+  return { ...(await orig<typeof import('@/services/nostr-bridge')>()), ...bridgeOverrides({  }) };
 });
 
 import { DmCallLayer } from '@/components/call/DmCallLayer';

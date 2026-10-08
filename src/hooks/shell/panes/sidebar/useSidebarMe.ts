@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type MouseEvent } from 'react';
-import { useMyPubkey, useUserMetadata as useProfile } from '@/services/nostr-bridge';
+import { useMyPubkey, useSessionProfile } from '@/hooks/session/useSession';
 import { onOpenSettings, revealSettingsSection, type SettingsSection } from '@/services/settings/open-settings';
 import { useChatStore } from '@/store/chat';
 import { profileHandle, profileName } from '@/utils/shell/panes/sidebar/sidebar-me';
@@ -13,7 +13,7 @@ import { profileHandle, profileName } from '@/utils/shell/panes/sidebar/sidebar-
  */
 export function useSidebarMe() {
   const myPubkey = useMyPubkey();
-  const meta = useProfile(myPubkey);
+  const meta = useSessionProfile();
   const [editing, setEditing] = useState(false);
   // Set when the panel was opened by a "manage these" request rather than by
   // the gear, so it lands on that section and scrolls to the right block.

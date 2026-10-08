@@ -1,3 +1,10 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useIsLoggedIn: () => mockBridge.isLoggedIn,
+    useMyLoginMethod: () => mockBridge.loginMethod,
+  });
+});
 import { render as rtlRender, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { LocaleProvider } from '@tests/support/intl';
@@ -17,10 +24,10 @@ const mockBridge = vi.hoisted(() => ({
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
-    useIsLoggedIn: () => mockBridge.isLoggedIn,
+
     useConnectionState: () => mockBridge.connectionState,
     useRelayAccess: () => mockBridge.relayAccess,
-    useMyLoginMethod: () => mockBridge.loginMethod,
+
     useCurrentRelayUrl: () => mockBridge.relayUrl,
   });
 });

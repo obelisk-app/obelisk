@@ -123,7 +123,7 @@ export interface BridgeContext {
   signAndPublish(
     template: { kind: number; content: string; tags: string[][]; created_at: number },
     relayOpts?: PublishRelayOpts | readonly string[],
-    opts?: { quiet?: boolean },
+    opts?: { quiet?: boolean; assertCurrent?: () => void },
   ): Promise<NostrEvent>;
   publishEvent(
     template: { kind: number; content: string; tags: string[][]; created_at?: number },

@@ -1,7 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useSignerReady } from '@/services/nostr-bridge';
+import { useSignerReady } from '@/hooks/session/useSession';
 
 /**
  * The publications chrome's view model: whether a new publication can be

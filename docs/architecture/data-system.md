@@ -1,5 +1,7 @@
 # Data system
 
+React account access now goes through the [session and profile API](session.md): the bridge owns credentials and transport, while one provider projects identity and the current user's profile into selector hooks.
+
 How Obelisk loads data from relays, what runs first, how connection state
 and whitelist rejection surface, and how the local cache fits in.
 
@@ -51,7 +53,7 @@ write synchronously from the cached box, open on reload) and `./vault.ts`.
   `sessionNotice` (`vault-unavailable`, `key-missing`, `unlock-failed`) is
   explained above the login methods.
 - **The SDK login widget** gets memory-only signer storage
-  (`src/services/login/signer-storage.ts`), so its NIP-46 pairing record and
+  (`src/services/session/signer-storage.ts`), so its NIP-46 pairing record and
   "remembered" nsec never reach localStorage; the bridge erases the two
   `@nostr-wot/ui:*` keys older builds left behind on every load and logout.
 

@@ -5,14 +5,14 @@
  * back buttons, and the upload state while saving.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { BRIDGE_MOCK_PUBKEY } from '@tests/support/mocks/nostr-bridge';
 
 const blossom = vi.hoisted(() => ({ upload: vi.fn() }));
 vi.mock('@/services/media/blossom', () => ({
-  uploadToBlossom: (file: File) => blossom.upload(file),
+  uploadToBlossom: (...args: Parameters<typeof import('@/services/media/blossom')['uploadToBlossom']>) => blossom.upload(...args),
   BlossomUploadError: class extends Error {},
 }));
 
@@ -144,7 +144,9 @@ describe('EditProfileScreen saving', () => {
     const file = image();
     pick(avatarInput, file);
     await act(async () => { fireEvent.click(screen.getByTestId('save-profile')); });
-    expect(blossom.upload).toHaveBeenCalledWith(file);
+    await waitFor(() => expect(blossom.upload).toHaveBeenCalledWith(file, undefined, expect.objectContaining({
+      assertCurrent: expect.any(Function), signEventTemplate: expect.any(Function),
+    })));
     expect(screen.getByTestId('save-profile').textContent).toBe('Saving...');
     expect(screen.getByTestId('save-profile')).toBeDisabled();
     expect(screen.getByTestId('edit-avatar-tap').className).toContain('uploading');

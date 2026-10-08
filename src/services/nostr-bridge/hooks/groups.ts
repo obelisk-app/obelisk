@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { wotEngine } from '@/services/wot/engine';
 import { useWotEnabled } from '@/hooks/wot/useWot';
 import type { JsGroup } from '../common/types';
-import { useMyPubkey } from './session';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useSubscription } from './subscription';
 
 export function useGroups(): ReadonlyArray<JsGroup> {

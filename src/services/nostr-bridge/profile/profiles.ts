@@ -1,3 +1,4 @@
+import type { ProfileEditOptions } from '@/types/session/profile';
 /**
  * Profiles (kind 0): the batched lookup queue, the active-relay one-shot
  * REQ, the external lookup-relay query and the display-name fallback; the
@@ -230,7 +231,7 @@ export class ProfilesModule {
   }
 
   /** The signed-in user's own kind 0: see `profile-own.ts`. */
-  edit(opts: EditUserMetadataOptions, options: { create?: boolean } = {}): Promise<void> {
+  edit(opts: EditUserMetadataOptions, options: ProfileEditOptions = {}): Promise<void> {
     return this.own.edit(opts, options);
   }
 

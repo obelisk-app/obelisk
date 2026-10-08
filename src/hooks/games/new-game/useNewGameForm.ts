@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { CRSizeKey } from '@/lib/games/chain-reaction/chain-reaction';
 import { readResumeState, playerCountOf } from '@/lib/games/vesta/resume';
 import type { GameInfo } from '@/lib/games/core/catalog';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { newGameForm } from '@/services/games/new-game-form';
 import { useForm } from '@/hooks/common/useForm';
 

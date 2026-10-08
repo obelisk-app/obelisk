@@ -1,6 +1,6 @@
 'use client';
 
-import { useProfileEditorForm } from '@/hooks/chat/profile/useProfileEditorForm';
+import { useProfileEditorForm } from '@/hooks/session/useProfileEditorForm';
 import ProfileAppearanceEditor from '@/components/settings/account/ProfileAppearanceEditor';
 import { profileAppearance, profileAppearancePatch, type ProfileEditorInitial } from '@/utils/chat/profile/profile-form-values';
 import { useTranslations } from 'next-intl';

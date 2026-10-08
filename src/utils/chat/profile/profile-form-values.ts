@@ -1,29 +1,7 @@
 import type { ProfileAppearanceValue } from '@/utils/settings/profile-image';
 
-/** A kind 0 profile as the editor reads it (any field may be missing). */
-export interface ProfileEditorInitial {
-  readonly displayName?: string | null;
-  readonly name?: string | null;
-  readonly about?: string | null;
-  readonly picture?: string | null;
-  readonly banner?: string | null;
-  readonly nip05?: string | null;
-  readonly lud16?: string | null;
-  readonly website?: string | null;
-}
-
-/** The profile editor's fields: the seven kind 0 texts and the picked picture and banner files (uploaded on save). */
-export type ProfileFormValues = {
-  name: string;
-  about: string;
-  picture: string;
-  banner: string;
-  nip05: string;
-  lud16: string;
-  website: string;
-  pictureFile: File | null;
-  bannerFile: File | null;
-};
+import type { ProfileEditorInitial, ProfileFormValues } from '@/types/session/profile';
+export type { ProfileEditorInitial, ProfileFormValues } from '@/types/session/profile';
 
 /** The editor's starting values from a profile, or blank ones before it has arrived. The name is the display name, else the name. */
 export function profileFormValues(initial: ProfileEditorInitial | null): ProfileFormValues {

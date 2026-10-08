@@ -1,3 +1,12 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const { userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = () => userMetadataFixture({ displayName: 'Bob' });
+  return sessionMock({
+    useMyPubkey: () => ME,
+    useSessionProfile: () => readProfile((() => ME)()),
+  });
+});
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,7 +27,7 @@ const PEER = 'b'.repeat(64);
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock, userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
-    useMyPubkey: () => ME,
+
     useUserMetadata: () => userMetadataFixture({ displayName: 'Bob' }),
     useDirectMessages: () => ({}),
     getBridgeImpl: () => null,

@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => pubkey,
+  });
+});
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -16,7 +22,7 @@ vi.mock('@/hooks/preferences/usePreferences', () => ({
 }));
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({ useMyPubkey: () => pubkey });
+  return bridgeMock({  });
 });
 vi.mock('@/services/social/pool', () => ({
   applySocialRelays: (r: string[]) => applySocialRelays(r),

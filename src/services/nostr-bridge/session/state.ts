@@ -16,6 +16,25 @@ export type LoginMethod = 'nsec' | 'nip07' | 'bunker';
 
 export class SessionState {
   session: PersistedSession | null = null;
+  /** Invalidates async work when another login, restore or logout takes ownership. */
+  readonly generation = new StateStore(0);
+  readonly isRestoringSession = new StateStore(false);
+  get sessionGeneration(): number { return this.generation.get(); }
+
+  beginSessionOperation(): number {
+    this.isRestoringSession.set(false);
+    this.isLoggedIn.set(false);
+    const next = this.sessionGeneration + 1;
+    this.generation.set(next);
+    return next;
+  }
+
+  assertSessionOperation(generation: number): void {
+    if (generation !== this.sessionGeneration) {
+      throw new DOMException('Session operation was superseded', 'AbortError');
+    }
+  }
+
   /** The active relay list (always length 1 today): what group REQs and publishes target. */
   relays: string[] = [DEFAULT_RELAY];
   /**

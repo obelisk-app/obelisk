@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => null,
+  });
+});
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { LocaleProvider } from '@tests/support/intl';
@@ -22,7 +28,7 @@ vi.mock('@/services/nostr-bridge', async () => {
       removeRelay: vi.fn(),
     },
     useConfiguredRelays: () => ['wss://lacrypta-relay.obelisk.ar'],
-    useMyPubkey: () => null,
+
     useCurrentRelayUrl: () => 'wss://lacrypta-relay.obelisk.ar',
   });
 });

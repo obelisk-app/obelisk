@@ -54,6 +54,21 @@ describe('session/connection', () => {
     expect(conn.generation).toBe(1);
   });
 
+  it.each(['resolve', 'reject'] as const)('ignores a superseded handshake that will %s', async (outcome) => {
+    let resolve!: () => void;
+    let reject!: (error: Error) => void;
+    const handshake = new Promise<void>((done, fail) => { resolve = done; reject = fail; });
+    const { conn, state } = setup(() => handshake);
+    const connecting = conn.connect().catch((error: Error) => error.name);
+    conn.generation++;
+    state.session = null;
+    state.connectionState.set('Disconnected');
+    if (outcome === 'resolve') resolve();
+    else reject(new Error('old connection failed'));
+    await connecting;
+    expect(state.connectionState.get()).toBe('Disconnected');
+  });
+
   it('marks the relay unreachable and rethrows when no handshake succeeds', async () => {
     const { conn, deps, state } = setup(async () => { throw new Error('refused'); });
     await expect(conn.connect()).rejects.toMatchObject({ message: 'no relays connected', code: 'no-relays-connected' });
@@ -65,7 +80,9 @@ describe('session/connection', () => {
 
   it('reads a drop of a socket it saw up, and opens the gate when the hub brings it back', () => {
     const { conn, deps, state } = setup();
+    state.isRestoringSession.set(true);
     conn.onHubStatus(status({ connection: 'connected' }));
+    expect(state.isRestoringSession.get()).toBe(false);
     expect(state.isLoggedIn.get()).toBe(true);
     expect(state.connectionState.get()).toBe('Connected');
     conn.onHubStatus(status({ connection: 'reconnecting' }));

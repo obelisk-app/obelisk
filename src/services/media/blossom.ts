@@ -1,5 +1,6 @@
 'use client';
 
+import type { BlossomUploadOptions } from '@/types/media/blossom';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { finalizeEvent, generateSecretKey } from 'nostr-tools/pure';
@@ -13,7 +14,7 @@ const BLOSSOM_SERVERS = [
   'https://blossom.band',
 ];
 
-async function createAuthEvent(fileHash: string, secretKey?: Uint8Array, server?: string): Promise<string> {
+async function createAuthEvent(fileHash: string, secretKey?: Uint8Array, server?: string, signEventTemplate: NonNullable<BlossomUploadOptions['signEventTemplate']> = nostrActions.signEventTemplate): Promise<string> {
   const tags = [
     ['t', 'upload'],
     ['x', fileHash],
@@ -28,7 +29,7 @@ async function createAuthEvent(fileHash: string, secretKey?: Uint8Array, server?
   };
   const event = secretKey
     ? finalizeEvent(template, secretKey)
-    : await nostrActions.signEventTemplate(template);
+    : await signEventTemplate(template);
   return btoa(JSON.stringify(event));
 }
 
@@ -46,14 +47,17 @@ export class BlossomUploadError extends Error {
   }
 }
 
-export async function uploadToBlossom(file: File, secretKey?: Uint8Array): Promise<string> {
+export async function uploadToBlossom(file: File, secretKey?: Uint8Array, options: BlossomUploadOptions = {}): Promise<string> {
   const buffer = new Uint8Array(await file.arrayBuffer());
   const hash = bytesToHex(sha256(buffer));
-  const authToken = await createAuthEvent(hash, secretKey);
+  options.assertCurrent?.();
+  const authToken = await createAuthEvent(hash, secretKey, undefined, options.signEventTemplate);
+  options.assertCurrent?.();
 
   const reasons: string[] = [];
 
   for (const server of BLOSSOM_SERVERS) {
+    options.assertCurrent?.();
     try {
       const res = await fetch(`${server}/upload`, {
         method: 'PUT',
@@ -70,8 +74,10 @@ export async function uploadToBlossom(file: File, secretKey?: Uint8Array): Promi
       }
 
       const data = await res.json();
+      options.assertCurrent?.();
       return data.url as string;
     } catch (err) {
+      options.assertCurrent?.();
       reasons.push(`${server}: ${(err as Error).message}`);
       console.warn('[blossom] upload failed on', server, err);
     }

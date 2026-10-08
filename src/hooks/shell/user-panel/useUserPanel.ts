@@ -1,20 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { nostrActions, useUserMetadata } from '@/services/nostr-bridge';
+import { useSessionActions, useSessionProfile } from '@/hooks/session/useSession';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { npubOrNull } from '@/utils/identity/short-npub';
 import type { SettingsSection } from '@/services/settings/open-settings';
 
 /**
- * The user panel's side effects: fetch the profile, and while the
+ * The user panel's side effects: while the
  * fullscreen settings are open, close on Escape and lock the page scroll.
  */
-export function useUserPanelEffects(pubkey: string, editing: boolean, onClose: () => void) {
-  useEffect(() => {
-    nostrActions.ensureUserMetadata(pubkey).catch(() => {});
-  }, [pubkey]);
-
+export function useUserPanelEffects(editing: boolean, onClose: () => void) {
   useEffect(() => {
     if (!editing) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -41,10 +37,11 @@ export function useUserPanel({ pubkey, onClose, onLogout, initialEditing, initia
   /** `preferences` is the pre-sections name for "the app settings": it lands on the first of them. */
   initialTab: SettingsSection | 'preferences';
 }) {
-  const meta = useUserMetadata(pubkey);
+  const meta = useSessionProfile();
+  const { logout } = useSessionActions();
   const [editing, setEditing] = useState(initialEditing);
   const [settingsTab, setSettingsTab] = useState<SettingsSection>(initialTab === 'preferences' ? 'general' : initialTab);
-  useUserPanelEffects(pubkey, editing, onClose);
+  useUserPanelEffects(editing, onClose);
   return {
     meta,
     displayName: displayNameFor(pubkey, meta),
@@ -61,7 +58,7 @@ export function useUserPanel({ pubkey, onClose, onLogout, initialEditing, initia
     logout: () => {
       onClose();
       if (onLogout) onLogout();
-      else void nostrActions.logout();
+      else void logout();
     },
   };
 }

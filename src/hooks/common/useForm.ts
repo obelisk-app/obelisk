@@ -42,7 +42,7 @@ export function useForm<V extends FormValues, R = unknown>(spec: FormSpec<V, R>)
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
-  const inFlight = useRef(false);
+  const inFlight = useRef<object | null>(null);
   const edited = useRef(false);
   const startedFrom = useRef<V>(values);
 
@@ -58,6 +58,9 @@ export function useForm<V extends FormValues, R = unknown>(spec: FormSpec<V, R>)
     setValuesState((current) => ({ ...current, ...patch }));
   }, []);
   const reset = useCallback((next?: V) => {
+    // A new draft owns its own submit, even if the previous request is pending.
+    inFlight.current = null;
+    setSubmitting(false);
     const base = next ?? startedFrom.current;
     startedFrom.current = base;
     edited.current = false;
@@ -90,18 +93,23 @@ export function useForm<V extends FormValues, R = unknown>(spec: FormSpec<V, R>)
       setError(t(problem));
       return;
     }
-    inFlight.current = true;
+    const submission = {};
+    inFlight.current = submission;
     setSubmitting(true);
     try {
       const result = await spec.submit(values);
+      if (inFlight.current !== submission) return;
       if (spec.resetOnSuccess) reset();
       spec.onSuccess?.(result, values);
     } catch (err) {
+      if (inFlight.current !== submission) return;
       const fallback = typeof spec.failure === 'function' ? spec.failure(err) : spec.failure;
       setError(errorText(t, err, fallback));
     } finally {
-      inFlight.current = false;
-      setSubmitting(false);
+      if (inFlight.current === submission) {
+        inFlight.current = null;
+        setSubmitting(false);
+      }
     }
   };
 

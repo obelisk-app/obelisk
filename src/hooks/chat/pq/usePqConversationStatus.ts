@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useMyPubkey } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { hasUsableKeys } from '@/services/chat/pq/attestations';
 import { conversationStatus, type PqConversationStatus } from '@/services/chat/pq/status';

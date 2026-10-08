@@ -6,7 +6,7 @@
  * entry points, signing and the probes the bridge tests read.
  */
 import { type Filter, type Event as NostrEvent, type EventTemplate, type VerifiedEvent } from 'nostr-tools';
-import type { NipSigner } from '@/constants/nostr/nip-signer';
+import type { NipSigner } from '@/types/nostr/nip-signer';
 import { type SignerLane } from '../session/signer-queue';
 import type { MessagesStatus, RelayAccessState } from '../common/types';
 import { type PersistedSession } from '../session/session-storage';
@@ -69,6 +69,9 @@ export class BridgeImpl extends BridgeCommands {
   private get session(): PersistedSession | null { return this.m.state.session; }
 
   // ---- methods ---------------------------------------------------------------
+
+  /** Identity lifecycle token for rejecting async work from an earlier session. */
+  getSessionGeneration(): number { return this.m.state.sessionGeneration; }
 
   initialize(): Promise<void> {
     return this.m.login.initialize();
@@ -281,4 +284,21 @@ export function getBridge(): Promise<BridgeImpl> {
 /** Returns the page bridge without creating it (`null` until something has). */
 export function getBridgeImpl(): BridgeImpl | null {
   return bridgeSlot().instance;
+}
+
+/** Forget credentials without restoring them or waiting for an older initialization. */
+export async function logoutPageSession(): Promise<void> {
+  const slot = bridgeSlot();
+  const cold = !slot.instance;
+  const instance = slot.instance ?? new BridgeImpl();
+  slot.instance = instance;
+  // Existing observers may still await the old restore. Its generation guard
+  // discards completion; new consumers should await only this reset.
+  void slot.promise?.catch(() => undefined);
+  slot.promise = (async () => {
+    await instance.logout();
+    if (cold) await instance.initialize(); // Restore device relay preferences, after secrets are gone.
+    return instance;
+  })();
+  await slot.promise;
 }

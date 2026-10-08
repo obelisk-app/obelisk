@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useMyFollows, useMyPubkey } from '@/services/nostr-bridge';
+import { useMyFollows } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { suggestedAuthors } from '@/services/social/feed-people';
 import { WHO_TO_FOLLOW_LIMIT } from '@/constants/social/widgets';
 

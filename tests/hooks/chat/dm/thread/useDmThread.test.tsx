@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => 'a'.repeat(64),
+  });
+});
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
@@ -13,7 +19,7 @@ const cancelPendingDirectMessage = vi.hoisted(() => vi.fn());
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
-    useMyPubkey: () => 'a'.repeat(64),
+
     useDirectMessages: () => dms.current,
     nostrActions: {
       retryDirectMessage: (...a: unknown[]) => retryDirectMessage(...a),

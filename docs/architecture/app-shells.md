@@ -12,7 +12,7 @@ Desktop supports a permanent relay/channel sidebar, resizable panes, simultaneou
 
 | Responsibility | Owner |
 |---|---|
-| Session and bridge instance | `mounts/AppProviders.tsx`, above shell selection |
+| Session and bridge instance | `mounts/AppProviders.tsx` mounts `BridgeProvider` and its nested `SessionProvider`, above shell selection |
 | Read state and channel voice playback | Authenticated mounts in `AppGate.tsx` |
 | DM call listener and call UI lifecycle | `LazyDmCallLayer` in authenticated `AppGate`; call UI loads only once status leaves idle |
 | Social relay initialization and persisted trust settings | `useAppGate`, for both layouts |
@@ -24,6 +24,8 @@ Desktop supports a permanent relay/channel sidebar, resizable panes, simultaneou
 | Sheet titles/actions and Back control | Shared UI primitives; owning screens keep their contents and navigation |
 
 Unmounting a layout must not end an active call. Logout still unmounts the authenticated call listener and retains its cleanup behavior. Search rows resolve bare keys consistently and only indicate verification when that public-key/handle pair was verified; passive rows do not fetch a profile-supplied domain merely to draw a badge.
+
+The [session provider](session.md) shares identity and current-user profile subscriptions across both shells. Account actions and selector hooks have one owner; layout changes do not recreate the login system.
 
 ## Navigation continuity
 

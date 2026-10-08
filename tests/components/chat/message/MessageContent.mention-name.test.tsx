@@ -1,3 +1,14 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const { userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = (pubkey) => {
+      const meta = pubkey ? metaByPubkey[pubkey] : null;
+      return meta ? userMetadataFixture({ pubkey: pubkey ?? undefined, ...meta }) : null;
+    };
+  return sessionMock({
+    useSessionProfile: () => readProfile('f'.repeat(64)),
+  });
+});
 import { render, screen } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi, beforeEach } from 'vitest';
 import { nip19 } from 'nostr-tools';

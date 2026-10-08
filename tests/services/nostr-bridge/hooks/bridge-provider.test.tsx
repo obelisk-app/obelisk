@@ -1,3 +1,4 @@
+import { useIsLoggedIn, useMyPubkey } from '@/hooks/session/useSession';
 /**
  * `<BridgeProvider>`: one instance per page, the same object for React and
  * for the non-React callers of `getBridgeImpl()`.
@@ -11,14 +12,12 @@ import {
   useBridge,
   useBridgeReady,
   useGroups,
-  useIsLoggedIn,
-  useMyPubkey,
 } from '@/services/nostr-bridge';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { groupFixture } from '@tests/support/mocks/nostr-bridge';
 import { getBridgeImpl, registerBridge, unregisterBridge, type BridgeImpl } from '@/services/nostr-bridge/facade/client';
 
-const fake = (name: string) => ({ name }) as unknown as BridgeImpl;
+const fake = (name: string) => Object.assign(fakeBridge(), { name });
 
 afterEach(() => {
   unregisterBridge();

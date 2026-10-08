@@ -5,7 +5,7 @@
  * notice before the bridge sees it.
  *
  * The widget's own default storage is plaintext localStorage; Obelisk hands
- * it memory-only storage (`src/services/login/signer-storage.ts`). Every
+ * it memory-only storage (`src/services/session/signer-storage.ts`). Every
  * assertion below is a scan of the real storage after the real widget ran.
  */
 import { readFileSync } from 'node:fs';

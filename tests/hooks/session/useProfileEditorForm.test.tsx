@@ -1,38 +1,79 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ReactNode } from 'react';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { BridgeProvider } from '@/services/nostr-bridge';
 import { LocaleProvider } from '@tests/support/intl';
 
 const editUserMetadata = vi.fn();
 let signerReady = true;
-vi.mock('@/services/nostr-bridge', async () => {
-  const { bridgeMock } = await import('@tests/support/mocks/nostr-bridge');
-  return bridgeMock({
-    nostrActions: { editUserMetadata: (...a: unknown[]) => editUserMetadata(...a) },
-    useSignerReady: () => signerReady,
-  });
-});
+let generation = 0;
+let emitGeneration: (value: number) => void = () => {};
+let bridge: ReturnType<typeof fakeBridge>;
 const uploadToBlossom = vi.fn();
 vi.mock('@/services/media/blossom', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/services/media/blossom')>()),
   uploadToBlossom: (...a: unknown[]) => uploadToBlossom(...a),
 }));
 
-import { useProfileEditorForm } from '@/hooks/chat/profile/useProfileEditorForm';
+import { useProfileEditorForm } from '@/hooks/session/useProfileEditorForm';
 import { BlossomUploadError } from '@/services/media/blossom';
 
-const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
+const wrapper = ({ children }: { children: React.ReactNode }) => {
+  bridge ??= fakeBridge({ myPubkey: signerReady ? 'a'.repeat(64) : null, isLoggedIn: signerReady, myLoginMethod: signerReady ? 'nsec' : null }, { editUserMetadata, getSessionGeneration: () => generation, subscribeSessionGeneration: (cb) => { emitGeneration = cb; cb(generation); return () => {}; }, getPublicKey: () => bridge.stores.myPubkey.get() });
+  return <LocaleProvider initialLocale="en"><BridgeProvider bridge={bridge}>{children}</BridgeProvider></LocaleProvider>;
+};
 const INITIAL = { displayName: 'Alice', name: 'alice', about: 'hi', picture: 'https://cdn/a.png', banner: '', nip05: 'alice@x', lud16: '', website: '' };
 const file = (name: string) => new File(['x'], name, { type: 'image/png' });
 
 beforeEach(() => {
   signerReady = true;
+  generation = 0;
+  bridge = undefined as unknown as ReturnType<typeof fakeBridge>;
   editUserMetadata.mockResolvedValue(undefined);
   uploadToBlossom.mockResolvedValue('https://blossom/uploaded.png');
 });
 afterEach(() => vi.clearAllMocks());
 
 describe('useProfileEditorForm', () => {
+  it('discards dirty text and picked files when the active account changes', () => {
+    const { result, rerender } = renderHook(({ initial }) => useProfileEditorForm(initial, () => {}), {
+      wrapper, initialProps: { initial: INITIAL },
+    });
+    act(() => result.current.setValues({ name: 'Unsaved Alice', pictureFile: file('alice.png') }));
+    act(() => bridge.stores.myPubkey.set('b'.repeat(64)));
+    rerender({ initial: { ...INITIAL, displayName: 'Bob', picture: '' } });
+    expect(result.current.values.name).toBe('Bob');
+    expect(result.current.values.pictureFile).toBeNull();
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it('drops dirty drafts and files when the same account gets a new session', () => {
+    const { result } = renderHook(() => useProfileEditorForm(INITIAL, () => {}), { wrapper });
+    act(() => result.current.setValues({ name: 'Unsaved Alice', pictureFile: file('alice.png') }));
+    act(() => { generation += 1; emitGeneration(generation); });
+    expect(result.current.values.name).toBe('Alice');
+    expect(result.current.values.pictureFile).toBeNull();
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it.each(['account', 'session'] as const)('ignores an old save after the %s changes', async (change) => {
+    let finish!: () => void;
+    editUserMetadata.mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve; }));
+    const onSaved = vi.fn();
+    const { result } = renderHook(() => useProfileEditorForm(INITIAL, onSaved), { wrapper });
+    let pending!: Promise<void>;
+    await act(async () => { pending = result.current.submit(); });
+    await vi.waitFor(() => expect(editUserMetadata).toHaveBeenCalled());
+    act(() => {
+      if (change === 'account') bridge.stores.myPubkey.set('b'.repeat(64));
+      else { generation += 1; emitGeneration(generation); }
+    });
+    await act(async () => { finish(); await pending; });
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(result.current.error).toBeNull();
+  });
+
+
   it('hydrates from metadata that arrives late, but never over the user\'s typing', () => {
     const { result, rerender } = renderHook(({ initial }) => useProfileEditorForm(initial, () => {}), {
       wrapper,
@@ -87,7 +128,7 @@ describe('useProfileEditorForm', () => {
       nip05: 'alice@x',
       lud16: '',
       website: 'https://alice.example',
-    });
+    }, expect.objectContaining({ assertCurrent: expect.any(Function) }));
     expect(onSaved).toHaveBeenCalledTimes(1);
     expect(result.current.busy).toBe(false);
     expect(result.current.uploading).toBeNull();
@@ -99,7 +140,7 @@ describe('useProfileEditorForm', () => {
     act(() => result.current.set('picture', 'https://cdn/new.png'));
     await act(() => result.current.submit());
     expect(uploadToBlossom).not.toHaveBeenCalled();
-    expect(editUserMetadata).toHaveBeenCalledWith(expect.objectContaining({ picture: 'https://cdn/new.png' }));
+    expect(editUserMetadata).toHaveBeenCalledWith(expect.objectContaining({ picture: 'https://cdn/new.png' }), expect.objectContaining({ assertCurrent: expect.any(Function) }));
     expect(result.current.error).toBe('Failed to publish');
     expect(result.current.submitting).toBe(false);
   });

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useBridge, useMyContactList, useMyContactListReady, useMyPubkey } from '@/services/nostr-bridge';
+import { useBridge, useMyContactList, useMyContactListReady } from '@/services/nostr-bridge';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { toggledFollowTags } from '@/services/social/profile-feed';
 
 /**

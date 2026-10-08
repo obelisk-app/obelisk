@@ -1,3 +1,4 @@
+import type { ProfileEditOptions } from '@/types/session/profile';
 /**
  * The command half of the bridge facade: group messages, reactions, DMs,
  * group and profile edits, membership, lists, the media library, search,
@@ -129,7 +130,7 @@ export abstract class BridgeCommands extends BridgeReads {
     return this.m.metadata.editGroupMetadata(opts);
   }
 
-  editUserMetadata(opts: EditUserMetadataOptions, options: { create?: boolean } = {}): Promise<void> {
+  editUserMetadata(opts: EditUserMetadataOptions, options: ProfileEditOptions = {}): Promise<void> {
     return this.m.profiles.edit(opts, options);
   }
 

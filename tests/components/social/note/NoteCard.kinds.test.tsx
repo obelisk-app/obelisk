@@ -1,3 +1,12 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  const { userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
+  const readProfile: typeof import('@/services/nostr-bridge')['useUserMetadata'] = () => userMetadataFixture({ displayName: 'Alice' });
+  return sessionMock({
+    useMyPubkey: () => 'me'.padEnd(64, '0'),
+    useSessionProfile: () => readProfile((() => 'me'.padEnd(64, '0'))()),
+  });
+});
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -14,7 +23,7 @@ vi.mock('@/services/social/engagement', () => ({
 vi.mock('@/services/nostr-bridge', async () => {
   const { bridgeMock, userMetadataFixture } = await import('@tests/support/mocks/nostr-bridge');
   return bridgeMock({
-    useMyPubkey: () => 'me'.padEnd(64, '0'),
+
     useMyFollows: () => [],
     useCurrentRelayUrl: () => 'wss://public.obelisk.ar',
     useUserMetadata: () => userMetadataFixture({ displayName: 'Alice' }),

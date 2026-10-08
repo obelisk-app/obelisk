@@ -23,17 +23,24 @@ export interface RestoreDeps extends Pick<LoginDeps, 'connect' | 'restoreConfigu
 
 export async function restoreSession(t: LifecycleTargets, deps: RestoreDeps): Promise<void> {
   const { state } = t;
+  const generation = state.beginSessionOperation();
+  const isCurrent = () => generation === state.sessionGeneration;
   deps.restoreConfiguredRelays();
   const raw = readMigrated(STORAGE_KEY, LEGACY_STORAGE_KEY);
   if (!raw) return;
+  state.isRestoringSession.set(true);
   try {
     // Opens the vault before connect(): a reload during the handshake must
     // find a sealed record, never a half-migrated one. Null when the vault
     // could not open it; the record is gone and `sessionNotice` says why.
     // Awaited only when there is a vault to wait for (see `load`).
-    const loaded = deps.store.load(raw);
+    const loaded = deps.store.load(raw, isCurrent);
     const parsed = loaded instanceof Promise ? await loaded : loaded;
-    if (!parsed) return;
+    if (!isCurrent()) return;
+    if (!parsed) {
+      state.isRestoringSession.set(false);
+      return;
+    }
     const storedRelayUrl = parsed.relayUrl;
     parsed.relayUrl = normalizeConfiguredRelayUrl(parsed.relayUrl);
     if (!isImportableRelayUrl(parsed.relayUrl)) parsed.relayUrl = DEFAULT_RELAY;
@@ -72,7 +79,7 @@ export async function restoreSession(t: LifecycleTargets, deps: RestoreDeps): Pr
     // chat render, the lazy fallback in the AUTH signer still works.
     if (parsed.loginMethod === 'bunker') {
       void t.bunker.ensure()
-        .then(() => t.bunker.ready.set(true))
+        .then(() => { if (isCurrent()) t.bunker.ready.set(true); })
         .catch((err) => {
           console.warn(
             '[bridge] bunker pre-warm failed; will retry lazily on first AUTH',
@@ -97,18 +104,24 @@ export async function restoreSession(t: LifecycleTargets, deps: RestoreDeps): Pr
       // renderable channel state, keep the cached shell mounted;
       // otherwise leave the app behind useIsRehydrating so a cache-free
       // user never sees an empty chat shell as the "successful" first paint.
+      if (!isCurrent()) return;
       if (hasRenderableCache) {
         state.myPubkey.set(parsed.pubKeyHex);
         state.myLoginMethod.set(parsed.loginMethod);
         state.isLoggedIn.set(true);
+        state.isRestoringSession.set(false);
       }
       return;
     }
+    if (!isCurrent()) return;
     state.myPubkey.set(parsed.pubKeyHex);
     state.myLoginMethod.set(parsed.loginMethod);
     state.isLoggedIn.set(true);
+    state.isRestoringSession.set(false);
     void t.profiles.syncOwn('login');
   } catch {
+    if (!isCurrent()) return;
+    state.isRestoringSession.set(false);
     // Corrupt storage: drop both the current and legacy session entries so
     // `useIsRehydrating` doesn't latch true forever on the next paint
     // (the LoginModal would never appear and the user would be locked out

@@ -6,7 +6,7 @@ vi.mock('@/services/shell/desktop/generated-profile', () => ({
   attachGeneratedProfileEnhancements: (...args: unknown[]) => { service.attach(...args); return service.detach; },
 }));
 
-import { useGeneratedProfileEnhancements } from '@/hooks/shell/login/useGeneratedProfileEnhancements';
+import { useGeneratedProfileEnhancements } from '@/hooks/session/useGeneratedProfileEnhancements';
 import { LocaleProvider } from '@tests/support/intl';
 
 describe('useGeneratedProfileEnhancements', () => {

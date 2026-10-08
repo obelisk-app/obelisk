@@ -115,8 +115,7 @@ const eslintConfig = defineConfig([
     files: [
       "src/services/nostr-bridge/hooks/groups.ts",
       "src/services/nostr-bridge/hooks/messages.ts",
-      "src/services/nostr-bridge/hooks/session.ts",
-    ],
+      ],
     rules: {
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/refs": "warn",

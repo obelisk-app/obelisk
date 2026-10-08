@@ -1,3 +1,4 @@
+vi.mock('@/hooks/session/useSession', () => ({ useMyPubkey: () => 'a'.repeat(64) }));
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nostrActions } from '@/services/nostr-bridge';

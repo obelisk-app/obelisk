@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => 'b'.repeat(64),
+  });
+});
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodedError } from '@/utils/errors/codes';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -24,7 +30,7 @@ vi.mock('@/services/nostr-bridge', async () => {
     useGroups: () => mockGroups,
     useRelayPeople: () => [{ pubkey: 'a'.repeat(64), displayName: 'Alice', role: 'member' }],
     useCurrentRelayUrl: () => 'wss://relay.test',
-    useMyPubkey: () => 'b'.repeat(64),
+
     useConfiguredRelays: () => ['wss://relay.test'],
   });
 });

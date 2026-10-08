@@ -1,3 +1,9 @@
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({
+    useMyPubkey: () => who.me,
+  });
+});
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChatStore } from '@/store/chat';
@@ -5,7 +11,7 @@ import { useChatStore } from '@/store/chat';
 const who = vi.hoisted(() => ({ me: 'op' as string | null, operator: 'op' as string | null }));
 const authorsSeen = vi.hoisted(() => [] as string[][]);
 vi.mock('@/services/nostr-bridge', () => ({
-  useMyPubkey: () => who.me,
+
   useMediaPacks: () => ({}),
 }));
 vi.mock('@/hooks/relay/operator/useRelayOperatorPubkey', () => ({ useRelayOperatorPubkey: () => who.operator }));
