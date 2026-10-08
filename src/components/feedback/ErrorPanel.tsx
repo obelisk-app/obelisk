@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import Button from '@/components/ui/buttons/Button';
 import TextButton from '@/components/ui/buttons/TextButton';
 import { useErrorPanel } from '@/hooks/feedback/useErrorPanel';
@@ -36,7 +37,7 @@ export default function ErrorPanel({
       data-testid="error-panel"
       className="flex min-h-screen w-full items-center justify-center bg-lc-black px-4 py-10 text-lc-white"
     >
-      <div className="lc-card w-full max-w-lg p-6 sm:p-8">
+      <Card variant="interactive" padding="2xl" className="w-full max-w-lg sm:p-8">
         <Heading as="h1" className="text-xl font-semibold sm:text-2xl">{t('panel.title')}</Heading>
         <Text as="p" variant="muted" className="mt-3 leading-relaxed">{t('panel.body')}</Text>
         {vm.code && (
@@ -96,7 +97,7 @@ export default function ErrorPanel({
             {t('panel.cleared', { count: vm.clearedCount })}
           </Text>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

@@ -13,6 +13,7 @@
  * context the note viewer builds.
  */
 
+import Container from '@/components/ui/layout/Container';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -108,7 +109,7 @@ export default async function ProfileViewerPage({ params }: Params) {
     <main className="min-h-screen bg-lc-black text-lc-white">
       <ViewerHeader />
 
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-x-10 px-0 lg:grid-cols-[minmax(0,1fr)_21rem] lg:px-5">
+      <Container width="6xl" className="grid grid-cols-1 gap-x-10 px-0 lg:grid-cols-[minmax(0,1fr)_21rem] lg:px-5">
         {/*
           The live profile: the app's component, so the tabs, the outbox
           reads and the note rendering are the same ones the app uses rather
@@ -150,7 +151,7 @@ export default async function ProfileViewerPage({ params }: Params) {
             />
           </div>
         </aside>
-      </div>
+      </Container>
     </main>
   );
 }

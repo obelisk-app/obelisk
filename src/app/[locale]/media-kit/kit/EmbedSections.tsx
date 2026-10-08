@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import { embedBadge, embedHtmlBanner, embedOg } from '@/utils/media-kit/content';
 import { OG_IMAGE_URL } from '@/constants/media-kit/content';
@@ -40,7 +41,7 @@ export function EmbedSections() {
         title={t('mediaKit.openGraph')}
         description={t('mediaKit.desc.og')}
       >
-        <div className="lc-card overflow-hidden mb-4">
+        <Card variant="interactive" padding="none" className="overflow-hidden mb-4">
           <div className="aspect-[1200/630] relative bg-lc-black">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -60,7 +61,7 @@ export function EmbedSections() {
               {t('mediaKit.openInNewTab')}
             </a>
           </div>
-        </div>
+        </Card>
         <CodeBlock
           code={embedOg({
             comment: t('mediaKit.brand.ogComment'),

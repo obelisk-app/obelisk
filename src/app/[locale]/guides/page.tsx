@@ -1,3 +1,4 @@
+import Container from '@/components/ui/layout/Container';
 import { Link } from '@/i18n/navigation';
 import { cachedGuideList } from '@/services/guides/cached-guides';
 import { guidePath } from '@/utils/guides/guide-urls';
@@ -45,7 +46,7 @@ export default async function Page() {
         <JsonLd data={collection} />
         <JsonLd data={breadcrumb} />
 
-        <main className="max-w-6xl mx-auto px-6 pt-28 pb-24">
+        <Container width="6xl" as="main" className="px-6 pt-28 pb-24">
           <div className="mb-10">
             <Link
               href="/"
@@ -70,7 +71,7 @@ export default async function Page() {
               ))}
             </div>
           )}
-        </main>
+        </Container>
         <Footer />
       </div>
     </IntlScope>

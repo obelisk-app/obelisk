@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { createPortal } from 'react-dom';
 import Button from '@/components/ui/buttons/Button';
 import { BookIcon, SparklesIcon } from '@/assets/icons';
@@ -45,22 +46,24 @@ export function HelpPopover({ onClose }: { onClose: () => void }) {
         <ul className="flex flex-col gap-2">
           {HELP_TOPICS.map((topic) => (
             <li key={topic.slug}>
-              <a
-                href={localizedPath(vm.locale, helpTopicPath(topic))}
-                data-testid={`help-popover-topic-${topic.slug}`}
-                onClick={onClose}
-                className="lc-card group flex items-start gap-3 p-3 hover:border-lc-green/50"
-              >
-                <HelpTopicBadge slug={topic.slug} />
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-lc-white group-hover:text-lc-green">
-                    {t(topic.titleKey)}
+              <Card variant="interactive" padding="md" asChild>
+                <a
+                  href={localizedPath(vm.locale, helpTopicPath(topic))}
+                  data-testid={`help-popover-topic-${topic.slug}`}
+                  onClick={onClose}
+                  className="group flex items-start gap-3 hover:border-lc-green/50"
+                >
+                  <HelpTopicBadge slug={topic.slug} />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-lc-white group-hover:text-lc-green">
+                      {t(topic.titleKey)}
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-lc-muted">
+                      {t(topic.descriptionKey)}
+                    </span>
                   </span>
-                  <span className="mt-1 block text-xs leading-5 text-lc-muted">
-                    {t(topic.descriptionKey)}
-                  </span>
-                </span>
-              </a>
+                </a>
+              </Card>
             </li>
           ))}
         </ul>

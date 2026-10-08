@@ -1,5 +1,6 @@
 'use client';
 
+import Container from '@/components/ui/layout/Container';
 import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';
 import Button, { buttonClass } from '@/components/ui/buttons/Button';
@@ -24,7 +25,7 @@ export default function LandingHero({ onLaunch }: { onLaunch: () => void }) {
       <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[520px] h-[520px] bg-lc-green/3 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-lc-black pointer-events-none" aria-hidden="true" />
 
-      <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center relative z-10">
+      <Container width="6xl" className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center relative z-10">
         <LandingHeroAnimation />
 
         <div className="flex min-w-0 flex-col items-center text-center lg:items-start lg:text-left">
@@ -61,7 +62,7 @@ export default function LandingHero({ onLaunch }: { onLaunch: () => void }) {
             mobileAlt={t('marketing.landing.preview.mobile.alt')}
           />
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

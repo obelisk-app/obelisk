@@ -1,5 +1,6 @@
 'use client';
 
+import Container from '@/components/ui/layout/Container';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 
@@ -12,9 +13,9 @@ type HeroProductPreviewProps = {
 export default function HeroProductPreview({ desktopAlt, mobileAlt }: HeroProductPreviewProps) {
   const t = useTranslations();
   return (
-    <div
+    <Container width="5xl"
       data-testid="hero-product-preview"
-      className="relative mx-auto mt-8 w-full max-w-5xl md:mt-10"
+      className="relative mt-8 w-full md:mt-10"
     >
       <div
         aria-hidden="true"
@@ -54,6 +55,6 @@ export default function HeroProductPreview({ desktopAlt, mobileAlt }: HeroProduc
           />
         </figure>
       </div>
-    </div>
+    </Container>
   );
 }

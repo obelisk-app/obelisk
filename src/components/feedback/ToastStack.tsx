@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import Stack from '@/components/ui/layout/Stack';
 import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
@@ -20,31 +21,32 @@ export default function ToastStack() {
       data-testid="toast-stack"
     >
       {vm.toasts.map((toast) => (
-        <Button
-          variant="bare"
-          key={toast.id}
-          type="button"
-          onClick={() => vm.open(toast)}
-          className="lc-card text-left px-4 py-3 shadow-lg border border-lc-border hover:border-lc-green/50 transition-colors cursor-pointer group"
-          data-testid="toast"
-        >
-          <Row gap="3" align="start">
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-lc-white truncate">{toast.title}</div>
-              <div className="text-sm text-lc-muted mt-0.5 line-clamp-2 break-words">{toast.body}</div>
-            </div>
-            <span
-              role="button"
-              aria-label={t('common.dismiss')}
-              tabIndex={-1}
-              onClick={(e) => vm.dismiss(e, toast.id)}
-              className="text-lc-muted hover:text-lc-white shrink-0"
-              data-testid="toast-dismiss"
-            >
-              <CloseIcon size={16} />
-            </span>
-          </Row>
-        </Button>
+        <Card variant="interactive" padding="none" key={toast.id} asChild>
+          <Button
+            variant="bare"
+            type="button"
+            onClick={() => vm.open(toast)}
+            className="text-left px-4 py-3 shadow-lg border border-lc-border hover:border-lc-green/50 transition-colors cursor-pointer group"
+            data-testid="toast"
+          >
+            <Row gap="3" align="start">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-lc-white truncate">{toast.title}</div>
+                <div className="text-sm text-lc-muted mt-0.5 line-clamp-2 break-words">{toast.body}</div>
+              </div>
+              <span
+                role="button"
+                aria-label={t('common.dismiss')}
+                tabIndex={-1}
+                onClick={(e) => vm.dismiss(e, toast.id)}
+                className="text-lc-muted hover:text-lc-white shrink-0"
+                data-testid="toast-dismiss"
+              >
+                <CloseIcon size={16} />
+              </span>
+            </Row>
+          </Button>
+        </Card>
       ))}
     </Stack>
   );

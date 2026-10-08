@@ -227,6 +227,7 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | `tests/services/nostr-bridge/fake-bridge-shape.test.ts` | The test fake has every store and `subscribeX` the facade has |
 | `tests/services/nostr-bridge/bounded-stores.test.ts` | Every bridge store that grows with relay traffic has a cap and an eviction order |
 | `tests/lib/relay-hub/isolation.test.ts` | `src/lib/relay-hub/` imports only `nostr-tools` and itself |
+| `tests/components/layout-recipes.test.ts` | Repeated `lc-card`, page-section spacing and centered bounded container recipes use `Card`, `PageSection`, and `Container` outside UI |
 | `tests/components/raw-button-cap.test.ts` | Raw `<button>` count in `src/components/` and `src/hooks/` equals its cap (lower the cap in the commit that moves a button onto a primitive); only the ui primitives may render one |
 | `tests/app/raw-buttons.test.ts` | Zero raw buttons in all `src/app/` routes, including mobile and development screens |
 | `tests/i18n/hardcoded-strings.test.ts` | No hardcoded user-visible copy (JSX text, any string prop outside the skip list, toasts, object copy, ...); the baseline is zero. Rule cases in `tests/i18n/hardcoded/` |

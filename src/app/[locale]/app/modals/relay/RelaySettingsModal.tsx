@@ -19,7 +19,7 @@ export function RelaySettingsModal(props: {
   const { items } = useRelaySettingsModal(props);
 
   return (
-    <Modal onClose={props.onClose} panelClassName="lc-card w-full max-w-lg mx-4 flex flex-col overflow-hidden bg-lc-dark">
+    <Modal onClose={props.onClose} surface="card" panelClassName="w-full max-w-lg mx-4 flex flex-col overflow-hidden bg-lc-dark">
       <ModalHeader title={t('shell.desktop.server.settings')} subtitle={t('shell.desktop.server.settingsHelp')} onClose={props.onClose} />
       <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto px-5 py-4">
         {items.map(({ kind: icon, open }) => (

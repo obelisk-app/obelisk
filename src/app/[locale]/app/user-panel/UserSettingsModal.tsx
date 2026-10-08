@@ -1,5 +1,6 @@
 'use client';
 
+import Container from '@/components/ui/layout/Container';
 import { createPortal } from 'react-dom';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
 import UserAvatar from '@/components/ui/media/UserAvatar';
@@ -38,22 +39,22 @@ const SETTINGS_NAV: ReadonlyArray<{
   label: MessageKey;
   items: ReadonlyArray<{ id: SettingsSection; Icon: (p: { size?: number }) => React.ReactElement }>;
 }> = [
-  { label: 'settings.group.user', items: [{ id: 'profile', Icon: UserIcon }] },
-  {
-    label: 'settings.group.app',
-    items: [
-      { id: 'general', Icon: GearIcon },
-      { id: 'appearance', Icon: PaletteIcon },
-      { id: 'notifications', Icon: BellIcon },
-      { id: 'relays', Icon: ServerIcon },
-      { id: 'privacy', Icon: ShieldIcon },
-      { id: 'wallet', Icon: ZapIcon },
-      { id: 'media', Icon: SmileIcon },
-      { id: 'data', Icon: FileIcon },
-      { id: 'advanced', Icon: WrenchIcon },
-    ],
-  },
-];
+    { label: 'settings.group.user', items: [{ id: 'profile', Icon: UserIcon }] },
+    {
+      label: 'settings.group.app',
+      items: [
+        { id: 'general', Icon: GearIcon },
+        { id: 'appearance', Icon: PaletteIcon },
+        { id: 'notifications', Icon: BellIcon },
+        { id: 'relays', Icon: ServerIcon },
+        { id: 'privacy', Icon: ShieldIcon },
+        { id: 'wallet', Icon: ZapIcon },
+        { id: 'media', Icon: SmileIcon },
+        { id: 'data', Icon: FileIcon },
+        { id: 'advanced', Icon: WrenchIcon },
+      ],
+    },
+  ];
 
 type Props = {
   pubkey: string;
@@ -141,7 +142,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
           {settingsTab === 'media' ? (
             <MediaLibraryModal embedded onClose={() => setSettingsTab('profile')} />
           ) : (
-            <div className="max-w-3xl mx-auto px-10 py-10" data-testid={`settings-section-${settingsTab}`}>
+            <Container width="3xl" className="px-10 py-10" data-testid={`settings-section-${settingsTab}`}>
               <div className="mb-6">
                 <Heading as="h2" className="text-lc-white text-xl font-semibold">{t(`settings.section.${settingsTab}.label`)}</Heading>
                 <Text as="p" variant="muted" className="mt-1">{t(`settings.section.${settingsTab}.desc`)}</Text>
@@ -161,7 +162,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
               {settingsTab === 'wallet' && <WalletSettings />}
               {settingsTab === 'data' && <LocalDataPanel />}
               {settingsTab === 'advanced' && <AdvancedSettingsSection />}
-            </div>
+            </Container>
           )}
         </main>
       </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import Container from '@/components/ui/layout/Container';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { guidePath } from '@/utils/guides/guide-urls';
@@ -21,7 +22,7 @@ export default function Footer() {
 
   return (
     <footer className="border-t border-lc-border/50 pt-14 pb-10 px-6" data-testid="site-footer">
-      <div className="max-w-6xl mx-auto">
+      <Container width="6xl">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
           {/* Brand */}
           <div>
@@ -184,7 +185,7 @@ export default function Footer() {
           <Text as="p" variant="caption">{t('marketing.footer.tagline')}</Text>
           <Text as="p" variant="caption">© {new Date().getFullYear()} Fabricio Acosta · AGPL-3.0</Text> {/* i18n-exempt: copyright line, a person's name and a license id */}
         </div>
-      </div>
+      </Container>
     </footer>
   );
 }

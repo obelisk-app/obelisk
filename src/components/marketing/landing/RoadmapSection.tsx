@@ -1,7 +1,8 @@
 'use client';
 
+import PageSection from '@/components/ui/layout/PageSection';
+import Container from '@/components/ui/layout/Container';
 import { useTranslations } from 'next-intl';
-import Reveal from '@/components/ui/animations/Reveal';
 import { ROADMAP_PHASES } from '@/constants/marketing/landing';
 import RoadmapPhase from './RoadmapPhase';
 import Heading from '@/components/ui/layout/Heading';
@@ -13,8 +14,8 @@ import Text from '@/components/ui/layout/Text';
 export default function RoadmapSection() {
   const t = useTranslations();
   return (
-    <Reveal id="roadmap" className="py-24 px-6">
-      <div className="max-w-4xl mx-auto">
+    <PageSection reveal id="roadmap">
+      <Container width="4xl">
         <div className="text-center mb-16">
           <Heading as="h2" variant="section" className="mb-4">
             {t('marketing.roadmap.heading')}
@@ -33,7 +34,7 @@ export default function RoadmapSection() {
             ))}
           </div>
         </div>
-      </div>
-    </Reveal>
+      </Container>
+    </PageSection>
   );
 }

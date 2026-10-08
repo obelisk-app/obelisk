@@ -26,6 +26,7 @@
  * lockout. Someone who wants to keep working can.
  */
 
+import Card from '@/components/ui/layout/Card';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
@@ -67,39 +68,41 @@ export default function HintCallout({
         aria-hidden="true"
         data-testid="hint-scrim"
       />
-      <div
-        ref={cardRef}
-        role="dialog"
-        aria-label={title}
-        className="lc-card fixed z-[150] p-3 shadow-2xl shadow-black/50"
-        style={{
-          top: pos?.top ?? -9999,
-          left: pos?.left ?? -9999,
-          width: HINT_CARD_WIDTH,
-          visibility: pos ? 'visible' : 'hidden',
-        }}
-        data-testid="hint-callout"
-        data-placement={pos?.below ? 'below' : 'above'}
-      >
-        <Text as="p" size="sm" weight="semibold" tone="default">{title}</Text>
-        <Text as="p" size="13" tone="muted" className="mt-1 leading-relaxed">{body}</Text>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <Button variant="ghost" size="xs" onClick={onMuteAll} data-testid="hint-mute">
-            {t('shell.hints.dismissAll')}
-          </Button>
-          <Button
-            variant="pill"
-            size="xs"
-            onClick={onDismiss}
-            // Focused on mount: Enter closes the thing that just appeared,
-            // which is what a keyboard user will try first.
-            autoFocus
-            data-testid="hint-dismiss"
-          >
-            {t('shell.hints.gotIt')}
-          </Button>
+      <Card variant="interactive" padding="md" asChild>
+        <div
+          ref={cardRef}
+          role="dialog"
+          aria-label={title}
+          className="fixed z-[150] shadow-2xl shadow-black/50"
+          style={{
+            top: pos?.top ?? -9999,
+            left: pos?.left ?? -9999,
+            width: HINT_CARD_WIDTH,
+            visibility: pos ? 'visible' : 'hidden',
+          }}
+          data-testid="hint-callout"
+          data-placement={pos?.below ? 'below' : 'above'}
+        >
+          <Text as="p" size="sm" weight="semibold" tone="default">{title}</Text>
+          <Text as="p" size="13" tone="muted" className="mt-1 leading-relaxed">{body}</Text>
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <Button variant="ghost" size="xs" onClick={onMuteAll} data-testid="hint-mute">
+              {t('shell.hints.dismissAll')}
+            </Button>
+            <Button
+              variant="pill"
+              size="xs"
+              onClick={onDismiss}
+              // Focused on mount: Enter closes the thing that just appeared,
+              // which is what a keyboard user will try first.
+              autoFocus
+              data-testid="hint-dismiss"
+            >
+              {t('shell.hints.gotIt')}
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
     </>,
     document.body,
   );

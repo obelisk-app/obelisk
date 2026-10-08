@@ -1,7 +1,9 @@
 'use client';
 
+import PageSection from '@/components/ui/layout/PageSection';
+import Container from '@/components/ui/layout/Container';
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
-import Reveal from '@/components/ui/animations/Reveal';
 import StepGlyph from './StepGlyph';
 import { ArrowDownIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
@@ -13,8 +15,8 @@ import Text from '@/components/ui/layout/Text';
 export default function StepsSection() {
   const t = useTranslations();
   return (
-    <Reveal id="how-it-works" className="py-24 px-6">
-      <div className="max-w-5xl mx-auto">
+    <PageSection reveal id="how-it-works">
+      <Container width="5xl">
         <div className="text-center mb-16">
           <Heading as="h2" variant="section" className="mb-4">
             {t('marketing.steps.heading')}
@@ -25,7 +27,7 @@ export default function StepsSection() {
           {/* Connector line (desktop only) */}
           <div className="hidden md:block absolute top-12 left-[calc(33.33%+0.75rem)] right-[calc(33.33%+0.75rem)] h-px bg-gradient-to-r from-lc-green/30 via-lc-green/20 to-lc-green/30" />
           {([1, 2, 3] as const).map((num, i) => (
-            <div key={num} className="lc-card p-6 relative group">
+            <Card variant="interactive" padding="2xl" key={num} className="relative group">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-lc-green/10 border border-lc-green/30 flex items-center justify-center text-lc-green text-sm font-bold group-hover:bg-lc-green/20 transition-colors">
                   {String(num).padStart(2, '0')}
@@ -41,10 +43,10 @@ export default function StepsSection() {
                   <ArrowDownIcon size={20} strokeWidth={2} />
                 </div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
-      </div>
-    </Reveal>
+      </Container>
+    </PageSection>
   );
 }

@@ -1,8 +1,10 @@
 'use client';
 
+import PageSection from '@/components/ui/layout/PageSection';
+import Container from '@/components/ui/layout/Container';
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
-import Reveal from '@/components/ui/animations/Reveal';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
@@ -12,9 +14,9 @@ import Text from '@/components/ui/layout/Text';
 export default function CtaSection({ onLaunch }: { onLaunch: () => void }) {
   const t = useTranslations();
   return (
-    <Reveal className="py-24 px-6">
-      <div className="max-w-3xl mx-auto text-center">
-        <div className="lc-card p-12 lc-glow">
+    <PageSection reveal>
+      <Container width="3xl" centeredText>
+        <Card variant="interactive" glow padding="hero">
           <Heading as="h2" variant="section" accent="?" className="mb-4">
             {t('marketing.cta.heading')}
           </Heading>
@@ -24,8 +26,8 @@ export default function CtaSection({ onLaunch }: { onLaunch: () => void }) {
           <Button variant="pill" size="lg" onClick={() => onLaunch()}>
             {t('marketing.cta.button')}
           </Button>
-        </div>
-      </div>
-    </Reveal>
+        </Card>
+      </Container>
+    </PageSection>
   );
 }

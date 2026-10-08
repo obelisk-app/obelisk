@@ -49,7 +49,7 @@ export function NewThreadModal({
     <Modal
       onClose={onClose}
       testId="new-thread-modal"
-      panelClassName="lc-card mx-4 flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden"
+      surface="card" panelClassName="mx-4 flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden"
     >
       <ModalHeader title={t('chat.forum.new')} onClose={onClose} />
       <Form form={form} layout="stack" className="min-h-0 flex-1 overflow-y-auto p-4" error={form.error}>

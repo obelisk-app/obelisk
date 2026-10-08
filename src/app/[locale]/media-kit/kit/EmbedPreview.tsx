@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useRef } from 'react';
 import { CodeBlock } from './CodeBlock';
 import { DownloadPngButton } from './DownloadPngButton';
@@ -28,9 +29,9 @@ export function EmbedPreview({
           pixelWidth={pixelWidth}
         />
       </div>
-      <div className="lc-card p-6 mb-3 flex justify-center">
+      <Card variant="interactive" padding="2xl" className="mb-3 flex justify-center">
         <div ref={ref} dangerouslySetInnerHTML={{ __html: html }} />
-      </div>
+      </Card>
       <CodeBlock code={html} />
     </div>
   );

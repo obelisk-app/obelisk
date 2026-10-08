@@ -1,3 +1,5 @@
+import Container from '@/components/ui/layout/Container';
+import Card from '@/components/ui/layout/Card';
 import { Link } from '@/i18n/navigation';
 import Footer from '@/components/marketing/site/Footer';
 import Navbar from '@/components/marketing/site/Navbar';
@@ -37,7 +39,7 @@ export default async function Page() {
   return (
     <div className="min-h-screen bg-lc-black lc-grid-bg">
       <Navbar />
-      <main className="mx-auto max-w-3xl px-6 pb-24 pt-28" data-testid="local-data-help">
+      <Container width="3xl" as="main" className="px-6 pb-24 pt-28" data-testid="local-data-help">
         <Link href="/help" className="text-sm font-medium text-lc-green hover:text-lc-green-dark">
           {t('help.localData.back')}
         </Link>
@@ -59,10 +61,10 @@ export default async function Page() {
         <Section variant="prose" title={t('help.localData.categories.title')} data-testid="local-data-help-categories">
           <dl className="space-y-4">
             {LOCAL_DATA_CATEGORIES.map((category) => (
-              <div key={category.id} className="lc-card p-4">
+              <Card variant="interactive" padding="lg" key={category.id}>
                 <dt className="font-semibold text-lc-white">{t(category.titleKey)}</dt>
                 <dd className="mt-1">{t(category.purposeKey)}</dd>
-              </div>
+              </Card>
             ))}
           </dl>
           <Text as="p" size="sm" className="mt-4">{t('help.localData.categories.perAccount')}</Text>
@@ -88,7 +90,7 @@ export default async function Page() {
         <Section variant="prose" title={t('help.localData.published.title')}>
           <Text as="p">{t('help.localData.published.body')}</Text>
         </Section>
-      </main>
+      </Container>
       <Footer />
     </div>
   );

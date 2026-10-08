@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import Row from '@/components/ui/layout/Row';
 import { useRef } from 'react';
 import { DownloadPngButton } from './DownloadPngButton';
@@ -22,7 +23,7 @@ export function BannerCard({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   return (
-    <div className="lc-card overflow-hidden">
+    <Card variant="interactive" padding="none" className="overflow-hidden">
       <div ref={ref}>{children}</div>
       <div className="border-t border-lc-border p-3 flex flex-wrap items-center justify-between gap-3 text-xs text-lc-muted">
         <span>
@@ -37,6 +38,6 @@ export function BannerCard({
           />
         </Row>
       </div>
-    </div>
+    </Card>
   );
 }

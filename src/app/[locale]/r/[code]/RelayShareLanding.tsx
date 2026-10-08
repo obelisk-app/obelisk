@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
@@ -18,7 +19,7 @@ export default function RelayShareLanding({ code }: { code: string }) {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-lc-black p-6">
-      <div className="lc-card w-full max-w-md rounded-2xl border border-lc-border bg-lc-dark p-6 text-center">
+      <Card variant="interactive" padding="2xl" className="w-full max-w-md rounded-2xl border border-lc-border bg-lc-dark text-center">
         {error ? (
           <>
             <Heading as="h1" variant="card">{t('common.relayLanding.failed')}</Heading>
@@ -46,7 +47,7 @@ export default function RelayShareLanding({ code }: { code: string }) {
             <div className="lc-spinner mx-auto mt-4" />
           </>
         )}
-      </div>
+      </Card>
     </main>
   );
 }

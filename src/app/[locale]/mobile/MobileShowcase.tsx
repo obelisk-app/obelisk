@@ -1,5 +1,8 @@
 'use client';
 
+import Container from '@/components/ui/layout/Container';
+import PageSection from '@/components/ui/layout/PageSection';
+import Card from '@/components/ui/layout/Card';
 import Stack from '@/components/ui/layout/Stack';
 import { Link } from '@/i18n/navigation';
 import { useRouter } from '@/i18n/navigation';
@@ -71,7 +74,7 @@ export default function MobileShowcase() {
         <Navbar />
 
         <section className="pt-32 pb-12 px-6 text-center">
-          <div className="max-w-3xl mx-auto">
+          <Container width="3xl">
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
               {t('showcase.mobile.hero.badge')}
             </span>
@@ -99,20 +102,20 @@ export default function MobileShowcase() {
                 {t('showcase.mobile.hero.ctaSecondary')}
               </Link>
             </Stack>
-          </div>
+          </Container>
         </section>
 
         <section className="px-6">
-          <div className="max-w-6xl mx-auto py-8 lg:py-16 space-y-24 lg:space-y-32">
+          <Container width="6xl" className="py-8 lg:py-16 space-y-24 lg:space-y-32">
             {items.map((item, i) => (
               <ShowcaseRow key={item.src} item={item} index={i} />
             ))}
-          </div>
+          </Container>
         </section>
 
-        <section className="px-6 py-24">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="lc-card p-12 lc-glow">
+        <PageSection>
+          <Container width="3xl" centeredText>
+            <Card variant="interactive" glow padding="hero">
               <Heading as="h2" variant="section" className="mb-4">
                 {t('showcase.mobile.cta.heading')}
               </Heading>
@@ -126,9 +129,9 @@ export default function MobileShowcase() {
               >
                 {t('showcase.mobile.cta.button')}
               </Button>
-            </div>
-          </div>
-        </section>
+            </Card>
+          </Container>
+        </PageSection>
 
         <Footer />
       </div>

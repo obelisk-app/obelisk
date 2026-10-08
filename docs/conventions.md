@@ -39,7 +39,7 @@ The route tree follows rule 3: Next.js files (`page.tsx`, `layout.tsx`, `route.t
 | `moderation` | Mutes and blocks | |
 | `wot` | Web of trust | |
 | `login`, `analytics`, `local-data`, `hints`, `i18n` | The login widget's storage, consent and gtag, the on-device data inventory, onboarding hints, the runtime translator | |
-| `marketing`, `guides`, `help`, `media-kit`, `seo` | The public site | `marketing`: `landing`, `site`, `showcase`; `guides`: `article`, `listing`, `mdx` (the guide artwork is in `src/assets/illustrations/guides/`) |
+| `marketing`, `guides`, `media-kit`, `seo` | The public site | `marketing`: `landing`, `site`, `showcase`; `guides`: `article`, `listing`, `mdx` (the guide artwork is in `src/assets/illustrations/guides/`) |
 
 Folders one layer has and the others do not: `services/nostr-bridge/` (the bridge, behind its front door), `services/server/` (server-only code) and the `utils` shared topics; each is listed with its reason in `LAYER_ONLY`.
 
@@ -273,3 +273,11 @@ Every route, including mobile and development screens, uses the controls in `src
 Choose an existing visual button variant first. Phone actions use `mobilePrimary`, `mobileSecondary`, `mobileDanger`, `mobileIcon`, or `mobileRow`; their stylesheet recipes stay scoped to the phone shell. `bare` is for compound controls whose geometry belongs to their feature, such as game cells, media tiles, and navigational rows. It supplies the shared keyboard focus and safe default button type without injecting padding, display, or disabled opacity that changes those controls. Do not use it to duplicate an existing action recipe.
 
 Use `Card` for repeated surfaces, `Panel` for cards with a separated title/action header, and `Section` for titled content groups (`article`, `prose`, or `mobile`). Use `Row` and `Stack` for reusable alignment and spacing. Plain `div` and semantic elements remain appropriate for unique structural markup; extracting every wrapper into a component adds indirection without centralizing a responsibility. Screen components should retain meaningful composition rather than only forwarding props.
+
+### Page ownership and container recipes
+
+A route owns its single-use page composition, metadata and translation scope. Do not introduce a page component whose only caller is a forwarding route. Keep separate client components when they own browser state or a reusable interactive island; server routes must not become client components merely to inline them.
+
+`Container` owns `mx-auto` and a named maximum width, with optional centered text and semantic element selection. `PageSection` owns the standard `px-6 py-24` rhythm; `reveal` applies the existing animation to the same section element. `Card variant="interactive"` owns the themed `lc-card` surface and hover treatment, `glow` adds the shared glow, and padding variants include feature and hero insets. `asChild` styles a single existing Link, Button or other element without adding a nested interactive control or an extra DOM wrapper. A modal selects this recipe with `surface="card"`. Unique positioning and responsive overrides remain at the call site.
+
+`tests/components/layout-recipes.test.ts` rejects the repeated card, centered-container and standard section-spacing recipes outside UI. It does not ban structural divs or centered text measures on typography components.

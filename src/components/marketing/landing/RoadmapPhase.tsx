@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import type { ROADMAP_PHASES } from '@/constants/marketing/landing';
 import Heading from '@/components/ui/layout/Heading';
@@ -14,20 +15,18 @@ export default function RoadmapPhase({ phase }: { phase: Phase }) {
   return (
     <div className="relative pl-12 md:pl-16">
       {/* Timeline dot */}
-      <div className={`absolute left-2.5 md:left-4.5 top-1.5 w-3 h-3 rounded-full border-2 ${
-        done
-          ? 'bg-lc-green border-lc-green'
-          : 'bg-lc-dark border-lc-border'
-      }`} />
+      <div className={`absolute left-2.5 md:left-4.5 top-1.5 w-3 h-3 rounded-full border-2 ${done
+        ? 'bg-lc-green border-lc-green'
+        : 'bg-lc-dark border-lc-border'
+        }`} />
 
-      <div className="lc-card p-5">
+      <Card variant="interactive" padding="xl">
         <div className="flex items-center gap-3 mb-2">
           <span className="text-xs font-bold text-lc-green">{t('marketing.roadmap.phaseLabel', { n: phase.num })}</span>
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-            done
-              ? 'bg-lc-green/20 text-lc-green'
-              : 'bg-lc-border text-lc-muted'
-          }`}>
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${done
+            ? 'bg-lc-green/20 text-lc-green'
+            : 'bg-lc-border text-lc-muted'
+            }`}>
             {done ? `✓ ${t('marketing.roadmap.done')}` : t('marketing.roadmap.upcoming')}
           </span>
         </div>
@@ -44,7 +43,7 @@ export default function RoadmapPhase({ phase }: { phase: Phase }) {
             </li>
           ))}
         </ul>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { ASSETS, PITCHES } from '@/constants/media-kit/content';
@@ -20,7 +21,7 @@ export function AboutSections() {
       >
         <div className="grid gap-4 md:grid-cols-2">
           {PITCHES.map(({ labelKey, textKey }) => (
-            <div key={labelKey} className="lc-card p-5 space-y-3">
+            <Card variant="interactive" padding="xl" key={labelKey} className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-lc-green">
                   {t(labelKey)}
@@ -28,7 +29,7 @@ export function AboutSections() {
                 <CopyButton text={t(textKey)} />
               </div>
               <Text as="p" size="sm" tone="default">{t(textKey)}</Text>
-            </div>
+            </Card>
           ))}
         </div>
       </Section>
@@ -41,7 +42,7 @@ export function AboutSections() {
       >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {ASSETS.map((a) => (
-            <div key={a.src} className="lc-card overflow-hidden">
+            <Card variant="interactive" padding="none" key={a.src} className="overflow-hidden">
               <div
                 className={`${a.bg} flex items-center justify-center p-6 h-48`}
               >
@@ -71,7 +72,7 @@ export function AboutSections() {
                   {t('mediaKit.download')}
                 </a>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       </Section>

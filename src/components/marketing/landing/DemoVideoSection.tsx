@@ -1,5 +1,6 @@
 'use client';
 
+import Container from '@/components/ui/layout/Container';
 import { useTranslations } from 'next-intl';
 import YouTubeEmbed from '@/components/common/YouTubeEmbed';
 import Reveal from '@/components/ui/animations/Reveal';
@@ -17,7 +18,7 @@ export default function DemoVideoSection() {
   const t = useTranslations();
   return (
     <Reveal id="demo-video" className="pt-10 pb-4 px-6" data-testid="landing-demo-video">
-      <div className="max-w-4xl mx-auto">
+      <Container width="4xl">
         <div className="text-center mb-8">
           <Heading as="h2" variant="section" className="mb-4">
             {t('marketing.landing.video.heading')}
@@ -32,7 +33,7 @@ export default function DemoVideoSection() {
           title={t('marketing.landing.video.title')}
           thumbnailRes="maxres"
         />
-      </div>
+      </Container>
     </Reveal>
   );
 }

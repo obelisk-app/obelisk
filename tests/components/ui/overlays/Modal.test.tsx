@@ -63,3 +63,13 @@ describe('Modal', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+it('applies the shared card surface to the existing dialog panel', () => {
+  const onClose = vi.fn();
+  render(<Modal surface="card" panelClassName="max-w-xl" onClose={onClose} testId="card-modal" aria-label="Settings">Body</Modal>);
+  const dialog = screen.getByRole('dialog', { name: 'Settings' });
+  expect(dialog).toHaveClass('lc-card', 'max-w-xl');
+  expect(dialog.parentElement).toBe(screen.getByTestId('card-modal'));
+  fireEvent.click(dialog);
+  expect(onClose).not.toHaveBeenCalled();
+});

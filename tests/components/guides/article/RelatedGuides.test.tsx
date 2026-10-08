@@ -3,8 +3,8 @@ import { render } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
 import RelatedGuides from '@/components/guides/article/RelatedGuides';
 
-vi.mock('@/services/guides/guides', () => ({
-  readGuide: vi.fn(),
+vi.mock('@/services/guides/cached-guides', () => ({
+  cachedGuide: vi.fn(),
 }));
 
 async function renderAsync(node: Promise<React.ReactElement | null> | React.ReactElement | null) {
@@ -15,9 +15,9 @@ async function renderAsync(node: Promise<React.ReactElement | null> | React.Reac
 
 describe('RelatedGuides', () => {
   beforeEach(async () => {
-    const { readGuide } = await import('@/services/guides/guides');
-    vi.mocked(readGuide).mockImplementation(async (_locale, slug) => {
-      if (slug === 'missing') throw new Error('not found');
+    const { cachedGuide } = await import('@/services/guides/cached-guides');
+    vi.mocked(cachedGuide).mockImplementation(async (_locale, slug) => {
+      if (slug === 'missing') return null;
       const map: Record<string, { title: string; description: string }> = {
         'how-obelisk-works': { title: 'How Obelisk works', description: 'no-backend default' },
         'web-of-trust': { title: 'Bring your own relay', description: 'multi-relay default' },

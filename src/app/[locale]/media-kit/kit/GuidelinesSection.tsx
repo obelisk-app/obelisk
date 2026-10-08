@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import Section from '@/components/ui/layout/Section';
 
@@ -13,7 +14,7 @@ export function GuidelinesSection() {
       description={t('mediaKit.desc.guidelines')}
     >
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="lc-card p-5">
+        <Card variant="interactive" padding="xl">
           <div className="text-lc-green font-semibold mb-2">{t('mediaKit.do')}</div>
           <ul className="space-y-1 text-sm text-lc-white list-disc list-inside">
             <li>
@@ -27,8 +28,8 @@ export function GuidelinesSection() {
               {t('mediaKit.rule.capital')}
             </li>
           </ul>
-        </div>
-        <div className="lc-card p-5">
+        </Card>
+        <Card variant="interactive" padding="xl">
           <div className="text-red-400 font-semibold mb-2">{t('mediaKit.dont')}</div>
           <ul className="space-y-1 text-sm text-lc-white list-disc list-inside">
             <li>{t('mediaKit.rule.noSkew')}</li>
@@ -40,7 +41,7 @@ export function GuidelinesSection() {
               {t('mediaKit.rule.noEffects')}
             </li>
           </ul>
-        </div>
+        </Card>
       </div>
     </Section>
   );

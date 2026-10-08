@@ -8,6 +8,7 @@
  * the gallery card observe this rule (see `ThreadCard`). The gallery, the
  * states and the skeletons sit beside this file.
  */
+import Card from '@/components/ui/layout/Card';
 import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import { useUserMetadata, type JsForumTag, type JsGroup } from '@/services/nostr-bridge';
@@ -21,7 +22,7 @@ import { useThreadCardData } from '@/hooks/chat/forum/useThreadCardData';
 
 /**
  * Thread card (list view). Three states:
- *   - messages.length > 0                             → full render (OP + last + counts)
+ *   - messages.length> 0                             → full render (OP + last + counts)
  *   - messages.length === 0, status !== empty-confirmed → skeleton placeholder
  *   - messages.length === 0, status === empty-confirmed → return null (truly empty)
  *
@@ -57,48 +58,50 @@ export function ThreadCard({
   const opName = posterName(opMeta, op.pubkey);
   const lastName = posterName(lastMeta, lastMsg.pubkey);
   return (
-    <Button
-      variant="bare"
-      type="button"
-      onClick={onOpen}
-      className="lc-card w-full text-left p-3 hover:border-lc-green/40 transition-colors"
-      data-testid="thread-card"
-      data-thread-id={thread.id}
-    >
-      <Row gap="3" align="start">
-        {opMeta?.picture ? (
-          <RemoteImage src={opMeta.picture} alt="" className="w-8 h-8 rounded-full shrink-0 object-cover" />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-lc-border shrink-0" />
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-lc-white truncate">
-            {thread.name || t('chat.forum.untitled')}
-          </div>
-          <div className="text-xs text-lc-muted line-clamp-2 mt-0.5 break-words">
-            {op.content}
-          </div>
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {tags.map((tag) => (
-                <InlineTagChip key={tag.id} tag={tag} />
-              ))}
-            </div>
+    <Card variant="interactive" padding="md" asChild>
+      <Button
+        variant="bare"
+        type="button"
+        onClick={onOpen}
+        className="w-full text-left hover:border-lc-green/40 transition-colors"
+        data-testid="thread-card"
+        data-thread-id={thread.id}
+      >
+        <Row gap="3" align="start">
+          {opMeta?.picture ? (
+            <RemoteImage src={opMeta.picture} alt="" className="w-8 h-8 rounded-full shrink-0 object-cover" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-lc-border shrink-0" />
           )}
-          <div className="flex flex-wrap gap-x-3 text-[11px] text-lc-muted mt-1.5">
-            <span>{t('chat.forum.op', { name: opName })}</span>
-            <span>{t('chat.forum.messages', { count: messages.length })}</span>
-            <span>{t('chat.forum.last', { name: lastName, time: relativeTime(lastMsg.createdAt, t, locale) })}</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-lc-white truncate">
+              {thread.name || t('chat.forum.untitled')}
+            </div>
+            <div className="text-xs text-lc-muted line-clamp-2 mt-0.5 break-words">
+              {op.content}
+            </div>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {tags.map((tag) => (
+                  <InlineTagChip key={tag.id} tag={tag} />
+                ))}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-x-3 text-[11px] text-lc-muted mt-1.5">
+              <span>{t('chat.forum.op', { name: opName })}</span>
+              <span>{t('chat.forum.messages', { count: messages.length })}</span>
+              <span>{t('chat.forum.last', { name: lastName, time: relativeTime(lastMsg.createdAt, t, locale) })}</span>
+            </div>
           </div>
-        </div>
-        {thread.picture && (
-          <RemoteImage
-            src={thread.picture}
-            alt=""
-            className="w-12 h-12 rounded-lg object-cover shrink-0"
-          />
-        )}
-      </Row>
-    </Button>
+          {thread.picture && (
+            <RemoteImage
+              src={thread.picture}
+              alt=""
+              className="w-12 h-12 rounded-lg object-cover shrink-0"
+            />
+          )}
+        </Row>
+      </Button>
+    </Card>
   );
 }

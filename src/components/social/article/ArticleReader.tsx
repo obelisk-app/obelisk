@@ -7,6 +7,7 @@
  * they can't disagree about which title an article has.
  */
 
+import Container from '@/components/ui/layout/Container';
 import Button from '@/components/ui/buttons/Button';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useTranslations } from 'next-intl';
@@ -31,7 +32,7 @@ export default function ArticleReader({
   const { meta, minutes, author, name, published, showHighlights, toggleHighlights, highlightCount, bodyRef } = useArticleReader(note);
 
   return (
-    <article className="mx-auto w-full max-w-2xl px-5 py-6" data-testid="article-reader">
+    <Container width="2xl" as="article" className="w-full px-5 py-6" data-testid="article-reader">
       {meta.image && (
         <RemoteImage
           src={meta.image}
@@ -99,6 +100,6 @@ export default function ArticleReader({
           ))}
         </div>
       )}
-    </article>
+    </Container>
   );
 }

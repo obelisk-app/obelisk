@@ -18,7 +18,7 @@ export default function MediaLibraryShell({ embedded, onClose, closeOnEscape, ch
       onClose={onClose}
       closeOnEscape={closeOnEscape}
       testId="media-library-modal"
-      panelClassName="lc-card mx-2 flex h-[calc(100dvh_-_1rem)] max-h-[calc(100%_-_1rem)] w-full max-w-6xl overflow-hidden bg-lc-dark sm:mx-3 sm:h-[min(780px,94vh)] sm:max-h-none"
+      surface="card" panelClassName="mx-2 flex h-[calc(100dvh_-_1rem)] max-h-[calc(100%_-_1rem)] w-full max-w-6xl overflow-hidden bg-lc-dark sm:mx-3 sm:h-[min(780px,94vh)] sm:max-h-none"
     >
       {children}
     </Modal>

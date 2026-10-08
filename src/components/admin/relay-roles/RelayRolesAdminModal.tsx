@@ -32,7 +32,7 @@ export default function RelayRolesAdminModal({
     <Modal
       onClose={onClose}
       testId="relay-roles-modal"
-      panelClassName="lc-card mx-4 flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden bg-lc-dark"
+      surface="card" panelClassName="mx-4 flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden bg-lc-dark"
     >
       <ModalHeader title={t('admin.roles.title')} subtitle={t('admin.roles.help')} onClose={onClose} />
 

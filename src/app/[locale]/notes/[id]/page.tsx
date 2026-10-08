@@ -13,6 +13,7 @@
  * relay shouldn't turn into a permanent 404.
  */
 
+import Container from '@/components/ui/layout/Container';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -120,9 +121,9 @@ export default async function NoteViewerPage({ params }: Params) {
       */}
       <noscript>
         {note && (
-          <div className="mx-auto max-w-2xl px-5 py-6">
+          <Container width="2xl" className="px-5 py-6">
             <Text as="p" size="sm" className="whitespace-pre-wrap leading-relaxed">{note.content}</Text>
-          </div>
+          </Container>
         )}
       </noscript>
 
@@ -132,7 +133,7 @@ export default async function NoteViewerPage({ params }: Params) {
         rather than being buried a screen below the fold. Below `lg` the grid
         collapses and the rail simply follows the note.
       */}
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-x-10 px-0 lg:grid-cols-[minmax(0,1fr)_21rem] lg:px-5">
+      <Container width="6xl" className="grid grid-cols-1 gap-x-10 px-0 lg:grid-cols-[minmax(0,1fr)_21rem] lg:px-5">
         <div className="min-w-0 lg:border-x lg:border-lc-border">
           <NoteViewerClient target={target} initialNote={note} />
         </div>
@@ -173,7 +174,7 @@ export default async function NoteViewerPage({ params }: Params) {
             </div>
           </aside>
         )}
-      </div>
+      </Container>
     </main>
   );
 }

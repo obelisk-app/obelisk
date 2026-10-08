@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import Button from '@/components/ui/buttons/Button';
 import { useState } from 'react';
 import Heading from '@/components/ui/layout/Heading';
@@ -13,8 +14,8 @@ interface Props {
 export default function FaqItem({ id, question, answer }: Props) {
   const [open, setOpen] = useState(false);
   return (
-    <div
-      className="lc-card overflow-hidden"
+    <Card variant="interactive" padding="none"
+      className="overflow-hidden"
       data-testid={`faq-item-${id}`}
     >
       <Button
@@ -30,9 +31,8 @@ export default function FaqItem({ id, question, answer }: Props) {
         </Heading>
         <span
           aria-hidden="true"
-          className={`shrink-0 text-lc-green text-2xl leading-none mt-0.5 transition-transform duration-300 ${
-            open ? 'rotate-45' : ''
-          }`}
+          className={`shrink-0 text-lc-green text-2xl leading-none mt-0.5 transition-transform duration-300 ${open ? 'rotate-45' : ''
+            }`}
         >
           +
         </span>
@@ -40,9 +40,8 @@ export default function FaqItem({ id, question, answer }: Props) {
       <div
         id={`faq-${id}-answer`}
         role="region"
-        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-        }`}
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+          }`}
       >
         <div className="overflow-hidden">
           <div
@@ -52,6 +51,6 @@ export default function FaqItem({ id, question, answer }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

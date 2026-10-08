@@ -1,3 +1,4 @@
+import Container from '@/components/ui/layout/Container';
 import { Link } from '@/i18n/navigation';
 import type { ReactNode } from 'react';
 import type { Locale } from '@/i18n';
@@ -36,7 +37,7 @@ export default function ArticleShell({
   const updated = new Date(frontmatter.updatedAt || frontmatter.publishedAt);
 
   return (
-    <article className="max-w-3xl mx-auto px-6 pt-28 pb-24" data-testid="article-shell">
+    <Container width="3xl" as="article" className="px-6 pt-28 pb-24" data-testid="article-shell">
       <Link
         href={backHref}
         className="inline-flex items-center gap-2 text-sm font-medium text-lc-green hover:text-lc-green-dark transition-colors mb-6"
@@ -95,6 +96,6 @@ export default function ArticleShell({
           })}
         </time>
       </footer>
-    </article>
+    </Container>
   );
 }

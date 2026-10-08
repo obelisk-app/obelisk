@@ -1,3 +1,5 @@
+import Container from '@/components/ui/layout/Container';
+import Card from '@/components/ui/layout/Card';
 import { Link } from '@/i18n/navigation';
 import { LINKS, NAV_LINKS } from '@/constants/media-kit/content';
 import Section from '@/components/ui/layout/Section';
@@ -27,7 +29,7 @@ export default async function Page() {
       <main className="min-h-screen bg-lc-black text-lc-white">
         {/* Hero */}
         <header className="border-b border-lc-border">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-20">
+          <Container width="6xl" className="px-4 sm:px-6 py-12 sm:py-20">
             <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-lc-green">
               <span className="inline-block w-2 h-2 rounded-full bg-lc-green lc-glow" />
               {t('mediaKit.eyebrow')}
@@ -50,10 +52,10 @@ export default async function Page() {
                 </a>
               ))}
             </nav>
-          </div>
+          </Container>
         </header>
 
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-16 space-y-16">
+        <Container width="6xl" className="px-4 sm:px-6 py-12 sm:py-16 space-y-16">
           <AboutSections />
 
           <BannersSection />
@@ -66,7 +68,7 @@ export default async function Page() {
             title={t('mediaKit.typography')}
             description={t('mediaKit.desc.typography')}
           >
-            <div className="lc-card p-6 space-y-4">
+            <Card variant="interactive" padding="2xl" className="space-y-4">
               <div className="text-5xl font-extrabold tracking-tight"> {/* i18n-exempt: type specimen, the brand asset itself */}
                 Aa - Obelisk
               </div>
@@ -80,7 +82,7 @@ export default async function Page() {
               <div className="text-xs uppercase tracking-widest text-lc-green"> {/* i18n-exempt: type specimen, the brand asset itself */}
                 Eyebrow · uppercase · tracking-widest · lc-green
               </div>
-            </div>
+            </Card>
           </Section>
 
           <ShortCopySection />
@@ -94,40 +96,44 @@ export default async function Page() {
             description={t('mediaKit.desc.contact')}
           >
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <a
-                href={LINKS.site}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="lc-card p-5 hover:border-lc-green transition-colors"
-              >
-                <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
-                  {t('mediaKit.website')}
-                </div>
-                <div className="text-sm text-lc-white truncate">
-                  {LINKS.site}
-                </div>
-              </a>
-              <a
-                href={LINKS.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="lc-card p-5 hover:border-lc-green transition-colors"
-              >
-                <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
-                  GitHub
-                </div>
-                <div className="text-sm text-lc-white truncate">
-                  {LINKS.github}
-                </div>
-              </a>
-              <div className="lc-card p-5">
+              <Card variant="interactive" padding="xl" asChild>
+                <a
+                  href={LINKS.site}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:border-lc-green transition-colors"
+                >
+                  <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
+                    {t('mediaKit.website')}
+                  </div>
+                  <div className="text-sm text-lc-white truncate">
+                    {LINKS.site}
+                  </div>
+                </a>
+              </Card>
+              <Card variant="interactive" padding="xl" asChild>
+                <a
+                  href={LINKS.github}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:border-lc-green transition-colors"
+                >
+                  <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
+                    GitHub
+                  </div>
+                  <div className="text-sm text-lc-white truncate">
+                    {LINKS.github}
+                  </div>
+                </a>
+              </Card>
+              <Card variant="interactive" padding="xl">
                 <div className="text-xs uppercase tracking-widest text-lc-green mb-1">
                   {t('mediaKit.defaultRelay')}
                 </div>
                 <div className="text-sm text-lc-white truncate font-mono">
                   {LINKS.defaultRelay}
                 </div>
-              </div>
+              </Card>
             </div>
           </Section>
 
@@ -141,7 +147,7 @@ export default async function Page() {
               {t('mediaKit.backHome')}
             </Link>
           </footer>
-        </div>
+        </Container>
       </main>
     </IntlScope>
   );

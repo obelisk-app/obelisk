@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Overlay from './Overlay';
+import Card from '../layout/Card';
 
 export interface ModalProps {
   onClose: () => void;
@@ -14,6 +15,8 @@ export interface ModalProps {
   closeOnEscape?: boolean;
   /** Extra classes on the inner panel (sizing, radius, etc.). */
   panelClassName?: string;
+  /** The shared themed card surface, with panelClassName reserved for layout. */
+  surface?: 'custom' | 'card';
   /** Identifies the backdrop in tests; individual modals add their own ids. */
   testId?: string;
   /**
@@ -46,6 +49,7 @@ export default function Modal({
   closeOnBackdrop = true,
   closeOnEscape = true,
   panelClassName = 'w-full max-w-lg mx-4 rounded-xl bg-lc-dark border border-lc-border p-6 shadow-xl',
+  surface = 'custom',
   testId,
   layerClassName = 'z-50',
   role = 'dialog',
@@ -54,6 +58,19 @@ export default function Modal({
   'aria-describedby': ariaDescribedBy,
   children,
 }: ModalProps) {
+  const panel = (
+    <div
+      role={role}
+      aria-modal="true"
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
+      aria-describedby={ariaDescribedBy}
+      className={panelClassName}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>
+  );
   return (
     <Overlay
       onClose={onClose}
@@ -63,17 +80,7 @@ export default function Modal({
       portal
       testId={testId}
     >
-      <div
-        role={role}
-        aria-modal="true"
-        aria-label={ariaLabel}
-        aria-labelledby={ariaLabelledBy}
-        aria-describedby={ariaDescribedBy}
-        className={panelClassName}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
+      {surface === 'card' ? <Card variant="interactive" padding="none" asChild>{panel}</Card> : panel}
     </Overlay>
   );
 }

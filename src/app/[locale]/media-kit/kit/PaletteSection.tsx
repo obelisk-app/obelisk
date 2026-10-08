@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import { COLORS } from '@/constants/media-kit/content';
 import { CopyButton } from './CopyButton';
@@ -16,7 +17,7 @@ export function PaletteSection() {
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {COLORS.map((c) => (
-          <div key={c.token} className="lc-card overflow-hidden">
+          <Card variant="interactive" padding="none" key={c.token} className="overflow-hidden">
             <div
               className="h-24 border-b border-lc-border"
               style={{ backgroundColor: c.hex }}
@@ -33,7 +34,7 @@ export function PaletteSection() {
             <div className="px-4 pb-4 -mt-2 text-xs text-lc-muted font-mono">
               {c.hex}
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     </Section>

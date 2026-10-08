@@ -30,36 +30,36 @@ export function RelayBrandingModal({
   return (
     <Modal
       onClose={onClose}
-      panelClassName="lc-card flex max-h-[90vh] w-full max-w-xl mx-4 flex-col overflow-hidden bg-lc-dark"
+      surface="card" panelClassName="flex max-h-[90vh] w-full max-w-xl mx-4 flex-col overflow-hidden bg-lc-dark"
     >
-        <ModalHeader
-          title={t('shell.desktop.branding.title')}
-          subtitle={t('shell.desktop.branding.subtitle', { host: shortHost(relayUrl) })}
-          onClose={onClose}
-        />
-        <Form form={form} layout="sections" className="min-h-0 flex-1 overflow-y-auto" error={form.error}>
-          <section className="space-y-4">
-            <SectionHeader title={t('shell.desktop.branding.appearance')} />
-            <ChannelAppearanceInput
-              picture={form.values.icon}
-              banner={form.values.banner}
-              onPictureChange={(value) => form.set('icon', value)}
-              onBannerChange={(value) => form.set('banner', value)}
-            />
-          </section>
-          <section className="space-y-3">
-            <Field label={t('mobile.field.name')}>
-              <Input size="sm" {...form.field('name')} placeholder={shortHost(relayUrl)} />
-            </Field>
-            <Field label={t('mobile.field.description')}>
-              <TextArea size="sm" resize="both" {...form.field('description')} rows={2} />
-            </Field>
-          </section>
-        </Form>
-        <ModalFooter
-          cancel={{ onClick: onClose }}
-          actions={[{ label: form.submitting ? t('common.saving') : t('common.save'), form: form.id, disabled: form.submitting }]}
-        />
+      <ModalHeader
+        title={t('shell.desktop.branding.title')}
+        subtitle={t('shell.desktop.branding.subtitle', { host: shortHost(relayUrl) })}
+        onClose={onClose}
+      />
+      <Form form={form} layout="sections" className="min-h-0 flex-1 overflow-y-auto" error={form.error}>
+        <section className="space-y-4">
+          <SectionHeader title={t('shell.desktop.branding.appearance')} />
+          <ChannelAppearanceInput
+            picture={form.values.icon}
+            banner={form.values.banner}
+            onPictureChange={(value) => form.set('icon', value)}
+            onBannerChange={(value) => form.set('banner', value)}
+          />
+        </section>
+        <section className="space-y-3">
+          <Field label={t('mobile.field.name')}>
+            <Input size="sm" {...form.field('name')} placeholder={shortHost(relayUrl)} />
+          </Field>
+          <Field label={t('mobile.field.description')}>
+            <TextArea size="sm" resize="both" {...form.field('description')} rows={2} />
+          </Field>
+        </section>
+      </Form>
+      <ModalFooter
+        cancel={{ onClick: onClose }}
+        actions={[{ label: form.submitting ? t('common.saving') : t('common.save'), form: form.id, disabled: form.submitting }]}
+      />
     </Modal>
   );
 }

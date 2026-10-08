@@ -1,5 +1,6 @@
 'use client';
 
+import Container from '@/components/ui/layout/Container';
 import Row from '@/components/ui/layout/Row';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
@@ -28,10 +29,9 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
 
   return (
     <>
-      <nav className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-        vm.scrolled ? 'bg-lc-black/95 backdrop-blur-xl' : 'bg-transparent'
-      }`}>
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <nav className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${vm.scrolled ? 'bg-lc-black/95 backdrop-blur-xl' : 'bg-transparent'
+        }`}>
+        <Container width="6xl" className="px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3">
             <ObeliskIcon className="w-12 h-12 text-lc-green" />
@@ -87,7 +87,7 @@ export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
               </Button>
             )}
           </Row>
-        </div>
+        </Container>
       </nav>
 
       {/* LoginModal removed: the bridge-backed login lives at /app. Old modal called dead /api/auth/challenge. */}

@@ -1,3 +1,4 @@
+import Container from '@/components/ui/layout/Container';
 import type { ReactNode } from 'react';
 import ViewerHeader from '@/components/social/viewer/ViewerHeader';
 
@@ -6,7 +7,7 @@ export default function HashtagShell({ children }: { children: ReactNode }) {
   return (
     <main className="min-h-screen bg-lc-black text-lc-white">
       <ViewerHeader />
-      <div className="mx-auto max-w-2xl">{children}</div>
+      <Container width="2xl">{children}</Container>
     </main>
   );
 }

@@ -1,3 +1,5 @@
+import Container from '@/components/ui/layout/Container';
+import Card from '@/components/ui/layout/Card';
 import { Link } from '@/i18n/navigation';
 import Footer from '@/components/marketing/site/Footer';
 import Navbar from '@/components/marketing/site/Navbar';
@@ -31,7 +33,7 @@ export default async function Page() {
   return (
     <div className="min-h-screen bg-lc-black lc-grid-bg">
       <Navbar />
-      <main className="mx-auto max-w-5xl px-6 pb-24 pt-28">
+      <Container width="5xl" as="main" className="px-6 pb-24 pt-28">
         <Link href="/app" className="text-sm font-medium text-lc-green hover:text-lc-green-dark">
           {t('help.back')}
         </Link>
@@ -42,15 +44,16 @@ export default async function Page() {
 
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           {HELP_TOPICS.map((topic) => (
-            <Link
-              key={topic.slug}
-              href={helpTopicPath(topic)}
-              data-testid={`help-topic-${topic.slug}`}
-              className="lc-card group p-6 transition-colors hover:border-lc-green/50"
-            >
-              <Heading as="h2" variant="cardLink">{t(topic.titleKey)}</Heading>
-              <Text as="p" variant="muted" className="mt-2 leading-6">{t(topic.descriptionKey)}</Text>
-            </Link>
+            <Card variant="interactive" padding="2xl" key={topic.slug} asChild>
+              <Link
+                href={helpTopicPath(topic)}
+                data-testid={`help-topic-${topic.slug}`}
+                className="group transition-colors hover:border-lc-green/50"
+              >
+                <Heading as="h2" variant="cardLink">{t(topic.titleKey)}</Heading>
+                <Text as="p" variant="muted" className="mt-2 leading-6">{t(topic.descriptionKey)}</Text>
+              </Link>
+            </Card>
           ))}
         </div>
 
@@ -60,7 +63,7 @@ export default async function Page() {
         >
           {t('help.all')}
         </Link>
-      </main>
+      </Container>
       <Footer />
     </div>
   );

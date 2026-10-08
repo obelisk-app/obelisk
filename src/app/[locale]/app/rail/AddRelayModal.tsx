@@ -17,35 +17,35 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal
       onClose={onClose}
-      panelClassName="lc-card flex max-h-[85vh] w-full max-w-lg mx-4 flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark shadow-2xl"
+      surface="card" panelClassName="flex max-h-[85vh] w-full max-w-lg mx-4 flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark shadow-2xl"
     >
-        <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} />
+      <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} />
 
-        <div className="flex shrink-0 border-b border-lc-border px-5">
-          <AddRelayTabButton active={vm.tab === 'suggested'} onClick={vm.showSuggested}>
-            {t('shell.rail.addModal.suggested')}
-          </AddRelayTabButton>
-          <AddRelayTabButton active={vm.tab === 'custom'} onClick={vm.showCustom}>
-            {t('shell.rail.addModal.custom')}
-          </AddRelayTabButton>
-        </div>
+      <div className="flex shrink-0 border-b border-lc-border px-5">
+        <AddRelayTabButton active={vm.tab === 'suggested'} onClick={vm.showSuggested}>
+          {t('shell.rail.addModal.suggested')}
+        </AddRelayTabButton>
+        <AddRelayTabButton active={vm.tab === 'custom'} onClick={vm.showCustom}>
+          {t('shell.rail.addModal.custom')}
+        </AddRelayTabButton>
+      </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          {vm.tab === 'suggested' ? (
-            <ul className="flex flex-col gap-2">
-              {SUGGESTED_RELAYS.map((r) => (
-                <SuggestedRelayItem
-                  key={r.url}
-                  url={r.url}
-                  alreadyAdded={vm.isAdded(r.url)}
-                  onAdded={onClose}
-                />
-              ))}
-            </ul>
-          ) : (
-            <CustomRelayForm onAdded={onClose} />
-          )}
-        </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        {vm.tab === 'suggested' ? (
+          <ul className="flex flex-col gap-2">
+            {SUGGESTED_RELAYS.map((r) => (
+              <SuggestedRelayItem
+                key={r.url}
+                url={r.url}
+                alreadyAdded={vm.isAdded(r.url)}
+                onAdded={onClose}
+              />
+            ))}
+          </ul>
+        ) : (
+          <CustomRelayForm onAdded={onClose} />
+        )}
+      </div>
     </Modal>
   );
 }

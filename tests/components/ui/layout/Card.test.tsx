@@ -43,3 +43,18 @@ describe('Card', () => {
     expect(screen.getByTestId('c')).toHaveClass('mt-2');
   });
 });
+
+it('keeps the themed hover card and glow without adding conflicting surfaces', () => {
+  render(<Card variant="interactive" glow padding="hero" data-testid="hero">Content</Card>);
+  const card = screen.getByTestId('hero');
+  expect(card).toHaveClass('lc-card', 'lc-glow', 'p-12');
+  expect(card).not.toHaveClass('bg-lc-dark', 'border-lc-border');
+});
+
+it('styles an existing link without adding a wrapper or losing its attributes', () => {
+  const { container } = render(<Card variant="interactive" padding="2xl" asChild><a href="https://example.com/guides" className="group" aria-label="Guides">Read</a></Card>);
+  const link = screen.getByRole('link', { name: 'Guides' });
+  expect(container.firstElementChild).toBe(link);
+  expect(link).toHaveAttribute('href', 'https://example.com/guides');
+  expect(link).toHaveClass('lc-card', 'p-6', 'group');
+});

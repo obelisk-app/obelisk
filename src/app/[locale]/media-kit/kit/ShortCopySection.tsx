@@ -1,5 +1,6 @@
 'use client';
 
+import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import { useShortCopy } from '@/hooks/media-kit/kit/useShortCopy';
 import { CopyButton } from './CopyButton';
@@ -17,9 +18,9 @@ export function ShortCopySection() {
     >
       <div className="grid gap-3 sm:grid-cols-2">
         {items.map((item) => (
-          <div
+          <Card variant="interactive" padding="lg"
             key={item.labelKey}
-            className="lc-card p-4 flex items-center justify-between gap-3"
+            className="flex items-center justify-between gap-3"
           >
             <div className="min-w-0">
               <div className="text-xs uppercase tracking-widest text-lc-green">
@@ -28,7 +29,7 @@ export function ShortCopySection() {
               <div className="text-sm truncate">{item.value}</div>
             </div>
             <CopyButton text={item.value} />
-          </div>
+          </Card>
         ))}
       </div>
     </Section>
