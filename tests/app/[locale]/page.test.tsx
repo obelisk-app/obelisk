@@ -1,11 +1,17 @@
-import type { ImgHTMLAttributes } from 'react';
+import type { ImgHTMLAttributes, ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LocaleProvider } from '@tests/support/intl';
-import LandingPage from '@/components/marketing/LandingPage';
+import Page from '@/app/[locale]/page';
 
-const pushMock = vi.fn();
+const serverLocale = vi.hoisted(() => ({ value: 'en' as 'en' | 'es' }));
+
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => serverLocale.value,
+  getTranslations: async () => (await import('@tests/support/intl')).translator(serverLocale.value),
+}));
+vi.mock('@/i18n/IntlScope', () => ({ default: ({ children }: { children: ReactNode }) => children }));
 
 type MockImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'alt'> & {
   src: string | { src: string };
@@ -14,9 +20,7 @@ type MockImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'alt'> &
   sizes?: string;
 };
 
-vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock({
-  useRouter: () => ({ push: pushMock, replace: vi.fn(), prefetch: vi.fn() }),
-}));
+vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock());
 
 vi.mock('next/image', () => ({
   default: ({ src, alt, priority, sizes, ...props }: MockImageProps) => {
@@ -48,16 +52,16 @@ class MockIntersectionObserver implements IntersectionObserver {
   unobserve = vi.fn();
 }
 
-describe('LandingPage hero', () => {
+describe('landing route', async () => {
   beforeEach(() => {
-    pushMock.mockClear();
+    serverLocale.value = 'en';
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
   });
 
-  it('renders the transparent animation and restored hero screenshots beside the current CTA copy', () => {
+  it('renders the transparent animation and restored hero screenshots beside the current CTA copy', async () => {
     render(
       <LocaleProvider initialLocale="en">
-        <LandingPage />
+        {await Page()}
       </LocaleProvider>,
     );
 
@@ -84,10 +88,10 @@ describe('LandingPage hero', () => {
     );
   });
 
-  it('keeps the latest screenshot preview cards below the hero', () => {
+  it('keeps the latest screenshot preview cards below the hero', async () => {
     render(
       <LocaleProvider initialLocale="en">
-        <LandingPage />
+        {await Page()}
       </LocaleProvider>,
     );
 
@@ -103,10 +107,10 @@ describe('LandingPage hero', () => {
     );
   });
 
-  it('embeds the demo video between the hero and the screenshot cards', () => {
+  it('embeds the demo video between the hero and the screenshot cards', async () => {
     render(
       <LocaleProvider initialLocale="en">
-        <LandingPage />
+        {await Page()}
       </LocaleProvider>,
     );
 
@@ -119,10 +123,10 @@ describe('LandingPage hero', () => {
     expect(video.compareDocumentPosition(desktopPreview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('renders the video as a click-to-play facade, not a live YouTube iframe', () => {
+  it('renders the video as a click-to-play facade, not a live YouTube iframe', async () => {
     render(
       <LocaleProvider initialLocale="en">
-        <LandingPage />
+        {await Page()}
       </LocaleProvider>,
     );
 
@@ -138,7 +142,7 @@ describe('LandingPage hero', () => {
     const user = userEvent.setup();
     render(
       <LocaleProvider initialLocale="en">
-        <LandingPage />
+        {await Page()}
       </LocaleProvider>,
     );
 
@@ -149,16 +153,17 @@ describe('LandingPage hero', () => {
     expect(iframe?.src).toContain('youtube-nocookie.com/embed/Z86oghQkUbk');
   });
 
-  it('lists the games among the features, in both locales', () => {
-    render(<LocaleProvider><LandingPage /></LocaleProvider>);
+  it('lists the games among the features, in both locales', async () => {
+    render(<LocaleProvider>{await Page()}</LocaleProvider>);
     expect(screen.getByRole('heading', { name: 'Games on the relay' })).toBeInTheDocument();
     expect(screen.getByText(/Chain Reaction, Vesta and Stacker/)).toBeInTheDocument();
   });
 
-  it('allows the Spanish hero headline to wrap on narrow screens', () => {
+  it('allows the Spanish hero headline to wrap on narrow screens', async () => {
+    serverLocale.value = 'es';
     render(
       <LocaleProvider initialLocale="es">
-        <LandingPage />
+        {await Page()}
       </LocaleProvider>,
     );
 

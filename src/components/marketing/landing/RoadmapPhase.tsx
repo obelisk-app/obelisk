@@ -1,5 +1,3 @@
-'use client';
-
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import type { ROADMAP_PHASES } from '@/constants/marketing/landing';

@@ -1,5 +1,3 @@
-'use client';
-
 import PageSection from '@/components/ui/layout/PageSection';
 import Container from '@/components/ui/layout/Container';
 import { useTranslations } from 'next-intl';

@@ -23,7 +23,7 @@ const SIMPLE_LINKS = [
  * signed-in account (`NavAccountMenu`). State and the lazy logout are in
  * `useNavbar`.
  */
-export default function Navbar(_props: { onLoginSuccess?: () => void } = {}) {
+export default function Navbar() {
   const t = useTranslations();
   const { menuRef, triggerRef, ...vm } = useNavbar();
 

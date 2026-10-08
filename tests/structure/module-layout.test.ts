@@ -105,7 +105,6 @@ export const ENTRY: Readonly<Record<string, string>> = {
   'src/app/[locale]/app': 'AppGate.tsx',
   'src/app/[locale]/app/mobile': 'PhoneShell.tsx',
   'src/app/[locale]/voice': 'VoiceRoomForm.tsx',
-  'src/components/marketing': 'LandingPage.tsx',
   'src/components/social': 'FeedScreen.tsx',
 };
 

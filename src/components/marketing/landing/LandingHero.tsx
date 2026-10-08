@@ -1,9 +1,8 @@
-'use client';
-
+import { Link } from '@/i18n/navigation';
 import Container from '@/components/ui/layout/Container';
 import Stack from '@/components/ui/layout/Stack';
 import { useTranslations } from 'next-intl';
-import Button, { buttonClass } from '@/components/ui/buttons/Button';
+import { buttonClass } from '@/utils/style/button-class';
 import LandingHeroAnimation from './LandingHeroAnimation';
 import HeroProductPreview from './HeroProductPreview';
 import { LogInIcon } from '@/assets/icons';
@@ -14,7 +13,7 @@ import Text from '@/components/ui/layout/Text';
 /**
  * The hero: headline, pitch, the launch and GitHub buttons, the animation and the screenshots.
  */
-export default function LandingHero({ onLaunch }: { onLaunch: () => void }) {
+export default function LandingHero() {
   const t = useTranslations();
   return (
     <section
@@ -40,10 +39,10 @@ export default function LandingHero({ onLaunch }: { onLaunch: () => void }) {
             {t('marketing.hero.trustLine')}
           </Text>
           <Stack gap="3" className="mt-7 sm:flex-row">
-            <Button variant="pill" size="lg" onClick={() => onLaunch()}>
+            <Link href="/app" prefetch={false} className={buttonClass({ variant: 'pill', size: 'lg' })}>
               <LogInIcon size={18} strokeWidth={2.5} />
               {t('marketing.hero.launchApp')}
-            </Button>
+            </Link>
             <a
               href="https://github.com/obelisk-app/obelisk"
               target="_blank"

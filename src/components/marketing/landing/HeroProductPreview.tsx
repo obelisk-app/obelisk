@@ -1,5 +1,3 @@
-'use client';
-
 import Container from '@/components/ui/layout/Container';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';

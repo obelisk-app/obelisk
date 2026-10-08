@@ -1,11 +1,9 @@
-'use client';
-
 import Container from '@/components/ui/layout/Container';
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
-import Button from '@/components/ui/buttons/Button';
+import { buttonClass } from '@/utils/style/button-class';
 import Reveal from '@/components/ui/animations/Reveal';
 import { LogInIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
@@ -17,7 +15,7 @@ import Text from '@/components/ui/layout/Text';
  * product screenshot with descriptive alt text for SEO; the CTAs below
  * bounce visitors straight into /app.
  */
-export default function PreviewSection({ onLaunch }: { onLaunch: () => void }) {
+export default function PreviewSection() {
   const t = useTranslations();
   return (
     <Reveal id="preview" className="pt-12 pb-16 px-6">
@@ -104,10 +102,10 @@ export default function PreviewSection({ onLaunch }: { onLaunch: () => void }) {
         </Container>
 
         <div className="mt-10 flex justify-center">
-          <Button variant="pill" size="lg" onClick={() => onLaunch()}>
+          <Link href="/app" prefetch={false} className={buttonClass({ variant: 'pill', size: 'lg' })}>
             <LogInIcon size={18} strokeWidth={2.5} />
             {t('marketing.hero.launchApp')}
-          </Button>
+          </Link>
         </div>
       </Container>
     </Reveal>

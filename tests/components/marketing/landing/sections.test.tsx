@@ -1,5 +1,5 @@
 import type { ImgHTMLAttributes, ReactElement } from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import LandingHero from '@/components/marketing/landing/LandingHero';
@@ -34,25 +34,16 @@ describe('landing sections', () => {
   beforeEach(() => { vi.stubGlobal('IntersectionObserver', MockIntersectionObserver); });
   afterEach(() => { vi.unstubAllGlobals(); });
 
-  it('the hero, preview and CTA launch buttons call onLaunch', () => {
-    const onLaunch = vi.fn();
-    renderEn(<><LandingHero onLaunch={onLaunch} /><PreviewSection onLaunch={onLaunch} /><CtaSection onLaunch={onLaunch} /></>);
-    const hero = screen.getByTestId('landing-hero');
-    fireEvent.click(within(hero).getAllByRole('button')[0]);
-    screen.getAllByRole('button').forEach((b) => fireEvent.click(b));
-    expect(onLaunch).toHaveBeenCalledTimes(4);
+  it('the hero, preview and CTA links navigate explicitly to the app', () => {
+    renderEn(<><LandingHero /><PreviewSection /><CtaSection /></>);
+    const launches = screen.getAllByRole('link').filter((link) => link.getAttribute('href') === '/app');
+    expect(launches).toHaveLength(3);
+    for (const link of launches) {
+      expect(link).toHaveClass('lc-pill-primary', 'text-base', 'focus-visible:ring-2');
+      expect(link.className).not.toMatch(/\bp[xy]-/);
+    }
     expect(screen.getByTestId('landing-preview-desktop')).toHaveAttribute('href', '/desktop');
     expect(screen.getByTestId('landing-preview-mobile')).toHaveAttribute('href', '/mobile');
-  });
-
-  it('the launch buttons are the large pill Button; the GitHub link shares its look', () => {
-    renderEn(<><LandingHero onLaunch={() => {}} /><PreviewSection onLaunch={() => {}} /><CtaSection onLaunch={() => {}} /></>);
-    for (const button of screen.getAllByRole('button')) {
-      expect(button).toHaveClass('lc-pill-primary', 'text-base', 'focus-visible:ring-2');
-      expect(button).toHaveAttribute('type', 'button');
-      // The stylesheet's pill padding always won; the dead utilities are gone.
-      expect(button.className).not.toMatch(/\bp[xy]-/);
-    }
     const github = within(screen.getByTestId('landing-hero')).getByRole('link', { name: /github/i });
     expect(github).toHaveClass('lc-pill-secondary', 'text-base');
   });

@@ -1,5 +1,3 @@
-'use client';
-
 import Container from '@/components/ui/layout/Container';
 import { useTranslations } from 'next-intl';
 import YouTubeEmbed from '@/components/common/YouTubeEmbed';
