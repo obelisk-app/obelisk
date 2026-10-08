@@ -6,7 +6,7 @@ import { useCurrentRelayUrl, useMyPubkey, type JsGroup } from '@/services/nostr-
 import { useSearchScreen } from '@/hooks/shell/mobile/screens/search/useSearchScreen';
 import { useTranslations } from 'next-intl';
 import Input from '@/components/ui/forms/Input';
-import BackButton from '../../chrome/BackButton';
+import BackButton from '@/components/ui/buttons/BackButton';
 import { SearchIcon } from '@/assets/icons';
 
 /**

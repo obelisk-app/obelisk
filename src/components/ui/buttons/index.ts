@@ -14,3 +14,5 @@ export { default as IconButton } from './IconButton';
 export * from './IconButton';
 export { default as TextButton } from './TextButton';
 export * from './TextButton';
+export { default as BackButton } from './BackButton';
+export * from './BackButton';

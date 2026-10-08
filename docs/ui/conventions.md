@@ -202,7 +202,7 @@ A heading that fits no role keeps its classes on a variant-less `Heading` (the l
 
 **Bundle size.** `Heading`, `Text` and `cn` are in nearly every chunk, so `next.config.ts` gives them one shared client chunk (`type`); without it webpack copied them into the layout chunk and each page chunk (seven copies, about 1.5 kB gzip on each page).
 
-`tests/components/typography.test.ts` fails on a raw `<h1>` to `<h6>`, `<p>` or `<label>` in JSX under `src/components/` or `src/app/`, outside the ui kit and the phone sheet chrome (`src/app/[locale]/app/mobile/sheets/chrome/`). There is no baseline: it is zero.
+`tests/components/typography.test.ts` fails on a raw `<h1>` to `<h6>`, `<p>` or `<label>` in JSX under `src/components/` or `src/app/`, outside the ui kit (including the shared sheet chrome). There is no baseline: it is zero.
 
 ## Animations
 
@@ -225,8 +225,8 @@ Every desktop dialog renders the same header and footer, so titles, spacing and 
 
 The phone shell has its own sheet design and keeps it, consistent within itself:
 
-- `src/app/[locale]/app/mobile/sheets/chrome/SheetHeader.tsx`: the centred sheet title with its accent glyph and an optional help line, an optional back chevron for a sheet with sub-views, the `confirm` shape (tinted icon circle, title, description) and the `identity` shape (an avatar beside a name and a mono line, the relay menu).
-- `src/app/[locale]/app/mobile/sheets/chrome/SheetActions.tsx`: the full-width primary button (or a destructive one, `tone: 'danger'`) and the quiet cancel under it.
+- `src/components/ui/overlays/SheetHeader.tsx`: the centred sheet title with its accent glyph and an optional help line, an optional back chevron for a sheet with sub-views, the `confirm` shape (tinted icon circle, title, description) and the `identity` shape (an avatar beside a name and a mono line, the relay menu).
+- `src/components/ui/overlays/SheetActions.tsx`: the full-width primary button (or a destructive one, `tone: 'danger'`) and the quiet cancel under it.
 
 `tests/components/modal-chrome.test.ts` enforces it: a file that renders `<Modal>` or `<Sheet>` may not render its own `<h1>` / `<h2>`, `<header>`, `<footer>` or `CloseButton`, nor the phone shell's title classes; the shared pieces render those. Section headings inside a dialog's body use `<h3>` and below.
 

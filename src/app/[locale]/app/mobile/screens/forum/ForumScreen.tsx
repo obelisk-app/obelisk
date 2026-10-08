@@ -9,7 +9,7 @@ import { NewThreadSheet } from '../../sheets/forum/NewThreadSheet';
 import { ForumChrome } from './ForumChrome';
 import { MobileForumCard } from './MobileForumCard';
 import { useForumScreen } from '@/hooks/shell/mobile/screens/forum/useForumScreen';
-import BackButton from '../../chrome/BackButton';
+import BackButton from '@/components/ui/buttons/BackButton';
 
 /**
  * Mobile equivalent of `src/components/chat/forum/ForumView`. Same Discord-style

@@ -17,10 +17,8 @@ export interface BackButtonProps {
 }
 
 /**
- * The mobile shell's round back button (`.back-btn` in mobile-shell.css,
- * which sizes the chevron to 20px). It stays on the stylesheet system rather
- * than the desktop `Button`; this only stops nine screens pasting the same
- * chevron. Stroke 2 matches the inline SVG it replaced.
+ * The phone-style back button for screens and sheets. The shared button owns
+ * keyboard behavior; mobile-shell.css keeps the round .back-btn geometry.
  */
 export default function BackButton({ onClick, label, className, style, disabled, 'data-testid': testId }: BackButtonProps) {
   const t = useTranslations();

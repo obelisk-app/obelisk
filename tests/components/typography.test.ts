@@ -15,10 +15,8 @@ import { describe, expect, it } from 'vitest';
  *
  * So this guard fails on a raw `<h1>` to `<h6>`, `<p>` or `<label>` in JSX
  * under `src/components/` or `src/app/`. Outside its reach: the ui kit
- * (`src/components/ui/`, which renders the elements), `src/assets/` (drawings
- * whose text is SVG), and the phone shell's sheet chrome
- * (`src/app/[locale]/app/mobile/sheets/chrome/`), the other half of the
- * dialog chrome beside `ModalHeader`, whose titles its own stylesheet draws.
+ * (`src/components/ui/`, including modal and sheet chrome, renders the
+ * elements) and `src/assets/` (drawings whose text is SVG).
  *
  * There is no baseline: the count reached zero in the round that added the
  * guard, and stays there.
@@ -26,7 +24,7 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = process.cwd();
 const SCOPE = ['src/components', 'src/app'];
-const OUTSIDE = ['src/components/ui/', 'src/app/[locale]/app/mobile/sheets/chrome/'];
+const OUTSIDE = ['src/components/ui/'];
 const RAW = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'label']);
 
 function files(dir: string): string[] {
@@ -72,7 +70,6 @@ describe('typography: no raw text elements outside the ui kit', () => {
     expect(all).toContain('src/components/marketing/landing/RoadmapSection.tsx');
     expect(all).toContain('src/app/[locale]/(site)/features/page.tsx');
     expect(all.some((f) => f.startsWith('src/components/ui/'))).toBe(false);
-    expect(all.some((f) => f.startsWith('src/app/[locale]/app/mobile/sheets/chrome/'))).toBe(false);
   });
 });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import BackButton from '../../chrome/BackButton';
+import BackButton from '@/components/ui/buttons/BackButton';
 import Heading from '@/components/ui/layout/Heading';
 
 /** A preferences sub-screen: a back button and title over its own settings body. */

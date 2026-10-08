@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useChannelActionSheet } from '@/hooks/chat/channel/useChannelActionSheet';
 import Sheet from '@/components/ui/overlays/Sheet';
-import SheetHeader from '@/app/[locale]/app/mobile/sheets/chrome/SheetHeader';
+import SheetHeader from '@/components/ui/overlays/SheetHeader';
 import type { ChannelMenuTarget } from '@/utils/chat/channel/channel-menu-options';
 import { MUTE_OPTIONS, NOTIFY_OPTIONS } from '@/constants/chat/channel';
 import { ChannelSheetRow } from './ChannelSheetRow';

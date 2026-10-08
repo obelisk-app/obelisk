@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import BackButton from '../../chrome/BackButton';
+import BackButton from '@/components/ui/buttons/BackButton';
 
 /**
  * `title`: the centred sheet title with its accent glyph and an optional help

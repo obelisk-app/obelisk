@@ -15,7 +15,7 @@ import { MESSAGE_INPUT_PROPS } from '@/constants/chat/composer';
 import { MobileMentionAutocomplete } from './MobileMentionAutocomplete';
 import Input from '@/components/ui/forms/Input';
 import EmojiSheet from '../../sheets/message/EmojiSheet';
-import { ReplyAuthorName } from './ReplyAuthorName';
+import UserName from '@/components/identity/UserName';
 import { CloseIcon, SendIcon, StickerIcon } from '@/assets/icons';
 
 /** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
@@ -42,7 +42,7 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
         <div className="composer-reply" data-testid="mobile-reply-preview">
           <div className="composer-reply-info">
             <span className="composer-reply-label">
-              {t('mobile.channel.replyingTo')} <ReplyAuthorName pubkey={replyingTo.pubkey} />
+              {t('mobile.channel.replyingTo')} <UserName pubkey={replyingTo.pubkey} className="composer-reply-author" />
             </span>
             <span className="composer-reply-text"><MentionText content={replyingTo.content.slice(0, 80)} /></span>
           </div>

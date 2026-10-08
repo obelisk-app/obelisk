@@ -12,7 +12,7 @@ import { useDmThread, useDmThreadScroll } from '@/hooks/chat/dm/thread/useDmThre
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 import { markAt } from '@/utils/shell/mobile/dm-list';
 import { DmThreadEntry } from './DmThreadEntry';
-import BackButton from '../../chrome/BackButton';
+import BackButton from '@/components/ui/buttons/BackButton';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { DmProtocolSwitch } from '../../../dm/DmProtocolSwitch';
 import { DmProtocolNotice } from '../../../dm/DmProtocolNotice';

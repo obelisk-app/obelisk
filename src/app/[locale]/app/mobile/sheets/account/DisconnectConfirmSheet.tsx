@@ -2,8 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import Sheet from '@/components/ui/overlays/Sheet';
-import SheetActions from '../chrome/SheetActions';
-import SheetHeader from '../chrome/SheetHeader';
+import SheetActions from '@/components/ui/overlays/SheetActions';
+import SheetHeader from '@/components/ui/overlays/SheetHeader';
 import { LogOutIcon } from '@/assets/icons';
 
 export function DisconnectConfirmSheet({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {

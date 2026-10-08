@@ -4,7 +4,7 @@ import Button from '@/components/ui/buttons/Button';
 import type { ForumPrefs } from '@/services/chat/forum/forum-prefs';
 import { useTranslations } from 'next-intl';
 import Sheet from '@/components/ui/overlays/Sheet';
-import SheetHeader from '../chrome/SheetHeader';
+import SheetHeader from '@/components/ui/overlays/SheetHeader';
 import { SortSheetRow } from './SortSheetRow';
 import Label from '@/components/ui/forms/Label';
 

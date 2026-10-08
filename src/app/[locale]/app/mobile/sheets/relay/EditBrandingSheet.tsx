@@ -11,8 +11,8 @@ import { useTranslations } from 'next-intl';
 import Sheet from '@/components/ui/overlays/Sheet';
 import Input from '@/components/ui/forms/Input';
 import TextArea from '@/components/ui/forms/TextArea';
-import SheetActions from '../chrome/SheetActions';
-import SheetHeader from '../chrome/SheetHeader';
+import SheetActions from '@/components/ui/overlays/SheetActions';
+import SheetHeader from '@/components/ui/overlays/SheetHeader';
 import { ImageIcon } from '@/assets/icons';
 import Label from '@/components/ui/forms/Label';
 

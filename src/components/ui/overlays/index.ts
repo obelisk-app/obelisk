@@ -19,3 +19,7 @@ export * from './PopoverPanel';
 export { default as Sheet } from './Sheet';
 export * from './Sheet';
 export * from './menu';
+export { default as SheetHeader } from './SheetHeader';
+export * from './SheetHeader';
+export { default as SheetActions } from './SheetActions';
+export * from './SheetActions';

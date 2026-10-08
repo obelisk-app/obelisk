@@ -3,7 +3,7 @@
 import Button from '@/components/ui/buttons/Button';
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
 import { useTranslations } from 'next-intl';
-import BackButton from '../../chrome/BackButton';
+import BackButton from '@/components/ui/buttons/BackButton';
 import { GearIcon, SearchIcon, UsersIcon } from '@/assets/icons';
 
 /** The phone channel header: category line, back, name, and the search / settings / members buttons. */

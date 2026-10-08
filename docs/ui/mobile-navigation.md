@@ -324,13 +324,12 @@ src/app/[locale]/app/mobile/
 ├── carousel/            (MobileScreensHost: the slots; TopLevelScreen: the
 │                         four persistent tabs; MobileScreenBody: the
 │                         sub-screen for `nav.screen`)
-├── chrome/              (BottomNav, BackButton, the voice status slot)
+├── chrome/              (BottomNav, the voice status slot)
 ├── common/              (NameAvatar, shared by screens and sheets)
 ├── rail/                (the relay rail and server banner)
 ├── screens/<screen>/    (one folder per screen: channel, dm, forum, inbox,
 │                         login, profile, search, server, settings, status, voice)
-└── sheets/<topic>/      (chrome/ holds SheetHeader and SheetActions; account,
-                          channel, forum, layout, message, relay)
+└── sheets/<topic>/      (account, channel, forum, layout, message, relay)
 
 src/utils/shell/mobile/  (the pure navigation rules, no React)
 ├── url-state.ts         (NavState shape, urlFor/parseUrl, initialNav)
@@ -349,6 +348,8 @@ src/services/shell/mobile/  (what the phone screens and sheets do to the
                              page: reply and react events, clipboard, the
                              relay menu, game cards, inbox read cursors)
 ```
+
+SheetHeader and SheetActions live beside Sheet in `src/components/ui/overlays/`; their BackButton lives in `src/components/ui/buttons/`. The phone stylesheet still owns their visual recipes, while shared feature sheets no longer import UI primitives from the app route tree.
 
 The shell's hooks live in the hooks layer, `src/hooks/shell/mobile/`, in the
 same sub-folders: `nav/` (`usePhoneShell`, the shell's view model, over

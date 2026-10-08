@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
-import SheetHeader from '@/app/[locale]/app/mobile/sheets/chrome/SheetHeader';
+import SheetHeader from '@/components/ui/overlays/SheetHeader';
 
 const en = (node: React.ReactNode) => render(<LocaleProvider initialLocale="en"><div data-testid="sheet">{node}</div></LocaleProvider>);
 

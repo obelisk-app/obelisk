@@ -4,7 +4,7 @@ import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { useEditProfileScreen } from '@/hooks/shell/mobile/screens/profile/useEditProfileScreen';
-import BackButton from '../../chrome/BackButton';
+import BackButton from '@/components/ui/buttons/BackButton';
 import EditProfileBannerTap from './EditProfileBannerTap';
 import EditProfileAvatarTap from './EditProfileAvatarTap';
 import EditProfileFields from './EditProfileFields';

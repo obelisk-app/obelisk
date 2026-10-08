@@ -12,8 +12,8 @@ import Input from '@/components/ui/forms/Input';
 import { CategoryChannelsBlock } from './CategoryChannelsBlock';
 import { NO_CATEGORY } from '@/constants/shell/mobile';
 import { CategoryListEditor } from './CategoryListEditor';
-import SheetActions from '../chrome/SheetActions';
-import SheetHeader from '../chrome/SheetHeader';
+import SheetActions from '@/components/ui/overlays/SheetActions';
+import SheetHeader from '@/components/ui/overlays/SheetHeader';
 import { HashIcon } from '@/assets/icons';
 import Label from '@/components/ui/forms/Label';
 

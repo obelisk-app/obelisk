@@ -17,7 +17,7 @@ import { useTranslations } from 'next-intl';
 import { useSettingsPrefsScreen } from '@/hooks/shell/mobile/screens/settings/useSettingsPrefsScreen';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { DisconnectConfirmSheet } from '../../sheets/account/DisconnectConfirmSheet';
-import BackButton from '../../chrome/BackButton';
+import BackButton from '@/components/ui/buttons/BackButton';
 import { SettingsSubScreen } from './SettingsSubScreen';
 import { LogOutIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';

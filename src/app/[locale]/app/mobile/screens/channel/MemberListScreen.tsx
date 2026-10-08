@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useMemberListScreen } from '@/hooks/shell/mobile/screens/channel/useMemberListScreen';
-import BackButton from '../../chrome/BackButton';
+import BackButton from '@/components/ui/buttons/BackButton';
 import { MemberRow } from './MemberRow';
 
 /** The phone member list: admins, then a section per relay role, then everyone else, with who is online. */

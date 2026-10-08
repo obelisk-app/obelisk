@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
  *
  *   desktop  `<Modal>` with `ModalHeader` and `ModalFooter` (src/components/ui/)
  *   phone    `<Sheet>` with `SheetHeader` and `SheetActions`
- *            (src/app/[locale]/app/mobile/sheets/)
+ *            (src/components/ui/overlays/)
  *
  * So a file that renders a dialog (`<Modal>`, `<Sheet>`, or `MediaLibraryShell`,
  * the media library's modal frame) may not draw its own chrome:
@@ -36,8 +36,8 @@ const SHARED = new Set([
   'src/components/ui/overlays/Sheet.tsx',
   'src/components/ui/overlays/ModalHeader.tsx',
   'src/components/ui/overlays/ModalFooter.tsx',
-  'src/app/[locale]/app/mobile/sheets/chrome/SheetHeader.tsx',
-  'src/app/[locale]/app/mobile/sheets/chrome/SheetActions.tsx',
+  'src/components/ui/overlays/SheetHeader.tsx',
+  'src/components/ui/overlays/SheetActions.tsx',
   'src/components/media/library/MediaLibraryShell.tsx',
 ]);
 const BANNED_TAGS = new Set(['h1', 'h2', 'header', 'footer', 'CloseButton']);

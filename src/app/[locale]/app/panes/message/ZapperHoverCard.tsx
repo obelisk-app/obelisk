@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useFormat } from '@/i18n/useFormat';
 import { useZapperHoverCard } from '@/hooks/shell/panes/message/useZapperHoverCard';
 import { HoverCardShell } from './HoverCardShell';
-import { PubkeyName } from './PubkeyName';
+import UserName from '@/components/identity/UserName';
 
 /** Who zapped a message and how much, largest first: the first 20, then "and N more". */
 export function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
@@ -20,7 +20,7 @@ export function ZapperHoverCard({ zapTotal }: { zapTotal: MessageZapTotal }) {
       <List marker="none" spacing="none" className="space-y-0.5">
         {shown.map(([pk, sats]) => (
           <li key={pk} className="flex items-center justify-between gap-2 truncate">
-            <span className="truncate"><PubkeyName pubkey={pk} /></span>
+            <span className="truncate"><UserName pubkey={pk} /></span>
             <span className="shrink-0 text-yellow-300">{formatNumber(sats)}</span>
           </li>
         ))}
