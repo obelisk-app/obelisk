@@ -2,14 +2,13 @@
 
 /**
  * Mobile shell for /app: full-screen, single-pane experience that runs
- * underneath ≤sm viewports, wired to the existing Nostr bridge. The screens
+ * underneath the 1024px desktop breakpoint, wired to the existing Nostr bridge. The screens
  * live in `./screens`, the overlays in `./sheets`, the screen table in
  * `./carousel/MobileScreenBody` and `./carousel/TopLevelScreen`, the carousel
  * in `./carousel/MobileScreensHost`. State, navigation and the browser
  * history are `usePhoneShell`; this file renders the frame.
  */
 
-import BackgroundVoiceAudio from '@/components/voice/audio/BackgroundVoiceAudio';
 import ProfilePopover from '@/components/chat/profile/ProfilePopover';
 import { useTranslations } from 'next-intl';
 import HintHost from '@/components/hints/HintHost';
@@ -51,7 +50,6 @@ export default function MobileShell() {
     >
       <MessageZapModal />
       <LazyGameModalHost />
-      <BackgroundVoiceAudio />
       <LazyDmCallLayer />
       <MobileScreensHost
         hostRef={screensHostRef}

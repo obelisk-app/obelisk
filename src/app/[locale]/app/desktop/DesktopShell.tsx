@@ -2,7 +2,6 @@
 
 import HintHost from '@/components/hints/HintHost';
 import ProfilePopover from '@/components/chat/profile/ProfilePopover';
-import BackgroundVoiceAudio from '@/components/voice/audio/BackgroundVoiceAudio';
 import MessageZapModal from '@/components/chat/zaps/MessageZapModal';
 import { LazyDmCallLayer, LazyGameModalHost } from '../mounts/lazy-mounts';
 import { RelayAccessModal } from '../modals/relay/RelayAccessModal';
@@ -45,7 +44,6 @@ export default function AppShell() {
       <MessageZapModal />
       <LazyGameModalHost />
       <RelayAccessModal />
-      <BackgroundVoiceAudio />
       <DirectMessageSubscriptionAnchor />
       <LazyDmCallLayer />
       <RelayTopBar

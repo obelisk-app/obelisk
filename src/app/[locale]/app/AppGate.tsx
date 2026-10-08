@@ -1,10 +1,9 @@
 'use client';
 
 /**
- * Viewport gate for /app - renders the mobile shell on phones (≤sm) and the
- * existing desktop AppShell on tablets and up. The breakpoint matches
- * Tailwind's `sm` (640px) so it composes with the existing `sm:`/`md:` rules
- * elsewhere in the app.
+ * Viewport gate for /app - renders the phone shell below 1024px and the
+ * desktop shell at Tailwind's `lg` breakpoint and up. Only the active
+ * shell mounts; shared voice playback survives a change of layout.
  *
  * SSR returns `null` for the first paint; the client picks the right shell
  * once `window.matchMedia` resolves. This avoids hydration mismatches when
@@ -18,6 +17,7 @@ import dynamic from 'next/dynamic';
 // in practice means the first paint of the mobile UI is unstyled (SVG
 // icons render at default browser size, etc.).
 import './mobile/mobile-shell.css';
+import BackgroundVoiceAudio from '@/components/voice/audio/BackgroundVoiceAudio';
 import ReadStateRoot from '@/components/read-state/ReadStateRoot';
 import ActivityIndicator from '@/components/feedback/ActivityIndicator';
 import { useAppGate } from '@/hooks/shell/mounts/useAppGate';
@@ -31,6 +31,7 @@ export default function AppGate() {
   return (
     <>
       {loggedIn ? <ReadStateRoot /> : null}
+      {loggedIn ? <BackgroundVoiceAudio /> : null}
       {isMobile ? <MobileShell /> : <AppShell />}
       {!isMobile && <ActivityIndicator />}
     </>
