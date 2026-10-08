@@ -112,6 +112,7 @@ const hookDefaults = {
   useMediaPacks: () => EMPTY_RECORD,
   useMyMediaFavorites: () => NO_FAVORITES,
   useMyFollows: () => EMPTY_LIST,
+  useMyFollowSet: () => new Set<string>(),
   useGroups: () => EMPTY_LIST,
   useGroupById: () => null,
   useGroupMetadataEose: () => true,
@@ -172,6 +173,7 @@ export function bridgeMock(overrides: BridgeMock = {}): BridgeMock {
     getBridgeImpl: () => null,
     ...(getBridgeImpl ? { useBridge: () => (getBridgeImpl() as BridgeImpl | null) } : {}),
     ...(getBridge ? { useAwaitBridge: () => getBridge as () => Promise<BridgeImpl> } : {}),
+    ...(overrides.useMyFollows ? { useMyFollowSet: () => new Set(overrides.useMyFollows!()) } : {}),
     ...overrides,
     nostrActions: { ...overrides.nostrActions },
   };

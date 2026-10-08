@@ -2,11 +2,11 @@
  * The user's own lists: contact list (and the follows derived from it), mute
  * list, and the media library.
  */
-import { useMemo } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { EMPTY_MEDIA_FAVORITES } from '@/constants/media/tags';
 import type { JsMediaFavorites, JsMediaPack } from '../common/types';
 import { useSubscription } from './subscription';
+import { contactFollows } from '../lists/follows';
 
 export function useMyContactList(): NostrEvent | null {
   return useSubscription<NostrEvent | null>((b, cb) => b.subscribeMyContactList(cb), null);
@@ -29,16 +29,12 @@ export function useMyMediaFavorites(): JsMediaFavorites {
 }
 
 export function useMyFollows(): ReadonlyArray<string> {
-  const event = useMyContactList();
-  return useMemo(() => {
-    if (!event) return [];
-    const seen = new Set<string>();
-    for (const tag of event.tags) {
-      const pubkey = tag[0] === 'p' ? tag[1]?.toLowerCase() : null;
-      if (pubkey && /^[0-9a-f]{64}$/.test(pubkey)) seen.add(pubkey);
-    }
-    return Array.from(seen);
-  }, [event]);
+  return contactFollows(useMyContactList()).list;
+}
+
+/** Shared membership index for rows that only need to check one author. */
+export function useMyFollowSet(): ReadonlySet<string> {
+  return contactFollows(useMyContactList()).set;
 }
 
 /**

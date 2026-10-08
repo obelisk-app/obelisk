@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
-import { useMyFollows, useMyPubkey } from '@/services/nostr-bridge';
+import { useMyFollowSet, useMyPubkey } from '@/services/nostr-bridge';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { useNoteEngagement } from '@/hooks/social/note/useNoteEngagement';
 import { replyParentOf } from '@/services/social/feed';
@@ -28,9 +28,7 @@ export function usePlainNoteCard({
 }) {
   const meta = useAuthor(note.pubkey);
   const myPubkey = useMyPubkey();
-  const follows = useMyFollows();
-  // Set lookup: a follow list runs to thousands and this renders per card.
-  const followSet = useMemo(() => new Set(follows), [follows]);
+  const followSet = useMyFollowSet();
   const [revealed, setRevealed] = useState(false);
 
   const warning = useMemo(() => sensitiveInfo(note), [note]);

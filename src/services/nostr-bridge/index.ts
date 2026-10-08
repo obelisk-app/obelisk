@@ -36,6 +36,7 @@ export {
   useMediaPacks,
   useMyMediaFavorites,
   useMyFollows,
+  useMyFollowSet,
   useMyMutes,
 } from './hooks/lists';
 export {
