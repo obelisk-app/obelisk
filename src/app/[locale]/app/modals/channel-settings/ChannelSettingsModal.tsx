@@ -16,9 +16,9 @@ import ForumTagsEditor from '@/components/chat/forum/ForumTagsEditor';
 import ChannelAppearanceInput from '@/components/media/upload/ChannelAppearanceInput';
 import { useTranslations } from 'next-intl';
 import { ManageMemberRow } from './ManageMemberRow';
-import { Field } from '../common/Field';
-import { SectionHeader } from '../common/SectionHeader';
-import { ToggleCard } from '../common/ToggleCard';
+import Field from '@/components/ui/forms/Field';
+import SectionHeader from '@/components/ui/layout/SectionHeader';
+import ToggleCard from '@/components/ui/forms/ToggleCard';
 import Chip from '@/components/ui/data/Chip';
 import Text from '@/components/ui/layout/Text';
 import Label from '@/components/ui/forms/Label';
@@ -50,11 +50,12 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
 
           {/* Basics --------------------------------------------------- */}
           <section className="space-y-3">
-            <Field label={t('mobile.field.name')}>
-              <Input size="sm" {...meta.field('name')} />
+            <Field htmlFor={`${meta.id}-name`} label={t('mobile.field.name')}>
+              <Input id={`${meta.id}-name`} size="sm" {...meta.field('name')} />
             </Field>
-            <Field label={t('mobile.field.description')}>
+            <Field htmlFor={`${meta.id}-description`} label={t('mobile.field.description')}>
               <TextArea
+                id={`${meta.id}-description`}
                 size="sm"
                 resize="both"
                 {...meta.field('about')}

@@ -113,9 +113,8 @@ export default function VestaPrompts({ state, seatLabel, busy, turn }: {
             ))}
             <Button
               variant="pillSecondary"
-              size="md"
+              size="xs"
               onClick={vm.skipSteal}
-              className="text-[11px]"
             >
               {t('games.vesta.skip')}
             </Button>

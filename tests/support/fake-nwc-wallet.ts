@@ -1,7 +1,7 @@
 /**
  * A fake Nostr Wallet Connect wallet service living on a fake relay.
  *
- * It sits on `FakeRelayFactory` (`src/lib/relay-hub/fake-relay.ts`): every
+ * It sits on `FakeRelayFactory` (`@nostr-wot/relay/hub`): every
  * `FakeRelay` the hub creates for the wallet relay gets the wallet's
  * behaviour wrapped around it. Nothing here opens a socket.
  *
@@ -21,8 +21,8 @@ import * as nip04 from 'nostr-tools/nip04';
 import { v2 as nip44 } from 'nostr-tools/nip44';
 import { normalizeURL } from 'nostr-tools/utils';
 import type { Filter } from 'nostr-tools';
-import { FakeRelay, FakeRelayFactory } from '@/lib/relay-hub';
-import type { Identity } from '@/lib/relay-hub';
+import { FakeRelay, FakeRelayFactory } from '@nostr-wot/relay/hub';
+import type { Identity } from '@nostr-wot/relay/hub';
 import { KIND_NWC_INFO, KIND_NWC_REQUEST, KIND_NWC_RESPONSE } from '@/constants/nostr/nip-kinds';
 
 export type WalletReply =

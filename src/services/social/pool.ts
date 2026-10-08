@@ -26,7 +26,7 @@ import {
   sharedCoalescer,
 } from '@nostr-wot/data';
 import type { SimplePool, Event as NostrEvent, Filter } from 'nostr-tools';
-import { SESSION_IDENTITY_ID } from '@/lib/relay-hub';
+import { SESSION_IDENTITY_ID } from '@nostr-wot/relay/hub';
 import { pageRelayHub } from '@/services/nostr-bridge/facade/page-hub';
 import { normalizeSocialRelays } from './relays';
 import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX } from '@/constants/social/relays';

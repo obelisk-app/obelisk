@@ -6,7 +6,7 @@ import { DM_BUBBLE_MENU_GUTTER, DmMessageMenu } from '@/components/chat/dm/messa
 import type { JsDirectMessage } from '@/services/nostr-bridge';
 import type { DmThread } from '@/hooks/chat/dm/thread/useDmThread';
 import { useTranslations } from 'next-intl';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import Button from '@/components/ui/buttons/Button';
 import CloseButton from '@/components/ui/buttons/CloseButton';
 

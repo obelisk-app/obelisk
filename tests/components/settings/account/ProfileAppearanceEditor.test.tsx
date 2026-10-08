@@ -1,9 +1,10 @@
+import { profileImageProblem } from '@/utils/identity/profile-image';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import ProfileAppearanceEditor from '@/components/settings/account/ProfileAppearanceEditor';
-import { validateImage, type ProfileAppearanceValue } from '@/utils/settings/profile-image';
-import { MAX_IMAGE_BYTES } from '@/constants/settings/profile-image';
+import { type ProfileAppearanceValue } from '@/utils/settings/profile-image';
+import { MAX_IMAGE_BYTES } from '@/constants/attachments/attachments-limits';
 
 const PUBKEY = 'a'.repeat(64);
 
@@ -34,11 +35,11 @@ const imageFile = (name = 'a.png', type = 'image/png', size = 1000) => {
   return file;
 };
 
-describe('validateImage', () => {
+describe('profileImageProblem', () => {
   it('rejects non-images and oversized files', () => {
-    expect(validateImage(imageFile('a.txt', 'text/plain'))).toBe('not-image');
-    expect(validateImage(imageFile('a.png', 'image/png', MAX_IMAGE_BYTES + 1))).toBe('too-large');
-    expect(validateImage(imageFile())).toBeNull();
+    expect(profileImageProblem(imageFile('a.txt', 'text/plain'))).toBe('not-image');
+    expect(profileImageProblem(imageFile('a.png', 'image/png', MAX_IMAGE_BYTES + 1))).toBe('too-large');
+    expect(profileImageProblem(imageFile())).toBeNull();
   });
 });
 

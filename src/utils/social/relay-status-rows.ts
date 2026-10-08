@@ -4,7 +4,7 @@
  * by the header pill's popover and the side column's relays widget, so the
  * two can never disagree about a relay.
  */
-import { normalizeRelayUrl } from '@/utils/social/relay-url';
+import { normalizePublicRelayUrl } from '@/utils/relay-url/public-relay';
 import type { RelayState, RelayStatus } from '@/services/social/relay-status';
 
 export interface RelayStatusRow {
@@ -20,7 +20,7 @@ export function relayStatusRows(
   statuses: Readonly<Record<string, RelayStatus>>,
 ): RelayStatusRow[] {
   return relays.map((relay) => {
-    const url = normalizeRelayUrl(relay);
+    const url = normalizePublicRelayUrl(relay);
     const status = url ? statuses[url] : undefined;
     return { relay, status, state: status?.state ?? 'unknown' };
   });

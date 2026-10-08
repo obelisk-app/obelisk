@@ -12,7 +12,7 @@
  * the account asking (`nwcPayerFor`), so a change of account can never pay
  * from the previous account's wallet, even before the next load finishes.
  */
-import { NwcClient, canPay, NwcError, parseNwcUri, type NwcConnection } from '@/lib/nwc';
+import { NwcClient, canPay, NwcError, parseNwcUri, type NwcConnection } from '@nostr-wot/wallet/nwc';
 import { pageRelayHub } from '@/services/nostr-bridge';
 import { registerClientResetHook } from '@/services/common/reset';
 import { useNwcWalletStore, type NwcWalletView } from '@/store/wallet/nwc-wallet';

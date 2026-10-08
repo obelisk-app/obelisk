@@ -6,7 +6,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { act, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PayingWalletNote from '@/components/chat/zaps/PayingWalletNote';
-import { FakeRelayFactory, getRelayHub, resetRelayHubForTests } from '@/lib/relay-hub';
+import { FakeRelayFactory, getRelayHub, resetRelayHubForTests } from '@nostr-wot/relay/hub';
 import { connectNwcWallet, ensureNwcWalletLoaded } from '@/services/wallet/nwc-wallet';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';

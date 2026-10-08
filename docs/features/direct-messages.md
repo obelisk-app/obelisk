@@ -25,7 +25,7 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 | `src/components/chat/pq/PqMessageMark.tsx`, `src/hooks/chat/pq/usePqConversationStatus.ts` | Post-quantum indicator and the thread's PQ status. |
 | `src/components/chat/dm/composer/DmComposer.tsx` (its parts beside it, logic in `src/hooks/chat/dm/composer/`) | The thread's message bar: the channel bar's widgets (attach, voice note, emoji / GIF / sticker picker, drop, paste) with encrypted uploads. Both shells mount it with `key={peer}`. |
 | `src/components/chat/dm/message/DmMessageBody.tsx`, `EncryptedDmAttachment.tsx` | What goes inside a bubble; the fetch → verify → decrypt path for file messages. |
-| `src/utils/attachments/dm-file.ts`, `src/services/chat/dm/dm-attachments.ts`, `src/lib/crypto/file-cipher.ts` | Kind-15 tag layout, encrypt + anonymous upload, AES-256-GCM. |
+| `src/utils/attachments/dm-file.ts`, `src/services/chat/dm/dm-attachments.ts`, `@nostr-wot/dm` | Kind-15 tag layout, encrypt + anonymous upload, AES-256-GCM. |
 
 `@nostr-wot/dm` types never leave `src/services/nostr-bridge/`. That boundary is deliberate: if the SDK integration turns out wrong, the blast radius is the bridge's DM methods rather than every component.
 
@@ -288,9 +288,11 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - `tests/services/nostr-bridge/dm-pq-send.test.ts`: post-quantum send and receive, every negative case, the classic fallback.
 - `tests/services/nostr-bridge/optimistic-send.test.ts`: placeholder lifecycle.
 - `dm-nip17.test.ts` also covers kind-15 send and receive, the NIP-04 refusal, and the 1059 REQ reopening after `switchRelay`.
-- `tests/lib/crypto/file-cipher.test.ts`, `tests/utils/attachments/dm-file.test.ts`, `tests/services/chat/dm/dm-attachments.test.ts`, `tests/services/media/blossom.test.ts`: the file path end to end, without a relay.
+- `tests/utils/attachments/dm-file.test.ts`, `tests/services/chat/dm/dm-attachments.test.ts`, `tests/services/media/blossom.test.ts`: the file path end to end, without a relay.
 - `tests/components/chat/dm/composer/DmComposer.test.tsx`, `DmMessageBody.test.tsx`, `EncryptedDmAttachment.test.tsx`: the bar, the bubble body, decrypt / integrity failure / revoke.
 - `tests/services/chat/pq/` (`attestations`, `capability`, `status`, `send`): attestations, capability, status lattice, send-plan resolution.
 - `tests/app/[locale]/app/panes/dm/DmPanel.pq.test.tsx`: indicator mounting, mark aggregation, on-accent contrast.
 - `tests/app/[locale]/app/dm/DmList.identity.test.tsx`: the peer resolves through the social tier, and one batched lookup per list.
 - `tests/components/chat/dm/thread/DmThreadMenu.test.tsx`: the ⋯ actions, and that they close after acting.
+
+NIP-17 attachment encryption and self-addressed NIP-59 envelope cryptography live in `@nostr-wot/dm`; Obelisk keeps upload choices, signer scheduling, read-state merge rules, and private payload schemas. The remaining `src/lib/crypto` record/session vault code retains the established local `SealedBox` format and IndexedDB lifecycle. It is application persistence compatibility, not another implementation of the SDK vault record format; replacing it requires an explicit persisted-data migration.

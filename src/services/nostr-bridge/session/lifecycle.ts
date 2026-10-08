@@ -5,7 +5,7 @@
  * module they touch and every method they call on it.
  */
 import type { EventTemplate, VerifiedEvent } from 'nostr-tools';
-import type { RelayHub } from '@/lib/relay-hub';
+import type { RelayHub } from '@nostr-wot/relay/hub';
 import type { DmInboxModule } from '../dm/inbox';
 import type { DmRelaysModule } from '../dm/relays';
 import type { DmSendModule } from '../dm/send';

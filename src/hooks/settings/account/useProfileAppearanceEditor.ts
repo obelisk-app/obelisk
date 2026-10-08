@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { profileImageProblem } from '@/utils/identity/profile-image';
 import { takePickedFile } from '@/utils/media/upload/picked-file';
 import {
-  validateImage, withPickedFile, withTypedUrl, type ProfileAppearanceValue, type ProfileImageTarget,
+  withPickedFile, withTypedUrl, type ProfileAppearanceValue, type ProfileImageTarget,
 } from '@/utils/settings/profile-image';
 
 type Previews = Record<ProfileImageTarget, string | null>;
@@ -36,7 +37,7 @@ export function useProfileAppearanceEditor(value: ProfileAppearanceValue, onChan
 
   const pick = (target: ProfileImageTarget, file: File | undefined) => {
     if (!file) return;
-    const problem = validateImage(file);
+    const problem = profileImageProblem(file);
     if (problem) {
       setError(t(problem === 'not-image' ? 'settings.profileAppearance.notImage' : 'settings.profileAppearance.tooLarge'));
       return;

@@ -4,17 +4,10 @@ import type { RefObject } from 'react';
 import type { JsMessage } from '@/services/nostr-bridge';
 import { ForwardIcon, MoreIcon, ObeliskReactIcon, ReplyIcon } from '@/assets/icons';
 import { useTranslations } from 'next-intl';
-import Button from '@/components/ui/buttons/Button';
+import IconButton from '@/components/ui/buttons/IconButton';
 import type { MessageRowActions } from '@/hooks/shell/panes/message/useMessageRowActions';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useMessageToolbar } from '@/hooks/shell/panes/message/useMessageToolbar';
-
-/**
- * One slot of the message hover toolbar: a ghost icon Button at a fixed
- * 32px, white-ish at rest with the menu's green-tinted hover. Each class
- * here sorts after the ghost class it overrides, so it wins.
- */
-const TOOLBAR_BTN = 'h-8 w-8 rounded-md text-lc-white/85 hover:bg-lc-green/15';
 
 /**
  * Hover toolbar, 7 slots: your 3 most recent reactions, the Obelisk
@@ -49,61 +42,63 @@ export function MessageToolbar({
       data-testid="message-toolbar"
     >
       {vm.slots.map(({ emoji: e, mine }) => (
-        <Button
+        <IconButton
           key={e.char}
-          variant="ghost"
-          size="icon"
+          tone="ghost"
+          size="8"
+          shape="square"
           onClick={() => vm.react(e)}
           disabled={mine}
-          className={`${TOOLBAR_BTN} text-lg`}
+          className="text-lg"
+          aria-label={t('shell.desktop.reactions.reactEmoji', { emoji: e.char })}
           title={mine ? t('shell.desktop.reactions.alreadyReacted') : t('shell.desktop.reactions.reactEmoji', { emoji: e.char })}
           data-testid="message-quick-reaction"
         >
           {e.url
             ? <RemoteImage src={e.url} alt={e.char} className="h-5 w-5 object-contain" />
             : <span className="leading-none">{e.char}</span>}
-        </Button>
+        </IconButton>
       ))}
-      <Button
-        variant="ghost"
-        size="icon"
+      <IconButton
+        tone="ghost"
+        size="8"
+        shape="square"
         onClick={togglePicker}
-        className={TOOLBAR_BTN}
         title={t('shell.desktop.reactions.moreEmojis')}
         aria-label={t('shell.desktop.reactions.openEmojiPicker')}
         data-testid="message-add-reaction"
       >
         <ObeliskReactIcon size={22} />
-      </Button>
+      </IconButton>
       <span className="mx-0.5 h-5 w-px bg-lc-border" aria-hidden="true" />
-      <Button
-        variant="ghost"
-        size="icon"
+      <IconButton
+        tone="ghost"
+        size="8"
+        shape="square"
         onClick={vm.reply}
-        className={TOOLBAR_BTN}
         title={t('shell.desktop.message.reply')}
         aria-label={t('shell.desktop.message.reply')}
         data-testid="message-reply"
       >
         <ReplyIcon size={18} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
+      </IconButton>
+      <IconButton
+        tone="ghost"
+        size="8"
+        shape="square"
         onClick={vm.forward}
-        className={TOOLBAR_BTN}
         title={t('chat.message.forward')}
         aria-label={t('chat.message.forward')}
         data-testid="message-forward"
       >
         <ForwardIcon size={18} />
-      </Button>
-      <Button
+      </IconButton>
+      <IconButton
         ref={moreBtnRef}
-        variant="ghost"
-        size="icon"
+        tone="ghost"
+        size="8"
+        shape="square"
         onClick={vm.more}
-        className={`${TOOLBAR_BTN} ${menuOpen ? 'bg-lc-green/15 text-lc-white' : ''}`}
         title={t('shell.desktop.message.moreActions')}
         aria-label={t('shell.desktop.message.moreActions')}
         aria-haspopup="menu"
@@ -111,7 +106,7 @@ export function MessageToolbar({
         data-testid="message-more"
       >
         <MoreIcon size={18} />
-      </Button>
+      </IconButton>
     </div>
   );
 }

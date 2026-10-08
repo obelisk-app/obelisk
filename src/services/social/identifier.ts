@@ -1,3 +1,4 @@
+import { normalizePublicRelayUrl } from '@/utils/relay-url/public-relay';
 /**
  * Parsing shareable Nostr identifiers.
  *
@@ -67,17 +68,8 @@ export function parseIdentifier(raw: string): ViewerTarget | null {
 export function safeRelayHints(hints: readonly string[], max = 3): string[] {
   const out: string[] = [];
   for (const hint of hints) {
-    try {
-      const url = new URL(hint);
-      if (url.protocol !== 'wss:') continue;
-      const host = url.hostname.toLowerCase();
-      if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.onion')) continue;
-      if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0)/.test(host)) continue;
-      if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) continue;
-      out.push(url.toString().replace(/\/$/, ''));
-    } catch {
-      // Ignore unparseable hints rather than failing the whole request.
-    }
+    const url = normalizePublicRelayUrl(hint);
+    if (url) out.push(url);
     if (out.length >= max) break;
   }
   return out;

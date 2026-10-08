@@ -6,7 +6,7 @@
  * reset and `dispose` release them. Pure move from `client.ts`.
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import type { RelayHub } from '@/lib/relay-hub';
+import type { RelayHub } from '@nostr-wot/relay/hub';
 import type { TrackedSub, WatchedSubOptions } from '../facade/context';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { RELAY_SWITCH_GRACE_MS } from '@/constants/nostr-bridge/subscriptions';

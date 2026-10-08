@@ -10,7 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { callIdentityId, createCallPool } from '@/services/call/call-pool';
-import { A, flush, makeHub, makeSigner, sessionIdentity, type TestHub, type TestSigner } from '@/lib/relay-hub/test-support';
+import { A, flush, makeHub, makeSigner, sessionIdentity, type TestHub, type TestSigner } from '@tests/support/relay-hub';
 
 const CALL = 'call-1';
 

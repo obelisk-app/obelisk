@@ -170,32 +170,6 @@ export async function fetchAuthorNotes(
     .slice(0, opts.limit ?? 5);
 }
 
-/**
- * Which hashtags this author actually uses, most-used first.
- *
- * Derived from their recent notes rather than any declared list, because
- * nobody declares one: the `t` tags on what they post are the only honest
- * signal of what they write about.
- */
-export function topHashtags(notes: readonly NostrEvent[], limit = 8): string[] {
-  const counts = new Map<string, number>();
-  for (const note of notes) {
-    // Count each tag once per note, or a single spammy post dominates.
-    const seen = new Set<string>();
-    for (const tag of note.tags) {
-      if (tag[0] !== 't' || !tag[1]) continue;
-      const value = tag[1].toLowerCase();
-      if (seen.has(value)) continue;
-      seen.add(value);
-      counts.set(value, (counts.get(value) ?? 0) + 1);
-    }
-  }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, limit)
-    .map(([tag]) => tag);
-}
-
 /** Pubkeys this author follows (kind 3). */
 export async function fetchAuthorFollows(pubkey: string, limit = 12): Promise<string[]> {
   const event = newest(await query([{ kinds: [3], authors: [pubkey], limit: 1 }], VIEWER_RELAYS));

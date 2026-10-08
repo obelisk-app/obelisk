@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
-import { cn } from '@/utils/style/cn';
 import Text from '@/components/ui/layout/Text';
 
 /** Follow and message buttons under someone else's bio, plus the follow error. */
@@ -31,9 +30,9 @@ export function ProfileActions({
       {!isMe ? (
         <div className="profile-view-actions flex shrink-0 gap-2 px-5 py-3">
           <Button
-            variant="pill"
+            variant={following ? 'pillSecondary' : 'pill'}
             size="xs"
-            className={cn('flex-1', following && '!border !border-lc-border !bg-transparent !text-lc-white')}
+            className="flex-1"
             onClick={onToggleFollow}
             disabled={followBusy || !contactsReady}
             data-testid="profile-follow-button"

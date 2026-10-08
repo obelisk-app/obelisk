@@ -4,7 +4,7 @@
  * are built from these, so "blank", "a relay address" and "a member's key"
  * mean the same thing in every form.
  */
-import { parsePubkeyInput } from '@/utils/identity/parse-pubkey';
+import { npubToHex } from '@nostr-wot/data';
 import { normalizeRelayInput } from '@/utils/relay-url/relay-url-input';
 
 /** Something other than spaces was typed. */
@@ -34,7 +34,7 @@ export type MemberKey = { ok: true; hex: string } | { ok: false; problem: 'notNp
 export function parseMemberKey(value: string): MemberKey {
   const trimmed = value.trim();
   if (trimmed.startsWith('npub1')) {
-    const hex = parsePubkeyInput(trimmed);
+    const hex = npubToHex(trimmed);
     return hex ? { ok: true, hex } : { ok: false, problem: 'notNpub' };
   }
   if (/^[0-9a-f]{64}$/i.test(trimmed)) return { ok: true, hex: trimmed.toLowerCase() };

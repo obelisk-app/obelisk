@@ -11,7 +11,7 @@ import { type MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import RoleBadge from '@/components/chat/members/RoleBadge';
 import { useTranslations } from 'next-intl';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import { Avatar } from '../../desktop/Avatar';
 import { MessageMenu } from './MessageMenu';
 import { MessageToolbar } from './MessageToolbar';

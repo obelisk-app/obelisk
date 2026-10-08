@@ -5,7 +5,7 @@
  * use different transports and the two traps the gift-wrap branch avoids.
  */
 import { getBridgeImpl, cacheSet } from '@/services/nostr-bridge';
-import { wrapForSelf } from '@/lib/nip-59';
+import { wrapForSelf } from '@/services/read-state/gift-wrap';
 import { useReadStateStore } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
 import { KIND_NIP78_APP_DATA as KIND_INNER } from '@/constants/nostr/nip-kinds';

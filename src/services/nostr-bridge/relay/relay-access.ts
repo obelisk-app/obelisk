@@ -7,7 +7,7 @@
  * plan, step 11). This is the module the hub's status adapter feeds.
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { BoundedMap } from '@/lib/relay-hub';
+import { BoundedMap } from '@nostr-wot/relay/hub';
 import { KIND_METADATA } from '@/constants/nostr/nip-kinds';
 import { dismissActivity, failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
 import type { ActivityCode, ErrorCode, EventKindLabel } from '@/utils/errors/codes';

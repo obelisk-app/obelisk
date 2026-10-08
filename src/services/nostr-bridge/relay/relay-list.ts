@@ -1,3 +1,4 @@
+import { isPublicWssUrl } from '@nostr-wot/relay';
 /**
  * The configured-relay list: the default relays, the retired-URL redirect,
  * and the validators a relay URL passes before it is connected to or kept
@@ -26,25 +27,7 @@ import { LACRYPTA_RELAY, RETIRED_RELAY } from '@/constants/nostr-bridge/relay';
  *     IPv4 literal in the loopback / RFC-1918 / link-local ranges.
  */
 export function isImportableRelayUrl(url: string): boolean {
-  let p: URL;
-  try { p = new URL(url); } catch { return false; }
-  if (p.protocol !== 'wss:') return false;
-  const host = p.hostname.toLowerCase();
-  if (!host) return false;
-  if (host.endsWith('.onion')) return false;
-  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return false;
-  if (host === 'host.docker.internal') return false;
-  // IPv4 ranges that have no business in a relay list.
-  if (/^127\./.test(host)) return false;
-  if (/^10\./.test(host)) return false;
-  if (/^192\.168\./.test(host)) return false;
-  if (/^169\.254\./.test(host)) return false;
-  if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)) return false;
-  if (host === '0.0.0.0') return false;
-  // IPv6 loopback / link-local literals.
-  if (host === '::1' || host === '[::1]') return false;
-  if (host.startsWith('fe80:')) return false;
-  return true;
+  return isPublicWssUrl(url);
 }
 
 /**

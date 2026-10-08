@@ -3,6 +3,7 @@
  * options), its timing limits, and two small helpers. Re-exported from
  * `session.ts`.
  */
+import { isOffer } from '@/utils/voice/signal-payload';
 import type { Peer, PeerOptions } from '@/services/voice/peer';
 import type { VoiceSignalPayload } from '@/services/voice/types';
 import type { CallPoolLike } from './signaling';
@@ -37,11 +38,6 @@ export interface DmCallSessionOptions {
   createPeer?: (opts: PeerOptions) => Peer;
   getUserMedia?: (c: MediaStreamConstraints) => Promise<MediaStream>;
   getDisplayMedia?: (c: DisplayMediaStreamOptions) => Promise<MediaStream>;
-}
-
-export function isOffer(payload: VoiceSignalPayload): boolean {
-  if (payload.type === 'offer') return true;
-  return payload.type === 'peer' && (payload.peerSignal as { type?: string } | undefined)?.type === 'offer';
 }
 
 export function sessionId(): string {

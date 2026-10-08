@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMyPubkey, useUserMetadata } from '@/services/nostr-bridge';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import type { MessageKey } from '@/i18n/keys';
 import { useHasExpired } from '@/hooks/chat/zaps/useHasExpired';
 import { parseBolt11, type ParsedInvoice } from '@/utils/wallet/bolt11';

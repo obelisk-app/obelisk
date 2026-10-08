@@ -35,10 +35,10 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           {demoting ? t('shell.desktop.members.confirmDemote', { name }) : t('shell.desktop.members.confirmRemove', { name })}
         </Text>
         <Button
-          variant="ghost"
+          variant="outlinePill"
           size="xs"
           onClick={cancel}
-          className="shrink-0 rounded-full px-2.5"
+          className="shrink-0"
           data-testid={`member-confirm-cancel-${pubkey}`}
         >
           {t('common.cancel')}
@@ -81,10 +81,9 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
       <div className="flex shrink-0 items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         {isAdmin && (
           <Button
-            variant="ghost"
+            variant="outlinePill"
             size="xs"
             onClick={() => ask('demote')}
-            className="rounded-full px-2.5 hover:bg-lc-dark"
             title={t('shell.desktop.members.demoteHelp')}
             aria-label={t('shell.desktop.members.demoteLabel', { name })}
             data-testid={`member-demote-${pubkey}`}
@@ -93,11 +92,10 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           </Button>
         )}
         <Button
-          variant="ghost"
+          variant="outlinePill"
           size="xs"
           tone="danger"
           onClick={() => ask('remove')}
-          className="rounded-full px-2.5 text-red-400"
           aria-label={t('shell.desktop.members.removeLabel', { name })}
           data-testid={`member-remove-${pubkey}`}
         >

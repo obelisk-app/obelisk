@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EncryptedDmAttachment } from '@/components/chat/dm/message/EncryptedDmAttachment';
 import { LocaleProvider } from '@tests/support/intl';
-import { encryptFile } from '@/lib/crypto/file-cipher';
+import { encryptFile } from '@nostr-wot/dm';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 
 const renderLocalized = (ui: React.ReactElement) => render(

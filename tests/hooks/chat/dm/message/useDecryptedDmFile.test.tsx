@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { encryptFile } from '@/lib/crypto/file-cipher';
+import { encryptFile } from '@nostr-wot/dm';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 import { useDecryptedDmFile } from '@/hooks/chat/dm/message/useDecryptedDmFile';
 

@@ -36,7 +36,7 @@
  * decrypted plaintext, so the cache is cleared on logout alongside the rest
  * of the per-identity state.
  */
-import { BoundedMap } from '@/lib/relay-hub';
+import { BoundedMap } from '@nostr-wot/relay/hub';
 
 /** Max distinct ciphertexts held. Bounds memory; wrap contents are ~1-3KB. */
 const MAX_ENTRIES = 500;

@@ -7,8 +7,8 @@ import {
   useGroups,
   useMessagesByGroup,
   type JsForumTag,
-  type JsGroup,
 } from '@/services/nostr-bridge';
+import { resolveChildGroups } from '@/utils/chat/forum/forum-view';
 import { useForumPrefs } from '@/hooks/chat/forum/useForumPrefs';
 import { hasExactThreadMatch, visibleForumThreads } from '@/utils/chat/forum/forum-threads';
 
@@ -28,10 +28,7 @@ export function useForumScreen(groupId: string, selectChild: (childId: string) =
   const group = groups.find((g) => g.id === groupId);
   const forumTags: ReadonlyArray<JsForumTag> = group?.forumTags ?? [];
   const childIds = childrenByParent[groupId] ?? NO_CHILDREN;
-  const children = useMemo<JsGroup[]>(() => {
-    const byId = new Map(groups.map((g) => [g.id, g] as const));
-    return childIds.map((id) => byId.get(id)).filter(Boolean) as JsGroup[];
-  }, [childIds, groups]);
+  const children = useMemo(() => resolveChildGroups(childIds, groups), [childIds, groups]);
 
   // Shared with the desktop ForumView: same storage key, so the sort choice
   // survives crossing the breakpoint (see src/services/chat/forum/forum-prefs.ts).

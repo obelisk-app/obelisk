@@ -9,6 +9,7 @@ import { CONTENT_FILTERS } from '@/constants/social/kinds';
 import type { FeedSort } from '@/services/social/rank';
 import type { FeedKind } from '@/services/social/feed';
 import Button from '@/components/ui/buttons/Button';
+import IconButton from '@/components/ui/buttons/IconButton';
 import { FilterIcon, GearIcon, GlobeIcon, SearchIcon, UsersIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
 
@@ -189,16 +190,15 @@ export default function FeedToolbar({
           rest of Obelisk's header buttons rather than an 11px chip.
         */}
         {compact && (
-          <Button
-            variant="toolIcon"
-            className={filter !== 'all' || sort !== 'recent' ? '!text-lc-green !border-lc-green/40' : undefined}
+          <IconButton
+            tone={filter !== 'all' || sort !== 'recent' ? 'accent' : 'outline'}
             onClick={onOpenFilters}
             aria-label={t('social.filters')}
             title={t('social.filters')}
             data-testid="feed-filters-open"
           >
             <FilterIcon size={19} />
-          </Button>
+          </IconButton>
         )}
         {/*
           Refresh is gone: pulling up at the top of the feed refreshes, and

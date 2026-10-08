@@ -346,9 +346,7 @@ its scope. On any change:
 
 ### NIP-44 + signing
 
-`wrapForSelf` and `unwrapForSelf` (`src/lib/nip-59/index.ts`) accept a
-`NipSigner`: `signEvent` + `nip44Encrypt` + `nip44Decrypt`. The bridge
-builds one for the active session via `getNipSigner()`:
+`wrapForSelf` and `unwrapForSelf` in `src/services/read-state/gift-wrap.ts` adapt the bridge's `NipSigner` (`src/constants/nostr/nip-signer.ts`) to the SDK signer interface. `@nostr-wot/dm` owns self-addressed NIP-59 encryption, seal signature verification, rumor author/hash validation, and rejection of other authors in the mixed inbox. The bridge builds its signing capability for the active session via `getNipSigner()`:
 
 - nsec → `finalizeEvent(template, sk)` + raw `nostr-tools/nip44`
 - NIP-07 → `window.nostr.signEvent` + `window.nostr.nip44.{encrypt,decrypt}`
@@ -467,7 +465,7 @@ in-page and the browser owns the OS handoff.
 | `tests/services/read-state/replies.test.ts` | NIP-10 strict reply detection, parent lookup, edge cases |
 | `tests/services/read-state/relay-sync.test.ts` | sub/ingest with merged cursors, debounced publish, d-tag filtering, cache-first paint |
 | `tests/hooks/read-state/useReadyToSync.test.tsx` | `useReadyToSync` gate: false before connect, flips on EOSE, flips after 1000ms grace, no flip if connection drops mid-grace |
-| `tests/lib/nip-59/nip-59.test.ts` | wrap/unwrap roundtrip, null-on-junk, recipient mismatch, ephemeral pubkey privacy |
+| `tests/services/read-state/gift-wrap.test.ts` | wrap/unwrap roundtrip, null-on-junk, recipient mismatch, ephemeral pubkey privacy |
 | `tests/utils/message-text/mentions.test.ts` | content-only and `#p`-tag mention extraction |
 | `tests/components/chat/mentions/MentionNavigator.test.tsx` | ↑↓ clamping, F7 / Shift+F7 keys, scrollIntoView, hidden when no highlights |
 | `tests/hooks/read-state/useAutoMarkRead.test.tsx` | cursor advances on watching, halts on hidden, monotonic on backfill |

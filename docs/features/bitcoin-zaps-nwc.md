@@ -52,10 +52,9 @@ The person pastes the `nostr+walletconnect://` link their wallet gives them.
 - Connected, the card shows the wallet, the relay, the budget when the
   wallet reports one, whether the connection is stored, and Disconnect.
 
-### The protocol (`src/lib/nwc/`)
+### The protocol (`@nostr-wot/wallet/nwc`)
 
-A mini-package (imports only `nostr-tools`) with a client that never opens
-a socket: it asks a transport the caller supplies. One call:
+The published SDK owns URI validation, protocol encryption, requests, response validation, and payment outcomes. Its client never opens a socket: Obelisk supplies the account-bound RelayHub transport. One call:
 
 1. read the info event once; use NIP-44 (`nip44_v2`) when its `encryption`
    tag offers it, else NIP-04 (a wallet with no tag speaks only NIP-04);
@@ -202,7 +201,7 @@ than paying twice. Other members do not see that it was paid: that needs an
 
 A fake wallet service on fake relays (`tests/support/fake-nwc-wallet.ts`,
 on the hub's `FakeRelayFactory`; the test setup bans real sockets and
-fetches): `tests/lib/nwc/` (URI, kinds, client), and under
+fetches): the SDK wallet package tests (URI and client), the app contract in `tests/services/wallet/nwc-contract.test.ts`, and under
 `tests/services/wallet/`: `nwc-wallet` (connect, sealed storage scan,
 reload, disconnect, logout, account isolation, no IndexedDB), `nwc-relay`
 (the hub owns the socket under `nwc:<key>`, no AUTH unless demanded, AUTH

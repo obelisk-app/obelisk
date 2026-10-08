@@ -2,7 +2,7 @@ import { requestZapInvoice } from '@nostr-wot/wallet';
 import { getDefaultRelays } from '@nostr-wot/data';
 import { getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
 import { KIND_REACTION } from '@/constants/nostr/nip-kinds';
-import type { NipSigner } from '@/lib/nip-59';
+import type { NipSigner } from '@/constants/nostr/nip-signer';
 import { codeOrMessage } from '@/utils/errors/codes';
 import { connectWallet, isWalletAvailable } from './wallet';
 import { MARKER_NO_BRIDGE } from '@/constants/wallet/zap';

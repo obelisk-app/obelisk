@@ -12,7 +12,7 @@ import {
   type MentionNotification,
 } from '@/store/notifications';
 import { useTranslations } from 'next-intl';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import type { InboxStreams } from '@/hooks/shell/panes/topbar/useTopBarPopovers';
 import SegmentedControl from '@/components/ui/forms/SegmentedControl';
 import { InboxRow } from './InboxRow';

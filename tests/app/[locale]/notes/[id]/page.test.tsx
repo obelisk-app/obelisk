@@ -13,7 +13,6 @@ vi.mock('@/services/server/viewer/nostr-fetch', () => ({
   fetchAuthorFollows: async () => [],
   fetchAuthorRelays: async () => ({ read: [], write: [] }),
   fetchProfilesForViewer: async () => [],
-  topHashtags: () => [],
   displayNameFor: () => 'Author',
 }));
 vi.mock('@/components/common/BridgeRoute', () => ({ default: ({ children }: { children: ReactNode }) => <div data-testid="viewer-bridge">{children}</div> }));

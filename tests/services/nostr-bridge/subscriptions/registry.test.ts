@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import type { AuthLease, AuthLeaseReason, QueryResult, SubscribeSpec } from '@/lib/relay-hub';
+import type { AuthLease, AuthLeaseReason, QueryResult, SubscribeSpec } from '@nostr-wot/relay/hub';
 import { RELAY_SWITCH_GRACE_MS, RequestsModule } from '@/services/nostr-bridge/subscriptions/registry';
 import { openWatchedReq, type WatchedReqDeps } from '@/services/nostr-bridge/subscriptions/watched';
 import { StateStore } from '@/services/nostr-bridge/common/state-store';

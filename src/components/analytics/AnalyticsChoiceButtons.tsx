@@ -27,7 +27,7 @@ export default function AnalyticsChoiceButtons({ choice, onChoose, testIdPrefix 
           variant="outline"
           tone={choice === option.value ? 'accent' : 'default'}
           size="sm"
-          className="w-full justify-center"
+          className="w-full"
           aria-pressed={choice === null ? undefined : choice === option.value}
           onClick={() => onChoose(option.value)}
           data-testid={`${testIdPrefix}-${option.value}`}

@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  const { resetRelayHubForTests } = await import('@/lib/relay-hub');
+  const { resetRelayHubForTests } = await import('@nostr-wot/relay/hub');
   resetRelayHubForTests();
   vi.useRealTimers();
 });
@@ -32,7 +32,7 @@ describe('the SDK pool on the RelayHub', () => {
   it('a kind-10002 lookup rides the leased relay\'s socket and opens none to an unleased configured relay', async () => {
     // The page hub, on a fake transport, created before `pool.ts` loads so
     // `pageRelayHub()` finds it (options bind on the first call).
-    const hubMod = await import('@/lib/relay-hub');
+    const hubMod = await import('@nostr-wot/relay/hub');
     const factory = new hubMod.FakeRelayFactory();
     const hub = hubMod.getRelayHub({ relayFactory: factory.create });
     const sk = generateSecretKey();

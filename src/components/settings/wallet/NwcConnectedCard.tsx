@@ -4,7 +4,7 @@ import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import Text from '@/components/ui/layout/Text';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import type { NwcWalletView } from '@/store/wallet/nwc-wallet';
 import { msatsToSats, nwcWalletLabel, relayHostLabel, renewalPeriod } from '@/utils/wallet/wallet-label';
 

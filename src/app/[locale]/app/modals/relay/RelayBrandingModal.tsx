@@ -12,8 +12,8 @@ import { relayBrandingForm } from '@/services/relay/branding-form';
 import Form from '@/components/ui/forms/Form';
 import ChannelAppearanceInput from '@/components/media/upload/ChannelAppearanceInput';
 import { useTranslations } from 'next-intl';
-import { Field } from '../common/Field';
-import { SectionHeader } from '../common/SectionHeader';
+import Field from '@/components/ui/forms/Field';
+import SectionHeader from '@/components/ui/layout/SectionHeader';
 
 export function RelayBrandingModal({
   relayUrl,
@@ -48,11 +48,11 @@ export function RelayBrandingModal({
           />
         </section>
         <section className="space-y-3">
-          <Field label={t('mobile.field.name')}>
-            <Input size="sm" {...form.field('name')} placeholder={shortHost(relayUrl)} />
+          <Field htmlFor={`${form.id}-name`} label={t('mobile.field.name')}>
+            <Input id={`${form.id}-name`} size="sm" {...form.field('name')} placeholder={shortHost(relayUrl)} />
           </Field>
-          <Field label={t('mobile.field.description')}>
-            <TextArea size="sm" resize="both" {...form.field('description')} rows={2} />
+          <Field htmlFor={`${form.id}-description`} label={t('mobile.field.description')}>
+            <TextArea id={`${form.id}-description`} size="sm" resize="both" {...form.field('description')} rows={2} />
           </Field>
         </section>
       </Form>

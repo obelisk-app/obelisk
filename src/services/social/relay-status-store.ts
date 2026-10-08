@@ -4,7 +4,7 @@
  * the pending-failure soak timers. No network here; the probing and
  * reconciling that move rows live in `relay-status.ts`.
  */
-import { normalizeRelayUrl } from '@/utils/social/relay-url';
+import { normalizePublicRelayUrl } from '@/utils/relay-url/public-relay';
 
 export type RelayState =
   | 'unknown'
@@ -73,7 +73,7 @@ function ensureEntry(url: string): RelayStatus {
 }
 
 export function patch(url: string, next: Partial<RelayStatus>): void {
-  const key = normalizeRelayUrl(url) ?? url;
+  const key = normalizePublicRelayUrl(url) ?? url;
   const current = ensureEntry(key);
   const merged = { ...current, ...next, url: key };
   if (

@@ -69,7 +69,7 @@ export default function AppearancePreferenceControls({ variant = 'desktop' }: Ap
           {t('settings.preferences.appearance.reset')}
         </Button>
       ) : (
-        <Button variant="secondary" size="sm" onClick={resetAppearancePreferences} className="bg-lc-black">
+        <Button variant="secondary" size="sm" onClick={resetAppearancePreferences}>
           {t('settings.preferences.appearance.reset')}
         </Button>
       )}

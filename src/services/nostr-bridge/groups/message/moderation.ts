@@ -9,7 +9,7 @@
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { KIND_EVENT_DELETION, KIND_GROUP_DELETE_EVENT } from '@/constants/nostr/nip-kinds';
-import { BoundedMap, BoundedSet } from '@/lib/relay-hub';
+import { BoundedMap, BoundedSet } from '@nostr-wot/relay/hub';
 import type { BridgeContext, TrackedSub } from '../../facade/context';
 import { MAX_TOMBSTONES } from '@/constants/nostr-bridge/groups';
 

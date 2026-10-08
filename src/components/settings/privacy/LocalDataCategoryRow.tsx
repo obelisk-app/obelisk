@@ -25,7 +25,7 @@ export default function LocalDataCategoryRow({ category, usage, busy, onRemove }
         variant="outline"
         tone="danger"
         size="sm"
-        className="shrink-0 px-3 py-1"
+        className="shrink-0"
         onClick={onRemove}
         disabled={busy !== null || !usage?.present}
         data-testid={`local-data-remove-${category.id}`}

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { encryptFile, FileIntegrityError } from '@/lib/crypto/file-cipher';
+import { encryptFile, FileIntegrityError } from '@nostr-wot/dm';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 import { fetchDecrypted } from '@/services/chat/dm/dm-file-decrypt';
 

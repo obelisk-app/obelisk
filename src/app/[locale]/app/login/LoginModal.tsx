@@ -2,8 +2,7 @@
 
 /**
  * Production login modal - thin wrapper around `@nostr-wot/ui`'s
- * `<LoginWidget>`. Updates to the fork's UI flow into obelisk-dex via
- * the `file:../nostr-wot-sdk/packages/ui` dep.
+ * `<LoginWidget>` from the published npm package.
  *
  * The SDK builds its own `NostrSigner` and now hands the bridging
  * material directly through `onLogin` (`nsec` for generate/import,
@@ -34,7 +33,8 @@ import { GeneratedNpubStep } from './GeneratedNpubStep';
 import { PastedKeyNoticeStep } from './PastedKeyNoticeStep';
 import { SessionNoticeBanner } from './SessionNoticeBanner';
 import { loginSignerStorage } from '@/services/login/signer-storage';
-import { Nip46SignerDeepLink } from './Nip46SignerDeepLink';
+import { copyText } from '@/services/common/clipboard';
+import { signerAppHref } from '@/utils/nip46/signer-link';
 import { useLoginFlow } from '@/hooks/shell/login/useLoginFlow';
 import { KeyIcon, LockIcon, ShieldIcon, SparklesIcon } from '@/assets/icons';
 
@@ -100,7 +100,6 @@ export default function LoginModal({
 
   return (
     <>
-      <Nip46SignerDeepLink />
       <GeneratedProfileEnhancements onDraftChange={flow.updateGeneratedProfile} />
       <NostrSessionProvider autoRestore={false} signerStorage={loginSignerStorage} theme="la-crypta">
         <SdkLoginModal
@@ -115,6 +114,19 @@ export default function LoginModal({
           profileSetup
           nip46Relays={['wss://public.obelisk.ar']}
           nip46Perms={NIP46_PERMS}
+          nip46Connection={{
+            signerHref: signerAppHref,
+            copyUri: copyText,
+            copyOnOpen: true,
+            labels: {
+              openSigner: t('shell.login.signer.openApp'),
+              pasteUri: t('shell.login.signer.useBunkerUri'),
+              copyUri: t('shell.login.signer.copyUri'),
+              copied: t('shell.login.signer.copied'),
+              copyFailed: t('shell.login.signer.copyFailed'),
+              fallbackHint: t('shell.login.signer.fallbackHint'),
+            },
+          }}
           nip46Metadata={NIP46_METADATA}
           methods={methods}
           modalClasses={{ modal: 'obelisk-login-modal' }}

@@ -2,7 +2,7 @@
 
 import { formatPubkey } from '@nostr-wot/data';
 import { useUserMetadata as useProfile, type JsSearchHit } from '@/services/nostr-bridge';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import { displayNameFor } from '@/utils/identity/display-name';
 
 /**

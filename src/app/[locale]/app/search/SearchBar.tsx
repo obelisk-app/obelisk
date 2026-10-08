@@ -43,7 +43,7 @@ export default function SearchBar({
           variant="ghost"
           size="icon-md"
           onClick={vm.expandMobile}
-          className="sm:hidden rounded-md"
+          className="sm:hidden"
           aria-label={t('shell.search.open')}
         >
           <SearchIcon size={20} strokeWidth={2} />

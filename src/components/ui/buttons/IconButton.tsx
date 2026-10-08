@@ -8,7 +8,7 @@ import { cn } from '@/utils/style/cn';
  *
  * Tones, each the dominant hand-rolled recipe of its kind:
  *   ghost       muted icon, faint white fill on hover (composer controls);
- *               green while `aria-pressed` (a composer toggle that is on)
+ *               green while pressed or expanded (a toggle or open menu)
  *   danger      muted icon that turns red on hover (discard a recording)
  *   dangerSoft  a soft red disc (stop recording)
  *   dangerSolid a solid red disc (decline a call)
@@ -23,7 +23,7 @@ export type IconButtonSize = '5' | '7' | '8' | '9' | '10' | '11' | '14';
 export type IconButtonShape = 'round' | 'square';
 
 const TONE_CLASS: Record<IconButtonTone, string> = {
-  ghost: 'text-lc-muted hover:bg-white/5 hover:text-lc-white aria-pressed:text-lc-green',
+  ghost: 'text-lc-muted hover:bg-white/5 hover:text-lc-white aria-pressed:text-lc-green aria-pressed:hover:text-lc-green aria-expanded:text-lc-green aria-expanded:hover:text-lc-green',
   danger: 'text-lc-muted hover:bg-red-500/10 hover:text-red-400',
   dangerSoft: 'bg-red-500/15 text-red-400 hover:bg-red-500/25',
   dangerSolid: 'bg-red-500 text-white hover:bg-red-600',

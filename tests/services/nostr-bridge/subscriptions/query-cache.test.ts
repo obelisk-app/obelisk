@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RequestsModule } from '@/services/nostr-bridge/subscriptions/registry';
 import { StateStore } from '@/services/nostr-bridge/common/state-store';
-import { A, fakeEvent, flush, makeHub, makeSigner, sessionIdentity, type TestHub } from '@/lib/relay-hub/test-support';
+import { A, fakeEvent, flush, makeHub, makeSigner, sessionIdentity, type TestHub } from '@tests/support/relay-hub';
 
 const FILTER = { kinds: [0], authors: ['ab'.repeat(32)] };
 

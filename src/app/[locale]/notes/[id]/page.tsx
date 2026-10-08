@@ -1,3 +1,4 @@
+import { topHashtags } from '@nostr-wot/data';
 /**
  * Public note viewer - Obelisk's own njump.
  *
@@ -34,7 +35,6 @@ import {
   fetchAuthorRelays,
   fetchEventForViewer,
   fetchProfilesForViewer,
-  topHashtags,
 } from '@/services/server/viewer/nostr-fetch';
 import { buildNotePreview } from '@/services/server/viewer/note-preview';
 import ViewerHeader from '@/components/social/viewer/ViewerHeader';

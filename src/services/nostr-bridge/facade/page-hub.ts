@@ -8,7 +8,7 @@
  * importing either (`relay-hub-bridge.test.ts` does).
  */
 import { TextCoercingWebSocket } from '@nostr-wot/data';
-import { getRelayHub, type RelayHub } from '@/lib/relay-hub';
+import { getRelayHub, type RelayHub } from '@nostr-wot/relay/hub';
 import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '@/constants/nostr-bridge/facade';
 
 /**

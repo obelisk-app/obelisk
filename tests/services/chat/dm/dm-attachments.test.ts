@@ -4,7 +4,7 @@ const uploadEncryptedBlob = vi.hoisted(() => vi.fn());
 vi.mock('@/services/media/blossom', () => ({ uploadEncryptedBlob }));
 
 import { baseMime, checkDmAttachment, DmAttachmentRejectedError, encryptAndUploadDmFile } from '@/services/chat/dm/dm-attachments';
-import { decryptFile } from '@/lib/crypto/file-cipher';
+import { decryptFile } from '@nostr-wot/dm';
 
 describe('dm-attachments', () => {
   afterEach(() => uploadEncryptedBlob.mockReset());

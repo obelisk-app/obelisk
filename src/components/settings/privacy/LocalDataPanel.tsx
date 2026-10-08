@@ -46,7 +46,7 @@ export default function LocalDataPanel({ mobile = false }: { mobile?: boolean })
           <Button
             variant="danger"
             size="sm"
-            className="shrink-0 px-3 py-1.5"
+            className="shrink-0"
             onClick={() => void removeAll()}
             disabled={busy !== null}
             data-testid="local-data-remove-all"

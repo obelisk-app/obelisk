@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { useNostrUserSearch } from '@/hooks/identity/useNostrUserSearch';
-import { parseQuery, searchHashtag, searchNotes, relatedHashtags, type ParsedQuery } from '@/services/social/search';
+import { topHashtags } from '@nostr-wot/data';
+import { parseQuery, searchHashtag, searchNotes, type ParsedQuery } from '@/services/social/search';
 import { ensureSocialProfiles } from '@/services/social/profiles';
 import { mergeUserHits } from '@/utils/identity/user-hits';
 
@@ -75,7 +76,7 @@ export function useFeedSearch(initialQuery: string, onOpenProfile?: (pubkey: str
     [people.directHit, people.nip05Hit, people.nostrResults],
   );
 
-  const tags = useMemo(() => relatedHashtags(notes), [notes]);
+  const tags = useMemo(() => topHashtags(notes), [notes]);
   const busy = loading || people.loading;
   const empty = debounced.length > 0 && !busy && notes.length === 0 && userHits.length === 0;
 

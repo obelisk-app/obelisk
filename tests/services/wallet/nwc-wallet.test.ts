@@ -7,7 +7,7 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nip19 } from 'nostr-tools';
-import { FakeRelayFactory, getRelayHub, resetRelayHubForTests } from '@/lib/relay-hub';
+import { FakeRelayFactory, getRelayHub, resetRelayHubForTests } from '@nostr-wot/relay/hub';
 import {
   connectNwcWallet,
   disconnectNwcWallet,

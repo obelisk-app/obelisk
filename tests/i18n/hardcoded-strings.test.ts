@@ -1,67 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import baseline from '@/i18n/hardcoded-baseline.json';
-import { countsByFile, looksLikeProse, scanFile, scanTree } from '@/i18n/hardcoded-strings';
+import { looksLikeProse, scanFile, scanTree } from '../../scripts/i18n/hardcoded-strings';
 
-const BASELINE = baseline as Record<string, number>;
-
-/**
- * A ratchet, not a gate.
- *
- * Copy written straight into the source is English in every language. The
- * scanner (src/i18n/hardcoded-strings.ts, rules in src/i18n/hardcoded/)
- * reads JSX text, reader-facing attributes and their expressions, object
- * copy, toasts and dialogs, ternaries, fallbacks, templates, `.ts` files,
- * and prose in src/lib; comments are stripped first. JSX text comes from
- * the syntax tree, so wrapped and inline-split sentences count (round 25;
- * cases in tests/i18n/hardcoded/jsx-text.test.ts), and so does a plain
- * string given to any prop outside a short skip list (round 26; cases in
- * tests/i18n/hardcoded/jsx-attrs.test.ts). Round 18 widened it
- * from "JSX text and five quoted attributes" to all of that, and the
- * baseline was regenerated honestly: several hundred strings, owned by the
- * translation waves listed in audits/obelisk/round18/I18N-WAVE2.md.
- *
- * The number may only go down: a new file with hardcoded copy, or an
- * existing file gaining more, fails. Text that legitimately stays (brand
- * names, protocol terms, artwork that feeds the OG snapshots, type
- * specimens) carries an `i18n-exempt: <reason>` marker on its line instead
- * of a baseline entry, so the baseline can reach an empty object.
- *
- * After moving strings to the messages, regenerate (never hand-merge):
- *   npx tsx scripts/i18n/hardcoded-baseline.ts
- */
+/** Migration is complete: no baseline or historical exceptions remain. */
 describe('hardcoded user-visible strings', () => {
-  const counts = countsByFile(scanTree('src'));
-
-  it('does not grow in a file that already had some', () => {
-    const grew: string[] = [];
-    for (const [file, count] of Object.entries(counts)) {
-      const allowed = BASELINE[file];
-      if (allowed === undefined) continue;
-      if (count > allowed) grew.push(`${file}: ${allowed} → ${count}`);
-    }
-    expect(grew, 'route new copy through t() instead').toEqual([]);
-  });
-
-  it('does not appear in a file that had none', () => {
-    const fresh = Object.keys(counts).filter((file) => BASELINE[file] === undefined);
-    expect(fresh, 'new components must use t() from the start').toEqual([]);
-  });
-
-  it('has a baseline that is still accurate', () => {
-    // A file that dropped to zero, or was deleted, should leave the
-    // baseline, otherwise the ratchet silently loosens over time.
-    const stale = Object.keys(BASELINE).filter((file) => (counts[file] ?? 0) === 0);
-    expect(stale, 'remove these from hardcoded-baseline.json').toEqual([]);
-  });
-
-  it('keeps the total at or under the baseline, which is now zero', () => {
-    // Proof that the scanner still finds things (so a broken regex cannot
-    // pass vacuously) lives in 'the scanner rules' below, which feeds it
-    // known strings. The baseline reached zero in round 19.
-    const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
-    const allowed = Object.values(BASELINE).reduce((sum, n) => sum + n, 0);
-    expect(total).toBeLessThanOrEqual(allowed);
-    expect(allowed).toBe(0);
+  it('keeps all production copy translated', () => {
+    const findings = Object.values(scanTree('src')).flat();
+    expect(findings, 'route copy through t() or mark a legitimate i18n-exempt reason').toEqual([]);
   });
 });
 

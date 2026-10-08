@@ -34,7 +34,7 @@ export function installBridgeHarness(fake: FakeBridgePool): void {
     }));
     // Each test starts fresh. The bridge lives in a globalThis slot that
     // survives a module reset, so it is forgotten explicitly; the modules are
-    // still reset because the page RelayHub (`lib/relay-hub`) and the
+    // still reset because the page RelayHub (`@nostr-wot/relay/hub`) and the
     // module-level stores and caches the bridge writes to are singletons of
     // their own.
     unregisterBridge();

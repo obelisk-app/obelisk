@@ -27,7 +27,7 @@
  * stays the one import.
  */
 
-import { normalizeRelayUrl } from '@/utils/social/relay-url';
+import { normalizePublicRelayUrl } from '@/utils/relay-url/public-relay';
 import { poolEvents, socialPool } from './pool';
 import {
   addListener,
@@ -50,7 +50,7 @@ const PROBE_TIMEOUT_MS = 6000;
 const RECONCILE_MS = 5000;
 
 export function markConnected(url: string): void {
-  const key = normalizeRelayUrl(url) ?? url;
+  const key = normalizePublicRelayUrl(url) ?? url;
   clearPendingFailure(key);
   patch(key, { state: 'connected' });
 }
@@ -61,7 +61,7 @@ export function markConnected(url: string): void {
  * flickering one.
  */
 export function markFailed(url: string): void {
-  const key = normalizeRelayUrl(url) ?? url;
+  const key = normalizePublicRelayUrl(url) ?? url;
   soakFailure(key, FAILURE_SOAK_MS, () => {
     patch(key, { state: isOffline() ? 'offline' : 'failed', latencyMs: null });
   });
@@ -91,7 +91,7 @@ function applyOffline(offline: boolean): void {
  * reports immediately instead of sitting unknown.
  */
 export async function probeRelay(url: string): Promise<void> {
-  const key = normalizeRelayUrl(url);
+  const key = normalizePublicRelayUrl(url);
   if (!key) return;
   if (isOffline()) {
     patch(key, { state: 'offline' });
@@ -129,7 +129,7 @@ function reconcileCounts(): void {
   const counts = new Map<string, number>();
   for (const relays of pool.seenOn?.values() ?? []) {
     for (const relay of relays) {
-      const key = normalizeRelayUrl(relay?.url ?? '');
+      const key = normalizePublicRelayUrl(relay?.url ?? '');
       if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
     }
   }
@@ -141,7 +141,7 @@ function reconcileCounts(): void {
   // state we just learned from the connection callbacks.
   if (!connection || connection.size === 0) return;
   for (const [rawUrl, connected] of connection) {
-    const key = normalizeRelayUrl(rawUrl);
+    const key = normalizePublicRelayUrl(rawUrl);
     if (!key || !statuses.has(key)) continue;
     if (connected) markConnected(key);
     else if (statuses.get(key)?.state === 'connected') markFailed(key);
@@ -183,7 +183,7 @@ let reconcileTimer: ReturnType<typeof setInterval> | null = null;
 
 /** Begin tracking `relays`. Idempotent; safe to call on every settings render. */
 export function watchRelays(relays: readonly string[]): void {
-  const keys = relays.map((url) => normalizeRelayUrl(url)).filter((url): url is string => !!url);
+  const keys = relays.map((url) => normalizePublicRelayUrl(url)).filter((url): url is string => !!url);
 
   // Drop rows for relays the user removed; add the new ones.
   syncEntries(keys);

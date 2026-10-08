@@ -1,3 +1,4 @@
+import { topHashtags } from '@nostr-wot/data';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 
@@ -15,7 +16,6 @@ const { SEARCH_RELAYS } = await import('@/constants/social/search');
 const {
   noteMatchesQuery,
   parseQuery,
-  relatedHashtags,
   searchHashtag,
   searchNotes,
 } = await import('@/services/social/search');
@@ -175,14 +175,14 @@ describe('searchHashtag', () => {
   });
 });
 
-describe('relatedHashtags', () => {
+describe('topHashtags', () => {
   it('ranks by frequency, then alphabetically for a stable order', () => {
     const notes = [
       ev({ id: '1', tags: [['t', 'nostr'], ['t', 'zaps']] }),
       ev({ id: '2', tags: [['t', 'nostr']] }),
       ev({ id: '3', tags: [['t', 'art']] }),
     ];
-    expect(relatedHashtags(notes)).toEqual(['nostr', 'art', 'zaps']);
+    expect(topHashtags(notes)).toEqual(['nostr', 'art', 'zaps']);
   });
 
   it('counts a tag once per note even when repeated', () => {
@@ -191,11 +191,11 @@ describe('relatedHashtags', () => {
       ev({ id: '2', tags: [['t', 'zaps']] }),
       ev({ id: '3', tags: [['t', 'zaps']] }),
     ];
-    expect(relatedHashtags(notes)[0]).toBe('zaps');
+    expect(topHashtags(notes)[0]).toBe('zaps');
   });
 
   it('honours the limit', () => {
     const notes = [ev({ tags: [['t', 'a'], ['t', 'b'], ['t', 'c']] })];
-    expect(relatedHashtags(notes, 2)).toHaveLength(2);
+    expect(topHashtags(notes, 2)).toHaveLength(2);
   });
 });

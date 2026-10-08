@@ -90,9 +90,6 @@ export const LAYER_ONLY: Readonly<Record<string, Readonly<Record<string, string>
     crypto: 'mini-package: the session vault and the record and file ciphers',
     emoji: 'mini-package: the emoji catalog and keyword search',
     games: 'mini-package: the game protocol, replay and rules engines',
-    'nip-59': 'mini-package: NIP-59 gift wrap for self',
-    nwc: 'mini-package: Nostr Wallet Connect (NIP-47) client',
-    'relay-hub': 'mini-package: the relay connection owner',
     'remark-spoiler': 'mini-package: the remark plugin for spoiler text',
   },
 };
@@ -252,8 +249,6 @@ describe('the layout rules', () => {
     'src/components/chat/dm/thread/DmThreadMenu.tsx',
     'src/hooks/chat/dm/thread/useDmThread.ts',
     'src/services/chat/dm/opt-in.ts',
-    'src/lib/nwc/index.ts',
-    'src/lib/nwc/uri.ts',
   ];
 
   it('passes a tree that follows them', () => {

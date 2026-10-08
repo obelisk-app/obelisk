@@ -15,7 +15,7 @@ Production deployment requires the user's explicit request. `npm run deploy` tar
 | Task | Reference |
 |---|---|
 | Expose local development over HTTPS | [Cloudflare tunnel](cloudflare-tunnel.md) |
-| Work with the SDK fork | [Nostr WoT SDK fork](nostr-wot-sdk-fork.md) |
+| Develop and release shared Nostr packages | [Nostr WoT SDK](nostr-wot-sdk.md) |
 | Export a Discord emoji set | [Emoji export](discord-emoji-export.md) |
 | Triage client issues and debt | [Known bugs](known-bugs.md) |
 | Triage SFU server issues | [SFU known bugs](sfu-known-bugs.md) |

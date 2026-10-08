@@ -160,7 +160,7 @@ export function installFakeRelayPage(): void {
     FakeRelaySocket.reset();
     window.localStorage.clear();
     vi.useFakeTimers();
-    const hubMod = await import('@/lib/relay-hub');
+    const hubMod = await import('@nostr-wot/relay/hub');
     hubMod.getRelayHub({
       connectTimeoutMs: 10_000,
       transport: { websocketImplementation: FakeRelaySocket as unknown as typeof WebSocket, enablePing: false },
@@ -182,7 +182,7 @@ export interface Nip07Login {
   readonly signEvent: ReturnType<typeof vi.fn<(template: EventTemplate) => Promise<VerifiedEvent>>>;
   readonly bridge: Awaited<ReturnType<typeof import('../facade/client').getBridge>>;
   readonly impl: NonNullable<ReturnType<typeof import('../facade/client').getBridgeImpl>>;
-  readonly hub: ReturnType<typeof import('@/lib/relay-hub').getRelayHub>;
+  readonly hub: ReturnType<typeof import('@nostr-wot/relay/hub').getRelayHub>;
 }
 
 /**
@@ -195,7 +195,7 @@ export async function loginWithNip07Spy(): Promise<Nip07Login> {
   const signEvent = vi.fn(async (template: EventTemplate): Promise<VerifiedEvent> => finalizeEvent(template, sk));
   Object.defineProperty(window, 'nostr', { configurable: true, value: { signEvent, getPublicKey: async () => pk } });
   const { getBridge, getBridgeImpl } = await import('../facade/client');
-  const { getRelayHub } = await import('@/lib/relay-hub');
+  const { getRelayHub } = await import('@nostr-wot/relay/hub');
   const bridge = await getBridge();
   const login = bridge.loginWithNip07(pk);
   await settle();

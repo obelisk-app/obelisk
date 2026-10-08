@@ -10,7 +10,8 @@ import Row from '@/components/ui/layout/Row';
 import { useTranslations } from 'next-intl';
 import { useDmList } from '@/hooks/shell/dm/useDmList';
 import type { DmListTab } from '@/utils/shell/desktop/dm-list';
-import Button from '@/components/ui/buttons/Button';
+import IconButton from '@/components/ui/buttons/IconButton';
+import TextButton from '@/components/ui/buttons/TextButton';
 import SegmentedControl from '@/components/ui/forms/SegmentedControl';
 import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
 import ComposeDm from './ComposeDm';
@@ -40,27 +41,24 @@ export default function DmList({
       <div className="flex h-[60px] shrink-0 items-center justify-between border-b border-lc-border px-4 shadow-sm" data-testid="dm-list-header">
         <Heading as="h3" variant="panel" className="truncate">{t('dm.title')}</Heading>
         <Row gap="1" align="center">
-          <Button
-            variant="ghost"
-            size="icon"
+          <IconButton
+            size="8"
             tone="danger"
             onClick={vm.explainCache}
             title={t('dm.clearCacheTitle')}
             aria-label={t('dm.clearCache')}
           >
             <TrashIcon strokeWidth={2} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
+          </IconButton>
+          <IconButton
+            size="8"
             onClick={vm.toggleComposing}
-            className="aria-pressed:text-lc-green aria-pressed:hover:text-lc-green"
             title={t('dm.new')}
             aria-label={t('dm.new')}
             aria-pressed={vm.composing}
           >
             <SearchIcon size={18} strokeWidth={2} />
-          </Button>
+          </IconButton>
         </Row>
       </div>
 
@@ -107,13 +105,12 @@ export default function DmList({
         {!vm.hasConversations ? (
           <div className="p-4 text-center">
             <Text as="p" variant="muted">{t('dm.noConversations')}</Text>
-            <Button
-              variant="bare"
+            <TextButton
               onClick={vm.startComposing}
-              className="mt-2 text-xs text-lc-green hover:underline"
+              className="mt-2 text-xs"
             >
               {t('dm.startConversation')}
-            </Button>
+            </TextButton>
           </div>
         ) : vm.visible.length === 0 ? (
           <div className="p-4 text-center">

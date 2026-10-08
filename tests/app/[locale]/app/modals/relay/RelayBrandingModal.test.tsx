@@ -30,7 +30,8 @@ describe('RelayBrandingModal', () => {
     mount();
     expect(screen.getByText('Relay branding')).toBeInTheDocument();
     expect(screen.getByText(/Shown to everyone on relay\.test/)).toBeInTheDocument();
-    expect(screen.getByDisplayValue('La Crypta')).toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toHaveValue('La Crypta');
+    expect(screen.getByLabelText('Description')).toBeInTheDocument();
   });
 
   it('closes from the header close button', () => {

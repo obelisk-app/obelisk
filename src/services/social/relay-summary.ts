@@ -6,7 +6,7 @@
  * that fits in a toolbar: how many of your relays are answering, and the
  * worst state among them, which is what decides the colour.
  */
-import { normalizeRelayUrl } from '@/utils/social/relay-url';
+import { normalizePublicRelayUrl } from '@/utils/relay-url/public-relay';
 import type { RelayState, RelayStatus } from './relay-status-store';
 
 export type RelaySummary = {
@@ -26,7 +26,7 @@ export function relayStatusSummary(
   let anyPending = false;
 
   for (const relay of relays) {
-    const url = normalizeRelayUrl(relay);
+    const url = normalizePublicRelayUrl(relay);
     const status = url ? statuses[url] : undefined;
     switch (status?.state) {
       case 'connected': connected += 1; break;

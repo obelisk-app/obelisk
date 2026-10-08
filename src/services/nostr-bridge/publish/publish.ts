@@ -11,7 +11,7 @@
  */
 import { CodedError, type ActivityCode, type ErrorCode } from '@/utils/errors/codes';
 import type { Event as NostrEvent } from 'nostr-tools';
-import type { PublishAuthMode, RelayHub } from '@/lib/relay-hub';
+import type { PublishAuthMode, RelayHub } from '@nostr-wot/relay/hub';
 import { KIND_CONTACT_LIST, KIND_EMOJI_FAVORITES, KIND_EMOJI_SET } from '@/constants/nostr/nip-kinds';
 import { failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
 import { pushRelayDebug } from '../relay/relay-debug';

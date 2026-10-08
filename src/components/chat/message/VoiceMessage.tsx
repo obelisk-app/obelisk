@@ -3,7 +3,7 @@
 import Button from '@/components/ui/buttons/Button';
 import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import { useTranslations } from 'next-intl';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import Range from '@/components/ui/forms/Range';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { formatElapsed } from '@/utils/format/format-elapsed';

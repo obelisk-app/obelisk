@@ -10,9 +10,9 @@
  * `relay-url.test.ts`: trim; fold host case, keep path case; drop the
  * default port; strip every trailing slash (a bare root has no slash);
  * drop the fragment; keep the query as given; `ws://` and `wss://` stay
- * distinct. Do not write another copy; `PhoneShell.tsx` and
- * `social/relays.ts` still carry ones with different answers and are
- * being pointed here.
+ * distinct. This is an equality key, not input validation: use the SDK's
+ * parseRelayUrl policy for validation, and normalizePublicRelayUrl for
+ * the social tier's deliberately different URL serialization contract.
  *
  * nostr-tools' `normalizeURL` (what the RelayHub keys sockets on) agrees
  * for every configured-relay shape once its output is passed through here,

@@ -65,10 +65,11 @@ vi.mock('@nostr-wot/ui', async () => {
     LoginModal: (props: Record<string, unknown>) => {
       sdkProps = props;
       return React.createElement('div', { className: 'nui-modal-overlay' },
-        React.createElement('div', { className: 'nui-modal', 'data-testid': 'sdk-login' },
+        React.createElement('div', { className: 'nui-modal obelisk-login-modal', 'data-testid': 'sdk-login' },
           React.createElement('button', { 'aria-label': 'Close', onClick: props.onClose }),
           React.createElement('div', { className: 'nui-qr-wrap' },
             React.createElement('div', { className: 'nui-qr', 'data-testid': 'sdk-qr' }),
+            React.createElement('a', { className: 'nui-btn', href: 'nostrconnect://test', 'data-testid': 'native-signer-link' }, React.createElement('span', { className: 'nui-btn-label' }, 'Open in signer app')),
             React.createElement('div', { className: 'nui-key-display' }, 'nostrconnect://test'),
           ),
         ),
@@ -219,23 +220,27 @@ describe('LoginModal generated identity flow', () => {
     );
   });
 
-  it('places the mobile signer handoff directly below the QR', async () => {
+  it('configures native SDK actions with translated labels and existing platform helpers', () => {
     renderLocalized(<LoginModal />);
-
-    await waitFor(() => expect(screen.getByText('Open in signer app')).toBeInTheDocument());
-
-    expect(screen.getByText('Open in signer app').closest('.nui-signer-actions')?.previousElementSibling)
-      .toBe(screen.getByTestId('sdk-qr'));
+    const options = sdkProps?.nip46Connection as {
+      labels: { openSigner: string; copyUri: string; pasteUri: string };
+      signerHref: (uri: string, userAgent: string) => string;
+      copyOnOpen: boolean;
+      copyUri: (uri: string) => Promise<boolean>;
+    };
+    expect(options.labels.openSigner).toBe('Open in signer app');
+    expect(options.labels.copyUri).toBe('Copy connection URI');
+    expect(options.labels.pasteUri).toBe('Use bunker URI');
+    expect(options.copyOnOpen).toBe(true);
+    expect(options.signerHref('nostrconnect://pairing', 'Android')).toContain('intent://pairing');
+    expect(options.copyUri).toBeTypeOf('function');
   });
 
   it('copies the exact QR URI for Amber manual import', async () => {
     renderLocalized(<LoginModal />);
-    const copy = await screen.findByRole('button', { name: 'Copy connection URI' });
-
-    fireEvent.click(copy);
-
-    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith('nostrconnect://test'));
-    expect(copy).toHaveTextContent('Copied');
+    const options = sdkProps.nip46Connection as { copyUri: (uri: string) => Promise<boolean> };
+    await expect(options.copyUri('nostrconnect://test')).resolves.toBe(true);
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('nostrconnect://test');
   });
 
   it('falls back to a temporary textarea when the Clipboard API rejects', async () => {

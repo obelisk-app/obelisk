@@ -16,8 +16,8 @@
  * The relay still sees the page's IP, as it does for every connection.
  */
 import { finalizeEvent, type Event as NostrEvent, type Filter } from 'nostr-tools';
-import type { AuthLease, RelayHub } from '@/lib/relay-hub';
-import type { NwcConnection, NwcTransport } from '@/lib/nwc';
+import type { AuthLease, RelayHub } from '@nostr-wot/relay/hub';
+import type { NwcConnection, NwcTransport } from '@nostr-wot/wallet/nwc';
 
 export type NwcHub = Pick<RelayHub, 'setIdentity' | 'removeIdentity' | 'subscribe' | 'publish' | 'acquireAuthLease'>;
 

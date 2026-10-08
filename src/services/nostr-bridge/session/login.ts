@@ -6,7 +6,7 @@
  * `./reset.ts`. Pure move from `client.ts`.
  */
 import { CodedError } from '@/utils/errors/codes';
-import { SESSION_IDENTITY_ID, type Identity } from '@/lib/relay-hub';
+import { SESSION_IDENTITY_ID, type Identity } from '@nostr-wot/relay/hub';
 import { resetAllClientState } from '@/services/common/reset';
 import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/store/notifications';
 import { ensureChannelPrefsStoreForAccount } from '@/store/chat/channel-prefs';

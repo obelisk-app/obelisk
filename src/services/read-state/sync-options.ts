@@ -3,7 +3,7 @@
  * the d tags, the payload shapes, the per-scope options and the small
  * parsers the ingest and publish halves both use.
  */
-import type { Rumor } from '@/lib/nip-59';
+import type { GiftWrapRumor as Rumor } from '@nostr-wot/dm';
 import type { WrapLedgerScope } from '@/services/nostr-bridge';
 import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/constants/nostr/nip-kinds';
 import { SCHEMA_VERSION } from '@/constants/read-state/sync-options';

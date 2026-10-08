@@ -3,7 +3,7 @@
 import Button from '@/components/ui/buttons/Button';
 import type { MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import { useTranslations } from 'next-intl';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import { ZapIcon } from '@/assets/icons';
 import { ReactorHoverCard } from './ReactorHoverCard';
 import { ZapperHoverCard } from './ZapperHoverCard';

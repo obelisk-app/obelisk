@@ -6,7 +6,7 @@
  * `client.ts`; `./registry.ts` is the only caller.
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import type { RelayHub, SubscriptionHandle } from '@/lib/relay-hub';
+import type { RelayHub, SubscriptionHandle } from '@nostr-wot/relay/hub';
 import { wotEngine } from '@/services/wot/engine';
 import type { SetRelayAccessOpts, TrackedSub, WatchedSubOptions } from '../facade/context';
 import { pushRelayDebug } from '../relay/relay-debug';

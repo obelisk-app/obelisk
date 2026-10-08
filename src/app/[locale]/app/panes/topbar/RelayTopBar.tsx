@@ -72,7 +72,7 @@ export function RelayTopBar({
           size="icon-touch"
           data-notif-trigger
           onClick={vm.toggleNotif}
-          className="relative rounded-lg"
+          className="relative"
           title={t('common.notifications')}
           aria-label={t('common.notifications')}
         >
@@ -88,7 +88,6 @@ export function RelayTopBar({
           size="icon-touch"
           data-help-trigger
           onClick={vm.toggleHelp}
-          className="rounded-lg"
           title={t('common.help')}
           aria-label={t('common.help')}
         >

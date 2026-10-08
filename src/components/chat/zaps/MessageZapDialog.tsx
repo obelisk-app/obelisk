@@ -8,7 +8,7 @@ import Modal from '@/components/ui/overlays/Modal';
 import Input from '@/components/ui/forms/Input';
 import { ZapIcon } from '@/assets/icons';
 import { useTranslations } from 'next-intl';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import PayingWalletNote from './PayingWalletNote';

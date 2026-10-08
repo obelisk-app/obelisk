@@ -67,11 +67,10 @@ export function LayoutCategoryCard({
           last={idx === categories.length - 1}
         />
         <Button
-          variant="ghost"
+          variant="outline"
           size="xs"
           tone="danger"
           onClick={() => deleteCategory(cat.id)}
-          className="text-red-400"
           title={t('mobile.layout.deleteCategory')}
         >
           {t('mobile.layout.delete')}

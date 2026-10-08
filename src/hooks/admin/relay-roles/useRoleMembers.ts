@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRelayPeople } from '@/services/nostr-bridge';
-import { parsePubkeyInput } from '@/utils/identity/parse-pubkey';
+import { npubToHex } from '@nostr-wot/data';
 import { isNewPastedHolder, roleCandidates } from '@/utils/admin/relay-roles-members';
 
 /**
@@ -21,7 +21,7 @@ export function useRoleMembers({ holders, onGrant, onError }: {
   const people = useRelayPeople();
   const held = useMemo(() => new Set(holders), [holders]);
   const matches = useMemo(() => roleCandidates(people, held, query), [held, people, query]);
-  const pasted = parsePubkeyInput(query);
+  const pasted = npubToHex(query);
   const pastedIsNew = isNewPastedHolder(pasted, held, matches);
 
   const grantPasted = () => {

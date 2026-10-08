@@ -7,7 +7,7 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
-import type { NipSigner } from '@/lib/nip-59';
+import type { NipSigner } from '@/constants/nostr/nip-signer';
 import { DmStoreModule, type HeldKind } from '@/services/nostr-bridge/dm/store';
 import { dmStoreDb } from '@/services/nostr-bridge/dm/store-db';
 

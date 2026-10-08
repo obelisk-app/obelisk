@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scanFile } from '@/i18n/hardcoded-strings';
+import { scanFile } from '../../../scripts/i18n/hardcoded-strings';
 
 /**
  * String props of custom components. The scanner used to read only six

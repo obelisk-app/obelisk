@@ -1,11 +1,8 @@
-/** A relay address a call can be set up on: `wss://`, with no user name or password in it. */
+import { parseRelayUrl } from '@nostr-wot/relay';
+
+/** Encrypted call relay without embedded credentials. */
 export function isWssRelay(value: string): boolean {
-  try {
-    const u = new URL(value.trim());
-    return u.protocol === 'wss:' && !u.username && !u.password;
-  } catch {
-    return false;
-  }
+  return parseRelayUrl(value) !== null;
 }
 
 /** A typed row to mark red: something is there and it is not a usable relay. */

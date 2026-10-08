@@ -15,8 +15,8 @@ vi.mock('@nostr-wot/wallet', async (importOriginal) => ({
   requestZapInvoice: sdk.requestZapInvoice,
 }));
 
-import { FakeRelayFactory, getRelayHub, resetRelayHubForTests } from '@/lib/relay-hub';
-import { mayHavePaid } from '@/lib/nwc';
+import { FakeRelayFactory, getRelayHub, resetRelayHubForTests } from '@nostr-wot/relay/hub';
+import { mayHavePaid } from '@nostr-wot/wallet/nwc';
 import { connectNwcWallet, disconnectNwcWallet, ensureNwcWalletLoaded } from '@/services/wallet/nwc-wallet';
 import { connectWallet, walletKindFor } from '@/services/wallet/wallet';
 import { payInvoice, InvoicePayError } from '@/services/wallet/pay-invoice';

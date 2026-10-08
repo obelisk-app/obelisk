@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FileIntegrityError } from '@/lib/crypto/file-cipher';
+import { FileIntegrityError } from '@nostr-wot/dm';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 import { fetchDecrypted } from '@/services/chat/dm/dm-file-decrypt';
 

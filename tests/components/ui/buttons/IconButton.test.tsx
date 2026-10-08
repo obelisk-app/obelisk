@@ -39,7 +39,14 @@ describe('IconButton', () => {
 
   it('ghost turns green while pressed', () => {
     render(<IconButton aria-label="Spoiler" aria-pressed>i</IconButton>);
-    expect(screen.getByRole('button', { pressed: true })).toHaveClass('aria-pressed:text-lc-green');
+    expect(screen.getByRole('button', { pressed: true })).toHaveClass('aria-pressed:text-lc-green', 'aria-pressed:hover:text-lc-green');
+  });
+
+  it('ghost highlights an open menu without giving it toggle semantics', () => {
+    render(<IconButton aria-label="More" aria-haspopup="menu" aria-expanded>i</IconButton>);
+    const el = screen.getByRole('button', { expanded: true });
+    expect(el).toHaveClass('aria-expanded:text-lc-green', 'aria-expanded:hover:text-lc-green');
+    expect(el).not.toHaveAttribute('aria-pressed');
   });
 
   it('square shape is rounded-lg', () => {

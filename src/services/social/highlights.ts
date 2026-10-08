@@ -17,6 +17,7 @@
  * `highlightsForArticle` is the reader-side query.
  */
 
+import { dedupeEventsNewestFirst } from '@nostr-wot/data';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { KIND_HIGHLIGHT } from '@/constants/nostr/nip-kinds';
 import { querySocial } from './pool';
@@ -81,12 +82,6 @@ export function filterFeedHighlights(
   });
 }
 
-/** Deduped by id, newest first: the same highlight arrives from every relay. */
-function newestFirst(events: readonly NostrEvent[]): NostrEvent[] {
-  const byId = new Map<string, NostrEvent>();
-  for (const event of events) byId.set(event.id, event);
-  return [...byId.values()].sort((a, b) => b.created_at - a.created_at);
-}
 
 /**
  * Highlights other people made in this article.
@@ -109,7 +104,7 @@ export async function fetchArticleHighlights(
     opts.relays ? { relays: opts.relays } : undefined,
   );
 
-  return newestFirst(events.filter((event) => {
+  return dedupeEventsNewestFirst(events.filter((event) => {
     if (event.kind !== KIND_HIGHLIGHT) return false;
     const source = highlightSource(event);
     return (source?.kind === 'address' && source.coordinate === coordinate)

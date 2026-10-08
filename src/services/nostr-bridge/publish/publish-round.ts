@@ -15,7 +15,7 @@
  */
 import type { Event as NostrEvent } from 'nostr-tools';
 import { normalizeURL } from 'nostr-tools/utils';
-import type { PublishAuthMode, PublishResult, RelayHub } from '@/lib/relay-hub';
+import type { PublishAuthMode, PublishResult, RelayHub } from '@nostr-wot/relay/hub';
 import type { PublishResults } from './publish-results';
 import { PUBLISH_TIMED_OUT } from '@/constants/nostr-bridge/publish';
 

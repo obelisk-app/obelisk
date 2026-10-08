@@ -3,7 +3,7 @@
  * relay-access state, and the signer readiness the publish paths wait on.
  */
 import { useEffect, useState } from 'react';
-import type { NipSigner } from '@/lib/nip-59';
+import type { NipSigner } from '@/constants/nostr/nip-signer';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import type { SessionNotice } from '../session/vault';
 import type { RelayAccessState } from '../common/types';

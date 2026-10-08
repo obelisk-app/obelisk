@@ -4,14 +4,9 @@
  * belongs to a connection attempt that no longer exists on one side or the
  * other, except an offer, which the owner follows with a fresh Peer.
  */
+import { isOffer } from '@/utils/voice/signal-payload';
 import type { VoiceSignalPayload } from './types';
 import type { PeerEvents } from './peer-types';
-
-export function isOffer(payload: VoiceSignalPayload): boolean {
-  if (payload.type === 'offer') return true;
-  return payload.type === 'peer'
-    && (payload.peerSignal as { type?: string } | undefined)?.type === 'offer';
-}
 
 export interface SessionBindingHost {
   readonly remotePubkey: string;

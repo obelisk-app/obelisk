@@ -6,7 +6,7 @@
  * on disk). The caller owns the returned URL and must revoke it.
  */
 
-import { decryptFile } from '@/lib/crypto/file-cipher';
+import { decryptFile } from '@nostr-wot/dm';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
 
 /** Fetch, verify and decrypt; resolves to a fresh object URL the caller owns. */

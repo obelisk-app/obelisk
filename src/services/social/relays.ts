@@ -32,7 +32,7 @@ import {
   DEFAULT_SOCIAL_RELAYS,
   WIDER_SOCIAL_RELAYS,
 } from '@/constants/social/relays';
-import { normalizeRelayUrl } from '@/utils/social/relay-url';
+import { normalizePublicRelayUrl } from '@/utils/relay-url/public-relay';
 
 /** The user's relays plus the fallback set, deduped. */
 export function widenedRelays(relays: readonly string[]): string[] {
@@ -69,7 +69,7 @@ export function normalizeSocialRelays(value: unknown): string[] {
   const input = Array.isArray(value) ? value : [];
   const seen = new Set<string>();
   for (const entry of input) {
-    const relay = normalizeRelayUrl(entry);
+    const relay = normalizePublicRelayUrl(entry);
     if (relay) seen.add(relay);
     if (seen.size >= SOCIAL_RELAY_MAX) break;
   }
@@ -80,7 +80,7 @@ export function normalizeSocialRelays(value: unknown): string[] {
 export function invalidRelayIndexes(draft: readonly string[]): number[] {
   const bad: number[] = [];
   draft.forEach((entry, index) => {
-    if (entry.trim() && !normalizeRelayUrl(entry)) bad.push(index);
+    if (entry.trim() && !normalizePublicRelayUrl(entry)) bad.push(index);
   });
   return bad;
 }

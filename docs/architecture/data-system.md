@@ -13,7 +13,7 @@ This doc supersedes the legacy `auth-and-data-loading.md` and
 Obelisk is fully Nostr-relay-only. The whole client is a thin shell over
 the bridge (`src/services/nostr-bridge/`, facade `client.ts`), whose every
 REQ, query and publish goes through the page's RelayHub
-(`src/lib/relay-hub/`): one socket per relay per identity, NIP-42 AUTH once
+(`@nostr-wot/relay/hub`): one socket per relay per identity, NIP-42 AUTH once
 per relay and pubkey, a shared refcounted subscription registry.
 Identity is one of three signer kinds (nsec, NIP-07, NIP-46 bunker). Group
 state, members, admins, messages, DMs, and reactions all arrive as NIP-29
@@ -312,8 +312,7 @@ channel list.
 
 ## 7. NIP-42 AUTH
 
-AUTH belongs to the RelayHub (`src/lib/relay-hub/auth.ts`, policy in
-`auth-policy.ts` and `auth-leases.ts`). It keeps one record per
+AUTH belongs to the SDK RelayHub (`@nostr-wot/relay/hub`, implementation in the SDK relay package's `src/hub/auth.ts`, `auth-policy.ts`, and `auth-leases.ts`). It keeps one record per
 `(relayUrl, pubkey)`, never per challenge, and installs exactly one signer
 per socket, so a reconnect or a `created_at` rollover does not prompt the
 signer again. The hub answers a challenge only where the identity holds an

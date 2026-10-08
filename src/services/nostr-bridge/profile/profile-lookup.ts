@@ -7,7 +7,7 @@
  */
 import type { Event as NostrEvent } from 'nostr-tools';
 import { KIND_METADATA } from '@/constants/nostr/nip-kinds';
-import { BoundedMap } from '@/lib/relay-hub';
+import { BoundedMap } from '@nostr-wot/relay/hub';
 import type { BridgeContext } from '../facade/context';
 import {
   loadProfileSyncState,

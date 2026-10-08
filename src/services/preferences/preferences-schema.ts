@@ -1,3 +1,4 @@
+import { parseRelayUrl } from '@nostr-wot/relay';
 /**
  * Preferences: the shape, the defaults and the normalisers that turn whatever
  * is in storage (old keys, hand-edited values, other versions) into a valid
@@ -125,13 +126,9 @@ export function normalizeCallRelays(value: unknown): string[] {
   const seen = new Set<string>();
   for (const entry of input) {
     if (typeof entry !== 'string') continue;
-    try {
-      const u = new URL(entry.trim());
-      if (u.protocol !== 'wss:' || u.username || u.password) continue;
-      seen.add(u.toString().replace(/\/$/, ''));
-    } catch {
-      continue;
-    }
+    const url = parseRelayUrl(entry);
+    if (!url) continue;
+    seen.add(url.toString().replace(/\/$/, ''));
     if (seen.size >= CALL_RELAY_MAX) break;
   }
   return seen.size > 0 ? [...seen] : [...DEFAULT_CALL_RELAYS];

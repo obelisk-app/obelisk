@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useCurrentRelayUrl, useNipSigner } from '@/services/nostr-bridge';
 import { useToastStore } from '@/store/feedback/toast';
 import { useTranslations } from 'next-intl';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import {
   checkZap,
   sendZap,
@@ -14,7 +14,7 @@ import {
 } from '@/services/wallet/send-zap';
 import { MARKER_NO_BRIDGE } from '@/constants/wallet/zap';
 import { errorText } from '@/utils/errors/error-text';
-import { mayHavePaid } from '@/lib/nwc';
+import { mayHavePaid } from '@nostr-wot/wallet/nwc';
 
 const ERROR_KEY = {
   noAddress: 'chat.zap.errorNoAddress',

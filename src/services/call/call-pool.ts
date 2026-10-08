@@ -21,7 +21,7 @@
 import { CodedError } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { normalizeURL } from 'nostr-tools/utils';
-import { currentRelayHub, type RelayHub } from '@/lib/relay-hub';
+import { currentRelayHub, type RelayHub } from '@nostr-wot/relay/hub';
 
 export interface CallPoolLike {
   subscribe(

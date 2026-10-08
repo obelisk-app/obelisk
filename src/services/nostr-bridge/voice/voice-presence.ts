@@ -7,7 +7,7 @@
  * priority since step 5) are not here.
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { BoundedMap } from '@/lib/relay-hub';
+import { BoundedMap } from '@nostr-wot/relay/hub';
 import { KIND_SFU_ACTIVE_CALL, KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
 import { getAllTags, getTag } from '../common/event-tags';
 import { resubscribeOnQuotaClose } from '../relay/quota-resubscribe';

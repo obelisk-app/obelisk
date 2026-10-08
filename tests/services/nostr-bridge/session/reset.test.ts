@@ -6,7 +6,7 @@
  * in `session/reset.ts` turns this red.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Identity } from '@/lib/relay-hub';
+import type { Identity } from '@nostr-wot/relay/hub';
 import type { LifecycleTargets, MessagesLifecycle } from '@/services/nostr-bridge/session/lifecycle';
 import { ConnectionModule } from '@/services/nostr-bridge/session/connection';
 import {

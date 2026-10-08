@@ -73,7 +73,7 @@ describe('nostr-bridge', () => {
 
   it('a mesh call leaves background group streams open: the hub budget admits the voice REQ, nothing is trimmed', async () => {
     const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
-    const { getRelayHub } = await import('@/lib/relay-hub');
+    const { getRelayHub } = await import('@nostr-wot/relay/hub');
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(skHex, pkHex);

@@ -7,10 +7,10 @@ This is the one instruction file for every agent in this repo; `CLAUDE.md` only 
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript + Tailwind v4 (La Crypta design system). Chat surfaces are client-rendered over the bridge; public site pages are prerendered. The server side is small: `src/proxy.ts` (static script hashes, dynamic CSP nonces, first-visit locale), server metadata and the public `/notes`, `/p` viewers (`src/services/server/`), one API route, `src/app/api/link-preview/route.ts` (OpenGraph unfurl, so a link a reader only *views* never reaches a third-party OG service), and the live preview-card route `src/app/[locale]/og/[kind]/[id]/route.ts` (the cards of notes, profiles, hashtags and relay share links; every other card is a committed PNG). No database, no session server.
-- `nostr-tools` for events, signing and sockets. The RelayHub (`src/lib/relay-hub/`) owns the app's relay sockets; the exceptions are the NIP-46 `BunkerSigner` (its own connection to the bunker's relays) and the SFU's direct WebSocket RPC (`src/services/voice/sfu-rpc-direct.ts`).
+- `nostr-tools` for events, signing and sockets. The RelayHub (`@nostr-wot/relay/hub`) owns the app's relay sockets; the exceptions are the NIP-46 `BunkerSigner` (its own connection to the bunker's relays) and the SFU's direct WebSocket RPC (`src/services/voice/sfu-rpc-direct.ts`).
 - `@nostr-wot/*`: `data` and `ui` (WoT-aware profiles, the login widget), `dm` (NIP-17 wire format), `pq` (post-quantum DM scheme), `signers`, `wallet` (NIP-57 zap requests and receipt validation).
 - Zustand stores in `src/store/<module>/` (a module's main store is its `index.ts`): `chat` (with `chat/dm`, `chat/channel-prefs`, `chat/message-zap`), `call/dm-call` (with `dm-call-store`, `-policy`, `-runtime`), `voice`, `notifications`, `read-state`, `games`, `hints`, `moderation`, `feedback/toast`, `wallet/invoice-payments`, `wallet/nwc-wallet`, and the per-account plumbing in `common/` (`multi-account`, `persist-version`). Identity is not a store: it lives on the bridge.
-- Payments (zaps and paying an invoice posted in chat) go through one module, `src/services/wallet/wallet.ts`, which picks the wallet: the account's Nostr Wallet Connect (NIP-47) wallet when one is connected (Settings > Wallet; `nwc-wallet.ts`, protocol in `src/lib/nwc/`), else a WebLN extension, else none. `pay-invoice.ts` and `send-zap.ts` sit beside it and keep their double-pay guards. The NWC link is a spending credential: sealed per account under its own vault key (`nwc-storage.ts`), never in the clear, deleted on disconnect and logout; its relay traffic rides the hub as `nwc:<client pubkey>`. See [docs/features/bitcoin-zaps-nwc.md](docs/features/bitcoin-zaps-nwc.md).
+- Payments (zaps and paying an invoice posted in chat) go through one module, `src/services/wallet/wallet.ts`, which picks the wallet: the account's Nostr Wallet Connect (NIP-47) wallet when one is connected (Settings > Wallet; `nwc-wallet.ts`, protocol in `@nostr-wot/wallet/nwc`), else a WebLN extension, else none. `pay-invoice.ts` and `send-zap.ts` sit beside it and keep their double-pay guards. The NWC link is a spending credential: sealed per account under its own vault key (`nwc-storage.ts`), never in the clear, deleted on disconnect and logout; its relay traffic rides the hub as `nwc:<client pubkey>`. See [docs/features/bitcoin-zaps-nwc.md](docs/features/bitcoin-zaps-nwc.md).
 - next-intl for the three languages (see i18n).
 - Vitest + React Testing Library + jsdom; Playwright for the end-to-end specs in `scripts/e2e/`.
 - NDK is not a dependency. Do not add it.
@@ -33,7 +33,7 @@ npm run build           # next build --webpack, then immutable public-page CSP h
 npm run seo:check       # build, start, crawl every route as search and preview bots do; fails on any SEO problem (docs/architecture/i18n.md#seo)
 npm run snap-og         # draw the static pages' preview cards into public/og/cards/ (after changing seo copy, a guide's front matter or the card design)
 bash scripts/check-source-bytes.sh          # rejects raw control bytes in tracked files
-npx tsx scripts/i18n/hardcoded-baseline.ts  # regenerate the hardcoded-strings baseline
+npx tsx scripts/i18n/scan.ts              # diagnose untranslated copy (optional src-relative folder)
 npx tsx scripts/markup-only/baseline.ts     # regenerate the markup-only baseline (--list <folder>, --top 20)
 npx tsx scripts/layers/scan.ts [folder]     # what breaks the layer-contents rule (constants, hooks, utils, services)
 ```
@@ -54,7 +54,7 @@ The owner's folder rules, enforced by the guard tests listed under Testing (deta
 
 | Folder | Holds |
 |---|---|
-| `src/lib/<package>/` | Mini-packages: no app imports, publishable as they stand, each a folder with an `index.ts` entry (`relay-hub/`, `nwc/`, `games/`, `emoji/`, `crypto/`, `nip-59/`, `remark-spoiler/`) |
+| `src/lib/<package>/` | Mini-packages: no app imports, publishable as they stand, each a folder with an `index.ts` entry (`games/`, `emoji/`, `crypto/`, `remark-spoiler/`) |
 | `src/constants/<module>/` | Values and types only: every constant another file reads (event kinds in `nostr/nip-kinds.ts`, timings, limits, storage keys, option lists, the landing content). No function, no class, no JSX; a constant reads only other constants and lib packages. A module's file is named after the file or sub-feature that owns the values (`constants/voice/sfu-rpc-support.ts`, `constants/chat/timeline.ts`) |
 | `src/utils/<module or topic>/` | Pure functions: a feature's in its module folder (`chat/dm/`, `voice/`, `wallet/`), shared ones by topic (`identity/`, `relay-url/`, `format/`, `message-text/`, `errors/`, ...). No React or Next.js, no import from hooks, services, store or components, no storage, network or timers |
 | `src/services/<module>/` | Business logic and side effects: anything that talks to a relay, the bridge, a store, `fetch`, storage, timers, WebRTC or the clipboard (`chat/`, `call/`, `relay/`, `media/`, `preferences/`, `common/`, the bridge in `nostr-bridge/`, server code in `server/`) |
@@ -63,7 +63,7 @@ The owner's folder rules, enforced by the guard tests listed under Testing (deta
 | `src/store/<module>/` | Zustand stores; a module's main store is its `index.ts` |
 | `src/assets/<kind>/` | Every picture the app draws, by kind: `icons/` (one icon per file, on `IconSvg`, barrel `@/assets/icons`), `brand/` (the Obelisk marks), `illustrations/` (guide heroes and diagrams, OG card art, game thumbnails, landing decoration), `textures/` (files a stylesheet references). No `<svg>` anywhere else ([docs/ui/conventions.md](docs/ui/conventions.md#assets)) |
 | `public/` | Only what must be served at a fixed URL: favicon and manifest icons, the static pages' preview cards (`og/cards/`, from `npm run snap-og`) and the guide snapshots, fonts, `sw.js`, downloadable media-kit files |
-| `src/i18n/` | next-intl config, message modules, the hardcoded-strings scanner |
+| `src/i18n/` | next-intl config, message modules, scoped providers and translator integration; React hooks live in `src/hooks/common/`, developer scanners in `scripts/i18n/` |
 | `tests/` | Every test, mirroring `src/` (`src/components/chat/members/MemberList.tsx` -> `tests/components/chat/members/MemberList.test.tsx`). `src/` holds no tests |
 
 - **Nothing loose at a layer root, one name per feature.** In `components`, `hooks`, `services`, `utils`, `constants`, `store`, `lib` and `assets` every file sits in a module folder (in `assets`, a kind folder); code used across features goes in `common/` or a named shared topic. A feature keeps one folder name in every layer (`components/chat/dm/thread/DmThreadMenu.tsx`, `hooks/chat/dm/thread/useDmThread.ts`, `services/chat/dm/opt-in.ts`, `utils/chat/dm/pending.ts`, `store/chat/dm.ts`). A folder with sub-folders keeps only its `index` or entry component beside them. Component files are PascalCase (`DmThreadMenu.tsx`, acronyms as words), modules of several pieces kebab-case (`columns.tsx`); hooks are `useX.ts`; everything in `services`, `utils`, `store` and `lib` is kebab-case.
@@ -84,9 +84,9 @@ The owner's folder rules, enforced by the guard tests listed under Testing (deta
 
 ## The relay layer
 
-### RelayHub (`src/lib/relay-hub/`)
+### RelayHub (`@nostr-wot/relay/hub`)
 
-The single connection owner for the page. It imports only `nostr-tools` and itself (`tests/lib/relay-hub/isolation.test.ts`), so it can move into the SDK unchanged. The bridge, the social pool, the background watch and DM calls make every REQ, query and publish through `hub.subscribe` / `hub.query` / `hub.publish`. Read the file headers in `index.ts`, `hub.ts`, `auth.ts` and `registry.ts` before changing it.
+The SDK's shared connection owner for the page. Its implementation and protocol tests live in the SDK relay package (`packages/relay/src/hub`, `packages/relay/test/hub`); Obelisk keeps its integration tests here. The bridge, the social pool, the background watch and DM calls make every REQ, query and publish through `hub.subscribe` / `hub.query` / `hub.publish`. App callers import the published `@nostr-wot/relay/hub` subpath directly and share the instance configured by the bridge.
 
 - **One socket per relay per identity.** Sockets are keyed on `(relay, identity)`. The session is one identity; a DM call is another (`ephemeral:<callId>`, `authPolicy: 'never-auth'`), so a call's throwaway key never shares a socket with the user's real key. A connected NWC wallet is a third (`nwc:<client pubkey>`, `src/services/wallet/nwc-transport.ts`): its only possible AUTH signer is the NWC client key, and it takes a `'wallet'` lease only after the wallet relay answers `auth-required:`.
 - **NIP-42 AUTH once per relay + pubkey.** `AuthLayer` keeps one record per `(relayUrl, pubkey)`, not per challenge, so a reconnect does not mean a new signer prompt. Where AUTH may be answered is decided by leases (`auth-policy.ts`, `auth-leases.ts`).
@@ -162,7 +162,7 @@ English, Spanish and Portuguese through next-intl. English is the default and un
 - **In components** `useTranslations()` from next-intl, ICU arguments (never `.replace()`), `t.rich` for markup. Links and routers come from `@/i18n/navigation` (eslint rejects `next/link` and the router hooks of `next/navigation`).
 - **Errors** carry a code (`CodedError`, `src/utils/errors/codes.ts`); the UI turns any thrown value into a sentence with `errorText(t, err, fallbackKey)` (`src/utils/errors/error-text.ts`), which reads `errors.codes.<code>`.
 - **Outside React** use `translate(key, values)` from `src/i18n/runtime.ts`; the app shell registers its translator (`RuntimeTranslator`), and before that `translate` returns the key.
-- **No hardcoded copy.** The scanner (`src/i18n/hardcoded-strings.ts`) reads JSX text (from the syntax tree, so wrapped or `<strong>`-split sentences count), a plain string given to any JSX prop (`subtitle="..."`, `heading={'...'}`; a short list of non-copy names such as `className`, `href`, `variant`, `d` is skipped, docs/architecture/i18n.md#the-ratchet), toasts, ternaries and more; its baseline `src/i18n/hardcoded-baseline.json` is empty and may only stay empty. Text that must stay literal (brand names, protocol terms) carries an `i18n-exempt: <reason>` marker on its line (for multi-line JSX text, any of its lines or the parent's opening tag; for a string prop, a comment inside the tag on the prop's line).
+- **No hardcoded copy.** The scanner (`scripts/i18n/hardcoded-strings.ts`) reads JSX text (from the syntax tree, so wrapped or `<strong>`-split sentences count), a plain string given to any JSX prop (`subtitle="..."`, `heading={'...'}`; a short list of non-copy names such as `className`, `href`, `variant`, `d` is skipped, docs/architecture/i18n.md#hardcoded-copy-guard), toasts, ternaries and more; the guard requires zero findings; `scripts/i18n/scan.ts` prints read-only diagnostics. Text that must stay literal (brand names, protocol terms) carries an `i18n-exempt: <reason>` marker on its line (for multi-line JSX text, any of its lines or the parent's opening tag; for a string prop, a comment inside the tag on the prop's line).
 
 ### Vocabulary: "publications", not "forums"
 
@@ -201,7 +201,7 @@ Several agents often work at once, each in its own worktree under `worktrees/` c
 - Tests live in `tests/`, mirroring `src/`, and import the code as `@/...`. Shared setup, fakes and mocks are in `tests/support/` (`setup.ts`, `fake-bridge.ts`, `render-with-bridge.tsx`, `intl.tsx`, `messages.ts`, `import-graph.ts`, `mocks/`), imported as `@tests/support/...`.
 - A component or hook test fakes the bridge instance, not the module: `renderWithBridge(<X />, fakeBridge({ groups }, { publishEvent }))`, or `bridgeWrapper` for `renderHook`. The real hooks run over seeded stores, and `fake.stores.groups.set(...)` inside `act` drives a change. A new `vi.mock('@/services/nostr-bridge', ...)` is not allowed (`tests/bridge-mock-count.test.ts`).
 - The page bridge lives on `globalThis` (`bridge-slot.ts`), so `vi.resetModules()` does not forget it: call `unregisterBridge()` for a fresh one, or `registerBridge(fake)` in a non-React suite.
-- Bridge integration suites (`tests/services/nostr-bridge/bridge*.test.ts`, `login-race.test.ts`, ...) run on a `FakePool` that stands in for nostr-tools' `SimplePool` (`tests/services/nostr-bridge/support/bridge-fake-pool.ts`, with `bridge-harness.ts`). It implements `subscribe`, `publish`, `close` and `ensureRelay`, because `connect()` awaits the handshake. RelayHub tests build hubs on `FakeRelayFactory` (`src/lib/relay-hub/fake-relay.ts`).
+- Bridge integration suites (`tests/services/nostr-bridge/bridge*.test.ts`, `login-race.test.ts`, ...) run on a `FakePool` that stands in for nostr-tools' `SimplePool` (`tests/services/nostr-bridge/support/bridge-fake-pool.ts`, with `bridge-harness.ts`). It implements `subscribe`, `publish`, `close` and `ensureRelay`, because `connect()` awaits the handshake. RelayHub protocol tests live in the SDK relay package; app integration tests use `FakeRelayFactory` from `@nostr-wot/relay/hub`.
 - Use `data-testid` for selectors. Wrap a component that reads messages in `LocaleProvider` from `tests/support/intl.tsx`.
 
 ### Guard tests
@@ -213,7 +213,7 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | `tests/eslint-config.test.ts` | The 300-line `max-lines` rule is on for `src/` and loosened nowhere; every path-scoped glob in `eslint.config.mjs` matches a file |
 | `tests/no-em-dash.test.ts` | No em dash in `src/`, `tests/`, `scripts/`, `docs/`, `content/`, `.github/`, `.claude/`, text assets in `public/`, or root files |
 | `tests/import-cycles.test.ts` | No static import cycle in `src/` |
-| `tests/hooks/hooks-layer.test.ts` | No hook file or hook definition under `src/components/`, `src/app/` or `src/assets/` |
+| `tests/hooks/hooks-layer.test.ts` | No hook file or hook definition under `src/components/`, `src/app/`, `src/assets/` or `src/i18n/` |
 | `tests/assets/assets-only.test.ts` | No SVG outside `src/assets/` (an `<svg>` or SVG shape in JSX, `<svg` markup in a string or a stylesheet), except the shrink-only reasoned `DATA_DRIVEN` list, empty today; no `...Icon` component outside `src/assets/icons/` (the brand `ObeliskIcon` aside); that folder holds only `<Name>Icon.tsx` files on `IconSvg`, all in its barrel; no two icon files draw the same thing |
 | `tests/assets/icon-style.test.ts` | One icon per symbol: no variant name (`...Alt`, `...Short`, a number) and no two names from one synonym group; every icon file in the style (no own `viewBox`, stroke width, caps, joins, colour, or square `<rect>`; filled glyphs allowed), except the shrink-only reasoned `STYLE_EXCEPTIONS`; no caller passing caps, joins, a grid or a weight outside 1.5 / 2 / 2.5 / 3 |
 | `tests/components/markup-only.test.ts` | Component files (under `src/components/`, `src/app/` and `src/assets/`) are markup: no effects, memos, callbacks, reducers, more than two `useState` / `useRef`, functions with logic, or extra components (rule: `scripts/markup-only/analyze.ts`); shrink-only per-file baseline `tests/components/markup-only-baseline.json`, regenerated by `scripts/markup-only/baseline.ts`, never hand-edited |
@@ -229,11 +229,10 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | `tests/bridge-mock-count.test.ts` | The number of test files mocking `@/services/nostr-bridge` only goes down |
 | `tests/services/nostr-bridge/fake-bridge-shape.test.ts` | The test fake has every store and `subscribeX` the facade has |
 | `tests/services/nostr-bridge/bounded-stores.test.ts` | Every bridge store that grows with relay traffic has a cap and an eviction order |
-| `tests/lib/relay-hub/isolation.test.ts` | `src/lib/relay-hub/` imports only `nostr-tools` and itself |
 | `tests/components/layout-recipes.test.ts` | Repeated `lc-card`, page-section spacing and centered bounded container recipes use `Card`, `PageSection`, and `Container` outside UI |
 | `tests/components/raw-button-cap.test.ts` | Raw `<button>` count in `src/components/` and `src/hooks/` equals its cap (lower the cap in the commit that moves a button onto a primitive); only the ui primitives may render one |
 | `tests/app/raw-buttons.test.ts` | Zero raw buttons in all `src/app/` routes, including mobile and development screens |
-| `tests/i18n/hardcoded-strings.test.ts` | No hardcoded user-visible copy (JSX text, any string prop outside the skip list, toasts, object copy, ...); the baseline is zero. Rule cases in `tests/i18n/hardcoded/` |
+| `tests/i18n/hardcoded-strings.test.ts` | No hardcoded user-visible copy (JSX text, any string prop outside the skip list, toasts, object copy, ...); zero findings are allowed. Rule cases in `tests/i18n/hardcoded/` |
 | `tests/i18n/locales.test.ts` | Locale parity: one file per module per locale, the same keys and ICU arguments as English, no empty values, no "forum", no em dash |
 | `tests/i18n/route-scopes.test.ts` | Every route renders inside an `IntlScope`, and no client file reachable from a route reads a module the route does not ship |
 | `tests/i18n/call-arguments.test.ts` | Every literal `t('key', {...})` passes exactly the arguments the English message declares |
@@ -258,9 +257,10 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 Verified on 2026-10-06. Do not add to any of these.
 
 - Raw kind numbers remain in a few filters; the list is in `tests/constants/nostr/nip-kinds.test.ts`.
-- `normalizeRelayUrl` exists twice with different signatures: `src/utils/relay-url/normalize.ts` (canonical) and `src/utils/social/relay-url.ts` (the social tier's).
 - The muted-channel marker is still the `🔕` emoji in `mobile/screens/server/ChannelRowCounts.tsx` and `panes/sidebar/GroupNode.tsx`.
 - The bridge retains its own React bindings in `src/services/nostr-bridge/hooks/` as part of its public facade. App hooks belong in `src/hooks/`; WoT persistence lives in `src/store/wot/`, and read-state mounts through `src/components/read-state/ReadStateRoot.tsx`.
 - The store layer is outside the constants rule: `src/store/` modules still export their own persist versions, initial states and caps (`MENTION_CAP_PER_RELAY`, `READ_STATE_STORE_VERSION`, ...).
 - `tests/support/mocks/ndk.ts` mocks a library that is no longer a dependency; nothing imports it.
 - Open bugs: [docs/operations/known-bugs.md](docs/operations/known-bugs.md), [docs/operations/sfu-known-bugs.md](docs/operations/sfu-known-bugs.md).
+
+Relay URL validation belongs to `@nostr-wot/relay`: `parseRelayUrl` explicitly selects encrypted, local-plaintext, compatible WebSocket, or public-host policy. The bridge/cache equality key and social serialization remain separate app contracts; neither is a substitute for validation.

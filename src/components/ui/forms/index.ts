@@ -36,3 +36,5 @@ export { default as TextArea } from './TextArea';
 export * from './TextArea';
 export { default as Toggle } from './Toggle';
 export * from './Toggle';
+export { default as ToggleCard } from './ToggleCard';
+export * from './ToggleCard';

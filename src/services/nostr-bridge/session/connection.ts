@@ -8,7 +8,7 @@
  * from `client.ts`.
  */
 import { CodedError, codeOrMessage, type ActivityCode } from '@/utils/errors/codes';
-import { SESSION_IDENTITY_ID, type AuthLease, type RelayHub, type RelayStatus } from '@/lib/relay-hub';
+import { SESSION_IDENTITY_ID, type AuthLease, type RelayHub, type RelayStatus } from '@nostr-wot/relay/hub';
 import { failActivity, pushActivity, resolveActivity } from '@/services/feedback/activity-log';
 import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '@/constants/nostr-bridge/facade';
 import { pushRelayDebug } from '../relay/relay-debug';

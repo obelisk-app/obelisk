@@ -4,24 +4,31 @@ import {
   normalizeSocialRelays,
   socialRelayKey,
 } from '@/services/social/relays';
-import { normalizeRelayUrl } from '@/utils/social/relay-url';
+import { normalizePublicRelayUrl } from '@/utils/relay-url/public-relay';
 import { DEFAULT_SOCIAL_RELAYS, SOCIAL_RELAY_MAX, SOCIAL_RELAY_PRESETS, WIDER_SOCIAL_RELAYS } from '@/constants/social/relays';
 
-describe('normalizeRelayUrl', () => {
+describe('normalizePublicRelayUrl', () => {
   it('accepts a public wss relay and strips a bare trailing slash', () => {
-    expect(normalizeRelayUrl('wss://relay.example/')).toBe('wss://relay.example');
+    expect(normalizePublicRelayUrl('wss://relay.example/')).toBe('wss://relay.example');
   });
 
   it('rejects non-wss, credentialed, and non-public hosts', () => {
-    // isPublicWssUrl guards against CSP violations and LAN-pointed sockets.
-    expect(normalizeRelayUrl('ws://relay.example')).toBeNull();
-    expect(normalizeRelayUrl('https://relay.example')).toBeNull();
-    expect(normalizeRelayUrl('wss://user:pw@relay.example')).toBeNull();
-    expect(normalizeRelayUrl('wss://localhost:7777')).toBeNull();
-    expect(normalizeRelayUrl('wss://127.0.0.1')).toBeNull();
-    expect(normalizeRelayUrl('not a url')).toBeNull();
-    expect(normalizeRelayUrl(42)).toBeNull();
+    // SDK public policy rejects local destinations before opening sockets.
+    expect(normalizePublicRelayUrl('ws://relay.example')).toBeNull();
+    expect(normalizePublicRelayUrl('https://relay.example')).toBeNull();
+    expect(normalizePublicRelayUrl('wss://user:pw@relay.example')).toBeNull();
+    expect(normalizePublicRelayUrl('wss://localhost:7777')).toBeNull();
+    expect(normalizePublicRelayUrl('wss://127.0.0.1')).toBeNull();
+    expect(normalizePublicRelayUrl('not a url')).toBeNull();
+    expect(normalizePublicRelayUrl(42)).toBeNull();
   });
+  it('preserves social serialization rather than applying bridge or socket equality', () => {
+    expect(normalizePublicRelayUrl(' WSS://RELAY.example:443/Path//?b=1&a=2#x ')).toBe('wss://relay.example/Path//?b=1&a=2#x');
+    expect(normalizePublicRelayUrl('wss://relay.example/Path//')).toBe('wss://relay.example/Path/');
+    expect(normalizePublicRelayUrl('wss://[::1]')).toBeNull();
+    expect(normalizePublicRelayUrl('wss://[fe80::1]')).toBeNull();
+  });
+
 });
 
 describe('normalizeSocialRelays', () => {
@@ -111,7 +118,7 @@ describe('the shipped relay sets', () => {
 
   it('ships only urls a browser will accept', () => {
     for (const relay of [...WIDER_SOCIAL_RELAYS, ...SOCIAL_RELAY_PRESETS.map((p) => p.url)]) {
-      expect(normalizeRelayUrl(relay)).toBe(relay);
+      expect(normalizePublicRelayUrl(relay)).toBe(relay);
     }
   });
 });

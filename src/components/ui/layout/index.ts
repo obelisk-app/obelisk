@@ -28,3 +28,5 @@ export { default as PageSection } from './PageSection';
 export * from './PageSection';
 export { default as List } from './List';
 export * from './List';
+export { default as SectionHeader } from './SectionHeader';
+export * from './SectionHeader';

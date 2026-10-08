@@ -20,7 +20,7 @@
  * valid kind 22242. Prompts are counted on a NIP-07 signer spy, so a
  * signature is a prompt the user would have seen.
  *
- * This file and `tests/lib/relay-hub/auth.test.ts` are not redundant and
+ * This file and the SDK relay package's `test/hub/auth.test.ts` are not redundant and
  * neither covers the other (round 6 ruling, `RULING-hub-pool-seam.md`).
  * nostr-tools' per-socket `authPromise` collapses concurrent AUTH calls
  * before the hub's memo is consulted, so a memo re-keyed on the challenge
@@ -49,7 +49,7 @@ describe('the bridge on the RelayHub', () => {
     Object.defineProperty(window, 'nostr', { configurable: true, value: { signEvent, getPublicKey: async () => pk } });
 
     const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
-    const { getRelayHub } = await import('@/lib/relay-hub');
+    const { getRelayHub } = await import('@nostr-wot/relay/hub');
     const bridge = await getBridge();
     const login = bridge.loginWithNip07(pk);
     await settle();
@@ -108,7 +108,7 @@ describe('the bridge on the RelayHub', () => {
   it('opens one socket per relay URL under concurrent subscribes and publishes', async () => {
     const sk = generateSecretKey();
     const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
-    const { getRelayHub } = await import('@/lib/relay-hub');
+    const { getRelayHub } = await import('@nostr-wot/relay/hub');
     const bridge = await getBridge();
     const login = bridge.loginWithNsec(bytesToHex(sk), getPublicKey(sk));
     await settle();
@@ -151,7 +151,7 @@ describe('the bridge on the RelayHub', () => {
   it('re-issues every pre-drop REQ on the new socket generation from the hub\'s connected report, the active channel first', async () => {
     const sk = generateSecretKey();
     const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
-    const { getRelayHub } = await import('@/lib/relay-hub');
+    const { getRelayHub } = await import('@nostr-wot/relay/hub');
     const bridge = await getBridge();
     const login = bridge.loginWithNsec(bytesToHex(sk), getPublicKey(sk));
     await settle();
@@ -206,7 +206,7 @@ describe('the bridge on the RelayHub', () => {
     const sk = generateSecretKey();
     const me = getPublicKey(sk);
     const { getBridge, getBridgeImpl } = await import('@/services/nostr-bridge/facade/client');
-    const { getRelayHub } = await import('@/lib/relay-hub');
+    const { getRelayHub } = await import('@nostr-wot/relay/hub');
     const bridge = await getBridge();
     const login = bridge.loginWithNsec(bytesToHex(sk), me);
     await settle();

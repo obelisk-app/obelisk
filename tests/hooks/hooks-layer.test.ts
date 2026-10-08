@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
  * The owner's rule: hooks live in the hooks layer, `src/hooks/<module>/`, so
  * they can be found and reused. Component folders hold components.
  *
- * So no file under `src/components/`, `src/app/` or `src/assets/` may
+ * So no file under `src/components/`, `src/app/`, `src/assets/` or `src/i18n/` may
  *   - be a hook file (a file named `useX.ts` or `useX.tsx`), or
  *   - define a hook: a top-level `function useX`, a top-level
  *     `const useX =`, or an `export` of a name `useX` (re-exports included,
@@ -18,7 +18,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const ROOT = process.cwd();
-const GUARDED = ['src/components', 'src/app', 'src/assets'];
+const GUARDED = ['src/components', 'src/app', 'src/assets', 'src/i18n'];
 
 const HOOK_FILE = /^use[A-Z][A-Za-z0-9]*\.tsx?$/;
 const HOOK_NAME = 'use[A-Z][A-Za-z0-9_$]*';
@@ -85,11 +85,11 @@ describe('the hooks layer', () => {
     expect(sourceFiles(join(ROOT, 'src/hooks')).length).toBeGreaterThan(100);
   });
 
-  it('keeps hook files out of src/components and src/app', () => {
+  it('keeps hook files out of component folders and i18n', () => {
     expect(hookFiles).toEqual([]);
   });
 
-  it('keeps hook definitions out of src/components and src/app', () => {
+  it('keeps hook definitions out of component folders and i18n', () => {
     const offenders = [...definitions].map(([file, hooks]) => `${file}: ${hooks.join(', ')}`);
     expect(offenders).toEqual([]);
   });

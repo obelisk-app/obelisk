@@ -7,7 +7,7 @@ import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA } from '@/constants/nostr/nip-kinds
 import { cacheKindFor, findInnerDTag, parsePayload } from '@/services/read-state/sync-options';
 import { D_TAG_GROUPS } from '@/constants/read-state/sync-options';
 import * as relaySync from '@/services/read-state/relay-sync';
-import type { Rumor } from '@/lib/nip-59';
+import type { GiftWrapRumor as Rumor } from '@nostr-wot/dm';
 
 const rumor = (content: string, tags: string[][] = []): Rumor => ({ id: 'r', kind: KIND_NIP78_APP_DATA, content, tags, created_at: 1, pubkey: 'p' });
 

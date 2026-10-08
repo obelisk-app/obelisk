@@ -7,7 +7,7 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useGroups, useIsLoggedIn, useLoadEarlier, useMyPubkey, useNipSigner, useUserMetadata } from '@/services/nostr-bridge';
 import { getBridgeImpl } from '@/services/nostr-bridge/facade/client';
-import type { NipSigner } from '@/lib/nip-59';
+import type { NipSigner } from '@/constants/nostr/nip-signer';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { groupFixture, userMetadataFixture } from '@tests/support/mocks/nostr-bridge';

@@ -27,11 +27,10 @@ describe('isImportableRelayUrl', () => {
     expect(isImportableRelayUrl('wss://172.32.0.1')).toBe(true);
   });
 
-  it('currently lets IPv6 link-local through: URL.hostname keeps the brackets, so startsWith("fe80:") never matches', () => {
-    // Pinned as-is during the extraction (behaviour-preserving). The fix is
-    // to strip the brackets before the fe80 check; see the round 4 report.
-    expect(new URL('wss://[fe80::1]').hostname).toBe('[fe80::1]');
-    expect(isImportableRelayUrl('wss://[fe80::1]')).toBe(true);
+  it('rejects bracketed IPv6 private hosts and embedded credentials', () => {
+    for (const relay of ['wss://[fe80::1]', 'wss://[fc00::1]', 'wss://[::ffff:127.0.0.1]', 'wss://user:pw@relay.example']) {
+      expect(isImportableRelayUrl(relay)).toBe(false);
+    }
   });
 });
 

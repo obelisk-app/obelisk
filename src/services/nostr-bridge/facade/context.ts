@@ -8,7 +8,7 @@
  * follows login and logout.
  */
 import type { Event as NostrEvent, EventTemplate, Filter, VerifiedEvent } from 'nostr-tools';
-import type { QueryCacheMode, SubPriority } from '@/lib/relay-hub';
+import type { QueryCacheMode, SubPriority } from '@nostr-wot/relay/hub';
 import type { StateStore } from '../common/state-store';
 import type { PersistedSession } from '../session/session-storage';
 import type { JsDirectMessage, JsGroup, JsMessage, RelayAccessState } from '../common/types';
@@ -48,7 +48,7 @@ export interface WatchedSubOptions {
 /** The NIP-42 signer the session installs on its sockets. */
 /**
  * How a one-shot read uses the hub's result cache (60 s for a complete
- * answer, 10 s for an uncertain one; see `lib/relay-hub/query.ts`).
+ * answer, 10 s for an uncertain one; see the SDK relay package's `src/hub/query.ts`).
  * `'cached-ok'` (the default) serves an unexpired result; `'fresh'` goes to
  * the wire and refreshes the cache; `'bypass'` goes to the wire and leaves
  * the cache alone.
@@ -110,7 +110,7 @@ export interface BridgeContext {
   ): Promise<{ events: NostrEvent[]; complete: boolean }>;
   /**
    * Several `{kinds, authors, limit}` reads as one REQ through the hub's
-   * author batching (`lib/relay-hub/batch.ts`), handed back per filter.
+   * author batching (the SDK relay package's `src/hub/batch.ts`), handed back per filter.
    * Same cache rules as {@link queryRelaysWithConfidence}.
    */
   queryAuthorsWithConfidence(

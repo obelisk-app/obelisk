@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { NwcBudget } from '@/lib/nwc';
+import type { NwcBudget } from '@nostr-wot/wallet/nwc';
 
 /**
  * What the UI may know about the connected Nostr Wallet Connect wallet:

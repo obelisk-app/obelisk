@@ -7,7 +7,7 @@
  * is a refcount on its filter. Pure move from `client.ts`.
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { queryAuthorsBatched, type RelayHub } from '@/lib/relay-hub';
+import { queryAuthorsBatched, type RelayHub } from '@nostr-wot/relay/hub';
 import type { WatchHold, WatchStreamCallbacks } from '../relay/background-watch';
 import type { QueryOpts, TrackedSub, WatchedSubOptions } from '../facade/context';
 import { uniqueRelayUrls } from '../relay/relay-list';

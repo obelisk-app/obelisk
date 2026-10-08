@@ -1,3 +1,4 @@
+import { parseRelayUrl } from '@nostr-wot/relay';
 /**
  * DM call control messages: what rides inside a gift-wrapped
  * `KIND_DM_CALL_RUMOR` rumor.
@@ -43,13 +44,7 @@ const HEX64 = /^[0-9a-f]{64}$/;
 const TYPES = new Set<DmCallMessageType>(['invite', 'accept', 'decline', 'cancel', 'hangup', 'busy']);
 
 function isRelayUrl(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
-  try {
-    const u = new URL(value);
-    return (u.protocol === 'wss:' || u.protocol === 'ws:') && !u.username && !u.password;
-  } catch {
-    return false;
-  }
+  return parseRelayUrl(value, { policy: 'ws' }) !== null;
 }
 
 export function encodeDmCallMessage(msg: DmCallMessage): string {

@@ -6,7 +6,7 @@ import type { JsGroup } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import SearchBar from '../../search/SearchBar';
 import { CopyInviteLinkButton } from './CopyInviteLinkButton';
-import Button from '@/components/ui/buttons/Button';
+import IconButton from '@/components/ui/buttons/IconButton';
 import { GearIcon, UsersIcon } from '@/assets/icons';
 
 type Props = {
@@ -41,30 +41,26 @@ export function ChannelHeader({ groupId, group, isAdmin, showMembers, onToggleMe
       </div>
       <Row gap="2" align="center">
         {isAdmin && (
-          <Button
-            variant="ghost"
-            size="icon-md"
+          <IconButton
+            size="9"
+            shape="square"
             onClick={onOpenSettings}
-            className="rounded-md"
             title={t('shell.desktop.channel.settings')}
             aria-label={t('shell.desktop.channel.settings')}
           >
             <GearIcon size={20} strokeWidth={2} />
-          </Button>
+          </IconButton>
         )}
-        {/* Pressed is green at rest and on hover; `aria-pressed:` variants
-            sort after the ghost colours, so they win without a conflict. */}
-        <Button
-          variant="ghost"
-          size="icon-md"
+        <IconButton
+          size="9"
+          shape="square"
           onClick={onToggleMembers}
-          className="rounded-md aria-pressed:text-lc-green aria-pressed:hover:text-lc-green"
           title={showMembers ? t('shell.desktop.channel.hideMembers') : t('shell.desktop.channel.showMembers')}
           aria-label={showMembers ? t('shell.desktop.channel.hideMembers') : t('shell.desktop.channel.showMembers')}
           aria-pressed={showMembers}
         >
           <UsersIcon size={20} strokeWidth={2} />
-        </Button>
+        </IconButton>
         <CopyInviteLinkButton groupId={groupId} />
         <SearchBar
           serverName={group?.name ?? t('common.channel')}

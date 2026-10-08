@@ -1,5 +1,6 @@
+import { isOffer } from '@/utils/voice/signal-payload';
 import { describe, expect, it } from 'vitest';
-import { OfferGate, isOffer, sessionId } from '@/services/call/session-config';
+import { OfferGate, sessionId } from '@/services/call/session-config';
 import type { VoiceSignalPayload } from '@/services/voice/types';
 
 const offer = (session: string) => ({ type: 'offer', sessionId: session }) as unknown as VoiceSignalPayload;

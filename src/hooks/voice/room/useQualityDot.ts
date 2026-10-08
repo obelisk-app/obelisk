@@ -1,5 +1,5 @@
 import { useTranslations } from 'next-intl';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import { useVoiceStore } from '@/store/voice';
 import { qualityColor, type QualitySample } from '@/services/voice/stats';
 

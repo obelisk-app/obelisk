@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scanFile } from '@/i18n/hardcoded-strings';
+import { scanFile } from '../../../scripts/i18n/hardcoded-strings';
 
 /**
  * JSX text the line regex never saw. Every case here passed the old

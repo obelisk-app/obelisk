@@ -8,7 +8,7 @@
  * imports the one copy.
  */
 
-import { SESSION_IDENTITY_ID, type Identity } from '@/lib/relay-hub';
+import { SESSION_IDENTITY_ID, type Identity } from '@nostr-wot/relay/hub';
 
 export const BUNKER_AUTH_SIGNATURE_TIMEOUT_MS = 45_000;
 

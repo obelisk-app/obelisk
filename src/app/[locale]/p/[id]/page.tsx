@@ -1,3 +1,4 @@
+import { topHashtags } from '@nostr-wot/data';
 /**
  * Public profile viewer - `/p/<npub|nprofile|hex>`.
  *
@@ -31,7 +32,6 @@ import {
   fetchAuthorNotes,
   fetchAuthorRelays,
   fetchProfilesForViewer,
-  topHashtags,
 } from '@/services/server/viewer/nostr-fetch';
 import ViewerHeader from '@/components/social/viewer/ViewerHeader';
 import AuthorDetails from '@/components/social/viewer/AuthorDetails';

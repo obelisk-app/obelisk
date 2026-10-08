@@ -63,6 +63,12 @@ describe('safeRelayHints', () => {
       'wss://169.254.1.1',
       'wss://thing.local',
       'wss://abc.onion',
+      'wss://sub.localhost',
+      'wss://host.docker.internal',
+      'wss://[::1]',
+      'wss://[fe80::1]',
+      'wss://[::ffff:127.0.0.1]',
+      'wss://user:pw@relay.example',
       'garbage',
     ])).toEqual([]);
   });

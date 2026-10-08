@@ -20,7 +20,7 @@
  * wire in the clear.
  */
 
-import { FILE_CIPHER_ALGORITHM } from '@/lib/crypto/file-cipher';
+import { FILE_CIPHER_ALGORITHM } from '@nostr-wot/dm';
 
 export interface JsDmFile {
   readonly url: string;

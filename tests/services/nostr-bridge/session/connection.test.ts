@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SESSION_IDENTITY_ID, type RelayStatus } from '@/lib/relay-hub';
+import { SESSION_IDENTITY_ID, type RelayStatus } from '@nostr-wot/relay/hub';
 import { ConnectionModule, type ConnectionDeps } from '@/services/nostr-bridge/session/connection';
 import { BrowserConnectionEvents } from '@/services/nostr-bridge/session/browser-events';
 import { openSessionSubscriptions, type FanoutTargets } from '@/services/nostr-bridge/session/fanout';

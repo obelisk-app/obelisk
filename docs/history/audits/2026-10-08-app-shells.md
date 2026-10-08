@@ -27,3 +27,9 @@ Keep separate desktop panes and phone screen-stack layouts behind one applicatio
 Targeted tests cover responsive call lifetime, idle lazy imports, history handoff, Back/sentinel behavior, tab retention, swipe exposure, loading dismissal, shared form mutations and identity fallback/verification. Structural guards protect component ownership and eager dependency boundaries. Production bundle sizes and live browser performance were not measured in this development pass; source import graphs are not compressed bundle measurements.
 
 Desktop reader stacks and open article/profile panes remain local to the desktop shell. Those transient panels do not transfer across the viewport breakpoint. Phone-only destinations retain their state while desktop displays an available parent, until a new desktop selection replaces them. These are explicit limits of the current adapters, not a claim that every pane state has been unified.
+
+## Follow-up findings
+
+The follow-up removed route-owned copies of generic fields, headers and toggle cards, standardized action buttons on shared variants, and moved formatting hooks and development-only i18n scanners into their proper layers. The completed hardcoded-copy migration no longer needs a baseline or a command that regenerates one; the regression check requires zero findings.
+
+Reusable relay, NWC, event, identity, gift-wrap and attachment helpers now belong to the SDK packages documented in [SDK development and releases](../../operations/nostr-wot-sdk.md). Obelisk retains application adapters, state and persisted storage policy. Native login customization replaces the obsolete injected signer button and markup observer.

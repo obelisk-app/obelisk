@@ -11,7 +11,7 @@
  * and remembers which sockets already refused us after AUTH.
  */
 import type { Event as NostrEvent } from 'nostr-tools';
-import { AUTH_UNAVAILABLE, BoundedMap, type RelayHub } from '@/lib/relay-hub';
+import { AUTH_UNAVAILABLE, BoundedMap, type RelayHub } from '@nostr-wot/relay/hub';
 import { pushRelayDebug } from '../relay/relay-debug';
 import { publishRound } from './publish-round';
 

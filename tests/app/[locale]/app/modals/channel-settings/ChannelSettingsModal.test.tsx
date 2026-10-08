@@ -30,7 +30,8 @@ describe('ChannelSettingsModal', () => {
   it('names the channel in its title and seeds the name field', () => {
     mount();
     expect(screen.getByText('Channel settings · #general')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('general')).toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toHaveValue('general');
+    expect(screen.getByLabelText('Description')).toBeInTheDocument();
   });
 
   it('closes from the header close button', () => {

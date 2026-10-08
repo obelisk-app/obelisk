@@ -11,7 +11,7 @@
  * the rest of the afternoon. Before this the two maps grew by one entry per
  * pubkey ever messaged and never expired an entry on their own.
  */
-import { BoundedMap } from '@/lib/relay-hub';
+import { BoundedMap } from '@nostr-wot/relay/hub';
 import {
   RELAY_LIST_CACHE_MAX,
   RELAY_LIST_TTL_MS,

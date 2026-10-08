@@ -16,7 +16,7 @@ vi.mock('@/services/wallet/send-zap', async (importOriginal) => {
 });
 
 import { useSendZap } from '@/hooks/chat/zaps/useSendZap';
-import { NwcError } from '@/lib/nwc';
+import { NwcError } from '@nostr-wot/wallet/nwc';
 import { useToastStore } from '@/store/feedback/toast';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';

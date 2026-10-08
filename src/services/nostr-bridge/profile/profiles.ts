@@ -26,7 +26,7 @@
  */
 import type { Event as NostrEvent } from 'nostr-tools';
 import { KIND_METADATA } from '@/constants/nostr/nip-kinds';
-import { BoundedMap, ProfileCache, type VisibilitySource } from '@/lib/relay-hub';
+import { BoundedMap, ProfileCache, type VisibilitySource } from '@nostr-wot/relay/hub';
 import { wotEngine } from '@/services/wot/engine';
 import { cacheGet, cacheSet } from '../cache/cache';
 import type { BridgeContext } from '../facade/context';

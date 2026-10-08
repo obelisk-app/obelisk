@@ -6,7 +6,7 @@
  * entry points, signing and the probes the bridge tests read.
  */
 import { type Filter, type Event as NostrEvent, type EventTemplate, type VerifiedEvent } from 'nostr-tools';
-import type { NipSigner } from '@/lib/nip-59';
+import type { NipSigner } from '@/constants/nostr/nip-signer';
 import { type SignerLane } from '../session/signer-queue';
 import type { MessagesStatus, RelayAccessState } from '../common/types';
 import { type PersistedSession } from '../session/session-storage';

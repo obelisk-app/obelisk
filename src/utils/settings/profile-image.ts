@@ -1,15 +1,3 @@
-
-import { MAX_IMAGE_BYTES } from '@/constants/settings/profile-image';
-
-export type ProfileImageProblem = 'not-image' | 'too-large';
-
-/** Why a picked file cannot be a profile picture or banner, or null when it can. */
-export function validateImage(file: File): ProfileImageProblem | null {
-  if (!file.type.startsWith('image/')) return 'not-image';
-  if (file.size > MAX_IMAGE_BYTES) return 'too-large';
-  return null;
-}
-
 export type ProfileImageTarget = 'picture' | 'banner';
 
 export type ProfileAppearanceValue = {

@@ -20,7 +20,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { stripComments } from '@/i18n/hardcoded/strip';
+import { stripComments } from '../../../scripts/i18n/hardcoded/strip';
 import { LOCAL_DATA, type LocalDataEntry } from '@/services/local-data';
 
 const SRC = join(process.cwd(), 'src');

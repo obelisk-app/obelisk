@@ -7,7 +7,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import type { EventTemplate, VerifiedEvent } from 'nostr-tools';
-import { FakeRelayFactory, SESSION_IDENTITY_ID, getRelayHub, resetRelayHubForTests } from '@/lib/relay-hub';
+import { FakeRelayFactory, SESSION_IDENTITY_ID, getRelayHub, resetRelayHubForTests } from '@nostr-wot/relay/hub';
 import { connectNwcWallet, ensureNwcWalletLoaded, nwcPayerFor } from '@/services/wallet/nwc-wallet';
 import { FakeNwcWallet, type FakeWalletOptions } from '@tests/support/fake-nwc-wallet';
 

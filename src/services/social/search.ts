@@ -21,6 +21,7 @@
  * side.
  */
 
+import { dedupeEventsNewestFirst } from '@nostr-wot/data';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { KIND_LONG_FORM, KIND_TEXT_NOTE } from '@/constants/nostr/nip-kinds';
 import { querySocial, socialRelays } from './pool';
@@ -93,11 +94,6 @@ export function noteMatchesQuery(note: Pick<NostrEvent, 'content' | 'tags'>, que
   return terms.every((term) => haystack.includes(term));
 }
 
-function newestFirst(events: readonly NostrEvent[]): NostrEvent[] {
-  const byId = new Map<string, NostrEvent>();
-  for (const event of events) byId.set(event.id, event);
-  return [...byId.values()].sort((a, b) => b.created_at - a.created_at);
-}
 
 /**
  * Full-text note search.
@@ -119,7 +115,7 @@ export async function searchNotes(
   );
 
   // Re-check every hit: see the module header.
-  return newestFirst(events.filter((event) => noteMatchesQuery(event, query))).slice(0, limit);
+  return dedupeEventsNewestFirst(events.filter((event) => noteMatchesQuery(event, query))).slice(0, limit);
 }
 
 /**
@@ -143,26 +139,7 @@ export async function searchHashtag(
 
   // Relays can over-deliver on tag filters too, and the shared coalescer
   // fans other consumers' events into this handle regardless.
-  return newestFirst(events.filter((event) =>
+  return dedupeEventsNewestFirst(events.filter((event) =>
     event.tags.some((t) => t[0] === 't' && t[1]?.toLowerCase() === clean),
   )).slice(0, limit);
-}
-
-/** Hashtags seen in a set of results, most frequent first. */
-export function relatedHashtags(notes: readonly NostrEvent[], limit = 8): string[] {
-  const counts = new Map<string, number>();
-  for (const note of notes) {
-    const seen = new Set<string>();
-    for (const tag of note.tags) {
-      if (tag[0] !== 't' || !tag[1]) continue;
-      const value = tag[1].toLowerCase();
-      if (seen.has(value)) continue;
-      seen.add(value);
-      counts.set(value, (counts.get(value) ?? 0) + 1);
-    }
-  }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, limit)
-    .map(([tag]) => tag);
 }

@@ -3,7 +3,7 @@
 import List from '@/components/ui/layout/List';
 import { type MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import { useTranslations } from 'next-intl';
-import { useFormat } from '@/i18n/useFormat';
+import { useFormat } from '@/hooks/common/useFormat';
 import { useZapperHoverCard } from '@/hooks/shell/panes/message/useZapperHoverCard';
 import { HoverCardShell } from './HoverCardShell';
 import UserName from '@/components/identity/UserName';

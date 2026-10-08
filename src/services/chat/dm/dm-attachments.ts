@@ -5,7 +5,7 @@
  *
  *   1. Check the mime / size against the same allowlist and caps the group
  *      composer uses (`src/utils/attachments/attachments.ts`).
- *   2. AES-256-GCM encrypt in the browser (`src/lib/crypto/file-cipher.ts`).
+ *   2. AES-256-GCM encrypt in the browser (`@nostr-wot/dm`).
  *   3. Upload only the ciphertext to Blossom, signed by a throwaway key
  *      (`uploadEncryptedBlob`), so the server learns neither the content nor
  *      who stored it.
@@ -15,7 +15,7 @@
  * The plaintext never leaves this tab except inside the gift wrap's key.
  */
 
-import { encryptFile, FILE_CIPHER_ALGORITHM } from '@/lib/crypto/file-cipher';
+import { encryptFile, FILE_CIPHER_ALGORITHM } from '@nostr-wot/dm';
 import { uploadEncryptedBlob } from '@/services/media/blossom';
 import { isAllowedMime, isImageMime, maxBytesFor } from '@/utils/attachments/attachments';
 import type { JsDmFile } from '@/utils/attachments/dm-file';
