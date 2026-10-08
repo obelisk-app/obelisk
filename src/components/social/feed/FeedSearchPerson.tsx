@@ -4,17 +4,12 @@ import Text from '@/components/ui/layout/Text';
 
 import Button from '@/components/ui/buttons/Button';
 import type { UserHit } from '@/constants/identity/user-search';
-import { useAuthor } from '@/hooks/social/profile/useAuthor';
-import { shortNpubLabel } from '@/utils/identity/short-npub';
+import { useIdentitySearchResult } from '@/hooks/identity/useIdentitySearchResult';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 
 /** A person in the search results: avatar, name and NIP-05; opens their profile. */
 export default function FeedSearchPerson({ hit, onOpen }: { hit: UserHit; onOpen: (pubkey: string) => void }) {
-  // Merge with our own resolver: NIP-50 hits often carry no picture, and the
-  // cached profile usually does.
-  const author = useAuthor(hit.pubkey);
-  const name = author.displayName || author.name || hit.displayName || shortNpubLabel(hit.pubkey);
-  const nip05 = author.nip05 || hit.nip05;
+  const row = useIdentitySearchResult(hit);
 
   return (
     <Button
@@ -26,14 +21,14 @@ export default function FeedSearchPerson({ hit, onOpen }: { hit: UserHit; onOpen
     >
       <UserAvatar
         pubkey={hit.pubkey}
-        picture={author.picture ?? hit.picture}
+        picture={row.picture}
         size={9}
-        name={name}
+        name={row.name}
         alt=""
       />
       <span className="min-w-0 flex-1">
-        <Text size="sm" weight="semibold" tone="default" truncate="truncate" className="block">{name}</Text>
-        {nip05 && <span className="block truncate text-[11px] text-lc-green">{nip05}</span>}
+        <Text size="sm" weight="semibold" tone="default" truncate="truncate" className="block">{row.name}</Text>
+        <Text tone={row.verified ? 'accent' : 'muted'} size="11" className="block truncate" data-nip05-state={row.nip05State}>{row.sub}</Text>
       </span>
     </Button>
   );

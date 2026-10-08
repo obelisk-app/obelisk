@@ -3,13 +3,13 @@
 import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import type { UserHit } from '@/constants/identity/user-search';
-import { useComposeDmResultRow } from '@/hooks/shell/dm/useComposeDmResultRow';
+import { useIdentitySearchResult } from '@/hooks/identity/useIdentitySearchResult';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import { CheckBadgeIcon } from '@/assets/icons';
 
 /** One person in the desktop "New message" results. */
 export function ComposeDmResultRow({ hit, active, onPick, onHover }: { hit: UserHit; active: boolean; onPick: () => void; onHover: () => void }) {
-  const row = useComposeDmResultRow(hit);
+  const row = useIdentitySearchResult(hit);
   return (
     <Button
       variant="bare"

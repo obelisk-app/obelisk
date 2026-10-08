@@ -2,7 +2,7 @@
 
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
-import { useSuggestedRelayItem } from '@/hooks/shell/mobile/sheets/relay/useSuggestedRelayItem';
+import { useSuggestedRelayItem } from '@/hooks/relay/rail/useSuggestedRelayItem';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 

@@ -2,18 +2,18 @@
 
 import List from '@/components/ui/layout/List';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
-import { useAddRelayModal } from '@/hooks/shell/rail/useAddRelayModal';
+import { useAddRelay } from '@/hooks/relay/rail/useAddRelay';
 import Modal from '@/components/ui/overlays/Modal';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import { useTranslations } from 'next-intl';
 import { AddRelayTabButton } from './AddRelayTabButton';
-import { CustomRelayForm } from './CustomRelayForm';
+import { CustomRelayForm } from '@/components/relay/CustomRelayForm';
 import { SuggestedRelayItem } from './SuggestedRelayItem';
 
 /** Add a relay to the rail: pick a suggested one, or type a URL. */
 export function AddRelayModal({ onClose }: { onClose: () => void }) {
   const t = useTranslations();
-  const vm = useAddRelayModal();
+  const vm = useAddRelay();
 
   return (
     <Modal
@@ -23,10 +23,10 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
       <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} />
 
       <div className="flex shrink-0 border-b border-lc-border px-5">
-        <AddRelayTabButton active={vm.tab === 'suggested'} onClick={vm.showSuggested}>
+        <AddRelayTabButton active={vm.tab === 'suggested'} onClick={() => vm.setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}
         </AddRelayTabButton>
-        <AddRelayTabButton active={vm.tab === 'custom'} onClick={vm.showCustom}>
+        <AddRelayTabButton active={vm.tab === 'custom'} onClick={() => vm.setTab('custom')}>
           {t('shell.rail.addModal.custom')}
         </AddRelayTabButton>
       </div>
@@ -38,7 +38,7 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
               <SuggestedRelayItem
                 key={r.url}
                 url={r.url}
-                alreadyAdded={vm.isAdded(r.url)}
+                alreadyAdded={vm.isConfigured(r.url)}
                 onAdded={onClose}
               />
             ))}

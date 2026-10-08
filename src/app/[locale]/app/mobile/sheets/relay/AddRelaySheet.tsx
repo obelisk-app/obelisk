@@ -3,17 +3,17 @@
 import Button from '@/components/ui/buttons/Button';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
 import { useTranslations } from 'next-intl';
-import { useAddRelaySheet } from '@/hooks/shell/mobile/sheets/relay/useAddRelaySheet';
+import { useAddRelay } from '@/hooks/relay/rail/useAddRelay';
 import Sheet from '@/components/ui/overlays/Sheet';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
 import { SuggestedRelayItem } from './SuggestedRelayItem';
-import { CustomRelayForm } from './CustomRelayForm';
+import { CustomRelayForm } from '@/components/relay/CustomRelayForm';
 import { PlusIcon } from '@/assets/icons';
 
 export function AddRelaySheet({ close }: { close: () => void }) {
   const t = useTranslations();
-  const { tab, setTab, isConfigured } = useAddRelaySheet();
+  const { tab, setTab, isConfigured } = useAddRelay();
 
   return (
     <Sheet onClose={close} screen="add-relay" label={t('mobile.rail.addTitle')} maxHeight="88%">
@@ -40,7 +40,7 @@ export function AddRelaySheet({ close }: { close: () => void }) {
             />
           ))
         ) : (
-          <CustomRelayForm onAdded={close} />
+          <CustomRelayForm presentation="sheet" onAdded={close} />
         )}
       </div>
       <SheetActions onCancel={close} dismiss="close" />
