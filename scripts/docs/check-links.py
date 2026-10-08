@@ -124,11 +124,13 @@ def main():
     for path in tracked_files():
         if not path.is_file():
             continue
+        relative = path.relative_to(ROOT)
+        if STALE.search(relative.as_posix()):
+            failures.append(f"{relative}: file remains at a retired documentation location")
         try:
             text = path.read_text()
         except (UnicodeDecodeError, OSError):
             continue
-        relative = path.relative_to(ROOT)
         if path != Path(__file__).resolve():
             for number, line in enumerate(text.splitlines(), 1):
                 for match in STALE.finditer(line):
