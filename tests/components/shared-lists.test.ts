@@ -3,10 +3,10 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import { buildImportGraph } from '@tests/support/import-graph';
 
-describe('shared component lists', () => {
+describe('shared UI lists', () => {
   it('uses List for list markup, including prose and menu adapters', () => {
     const lists: string[] = [];
-    for (const file of buildImportGraph().files.filter((file) => file.startsWith('src/components/'))) {
+    for (const file of buildImportGraph().files.filter((file) => file.startsWith('src/components/') || file.startsWith('src/app/'))) {
       const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
       const visit = (node: ts.Node) => {
         if ((ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) && ts.isIdentifier(node.tagName) && ['ul', 'ol'].includes(node.tagName.text)) {
