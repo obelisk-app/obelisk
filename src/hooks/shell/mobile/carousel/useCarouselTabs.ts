@@ -103,7 +103,7 @@ export function useCarouselTabs({
       setSlideDir(null);
       if (typeof window !== 'undefined') {
         try {
-          window.history.replaceState({ nav: bare }, '', urlFor(bare, relayRef.current));
+          window.history.replaceState({ ...window.history.state, nav: bare, phoneHistory: true }, '', urlFor(bare, relayRef.current));
         } catch { /* ignore */ }
       }
       // Clear the inline transform on the (now unmounting) overlay so a

@@ -154,6 +154,7 @@ describe('useScreenCarousel: tab presses', () => {
 
   it('tapping the tab a sub-screen belongs to pops to the bare tab by replacing history', () => {
     const sub: NavState = { ...initialNav, screen: 'channel', groupId: 'g1', parentScreen: 'server' };
+    window.history.replaceState({ nav: sub, phoneHistory: true, custom: 'preserved' }, '', '/es/app?c=g1');
     const h = harness(sub);
     const replaceState = vi.spyOn(window.history, 'replaceState');
     act(() => { h.result.current.onTabPress('server'); });
@@ -164,7 +165,7 @@ describe('useScreenCarousel: tab presses', () => {
     expect(h.navRef.current).toEqual(bare);
     // replaceState, not pushState: back from the bare tab must lead to
     // whatever preceded the sub-screen, not back into it.
-    expect(replaceState).toHaveBeenCalledWith({ nav: bare }, '', urlFor(bare, 'wss://relay.test'));
+    expect(replaceState).toHaveBeenCalledWith({ nav: bare, phoneHistory: true, custom: 'preserved' }, '', urlFor(bare, 'wss://relay.test'));
     expect(h.pushNav).not.toHaveBeenCalled();
     expect(useChatStore.getState().activeChannelId).toBeNull();
     replaceState.mockRestore();
