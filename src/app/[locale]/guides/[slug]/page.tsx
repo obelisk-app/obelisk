@@ -12,7 +12,6 @@ import JsonLd from '@/components/seo/JsonLd';
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { LOCALES } from '@/i18n';
-import IntlScope from '@/i18n/IntlScope';
 import { listSlugs, estimateReadMinutes } from '@/services/guides/guides';
 import { cachedGuide } from '@/services/guides/cached-guides';
 import { guideMetadata, guideJsonLd } from '@/utils/seo/guide';
@@ -55,33 +54,31 @@ export default async function Page({ params }: Params) {
   });
 
   return (
-    <IntlScope scope="guides">
-      <div className="min-h-screen bg-lc-black lc-grid-bg">
-        <Navbar />
-        {jsonLd.map((data, i) => <JsonLd key={i} data={data} />)}
-        <ArticleShell
-          frontmatter={fm}
-          locale={locale}
-          slug={slug}
-          readMinutes={readMinutes}
-          backHref={guidePath()}
-          backLabel={t('guides.article.back')}
-          readTimeLabel={t('guides.article.readTime')}
-          updatedLabel={t('guides.article.updated')}
-        >
-          <MDXRemote
-            source={guide.content}
-            components={{
-              ...mdxComponents,
-              RelatedGuides: (props: { items: Array<{ slug: string; note?: string }> }) => (
-                <RelatedGuides locale={locale} {...props} />
-              ),
-            }}
-            options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
-          />
-        </ArticleShell>
-        <Footer />
-      </div>
-    </IntlScope>
+    <div className="min-h-screen bg-lc-black lc-grid-bg">
+      <Navbar />
+      {jsonLd.map((data, i) => <JsonLd key={i} data={data} />)}
+      <ArticleShell
+        frontmatter={fm}
+        locale={locale}
+        slug={slug}
+        readMinutes={readMinutes}
+        backHref={guidePath()}
+        backLabel={t('guides.article.back')}
+        readTimeLabel={t('guides.article.readTime')}
+        updatedLabel={t('guides.article.updated')}
+      >
+        <MDXRemote
+          source={guide.content}
+          components={{
+            ...mdxComponents,
+            RelatedGuides: (props: { items: Array<{ slug: string; note?: string }> }) => (
+              <RelatedGuides locale={locale} {...props} />
+            ),
+          }}
+          options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+        />
+      </ArticleShell>
+      <Footer />
+    </div>
   );
 }

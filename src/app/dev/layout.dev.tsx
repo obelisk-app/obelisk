@@ -11,7 +11,7 @@ export default function DevLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-lc-black text-lc-white antialiased">
-        <IntlScope scope="app">{children}</IntlScope>
+        <IntlScope scope="app" standalone>{children}</IntlScope>
       </body>
     </html>
   );

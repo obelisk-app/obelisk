@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { MODULES, SCOPES, type Module, type Scope } from '@/i18n/modules';
+import { MODULES, SCOPES, scopeMessages, type Module, type Scope } from '@/i18n/modules';
 import { buildImportGraph } from '@tests/support/import-graph';
 
 /**
@@ -12,8 +12,8 @@ import { buildImportGraph } from '@tests/support/import-graph';
  * in that language.
  *
  * So: for every route file under `src/app/[locale]`, find the nearest scope
- * (declared in the file itself or in a layout above it), walk every module
- * the file can load (static and dynamic imports), and require each message
+ * (declared in the file itself or in a layout above it), walk client boundaries and every module
+ * those clients can load (static and dynamic imports), and require each message
  * module those files name to be in the scope. `seo` is exempt: it is read
  * on the server through `getTranslations` and never shipped.
  */
@@ -55,21 +55,29 @@ function modulesNamedIn(file: string): Set<Module> {
   return out;
 }
 
+function messageAt(tree: unknown, path: string): unknown {
+  return path.split('.').reduce<unknown>((value, key) => value && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined, tree);
+}
+
 describe('route message scopes', () => {
   const graph = buildImportGraph();
 
   function reachable(entry: string): string[] {
-    const seen = new Set<string>([entry]);
-    const queue = [entry];
+    const seen = new Set<string>();
+    const clients = new Set<string>();
+    const queue: Array<[string, boolean]> = [[entry, false]];
     while (queue.length) {
-      const f = queue.pop()!;
+      const [f, inheritedClient] = queue.pop()!;
+      const client = inheritedClient || /^['"]use client['"];?/m.test(readFileSync(f, 'utf8'));
+      const key = `${f}:${client}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (client) clients.add(f);
       for (const next of [...(graph.staticEdges.get(f) ?? []), ...(graph.dynamicEdges.get(f) ?? [])]) {
-        if (!graph.staticEdges.has(next) || seen.has(next)) continue;
-        seen.add(next);
-        queue.push(next);
+        if (graph.staticEdges.has(next)) queue.push([next, client]);
       }
     }
-    return [...seen];
+    return [...clients];
   }
 
   const routes = files(LOCALE_ROOT).filter((f) => ROUTE_FILE.test(f));
@@ -93,6 +101,39 @@ describe('route message scopes', () => {
       }
     }
     expect([...new Set(problems)]).toEqual([]);
+  });
+
+  it('ships every literal client message subtree used by each route', () => {
+    const messages = Object.fromEntries(MODULES.map((module) => [module, JSON.parse(readFileSync(`src/i18n/messages/en/${module}.json`, 'utf8'))]));
+    const problems: string[] = [];
+    for (const route of routes) {
+      const scope = scopeOf(route);
+      if (!scope) continue;
+      const selected = scopeMessages(messages, scope);
+      for (const file of reachable(route).filter((f) => !f.startsWith('src/i18n/'))) {
+        for (const match of readFileSync(file, 'utf8').matchAll(MODULE_KEY)) {
+          const path = match[0].slice(1, -1).split('${')[0].replace(/\.$/, '');
+          if (!path.startsWith('seo.') && messageAt(messages, path) !== undefined && messageAt(selected, path) === undefined) {
+            problems.push(`${route} (${scope}) reaches ${file}, which reads "${path}"`);
+          }
+        }
+      }
+    }
+    expect([...new Set(problems)]).toEqual([]);
+  });
+
+  it('declares each scope only once along a route ancestry', () => {
+    for (const route of routes) {
+      const declared = readFileSync(route, 'utf8').match(SCOPE_DECL)?.[1];
+      if (!declared) continue;
+      for (let dir = dirname(route); dir.startsWith(LOCALE_ROOT); dir = dirname(dir)) {
+        const layout = join(dir, 'layout.tsx');
+        if (layout === route) continue;
+        let source = '';
+        try { source = readFileSync(layout, 'utf8'); } catch { continue; }
+        expect(source.match(SCOPE_DECL)?.[1], route).not.toBe(declared);
+      }
+    }
   });
 
   it('keeps the chat and app modules off the landing page', () => {

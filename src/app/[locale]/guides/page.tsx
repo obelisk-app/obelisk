@@ -12,7 +12,6 @@ import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
-import IntlScope from '@/i18n/IntlScope';
 import { standardPageMetadata } from '@/utils/seo/standard';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -40,40 +39,38 @@ export default async function Page() {
   });
 
   return (
-    <IntlScope scope="guides">
-      <div className="min-h-screen bg-lc-black lc-grid-bg">
-        <Navbar />
-        <JsonLd data={collection} />
-        <JsonLd data={breadcrumb} />
+    <div className="min-h-screen bg-lc-black lc-grid-bg">
+      <Navbar />
+      <JsonLd data={collection} />
+      <JsonLd data={breadcrumb} />
 
-        <Container width="6xl" as="main" className="px-6 pt-28 pb-24">
-          <div className="mb-10">
-            <Link
-              href="/"
-              className="inline-flex items-center text-sm font-medium text-lc-green hover:text-lc-green-dark transition-colors"
-            >
-              {t('guides.index.backHome')}
-            </Link>
-            <div className="mt-4">
-              <Heading as="h1" variant="page">
-                {t('guides.index.heading')}
-              </Heading>
-              <Text as="p" variant="lead" className="mt-3 max-w-2xl">{t('guides.index.subtitle')}</Text>
-            </div>
+      <Container width="6xl" as="main" className="px-6 pt-28 pb-24">
+        <div className="mb-10">
+          <Link
+            href="/"
+            className="inline-flex items-center text-sm font-medium text-lc-green hover:text-lc-green-dark transition-colors"
+          >
+            {t('guides.index.backHome')}
+          </Link>
+          <div className="mt-4">
+            <Heading as="h1" variant="page">
+              {t('guides.index.heading')}
+            </Heading>
+            <Text as="p" variant="lead" className="mt-3 max-w-2xl">{t('guides.index.subtitle')}</Text>
           </div>
+        </div>
 
-          {guides.length === 0 ? (
-            <Text as="p" tone="muted">{t('guides.index.empty')}</Text>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2">
-              {guides.map((g) => (
-                <GuideCard key={g.slug} slug={g.slug} frontmatter={g.frontmatter} />
-              ))}
-            </div>
-          )}
-        </Container>
-        <Footer />
-      </div>
-    </IntlScope>
+        {guides.length === 0 ? (
+          <Text as="p" tone="muted">{t('guides.index.empty')}</Text>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {guides.map((g) => (
+              <GuideCard key={g.slug} slug={g.slug} frontmatter={g.frontmatter} />
+            ))}
+          </div>
+        )}
+      </Container>
+      <Footer />
+    </div>
   );
 }

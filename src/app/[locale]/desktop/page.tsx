@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
-import IntlScope from '@/i18n/IntlScope';
 import { tourJsonLd, tourMetadata, type Tour } from '@/utils/seo/showcase';
 import JsonLd from '@/components/seo/JsonLd';
 import DesktopShowcase from './DesktopShowcase';
@@ -28,9 +27,9 @@ export default async function DesktopPage() {
   const locale = await getLocale();
   const jsonLd = tourJsonLd(TOUR, await getTranslations({ locale }), locale);
   return (
-    <IntlScope scope="showcase">
+    <>
       <JsonLd data={jsonLd} />
       <DesktopShowcase />
-    </IntlScope>
+    </>
   );
 }

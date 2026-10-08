@@ -1,3 +1,5 @@
+import type { AbstractIntlMessages } from 'next-intl';
+
 /**
  * The message modules: one JSON file per module per locale, under
  * `messages/<locale>/<module>.json`. A module is also the first segment of
@@ -25,14 +27,16 @@ export type Module = (typeof MODULES)[number];
 export const SCOPES = {
   /** The `[locale]` layout: toasts, the confirm dialog, appearance. */
   common: ['common'],
-  /** `/`, `/features`. */
+  /** `/`. */
   marketing: ['common', 'marketing'],
+  /** Server-rendered public pages: only navigation is interactive. */
+  public: ['common', 'marketing'],
   /** `/desktop`, `/mobile`. */
   showcase: ['common', 'marketing', 'showcase'],
-  /** `/guides`, `/guides/<slug>`, `/help`. */
-  guides: ['common', 'marketing', 'guides', 'help'],
+  /** `/guides`, `/guides/<slug>`. */
+  guides: ['common', 'marketing', 'guides'],
   /** `/media-kit`. */
-  mediaKit: ['common', 'marketing', 'mediaKit'],
+  mediaKit: ['common', 'mediaKit'],
   /**
    * `/notes/<id>`, `/p/<id>`, `/t/<tag>`: note cards embed media, packs and
    * games, and the profile header carries its menus. `errors` because the
@@ -60,4 +64,31 @@ export function pickModules<T extends Record<string, unknown>>(
   const out: Record<string, unknown> = {};
   for (const m of modules) if (m in messages) out[m] = messages[m];
   return out as Partial<T>;
+}
+
+/** Subtrees needed by public client islands; server-rendered body copy is never serialized. */
+const NAVIGATION_PATHS = ['marketing.nav', 'marketing.learn.card', 'marketing.footer'] as const;
+const CLIENT_PATHS: Partial<Record<Scope, readonly string[]>> = {
+  public: ['common', ...NAVIGATION_PATHS],
+  guides: ['common', ...NAVIGATION_PATHS, 'guides.clip'],
+  showcase: ['common', ...NAVIGATION_PATHS, 'showcase'],
+};
+
+/** Select only the message subtrees a scope renders in the browser. */
+export function scopeMessages(messages: Record<string, unknown>, scope: Scope, inheritCommon = false): AbstractIntlMessages {
+  const selected: Record<string, unknown> = {};
+  for (const path of CLIENT_PATHS[scope] ?? SCOPES[scope]) {
+    const keys = path.split('.');
+    if (inheritCommon && keys[0] === 'common') continue;
+    let value: unknown = messages;
+    for (const key of keys) value = value && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined;
+    if (value === undefined) continue;
+    let target = selected;
+    for (const key of keys.slice(0, -1)) {
+      target[key] ??= {};
+      target = target[key] as Record<string, unknown>;
+    }
+    target[keys[keys.length - 1]] = value;
+  }
+  return selected as AbstractIntlMessages;
 }
