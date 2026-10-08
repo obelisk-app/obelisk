@@ -5,8 +5,18 @@ import { useDmCallView } from '@/hooks/call/useDmCallView';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import IconButton from '@/components/ui/buttons/IconButton';
 import {
-  CloseIcon, FlipCameraIcon, LockIcon, MaximizeIcon, MicIcon, MicOffIcon, MinimizeIcon, PhoneOffIcon,
-  ScreenShareIcon, ShieldIcon, VideoIcon, VideoOffIcon,
+  CloseIcon,
+  SwitchCameraIcon,
+  LockIcon,
+  MaximizeIcon,
+  MicIcon,
+  MicOffIcon,
+  MinimizeIcon,
+  PhoneOffIcon,
+  ScreenShareIcon,
+  ShieldIcon,
+  VideoIcon,
+  VideoOffIcon,
 } from '@/assets/icons';
 import CallControlButton from './CallControlButton';
 import CallStatusText from './CallStatusText';
@@ -114,7 +124,7 @@ export default function DmCallView() {
             </CallControlButton>
             {s.media.cameraOn && (
               <CallControlButton onClick={() => void s.flipCamera()} label={t('calls.call.flip')} testId="dm-call-flip">
-                <FlipCameraIcon size={20} />
+                <SwitchCameraIcon size={20} />
               </CallControlButton>
             )}
             {vm.canShare && (

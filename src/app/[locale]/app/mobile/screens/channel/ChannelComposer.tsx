@@ -108,7 +108,7 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
         <div className="composer-btns">
           {composer.draft.trim() ? (
             <button className="composer-send" onClick={() => void composer.send()} aria-label={t("common.send")}>
-              <SendIcon size={null} strokeWidth={1} />
+              <SendIcon size={null} />
             </button>
           ) : (
             <VoiceNoteButton disabled={composer.uploading} onRecorded={(file, duration) => void composer.onVoiceRecorded(file, duration)} />

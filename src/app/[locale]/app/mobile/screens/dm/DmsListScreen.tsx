@@ -6,7 +6,7 @@ import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { useDmsListScreen } from '@/hooks/shell/mobile/screens/dm/useDmsListScreen';
 import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
 import { DmRow } from './DmRow';
-import { LockWideIcon, PlusIcon, SearchShortIcon } from '@/assets/icons';
+import { LockIcon, PlusIcon, SearchIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
 
 /** The phone DMs tab: conversations with people you follow, and with everyone else. */
@@ -29,10 +29,10 @@ export function DmsListScreen({
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <MobileSigningIndicator />
           <button className="icon-btn action-search" onClick={() => go('compose-dm')} aria-label={t('common.search')}>
-            <SearchShortIcon size={20} strokeWidth={1.6} />
+            <SearchIcon size={20} strokeWidth={1.5} />
           </button>
           <button className="icon-btn action-create" onClick={() => go('compose-dm')} aria-label={t('dm.newMessage')}>
-            <PlusIcon size={20} strokeWidth={1.6} />
+            <PlusIcon size={20} strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -50,7 +50,7 @@ export function DmsListScreen({
       <div className="dms-list-rows native-scroll-y" ref={listRef}>
         {shown.length === 0 && (
           <div className="empty-state">
-            <LockWideIcon size={null} strokeWidth={1.6} />
+            <LockIcon size={null} strokeWidth={1.5} />
             <div className="empty-state-title">{t('dm.noConversations')}</div>
             <div className="empty-state-desc">{t('dm.emptyMobileDescription')}</div>
           </div>

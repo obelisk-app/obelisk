@@ -3,7 +3,7 @@
 import { FilterRow } from './FilterRow';
 import Button from '@/components/ui/buttons/Button';
 import type { Translate } from '@/i18n/keys';
-import { BinIcon, SearchIcon } from '@/assets/icons';
+import { TrashIcon, SearchIcon } from '@/assets/icons';
 
 /** The dropdown before anything is typed: the grammar as rows, then recent queries. */
 export function FilterAndHistoryPane({
@@ -42,7 +42,7 @@ export function FilterAndHistoryPane({
             <span>{t('shell.search.history.title')}</span>
             {/* `-my-1` keeps the header row at its old height around the `p-1` button. */}
             <Button variant="ghost" size="icon" onClick={onClearHistory} className="-my-1" aria-label={t('shell.search.history.clear')}>
-              <BinIcon size={13} strokeWidth={2} />
+              <TrashIcon size={13} strokeWidth={2} />
             </Button>
           </div>
           {history.map((h) => (

@@ -22,7 +22,7 @@ export function ComposerAttachments({ urls, uploading, onRemove }: {
             className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[11px] text-lc-white opacity-90 hover:bg-black"
             aria-label={t('shell.desktop.composer.removeAttachment')}
           >
-            <CloseIcon size={12} strokeWidth={2.4} />
+            <CloseIcon size={12} strokeWidth={2.5} />
           </button>
         </div>
       ))}

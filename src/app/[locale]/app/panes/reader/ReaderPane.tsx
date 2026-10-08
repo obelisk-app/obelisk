@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { ChevronLeftIcon, CloseIcon, ExpandIcon, ShrinkIcon } from '@/assets/icons';
+import { ChevronLeftIcon, CloseIcon, MaximizeIcon, MinimizeIcon } from '@/assets/icons';
 import { PaneIconButton } from './PaneIconButton';
 import Heading from '@/components/ui/layout/Heading';
 
@@ -38,7 +38,7 @@ export function ReaderPaneHeader({
         title={t('common.back')}
         data-testid="desktop-thread-back"
       >
-        <ChevronLeftIcon size={20} strokeWidth={2.3} />
+        <ChevronLeftIcon size={20} strokeWidth={2.5} />
       </button>
       <Heading as="h2" variant="panel">{title}</Heading>
       <div className="ml-auto flex items-center gap-0.5">
@@ -46,7 +46,7 @@ export function ReaderPaneHeader({
           label={full ? t('social.restoreFeed') : t('social.expandFeed')}
           testId="desktop-thread-expand"
           onClick={onToggleFull}
-          icon={full ? ShrinkIcon : ExpandIcon}
+          icon={full ? MinimizeIcon : MaximizeIcon}
         />
         <PaneIconButton label={t('common.close')} testId="desktop-thread-close" onClick={onBack} icon={CloseIcon} />
       </div>

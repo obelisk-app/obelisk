@@ -6,7 +6,7 @@ import RelayStatusPill from '@/components/relay/RelayStatusPill';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useMobileServerBanner } from '@/hooks/shell/mobile/rail/useMobileServerBanner';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
-import { MoreVerticalIcon, PlusIcon, SearchShortIcon } from '@/assets/icons';
+import { MoreIcon, PlusIcon, SearchIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
 
 /**
@@ -57,7 +57,7 @@ export function MobileServerBanner({
         />
         <MobileSigningIndicator />
         <button className="icon-btn action-search" aria-label={t('mobile.header.search')} onClick={onSearch}>
-          <SearchShortIcon size={20} strokeWidth={1.6} />
+          <SearchIcon size={20} strokeWidth={1.5} />
         </button>
         <button
           className="icon-btn action-create"
@@ -68,7 +68,7 @@ export function MobileServerBanner({
           <PlusIcon size={20} />
         </button>
         <button className="icon-btn action-menu" aria-label={t('mobile.header.spaceMenu')} onClick={onOpenMenu}>
-          <MoreVerticalIcon size={20} strokeWidth={1.6} />
+          <MoreIcon size={20} strokeWidth={1.5} />
         </button>
       </div>
       <div className="server-banner-meta">

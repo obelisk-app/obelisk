@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import type { RelayMenuPanel } from '@/hooks/shell/mobile/sheets/relay/useRelayMenuSheet';
 import { RelayMenuRow } from './RelayMenuRow';
-import { ImageIcon, MenuIcon, SmileIcon, StarSimpleIcon, UsersIcon } from '@/assets/icons';
+import { HashIcon, ImageIcon, SmileIcon, StarIcon, UsersIcon } from '@/assets/icons';
 
 /** The relay operator's part of the relay menu: one row per admin panel. */
 export function RelayMenuAdminRows({ onOpen }: { onOpen: (panel: RelayMenuPanel) => void }) {
@@ -25,31 +25,31 @@ export function RelayMenuAdminRows({ onOpen }: { onOpen: (panel: RelayMenuPanel)
         {t('mobile.members.admin')}
       </div>
       <RelayMenuRow
-        icon={<ImageIcon size={20} strokeWidth={1.6} />}
+        icon={<ImageIcon size={20} strokeWidth={1.5} />}
         rowLabel={t('mobile.branding.edit')}
         hint={t('mobile.branding.hint')}
         onClick={() => onOpen('branding')}
       />
       <RelayMenuRow
-        icon={<SmileIcon size={20} strokeWidth={1.6} />}
+        icon={<SmileIcon size={20} strokeWidth={1.5} />}
         rowLabel={t('mobile.settings.packs')}
         hint="NIP-51"
         onClick={() => onOpen('emojis')}
       />
       <RelayMenuRow
-        icon={<MenuIcon size={20} strokeWidth={1.6} />}
+        icon={<HashIcon size={20} strokeWidth={1.5} />}
         rowLabel={t('mobile.layout.title')}
         hint={t('mobile.space.layoutHint')}
         onClick={() => onOpen('categories')}
       />
       <RelayMenuRow
-        icon={<StarSimpleIcon size={20} strokeWidth={1.6} />}
+        icon={<StarIcon size={20} strokeWidth={1.5} />}
         rowLabel={t('mobile.space.roles')}
         hint={t('mobile.space.rolesHint')}
         onClick={() => onOpen('roles')}
       />
       <RelayMenuRow
-        icon={<UsersIcon size={20} strokeWidth={1.6} />}
+        icon={<UsersIcon size={20} strokeWidth={1.5} />}
         rowLabel={t('mobile.space.people')}
         hint={t('mobile.space.peopleHint')}
         onClick={() => onOpen('members')}

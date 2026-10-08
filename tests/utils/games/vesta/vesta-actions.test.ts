@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  decrementCount, incrementCount, roadAction, robberAction, togglePickMode, vertexAction, withCount,
+  clampDraft, decrementCount, incrementCount, roadAction, robberAction, togglePickMode, vertexAction, withCount,
 } from '@/utils/games/vesta/vesta-actions';
 
 const spot = { q: 1, r: -1, corner: 2 };
@@ -35,14 +35,31 @@ describe('counting', () => {
     expect(incrementCount(3, 3)).toBe(3);
   });
 
-  it('only steps down from a count already above the cap', () => {
+  it('never lowers a count with "+"; a count above the cap is the draft clamp\'s job', () => {
     expect(decrementCount(5)).toBe(4);
-    expect(incrementCount(5, 3)).toBe(3);
+    expect(incrementCount(5, 3)).toBe(5);
   });
 
   it('replaces one resource without touching the others', () => {
     const counts = { brick: 1, ore: 2 };
     expect(withCount(counts, 'ore', 0)).toEqual({ brick: 1, ore: 0 });
     expect(counts).toEqual({ brick: 1, ore: 2 });
+  });
+});
+
+describe('clampDraft', () => {
+  const hand = { brick: 1, lumber: 2, wool: 0, grain: 5, ore: 0 } as const;
+  const cap = (r: keyof typeof hand) => hand[r];
+
+  it('lowers every count above its cap to the cap and leaves the rest', () => {
+    const draft = { lumber: 3, grain: 2, ore: 1 };
+    expect(clampDraft(draft, cap)).toEqual({ lumber: 2, grain: 2, ore: 0 });
+    expect(draft).toEqual({ lumber: 3, grain: 2, ore: 1 });
+  });
+
+  it('hands back the same draft when nothing is over its cap', () => {
+    const draft = { brick: 1, lumber: 2 };
+    expect(clampDraft(draft, cap)).toBe(draft);
+    expect(clampDraft({}, cap)).toEqual({});
   });
 });

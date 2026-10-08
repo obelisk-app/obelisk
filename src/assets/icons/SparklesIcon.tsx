@@ -1,11 +1,11 @@
 import IconSvg, { type IconProps } from './IconSvg';
 
-/** A small sun of rays: something new. */
+/** A large and a small four-point sparkle: something new or generated. */
 export default function SparklesIcon(props: IconProps) {
   return (
     <IconSvg {...props}>
-      <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
-      <circle cx="12" cy="12" r="2.5" />
+      <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z" />
+      <path d="M19 15l.7 1.7L21.5 17.5l-1.8.8L19 20l-.7-1.7L16.5 17.5l1.8-.8z" />
     </IconSvg>
   );
 }

@@ -481,7 +481,7 @@
 .obelisk-mobile .nav-item svg {
   width: 26px;
   height: 26px;
-  stroke-width: 1.6;
+  stroke-width: 1.5;
 }
 .obelisk-mobile .nav-badge {
   position: absolute;
@@ -1326,7 +1326,7 @@
 .obelisk-mobile .chat-actions svg {
   width: 22px;
   height: 22px;
-  stroke-width: 1.6;
+  stroke-width: 1.5;
 }
 .obelisk-mobile .chat-header-compact .chat-title-block {
   gap: 4px;
@@ -2180,7 +2180,7 @@
 .obelisk-mobile .voice-tile-mic svg {
   width: 10px;
   height: 10px;
-  stroke-width: 2.4;
+  stroke-width: 2.5;
 }
 .obelisk-mobile .voice-controls {
   display: flex;

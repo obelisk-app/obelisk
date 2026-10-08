@@ -9,7 +9,7 @@ import { useTranslations } from 'next-intl';
 import type { SfuStatus } from '@/services/voice/room-events';
 import SfuStatusPill from './SfuStatusPill';
 import MeshSyncStatusPill from './MeshSyncStatusPill';
-import { UsersAltIcon } from '@/assets/icons';
+import { UsersIcon } from '@/assets/icons';
 import PingDot from '@/components/ui/animations/PingDot';
 
 export default function RoomHeader({ name, count, sfuStatus, meshSyncingCount = 0 }: {
@@ -38,7 +38,7 @@ export default function RoomHeader({ name, count, sfuStatus, meshSyncingCount = 
         )}
       </div>
       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-white/80 shrink-0">
-        <UsersAltIcon size={12} strokeWidth={2.5} />
+        <UsersIcon size={12} strokeWidth={2.5} />
         <span className="tabular-nums">{count}</span>
       </div>
     </div>

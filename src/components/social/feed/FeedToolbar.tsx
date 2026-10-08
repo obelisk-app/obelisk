@@ -9,7 +9,7 @@ import { CONTENT_FILTERS } from '@/constants/social/kinds';
 import type { FeedSort } from '@/services/social/rank';
 import type { FeedKind } from '@/services/social/feed';
 import Button from '@/components/ui/buttons/Button';
-import { FilterIcon, GearIcon, GlobeIcon, SearchWideIcon, UsersIcon } from '@/assets/icons';
+import { FilterIcon, GearIcon, GlobeIcon, SearchIcon, UsersIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
 
 /** Source segment, content filters, sort, and the action cluster on the right. */
@@ -197,7 +197,7 @@ export default function FeedToolbar({
             title={t('social.filters')}
             data-testid="feed-filters-open"
           >
-            <FilterIcon size={19} strokeWidth={1.9} />
+            <FilterIcon size={19} />
           </Button>
         )}
         {/*
@@ -218,7 +218,7 @@ export default function FeedToolbar({
           data-testid="feed-search-open"
           data-tour="feed-search"
         >
-          <SearchWideIcon size={19} strokeWidth={2} />
+          <SearchIcon size={19} strokeWidth={2} />
         </Button>
         {onOpenSettings && !embedded && (
           <Button

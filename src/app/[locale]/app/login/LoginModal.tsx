@@ -36,7 +36,7 @@ import { SessionNoticeBanner } from './SessionNoticeBanner';
 import { loginSignerStorage } from '@/services/login/signer-storage';
 import { Nip46SignerDeepLink } from './Nip46SignerDeepLink';
 import { useLoginFlow } from '@/hooks/shell/login/useLoginFlow';
-import { KeyAltIcon, LockLargeIcon, ShieldIcon, SparklePairIcon } from '@/assets/icons';
+import { KeyIcon, LockIcon, ShieldIcon, SparklesIcon } from '@/assets/icons';
 
 const NIP46_PERMS = OBELISK_NIP46_PERMISSIONS;
 
@@ -121,10 +121,10 @@ export default function LoginModal({
           {...(flow.hideTransientError ? { styles: { error: { display: 'none' } } } : {})}
           onError={flow.handleSdkError}
           methodIcons={{
-            nip07: <LockLargeIcon size={20} strokeWidth={2} />,
+            nip07: <LockIcon size={20} strokeWidth={2} />,
             nip46: <ShieldIcon size={20} strokeWidth={2} />,
-            generate: <SparklePairIcon size={20} strokeWidth={2} />,
-            import: <KeyAltIcon size={20} strokeWidth={2} />,
+            generate: <SparklesIcon size={20} strokeWidth={2} />,
+            import: <KeyIcon size={20} strokeWidth={2} />,
           }}
           slots={{ ...(headerSlot ? { header: headerSlot } : {}), beforeMethods: <SessionNoticeBanner /> }}
           onLogin={pasted.intercept}

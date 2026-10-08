@@ -47,7 +47,7 @@ export default function InlineReader({
           title={t('common.back')}
           data-testid="inline-reader-back"
         >
-          <ChevronLeftIcon size={20} strokeWidth={2.3} />
+          <ChevronLeftIcon size={20} strokeWidth={2.5} />
         </Button>
         <span className="min-w-0 truncate text-sm font-semibold text-lc-white">{title}</span>
       </div>

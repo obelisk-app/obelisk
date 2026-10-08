@@ -48,7 +48,7 @@ export function MediaGridTile({ tile, onOpen }: { tile: MediaGridTileModel; onOp
           {video ? (
             <PlayIcon />
           ) : (
-            <StackIcon size={15} strokeWidth={2} strokeLinecap="butt" />
+            <StackIcon size={15} strokeWidth={2} />
           )}
         </span>
       )}

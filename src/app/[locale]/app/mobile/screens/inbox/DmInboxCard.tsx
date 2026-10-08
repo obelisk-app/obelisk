@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useReadStateStore } from '@/store/read-state';
 import { isDmNotificationRead, type DmNotification } from '@/store/notifications';
 import { NotificationCard } from './NotificationCard';
-import { LockWideIcon } from '@/assets/icons';
+import { LockIcon } from '@/assets/icons';
 
 /** A direct-message ping, faded once read; no preview while DMs are locked. */
 export function DmInboxCard({ dm, onJump }: { dm: DmNotification; onJump: () => void }) {
@@ -20,7 +20,7 @@ export function DmInboxCard({ dm, onJump }: { dm: DmNotification; onJump: () => 
       label={t('shell.inbox.type.dm')}
       typeClass="dm"
       icon={
-        <LockWideIcon size={null} strokeWidth={2} />
+        <LockIcon size={null} strokeWidth={2} />
       }
       onJump={onJump}
     />

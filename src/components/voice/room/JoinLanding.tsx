@@ -12,7 +12,7 @@ import Button from '@/components/ui/buttons/Button';
 import PassiveCallRoster from './PassiveCallRoster';
 import StageBackdrop from './StageBackdrop';
 import RoomHeader from './RoomHeader';
-import { MicStandIcon } from '@/assets/icons';
+import { MicIcon } from '@/assets/icons';
 
 export function JoinLanding({
   displayName, activeCall, passiveCount, passiveParticipantPubkeys, browsingWhileConnected,
@@ -38,7 +38,7 @@ export function JoinLanding({
         <div className="relative z-10 flex-1 flex items-center justify-center p-6">
           <div className="text-center max-w-md">
             <div className="mx-auto mb-5 w-16 h-16 rounded-2xl bg-lc-green/10 ring-1 ring-lc-green/30 flex items-center justify-center text-lc-green">
-              <MicStandIcon size={30} strokeWidth={2} />
+              <MicIcon size={30} strokeWidth={2} />
             </div>
             <div className="text-xl font-semibold text-lc-white mb-1">{displayName}</div>
             <div className="text-sm text-lc-muted mb-5">

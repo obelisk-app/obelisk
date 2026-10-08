@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { CompassIcon, EditIcon, MessageIcon, SettingsIcon } from '@/assets/icons';
+import { CompassIcon, EditIcon, ChatIcon, GearIcon } from '@/assets/icons';
 import { usePopoverActions } from '@/hooks/chat/profile/usePopoverActions';
 import Button from '@/components/ui/buttons/Button';
 
@@ -42,7 +42,7 @@ export function PopoverActions({
             onClick={vm.openPreferences}
             data-testid="profile-preferences-btn"
           >
-            <SettingsIcon size={15} /> {t('settings.openPreferences')}
+            <GearIcon size={15} /> {t('settings.openPreferences')}
           </Button>
         </div>
       ) : onMessage && (
@@ -53,7 +53,7 @@ export function PopoverActions({
           onClick={vm.message}
           data-testid="profile-message-btn"
         >
-          <MessageIcon size={15} /> {t('mobile.profile.message')}
+          <ChatIcon size={15} /> {t('mobile.profile.message')}
         </Button>
       )}
       <Button

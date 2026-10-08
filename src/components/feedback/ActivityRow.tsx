@@ -40,7 +40,7 @@ export default function ActivityRow({ entry }: { entry: ActivityEntry }) {
           className="-mr-1 -mt-0.5 rounded p-0.5 text-red-200/80 hover:bg-red-500/20 hover:text-red-100"
           aria-label={t('common.dismiss')}
         >
-          <CloseIcon size={12} strokeWidth={2.2} />
+          <CloseIcon size={12} strokeWidth={2} />
         </button>
       ) : null}
     </div>

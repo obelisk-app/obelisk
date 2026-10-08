@@ -5,7 +5,7 @@ import { type JsGroup } from '@/services/nostr-bridge';
 import { useChannelRowBody } from '@/hooks/shell/mobile/screens/server/useChannelRow';
 import { channelRowClass, isVoiceKind } from '@/utils/shell/mobile/channel-row';
 import { ChannelRowCounts } from './ChannelRowCounts';
-import { ChevronRightIcon, ListIcon, MicCapsuleIcon } from '@/assets/icons';
+import { ChevronRightIcon, ListIcon, MicIcon } from '@/assets/icons';
 
 export type ChannelRowProps = {
   group: JsGroup;
@@ -20,7 +20,7 @@ export type ChannelRowProps = {
 
 const FORUM_ICON = (
   <span className="ch-icon">
-    <ListIcon size={null} strokeWidth={1.6} />
+    <ListIcon size={null} strokeWidth={1.5} />
   </span>
 );
 const CHEVRON = (
@@ -41,7 +41,7 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
     return (
       <button className={`ch-row voice ${active ? 'active' : ''}`} onClick={onClick}>
         <span className="ch-icon" style={{ color: live ? 'var(--accent)' : 'var(--app-text-mute)' }}>
-          <MicCapsuleIcon size={null} />
+          <MicIcon size={null} />
         </span>
         <div className="ch-body">
           <div className="ch-row-top">

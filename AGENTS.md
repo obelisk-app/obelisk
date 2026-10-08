@@ -25,6 +25,9 @@ npm run lint            # eslint (includes the 300-line rule)
 npm run typecheck       # tsc --noEmit
 npm test                # vitest run, everything under tests/ (and scripts/**/*.test.ts)
 npx vitest run tests/path/to/file.test.ts   # one file
+npm run test:related -- <src files>         # every test that imports those files
+npm run test:guards     # the structural guard tests only (~20 s)
+bash scripts/agents/link-deps.sh            # agent worktree: link the canonical node_modules (see Testing)
 npm run test:e2e        # Playwright (test:e2e:voice for the voice set; *:headed variants)
 npm run build           # next build --webpack
 npm run seo:check       # build, start, crawl every route as search and preview bots do; fails on any SEO problem (docs/i18n.md#seo)
@@ -65,7 +68,7 @@ The owner's folder rules, enforced by the guard tests listed under Testing (deta
 - **A component file is markup** ([docs/conventions.md](docs/conventions.md#component-files)). One exported component per file, reading its state and handlers from one view-model hook (`src/hooks/<module>/use<Component>.ts`) and its data from bridge and store hooks. Purely visual local state may stay as up to two `useState` / `useRef`; effects, memos, callbacks, reducers, derived data and handlers with logic live in the hook. Pure shaping (build rows, filter, sort, format) goes to `src/utils/<topic>/`; actions with side effects (publish, remove a user, confirm-then-act) to `src/services/<topic>/`. Inline handlers only pass a value on (`onClick={() => vm.kick(row)}`).
 - **Tables and multi-part features.** Column definitions in a `columns.tsx` next to the component, each non-trivial cell its own small component file, toolbar and footer their own components, the whole feature in a folder named after it. The reference is `src/components/admin/relay-admin/`.
 - **More than one component in a file** only for the reasoned list in `scripts/markup-only/multi-component.ts` (the MDX component map, the media-kit banner variants, the lazy-boundary modules, the menu primitive's parts). Icons are never a set: one file each.
-- **Every picture lives in `src/assets/`** ([docs/conventions.md](docs/conventions.md#assets)). A component never draws an inline `<svg>` (nor a stray `<path>`, nor `<svg` markup in a string or a CSS data URI): it imports the icon, `import { CloseIcon } from '@/assets/icons'`, and passes what differs from the defaults (`size` in px, 16 by default, `size={null}` when a stylesheet sizes it; `strokeWidth`, 1.8 by default; `className`; `title` when the icon means something on its own). Before drawing a new icon, look in `src/assets/icons/index.ts`; one drawing is one icon. A component that only picks an icon is not named `...Icon` (`HelpTopicBadge`, `MediaCategoryGlyph`). Files that must be served by URL stay in `public/`.
+- **Every picture lives in `src/assets/`** ([docs/conventions.md](docs/conventions.md#assets)). A component never draws an inline `<svg>` (nor a stray `<path>`, nor `<svg` markup in a string or a CSS data URI): it imports the icon, `import { CloseIcon } from '@/assets/icons'`, and passes what differs from the defaults (`size` in px, 16 by default, `size={null}` when a stylesheet sizes it; `strokeWidth`, 1.8 by default; `className`; `title` when the icon means something on its own). Before drawing a new icon, look in `src/assets/icons/index.ts`: one symbol is one icon, drawn once in the one icon style (24 grid, 1.8 round-capped `currentColor` line, rounded corners; a caller may pass a weight of 1.5, 2, 2.5 or 3, never caps, joins or a grid; [docs/conventions.md](docs/conventions.md#icon-style)). A component that only picks an icon is not named `...Icon` (`HelpTopicBadge`, `MediaCategoryGlyph`). Files that must be served by URL stay in `public/`.
 - **Dialogs use the shared chrome.** A desktop `<Modal>` renders `ModalHeader` and, when it has actions at its foot, `ModalFooter` (`src/components/ui/overlays/`); a phone `<Sheet>` renders `SheetHeader` and `SheetActions` (`src/app/[locale]/app/mobile/sheets/chrome/`). No hand-built title row, close button or footer ([docs/conventions.md](docs/conventions.md#modal-and-sheet-chrome)).
 - Before writing a hook or helper, look for one (`useDismiss` for click-outside and Escape, `useAnchoredPosition` for popovers, `shortNpubLabel` for a key shown to a person).
 - A props type used only by its component stays in the component file; a type shared with logic lives beside the logic.
@@ -172,7 +175,21 @@ Forum-kind channels are **Publications** in every user-facing string, in all thr
 
 ## Testing
 
-A change is not done until its tests are written and passing. Scope: for a small local change run the affected test files (plus lint or typecheck where relevant); for bridge, auth, protocol, shared state or cross-cutting changes run `npm test` in full.
+A change is not done until its tests are written and passing. While you work, run only what your change touches (below); the full suite runs once per batch, not once per agent.
+
+### Working in parallel (agents)
+
+Several agents often work at once, each in its own worktree under `worktrees/` cut from the integration branch. To keep that fast:
+
+1. **One install.** In a new worktree run `bash scripts/agents/link-deps.sh`. It links the canonical checkout's `node_modules` when `package-lock.json` matches, and installs locally only when your task changes dependencies. Never run `npm ci` / `npm install` while `node_modules` is a link: remove the link first.
+2. **Targeted checks while developing**, before every commit:
+   - `npm run typecheck`
+   - `npx eslint <files you changed>`
+   - `npm run test:related -- <files you changed>` (every test that imports them)
+   - `npm run test:guards` (the structural guard tests, about 20 seconds)
+3. **Do not run** the full `npm test`, `npm run build` or `npm run seo:check` from an agent worktree. Commit, report, and stop.
+4. **The coordinator merges the batch** into the integration branch once every agent in it has reported, then runs typecheck, lint and the full `npm test` **once** for the whole batch. Failures go back to the agent that owns the files, which fixes them with targeted checks; the coordinator then re-runs only the failing files and what they import, until clean. Then the batch is published.
+5. **Release checks** (`npm run build`, `npm run seo:check`, bundle sizes, `npm run test:e2e`, a manual pass in a browser) run only when cutting a release, not during continuous development. CI still runs its own checks on every push.
 
 - Tests live in `tests/`, mirroring `src/`, and import the code as `@/...`. Shared setup, fakes and mocks are in `tests/support/` (`setup.ts`, `fake-bridge.ts`, `render-with-bridge.tsx`, `intl.tsx`, `messages.ts`, `import-graph.ts`, `mocks/`), imported as `@tests/support/...`.
 - A component or hook test fakes the bridge instance, not the module: `renderWithBridge(<X />, fakeBridge({ groups }, { publishEvent }))`, or `bridgeWrapper` for `renderHook`. The real hooks run over seeded stores, and `fake.stores.groups.set(...)` inside `act` drives a change. A new `vi.mock('@/services/nostr-bridge', ...)` is not allowed (`tests/bridge-mock-count.test.ts`).
@@ -191,6 +208,7 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | `tests/import-cycles.test.ts` | No static import cycle in `src/` |
 | `tests/hooks/hooks-layer.test.ts` | No hook file or hook definition under `src/components/`, `src/app/` or `src/assets/` |
 | `tests/assets/assets-only.test.ts` | No SVG outside `src/assets/` (an `<svg>` or SVG shape in JSX, `<svg` markup in a string or a stylesheet), except the shrink-only reasoned `DATA_DRIVEN` list, empty today; no `...Icon` component outside `src/assets/icons/` (the brand `ObeliskIcon` aside); that folder holds only `<Name>Icon.tsx` files on `IconSvg`, all in its barrel; no two icon files draw the same thing |
+| `tests/assets/icon-style.test.ts` | One icon per symbol: no variant name (`...Alt`, `...Short`, a number) and no two names from one synonym group; every icon file in the style (no own `viewBox`, stroke width, caps, joins, colour, or square `<rect>`; filled glyphs allowed), except the shrink-only reasoned `STYLE_EXCEPTIONS`; no caller passing caps, joins, a grid or a weight outside 1.5 / 2 / 2.5 / 3 |
 | `tests/components/markup-only.test.ts` | Component files (under `src/components/`, `src/app/` and `src/assets/`) are markup: no effects, memos, callbacks, reducers, more than two `useState` / `useRef`, functions with logic, or extra components (rule: `scripts/markup-only/analyze.ts`); shrink-only per-file baseline `tests/components/markup-only-baseline.json`, regenerated by `scripts/markup-only/baseline.ts`, never hand-edited |
 | `tests/components/typography.test.ts` | No raw `<h1>`-`<h6>`, `<p>` or `<label>` in JSX under `src/components/` or `src/app/` outside the ui kit and the phone sheet chrome (`mobile/sheets/chrome/`): `Heading`, `Text as="p"`, `Label`; zero, no baseline |
 | `tests/components/modal-chrome.test.ts` | A file that renders `<Modal>` / `<Sheet>` draws no `<h1>` / `<h2>` / `<header>` / `<footer>` / `CloseButton` or sheet title class of its own and renders `ModalHeader` / `SheetHeader` |

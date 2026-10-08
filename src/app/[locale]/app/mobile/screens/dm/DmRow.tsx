@@ -8,7 +8,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useDMUnreadCount } from '@/hooks/read-state/useUnreadCounts';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { LockWideIcon } from '@/assets/icons';
+import { LockIcon } from '@/assets/icons';
 
 /** One conversation in the phone DM list: avatar, name, when, the latest message and an unread dot. */
 export function DmRow({
@@ -41,7 +41,7 @@ export function DmRow({
           <span className="dm-time">{relativeTime(latest.createdAt, t, locale)}</span>
         </div>
         <div className="dm-preview">
-          <LockWideIcon size={null} strokeWidth={2} className="lock" />
+          <LockIcon size={null} strokeWidth={2} className="lock" />
           {latest.outgoing ? youPrefix : ''}{latest.content}
         </div>
       </div>

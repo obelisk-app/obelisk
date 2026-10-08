@@ -15,7 +15,7 @@ export function DmSendControl({ state, variant }: { state: DmComposerState; vari
   const { canSend } = state;
   if (state.showSend) {
     const icon = (
-      <SendIcon size={null} strokeWidth={2.2} className={variant === 'desktop' ? 'h-5 w-5' : undefined} />
+      <SendIcon size={null} strokeWidth={2} className={variant === 'desktop' ? 'h-5 w-5' : undefined} />
     );
     if (variant === 'desktop') {
       return (

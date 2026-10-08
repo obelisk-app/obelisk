@@ -13,7 +13,7 @@ import { NO_CATEGORY } from '@/constants/shell/mobile';
 import { CategoryListEditor } from './CategoryListEditor';
 import SheetActions from '../chrome/SheetActions';
 import SheetHeader from '../chrome/SheetHeader';
-import { MenuIcon } from '@/assets/icons';
+import { HashIcon } from '@/assets/icons';
 import Label from '@/components/ui/forms/Label';
 
 // Bottom-sheet for the kind 30078 channel-layout doc - categories + their
@@ -55,7 +55,7 @@ export function ManageCategoriesSheet({
   return (
     <Sheet onClose={close} screen="manage-categories" label={t('mobile.layout.title')} zIndex={20} maxHeight="94%">
       <SheetHeader
-        icon={<MenuIcon size={null} />}
+        icon={<HashIcon size={null} />}
         title={t('mobile.layout.title')}
         subtitle={t('mobile.layout.help')}
       />

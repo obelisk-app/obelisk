@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import IconButton from '@/components/ui/buttons/IconButton';
 import { useScrollableRail } from '@/hooks/voice/room/useScrollableRail';
-import { ChevronLeftUpIcon, ChevronRightDownIcon } from '@/assets/icons';
+import { ChevronLeftIcon, ChevronRightIcon } from '@/assets/icons';
 
 /** The side rail (a bottom strip on a phone), with arrows while there is more to scroll. */
 export default function ScrollableRail({ children }: { children: React.ReactNode }) {
@@ -27,7 +27,7 @@ export default function ScrollableRail({ children }: { children: React.ReactNode
           aria-label={t('common.previous')}
           className="absolute z-10 left-1 md:left-1/2 md:-translate-x-1/2 top-1 md:top-1 shadow-lg ring-1 ring-white/15"
         >
-          <ChevronLeftUpIcon size={14} strokeWidth={2.5} />
+          <ChevronLeftIcon size={14} strokeWidth={2.5} className="md:rotate-90" />
         </IconButton>
       )}
       {vm.canNext && (
@@ -38,7 +38,7 @@ export default function ScrollableRail({ children }: { children: React.ReactNode
           aria-label={t('common.next')}
           className="absolute z-10 right-1 md:right-auto md:left-1/2 md:-translate-x-1/2 bottom-auto top-1/2 -translate-y-1/2 md:translate-y-0 md:top-auto md:bottom-1 shadow-lg ring-1 ring-white/15"
         >
-          <ChevronRightDownIcon size={14} strokeWidth={2.5} />
+          <ChevronRightIcon size={14} strokeWidth={2.5} className="md:rotate-90" />
         </IconButton>
       )}
     </div>

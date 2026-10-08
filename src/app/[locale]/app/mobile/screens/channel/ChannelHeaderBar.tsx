@@ -3,7 +3,7 @@
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
 import { useTranslations } from 'next-intl';
 import BackButton from '../../chrome/BackButton';
-import { GearIcon, SearchShortIcon, UsersPairIcon } from '@/assets/icons';
+import { GearIcon, SearchIcon, UsersIcon } from '@/assets/icons';
 
 /** The phone channel header: category line, back, name, and the search / settings / members buttons. */
 export function ChannelHeaderBar({ header, back, onSearch, isChannelAdmin, onOpenSettings, openMembers }: {
@@ -32,7 +32,7 @@ export function ChannelHeaderBar({ header, back, onSearch, isChannelAdmin, onOpe
         <div className="chat-actions">
           <MobileSigningIndicator />
           <button className="icon-btn action-search" onClick={onSearch} aria-label={t('common.search')}>
-            <SearchShortIcon size={null} />
+            <SearchIcon size={null} />
           </button>
           {isChannelAdmin && (
             <button
@@ -41,11 +41,11 @@ export function ChannelHeaderBar({ header, back, onSearch, isChannelAdmin, onOpe
               aria-label={t('shell.desktop.channel.settings')}
               data-testid="mobile-channel-settings-btn"
             >
-              <GearIcon size={null} strokeWidth={1.6} />
+              <GearIcon size={null} strokeWidth={1.5} />
             </button>
           )}
           <button className="icon-btn action-members" onClick={openMembers} aria-label={t('mobile.members.members')}>
-            <UsersPairIcon size={null} strokeWidth={1} />
+            <UsersIcon size={null} />
           </button>
         </div>
       </div>

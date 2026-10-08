@@ -3,7 +3,7 @@
 import { type FeedPaneMode } from '@/utils/shell/desktop/feed-pane';
 import { useTranslations } from 'next-intl';
 import { PaneIconButton } from './PaneIconButton';
-import { CloseIcon, ExpandIcon, ShrinkIcon } from '@/assets/icons';
+import { CloseIcon, MaximizeIcon, MinimizeIcon } from '@/assets/icons';
 
 /**
  * Expand / restore / close for the feed pane: the feed pane's own controls.
@@ -41,14 +41,14 @@ export function FeedPaneActions({
             label={t('social.expandFeed')}
             testId="feed-pane-expand"
             onClick={onExpand}
-            icon={ExpandIcon}
+            icon={MaximizeIcon}
           />
         ) : restorable ? (
           <PaneIconButton
             label={t('social.restoreFeed')}
             testId="feed-pane-restore"
             onClick={onRestore}
-            icon={ShrinkIcon}
+            icon={MinimizeIcon}
           />
         ) : null}
         <PaneIconButton label={t('common.close')} testId="feed-pane-close" onClick={onClose} icon={CloseIcon} />

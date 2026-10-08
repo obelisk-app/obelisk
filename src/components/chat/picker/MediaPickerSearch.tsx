@@ -1,7 +1,7 @@
 'use client';
 
 import Input from '@/components/ui/forms/Input';
-import { SearchShortIcon } from '@/assets/icons';
+import { SearchIcon } from '@/assets/icons';
 import Label from '@/components/ui/forms/Label';
 
 /** The search field both pickers share: an icon and a bare input in one bordered pill. */
@@ -18,7 +18,7 @@ export function MediaPickerSearch({
 }) {
   return (
     <Label className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border border-lc-border bg-lc-black px-3 text-lc-muted transition-colors focus-within:border-lc-green">
-      <SearchShortIcon size={null} strokeWidth={2} className="h-5 w-5 shrink-0" />
+      <SearchIcon size={null} strokeWidth={2} className="h-5 w-5 shrink-0" />
       <Input
         variant="bare"
         type="search"

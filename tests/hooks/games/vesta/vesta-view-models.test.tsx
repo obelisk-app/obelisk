@@ -173,6 +173,65 @@ describe('useVestaTradePanel', () => {
     expect(result.current.panel.take).toEqual({});
   });
 
+  describe('when the hand shrinks under an open draft', () => {
+    const lumber = (n: number): GameState => ({
+      ...playing,
+      players: playing.players.map((p, i) => (i === 0 ? { ...p, resources: { ...p.resources, lumber: n } } : p)),
+    });
+    /** The panel over a state the test swaps, as the table re-renders it after a move. */
+    function panelOver(state: GameState) {
+      const onAction = vi.fn().mockResolvedValue(undefined);
+      const hook = renderHook(({ s }: { s: GameState }) => {
+        const turn = useVestaTurn({ session, state: s, mySeats: [HOST], onAction });
+        return { turn, panel: useVestaTradePanel({ state: s, turn }) };
+      }, { wrapper, initialProps: { s: state } });
+      return { ...hook, onAction };
+    }
+    /** Offer Bruno all three lumber for his ore. */
+    function draftThreeLumber() {
+      const h = panelOver(lumber(3));
+      act(() => h.result.current.panel.choosePartner(1));
+      act(() => h.result.current.panel.setGiveCount('lumber', 3));
+      act(() => h.result.current.panel.setTakeCount('ore', 1));
+      expect(h.result.current.panel.give.lumber).toBe(3);
+      expect(h.result.current.panel.canSubmit).toBe(true);
+      return h;
+    }
+
+    it('lowers the count to the hand with no press, and sends the lowered count', () => {
+      const { result, rerender, onAction } = draftThreeLumber();
+      rerender({ s: lumber(2) });
+      expect(result.current.panel.give.lumber).toBe(2);
+      expect(result.current.panel.take.ore).toBe(1);
+      expect(result.current.panel.canSubmit).toBe(true);
+      act(() => result.current.panel.submit());
+      expect(onAction).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'propose-trade', give: expect.objectContaining({ lumber: 2 }), take: expect.objectContaining({ ore: 1 }),
+      }), HOST);
+    });
+
+    it('stays lowered when the hand grows back', () => {
+      const { result, rerender } = draftThreeLumber();
+      rerender({ s: lumber(2) });
+      rerender({ s: lumber(3) });
+      expect(result.current.panel.give.lumber).toBe(2);
+    });
+
+    it('turns the offer off when the hand no longer holds any of it', () => {
+      const { result, rerender } = draftThreeLumber();
+      rerender({ s: lumber(0) });
+      expect(result.current.panel.give.lumber).toBe(0);
+      expect(result.current.panel.canSubmit).toBe(false);
+    });
+
+    it('applies the same rule to a discard draft', () => {
+      const { result, rerender } = panelOver(lumber(3));
+      act(() => result.current.turn.setDiscard({ lumber: 3, brick: 1 }));
+      rerender({ s: lumber(1) });
+      expect(result.current.turn.discard).toEqual({ lumber: 1, brick: 1 });
+    });
+  });
+
   it('sends nothing without a partner', () => {
     const { result, onAction } = withTurn(playing, [HOST], (turn) => useVestaTradePanel({ state: playing, turn }));
     act(() => result.current.panel.submit());

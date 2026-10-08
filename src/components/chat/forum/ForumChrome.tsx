@@ -17,7 +17,7 @@ import Input from '@/components/ui/forms/Input';
 import { SortViewMenu } from './SortViewMenu';
 import { TagChip } from './TagChip';
 import Button from '@/components/ui/buttons/Button';
-import { MessageCircleIcon, SearchIcon } from '@/assets/icons';
+import { ChatIcon, SearchIcon } from '@/assets/icons';
 
 export function ForumChrome({
   searchQuery,
@@ -74,7 +74,7 @@ export function ForumChrome({
           data-testid="forum-new-thread-btn"
           title={t(vm.ready ? 'chat.forum.new' : 'chat.forum.signInToStart')}
         >
-          <MessageCircleIcon size={14} strokeWidth={2} />
+          <ChatIcon size={14} strokeWidth={2} />
           <span className="hidden sm:inline">{t('chat.forum.new')}</span>
         </Button>
       </form>

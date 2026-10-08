@@ -29,6 +29,9 @@ import { describe, expect, it } from 'vitest';
  *   4. two icon files draw the same thing (the same shapes with the same
  *      path data): one drawing, one icon, every caller pointed at it.
  *
+ * The icon style and one-name-per-symbol rules (round 33) are the sibling
+ * guard `tests/assets/icon-style.test.ts`.
+ *
  * `DATA_DRIVEN` is the reasoned list of files allowed to draw SVG because
  * the drawing is computed from live data at render time (a chart, a meter, a
  * QR code). A static shape inside such a component still moves to assets.

@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useFullscreenButton } from '@/hooks/voice/room/useFullscreenButton';
-import { FullscreenExitIcon, FullscreenIcon } from '@/assets/icons';
+import { MinimizeIcon, MaximizeIcon } from '@/assets/icons';
 
 /** Fullscreen for one tile, with its audio inside the same element. */
 export default function FullscreenButton({ targetRef }: { targetRef: { current: HTMLElement | null } }) {
@@ -22,7 +22,7 @@ export default function FullscreenButton({ targetRef }: { targetRef: { current: 
           : 'bg-black/60 text-white/80 border border-white/15 hover:bg-black/80')
       }
     >
-      {isFullscreen ? <FullscreenExitIcon size={13} strokeWidth={2} /> : <FullscreenIcon size={13} strokeWidth={2} />}
+      {isFullscreen ? <MinimizeIcon size={13} strokeWidth={2} /> : <MaximizeIcon size={13} strokeWidth={2} />}
     </button>
   );
 }

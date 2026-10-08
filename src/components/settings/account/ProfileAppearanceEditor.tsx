@@ -29,7 +29,7 @@ import Spinner from '@/components/ui/feedback/Spinner';
 import { useProfileAppearanceEditor } from '@/hooks/settings/account/useProfileAppearanceEditor';
 import type { ProfileAppearanceValue } from '@/utils/settings/profile-image';
 import ProfileUrlField from './ProfileUrlField';
-import { PencilIcon } from '@/assets/icons';
+import { EditIcon } from '@/assets/icons';
 import Text from '@/components/ui/layout/Text';
 
 export type ImagePick = {
@@ -76,7 +76,7 @@ export default function ProfileAppearanceEditor({
             <div className="h-full w-full rounded-xl bg-gradient-to-br from-lc-olive to-lc-black" />
           )}
           <span className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-black/45 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
-            {uploading === 'banner' ? <Spinner size="sm" /> : <PencilIcon size={18} strokeWidth={2} />}
+            {uploading === 'banner' ? <Spinner size="sm" /> : <EditIcon size={18} strokeWidth={2} />}
             {t(bannerSrc ? 'settings.profileAppearance.changeBanner' : 'settings.profileAppearance.addBanner')}
           </span>
         </button>
@@ -97,7 +97,7 @@ export default function ProfileAppearanceEditor({
             initialClassName="text-2xl"
           />
           <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
-            {uploading === 'picture' ? <Spinner size="sm" /> : <PencilIcon size={18} strokeWidth={2} />}
+            {uploading === 'picture' ? <Spinner size="sm" /> : <EditIcon size={18} strokeWidth={2} />}
           </span>
         </button>
       </div>

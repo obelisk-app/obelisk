@@ -19,7 +19,7 @@ import type { RailMode } from '@/utils/shell/desktop/desktop-layout';
 import { AddRelayModal } from './AddRelayModal';
 import { RailTile } from './RailTile';
 import { RelayTile } from './RelayTile';
-import { GlobeIcon, PaperPlaneIcon, PlusIcon } from '@/assets/icons';
+import { GlobeIcon, SendIcon, PlusIcon } from '@/assets/icons';
 
 export default function ServerRail({
   mode,
@@ -43,7 +43,7 @@ export default function ServerRail({
         hint="rail-dm"
         onClick={onPickDM}
         icon={
-          <PaperPlaneIcon size={22} strokeWidth={2} />
+          <SendIcon size={22} strokeWidth={2} />
         }
         emphasis
       />

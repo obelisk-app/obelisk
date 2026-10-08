@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import type { NavbarModel } from '@/hooks/marketing/useNavbar';
 import { guidePath } from '@/utils/guides/guide-urls';
-import { CaretDownIcon } from '@/assets/icons';
+import { ChevronDownIcon } from '@/assets/icons';
 
 const GUIDE_ITEMS = [
   { slug: 'what-is-obelisk', tKey: 'marketing.learn.card.whatIsObelisk.title' },
@@ -32,7 +32,7 @@ export default function NavGuidesMenu({ guides }: { guides: NavbarModel['guides'
         data-testid="nav-guides-link"
       >
         {t('marketing.nav.guides')}
-        <CaretDownIcon size={10} className={`transition-transform ${guides.open ? 'rotate-180' : ''}`} />
+        <ChevronDownIcon size={10} strokeWidth={3} className={`transition-transform ${guides.open ? 'rotate-180' : ''}`} />
       </Link>
 
       {guides.open && (

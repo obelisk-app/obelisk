@@ -23,7 +23,7 @@ import EmptyState from '@/components/ui/feedback/EmptyState';
 import { useFeedSearch } from '@/hooks/social/feed/useFeedSearch';
 import FeedSearchSection from './FeedSearchSection';
 import FeedSearchPerson from './FeedSearchPerson';
-import { GlobeIcon, SearchWideIcon } from '@/assets/icons';
+import { GlobeIcon, SearchIcon } from '@/assets/icons';
 import Text from '@/components/ui/layout/Text';
 
 export default function FeedSearch({
@@ -63,11 +63,11 @@ export default function FeedSearch({
           className="flex shrink-0 items-center gap-1.5 rounded-md border border-lc-green/40 bg-lc-green/10 px-2.5 py-1.5 text-[11px] font-semibold text-lc-green"
           data-testid="feed-search-scope"
         >
-          <GlobeIcon size={13} strokeWidth={2} strokeLinecap="butt" strokeLinejoin="miter" />
+          <GlobeIcon size={13} strokeWidth={2} />
           {t('social.searchScope')}
         </span>
         <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-lc-border bg-lc-black/40 px-3 py-2 focus-within:border-lc-green/60">
-          <SearchWideIcon strokeWidth={2} className="shrink-0 text-lc-white/70" />
+          <SearchIcon strokeWidth={2} className="shrink-0 text-lc-white/70" />
           <Input
             variant="bare"
             autoFocus

@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { formatElapsed } from '@/utils/format/format-elapsed';
 import { useVoiceRecorder } from '@/hooks/chat/composer/useVoiceRecorder';
 import IconButton from '@/components/ui/buttons/IconButton';
-import { MicRecordIcon, TrashNarrowIcon } from '@/assets/icons';
+import { MicIcon, TrashIcon } from '@/assets/icons';
 import PulseDot from '@/components/ui/animations/PulseDot';
 
 export function VoiceNoteButton({
@@ -26,7 +26,7 @@ export function VoiceNoteButton({
           aria-label={t('chat.composer.discardRecording')}
           title={t('chat.composer.discardRecording')}
         >
-          <TrashNarrowIcon size={null} className="h-5 w-5" />
+          <TrashIcon size={null} className="h-5 w-5" />
         </IconButton>
         <span className="flex items-center gap-2 px-1 font-mono text-sm text-red-400">
           <PulseDot color="bg-red-400" />
@@ -50,7 +50,7 @@ export function VoiceNoteButton({
       onClick={() => void start()}
       aria-label={t('chat.composer.recordVoice')}
     >
-      <MicRecordIcon size={null} strokeWidth={2} className="h-5 w-5" />
+      <MicIcon size={null} strokeWidth={2} className="h-5 w-5" />
     </IconButton>
   );
 }

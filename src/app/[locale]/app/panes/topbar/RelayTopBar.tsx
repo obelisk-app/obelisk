@@ -7,7 +7,7 @@ import { InboxPopover } from './InboxPopover';
 import { useRelayTopBar } from '@/hooks/shell/panes/topbar/useRelayTopBar';
 import Button from '@/components/ui/buttons/Button';
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { BellAltIcon, HelpCircleIcon, MenuIcon } from '@/assets/icons';
+import { BellIcon, HelpCircleIcon, MenuIcon } from '@/assets/icons';
 
 /**
  * The desktop top bar: the relay's name and icon (a link to its website),
@@ -69,7 +69,7 @@ export function RelayTopBar({
           title={t('common.notifications')}
           aria-label={t('common.notifications')}
         >
-          <BellAltIcon size={null} strokeWidth={1.5} className="w-6 h-6 md:w-4 md:h-4" />
+          <BellIcon size={null} strokeWidth={1.5} className="w-6 h-6 md:w-4 md:h-4" />
           {vm.inbox.unreadInboxCount > 0 && (
             <span className="absolute top-0.5 right-0.5 md:top-0 md:right-0 min-w-[16px] h-[16px] md:min-w-[14px] md:h-[14px] px-1 rounded-full bg-lc-green text-lc-black text-[10px] md:text-[9px] font-bold flex items-center justify-center leading-none">
               {vm.inbox.unreadInboxCount > 99 ? '99+' : vm.inbox.unreadInboxCount}

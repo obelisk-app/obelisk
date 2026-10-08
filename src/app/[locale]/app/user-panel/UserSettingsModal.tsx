@@ -13,7 +13,7 @@ import {
   LogOutIcon,
   PaletteIcon,
   ServerIcon,
-  SettingsIcon,
+  GearIcon,
   ShieldIcon,
   SmileIcon,
   UserIcon,
@@ -42,7 +42,7 @@ const SETTINGS_NAV: ReadonlyArray<{
   {
     label: 'settings.group.app',
     items: [
-      { id: 'general', Icon: SettingsIcon },
+      { id: 'general', Icon: GearIcon },
       { id: 'appearance', Icon: PaletteIcon },
       { id: 'notifications', Icon: BellIcon },
       { id: 'relays', Icon: ServerIcon },

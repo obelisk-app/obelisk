@@ -15,7 +15,7 @@ import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
 import ComposeDm from './ComposeDm';
 import { DmListRow } from './DmListRow';
 import { DmTabLabel } from './DmTabLabel';
-import { SearchIcon, TrashRoundIcon } from '@/assets/icons';
+import { SearchIcon, TrashIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
@@ -47,7 +47,7 @@ export default function DmList({
             title={t('dm.clearCacheTitle')}
             aria-label={t('dm.clearCache')}
           >
-            <TrashRoundIcon strokeWidth={2} />
+            <TrashIcon strokeWidth={2} />
           </Button>
           <Button
             variant="ghost"

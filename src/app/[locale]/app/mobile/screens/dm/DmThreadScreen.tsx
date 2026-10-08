@@ -18,7 +18,7 @@ import { DmProtocolSwitch } from '../../../dm/DmProtocolSwitch';
 import { DmProtocolNotice } from '../../../dm/DmProtocolNotice';
 import { useDmProtocolChoice } from '@/hooks/shell/dm/useDmProtocolChoice';
 import { DmUnlock } from '@/components/chat/dm/unlock/DmUnlock';
-import { LockWideIcon } from '@/assets/icons';
+import { LockIcon } from '@/assets/icons';
 
 /**
  * Phone skin of a DM conversation. Order, dividers, post-quantum marks,
@@ -50,7 +50,7 @@ export function DmThreadScreen({
         <div className="dm-header-meta" onClick={() => openProfile(peer)}>
           <div className="dm-header-name">{thread.peerName}</div>
           <div className="dm-header-pubkey">
-            <LockWideIcon size={null} strokeWidth={2} className="lock" />
+            <LockIcon size={null} strokeWidth={2} className="lock" />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {shortNpubLabel(peer)} · <span data-testid="dm-header-protocol">{protocolChoice.protocol === 'nip04' ? 'NIP-04' : 'NIP-17'}</span>
             </span>
@@ -73,7 +73,7 @@ export function DmThreadScreen({
 
       <div className="dm-messages native-scroll-y" ref={scrollRef}>
         <div className="dm-encryption-pill">
-          <LockWideIcon size={null} strokeWidth={2} className="lock" />
+          <LockIcon size={null} strokeWidth={2} className="lock" />
           {t('dm.encryptedPill')}
         </div>
         {thread.items.map((it) => (

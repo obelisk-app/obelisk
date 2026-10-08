@@ -38,7 +38,7 @@ export default function RepostCard(props: NoteCardProps) {
         data-testid="repost-attribution"
       >
         <span className="flex h-4 w-4 shrink-0 items-center justify-center text-lc-green">
-          <RepostIcon size={18} strokeWidth={1.75} />
+          <RepostIcon size={18} />
         </span>
         <span className="min-w-0 truncate">
           <RepostersLine pubkeys={everyone} onOpenProfile={props.onOpenProfile} />

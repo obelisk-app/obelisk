@@ -1,10 +1,13 @@
 import IconSvg, { type IconProps } from './IconSvg';
 
-/** Four inward corners: shrink. */
+/** Four rounded corners pointing in: back to the normal size (MaximizeIcon's opposite). */
 export default function MinimizeIcon(props: IconProps) {
   return (
     <IconSvg {...props}>
-      <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+      <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+      <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+      <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+      <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
     </IconSvg>
   );
 }

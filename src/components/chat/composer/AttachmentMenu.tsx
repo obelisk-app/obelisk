@@ -5,7 +5,7 @@ import IconButton from '@/components/ui/buttons/IconButton';
 import { useAttachmentMenu } from '@/hooks/chat/composer/useAttachmentMenu';
 import { AttachmentMenuItem } from './AttachmentMenuItem';
 import { AttachmentPickerInput } from './AttachmentPickerInput';
-import { CalendarIcon, CameraAltIcon, ContactIcon, DocumentIcon, PhotoIcon, PlusIcon, PollIcon, StickerIcon } from '@/assets/icons';
+import { CalendarIcon, CameraIcon, ContactIcon, FileIcon, ImageIcon, PlusIcon, PollIcon, StickerIcon } from '@/assets/icons';
 
 export function AttachmentMenu({
   disabled,
@@ -38,9 +38,9 @@ export function AttachmentMenu({
       </IconButton>
       {open && (
         <div className="absolute bottom-full left-0 z-40 mb-2 w-56 overflow-hidden rounded-2xl border border-lc-border bg-lc-dark p-2 text-sm text-lc-white shadow-2xl" role="menu">
-          <AttachmentMenuItem label={t('chat.composer.document')} icon={<DocumentIcon size={null} className="h-[18px] w-[18px]" />} onClick={() => pick('document')} />
-          <AttachmentMenuItem label={t('chat.composer.photos')} icon={<PhotoIcon size={null} className="h-[18px] w-[18px]" />} onClick={() => pick('media')} />
-          <AttachmentMenuItem label={t('chat.composer.camera')} icon={<CameraAltIcon size={null} className="h-[18px] w-[18px]" />} onClick={() => pick('camera')} />
+          <AttachmentMenuItem label={t('chat.composer.document')} icon={<FileIcon size={null} className="h-[18px] w-[18px]" />} onClick={() => pick('document')} />
+          <AttachmentMenuItem label={t('chat.composer.photos')} icon={<ImageIcon size={null} className="h-[18px] w-[18px]" />} onClick={() => pick('media')} />
+          <AttachmentMenuItem label={t('chat.composer.camera')} icon={<CameraIcon size={null} className="h-[18px] w-[18px]" />} onClick={() => pick('camera')} />
           <AttachmentMenuItem label={t('chat.composer.contact')} icon={<ContactIcon size={null} className="h-[18px] w-[18px]" />} onClick={contact} />
           <AttachmentMenuItem label={t('chat.composer.newSticker')} icon={<StickerIcon size={null} className="h-[18px] w-[18px]" />} onClick={newSticker} />
           <AttachmentMenuItem label={t('chat.composer.poll')} icon={<PollIcon size={null} className="h-[18px] w-[18px]" />} disabled />

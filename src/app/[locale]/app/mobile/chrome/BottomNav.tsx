@@ -6,25 +6,25 @@ import HintDot from '@/components/hints/HintDot';
 import { type ScreenName, type NavState } from '@/utils/shell/mobile/url-state';
 import { activeTabFor, badgeLabel } from '@/utils/shell/mobile/bottom-nav';
 import { NAV_HINT_ANCHOR, NAV_HINT_ID } from '@/constants/shell/mobile';
-import { BellAltIcon, GlobeIcon, GridIcon, PaperPlaneIcon, UserRoundIcon } from '@/assets/icons';
+import { BellIcon, GlobeIcon, GridIcon, SendIcon, UserIcon } from '@/assets/icons';
 
 interface NavTab { id: ScreenName; icon: ReactNode; label: string; badge?: number }
 
 const NAV_ICONS: Record<'servers' | 'feed' | 'dms' | 'inbox' | 'you', ReactNode> = {
   servers: (
-    <GridIcon size={null} strokeWidth={1} />
+    <GridIcon size={null} />
   ),
   feed: (
-    <GlobeIcon size={null} strokeWidth={1} />
+    <GlobeIcon size={null} />
   ),
   dms: (
-    <PaperPlaneIcon size={null} strokeWidth={1} />
+    <SendIcon size={null} />
   ),
   inbox: (
-    <BellAltIcon size={null} strokeWidth={1.5} />
+    <BellIcon size={null} strokeWidth={1.5} />
   ),
   you: (
-    <UserRoundIcon size={null} strokeWidth={1} />
+    <UserIcon size={null} />
   ),
 };
 

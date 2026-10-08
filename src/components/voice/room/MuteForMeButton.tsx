@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useMuteForMeButton } from '@/hooks/voice/room/useMuteForMeButton';
-import { MicTallIcon, MicTallOffIcon } from '@/assets/icons';
+import { MicIcon, MicOffIcon } from '@/assets/icons';
 
 /** Mute one person for me only (the voice store's local mute list); the call does not hear about it. */
 export default function MuteForMeButton({ pubkey, compact = false }: { pubkey: string; compact?: boolean }) {
@@ -23,7 +23,7 @@ export default function MuteForMeButton({ pubkey, compact = false }: { pubkey: s
           : 'bg-black/60 text-white/80 border border-white/15 hover:bg-black/80')
       }
     >
-      {muted ? <MicTallOffIcon size={compact ? 12 : 11} strokeWidth={2} /> : <MicTallIcon size={compact ? 12 : 11} strokeWidth={2} />}
+      {muted ? <MicOffIcon size={compact ? 12 : 11} strokeWidth={2} /> : <MicIcon size={compact ? 12 : 11} strokeWidth={2} />}
     </button>
   );
 }

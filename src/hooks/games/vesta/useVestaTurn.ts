@@ -1,19 +1,22 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { GameState } from 'vesta';
+import type { GameState, TradeResource } from 'vesta';
 import { getRobbableVertices, computeRates } from 'vesta';
 import type { GameSession } from '@/lib/games/session/session';
 import { vesta, isRobberPending, isStealPending, type VestaAction } from '@/lib/games/vesta/definition';
 import type { PickMode } from '@/utils/games/vesta/pick-mode';
-import type { ResourceCounts } from '@/utils/games/vesta/resources';
-import { RESOURCES } from '@/constants/games/vesta';
+import { RESOURCES, TRADE_TAKE_MAX } from '@/constants/games/vesta';
+import { useCappedDraft } from '@/hooks/games/vesta/useCappedDraft';
+
+const takeCap = () => TRADE_TAKE_MAX;
 
 /**
  * Everything the Vesta table derives from the state for the seat acting at
  * this keyboard: whose move it is, what the rules are waiting on (setup
  * placement, the robber, a steal, a discard, a trade), what the board should
- * ask for, and the draft counts for a discard or a trade.
+ * ask for, and the draft counts for a discard or a trade, each kept within
+ * its cap (`useCappedDraft`).
  *
  * `can` is the engine's own `validateAction`, so no control is offered that
  * the reducer would drop.
@@ -32,9 +35,6 @@ export function useVestaTurn({
   const [pick, setPick] = useState<PickMode>('none');
   const [stealDone, setStealDone] = useState<string | null>(null);
   const [tradePartner, setTradePartner] = useState<number | 'bank' | null>(null);
-  const [give, setGive] = useState<ResourceCounts>({});
-  const [take, setTake] = useState<ResourceCounts>({});
-  const [discard, setDiscard] = useState<ResourceCounts>({});
 
   const participants = session.participants;
   const turnSeat = session.currentTurn;
@@ -48,6 +48,15 @@ export function useVestaTurn({
   }, [turnSeat, mySeats]);
 
   const actingIdx = actingSeat ? participants.indexOf(actingSeat) : -1;
+
+  // The drafts for a trade and a discard. What a seat gives or discards is
+  // capped by what it holds, so a drafted count follows the hand down when
+  // it shrinks; what it asks for is capped by the bank's stock.
+  const holding = (r: TradeResource) => state.players[actingIdx]?.resources[r] ?? 0;
+  const [give, setGive] = useCappedDraft(holding);
+  const [take, setTake] = useCappedDraft(takeCap);
+  const [discard, setDiscard] = useCappedDraft(holding);
+
   const myTurn = !!turnSeat && mySeats.includes(turnSeat);
   const isSetup = state.phase === 'initial_first' || state.phase === 'initial_second';
 
@@ -115,6 +124,8 @@ export function useVestaTurn({
     iAmTradeTarget,
     iAmProposer,
     rates,
+    holding,
+    takeCap,
     tradePartner,
     setTradePartner,
     give,

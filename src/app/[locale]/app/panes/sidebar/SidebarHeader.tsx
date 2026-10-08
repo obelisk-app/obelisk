@@ -99,7 +99,7 @@ export function SidebarHeader({
             aria-label={t('shell.desktop.server.settings')}
             className="shrink-0"
           >
-            <GearIcon strokeWidth={2} strokeLinejoin="miter" />
+            <GearIcon strokeWidth={2} />
           </Button>
         )}
       </div>

@@ -16,7 +16,7 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 import { RelayMenuRow } from './RelayMenuRow';
 import { RelayMenuAdminRows } from './RelayMenuAdminRows';
 import { RelayMenuPanels } from './RelayMenuPanels';
-import { CopyAltIcon, LogOutIcon, ShareIcon, UserPlusIcon } from '@/assets/icons';
+import { CopyIcon, LogOutIcon, ShareIcon, UserPlusIcon } from '@/assets/icons';
 
 /**
  * The phone relay menu: invite, share, copy the URL and leave, plus the
@@ -75,25 +75,25 @@ export function RelayMenuSheet({
       />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <RelayMenuRow
-          icon={<UserPlusIcon size={20} strokeWidth={1.6} />}
+          icon={<UserPlusIcon size={20} strokeWidth={1.5} />}
           rowLabel={t('mobile.space.invite')}
           hint={vm.busy === 'invite' ? '…' : t('mobile.space.copyLinkHint')}
           onClick={vm.invite}
         />
         <RelayMenuRow
-          icon={<ShareIcon size={20} strokeWidth={1.6} />}
+          icon={<ShareIcon size={20} strokeWidth={1.5} />}
           rowLabel={t('mobile.space.share')}
           hint={vm.busy === 'share' ? '…' : undefined}
           onClick={vm.share}
         />
         <RelayMenuRow
-          icon={<CopyAltIcon size={20} strokeWidth={1.6} />}
+          icon={<CopyIcon size={20} strokeWidth={1.5} />}
           rowLabel={t('mobile.space.copyUrl')}
           onClick={vm.copyUrl}
         />
         {isAdmin && <RelayMenuAdminRows onOpen={vm.openPanel} />}
         <RelayMenuRow
-          icon={<LogOutIcon size={20} strokeWidth={1.6} />}
+          icon={<LogOutIcon size={20} strokeWidth={1.5} />}
           rowLabel={t('mobile.space.leave')}
           hint={vm.busy === 'leave' ? '…' : undefined}
           danger

@@ -38,7 +38,7 @@ export default function StepsSection() {
               <Text as="p" variant="muted" className="leading-relaxed">{t(`marketing.steps.${num}.desc`)}</Text>
               {i < 2 && (
                 <div className="md:hidden flex justify-center py-2 mt-4 text-lc-green/30">
-                  <ArrowDownIcon size={20} strokeWidth={2} strokeLinecap="butt" strokeLinejoin="miter" />
+                  <ArrowDownIcon size={20} strokeWidth={2} />
                 </div>
               )}
             </div>

@@ -11,7 +11,7 @@
 
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
-import { PictureIcon } from '@/assets/icons';
+import { ImageIcon } from '@/assets/icons';
 
 export function RemoteMediaPlaceholder({ onReveal, compact = false }: { onReveal: () => void; compact?: boolean }) {
   const t = useTranslations();
@@ -23,7 +23,7 @@ export function RemoteMediaPlaceholder({ onReveal, compact = false }: { onReveal
       className="mt-1 max-w-sm text-left"
       data-testid="remote-media-placeholder"
     >
-      <PictureIcon size={null} className="h-5 w-5 shrink-0 text-lc-white" />
+      <ImageIcon size={null} className="h-5 w-5 shrink-0 text-lc-white" />
       <span className="flex min-w-0 flex-col">
         <span className="text-sm font-medium text-lc-white">{t('media.remote.show')}</span>
         {!compact && <span className="text-xs text-lc-muted">{t('media.remote.hint')}</span>}

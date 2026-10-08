@@ -45,7 +45,7 @@ export default function NoteMenu({
         data-testid="note-more"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full transition-colors group-hover/act:bg-white/10 group-hover/act:text-lc-white">
-          <MoreIcon size={18} strokeWidth={1.75} />
+          <MoreIcon size={18} />
         </span>
       </button>
 

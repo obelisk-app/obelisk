@@ -13,7 +13,7 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useChannelMessage } from '@/hooks/shell/mobile/screens/channel/useChannelMessage';
 import { MobileReplyPreviewRow } from './MobileReplyPreviewRow';
 import { MobileReactionChip } from './MobileReactionChip';
-import { MoreLargeIcon } from '@/assets/icons';
+import { MoreIcon } from '@/assets/icons';
 
 /**
  * One message tile. Memoized: `ChannelScreen` re-renders on every ingest and
@@ -75,7 +75,7 @@ export const ChannelMessage = memo(function ChannelMessage({
             data-testid="mobile-msg-more"
             onClick={() => onLongPress(msg)}
           >
-            <MoreLargeIcon size={null} />
+            <MoreIcon size={null} />
           </button>
         </div>
         <div

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useMessageActionsSheet, type MobileActionMessage } from '@/hooks/shell/mobile/sheets/message/useMessageActionsSheet';
 import { QUICK_REACTIONS } from '@/constants/shell/mobile';
 import EmojiSheet from './EmojiSheet';
-import { BoltAltIcon, CopyLargeIcon, CornerUpLeftIcon, TrashFlatIcon } from '@/assets/icons';
+import { ZapIcon, CopyIcon, ReplyIcon, TrashIcon } from '@/assets/icons';
 
 export function MessageActionsSheet({
   msg,
@@ -50,19 +50,19 @@ export function MessageActionsSheet({
             data-testid="mobile-msg-actions-reply"
             onClick={vm.reply}
           >
-            <CornerUpLeftIcon size={null} />
+            <ReplyIcon size={null} />
             {t('social.reply')}
           </button>
           <button className="ma-action" onClick={vm.copyText}>
-            <CopyLargeIcon size={null} />
+            <CopyIcon size={null} />
             {t('social.copyText')}
           </button>
           <button className="ma-action zap" onClick={onZap}>
-            <BoltAltIcon size={null} />
+            <ZapIcon size={null} />
             {t('mobile.message.zap')}
           </button>
           <button className="ma-action" onClick={vm.copyId}>
-            <CopyLargeIcon size={null} />
+            <CopyIcon size={null} />
             {t('social.copyEventId')}
           </button>
           {vm.canDelete && (
@@ -71,7 +71,7 @@ export function MessageActionsSheet({
               data-testid="mobile-msg-actions-delete"
               onClick={() => void vm.deleteMessage()}
             >
-              <TrashFlatIcon size={null} />
+              <TrashIcon size={null} />
               {msg.canModerate ? t('mobile.message.deleteEveryone') : t('mobile.message.deleteMessage')}
             </button>
           )}

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import SearchBar from '../../search/SearchBar';
 import { CopyInviteLinkButton } from './CopyInviteLinkButton';
 import Button from '@/components/ui/buttons/Button';
-import { GearIcon, UsersAltIcon } from '@/assets/icons';
+import { GearIcon, UsersIcon } from '@/assets/icons';
 
 type Props = {
   groupId: string;
@@ -47,7 +47,7 @@ export function ChannelHeader({ groupId, group, isAdmin, showMembers, onToggleMe
             title={t('shell.desktop.channel.settings')}
             aria-label={t('shell.desktop.channel.settings')}
           >
-            <GearIcon size={20} strokeWidth={2} strokeLinejoin="miter" />
+            <GearIcon size={20} strokeWidth={2} />
           </Button>
         )}
         {/* Pressed is green at rest and on hover; `aria-pressed:` variants
@@ -61,7 +61,7 @@ export function ChannelHeader({ groupId, group, isAdmin, showMembers, onToggleMe
           aria-label={showMembers ? t('shell.desktop.channel.hideMembers') : t('shell.desktop.channel.showMembers')}
           aria-pressed={showMembers}
         >
-          <UsersAltIcon size={20} strokeWidth={2} />
+          <UsersIcon size={20} strokeWidth={2} />
         </Button>
         <CopyInviteLinkButton groupId={groupId} />
         <SearchBar

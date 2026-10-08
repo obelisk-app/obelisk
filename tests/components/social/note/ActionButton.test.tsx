@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import ActionButton from '@/components/social/note/ActionButton';
-import { HeartIcon, MessageCircleIcon } from '@/assets/icons';
+import { HeartIcon, ChatIcon } from '@/assets/icons';
 
 const wrap = (ui: React.ReactNode) => render(
   <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
@@ -17,7 +17,7 @@ describe('ActionButton', () => {
       <ActionButton
         kind="reply"
         label="Reply"
-        icon={<MessageCircleIcon size={18} strokeWidth={1.75} />}
+        icon={<ChatIcon size={18} strokeWidth={1.75} />}
         count={3}
         testId="act"
         onClick={() => {}}
@@ -52,7 +52,7 @@ describe('ActionButton', () => {
   it('does not fire while disabled', () => {
     const onClick = vi.fn();
     wrap(
-      <ActionButton kind="zap" label="Zap" icon={<MessageCircleIcon size={18} strokeWidth={1.75} />} count={0} testId="act" disabled onClick={onClick} />,
+      <ActionButton kind="zap" label="Zap" icon={<ChatIcon size={18} strokeWidth={1.75} />} count={0} testId="act" disabled onClick={onClick} />,
     );
     fireEvent.click(screen.getByTestId('act'));
     expect(onClick).not.toHaveBeenCalled();

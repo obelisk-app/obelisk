@@ -119,7 +119,7 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lc-green text-lc-black disabled:opacity-30"
             aria-label={t("common.send")}
           >
-            <SendIcon size={null} strokeWidth={2.2} className="h-5 w-5" />
+            <SendIcon size={null} strokeWidth={2} className="h-5 w-5" />
           </button>
         ) : (
           <VoiceNoteButton disabled={composer.uploading} onRecorded={(file, duration) => void composer.onVoiceRecorded(file, duration)} />

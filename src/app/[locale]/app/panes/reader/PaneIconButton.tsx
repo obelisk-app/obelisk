@@ -24,7 +24,7 @@ export function PaneIconButton({
       title={label}
       data-testid={testId}
     >
-      <Icon size={18} strokeWidth={2.2} />
+      <Icon size={18} strokeWidth={2} />
     </button>
   );
 }

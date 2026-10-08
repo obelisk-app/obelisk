@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useDmOptInGate } from '@/hooks/shell/dm/useDmOptInGate';
 import Button from '@/components/ui/buttons/Button';
-import { LockWideIcon } from '@/assets/icons';
+import { LockIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
@@ -56,7 +56,7 @@ export default function DmOptInGate({
       >
         <div className="mb-4 flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-lc-green/40 bg-lc-green/10 text-lc-green">
-            <LockWideIcon size={18} strokeWidth={2} />
+            <LockIcon size={18} strokeWidth={2} />
           </div>
           <div className="min-w-0">
             <Heading as="h2" id={`dm-opt-in-title-${surface}`} className={compact ? 'text-sm font-bold text-lc-white' : 'text-lg font-bold text-lc-white'}>

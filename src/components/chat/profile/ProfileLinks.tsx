@@ -18,7 +18,7 @@ import { copyWithToast } from '@/services/common/clipboard';
 import { useTranslations } from 'next-intl';
 import TextButton from '@/components/ui/buttons/TextButton';
 import { BioSegmentView } from './BioSegmentView';
-import { BoltIcon, GlobeIcon } from '@/assets/icons';
+import { ZapIcon, GlobeIcon } from '@/assets/icons';
 import Text from '@/components/ui/layout/Text';
 
 export default function ProfileLinks({
@@ -54,7 +54,7 @@ export default function ProfileLinks({
               className="inline-flex items-center gap-1.5 text-lc-green hover:underline"
               data-testid="profile-website"
             >
-              <GlobeIcon size={13} strokeWidth={2} strokeLinejoin="miter" />
+              <GlobeIcon size={13} strokeWidth={2} />
               {prettyUrl(site)}
             </a>
           )}
@@ -64,7 +64,7 @@ export default function ProfileLinks({
               data-testid="profile-lud16"
               title={lud16}
             >
-              <BoltIcon size={13} strokeWidth={2} />
+              <ZapIcon size={13} strokeWidth={2} />
               {lud16}
             </TextButton>
           )}

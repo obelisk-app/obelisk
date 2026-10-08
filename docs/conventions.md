@@ -153,9 +153,7 @@ Every picture the app draws lives in `src/assets/`, one folder per kind (round 3
 - `size`: width and height in px, 16 by default; `size={null}` writes neither, for an icon a stylesheet sizes (`className="h-5 w-5"`, `.nav-item svg { ... }`);
 - `title`: a spoken name for an icon that means something on its own; it renders a `<title>`, adds `role="img"` and drops `aria-hidden` (so does an `aria-label`).
 
-A caller passes only what differs: `<ChevronRightIcon size={12} strokeWidth={2.5} />`, `<SearchIcon size={null} className="h-5 w-5" />`. An icon whose drawing is a filled glyph sets `fill="currentColor" stroke="none"` in its own file (`PlayIcon`, `PauseIcon`, `DragHandleIcon`); one drawn on another grid sets its `viewBox` (`DragHandleIcon`, `CaretDownIcon`). A variant that is the same drawing in another state is a prop, not a second file (`ZapIcon filled`, `StarIcon filled`, `MonitorIcon checked`); any icon can be filled with `fill="currentColor"` (the note actions do).
-
-**One drawing, one icon.** Before adding an icon, look in `index.ts`. Two icons that look the same are one icon; when two drawings of one idea differ visibly (a shorter handle, a wider body), both stay under names that say how (`SearchIcon`, `SearchShortIcon`, `SearchWideIcon`; `LockIcon`, `LockMediumIcon`, `LockWideIcon`, `LockLargeIcon`). A component that only chooses which icon to show (by topic, by category) is a component like any other and is not named `...Icon` (`HelpTopicBadge`, `RailBadge`, `MediaCategoryGlyph`).
+A caller passes only what differs: `<ChevronRightIcon size={12} strokeWidth={2.5} />`, `<SearchIcon size={null} className="h-5 w-5" />`. An icon whose drawing is a filled glyph sets `fill="currentColor" stroke="none"` in its own file (`PlayIcon`, `PauseIcon`, `DragHandleIcon`). A variant that is the same drawing in another state is a prop, not a second file (`ZapIcon filled`, `StarIcon filled`, `ScreenShareIcon checked`); any icon can be filled with `fill="currentColor"` (the note actions do, and the voice note's empty avatar is `UserIcon` filled).
 
 **Illustrations** are components that may read translated labels (`useTranslations`), and follow the component rules (markup-only, one component per file). The guide snapshot pipeline imports them from `src/assets/illustrations/guides/` and must keep producing byte-identical files (`tests/assets/illustrations/guides/snapshots-match.test.tsx`).
 
@@ -163,7 +161,20 @@ A caller passes only what differs: `<ChevronRightIcon size={12} strokeWidth={2.5
 
 **Drawn from data.** SVG computed from live data at render time (a chart, a level meter, a QR code) may stay in its component, listed with its reason in `DATA_DRIVEN` in `tests/assets/assets-only.test.ts`. A static shape inside such a component still moves to assets. The list is empty today: the game thumbnails and the landing's relay pulse are drawn from fixed geometry, so they are illustrations.
 
-`tests/assets/assets-only.test.ts` holds all of this: no `<svg>` or SVG shape in JSX, no `<svg` markup in a string or a stylesheet outside `src/assets/`; no `...Icon` component outside `src/assets/icons/` (the brand `ObeliskIcon` aside); only icon files, `IconSvg.tsx` and the barrel in that folder, every icon in the barrel; no two icon files with the same drawing.
+`tests/assets/assets-only.test.ts` holds all of this: no `<svg>` or SVG shape in JSX, no `<svg` markup in a string or a stylesheet outside `src/assets/`; no `...Icon` component outside `src/assets/icons/` (the brand `ObeliskIcon` aside); only icon files, `IconSvg.tsx` and the barrel in that folder, every icon in the barrel; no two icon files with the same drawing. `tests/assets/icon-style.test.ts` holds the [icon style](#icon-style): no two icons named for one symbol (a variant suffix, or two names from one synonym group); no icon file with its own grid, weight, caps, joins, colour or a square `<rect>`; no caller passing caps, joins, a grid or a weight outside the set.
+
+### Icon style
+
+The owner's rule (round 33): "Choose one style for the icons, and reuse it." Every icon is drawn the way most of the set already was:
+
+- **Grid:** the frame's 24-unit `viewBox`, the drawing inside about 2 to 22. An icon file never sets its own `viewBox`.
+- **Line:** an outline in `currentColor`, 1.8 wide (the frame's default), round caps and round joins. An icon file sets no stroke width, caps or joins, and no colour but `currentColor`.
+- **Corners:** rounded. A `<rect>` always has an `rx` (2 for a frame, 1.5 for small tiles); a corner that is part of a path is a 2-unit arc where it is a box corner (`MaximizeIcon`, `DownloadIcon`).
+- **Fills:** none, except filled glyphs (`fill="currentColor" stroke="none"`: play, pause, the drag handle) and small solid dots (`MoreIcon`, `DiceIcon`).
+- **Exceptions** are listed with their reason in `STYLE_EXCEPTIONS` in `tests/assets/icon-style.test.ts`: only `ObeliskReactIcon`, the Obelisk mascot in brand colours on the add-reaction button.
+- **Callers** may change the size (`size`, `className`) and, to keep a line legible at that size, the weight, from one set: 1.5 (large display icons), 2, 2.5 (small chevrons and arrows), 3 (icons of 10 px and under). Never caps, joins or the grid. A stylesheet that sets `stroke-width` on icons uses the same set.
+
+**One symbol, one icon.** Before adding an icon, look in `index.ts`. Each meaning has one icon, drawn once, and every screen that means it uses it: there is one search lens, one padlock, one bin, one microphone (and its struck-through `MicOffIcon`), one bell, one speech bubble, one paper plane for sending and for the direct-messages entry. A name never says how a drawing differs (`Alt`, `Short`, `Wide`, `Large`, `Round`, a number): if the difference matters, it is a different meaning and gets a name that says the meaning (`MicOffIcon`, `CheckCircleIcon`, `StackIcon` for "several pictures"). A component that only chooses which icon to show (by topic, by category) is a component like any other and is not named `...Icon` (`HelpTopicBadge`, `RailBadge`, `MediaCategoryGlyph`).
 
 ## Type
 

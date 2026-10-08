@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { DownloadAltIcon, FileAltIcon } from '@/assets/icons';
+import { DownloadIcon, FileIcon } from '@/assets/icons';
 import Text from '@/components/ui/layout/Text';
 
 interface AttachmentCardProps {
@@ -40,14 +40,14 @@ export default function AttachmentCard({ url, name, thumbnailUrl }: AttachmentCa
             data-testid="attachment-thumbnail"
           />
         ) : (
-          <FileAltIcon size={18} strokeWidth={2} className="text-lc-green" />
+          <FileIcon size={18} strokeWidth={2} className="text-lc-green" />
         )}
       </div>
       <div className="min-w-0 flex-1">
         <Text as="p" size="sm" tone="default" weight="medium" className="truncate">{name}</Text>
         <Text as="p" variant="caption">{ext}</Text>
       </div>
-      <DownloadAltIcon strokeWidth={2} className="text-lc-muted shrink-0" />
+      <DownloadIcon strokeWidth={2} className="text-lc-muted shrink-0" />
     </a>
   );
 }

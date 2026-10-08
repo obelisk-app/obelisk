@@ -7,7 +7,7 @@ import Range from '@/components/ui/forms/Range';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { formatElapsed } from '@/utils/format/format-elapsed';
 import { useVoicePlayback } from '@/hooks/chat/message/useVoicePlayback';
-import { MicSmallIcon, PauseIcon, PlayLargeIcon, UserSolidIcon } from '@/assets/icons';
+import { MicIcon, PauseIcon, PlayIcon, UserIcon } from '@/assets/icons';
 
 /** Bar heights (px) of the decorative waveform the player draws. */
 const VOICE_WAVEFORM = [10, 18, 13, 25, 20, 12, 28, 17, 23, 14, 30, 20, 12, 24, 17, 28, 15, 22, 30, 18, 11, 25, 16, 21, 13, 27, 19, 10] as const;
@@ -57,7 +57,7 @@ export function VoiceMessage({
         {playing ? (
           <PauseIcon size={null} className="h-5 w-5" />
         ) : (
-          <PlayLargeIcon size={null} className="ml-0.5 h-6 w-6" />
+          <PlayIcon size={null} className="ml-0.5 h-6 w-6" />
         )}
       </button>
       <span className={`min-w-0 flex-1 ${compact ? "" : "relative h-16 pr-2"}`}>
@@ -101,11 +101,11 @@ export function VoiceMessage({
             <RemoteImage src={authorPicture} alt={t('chat.voiceNote.sender')} className="h-14 w-14 rounded-full object-cover" />
           ) : (
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#6b7c85] text-white/80">
-              <UserSolidIcon size={null} className="h-7 w-7" />
+              <UserIcon size={null} fill="currentColor" className="h-7 w-7" />
             </span>
           )}
           <span className="absolute -bottom-1 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full bg-[#202c33] text-[#53bdeb]" data-testid="voice-mic-badge">
-            <MicSmallIcon size={null} strokeWidth={2.2} className="h-5 w-5" />
+            <MicIcon size={null} strokeWidth={2} className="h-5 w-5" />
           </span>
           {playing && (
             <button

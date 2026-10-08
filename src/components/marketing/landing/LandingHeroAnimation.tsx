@@ -1,5 +1,5 @@
 import ObeliskIcon from '@/assets/brand/ObeliskIcon';
-import { ChatIcon, KeyAltIcon, MoonIcon, SunIcon } from '@/assets/icons';
+import { ChatIcon, KeyIcon, MoonIcon, SunIcon } from '@/assets/icons';
 
 /** The decorative relay animation beside the hero copy. */
 export default function LandingHeroAnimation() {
@@ -28,7 +28,7 @@ export default function LandingHeroAnimation() {
               '--bubble-opacity': b.opacity,
               '--float-duration': b.duration,
               '--float-delay': b.delay,
-            } as React.CSSProperties} strokeLinejoin="miter" />
+            } as React.CSSProperties} />
         ))}
       </div>
 
@@ -66,8 +66,8 @@ export default function LandingHeroAnimation() {
         ))}
 
         <div className="relative h-full w-full" style={{ transform: 'scaleY(0.35)' }}>
-          <KeyAltIcon size={22} strokeWidth={1.5} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 animate-orbit drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]" style={{ '--orbit-radius': '118px', '--orbit-duration': '16s', transform: 'scaleY(2.85)' } as React.CSSProperties} strokeLinecap="butt" strokeLinejoin="miter" />
-          <KeyAltIcon size={22} strokeWidth={1.5} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 animate-orbit drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" style={{ '--orbit-radius': '118px', '--orbit-duration': '16s', animationDelay: '-8s', transform: 'scaleY(2.85)' } as React.CSSProperties} strokeLinecap="butt" strokeLinejoin="miter" />
+          <KeyIcon size={22} strokeWidth={1.5} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 animate-orbit drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]" style={{ '--orbit-radius': '118px', '--orbit-duration': '16s', transform: 'scaleY(2.85)' } as React.CSSProperties} />
+          <KeyIcon size={22} strokeWidth={1.5} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 animate-orbit drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" style={{ '--orbit-radius': '118px', '--orbit-duration': '16s', animationDelay: '-8s', transform: 'scaleY(2.85)' } as React.CSSProperties} />
         </div>
       </div>
 

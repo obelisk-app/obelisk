@@ -42,12 +42,17 @@ describe('ChevronUpIcon / ChevronDownIcon', () => {
 });
 
 describe('ZapIcon', () => {
-  it('draws the solid bolt with no stroke when filled, matching the copies it replaced', () => {
-    const { container } = render(<ZapIcon filled />);
-    const svg = container.querySelector('svg')!;
+  it('fills the one bolt drawing when filled, keeping its rounded outline', () => {
+    const outline = render(<ZapIcon />).container.querySelector('path')!.getAttribute('d');
+    const svg = render(<ZapIcon filled />).container.querySelector('svg')!;
     expect(svg.getAttribute('fill')).toBe('currentColor');
-    expect(svg.getAttribute('stroke')).toBe('none');
-    expect(svg.querySelector('path')!.getAttribute('d')).toBe('M13 2 4 14h6l-1 8 9-12h-6l1-8z');
+    expect(svg.getAttribute('stroke')).toBe('currentColor');
+    expect(svg.querySelector('path')!.getAttribute('d')).toBe(outline);
+  });
+
+  it('lets a caller fill it without the filled prop', () => {
+    const svg = render(<ZapIcon fill="currentColor" />).container.querySelector('svg')!;
+    expect(svg.getAttribute('fill')).toBe('currentColor');
   });
 
   it('stays an outline by default', () => {

@@ -37,7 +37,7 @@ export default function RepostButton({
       <ActionButton
         kind="repost"
         label={t('social.repost')}
-        icon={<RepostIcon size={18} strokeWidth={1.75} />}
+        icon={<RepostIcon size={18} />}
         count={count}
         testId="note-repost"
         active={active}
@@ -52,7 +52,7 @@ export default function RepostButton({
       <ActionButton
         kind="repost"
         label={t('social.repost')}
-        icon={<RepostIcon size={18} strokeWidth={1.75} />}
+        icon={<RepostIcon size={18} />}
         count={count}
         testId="note-repost"
         active={active}
@@ -74,13 +74,13 @@ export default function RepostButton({
         panelClassName={MENU_PANEL_CLASS}
       >
         <MenuItem
-          icon={<RepostIcon size={18} strokeWidth={1.75} />}
+          icon={<RepostIcon size={18} />}
           label={t('social.repost')}
           onClick={menu.repost}
           testId="note-repost-confirm"
         />
         <MenuItem
-          icon={<QuoteIcon size={18} strokeWidth={1.75} />}
+          icon={<QuoteIcon size={18} />}
           label={t('social.quote')}
           onClick={menu.quote}
           testId="note-quote"
