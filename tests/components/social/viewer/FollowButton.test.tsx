@@ -14,7 +14,7 @@ vi.mock('@/hooks/preferences/usePreferences', () => ({
   usePreferences: () => ({ socialRelays: ['wss://a.example'] }),
 }));
 
-import FollowButton from '@/app/[locale]/notes/[id]/FollowButton';
+import FollowButton from '@/components/social/viewer/FollowButton';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
 

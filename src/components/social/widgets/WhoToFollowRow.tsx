@@ -6,7 +6,7 @@ import Button from '@/components/ui/buttons/Button';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import UserAvatar from '@/components/ui/media/UserAvatar';
-import FollowButton from '@/app/[locale]/notes/[id]/FollowButton';
+import FollowButton from '@/components/social/viewer/FollowButton';
 
 /** One suggested person: avatar, name and NIP-05 (opens their profile), and a follow button. */
 export default function WhoToFollowRow({

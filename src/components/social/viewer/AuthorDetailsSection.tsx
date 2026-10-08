@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Heading from '@/components/ui/layout/Heading';
 
 /** One titled block of the author context. */
-export default function AuthorContextSection({
+export default function AuthorDetailsSection({
   title,
   testId,
   children,

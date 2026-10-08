@@ -22,14 +22,14 @@ import FollowButton from './FollowButton';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { safeNpub } from '@/utils/identity/short-npub';
 import { relayHostLabel } from '@/utils/relay-url/relay-host';
-import AuthorContextSection from './AuthorContextSection';
+import AuthorDetailsSection from './AuthorDetailsSection';
 import { plainTextForPreview } from '@/services/server/viewer/note-preview';
 import { noteIdentifier } from '@/services/social/note-links';
 import { NOTE_VIEWER_PATH } from '@/constants/social/note-links';
 import { formatDate } from '@/utils/format/format';
 import Text from '@/components/ui/layout/Text';
 
-export default async function AuthorContext({
+export default async function AuthorDetails({
   author,
   notes,
   hashtags,
@@ -52,7 +52,7 @@ export default async function AuthorContext({
   return (
     <div className="min-w-0 space-y-8" data-testid="author-context">
       {notes.length > 0 && (
-        <AuthorContextSection title={t('social.viewer.moreFrom', { name })} testId="author-more-notes">
+        <AuthorDetailsSection title={t('social.viewer.moreFrom', { name })} testId="author-more-notes">
           <List marker="none" spacing="normal">
             {notes.map((note) => (
               <li key={note.id}>
@@ -73,11 +73,11 @@ export default async function AuthorContext({
               </li>
             ))}
           </List>
-        </AuthorContextSection>
+        </AuthorDetailsSection>
       )}
 
       {hashtags.length > 0 && (
-        <AuthorContextSection title={t('social.author.writesAbout')} testId="author-hashtags">
+        <AuthorDetailsSection title={t('social.author.writesAbout')} testId="author-hashtags">
           <div className="flex flex-wrap gap-1.5">
             {hashtags.map((tag) => (
               <Link
@@ -89,11 +89,11 @@ export default async function AuthorContext({
               </Link>
             ))}
           </div>
-        </AuthorContextSection>
+        </AuthorDetailsSection>
       )}
 
       {follows.length > 0 && (
-        <AuthorContextSection title={t('social.author.follows')} testId="author-follows">
+        <AuthorDetailsSection title={t('social.author.follows')} testId="author-follows">
           <List marker="none" spacing="none" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
             {follows.map((profile) => (
               <li key={profile.pubkey}>
@@ -123,11 +123,11 @@ export default async function AuthorContext({
               </li>
             ))}
           </List>
-        </AuthorContextSection>
+        </AuthorDetailsSection>
       )}
 
       {writeRelays.length > 0 && (
-        <AuthorContextSection title={t('social.author.publishesTo')} testId="author-relays">
+        <AuthorDetailsSection title={t('social.author.publishesTo')} testId="author-relays">
           <List marker="none" spacing="none" className="flex flex-wrap gap-1.5">
             {writeRelays.map((relay) => (
               <li
@@ -141,7 +141,7 @@ export default async function AuthorContext({
           <Text as="p" size="10" tone="muted" className="mt-2">
             {t('social.author.relaysHelp')}
           </Text>
-        </AuthorContextSection>
+        </AuthorDetailsSection>
       )}
     </div>
   );

@@ -13,7 +13,7 @@ import { KIND_CONTACT_LIST } from '@/constants/nostr/nip-kinds';
 import type { MessageKey } from '@/i18n/keys';
 
 /**
- * The note page's follow button (`src/app/[locale]/notes/[id]/FollowButton.tsx`):
+ * The note page's follow button (`src/components/social/viewer/FollowButton.tsx`):
  * whether there is anyone to follow as, whether `pubkey` is already
  * followed, and the click that republishes the contact list with them
  * added or removed.

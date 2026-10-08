@@ -11,7 +11,7 @@ vi.mock('@/services/server/i18n/locale', async () => {
 });
 vi.mock('@/i18n/navigation', async () => (await import('@tests/support/mocks/i18n-navigation')).navigationMock());
 
-import AuthorContext from '@/app/[locale]/notes/[id]/AuthorContext';
+import AuthorDetails from '@/components/social/viewer/AuthorDetails';
 import type { ViewerProfile } from '@/services/server/viewer/nostr-fetch';
 
 const t = translator('en');
@@ -22,8 +22,8 @@ const profile = (pubkey: string, over: Partial<ViewerProfile> = {}): ViewerProfi
 } as ViewerProfile);
 const note = (id: string, content: string): NostrEvent => ({ id: id.repeat(64), pubkey: A, kind: 1, created_at: 1700000000, content, tags: [], sig: '' });
 
-async function show(props: Partial<Parameters<typeof AuthorContext>[0]>) {
-  const element = await AuthorContext({
+async function show(props: Partial<Parameters<typeof AuthorDetails>[0]>) {
+  const element = await AuthorDetails({
     author: profile(A, { name: 'alice' }), notes: [], hashtags: [], follows: [], relays: { read: [], write: [] }, ...props,
   });
   if (!element) return null;

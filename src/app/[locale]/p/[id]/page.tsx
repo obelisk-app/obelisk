@@ -34,7 +34,7 @@ import {
   topHashtags,
 } from '@/services/server/viewer/nostr-fetch';
 import ViewerHeader from '@/components/social/viewer/ViewerHeader';
-import AuthorContext from '@/app/[locale]/notes/[id]/AuthorContext';
+import AuthorDetails from '@/components/social/viewer/AuthorDetails';
 import ProfileViewerClient from './ProfileViewerClient';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
@@ -152,7 +152,7 @@ export default async function ProfileViewerPage({ params }: Params) {
                 className="min-w-0 space-y-8 overflow-x-hidden [overflow-wrap:anywhere] lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-2"
                 style={{ scrollbarGutter: 'stable' }}
               >
-                <AuthorContext
+                <AuthorDetails
                   author={profile}
                   notes={notes}
                   hashtags={topHashtags(notes)}

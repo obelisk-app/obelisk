@@ -39,7 +39,7 @@ import {
 import { buildNotePreview } from '@/services/server/viewer/note-preview';
 import ViewerHeader from '@/components/social/viewer/ViewerHeader';
 import NoteViewerClient from './NoteViewerClient';
-import AuthorContext from './AuthorContext';
+import AuthorDetails from '@/components/social/viewer/AuthorDetails';
 import Text from '@/components/ui/layout/Text';
 
 export const runtime = 'nodejs';
@@ -195,7 +195,7 @@ export default async function NoteViewerPage({ params }: Params) {
                     </List>
                   </section>
                   {author && (
-                    <AuthorContext
+                    <AuthorDetails
                       author={author}
                       notes={authorNotes}
                       hashtags={hashtags}
