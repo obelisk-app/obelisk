@@ -100,12 +100,6 @@ describe('LoginModal generated identity flow', () => {
     expect(sdkProps.profileSetup).toBe(true);
     expect(sdkProps.closeOnSuccess).toBe(false);
     expect(sdkProps.showRememberToggle).toBe(false);
-    const permissions = (sdkProps.nip46Perms as string).split(',');
-    expect(permissions).toContain('sign_event:22242');
-    expect(permissions).not.toContain('nip:42');
-    expect(permissions).toContain('nip:29');
-    expect(permissions).toContain('sign_event:25052');
-    expect(permissions).not.toContain('sign_event');
     expect(sdkProps.nip46Metadata).toEqual({
       name: 'Obelisk',
       url: 'https://obelisk.ar',
@@ -171,12 +165,12 @@ describe('LoginModal generated identity flow', () => {
     renderLocalized(<LoginModal />);
 
     expect(sdkProps.nip46Relays).toEqual([
-      'wss://relay.damus.io',
-      'wss://nos.lol',
-      'wss://relay.primal.net',
       'wss://relay.nsec.app',
-      'wss://relay.nostr.band',
+      'wss://nos.lol',
+      'wss://relay.damus.io',
+      'wss://nostr-01.yakihonne.com',
     ]);
+    expect(sdkProps.nip46Perms).toBeUndefined();
   });
 
   it('hands the SDK-paired remote signer to the bridge', async () => {

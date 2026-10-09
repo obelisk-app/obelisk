@@ -27,7 +27,6 @@ import { LoginModal as SdkLoginModal, NostrSessionProvider, type LoginMethodId }
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePastedKeyStep } from '@/hooks/session/usePastedKeyStep';
-import { OBELISK_NIP46_PERMISSIONS } from '@/constants/nostr/nip46-permissions';
 import { OBELISK_NIP46_RELAYS } from '@/constants/nostr/nip46-relays';
 import GeneratedProfileEnhancements from './GeneratedProfileEnhancements';
 import { GeneratedNpubStep } from './GeneratedNpubStep';
@@ -112,7 +111,6 @@ export default function LoginModal({
           showRememberToggle={false}
           profileSetup
           nip46Relays={OBELISK_NIP46_RELAYS}
-          nip46Perms={OBELISK_NIP46_PERMISSIONS}
           nip46Connection={{
             signerHref: signerAppHref,
             copyUri: copyText,
