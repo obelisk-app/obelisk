@@ -22,6 +22,12 @@ export function useSessionNoticeToast(): void {
         body: t('shell.login.notice.notRemembered.body'),
       });
     }
+    if (notice === 'extension-unverified' && last.current !== notice) {
+      useToastStore.getState().pushToast({
+        title: t('shell.login.notice.extensionUnverified.title'),
+        body: t('shell.login.notice.extensionUnverified.body'),
+      });
+    }
     last.current = notice;
   }, [notice, t]);
 }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { OwnProfileModule, type OwnProfileContext } from '@/services/nostr-bridge/profile/profile-own';
 import { StateStore } from '@/services/nostr-bridge/common/state-store';
+import { setCachedKind0, saveProfileSyncState } from '@/services/nostr-bridge/profile/profile-sync-cache';
 import type { PersistedSession } from '@/services/nostr-bridge/session/session-storage';
 
 function deferred<T>() {
@@ -29,6 +30,17 @@ function setup() {
 beforeEach(() => localStorage.clear());
 
 describe('own profile account ownership', () => {
+  it('refreshes the profile on login even when the persisted lookup TTL is fresh', async () => {
+    const { profile, query, deps } = setup();
+    const cached = { pubkey: 'a'.repeat(64), kind: 0, created_at: 1, content: '{"name":"old"}', tags: [], id: '1'.repeat(64), sig: '1'.repeat(128) };
+    setCachedKind0(cached);
+    saveProfileSyncState({ ownProfileLookupAt: { [cached.pubkey]: Date.now() }, ownProfileSyncedToRelay: {} });
+    const fresh = { ...cached, created_at: 2, content: '{"name":"new"}' };
+    query.resolve({ events: [fresh], complete: true });
+    await profile.sync('login');
+    expect(deps.ingest).toHaveBeenCalledWith(fresh);
+  });
+
   it.each(['switch', 'same-key-relogin'] as const)('does not sign an edit after %s during its lookup', async (change) => {
     const { profile, account, query, signAndPublish } = setup();
     const result = profile.edit({ name: 'Old account name' }).catch((error: Error) => error.name);

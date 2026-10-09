@@ -40,7 +40,7 @@ afterEach(() => {
 describe('extension account changes', () => {
   it('verifies the provider key instead of trusting the event and updates once', async () => {
     const getPublicKey = vi.fn().mockResolvedValue(bob);
-    window.nostr = { getPublicKey } as typeof window.nostr;
+    window.nostr = { getPublicKey, signEvent: vi.fn() };
     const { login, controller } = fixture();
     controller.wire();
     changed();
@@ -52,7 +52,7 @@ describe('extension account changes', () => {
   });
   it.each(['bunker', 'nsec', null] as const)('ignores the event for %s sessions', async (method) => {
     const getPublicKey = vi.fn().mockResolvedValue(bob);
-    window.nostr = { getPublicKey } as typeof window.nostr;
+    window.nostr = { getPublicKey, signEvent: vi.fn() };
     const { state, login } = fixture(method ?? 'nip07');
     if (!method) state.session = null;
     changed();
@@ -63,21 +63,21 @@ describe('extension account changes', () => {
   it('coalesces bursts and drops a superseded response', async () => {
     const first = deferred();
     const getPublicKey = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue(carol);
-    window.nostr = { getPublicKey } as typeof window.nostr;
+    window.nostr = { getPublicKey, signEvent: vi.fn() };
     const { login, state } = fixture();
     changed();
-    expect(state.extensionIdentityPending).toBe(true);
+    expect(state.extensionIdentityPending.get()).toBe(true);
     await flush();
     changed(); changed(); changed();
     first.resolve(bob);
     await flush();
     expect(getPublicKey).toHaveBeenCalledTimes(2);
     expect(login).toHaveBeenCalledExactlyOnceWith(carol);
-    expect(state.extensionIdentityPending).toBe(false);
+    expect(state.extensionIdentityPending.get()).toBe(false);
   });
   it.each(['logout', 'login', 'dispose'] as const)('drops pending results after %s', async (action) => {
     const first = deferred();
-    window.nostr = { getPublicKey: () => first.promise } as typeof window.nostr;
+    window.nostr = { getPublicKey: () => first.promise, signEvent: vi.fn() };
     const { state, login, controller } = fixture();
     changed();
     await flush();
@@ -92,7 +92,7 @@ describe('extension account changes', () => {
   });
   it('removes its listener and permits a fresh lifecycle', async () => {
     const getPublicKey = vi.fn().mockResolvedValue(bob);
-    window.nostr = { getPublicKey } as typeof window.nostr;
+    window.nostr = { getPublicKey, signEvent: vi.fn() };
     const { controller, login } = fixture();
     controller.unwire();
     changed();
@@ -105,17 +105,17 @@ describe('extension account changes', () => {
   });
   it('does not install malformed keys or leak rejected lookups', async () => {
     const getPublicKey = vi.fn().mockRejectedValueOnce(new Error('locked')).mockResolvedValue('invalid');
-    window.nostr = { getPublicKey } as typeof window.nostr;
+    window.nostr = { getPublicKey, signEvent: vi.fn() };
     const { login, state } = fixture();
     changed(); await flush();
     changed(); await flush();
     expect(login).not.toHaveBeenCalled();
-    expect(state.extensionIdentityPending).toBe(true);
+    expect(state.extensionIdentityPending.get()).toBe(true);
   });
 });
 
 it('validates and normalizes public keys for startup and event reads', async () => {
-  window.nostr = { getPublicKey: vi.fn().mockResolvedValue(alice.toUpperCase()) } as typeof window.nostr;
+  window.nostr = { getPublicKey: vi.fn().mockResolvedValue(alice.toUpperCase()), signEvent: vi.fn() };
   await expect(readExtensionPubkey()).resolves.toBe(alice);
 });
 
@@ -124,7 +124,7 @@ it('connects account listener ownership to the browser lifecycle', async () => {
   state.session = { pubKeyHex: alice, loginMethod: 'nip07', relayUrl: 'wss://relay.test' };
   const login = vi.fn(async () => {});
   const getPublicKey = vi.fn().mockResolvedValue(bob);
-  window.nostr = { getPublicKey } as typeof window.nostr;
+  window.nostr = { getPublicKey, signEvent: vi.fn() };
   const browser = new BrowserConnectionEvents(state, vi.fn(), new ExtensionAccountEvents(state, login));
   disposers.push(() => browser.unwire());
   browser.wire();
@@ -138,7 +138,7 @@ it('connects account listener ownership to the browser lifecycle', async () => {
 it('rechecks an event received while installing an account', async () => {
   const installing = deferred();
   const getPublicKey = vi.fn().mockResolvedValueOnce(bob).mockResolvedValue(carol);
-  window.nostr = { getPublicKey } as typeof window.nostr;
+  window.nostr = { getPublicKey, signEvent: vi.fn() };
   const { state, login } = fixture();
   login.mockImplementationOnce(async (pubkey) => {
     state.beginSessionOperation();
@@ -153,7 +153,7 @@ it('rechecks an event received while installing an account', async () => {
 
 it('does not lose a new event when a prior account lookup becomes stale', async () => {
   const first = deferred();
-  window.nostr = { getPublicKey: vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue(carol) } as typeof window.nostr;
+  window.nostr = { getPublicKey: vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue(carol), signEvent: vi.fn() };
   const { state, login } = fixture();
   changed(); await flush();
   state.beginSessionOperation();

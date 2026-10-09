@@ -1,10 +1,36 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createSessionController } from '@/services/session/controller';
 import { fakeBridge } from '@tests/support/fake-bridge';
 
 const PUBKEY = 'a'.repeat(64);
 
 describe('authoritative session status', () => {
+  it('suspends and refreshes the exposed signer while an extension identity is verified', () => {
+    const bridge = fakeBridge({ myLoginMethod: 'nip07', myPubkey: PUBKEY });
+    const controller = createSessionController(bridge, true);
+    const stop = controller.start();
+    expect(controller.getSnapshot().signerReady).toBe(true);
+    bridge.stores.extensionIdentityPending.set(true);
+    expect(controller.getSnapshot().signerReady).toBe(false);
+    expect(controller.getSigner()).toBeNull();
+    bridge.stores.extensionIdentityPending.set(false);
+    expect(controller.getSnapshot().signerReady).toBe(true);
+    stop();
+  });
+
+  it('replaces a cached signer after same-key verification without an intermediate read', () => {
+    const createSigner = vi.fn(() => ({ pubkey: PUBKEY }) as ReturnType<import('@/services/nostr-bridge').BridgeImpl['getNipSigner']>);
+    const bridge = fakeBridge({ myLoginMethod: 'nip07', myPubkey: PUBKEY }, { getNipSigner: createSigner });
+    const controller = createSessionController(bridge, true);
+    const stop = controller.start();
+    const before = controller.getSigner();
+    bridge.stores.extensionIdentityPending.set(true);
+    bridge.stores.extensionIdentityPending.set(false);
+    expect(controller.getSigner()).not.toBe(before);
+    expect(createSigner).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
   it('keeps a restored account reconnecting after initialization settles', () => {
     const bridge = fakeBridge({ isLoggedIn: false, myPubkey: null, isRestoringSession: true });
     const controller = createSessionController(bridge, true);

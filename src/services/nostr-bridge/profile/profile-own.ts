@@ -121,7 +121,7 @@ export class OwnProfileModule {
     let cached = getCachedKind0(me);
     const now = Date.now();
     const lastLookup = state.ownProfileLookupAt[me] ?? 0;
-    const shouldLookup = !cached || now - lastLookup >= OWN_PROFILE_LOOKUP_TTL_MS || reason === 'manual' || reason === 'edit';
+    const shouldLookup = !cached || now - lastLookup >= OWN_PROFILE_LOOKUP_TTL_MS || reason === 'login' || reason === 'manual' || reason === 'edit';
     if (shouldLookup) {
       try {
         const newest = await this.findNewest(me);

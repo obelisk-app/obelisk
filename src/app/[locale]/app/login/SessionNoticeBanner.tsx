@@ -13,7 +13,7 @@ export function SessionNoticeBanner() {
   const t = useTranslations();
   const notice = useSessionNotice();
   if (notice === null || notice === 'not-remembered') return null;
-  const message = notice === 'vault-unavailable' ? t('shell.login.notice.vaultUnavailable') : t('shell.login.notice.unlockFailed');
+  const message = notice === 'extension-unverified' ? t('shell.login.notice.extensionUnverified.body') : notice === 'vault-unavailable' ? t('shell.login.notice.vaultUnavailable') : t('shell.login.notice.unlockFailed');
   return (
     <Text as="p" className="nui-warning" role="status" data-testid="session-notice">
       {message}

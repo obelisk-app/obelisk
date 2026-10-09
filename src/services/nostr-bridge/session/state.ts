@@ -17,7 +17,7 @@ export type LoginMethod = 'nsec' | 'nip07' | 'bunker';
 
 export class SessionState {
   session: PersistedSession | null = null;
-  extensionIdentityPending = false;
+  readonly extensionIdentityPending = new StateStore(false);
   extensionIdentityRevision = 0;
   /** Invalidates async work when another login, restore or logout takes ownership. */
   readonly generation = new StateStore(0);
@@ -26,7 +26,7 @@ export class SessionState {
 
   beginSessionOperation(): number {
     clearDecryptCache();
-    this.extensionIdentityPending = false;
+    this.extensionIdentityPending.set(false);
     this.isRestoringSession.set(false);
     this.isLoggedIn.set(false);
     const next = this.sessionGeneration + 1;
@@ -41,7 +41,7 @@ export class SessionState {
     const extensionRevision = this.extensionIdentityRevision;
     return () => {
       this.assertSessionOperation(generation);
-      if (session?.loginMethod === 'nip07' && (this.extensionIdentityPending || extensionRevision !== this.extensionIdentityRevision)) {
+      if (session?.loginMethod === 'nip07' && (this.extensionIdentityPending.get() || extensionRevision !== this.extensionIdentityRevision)) {
         throw new DOMException('Extension identity changed', 'AbortError');
       }
       if (this.session !== session) throw new DOMException('Session was replaced', 'AbortError');

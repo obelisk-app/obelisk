@@ -118,17 +118,15 @@ export class BunkerModule {
     try {
       if (bp.secret) {
         await signer.connect();
-      } else {
-        // SDK QR logins persist a bunker URL synthesized from the paired signer
-        // and relays; the original nostrconnect secret is not recoverable from
-        // the SDK's public API. The client secret is the durable authorization,
-        // so warm the RPC channel with get_public_key instead of sending a
-        // bogus connect request with an empty secret.
-        const pubkey = await signer.getPublicKey();
         assertCurrent();
-        if (pubkey !== session.pubKeyHex) {
-          throw new Error('Restored signer returned a different account');
-        }
+      }
+      // QR sessions have no reusable connect secret. In both restore paths,
+      // verify the actual account once before exposing any signer capability.
+      // Concurrent prewarm/AUTH calls share this pending restore.
+      const pubkey = await signer.getPublicKey();
+      assertCurrent();
+      if (pubkey !== session.pubKeyHex) {
+        throw new Error('Restored signer returned a different account');
       }
       assertCurrent();
     } catch (error) {

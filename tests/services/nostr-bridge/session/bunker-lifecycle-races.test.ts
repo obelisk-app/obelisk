@@ -7,7 +7,7 @@ import { StateStore } from '@/services/nostr-bridge/common/state-store';
 
 vi.mock('nostr-tools/nip46', () => ({
   BunkerSigner: { fromURI: vi.fn(), fromBunker: vi.fn() },
-  parseBunkerInput: async () => ({ pubkey: 'a'.repeat(64), relays: ['wss://relay.example.com'] }),
+  parseBunkerInput: async (url: string) => ({ pubkey: 'a'.repeat(64), relays: ['wss://relay.example.com'], secret: url.includes('secret=') ? 'secret' : null }),
   createNostrConnectURI: () => 'nostrconnect://test',
 }));
 afterEach(() => vi.restoreAllMocks());
@@ -15,7 +15,7 @@ afterEach(() => vi.restoreAllMocks());
 function setup() {
   let resolve!: (pubkey: string) => void;
   const pending = new Promise<string>((done) => { resolve = done; });
-  const signer = { getPublicKey: vi.fn(() => pending), close: vi.fn(), bp: { pubkey: 'a'.repeat(64), relays: [] } };
+  const signer = { connect: vi.fn(async () => undefined), getPublicKey: vi.fn(() => pending), close: vi.fn(), bp: { pubkey: 'a'.repeat(64), relays: [] } };
   vi.mocked(BunkerSigner.fromURI).mockResolvedValue(signer as unknown as BunkerSigner);
   const state = new SessionState();
   const bunker = { signer: null, onAuth: null, openAuthUrl: vi.fn(), ready: new StateStore(false) };
@@ -66,9 +66,9 @@ describe('remote login ownership', () => {
     bunker.close();
   });
 
-  it('rejects a restored signer answering with a different account', async () => {
+  it.each(['bunker://test', 'bunker://test?secret=secret'])('rejects a restored signer answering with a different account (%s)', async (bunkerUrl) => {
     const { state, signer, resolve } = setup();
-    state.session = { pubKeyHex: 'b'.repeat(64), loginMethod: 'bunker', relayUrl: 'wss://relay.example.com', bunkerUrl: 'bunker://test', bunkerLocalSecretHex: '1'.repeat(64) };
+    state.session = { pubKeyHex: 'b'.repeat(64), loginMethod: 'bunker', relayUrl: 'wss://relay.example.com', bunkerUrl, bunkerLocalSecretHex: '1'.repeat(64) };
     vi.mocked(BunkerSigner.fromBunker).mockReturnValue(signer as unknown as BunkerSigner);
     const bunker = new BunkerModule({ session: () => state.session });
     const waiting = bunker.ensure();

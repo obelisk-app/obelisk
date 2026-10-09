@@ -33,4 +33,20 @@ Shared TypeScript contracts live in `src/types/session/`; the React context live
 
 ### Concurrent bunker restore
 
-Session prewarm and relay authentication share one pending bunker reconstruction per session generation. A refresh therefore performs one `get_public_key` warmup for a restored QR signer even when multiple relay AUTH requests arrive concurrently. The returned identity must match the persisted account before the signer becomes ready. A failed attempt releases the pending operation for retry; logout or account replacement supersedes it, and an old completion cannot clear a newer attempt. Established signer operations retain bounded concurrency.
+Session prewarm and relay authentication share one pending bunker reconstruction per session generation. A refresh therefore performs one `get_public_key` warmup for a restored remote signer (QR or bunker URL) even when multiple relay AUTH requests arrive concurrently. The returned identity must match the persisted account before the signer becomes ready. A failed attempt releases the pending operation for retry; logout or account replacement supersedes it, and an old completion cannot clear a newer attempt. Established signer operations retain bounded concurrency.
+
+## Extension account changes and startup verification
+
+Only an active NIP-07 session reacts to `nostr:accountChanged`. The event payload is a hint, not identity evidence: the bridge asks the extension for its public key, validates it, and applies a changed account through the existing login lifecycle. Event bursts share one verification flow with a trailing lookup when a response has been superseded. Bunker, local-key and logged-out sessions ignore extension account events.
+
+An account-change signal immediately suspends extension capabilities. Queued work and late results carry a session/extension-revision guard; verification cannot revive an old signer adapter, even when the selected key is unchanged. The session provider projects this pending state into `signerReady` and invalidates its cached adapter. If verification fails, signing stays suspended and the UI explains how to unlock/select the extension account again or log in again. The application never adopts an event payload as an account or silently uses a different provider.
+
+Reload checks the selected extension key before installing a saved NIP-07 identity or opening authenticated relay traffic. It observes account events during that first lookup as well. If the key changed while the page was closed, the verified key replaces the saved public identity. A missing/locked extension leaves the saved record intact for retry but does not authenticate its stale account. A first visit with no saved session does not probe an installed extension or sign the visitor in implicitly; the login widget verifies the chosen signer when the visitor selects a login method.
+
+Each successful login or restore refreshes the current user's profile from the lookup relays, even when the persisted profile lookup timestamp is recent. Cached metadata still supports immediate display; newer kind-0 events update the shared session profile. Ordinary relay switches retain the profile lookup cooldown.
+
+## Provider selection for account services
+
+Account services capture the active bridge/session capability rather than selecting a provider because a browser global happens to exist. Nostr Connect signing and NIP-04/NIP-44 operations stay on the remote signer; remote errors never fall back to `window.nostr`. Extension-only WoT calls and PQ capability discovery require the active extension session. Pending account verification and session replacement invalidate retained service capabilities.
+
+Wallet identity is separate from Nostr signing. The active account's configured NWC wallet takes priority for any login method. Automatic WebLN fallback is available only for an extension-backed Nostr session; Nostr Connect and local-key sessions do not silently enable or pay through an unrelated browser wallet. WebLN can still represent a different wallet account from the Nostr key: this policy controls provider selection, not a claim that the two identities are cryptographically bound.

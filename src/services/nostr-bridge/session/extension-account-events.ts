@@ -18,7 +18,7 @@ export class ExtensionAccountEvents {
     if (this.state.session?.loginMethod !== 'nip07') return;
     this.revision++;
     this.requested = true;
-    this.state.extensionIdentityPending = true;
+    this.state.extensionIdentityPending.set(true);
     this.state.extensionIdentityRevision++;
     if (!this.running) void this.reconcile();
   };
@@ -40,12 +40,14 @@ export class ExtensionAccountEvents {
           if (revision !== this.revision) continue;
           // Fail closed: existing extension capabilities stay suspended until
           // a later event verifies the identity or the user logs in again.
+          this.state.sessionNotice.set('extension-unverified');
           traceLogin('extension.account-change.failed');
           return;
         }
         if (!isCurrent()) return;
         if (revision !== this.revision) continue;
-        this.state.extensionIdentityPending = false;
+        this.state.extensionIdentityPending.set(false);
+        if (this.state.sessionNotice.get() === 'extension-unverified') this.state.sessionNotice.set(null);
         if (pubkey !== session.pubKeyHex) {
           // login starts its generation synchronously, before its first await.
           const applied = this.login(pubkey);

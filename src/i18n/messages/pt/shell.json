@@ -415,6 +415,10 @@
       "useSigner": "Usar uma extensão ou um bunker"
     },
     "notice": {
+      "extensionUnverified": {
+        "title": "Confira sua conta na extensão",
+        "body": "Não foi possível verificar a conta selecionada na extensão. As assinaturas estão pausadas. Desbloqueie a extensão e selecione sua conta novamente, ou entre de novo."
+      },
       "notRemembered": {
         "title": "Sessão só nesta visita",
         "body": "Este navegador não consegue guardar sua chave com segurança, então você vai precisar entrar de novo da próxima vez."

@@ -16,7 +16,7 @@ import { SDK_SIGNER_STORAGE_KEYS } from '@/constants/nostr-bridge/session';
  * What the session layer has to tell the person about storage. The first is
  * set at login, the other three when a reload could not restore a session.
  */
-export type SessionNotice = 'not-remembered' | 'vault-unavailable' | 'key-missing' | 'unlock-failed';
+export type SessionNotice = 'extension-unverified' | 'not-remembered' | 'vault-unavailable' | 'key-missing' | 'unlock-failed';
 
 let queue: Promise<unknown> = Promise.resolve();
 

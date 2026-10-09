@@ -27,6 +27,12 @@ describe('useSessionNoticeToast', () => {
     expect(toasts[0].body).toMatch(/log in again next time/);
   });
 
+  it('explains how to recover when extension account verification fails', () => {
+    renderHook(() => useSessionNoticeToast(), { wrapper: bridgeWrapper(bridge) });
+    act(() => bridge.stores.sessionNotice.set('extension-unverified'));
+    expect(useToastStore.getState().toasts[0]?.body).toMatch(/log in again/i);
+  });
+
   it('says nothing for the restore failures, which the login screen explains', () => {
     renderHook(() => useSessionNoticeToast(), { wrapper: bridgeWrapper(bridge) });
     for (const code of ['vault-unavailable', 'key-missing', 'unlock-failed'] as const) {

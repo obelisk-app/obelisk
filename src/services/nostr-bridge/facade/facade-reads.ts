@@ -41,6 +41,7 @@ export abstract class BridgeReads {
   get isLoggedIn(): StateStore<boolean> { return this.m.state.isLoggedIn; }
   get myPubkey(): StateStore<string | null> { return this.m.state.myPubkey; }
   get myLoginMethod(): StateStore<LoginMethod | null> { return this.m.state.myLoginMethod; }
+  get extensionIdentityPending(): StateStore<boolean> { return this.m.state.extensionIdentityPending; }
   get bunkerSignerReady(): StateStore<boolean> { return this.m.bunker.ready; }
   get sessionNotice(): StateStore<SessionNotice | null> { return this.m.state.sessionNotice; }
   get groups(): StateStore<JsGroup[]> { return this.m.metadata.groups; }
@@ -91,6 +92,10 @@ export abstract class BridgeReads {
 
   subscribeMyLoginMethod(cb: (m: 'nsec' | 'nip07' | 'bunker' | null) => void): Unsubscribe {
     return this.myLoginMethod.subscribe(cb);
+  }
+
+  subscribeExtensionIdentityPending(cb: (pending: boolean) => void): Unsubscribe {
+    return this.extensionIdentityPending.subscribe(cb);
   }
 
   subscribeBunkerSignerReady(cb: (ready: boolean) => void): Unsubscribe {

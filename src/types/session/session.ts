@@ -13,6 +13,7 @@ export interface SessionSnapshot {
   readonly isRehydrating: boolean;
   readonly pubkey: string | null;
   readonly loginMethod: LoginMethod | null;
+  readonly extensionIdentityPending: boolean;
   readonly bunkerSignerReady: boolean;
   readonly signerReady: boolean;
   readonly notice: SessionNotice | null;

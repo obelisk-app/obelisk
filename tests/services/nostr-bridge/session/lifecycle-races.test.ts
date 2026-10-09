@@ -13,7 +13,7 @@ function deferred<T>() {
 }
 
 async function prepare() {
-  Object.defineProperty(window, 'nostr', { configurable: true, value: {} });
+  Object.defineProperty(window, 'nostr', { configurable: true, value: { getPublicKey: vi.fn(async () => 'a'.repeat(64)) } });
   const { ConnectionModule } = await import('@/services/nostr-bridge/session/connection');
   const { getBridge } = await import('@/services/nostr-bridge/facade/client');
   const bridge = await getBridge();
@@ -72,6 +72,7 @@ describe('session operation ownership', () => {
     connect.mockReturnValueOnce(first.promise).mockResolvedValueOnce();
     localStorage.setItem('obelisk-dex/session', JSON.stringify({ v: 2, pubKeyHex: 'a'.repeat(64), loginMethod: 'nip07', relayUrl: 'wss://relay.example.com' }));
     const restoring = bridge.initialize();
+    await vi.waitFor(() => expect(connect).toHaveBeenCalledOnce());
     await bridge.loginWithNip07('b'.repeat(64));
     first.resolve();
     await restoring;

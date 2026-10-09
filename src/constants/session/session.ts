@@ -9,6 +9,7 @@ export const EMPTY_SESSION: SessionSnapshot = Object.freeze({
   pubkey: null,
   loginMethod: null,
   bunkerSignerReady: false,
+  extensionIdentityPending: false,
   signerReady: false,
   notice: null,
   profile: null,

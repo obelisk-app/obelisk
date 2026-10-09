@@ -415,6 +415,10 @@
       "useSigner": "Use an extension or bunker"
     },
     "notice": {
+      "extensionUnverified": {
+        "title": "Check your extension account",
+        "body": "We could not verify the account selected in your extension. Signing is paused. Unlock the extension and select your account again, or log in again."
+      },
       "notRemembered": {
         "title": "Logged in for this visit only",
         "body": "This browser can't keep your key safely, so you'll need to log in again next time."

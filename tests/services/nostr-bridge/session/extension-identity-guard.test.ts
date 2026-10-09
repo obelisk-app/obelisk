@@ -6,9 +6,9 @@ it('invalidates extension capabilities while identity verification is pending an
   state.session = { pubKeyHex: 'alice', loginMethod: 'nip07', relayUrl: 'wss://relay.example' };
   const guard = state.captureSessionGuard();
   state.extensionIdentityRevision++;
-  state.extensionIdentityPending = true;
+  state.extensionIdentityPending.set(true);
   expect(guard).toThrow('Extension identity changed');
-  state.extensionIdentityPending = false;
+  state.extensionIdentityPending.set(false);
   expect(guard).toThrow('Extension identity changed');
   expect(state.captureSessionGuard()).not.toThrow();
 });
@@ -18,6 +18,6 @@ it('does not let an unrelated extension event retire a bunker session', () => {
   state.session = { pubKeyHex: 'alice', loginMethod: 'bunker', relayUrl: 'wss://relay.example' };
   const guard = state.captureSessionGuard();
   state.extensionIdentityRevision++;
-  state.extensionIdentityPending = true;
+  state.extensionIdentityPending.set(true);
   expect(guard).not.toThrow();
 });

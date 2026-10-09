@@ -16,6 +16,7 @@ import type { LifecycleTargets } from './lifecycle';
 import type { LoginDeps } from './login';
 import type { SessionPersistence } from './persistence';
 import { installSessionIdentity } from './identity';
+import { readExtensionPubkey } from './extension-identity';
 
 export interface RestoreDeps extends Pick<LoginDeps, 'connect' | 'restoreConfiguredRelays' | 'ensureRelayInList'> {
   /** The record on disk: opens the sealed secrets, migrates a plaintext record, writes it back. */
@@ -42,12 +43,43 @@ export async function restoreSession(t: LifecycleTargets, deps: RestoreDeps): Pr
       state.isRestoringSession.set(false);
       return;
     }
+    const storedPubkey = parsed.pubKeyHex;
+    if (parsed.loginMethod === 'nip07') {
+      let revision = 0;
+      const changed = () => { revision++; };
+      window.addEventListener('nostr:accountChanged', changed);
+      try {
+        // The persistent account listener is wired only after installation.
+        // Observe changes during this first lookup so an old response cannot
+        // install the account the extension has just switched away from.
+        while (isCurrent()) {
+          const requestedRevision = revision;
+          const pubkey = await readExtensionPubkey();
+          if (!isCurrent()) return;
+          if (requestedRevision !== revision) continue;
+          parsed.pubKeyHex = pubkey;
+          break;
+        }
+      } catch {
+        if (!isCurrent()) return;
+        // A locked or missing extension is not corrupt storage. Leave the
+        // saved record available for retry, but never authenticate its old key.
+        state.sessionNotice.set('extension-unverified');
+        state.session = null;
+        state.myPubkey.set(null);
+        state.myLoginMethod.set(null);
+        state.isRestoringSession.set(false);
+        return;
+      } finally {
+        window.removeEventListener('nostr:accountChanged', changed);
+      }
+    }
     const storedRelayUrl = parsed.relayUrl;
     parsed.relayUrl = normalizeConfiguredRelayUrl(parsed.relayUrl);
     if (!isImportableRelayUrl(parsed.relayUrl)) parsed.relayUrl = DEFAULT_RELAY;
     state.session = parsed;
     installSessionIdentity(t);
-    if (parsed.relayUrl !== storedRelayUrl) deps.store.persist();
+    if (parsed.relayUrl !== storedRelayUrl || parsed.pubKeyHex !== storedPubkey) deps.store.persist();
     t.browserEvents.wire();
     state.currentRelayUrl.set(parsed.relayUrl);
     state.relays = [parsed.relayUrl];

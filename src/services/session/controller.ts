@@ -20,14 +20,15 @@ export function createSessionController(bridge: BridgeImpl | null, ready: boolea
   const pubkey = bridge?.myPubkey.get() ?? null;
   const isLoggedIn = bridge?.isLoggedIn.get() ?? false;
   const loginMethod = bridge?.myLoginMethod.get() ?? null;
+  const extensionIdentityPending = bridge?.extensionIdentityPending.get() ?? false;
   const bunkerSignerReady = bridge?.bunkerSignerReady.get() ?? false;
   let snapshot: SessionSnapshot = {
-    ...EMPTY_SESSION, ready, pubkey, isLoggedIn, loginMethod, bunkerSignerReady,
+    ...EMPTY_SESSION, ready, pubkey, isLoggedIn, loginMethod, bunkerSignerReady, extensionIdentityPending,
     generation: bridge?.getSessionGeneration() ?? 0,
     isRehydrating: bridge?.isRestoringSession.get() ?? false,
     notice: bridge?.sessionNotice.get() ?? null,
     profile: pubkey ? bridge?.userMetadata.get()[pubkey] ?? null : null,
-    signerReady: isLoggedIn && loginMethod !== null && (loginMethod !== 'bunker' || bunkerSignerReady),
+    signerReady: !extensionIdentityPending && isLoggedIn && loginMethod !== null && (loginMethod !== 'bunker' || bunkerSignerReady),
   };
   const listeners = new Set<() => void>();
   let profileUnsubscribe: (() => void) | undefined;
@@ -41,7 +42,7 @@ export function createSessionController(bridge: BridgeImpl | null, ready: boolea
 
   const patch = (next: Partial<SessionSnapshot>) => {
     const candidate = { ...snapshot, ...next };
-    candidate.signerReady = candidate.isLoggedIn && candidate.loginMethod !== null
+    candidate.signerReady = !candidate.extensionIdentityPending && candidate.isLoggedIn && candidate.loginMethod !== null
       && (candidate.loginMethod !== 'bunker' || candidate.bunkerSignerReady);
     if (candidate.isLoggedIn) candidate.isRehydrating = false;
     if ((Object.keys(candidate) as Array<keyof SessionSnapshot>).every((key) => Object.is(candidate[key], snapshot[key]))) return;
@@ -88,6 +89,12 @@ export function createSessionController(bridge: BridgeImpl | null, ready: boolea
         bridge.subscribeIsRestoringSession((isRehydrating) => { if (active && epoch === mountEpoch) patch({ isRehydrating }); }),
         bridge.subscribeIsLoggedIn((isLoggedIn) => { if (active && epoch === mountEpoch) patch({ isLoggedIn }); }),
         bridge.subscribeMyLoginMethod((loginMethod) => { if (active && epoch === mountEpoch) patch({ loginMethod }); }),
+        bridge.subscribeExtensionIdentityPending((extensionIdentityPending) => {
+          if (!active || epoch !== mountEpoch) return;
+          signerKey = '';
+          signer = null;
+          patch({ extensionIdentityPending });
+        }),
         bridge.subscribeBunkerSignerReady((bunkerSignerReady) => { if (active && epoch === mountEpoch) patch({ bunkerSignerReady }); }),
         bridge.subscribeSessionNotice((notice) => { if (active && epoch === mountEpoch) patch({ notice }); }),
         bridge.subscribeMyPubkey((pubkey) => { if (active && epoch === mountEpoch) watchProfile(pubkey); }),

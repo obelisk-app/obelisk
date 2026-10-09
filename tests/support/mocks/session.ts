@@ -5,7 +5,7 @@ type SessionHooks = typeof import('@/hooks/session/useSession');
 const PUBKEY = 'f'.repeat(64);
 const snapshot: SessionSnapshot = Object.freeze({
   ready: true, generation: 0, isLoggedIn: true, isRehydrating: false,
-  pubkey: PUBKEY, loginMethod: 'nsec', bunkerSignerReady: false,
+  pubkey: PUBKEY, loginMethod: 'nsec', bunkerSignerReady: false, extensionIdentityPending: false,
   signerReady: true, notice: null, profile: null,
 });
 
