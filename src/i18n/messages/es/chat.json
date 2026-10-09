@@ -48,18 +48,18 @@
   },
   "pq": {
     "level": {
-      "quantum": "Súper seguro",
-      "quantumDetail": "Tus mensajes están bajo llave y nadie puede ver con quién hablás. Ni siquiera una computadora cuántica del futuro podría abrirlos.",
+      "quantum": "Encriptación poscuántica",
+      "quantumDetail": "Este mensaje añade encriptación poscuántica a NIP-17, diseñada para resistir futuros ataques cuánticos.",
       "wrapped": "Seguro",
       "wrappedDetail": "Tus mensajes están bajo llave y nadie puede ver con quién hablás. Aunque algún día una computadora cuántica podría abrirlos.",
-      "basic": "Básico",
-      "basicDetail": "Tus mensajes están bajo llave, pero los servidores que los llevan pueden ver con quién hablás."
+      "basic": "Legacy",
+      "basicDetail": "Mensaje antiguo que usa NIP-04. El contenido está encriptado, pero los relays pueden ver el emisor, el destinatario y la fecha."
     },
     "learnHow": "Cómo tenerlo súper seguro",
-    "markNoGiftwrap": "Se ve con quién hablás",
-    "markNoGiftwrapDetail": "Los servidores que llevaron este mensaje pudieron ver con quién estabas hablando.",
-    "markNoPq": "No es súper seguro",
-    "markNoPqDetail": "Este mensaje está bajo llave hoy, pero alguien podría guardarlo ahora y abrirlo dentro de unos años, cuando lleguen las computadoras cuánticas."
+    "markNoGiftwrap": "Legacy",
+    "markNoGiftwrapDetail": "Mensaje antiguo que usa NIP-04. El contenido está encriptado, pero los relays pueden ver el emisor, el destinatario y la fecha.",
+    "markQuantum": "Encriptación poscuántica",
+    "markQuantumDetail": "Este mensaje añade encriptación poscuántica a NIP-17, diseñada para resistir futuros ataques cuánticos."
   },
   "forum": {
     "searchPlaceholder": "Buscar o crear una publicación",

@@ -68,7 +68,7 @@ export function DmThreadScreen({
       <div className="dm-protocol-bar">
         <DmProtocolSwitch choice={protocolChoice} />
       </div>
-      <DmUnlock />
+      <DmUnlock peer={peer} />
       <DmProtocolNotice choice={protocolChoice} className="px-3.5" />
 
       <div className="dm-messages native-scroll-y" ref={scrollRef}>

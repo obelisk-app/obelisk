@@ -34,6 +34,8 @@ export interface DMThread {
 }
 
 interface DMPersistedState {
+  /** Known counterparties and latest timestamps only; never message text. */
+  conversationIndex: Record<string, number>;
   /**
    * Per-peer wire protocol the user chose for a thread. NIP-17 is the
    * default; NIP-04 is a per-thread opt-out (docs/features/direct-messages.md).
@@ -60,6 +62,7 @@ interface DMState extends DMPersistedState {
   /** Show the protocol choice popup */
   showProtocolPrompt: string | null;
 
+  rememberConversation: (pubkey: string, createdAt: number) => void;
   setProtocolOverride: (pubkey: string, protocol: DMProtocol) => void;
   setShowProtocolPrompt: (pubkey: string | null) => void;
 }
@@ -69,15 +72,19 @@ interface DMState extends DMPersistedState {
  *   0  before versioning. Older app versions saved decrypted `threads` and
  *      `messages` here, and a PWA can still hold them.
  *   1  `protocolOverrides` only.
+ *   2  Add counterparty public keys and last-message timestamps.
  */
-export const DM_STORE_VERSION = 1;
+export const DM_STORE_VERSION = 2;
 
 /** Version 0 -> 1: drop everything but the protocol choices, so old plaintext is erased from disk. */
 const dropLegacyPlaintext: Upgrade = (raw) => ({ protocolOverrides: raw.protocolOverrides });
 
 /** Keeps only valid per-peer protocol choices; anything else in the blob is ignored. */
 export function sanitizeDmPersisted(raw: Record<string, unknown>): DMPersistedState {
-  return { protocolOverrides: recordOf(raw.protocolOverrides, (v) => oneOf(v, DM_PROTOCOLS)) };
+  return {
+    protocolOverrides: recordOf(raw.protocolOverrides, (v) => oneOf(v, DM_PROTOCOLS)),
+    conversationIndex: recordOf(raw.conversationIndex, (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : undefined),
+  };
 }
 
 export const useDMStore = create<DMState>()(
@@ -91,6 +98,12 @@ export const useDMStore = create<DMState>()(
       isLoadingThreads: false,
       hasMoreHistory: false,
       protocolOverrides: {},
+      conversationIndex: {},
+      rememberConversation: (pubkey, createdAt) => set((state) => {
+        if (!/^[0-9a-f]{64}$/i.test(pubkey) || !Number.isFinite(createdAt) || createdAt < 0) return state;
+        if ((state.conversationIndex[pubkey] ?? -1) >= createdAt) return state;
+        return { conversationIndex: { ...state.conversationIndex, [pubkey]: createdAt } };
+      }),
       showProtocolPrompt: null,
 
       setProtocolOverride: (pubkey, protocol) =>
@@ -103,13 +116,13 @@ export const useDMStore = create<DMState>()(
     {
       name: 'obelisk-dm-store',
       storage: createJSONStorage(() => quotaSafeLocalStorage),
-      // The DM store persists *only* the per-peer protocol choices. Read
+      // Persist protocol choices and conversation metadata only. Read
       // state lives in `useReadStateStore` (`obelisk-read-state:{pubkey}`);
-      // DM threads and messages are in the bridge and never touch disk.
-      partialize: (state): DMPersistedState => ({ protocolOverrides: state.protocolOverrides }),
+      // Conversation metadata is saved; message bodies remain encrypted in IndexedDB.
+      partialize: (state): DMPersistedState => ({ protocolOverrides: state.protocolOverrides, conversationIndex: state.conversationIndex }),
       // A version 0 blob is upgraded (plaintext dropped) and saved back
       // without it. Whatever the version, `sanitizeDmPersisted` takes
-      // `protocolOverrides` and nothing else, so no plaintext reaches memory.
+      // only protocol choices and conversation metadata, never legacy message bodies.
       ...versionedPersist<DMState, DMPersistedState>({
         version: DM_STORE_VERSION,
         upgrades: { 0: dropLegacyPlaintext },

@@ -5,6 +5,7 @@
  * handed the narrow callbacks it needs into the rest of the bridge
  * (`./compose.ts`). Moved from the facade's constructor.
  */
+import { rememberDmConversation } from '@/services/chat/dm/conversations';
 import { DmCallsModule } from '../dm/calls';
 import { DmInboxModule } from '../dm/inbox';
 import { Nip04Module } from '../dm/nip04';
@@ -28,20 +29,29 @@ export class DmModules {
   readonly dmStore: DmStoreModule;
 
   constructor(private readonly m: BridgeModules) {
+    const remember = (params: IngestDmParams) => rememberDmConversation(this.m.state.session?.pubKeyHex ?? null, params.counterparty, params.createdAt);
     this.dmStore = new DmStoreModule({
       // Interactive lane: the person just opened their DMs and is waiting.
       nipSigner: () => buildNipSigner(this.m.state.session, this.m.bunker, 'interactive', this.m.state.captureSessionGuard()),
-      replay: (params) => this.dmThread.ingest(params, { replay: true }),
-      reingest: (ev, kind) => void (kind === 'wrap' ? this.dmInbox.ingestGiftWrap(ev) : this.nip04.ingestIncoming(ev)),
+      replay: (params) => { remember(params); this.dmThread.ingest(params, { replay: true }); },
+      reingest: (ev, kind) => (kind === 'wrap' ? this.dmInbox.ingestGiftWrap(ev) : this.nip04.ingestIncoming(ev)),
       dmsEnabled: () => getPreferences().directMessagesEnabled,
     });
     // Every message opened from a relay goes to its thread and into the store.
     const ingestDM = (params: IngestDmParams) => {
+      remember(params);
       this.dmThread.ingest(params);
       this.dmStore.save(params);
     };
-    const rememberOwn = (params: IngestDmParams) => this.dmStore.save(params);
-    const holdLocked = (kind: 'wrap' | 'nip04') => (ev: Parameters<DmStoreModule['hold']>[0]) => this.dmStore.hold(ev, kind);
+    const rememberOwn = (params: IngestDmParams) => { remember(params); this.dmStore.save(params); };
+    const holdLocked = (kind: 'wrap' | 'nip04') => (ev: Parameters<DmStoreModule['hold']>[0]) => {
+      const account = this.m.state.session?.pubKeyHex ?? null;
+      if (kind === 'nip04' && account) {
+        const peer = ev.pubkey === account ? ev.tags.find((t) => t[0] === 'p')?.[1] : ev.pubkey;
+        if (peer) rememberDmConversation(account, peer, ev.created_at);
+      }
+      return this.dmStore.hold(ev, kind);
+    };
     const isStored = (wireId: string) => this.dmStore.knows(wireId);
     this.dmRelays = new DmRelaysModule(this.m.ctx, {
       dmSigner: () => this.m.dmSigner(),

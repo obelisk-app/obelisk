@@ -4,10 +4,10 @@ import type { DMProtocol } from '@/store/chat/dm';
 export type PqConversationStatus = 'secured' | 'not-secured';
 
 /**
- * What a single message lacked. `null` means it lacked nothing; only
- * deficient messages are marked, so a healthy thread stays quiet.
+ * Optional message labels: legacy transport or additional post-quantum protection.
+ * Standard NIP-17 messages stay quiet.
  */
-export type PqMessageMark = 'no-giftwrap' | 'no-pq' | null;
+export type PqMessageMark = 'no-giftwrap' | 'quantum' | null;
 
 export interface ConversationStatusInput {
   /** The `postQuantumEnabled` preference. */
@@ -71,7 +71,7 @@ export function messageMark(input: MessageMarkInput): PqMessageMark {
   // Gift-wrap is the stronger claim: a nip04 message leaks metadata to relays
   // whatever its payload, so that mark wins.
   if (input.protocol === 'nip04') return 'no-giftwrap';
-  return input.pq === true ? null : 'no-pq';
+  return input.pq === true ? 'quantum' : null;
 }
 
 export interface ThreadMarkInput extends MessageMarkInput {
@@ -96,7 +96,7 @@ export interface ThreadMarkInput extends MessageMarkInput {
  * thread changes protection level), which is the same information at a
  * hundredth of the density.
  *
- * A transition *to* a healthy message shows nothing, by construction: its mark
+ * A transition to standard NIP-17 shows nothing, by construction: its mark
  * is `null`. That is the intended reading: marks simply stop.
  *
  * Pure, so the whole lattice is table-testable.

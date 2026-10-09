@@ -66,7 +66,7 @@ export function DmPanel({ peer }: { peer: string | null; onPickPeer: (p: string)
           />
         </span>
       </header>
-      <DmUnlock className="shrink-0 border-b border-lc-border" />
+      <DmUnlock peer={peer} className="shrink-0 border-b border-lc-border" />
       <DmProtocolNotice choice={protocolChoice} />
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
         {thread.items.length === 0 ? (

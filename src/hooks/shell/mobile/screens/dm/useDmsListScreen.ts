@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDirectMessages } from '@/services/nostr-bridge';
 import { ensureSocialProfiles } from '@/services/social/profiles';
+import { useKnownDmConversations } from '@/hooks/chat/dm/lists/useKnownDmConversations';
+import { dmPeers } from '@/utils/shell/desktop/dm-list';
 import { useScreenScrollMemo } from '@/hooks/shell/mobile/carousel/useScreenScrollMemo';
-import { dmPeersByLatest, splitByFollows } from '@/utils/shell/mobile/dm-list';
+import { splitByFollows } from '@/utils/shell/mobile/dm-list';
 
 /**
  * The phone DM list: conversations newest first, split into people you
@@ -12,7 +14,8 @@ import { dmPeersByLatest, splitByFollows } from '@/utils/shell/mobile/dm-list';
 export function useDmsListScreen(myFollows: ReadonlyArray<string>) {
   const dms = useDirectMessages();
   const [tab, setTab] = useState<'follows' | 'others'>('follows');
-  const peers = useMemo(() => dmPeersByLatest(dms), [dms]);
+  const known = useKnownDmConversations();
+  const peers = useMemo(() => dmPeers(dms, known).map((p) => ({ peer: p.pubkey, latest: p.last, latestAt: p.sortKey })), [dms, known]);
 
   // One batched kind-0 REQ for the whole list rather than one per row.
   const peerKey = peers.map((p) => p.peer).join(',');

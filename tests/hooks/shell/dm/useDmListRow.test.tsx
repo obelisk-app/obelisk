@@ -5,6 +5,7 @@ import type { JsDirectMessage } from '@/services/nostr-bridge';
 vi.mock('@/hooks/social/profile/useAuthor', () => ({
   useAuthor: () => ({ name: 'alice', displayName: 'Alice', picture: 'a.png', nip05: null }),
 }));
+vi.mock('next-intl', () => ({ useTranslations: () => () => 'Encrypted message · open chat to read' }));
 const unread = vi.hoisted(() => ({ n: 0 }));
 vi.mock('@/hooks/read-state/useUnreadCounts', () => ({ useDMUnreadCount: () => unread.n }));
 
@@ -22,6 +23,6 @@ describe('useDmListRow', () => {
   it('flags unread conversations with a capped count', () => {
     unread.n = 150;
     const { result } = renderHook(() => useDmListRow('a'.repeat(64), undefined, 'You: '));
-    expect(result.current).toMatchObject({ unread: true, unreadLabel: '99+', preview: null });
+    expect(result.current).toMatchObject({ unread: true, unreadLabel: '99+', preview: 'Encrypted message · open chat to read' });
   });
 });

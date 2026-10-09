@@ -50,6 +50,8 @@ export type DmLockStatus = 'locked' | 'unlocking' | 'unlocked' | 'failed';
 
 export interface DmLockState {
   readonly status: DmLockStatus;
+  /** Held messages still being opened after the local storage key was unlocked. */
+  readonly pendingDecryptions?: number;
   /** Created-at (unix ms) of each gift wrap held while locked that the store does not hold. */
   readonly unopened: ReadonlyArray<number>;
 }
@@ -64,7 +66,7 @@ export interface DmStoreDeps {
   /** Put one stored message back into its thread: no signer, no chime. */
   replay(params: IngestDmParams): void;
   /** Hand an event held while locked back to its ingest. */
-  reingest(ev: NostrEvent, kind: HeldKind): void;
+  reingest(ev: NostrEvent, kind: HeldKind): void | Promise<void>;
   /** DMs are turned on (the opt-in). Decryption requires both this opt-in and an explicit unlock. */
   dmsEnabled(): boolean;
 }
@@ -86,6 +88,10 @@ export class DmStoreModule {
   private deferred: Array<() => void> = [];
   private unlocking: Promise<void> | null = null;
   private writes: Promise<void> = Promise.resolve();
+  private discoveryEnabled = false;
+  private readonly openedPeers = new Set<string>();
+  private readonly openedRecords = new Map<string, IngestDmParams>();
+  private pendingDecryptions = 0;
 
   constructor(private readonly deps: DmStoreDeps) {}
 
@@ -95,6 +101,10 @@ export class DmStoreModule {
     this.epoch++;
     this.pubkey = pubkey;
     this.key = null;
+    this.discoveryEnabled = false;
+    this.openedPeers.clear();
+    this.openedRecords.clear();
+    this.pendingDecryptions = 0;
     this.memoryOnly = false;
     this.known.clear();
     this.indexed = false;
@@ -116,7 +126,7 @@ export class DmStoreModule {
 
   /** While locked, keep `ev` for the unlock instead of opening it. True when held. */
   hold(ev: NostrEvent, kind: HeldKind): boolean {
-    if (!this.pubkey || this.isUnlocked()) return false;
+    if (!this.pubkey || (this.isUnlocked() && this.mayOpen(ev, kind))) return false;
     if (!this.held.has(ev.id) && this.held.size >= MAX_HELD) {
       const oldest = this.held.keys().next().value;
       if (oldest !== undefined) this.held.delete(oldest);
@@ -136,9 +146,18 @@ export class DmStoreModule {
   }
 
   /** Open the store: one signer call, then everything stored, then what was held. Idempotent. */
-  unlock(): Promise<void> {
+  unlock(peer?: string): Promise<void> {
     const pubkey = this.pubkey;
-    if (!pubkey || !this.deps.dmsEnabled() || this.isUnlocked()) return Promise.resolve();
+    if (!pubkey || !this.deps.dmsEnabled()) return Promise.resolve();
+    if (peer) this.openedPeers.add(peer);
+    else this.discoveryEnabled = true;
+    if (this.isUnlocked()) {
+      for (const params of this.openedRecords.values()) {
+        if (!peer || params.counterparty === peer) this.deps.replay(params);
+      }
+      this.finish(this.epoch, this.memoryOnly);
+      return Promise.resolve();
+    }
     if (this.unlocking) return this.unlocking;
     const epoch = this.epoch;
     this.lock.set({ ...this.lock.get(), status: 'unlocking' });
@@ -155,6 +174,7 @@ export class DmStoreModule {
     const wireId = params.notifyId;
     if (!pubkey || this.disabled || !this.isUnlocked() || this.known.has(wireId)) return;
     this.known.add(wireId);
+    this.openedRecords.set(wireId, params);
     const key = this.key;
     const db = this.db();
     if (this.memoryOnly || !key || !db) return;
@@ -306,11 +326,21 @@ export class DmStoreModule {
     await Promise.all(removals);
     if (epoch !== this.epoch) return;
     opened.sort((a, b) => a.createdAt - b.createdAt);
-    for (const params of opened) this.deps.replay(params);
+    for (const params of opened) {
+      this.openedRecords.set(params.notifyId, params);
+      if (this.discoveryEnabled || this.openedPeers.has(params.counterparty)) this.deps.replay(params);
+    }
   }
 
   private fail(epoch: number): void {
     if (epoch === this.epoch) this.lock.set({ ...this.lock.get(), status: 'failed' });
+  }
+
+  private mayOpen(ev: NostrEvent, kind: HeldKind): boolean {
+    if (this.discoveryEnabled) return true;
+    if (kind === 'wrap') return false;
+    const peer = ev.pubkey === this.pubkey ? ev.tags.find((t) => t[0] === 'p')?.[1] : ev.pubkey;
+    return !!peer && this.openedPeers.has(peer);
   }
 
   private finish(epoch: number, memoryOnly: boolean): void {
@@ -321,10 +351,21 @@ export class DmStoreModule {
       this.key = null;
       this.known.clear();
     }
-    this.lock.set({ status: 'unlocked', unopened: [] });
-    const held = [...this.held.values()];
-    this.held.clear();
-    for (const { ev, kind } of held) this.deps.reingest(ev, kind);
+    const held = [...this.held.values()].filter(({ ev, kind }) => this.mayOpen(ev, kind));
+    for (const { ev } of held) this.held.delete(ev.id);
+    this.pendingDecryptions += held.length;
+    this.lock.set({ status: 'unlocked', unopened: [], ...(this.pendingDecryptions ? { pendingDecryptions: this.pendingDecryptions } : {}) });
+    this.recount();
+    for (const { ev, kind } of held) {
+      void Promise.resolve().then(() => {
+        if (epoch === this.epoch && this.deps.dmsEnabled()) return this.deps.reingest(ev, kind);
+      }).catch(() => {}).finally(() => {
+        if (epoch !== this.epoch) return;
+        this.pendingDecryptions--;
+        const { pendingDecryptions: _previous, ...state } = this.lock.get();
+        this.lock.set({ ...state, ...(this.pendingDecryptions ? { pendingDecryptions: this.pendingDecryptions } : {}) });
+      });
+    }
     const deferred = this.deferred;
     this.deferred = [];
     for (const fn of deferred) fn();

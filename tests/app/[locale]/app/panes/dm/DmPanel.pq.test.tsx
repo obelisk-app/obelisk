@@ -21,7 +21,7 @@ vi.mock('@/hooks/session/useSession', async () => {
  * describe the gift wrap rather than post-quantum, so unlike the per-message
  * marks it is NOT gated on the `postQuantumEnabled` preference.
  */
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import type { JsDirectMessage } from '@/services/nostr-bridge';
@@ -95,23 +95,11 @@ afterEach(() => {
 });
 
 describe('DmPanel: conversation shield', () => {
-  it('reports the wrap when post-quantum is not established', async () => {
+  it('leaves standard NIP-17 without a badge or standing guide', async () => {
     renderPanel();
-
-    const shield = await screen.findByTestId('pq-shield');
-    // 'wrapped', not a warning: the thread IS hiding who you talk to, which
-    // the banner this replaced never said.
-    expect(shield).toHaveAttribute('data-level', 'wrapped');
-    expect(shield.getAttribute('aria-label')).toContain('Safe');
-  });
-
-  it('offers the guide only from inside the panel, not as standing text', async () => {
-    renderPanel();
-
-    const shield = await screen.findByTestId('pq-shield');
-    expect(screen.queryByText('How to get extra safe')).not.toBeInTheDocument();
-    fireEvent.click(shield);
-    expect(screen.getByRole('link', { name: 'How to get extra safe' })).toBeInTheDocument();
+    await waitFor(() => expect(hasUsableKeys).toHaveBeenCalled());
+    expect(screen.queryByTestId('pq-shield')).toBeNull();
+    expect(screen.queryByText('How to get extra safe')).toBeNull();
   });
 
   it('confirms when both parties advertise post-quantum keys', async () => {
@@ -123,7 +111,7 @@ describe('DmPanel: conversation shield', () => {
     );
   });
 
-  it('still reports the wrap when the user has post-quantum turned off', async () => {
+  it('keeps standard NIP-17 quiet with post-quantum turned off', async () => {
     // The preference silences the per-message marks, but not the shield: a
     // user who turned post-quantum off still benefits from knowing whether
     // the wrap is hiding who they talk to.
@@ -132,7 +120,7 @@ describe('DmPanel: conversation shield', () => {
     renderPanel();
 
     await waitFor(() => expect(screen.getByText('hi')).toBeInTheDocument());
-    expect(screen.getByTestId('pq-shield')).toHaveAttribute('data-level', 'wrapped');
+    expect(screen.queryByTestId('pq-shield')).toBeNull();
     expect(screen.queryAllByTestId('pq-mark')).toHaveLength(0);
   });
 });
@@ -151,7 +139,7 @@ describe('DmPanel: per-message marks', () => {
     await screen.findByText('one');
     // Three NIP-04 messages, one pill - not three.
     expect(screen.getAllByTestId('pq-mark')).toHaveLength(1);
-    expect(screen.getByTestId('pq-mark')).toHaveTextContent('Who you talk to is visible');
+    expect(screen.getByTestId('pq-mark')).toHaveTextContent('Legacy');
   });
 
   it('marks the transition from NIP-04 history to NIP-17', async () => {
@@ -166,7 +154,7 @@ describe('DmPanel: per-message marks', () => {
 
     await screen.findByText('old');
     const marks = screen.getAllByTestId('pq-mark');
-    expect(marks.map((m) => m.textContent)).toEqual(['Who you talk to is visible', 'Not extra safe']);
+    expect(marks.map((m) => m.textContent)).toEqual(['Legacy', '']);
   });
 
   it('uses the on-accent variant for outgoing bubbles', async () => {
@@ -195,7 +183,7 @@ describe('DmPanel: per-message marks', () => {
     expect(screen.getAllByTestId('pq-mark')).toHaveLength(1);
   });
 
-  it('stays quiet for a fully post-quantum thread', async () => {
+  it('shows one icon for a fully post-quantum thread', async () => {
     hasUsableKeys.mockResolvedValue(true);
     dms.current = {
       [PEER]: [
@@ -206,7 +194,7 @@ describe('DmPanel: per-message marks', () => {
     renderPanel();
 
     await screen.findByText('a');
-    expect(screen.queryAllByTestId('pq-mark')).toHaveLength(0);
+    expect(screen.queryAllByTestId('pq-mark')).toHaveLength(1);
   });
 });
 

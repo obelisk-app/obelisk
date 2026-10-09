@@ -16,9 +16,11 @@ function mount(lock: DmLockState, locale: 'en' | 'es' | 'pt' = 'en') {
 afterEach(() => setPreference('directMessagesEnabled', false));
 
 describe('DmUnlock', () => {
-  it('opening a DM surface asks once to open the DMs, and shows nothing once open', () => {
+  it('the list waits for explicit discovery and shows nothing once open', () => {
     setPreference('directMessagesEnabled', true);
     const { bridge, unlockDirectMessages } = mount({ status: 'locked', unopened: [] });
+    expect(unlockDirectMessages).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('dm-discover'));
     expect(unlockDirectMessages).toHaveBeenCalledTimes(1);
     act(() => bridge.stores.dmLock.set({ status: 'unlocked', unopened: [] }));
     expect(screen.queryByTestId('dm-unlocking')).toBeNull();

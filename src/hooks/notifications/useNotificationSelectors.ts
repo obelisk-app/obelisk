@@ -85,11 +85,11 @@ export function useDmNotificationCursor(): number {
  * rather than as cards. Zero once DMs are open: they are cards by then.
  */
 export function useLockedDmCount(): number {
-  const { status, unopened } = useDmLock();
+  const { unopened } = useDmLock();
   const cursor = useDmNotificationCursor();
   return useMemo(
-    () => (status === 'unlocked' ? 0 : unopened.filter((at) => at > cursor).length),
-    [status, unopened, cursor],
+    () => unopened.filter((at) => at > cursor).length,
+    [unopened, cursor],
   );
 }
 

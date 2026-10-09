@@ -27,15 +27,15 @@ describe('messageMark', () => {
   });
 
   it('marks a nip17 message without a post-quantum envelope', () => {
-    expect(messageMark({ protocol: 'nip17', pq: false })).toBe('no-pq');
+    expect(messageMark({ protocol: 'nip17', pq: false })).toBeNull();
   });
 
   it('leaves a post-quantum nip17 message unmarked', () => {
-    expect(messageMark({ protocol: 'nip17', pq: true })).toBeNull();
+    expect(messageMark({ protocol: 'nip17', pq: true })).toBe('quantum');
   });
 
   it('treats an undefined pq flag as not post-quantum', () => {
-    expect(messageMark({ protocol: 'nip17', pq: undefined })).toBe('no-pq');
+    expect(messageMark({ protocol: 'nip17', pq: undefined })).toBeNull();
   });
 
   it('prefers the gift-wrap mark when a nip04 message is somehow flagged pq', () => {
@@ -68,17 +68,17 @@ describe('threadMarks', () => {
         settled('nip17', true),
         settled('nip17', true),
       ]),
-    ).toEqual(['no-giftwrap', null, 'no-pq', null, null, null]);
+    ).toEqual(['no-giftwrap', null, null, null, 'quantum', null]);
   });
 
   it('re-marks when a thread regresses to an earlier protection level', () => {
     expect(
       threadMarks([settled('nip17', true), settled('nip04'), settled('nip17', true), settled('nip17', false)]),
-    ).toEqual([null, 'no-giftwrap', null, 'no-pq']);
+    ).toEqual(['quantum', 'no-giftwrap', 'quantum', null]);
   });
 
   it('stays silent for a fully post-quantum thread', () => {
-    expect(threadMarks([settled('nip17', true), settled('nip17', true)])).toEqual([null, null]);
+    expect(threadMarks([settled('nip17', true), settled('nip17', true)])).toEqual(['quantum', null]);
   });
 
   it('never marks an unsettled message and never lets it break a run', () => {
@@ -94,7 +94,7 @@ describe('threadMarks', () => {
   });
 
   it('treats a missing pq flag on stored history as not post-quantum', () => {
-    expect(threadMarks([settled('nip17', undefined)])).toEqual(['no-pq']);
+    expect(threadMarks([settled('nip17', undefined)])).toEqual([null]);
   });
 
   it('returns an empty list for an empty thread', () => {

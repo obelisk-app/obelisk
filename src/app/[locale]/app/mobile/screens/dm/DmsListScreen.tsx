@@ -57,7 +57,7 @@ export function DmsListScreen({
           </div>
         )}
         {shown.map((p) => (
-          <DmRow key={p.peer} peer={p.peer} latest={p.latest} youPrefix={t('dm.youPrefix')} onClick={() => selectPeer(p.peer)} />
+          <DmRow key={p.peer} peer={p.peer} latest={p.latest} latestAt={p.latestAt} youPrefix={t('dm.youPrefix')} onClick={() => selectPeer(p.peer)} />
         ))}
       </div>
     </div>

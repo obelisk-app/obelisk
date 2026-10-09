@@ -10,15 +10,21 @@ import { useDmUnlock } from '@/hooks/chat/dm/unlock/useDmUnlock';
  * open the encrypted store; it shows nothing once they are open, a line
  * while the signer is asked, and a retry when the signer said no.
  */
-export function DmUnlock({ className = '' }: { className?: string }) {
+export function DmUnlock({ className = '', peer }: { className?: string; peer?: string }) {
   const t = useTranslations();
-  const { status, retry } = useDmUnlock();
-  if (status === 'unlocking') {
+  const { status, pendingDecryptions, unopened, enabled, retry } = useDmUnlock(peer);
+  if (!enabled) return null;
+  if (status === 'unlocking' || pendingDecryptions > 0) {
     return (
       <div role="status" data-testid="dm-unlocking" className={`px-4 py-2 text-xs text-lc-white/80 ${className}`}>
-        {t('dm.lock.unlocking')}
+        {pendingDecryptions > 0 ? t('dm.lock.loading', { count: pendingDecryptions }) : t('dm.lock.unlocking')}
       </div>
     );
+  }
+  if (!peer && (status === 'locked' || (status === 'unlocked' && unopened > 0))) {
+    return <div className={`px-4 py-2 ${className}`}>
+      <Button variant="secondary" size="xs" onClick={retry} data-testid="dm-discover">{t('dm.lock.discover')}</Button>
+    </div>;
   }
   if (status !== 'failed') return null;
   return (

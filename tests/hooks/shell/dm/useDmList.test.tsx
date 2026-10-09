@@ -8,6 +8,7 @@ vi.mock('@/services/social/profiles', async (importOriginal) => ({
   ensureSocialProfiles: vi.fn(async (pks: string[]) => { ensured.push(pks); }),
 }));
 
+import { useDMStore } from '@/store/chat/dm';
 import { useDmList } from '@/hooks/shell/dm/useDmList';
 import { setDmOptInEnabled } from '@/services/chat/dm/opt-in';
 import { fakeBridge } from '@tests/support/fake-bridge';
@@ -29,6 +30,16 @@ function setup(onPick = vi.fn()) {
 describe('useDmList', () => {
   beforeEach(() => { setDmOptInEnabled(true); ensured.length = 0; });
   afterEach(() => setDmOptInEnabled(false));
+
+  it('lists remembered chats before their message bodies are decrypted', () => {
+    useDMStore.setState({ conversationIndex: { [ALICE]: 42 } });
+    const fake = fakeBridge({ dmsByPeer: {}, myContactList: contacts(ALICE) as never });
+    const { result, unmount } = renderHook(() => useDmList(vi.fn()), { wrapper: bridgeWrapper(fake) });
+    expect(result.current.hasConversations).toBe(true);
+    expect(result.current.visible).toEqual([{ pubkey: ALICE, last: undefined, sortKey: 42 }]);
+    unmount();
+    useDMStore.setState({ conversationIndex: {} });
+  });
 
   it('splits the conversations and opens on Follows', () => {
     const { result } = setup();

@@ -146,7 +146,7 @@ export const CACHE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
   // ---- direct message settings -------------------------------------------
   {
     id: 'dm-store', area: LS, key: 'obelisk-dm-store:', match: 'prefix', category: 'dms',
-    holds: 'Per peer: whether to send NIP-17 or NIP-04. No message text (an old version\'s plaintext is dropped on load).',
+    holds: 'Per peer: protocol choice and last-message timestamp. Counterparty keys are stored locally so known chats appear while locked. No message text (an old version\'s plaintext is dropped on load).',
     why: 'Keeps a chosen protocol for people whose client needs NIP-04.',
     perAccount: true, sensitive: true, source: 'src/store/chat/dm.ts',
   },

@@ -87,6 +87,9 @@
     "unavailable": "Not available for this message yet."
   },
   "lock": {
+    "preview": "Encrypted message · open chat to read",
+    "discover": "Discover encrypted chats",
+    "loading": "Opening messages: {count} remaining.",
     "unlocking": "Opening your messages. Your signer may ask you to approve.",
     "failed": "Your messages are still locked: the signer did not open them.",
     "retry": "Try again"

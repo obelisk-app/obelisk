@@ -11,11 +11,13 @@ export interface DmPeer {
 }
 
 /** Every conversation, the most recent first. */
-export function dmPeers(dms: Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>): DmPeer[] {
-  return Object.entries(dms)
-    .map(([pubkey, msgs]) => {
-      const last = msgs[msgs.length - 1];
-      return { pubkey, last, sortKey: last?.createdAt ?? 0 };
+export function dmPeers(dms: Readonly<Record<string, ReadonlyArray<JsDirectMessage>>>, known: Readonly<Record<string, number>> = {}): DmPeer[] {
+  return [...new Set([...Object.keys(dms), ...Object.keys(known)])]
+    .filter((pubkey) => (dms[pubkey]?.length ?? 0) > 0 || pubkey in known)
+    .map((pubkey) => {
+      const msgs = dms[pubkey] ?? [];
+      const last = msgs.reduce<JsDirectMessage | undefined>((latest, message) => !latest || message.createdAt > latest.createdAt ? message : latest, undefined);
+      return { pubkey, last, sortKey: Math.max(last?.createdAt ?? 0, known[pubkey] ?? 0) };
     })
     .sort((a, b) => b.sortKey - a.sortKey);
 }

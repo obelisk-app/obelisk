@@ -102,7 +102,7 @@ export default function DmList({
         the last conversation sat permanently behind the "You" pill.
       */}
       <div className="flex-1 overflow-y-auto pb-2 md:pb-28">
-        {!vm.hasConversations ? (
+        {!vm.hasConversations && vm.loading ? null : !vm.hasConversations ? (
           <div className="p-4 text-center">
             <Text as="p" variant="muted">{t('dm.noConversations')}</Text>
             <TextButton

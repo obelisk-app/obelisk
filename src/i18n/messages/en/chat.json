@@ -48,18 +48,18 @@
   },
   "pq": {
     "level": {
-      "quantum": "Extra safe",
-      "quantumDetail": "Your messages are locked, and nobody can see who you are talking to. Even a future quantum computer could not open them.",
+      "quantum": "Post-quantum encryption",
+      "quantumDetail": "This message adds post-quantum encryption to NIP-17, designed to resist future quantum attacks.",
       "wrapped": "Safe",
       "wrappedDetail": "Your messages are locked, and nobody can see who you are talking to. One day a quantum computer could open them, though.",
-      "basic": "Basic",
-      "basicDetail": "Your messages are locked, but the servers that carry them can see who you are talking to."
+      "basic": "Legacy",
+      "basicDetail": "An older message using NIP-04. Its content is encrypted, but relays can see the sender, recipient and timestamp."
     },
     "learnHow": "How to get extra safe",
-    "markNoGiftwrap": "Who you talk to is visible",
-    "markNoGiftwrapDetail": "The servers that carried this message could see who you were talking to.",
-    "markNoPq": "Not extra safe",
-    "markNoPqDetail": "This message is locked today, but someone could save it now and open it years from now, once quantum computers arrive."
+    "markNoGiftwrap": "Legacy",
+    "markNoGiftwrapDetail": "An older message using NIP-04. Its content is encrypted, but relays can see the sender, recipient and timestamp.",
+    "markQuantum": "Post-quantum encryption",
+    "markQuantumDetail": "This message adds post-quantum encryption to NIP-17, designed to resist future quantum attacks."
   },
   "forum": {
     "searchPlaceholder": "Search or create a publication",

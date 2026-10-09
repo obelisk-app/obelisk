@@ -14,6 +14,19 @@ const makeMsg = (overrides: Partial<DMMessage> = {}): DMMessage => ({
 });
 
 describe('useDMStore', () => {
+  it('remembers known chats per account without plaintext previews', () => {
+    const account = freshPubkey();
+    const peer = 'a'.repeat(64);
+    ensureDMStoreForAccount(account);
+    useDMStore.getState().rememberConversation(peer, 12);
+    useDMStore.getState().rememberConversation(peer, 10);
+    expect(useDMStore.getState().conversationIndex[peer]).toBe(12);
+    ensureDMStoreForAccount(freshPubkey());
+    expect(useDMStore.getState().conversationIndex).toEqual({});
+    ensureDMStoreForAccount(account);
+    expect(useDMStore.getState().conversationIndex[peer]).toBe(12);
+  });
+
   beforeEach(() => {
     useDMStore.setState({
       isDMMode: false,
@@ -24,6 +37,7 @@ describe('useDMStore', () => {
       isLoadingThreads: false,
       hasMoreHistory: false,
       protocolOverrides: {},
+      conversationIndex: {},
       showProtocolPrompt: null,
     });
   });
@@ -158,7 +172,7 @@ describe('DM store saved-data migrations', () => {
     expect(useDMStore.getState().isDMMode).toBe(false);
     const saved = readBlob(key(pk));
     expect(saved?.version).toBe(DM_STORE_VERSION);
-    expect(saved?.state).toEqual({ protocolOverrides: { [peer]: 'nip04' } });
+    expect(saved?.state).toEqual({ protocolOverrides: { [peer]: 'nip04' }, conversationIndex: {} });
     expect(localStorage.getItem(key(pk))).not.toContain('old decrypted message');
   });
 

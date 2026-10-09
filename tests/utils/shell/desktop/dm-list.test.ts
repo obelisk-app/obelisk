@@ -6,7 +6,7 @@ const msg = (createdAt: number, content = 'hi', outgoing = false) => ({ id: `${c
 
 describe('dm list helpers', () => {
   it('orders conversations by their last message, newest first', () => {
-    const peers = dmPeers({ a: [msg(1), msg(5)], b: [msg(9)], c: [] });
+    const peers = dmPeers({ a: [msg(1), msg(5)], b: [msg(9)], c: [], empty: [] }, { c: 0 });
     expect(peers.map((p) => p.pubkey)).toEqual(['b', 'a', 'c']);
     expect(peers[1].last?.createdAt).toBe(5);
     expect(peers[2]).toEqual({ pubkey: 'c', last: undefined, sortKey: 0 });

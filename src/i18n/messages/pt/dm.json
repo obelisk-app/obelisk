@@ -87,6 +87,9 @@
     "unavailable": "Ainda não disponível para esta mensagem."
   },
   "lock": {
+    "preview": "Mensagem criptografada · abra a conversa para ler",
+    "discover": "Descobrir conversas criptografadas",
+    "loading": "Abrindo mensagens: faltam {count}.",
     "unlocking": "Abrindo suas mensagens. Seu assinador pode pedir que você aprove.",
     "failed": "Suas mensagens continuam trancadas: o assinador não as abriu.",
     "retry": "Tentar de novo"

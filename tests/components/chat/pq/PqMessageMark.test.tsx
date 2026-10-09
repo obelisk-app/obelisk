@@ -22,7 +22,7 @@ describe('PqMessageMark', () => {
     const mark = screen.getByTestId('pq-mark');
     // Plain language on purpose: "relays" is jargon to everyone outside Nostr,
     // and this string is aimed at a reader who has never heard the word.
-    const detail = 'The servers that carried this message could see who you were talking to.';
+    const detail = 'An older message using NIP-04. Its content is encrypted, but relays can see the sender, recipient and timestamp.';
     expect(mark).toHaveAttribute('title', detail);
     expect(mark).toHaveAttribute('aria-label', expect.stringContaining(detail));
   });
@@ -30,7 +30,7 @@ describe('PqMessageMark', () => {
   it('exposes a detail for the no-pq mark too', () => {
     render(
       <LocaleProvider initialLocale="en">
-        <PqMessageMark mark="no-pq" />
+        <PqMessageMark mark="quantum" />
       </LocaleProvider>,
     );
     const mark = screen.getByTestId('pq-mark');
@@ -41,7 +41,7 @@ describe('PqMessageMark', () => {
   it('defaults to the muted color', () => {
     render(
       <LocaleProvider initialLocale="en">
-        <PqMessageMark mark="no-pq" />
+        <PqMessageMark mark="quantum" />
       </LocaleProvider>,
     );
     expect(screen.getByTestId('pq-mark')).toHaveClass('text-lc-muted');
@@ -50,7 +50,7 @@ describe('PqMessageMark', () => {
   it('switches to the on-accent color for outgoing bubbles', () => {
     render(
       <LocaleProvider initialLocale="en">
-        <PqMessageMark mark="no-pq" onAccent />
+        <PqMessageMark mark="quantum" onAccent />
       </LocaleProvider>,
     );
     const mark = screen.getByTestId('pq-mark');

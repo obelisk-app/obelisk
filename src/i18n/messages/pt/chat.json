@@ -48,18 +48,18 @@
   },
   "pq": {
     "level": {
-      "quantum": "Extra seguro",
-      "quantumDetail": "As suas mensagens estão trancadas e ninguém vê com quem você fala. Nem um computador quântico do futuro conseguiria abrir.",
+      "quantum": "Criptografia pós-quântica",
+      "quantumDetail": "Esta mensagem adiciona criptografia pós-quântica ao NIP-17, projetada para resistir a futuros ataques quânticos.",
       "wrapped": "Seguro",
       "wrappedDetail": "As suas mensagens estão trancadas e ninguém vê com quem você fala. Só que um dia um computador quântico poderia abrir.",
-      "basic": "Básico",
-      "basicDetail": "As suas mensagens estão trancadas, mas os servidores que as carregam veem com quem você fala."
+      "basic": "Legacy",
+      "basicDetail": "Mensagem antiga que usa NIP-04. O conteúdo é criptografado, mas os relays podem ver o remetente, o destinatário e a data."
     },
     "learnHow": "Como ficar extra seguro",
-    "markNoGiftwrap": "Dá para ver com quem você fala",
-    "markNoGiftwrapDetail": "Os servidores que carregaram esta mensagem conseguiram ver com quem você estava falando.",
-    "markNoPq": "Não é extra seguro",
-    "markNoPqDetail": "Esta mensagem está trancada hoje, mas alguém poderia guardá-la agora e abrir daqui a anos, quando os computadores quânticos chegarem."
+    "markNoGiftwrap": "Legacy",
+    "markNoGiftwrapDetail": "Mensagem antiga que usa NIP-04. O conteúdo é criptografado, mas os relays podem ver o remetente, o destinatário e a data.",
+    "markQuantum": "Criptografia pós-quântica",
+    "markQuantumDetail": "Esta mensagem adiciona criptografia pós-quântica ao NIP-17, projetada para resistir a futuros ataques quânticos."
   },
   "forum": {
     "searchPlaceholder": "Buscar ou criar uma publicação",

@@ -13,10 +13,14 @@ function renderShield(level: PqProtectionLevel, locale: 'en' | 'es' = 'en') {
 }
 
 describe('PqShield', () => {
+  it('leaves standard NIP-17 without an indicator', () => {
+    renderShield('wrapped');
+    expect(screen.queryByTestId('pq-shield')).toBeNull();
+  });
   it('renders a single control per level, not a banner', () => {
     // The whole point of replacing the notice: one small control in the
     // header, no standing block of text above the conversation.
-    for (const level of ['quantum', 'wrapped', 'basic'] as const) {
+    for (const level of ['quantum', 'basic'] as const) {
       const { unmount } = renderShield(level);
       expect(screen.getByTestId('pq-shield')).toHaveAttribute('data-level', level);
       unmount();
@@ -26,10 +30,10 @@ describe('PqShield', () => {
   it('keeps the explanation reachable without hover, via aria-label', () => {
     // The panel only exists while open, so a user who never hovers would
     // otherwise get an unlabelled icon button.
-    renderShield('wrapped');
+    renderShield('basic');
     expect(screen.getByTestId('pq-shield')).toHaveAttribute(
       'aria-label',
-      'Safe. Your messages are locked, and nobody can see who you are talking to. One day a quantum computer could open them, though.',
+      'Legacy. An older message using NIP-04. Its content is encrypted, but relays can see the sender, recipient and timestamp.',
     );
   });
 
@@ -42,8 +46,8 @@ describe('PqShield', () => {
     renderShield('basic');
     fireEvent.click(screen.getByTestId('pq-shield'));
     const panel = screen.getByRole('tooltip');
-    expect(panel).toHaveTextContent('Basic');
-    expect(panel).toHaveTextContent('the servers that carry them can see who you are talking to');
+    expect(panel).toHaveTextContent('Legacy');
+    expect(panel).toHaveTextContent('relays can see the sender, recipient and timestamp');
   });
 
   it('closes again on a second click', () => {
@@ -55,14 +59,14 @@ describe('PqShield', () => {
   });
 
   it('closes on Escape', () => {
-    renderShield('wrapped');
+    renderShield('basic');
     fireEvent.click(screen.getByTestId('pq-shield'));
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('tooltip')).toBeNull();
   });
 
   it('offers the guide when protection is short of quantum', () => {
-    for (const level of ['wrapped', 'basic'] as const) {
+    for (const level of ['basic'] as const) {
       const { unmount } = renderShield(level);
       fireEvent.click(screen.getByTestId('pq-shield'));
       expect(screen.getByRole('link', { name: 'How to get extra safe' })).toHaveAttribute(
@@ -76,7 +80,7 @@ describe('PqShield', () => {
   it('does not nag the user who already has quantum protection', () => {
     renderShield('quantum');
     fireEvent.click(screen.getByTestId('pq-shield'));
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Extra safe');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Post-quantum encryption');
     expect(screen.queryByRole('link')).toBeNull();
   });
 
@@ -84,8 +88,8 @@ describe('PqShield', () => {
     renderShield('basic', 'es');
     fireEvent.click(screen.getByTestId('pq-shield'));
     const panel = screen.getByRole('tooltip');
-    expect(panel).toHaveTextContent('Básico');
-    expect(panel).toHaveTextContent('con quién hablás');
+    expect(panel).toHaveTextContent('Legacy');
+    expect(panel).toHaveTextContent('NIP-04');
   });
 
   it('opens on focus and hover; blur keeps it open while focus moves into the panel', () => {

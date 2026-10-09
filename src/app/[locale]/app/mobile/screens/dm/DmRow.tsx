@@ -15,11 +15,13 @@ import { LockIcon } from '@/assets/icons';
 export function DmRow({
   peer,
   latest,
+  latestAt,
   youPrefix,
   onClick,
 }: {
   peer: string;
-  latest: JsDirectMessage;
+  latest?: JsDirectMessage;
+  latestAt: number;
   youPrefix: string;
   onClick: () => void;
 }) {
@@ -39,11 +41,11 @@ export function DmRow({
       <div className="dm-meta">
         <div className="dm-row-top">
           <span className="dm-name">{name}</span>
-          <span className="dm-time">{relativeTime(latest.createdAt, t, locale)}</span>
+          <span className="dm-time">{relativeTime(latestAt, t, locale)}</span>
         </div>
         <div className="dm-preview">
           <LockIcon size={null} strokeWidth={2} className="lock" />
-          {latest.outgoing ? youPrefix : ''}{latest.content}
+          {latest?.outgoing ? youPrefix : ''}{latest?.content ?? t('dm.lock.preview')}
         </div>
       </div>
       {unreadCount > 0 && <span className="unread-dot" />}

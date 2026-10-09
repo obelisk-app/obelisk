@@ -50,6 +50,45 @@ function build(signer: NipSigner, dmsEnabled = true) {
 }
 
 describe('DmStoreModule', () => {
+  it('opening a known conversation leaves other senders and unknown gift wraps encrypted', async () => {
+    const { store, reingest } = build(fakeSigner());
+    const alice = 'a'.repeat(64);
+    const bob = 'b'.repeat(64);
+    store.hold({ ...wrap('alice'), pubkey: alice }, 'nip04');
+    store.hold({ ...wrap('bob'), pubkey: bob }, 'nip04');
+    store.hold(wrap('unknown'), 'wrap');
+    await store.unlock(alice);
+    await vi.waitFor(() => expect(reingest).toHaveBeenCalledTimes(1));
+    expect(reingest).toHaveBeenCalledWith(expect.objectContaining({ id: 'alice' }), 'nip04');
+    await store.unlock();
+    await vi.waitFor(() => expect(reingest).toHaveBeenCalledTimes(3));
+  });
+
+  it('keeps reporting queued message loading after the storage key is unlocked', async () => {
+    let finish!: () => void;
+    const reingest = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    const store = new DmStoreModule({ nipSigner: () => fakeSigner(), replay: vi.fn(), reingest, dmsEnabled: () => true });
+    store.attach(ME);
+    store.hold(wrap('slow'), 'wrap');
+    await store.unlock();
+    expect(store.isUnlocked()).toBe(true);
+    expect(store.lock.get().pendingDecryptions).toBe(1);
+    finish();
+    await vi.waitFor(() => expect(store.lock.get().pendingDecryptions ?? 0).toBe(0));
+  });
+
+  it('does not let old pending decryption overwrite another account lock', async () => {
+    let finish!: () => void;
+    const store = new DmStoreModule({ nipSigner: () => fakeSigner(), replay: vi.fn(), reingest: () => new Promise<void>((resolve) => { finish = resolve; }), dmsEnabled: () => true });
+    store.attach(ME);
+    store.hold(wrap('slow'), 'wrap');
+    await store.unlock();
+    store.attach(null);
+    finish();
+    await Promise.resolve(); await Promise.resolve();
+    expect(store.lock.get()).toEqual({ status: 'locked', unopened: [] });
+  });
+
   it('a refused unlock stays locked and keeps what it held; a retry opens and hands it all back', async () => {
     const refusing = fakeSigner({ refuse: true });
     const reingest = vi.fn();

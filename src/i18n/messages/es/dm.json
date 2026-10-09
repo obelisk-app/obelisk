@@ -87,6 +87,9 @@
     "unavailable": "Todavía no está disponible para este mensaje."
   },
   "lock": {
+    "preview": "Mensaje encriptado · abrí el chat para leer",
+    "discover": "Descubrir chats encriptados",
+    "loading": "Abriendo mensajes: quedan {count}.",
     "unlocking": "Abriendo tus mensajes. Puede que tu firmante te pida aprobarlo.",
     "failed": "Tus mensajes siguen cerrados: el firmante no los abrió.",
     "retry": "Probar de nuevo"

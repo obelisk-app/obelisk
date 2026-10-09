@@ -78,8 +78,8 @@ export abstract class BridgeCommands extends BridgeReads {
 
   // -- The encrypted DM store: `dm/store.ts`.
   /** Open the DMs: one signer call for the key, then the stored messages. Idempotent. */
-  unlockDirectMessages(): Promise<void> {
-    return this.m.dm.dmStore.unlock();
+  unlockDirectMessages(peer?: string): Promise<void> {
+    return this.m.dm.dmStore.unlock(peer);
   }
   /** Settings is about to delete the store: stop writing and drop the key. */
   forgetDirectMessages(): Promise<void> {

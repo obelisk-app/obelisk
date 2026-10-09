@@ -12,12 +12,12 @@ DMs live **in the bridge**, delegating the wire format to `@nostr-wot/dm`. There
 |---|---|
 | `src/services/nostr-bridge/dm/` | The DM modules, wired by `compose-dm.ts`: `send.ts` (optimistic placeholder, per-thread protocol choice, retry), `nip17.ts` (seal and gift-wrap to the recipient's inbox and to ourselves), `nip04.ts` (the opt-out path), `inbox.ts` (the kind 4 and kind 1059 REQs, the `'dm'` AUTH lease), `thread.ts` (dedupe and placeholder replacement into a thread, the bell card), `relays.ts` and `relay-cache.ts` (NIP-65 and kind-10050 lookups, the gift-wrap ladder), `inbox-list.ts` (publishing our own kind 10050), `calls.ts` (DM call control messages), and the encrypted store (below): `store.ts` (locked / unlocked, what is held, what is kept), `store-key.ts` (the DM key wrapped by the signer), `store-db.ts` (the IndexedDB layout), `store-record.ts` (what one stored message holds) |
 | `src/lib/crypto/record-cipher.ts` | AES-256-GCM boxes under a non-extractable key held in memory. |
-| `src/components/chat/dm/unlock/DmUnlock.tsx`, `src/hooks/chat/dm/unlock/useDmUnlock.ts` | Mounted on every DM surface: opening one opens the DMs, and says so while the signer is asked or after it said no. |
+| `src/components/chat/dm/unlock/DmUnlock.tsx`, `src/hooks/chat/dm/unlock/useDmUnlock.ts` | Opening a thread unlocks that peer. The list offers explicit discovery and shows progress while the signer or envelope processing is pending. |
 | `src/services/nostr-bridge/session/dm-signer.ts` | The signer the DM transport uses, adapted from the session's login method. |
 | `src/services/nostr-bridge/dm/types.ts` | `JsDirectMessage`: the only DM shape the UI ever sees (re-exported from `types.ts`). |
 | `src/services/nostr-bridge/hooks/messages.ts` | `useDirectMessages()` over the bridge's `dmsByPeer` store, exported from the front door. |
-| `src/services/chat/dm/opt-in.ts` | The `directMessagesEnabled` preference gate. The only file under `src/services/chat/dm/`. |
-| `src/store/chat/dm.ts` | Zustand UI state: `activeDMPubkey`, `isDMMode`, and the persisted per-peer `protocolOverrides`. |
+| `src/services/chat/dm/opt-in.ts` | The `directMessagesEnabled` preference gate. Conversation indexing and encrypted-attachment adapters share that folder. |
+| `src/store/chat/dm.ts` | Zustand UI state: `activeDMPubkey`, `isDMMode`, and the persisted per-peer `protocolOverrides` and conversation timestamps (no message bodies). |
 | `src/services/chat/pq/` | Post-quantum: attestation lookup, own-capability detection, status computation, send-plan resolution. |
 | `src/app/[locale]/app/dm/DmList.tsx`, `ComposeDm.tsx`, `DmOptInGate.tsx` (and `DmOptInBoundary.tsx`), their parts beside them, logic in `src/hooks/shell/dm/` and `src/utils/shell/desktop/` (`dm-list.ts`, `compose-dm.ts`) | Shared DM UI. |
 | `src/app/[locale]/app/panes/dm/DmPanel.tsx` | Desktop thread view. |
@@ -167,7 +167,7 @@ Condition 2 is checked **locally first**, before any relay round trip, because i
 
 **Provenance.** Every message carries `protocol: 'nip04' | 'nip17'` and `pq?: boolean`. Inbound `pq` comes from `isPqEnvelope()` on the seal's ciphertext, recorded by the signer adapter's `pqTrack` because `unwrapGiftWrap` does not report its own routing decision. Outbound `pq` reflects what the seal actually did, never what was requested. `undefined` reads as classic everywhere, which is what any message stored before the field existed should mean.
 
-**Indicators.** `PqConversationNotice` sits under the thread header on both shells; `PqMessageMark` renders per message, aggregated by `threadMarks` so only protection-level *transitions* are marked. Marking every message would put a pill on every bubble of a Discord-style list, because all pre-NIP-17 history is NIP-04. Both surfaces are gated on the `postQuantumEnabled` preference, which **defaults on**: the indicators are the feature, and defaulting off meant nobody who never opened settings saw the notice, the marks or the guide link at all. Unlike `directMessagesEnabled` the preference grants nothing and reveals nothing, it only decides whether Obelisk tells you what a conversation rests on. Sending stays conservative independently (condition 2 above), so the default cannot produce a false claim of protection.
+**Indicators.** Standard NIP-17 carries no badge. NIP-04 shows “Legacy” with a tooltip explaining that the content is encrypted but sender, recipient and timestamp remain visible to relays. Post-quantum messages show a shield with an explanatory tooltip. Marks are aggregated at protocol transitions. Tooltips also open on focus or tap. The thread header shows the same quiet choices based on the configured next-send capability, while message marks reflect actual message provenance.
 
 ## Who the thread says you are talking to
 
@@ -203,16 +203,11 @@ cache only and accept the petname fallback.
 
 ## The thread header
 
-Three things sit at the top right, and they are not interchangeable:
+The header separates protocol information from thread actions:
 
-- **`PqShield`**: conversation-level protection state. Not gated on the
-  post-quantum preference, because two of its three states describe the gift
-  wrap. It is *state*, not a menu, and must stay visible.
-- **`PqMessageMark`**: per-message, aggregated to protocol transitions only.
-  A pill per bubble is unreadable when all of pre-NIP-17 history is NIP-04.
-- **`DmThreadMenu`**: the `⋯` beside the shield: profile, copy npub, mute,
-  block. Added beside the indicators deliberately; folding them into a menu
-  would hide the one thing the header says about safety.
+- **`PqShield`**: optional Legacy label or post-quantum icon; normal NIP-17 has no badge.
+- **`PqMessageMark`**: actual message provenance, aggregated at protocol transitions.
+- **`DmThreadMenu`**: profile, copy npub, mute and block actions.
 
 ## Security
 
@@ -234,7 +229,7 @@ The owner's decision (2026-10-06): DMs are kept on the device encrypted with AES
 
 - Kind 4 events and gift wraps that arrive are held in memory as they came off the relay (ciphertext; at most `MAX_HELD`, oldest dropped, since the relays send them again).
 - The read-state sync waits too: while DMs are on and locked it opens no gift wrap it has not classified (`sync-ingest.ts`), and it never opens one the store holds (that wrap is a DM, and it records the verdict).
-- `DmUnlock`, on every DM surface (the lists, a thread, the compose screen; the bell's DM alerts open one of these), calls `unlockDirectMessages()`. That is **one signer call**: `nip44Decrypt` of the wrapped key, or the first time on a device `nip44Encrypt` of a new one. An extension or bunker that asks shows one prompt; an nsec session, whose signer is in the page, shows none. Then the stored boxes are opened locally (no signer call per message) and put back in their threads, the held events go to their ingest, which skips every one the store holds, and new messages are opened and saved as they arrive. A refusal leaves the DMs locked (`failed`) with a retry; it is never answered with another prompt by itself.
+- `DmUnlock` opens only a selected thread automatically. Lists and compose screens offer **Discover encrypted chats**, which calls `unlockDirectMessages()` without a peer. Unlocking the store uses one signer call: `nip44Decrypt` of the wrapped key, or first-time `nip44Encrypt` of a new one. Stored boxes open locally; newly received encrypted messages may need additional signer calls. Selecting a thread releases only that peer's cached history and NIP-04 events; discovery releases unidentified gift wraps and remains enabled for this visit. A refusal leaves the DMs locked (`failed`) with a retry, never another automatic prompt.
 - A wrapped key that the signer opens into something that is not a key is treated as lost: the account's boxes are deleted and a new key is made (the messages come back from the relays).
 
 **What the store skips.** A wrap or kind 4 whose message is stored is never sent to the signer again. The store's index (its record keys) is the authority, not the localStorage ledger. A box that does not open (tampered, or under a lost key) is deleted, so its wire id is unknown again and the relay's copy is opened and saved afresh.
@@ -267,7 +262,7 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 
 - **"Sent a message but they never got it."** Check whether the recipient has published a kind-10050. Without one the wrap falls to their NIP-65 read set, and without that to our own active relay, neither of which is guaranteed to overlap with what they actually read. They can fix it once, for everyone, with any modern client.
 - **"Older NIP-17 messages vanish after a reload, only new ones show."** That was the wrap ledger recording chat wraps as seen (fixed 2026-09-26, see Protocols). If it comes back, check what `hasSeenWrap` is being asked in `ingestGiftWrap` (`dm/inbox.ts`).
-- **"My DMs are empty after a reload."** They are locked until a DM surface opens; if the signer was asked and said no (or did not answer), the list shows a retry. Settings > Data on this device > Direct messages (encrypted) > Remove starts the store over.
+- **"My DMs are empty after a reload."** Known chats are listed without plaintext; open a thread or choose Discover encrypted chats to decrypt. If the signer was asked and said no (or did not answer), the list shows a retry. Settings > Data on this device > Direct messages (encrypted) > Remove starts the store over.
 - **"My own DMs are missing after a reload."** A message sent from this device is kept in the encrypted store when it settles. One sent from another device comes back only through its self-copy. If an outgoing NIP-17 message never comes back, its self-copy did not land: check whether we have a published kind-10050 (`ensureDmInboxRelaysPublished`) and whether the relay accepted the second wrap. Messages sent before the self-copy shipped are gone from the sender's side for good; the recipient still has them.
 - **"The post-quantum toggle is on but nothing is post-quantum."** Almost certainly `capabilityUnknown`: the extension does not advertise `nip44.schemes`. The settings status row says so explicitly.
 - **"Every old message shows a mark."** It should not: marks aggregate to transitions. If you see one per bubble, `threadMarks` is not being used.
@@ -288,3 +283,11 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - `tests/components/chat/dm/thread/DmThreadMenu.test.tsx`: the ⋯ actions, and that they close after acting.
 
 NIP-17 attachment encryption and self-addressed NIP-59 envelope cryptography live in `@nostr-wot/dm`; Obelisk keeps upload choices, signer scheduling, read-state merge rules, and private payload schemas. The remaining `src/lib/crypto` record/session vault code retains the established local `SealedBox` format and IndexedDB lifecycle. It is application persistence compatibility, not another implementation of the SDK vault record format; replacing it requires an explicit persisted-data migration.
+
+### Chat discovery and decryption consent
+
+The desktop and mobile lists show known counterparties before decrypting message bodies. A per-account conversation index retains only peer public keys and latest message timestamps in local storage; protocol preferences remain there too. Message text and previews are never added to that index. Existing notification metadata provides a fallback for older installations. NIP-04 exposes its sender/recipient on the wire, so its chats can be indexed while locked. NIP-17 hides the sender inside the encrypted envelope: previously unseen chats cannot be identified without decryption.
+
+The list offers **Discover encrypted chats** instead of automatically asking the signer on mount. Selecting a known conversation opens its cached messages and held NIP-04 messages; other senders and unidentified NIP-17 wraps stay held until discovery is requested. Discovery opens the envelopes needed to identify those chats and remains enabled for new arrivals for the current page session. A signer configured to always approve completes those requests without prompting; Obelisk does not probe for that external permission. Cached history uses the local encrypted store after its key is unlocked, without a signer request per cached message. Older cached conversations not yet indexed become known on their next discovery.
+
+Unlocking the storage key and opening the queued messages are separate phases. The shared unlock indicator reports pending message decryption until that queue settles, and the desktop list avoids a false empty state during that work. Pending completions from a previous account cannot overwrite the current account's lock state.

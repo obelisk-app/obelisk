@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useDirectMessages, useMyFollows } from '@/services/nostr-bridge';
+import { useDirectMessages, useDmLock, useMyFollows } from '@/services/nostr-bridge';
 import { ensureSocialProfiles } from '@/services/social/profiles';
 import {
   defaultDmListTab,
@@ -10,6 +10,7 @@ import {
   splitByFollows,
   type DmListTab,
 } from '@/utils/shell/desktop/dm-list';
+import { useKnownDmConversations } from '@/hooks/chat/dm/lists/useKnownDmConversations';
 import { DM_LIST_TABS } from '@/constants/shell/desktop';
 
 /**
@@ -19,11 +20,13 @@ import { DM_LIST_TABS } from '@/constants/shell/desktop';
 export function useDmList(onPick: (peer: string) => void) {
   const t = useTranslations();
   const dms = useDirectMessages();
+  const { status, pendingDecryptions = 0 } = useDmLock();
   const follows = useMyFollows();
   const [composing, setComposing] = useState(false);
   const [tab, setTab] = useState<DmListTab | null>(null);
 
-  const peers = useMemo(() => dmPeers(dms), [dms]);
+  const known = useKnownDmConversations();
+  const peers = useMemo(() => dmPeers(dms, known), [dms, known]);
   const split = useMemo(() => splitByFollows(peers, new Set(follows)), [peers, follows]);
 
   // Resolve every peer in one batched REQ instead of letting each row fire
@@ -38,6 +41,7 @@ export function useDmList(onPick: (peer: string) => void) {
   const activeTab = tab ?? defaultDmListTab(split.follows.length, split.others.length);
 
   return {
+    loading: status === 'unlocking' || pendingDecryptions > 0,
     composing,
     toggleComposing: () => setComposing((v) => !v),
     startComposing: () => setComposing(true),

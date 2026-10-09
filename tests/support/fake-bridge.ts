@@ -144,5 +144,5 @@ function reads(s: FakeStores) {
  */
 export function fakeBridge(seed: FakeBridgeSeed = {}, methods: Partial<BridgeImpl> = {}): FakeBridge {
   const stores = makeStores(seed);
-  return Object.assign({ stores }, stores, reads(stores), methods) as unknown as FakeBridge;
+  return Object.assign({ stores, unlockDirectMessages: async () => {} }, stores, reads(stores), methods) as unknown as FakeBridge;
 }
