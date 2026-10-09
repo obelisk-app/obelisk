@@ -291,3 +291,27 @@ describe('encrypted DM store: login methods and storage', () => {
     await expectNoPlaintextOnDisk(FIRST);
   });
 });
+
+
+describe('group read-state migration respects DM opt-in', () => {
+  it('does not ask the signer to open real DMs received by its legacy subscription', async () => {
+    const alice = keysFrom(makeKeypair());
+    const bob = keysFrom(makeKeypair());
+    const ext = installExtension(bob);
+    const { setPreference } = await import('@/services/preferences/preferences');
+    setPreference('directMessagesEnabled', false);
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const bridge = await getBridge();
+    await bridge.loginWithNip07(bob.pkHex);
+    const { startGroupsRelaySync } = await import('@/services/read-state/relay-sync');
+    const stop = startGroupsRelaySync('wss://public.obelisk.ar', ['group']);
+    try {
+      deliver(await giftWrapFrom(alice, bob.pkHex, 'private DM, not a group cursor'));
+      await bridge.unlockDirectMessages();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(ext.nip44.decrypt).not.toHaveBeenCalled();
+      expect(ext.nip04.decrypt).not.toHaveBeenCalled();
+      expect(bridge.dmLock.get().status).toBe('locked');
+    } finally { stop(); }
+  });
+});

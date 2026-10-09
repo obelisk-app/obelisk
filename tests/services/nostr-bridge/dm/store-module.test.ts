@@ -68,7 +68,7 @@ describe('DmStoreModule', () => {
     expect(store.hold(wrap('w2'), 'wrap')).toBe(false);
   });
 
-  it('the read-state sync waits only while DMs are on and locked', async () => {
+  it('the read-state sync waits for unlock and blocks when DMs are disabled', async () => {
     const { store } = build(fakeSigner());
     const later = vi.fn();
     expect(store.defer(later)).toBe(true);
@@ -77,7 +77,7 @@ describe('DmStoreModule', () => {
     expect(store.defer(vi.fn())).toBe(false);
 
     const off = build(fakeSigner(), false).store;
-    expect(off.defer(vi.fn())).toBe(false);
+    expect(off.defer(vi.fn())).toBe(true);
   });
 
   it('opens once: a second unlock while the first is asking costs no second prompt', async () => {

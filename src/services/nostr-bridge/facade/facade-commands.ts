@@ -89,7 +89,7 @@ export abstract class BridgeCommands extends BridgeReads {
   isStoredDmWrap(wireId: string): boolean {
     return this.m.dm.dmStore.knows(wireId);
   }
-  /** While DMs are on and locked, run `fn` once they are opened. True when deferred. */
+  /** Block disabled DMs; defer locked DMs until opened. False only when decryption is allowed. */
   deferUntilDmsUnlocked(fn: () => void): boolean {
     return this.m.dm.dmStore.defer(fn);
   }

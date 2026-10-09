@@ -457,3 +457,7 @@ End-to-end (Playwright):
 | Spec | What it asserts |
 |---|---|
 | `scripts/e2e/read-state-convergence.spec.ts` | Two contexts seeded with the same nsec on `public.obelisk.ar`. Context A advances a cursor; within 12s (8s debounce + grace) context B's `obelisk-read-state:<pubkey>.groupCursors[gid]` reflects the advance. |
+
+### Decryption consent
+
+Legacy group read-state migration receives the same gift-wrap envelopes as real DMs. It must not unwrap them while DMs are disabled, after logout, or before the DM store is unlocked. Disabled envelopes are ignored; enabled but locked envelopes wait for the explicit unlock. The group replaceable snapshot uses a separate self-decryption request for group read positions and does not decrypt DM envelopes.

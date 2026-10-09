@@ -297,8 +297,8 @@ describe('NIP-17 send/receive', () => {
 
     const bridge = await getBridge();
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     bridge.subscribeDirectMessages(() => {});
 
     await bridge.sendDirectMessage(bob.pkHex, 'meet me at the obelisk');
@@ -336,8 +336,8 @@ describe('NIP-17 send/receive', () => {
 
     const bridge = await getBridge();
     await bridge.loginWithNsec(bob.skHex, bob.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
 
     let last: Readonly<Record<string, ReadonlyArray<{ content: string; outgoing: boolean; protocol?: string; pq?: boolean }>>> = {};
     bridge.subscribeDirectMessages((byPeer) => {
@@ -371,8 +371,8 @@ describe('NIP-17 send/receive', () => {
 
     const bridge = await getBridge();
     await bridge.loginWithNsec(bob.skHex, bob.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
 
     let last: Readonly<Record<string, ReadonlyArray<{ content: string }>>> = {};
     bridge.subscribeDirectMessages((byPeer) => { last = byPeer as typeof last; });
@@ -390,8 +390,8 @@ describe('DM subscription survives a relay switch', () => {
     const me = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(me.skHex, me.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     bridge.subscribeDirectMessages(() => {});
     const wrapSubs = () => fake.state.subscriptions.filter((s) =>
       (s.filter.kinds as number[] | undefined)?.includes(1059)
@@ -416,8 +416,8 @@ describe('NIP-17 history across a real page reload', () => {
       const { setPreference } = await import('@/services/preferences/preferences');
       const bridge = await getBridge();
       await bridge.loginWithNsec(bob.skHex, bob.pkHex);
-      await bridge.unlockDirectMessages();
       setPreference('directMessagesEnabled', true);
+      await bridge.unlockDirectMessages();
       let thread: ReadonlyArray<{ content: string }> = [];
       bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[alice.pkHex] ?? []; });
       await vi.waitFor(() => { if (thread.length === 0) throw new Error('not ingested'); }, { timeout: 3000, interval: 5 });
@@ -467,8 +467,8 @@ describe('NIP-17 kind-15 file messages', () => {
     const bob = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
 
     let thread: ReadonlyArray<{ file?: unknown; pending?: boolean; content: string }> = [];
     bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[bob.pkHex] ?? []; });
@@ -507,8 +507,8 @@ describe('NIP-17 kind-15 file messages', () => {
     const bob = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     useDMStore.getState().setProtocolOverride(bob.pkHex, 'nip04');
     await expect(bridge.sendDirectFile(bob.pkHex, file)).rejects.toThrow(/NIP-17/);
     expect(fake.state.published.filter((e) => e.kind === 4 || e.kind === 1059)).toHaveLength(0);
@@ -530,8 +530,8 @@ describe('NIP-17 kind-15 file messages', () => {
 
     const bridge = await getBridge();
     await bridge.loginWithNsec(bob.skHex, bob.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     let thread: ReadonlyArray<{ file?: unknown; content: string; outgoing: boolean }> = [];
     bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[alice.pkHex] ?? []; });
     await vi.waitFor(() => { if (thread.length === 0) throw new Error('not ingested'); }, { timeout: 5000, interval: 5 });
@@ -555,8 +555,8 @@ describe('NIP-17 kind-15 file messages', () => {
     fake.state.published.push(await sealAndGiftWrap(new PrivateKeySigner(alice.sk), bob.pkHex, inner));
     const bridge = await getBridge();
     await bridge.loginWithNsec(bob.skHex, bob.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     let thread: ReadonlyArray<unknown> = [];
     bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[alice.pkHex] ?? []; });
     await flush(200);
@@ -577,8 +577,8 @@ describe('DM call control messages', () => {
     const bob = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     let thread: ReadonlyArray<unknown> = [];
     bridge.subscribeDirectMessages((byPeer) => { thread = byPeer[bob.pkHex] ?? []; });
 
@@ -617,8 +617,8 @@ describe('DM call control messages', () => {
 
     const bridge = await getBridge();
     await bridge.loginWithNsec(bob.skHex, bob.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     const got: Array<{ type: string; callId: string; from: string; peer: string }> = [];
     bridge.subscribeDmCallMessages((m) => got.push(m));
     let thread: ReadonlyArray<unknown> = [];
@@ -637,8 +637,8 @@ describe('DM call control messages', () => {
     const alice = makeKeypair();
     const bridge = await getBridge();
     await bridge.loginWithNsec(bob.skHex, bob.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     const got: Array<{ type: string; from: string; peer: string }> = [];
     bridge.subscribeDmCallMessages((m) => got.push(m));
     bridge.subscribeDirectMessages(() => {});
@@ -662,8 +662,8 @@ describe('NIP-17 signer adapter: all three login methods', () => {
 
     const bridge = await getBridge();
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     await bridge.sendDirectMessage(bob.pkHex, 'from nsec');
     const wrap = await waitForWrap();
 
@@ -703,8 +703,8 @@ describe('NIP-17 signer adapter: all three login methods', () => {
 
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     await bridge.sendDirectMessage(bob.pkHex, 'from nip07');
     const wrap = await waitForWrap();
 
@@ -725,8 +725,8 @@ describe('NIP-17 signer adapter: all three login methods', () => {
 
     const bridge = await getBridge();
     await bridge.loginWithBunker(`bunker://${alice.pkHex}?relay=wss://relay.nsec.app`);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     await bridge.sendDirectMessage(bob.pkHex, 'from bunker');
     const wrap = await waitForWrap();
 
@@ -751,8 +751,8 @@ describe('NIP-17 self-copy', () => {
     const { setPreference } = await import('@/services/preferences/preferences');
     const bridge = await getBridge();
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     return bridge;
   }
 
@@ -840,8 +840,8 @@ describe('NIP-17 self-copy', () => {
 
     const { setPreference } = await import('@/services/preferences/preferences');
     await bridge.loginWithNsec(alice.skHex, alice.pkHex);
-    await bridge.unlockDirectMessages();
     setPreference('directMessagesEnabled', true);
+    await bridge.unlockDirectMessages();
     let last: Readonly<Record<string, ReadonlyArray<{ content: string; outgoing: boolean; protocol?: string }>>> = {};
     bridge.subscribeDirectMessages((byPeer) => {
       const out: Record<string, ReadonlyArray<{ content: string; outgoing: boolean; protocol?: string }>> = {};

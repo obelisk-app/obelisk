@@ -65,7 +65,7 @@ export interface DmStoreDeps {
   replay(params: IngestDmParams): void;
   /** Hand an event held while locked back to its ingest. */
   reingest(ev: NostrEvent, kind: HeldKind): void;
-  /** DMs are turned on (the opt-in). The read-state sync waits for the unlock only then. */
+  /** DMs are turned on (the opt-in). Decryption requires both this opt-in and an explicit unlock. */
   dmsEnabled(): boolean;
 }
 
@@ -106,7 +106,7 @@ export class DmStoreModule {
   }
 
   isUnlocked(): boolean {
-    return this.lock.get().status === 'unlocked';
+    return this.deps.dmsEnabled() && this.lock.get().status === 'unlocked';
   }
 
   /** The message carried by this wire event is already stored (or opened this visit). */
@@ -126,9 +126,10 @@ export class DmStoreModule {
     return true;
   }
 
-  /** While DMs are on and locked, run `fn` after the unlock instead of now. True when deferred. */
+  /** Block while disabled or logged out; queue while locked. False only when opening is allowed. */
   defer(fn: () => void): boolean {
-    if (!this.pubkey || this.isUnlocked() || !this.deps.dmsEnabled()) return false;
+    if (!this.pubkey || !this.deps.dmsEnabled()) return true;
+    if (this.isUnlocked()) return false;
     if (this.deferred.length >= MAX_DEFERRED) this.deferred.shift();
     this.deferred.push(fn);
     return true;
@@ -137,7 +138,7 @@ export class DmStoreModule {
   /** Open the store: one signer call, then everything stored, then what was held. Idempotent. */
   unlock(): Promise<void> {
     const pubkey = this.pubkey;
-    if (!pubkey || this.isUnlocked()) return Promise.resolve();
+    if (!pubkey || !this.deps.dmsEnabled() || this.isUnlocked()) return Promise.resolve();
     if (this.unlocking) return this.unlocking;
     const epoch = this.epoch;
     this.lock.set({ ...this.lock.get(), status: 'unlocking' });
@@ -228,6 +229,7 @@ export class DmStoreModule {
     // (putting back the id of a box it deleted as unreadable).
     await this.indexing;
     if (epoch !== this.epoch) return;
+    if (!this.deps.dmsEnabled()) return this.fail(epoch);
     const signer = this.deps.nipSigner();
     if (!signer || signer.pubkey !== pubkey) return this.fail(epoch);
     const db = this.db();
@@ -238,6 +240,7 @@ export class DmStoreModule {
     } catch {
       return this.finish(epoch, true);
     }
+    if (epoch !== this.epoch || !this.deps.dmsEnabled()) return this.fail(epoch);
     let raw: Uint8Array | null = null;
     try {
       if (isWrappedDmKey(wrapped, pubkey)) raw = await unwrapDmKey(signer, wrapped);
@@ -245,6 +248,7 @@ export class DmStoreModule {
       return this.fail(epoch);
     }
     if (epoch !== this.epoch) return void raw?.fill(0);
+    if (!this.deps.dmsEnabled()) { raw?.fill(0); return this.fail(epoch); }
     const fresh = !raw;
     if (!raw) {
       // First unlock on this device, or a wrapped key that is not a key any
@@ -311,6 +315,7 @@ export class DmStoreModule {
 
   private finish(epoch: number, memoryOnly: boolean): void {
     if (epoch !== this.epoch) return;
+    if (!this.deps.dmsEnabled()) return this.fail(epoch);
     if (memoryOnly) {
       this.memoryOnly = true;
       this.key = null;

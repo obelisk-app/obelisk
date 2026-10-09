@@ -110,7 +110,7 @@ export function subscribeAndIngest<T>(
       // encrypted DM store holds: those are DMs, not read state.
       if (hasSeenWrap(opts.ledgerScope, ev.id)) return;
       if (impl.isStoredDmWrap(ev.id)) { markWrapSeen(opts.ledgerScope, ev.id); return; }
-      // While DMs are on and locked, opening a wrap would ask the signer
+      // While DMs are disabled or locked, opening a wrap would ask the signer
       // before the person asked for anything, and would decrypt their own
       // sent DMs (self-copies are self-authored too). Wait for the unlock.
       if (impl.deferUntilDmsUnlocked(() => { if (!stopped) void open(ev); })) return;
