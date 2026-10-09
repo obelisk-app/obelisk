@@ -577,3 +577,8 @@ Explicit mutes combine the account’s NIP-51 list and local preferences; explic
 Bunker/NIP-46 operations use up to ten concurrent RPCs. At most one slot runs background work such as history decryption or read-state sync, leaving capacity for interactive sends and authentication. Requests are matched to their own responses; completion order may differ from enqueue order. Each message still needs its own signature. An always-approve signer can benefit from overlapping relay round trips, but actual throughput remains signer- and relay-dependent.
 
 NIP-07 extension calls remain serialized. Interactive work takes precedence over queued background work for both transports. Failures release their slot, queued start deadlines remain enforced, and queue resets isolate the next session from late completions belonging to the previous one. Local-key signing bypasses the remote signer queue.
+
+
+### Publish failure diagnostics
+
+The browser console records terminal publish failures as `[publish] rejected`, including the event kind, event ID and each target relay's refusal reason. Ephemeral rounds that finish after the caller's short wait also report `[publish] late rejection` if no relay accepts them. These failure records do not require the verbose relay-debug preference and omit event content, tags and signer credentials. A timeout is an unconfirmed delivery, not proof that a relay explicitly refused the event.

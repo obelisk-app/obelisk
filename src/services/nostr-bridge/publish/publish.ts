@@ -216,6 +216,7 @@ export class PublishModule {
     const joined = alreadyJoined(event, finalResults);
     if (accepted.length === 0 && !joined) {
       const msg = rejectionMessage(event, finalResults, targetRelays);
+      console.warn('[publish] rejected', JSON.stringify({ eventKind: event.kind, eventId: event.id, reason: msg }));
       const code: ErrorCode = timedOutEverywhere(accepted, finalResults) ? 'publish-timeout' : 'publish-rejected';
       if (pubId != null) failActivity(pubId, code);
       pushRelayDebug({ kind: "publish-error", relays: targetRelays, eventKind: event.kind, reason: msg });
@@ -252,7 +253,12 @@ export class PublishModule {
     ]);
     if (timer) clearTimeout(timer);
     if (settled === null) {
-      round.catch((e: unknown) => console.debug('[bridge] ephemeral publish skip', event.kind, e instanceof Error ? e.message : e));
+      void round.then((results) => {
+        if (acceptedOf(results).length > 0) return;
+        console.warn('[publish] late rejection', JSON.stringify({
+          eventKind: event.kind, eventId: event.id, reason: rejectionMessage(event, results, targets),
+        }));
+      }).catch((e: unknown) => console.warn('[publish] ephemeral round failed', event.kind, e instanceof Error ? e.message : String(e)));
     }
     return settled;
   }
