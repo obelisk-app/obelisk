@@ -55,6 +55,7 @@ export function useInboxStreams(relay: string) {
   const mentions = useMentionNotifications(relay);
   const mentionCursor = useMentionCursor(relay);
   const dmNotifications = useDmNotifications();
+  const dmCursors = useReadStateStore((s) => s.dmCursors);
   const dmCursor = useReadStateStore((s) => s.inboxLastReadAt);
   const unreadMentions = useUnreadMentionCount(relay);
   const unreadDms = useUnreadDmNotificationCount();
@@ -87,7 +88,7 @@ export function useInboxStreams(relay: string) {
 
   return {
     notifTab, setNotifTab,
-    mentions, mentionCursor, dmNotifications, dmCursor,
+    mentions, mentionCursor, dmNotifications, dmCursor, dmCursors,
     unreadMentions, unreadDms, unreadInboxCount, lockedDms,
     /** The two tabs with their unread counts. */
     tabs: inboxTabs(unreadMentions, unreadDms),

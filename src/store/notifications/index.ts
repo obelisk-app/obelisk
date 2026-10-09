@@ -288,8 +288,8 @@ export function isMentionRead(m: MentionNotification, relayCursor: number): bool
   return m.seen === true || m.createdAt <= relayCursor;
 }
 
-export function isDmNotificationRead(d: DmNotification, cursor: number): boolean {
-  return d.createdAt <= cursor;
+export function isDmNotificationRead(d: DmNotification, cursor: number, peerCursor = 0): boolean {
+  return d.createdAt <= Math.max(cursor, peerCursor);
 }
 
 // -- non-reactive selectors (for use outside React) ---------------------
@@ -309,10 +309,10 @@ export function getUnreadMentionCount(relay: string | null | undefined): number 
 
 export function getUnreadDmNotificationCount(): number {
   const { dmNotifications } = useNotificationsStore.getState();
-  const cursor = dmCursor();
+  const { inboxLastReadAt: cursor, dmCursors } = useReadStateStore.getState();
   let n = 0;
   for (const d of dmNotifications) {
-    if (!isDmNotificationRead(d, cursor)) n++;
+    if (!isDmNotificationRead(d, cursor, dmCursors[d.senderPubkey])) n++;
   }
   return n;
 }

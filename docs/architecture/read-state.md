@@ -140,6 +140,7 @@ Rules:
   the tab visible and focused. A mention in the channel you're watching
   still gets a card (no chime); the observer clears it once it's really on
   screen. `seen` is per device; only the relay mention cursor syncs.
+- **DM notifications follow conversation reads.** DM notification cards and badge counts use the later of `inboxLastReadAt` and the sender’s `dmCursors` entry. Reading a conversation clears its existing notifications through that cursor without dismissing other conversations or newer messages. Both local reads and remotely merged cursors update the desktop and mobile inbox immediately; the existing batched DM-scope sync carries these cursors without an extra publish per notification. Unknown encrypted envelopes remain pending until discovery identifies their sender.
 - **Per-channel preferences** (`src/store/chat/channel-prefs.ts`, set from the
   channel right-click / long-press menu, `ChannelContextMenu.tsx`), keyed
   `relay|channelId`, persisted per account. Applied in one place, the

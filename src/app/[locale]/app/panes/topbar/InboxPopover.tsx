@@ -28,7 +28,7 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
 }) {
   const t = useTranslations();
   const { formatTime } = useFormat();
-  const { notifTab, setNotifTab, mentions, mentionCursor, dmNotifications, dmCursor, tabHasItems, tabUnread, lockedDms } = inbox;
+  const { notifTab, setNotifTab, mentions, mentionCursor, dmNotifications, dmCursor, dmCursors, tabHasItems, tabUnread, lockedDms } = inbox;
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div
@@ -116,7 +116,7 @@ export function InboxPopover({ inbox, onMentionClick, onDmClick, onOpenDms }: {
             {dmNotifications.map((d) => (
               <InboxRow
                 key={d.id}
-                read={isDmNotificationRead(d, dmCursor)}
+                read={isDmNotificationRead(d, dmCursor, dmCursors[d.senderPubkey])}
                 label={t('shell.inbox.type.dm')}
                 time={formatTime(d.createdAt)}
                 // No preview while DMs are locked: the text is still encrypted.

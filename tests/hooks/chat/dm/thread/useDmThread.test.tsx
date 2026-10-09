@@ -107,7 +107,7 @@ describe('useDmThread', () => {
       ],
     };
     const { result, rerender } = renderHook(() => useDmThread(PEER), { wrapper });
-    expect(result.current.marks.filter(Boolean)).toHaveLength(2);
+    expect(result.current.marks).toEqual(['no-giftwrap', null, null]);
     act(() => setPreference('postQuantumEnabled', false));
     rerender();
     expect(result.current.marks).toEqual([]);

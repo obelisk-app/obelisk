@@ -9,6 +9,7 @@ import { LockIcon } from '@/assets/icons';
 /** A direct-message ping, faded once read; no preview while DMs are locked. */
 export function DmInboxCard({ dm, onJump }: { dm: DmNotification; onJump: () => void }) {
   const t = useTranslations();
+  const peerCursor = useReadStateStore((s) => s.dmCursors[dm.senderPubkey]);
   const cursor = useReadStateStore((s) => s.inboxLastReadAt);
   return (
     <NotificationCard
@@ -16,7 +17,7 @@ export function DmInboxCard({ dm, onJump }: { dm: DmNotification; onJump: () => 
       // No preview while DMs are locked: the text is still encrypted.
       preview={dm.preview ?? t('common.ping.newDm')}
       createdAt={dm.createdAt}
-      isRead={isDmNotificationRead(dm, cursor)}
+      isRead={isDmNotificationRead(dm, cursor, peerCursor)}
       label={t('shell.inbox.type.dm')}
       typeClass="dm"
       icon={

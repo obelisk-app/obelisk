@@ -235,6 +235,18 @@ describe('useNotificationsStore', () => {
       expect(isDmNotificationRead(d, 1_000)).toBe(true);
     });
 
+    it('reading one DM clears only that peer through its read cursor', () => {
+      const push = useNotificationsStore.getState().pushDmNotification;
+      push({ id: 'a', senderPubkey: 'alice', createdAt: 1_000 });
+      push({ id: 'b', senderPubkey: 'bob', createdAt: 1_000 });
+      push({ id: 'c', senderPubkey: 'alice', createdAt: 2_000 });
+      useReadStateStore.getState().setDmCursor('alice', 1_000);
+      expect(getUnreadDmNotificationCount()).toBe(2);
+      useReadStateStore.getState().applyRemoteState({ dmCursors: { alice: 2_000 } });
+      expect(getUnreadDmNotificationCount()).toBe(1);
+      expect(useReadStateStore.getState().inboxLastReadAt).toBe(0);
+    });
+
     it('getUnreadMentionCount is 0 for an unknown relay', () => {
       expect(getUnreadMentionCount(null)).toBe(0);
       expect(getUnreadMentionCount('wss://never-seen')).toBe(0);

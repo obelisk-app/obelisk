@@ -98,13 +98,14 @@ export function useUnreadDmNotificationCount(): number {
   const dms = useDmNotifications();
   const cursor = useDmNotificationCursor();
   const locked = useLockedDmCount();
+  const dmCursors = useReadStateStore((s) => s.dmCursors);
   return useMemo(() => {
     let n = locked;
     for (const d of dms) {
-      if (!isDmNotificationRead(d, cursor)) n++;
+      if (!isDmNotificationRead(d, cursor, dmCursors[d.senderPubkey])) n++;
     }
     return n;
-  }, [dms, cursor, locked]);
+  }, [dms, cursor, locked, dmCursors]);
 }
 
 /**

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useUnreadMentionCardsForChannel } from '@/hooks/notifications/useNotificationSelectors';
+import { useUnreadDmNotificationCount, useUnreadMentionCardsForChannel } from '@/hooks/notifications/useNotificationSelectors';
 import { NOTIFICATIONS_INITIAL, useNotificationsStore } from '@/store/notifications';
 import { READ_STATE_INITIAL, useReadStateStore } from '@/store/read-state';
 
@@ -12,6 +12,21 @@ describe('useUnreadMentionCardsForChannel', () => {
   beforeEach(() => {
     useNotificationsStore.setState({ ...NOTIFICATIONS_INITIAL });
     useReadStateStore.setState({ ...READ_STATE_INITIAL });
+  });
+
+  it('updates the DM badge on local and synced peer reads without dismissing other chats', () => {
+    const pushDm = useNotificationsStore.getState().pushDmNotification;
+    pushDm({ id: 'a', senderPubkey: 'alice', createdAt: 1_000 });
+    pushDm({ id: 'b', senderPubkey: 'bob', createdAt: 1_000 });
+    pushDm({ id: 'c', senderPubkey: 'alice', createdAt: 2_000 });
+    const { result } = renderHook(() => useUnreadDmNotificationCount());
+    expect(result.current).toBe(3);
+    act(() => { useReadStateStore.getState().setDmCursor('alice', 1_000); });
+    expect(result.current).toBe(2);
+    act(() => { useReadStateStore.getState().applyRemoteState({ dmCursors: { alice: 2_000 } }); });
+    expect(result.current).toBe(1);
+    act(() => { useReadStateStore.getState().advanceInboxRead(); });
+    expect(result.current).toBe(0);
   });
 
   it('counts unread cards for one channel on one relay, with no messages loaded', () => {
