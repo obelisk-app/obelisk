@@ -118,7 +118,13 @@ export class Peer {
 
     this.connectWatchdog = setTimeout(() => {
       this.connectWatchdog = null;
-      if (!this.closed && !this.connected) this.events.onPeerDead?.('open-timeout');
+      if (!this.closed && !this.connected) {
+        console.warn('[voice] open-timeout', this.remotePubkey.slice(0, 8), {
+          connection: pc.connectionState, ice: pc.iceConnectionState, signaling: pc.signalingState,
+          localSdp: pc.localDescription?.type, remoteSdp: pc.remoteDescription?.type, budgetMs: this.connectTimeoutMs,
+        });
+        this.events.onPeerDead?.('open-timeout');
+      }
     }, this.connectTimeoutMs);
     console.log('[voice] simple-peer PC', this.remotePubkey.slice(0, 8), 'initiator=', this.initiator);
     return simple;
@@ -137,6 +143,7 @@ export class Peer {
   }
 
   private handleConnectionState(state: RTCPeerConnectionState): void {
+    console.debug('[voice] connection-state', this.remotePubkey.slice(0, 8), state);
     this.events.onConnectionStateChange(state);
     if (state === 'connected') this.handleConnected();
     if (state === 'failed' || state === 'disconnected' || state === 'closed') {

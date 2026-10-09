@@ -287,3 +287,8 @@ Mesh peers advertise `signalTransport: 1` in their data-channel hello. When both
 The debug ring records `beacon-sent` with `join`, `state` or `heartbeat` as its payload reason, and data-channel signals as `control-msg` with direction, payload type and sequence. `signal-sent` continues to count relay signaling; no SDP or media content is added to the data-channel diagnostics.
 
 Voice presence and signaling are not chat messages and do not advance read cursors. Read-state encryption and application-data signing are a separate, dirty-state-only batched process; an idle voice call must not generate read-state writes. See [read-state synchronization](../../architecture/read-state.md).
+
+
+### Session binding during rebuilds
+
+A rebuilt peer binds the remote session only from an SDP offer or answer. Track metadata, ICE candidates and renegotiation hints can arrive late from a previous connection and must not decide which session owns the new handshake. Once bound, mismatched-session signals remain rejected; a fresh offer still triggers a deliberate peer replacement. Connection timeout logs include only the peer prefix, connection/ICE/signaling states, SDP types and time budget, without SDP bodies or addresses. The desktop shell preserves `debug=voice` while synchronizing its navigation URL.

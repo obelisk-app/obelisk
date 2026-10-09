@@ -736,7 +736,7 @@ describe('VoiceClient roster → peer lifecycle', () => {
     await client.join();
     transportFake.fireRoster([presence(PEER1)]);
     await flushMicrotasks(8);
-    transportFake.fireSignal(PEER1, { type: 'ice', candidates: [], sessionId: 'remote-1', seq: 1 });
+    transportFake.fireSignal(PEER1, { type: 'answer', sdp: 'v=0', sessionId: 'remote-1', seq: 1 });
     await flushMicrotasks(8);
     const pcsBefore = webrtc.pcs().length;
     const beforeSessions = new Set(transportFake.sentSignals.filter((s) => s.to === PEER1).map((s) => s.payload.sessionId));

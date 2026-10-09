@@ -116,6 +116,7 @@ export function useDesktopNavigation(relay: string) {
     const nav = source?.view === view ? source.nav : navForView(view);
     if (source?.view !== view) inherited.current = null;
     const url = new URL(urlFor(nav, relay), window.location.origin);
+    if (new URLSearchParams(window.location.search).get('debug') === 'voice') url.searchParams.set('debug', 'voice');
     if (pendingMessageId && view.kind === 'group' && messageGroup.current === view.groupId) url.searchParams.set('m', pendingMessageId);
     window.history.replaceState({ ...window.history.state, nav }, '', url.pathname + url.search);
   }, [view, relay, restored, pendingMessageId]);

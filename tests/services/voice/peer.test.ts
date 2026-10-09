@@ -204,6 +204,17 @@ describe('Peer session binding', () => {
     type: 'peer', peerSignal: { type: 'offer', sdp: 'v=0' }, sessionId, seq: 1,
   });
 
+  it('does not let delayed metadata bind a rebuilt connection to an obsolete session', async () => {
+    const { peer, simple } = makePeer();
+    await peer.handleSignal({ type: 'trackinfo', sessionId: 'old', seq: 8, trackInfo: { trackId: 'old-track', kind: 'audio' } });
+    await peer.handleSignal({ type: 'peer', sessionId: 'old', seq: 9, peerSignal: { renegotiate: true } });
+    await peer.handleSignal(answer('current'));
+    expect(simple.signaled).toContainEqual({ type: 'answer', sdp: 'v=0' });
+    await peer.handleSignal(answer('old'));
+    expect(simple.signaled.filter((signal) => (signal as { type?: string }).type === 'answer')).toHaveLength(1);
+    peer.close();
+  });
+
   it('drops signals from a remote session other than the one it bound to', async () => {
     const { peer, simple } = makePeer();
     await peer.handleSignal(answer('remote-1'));
