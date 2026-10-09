@@ -7,7 +7,7 @@ import { KIND_VOICE_PRESENCE } from '@/constants/nostr/nip-kinds';
 import type { VoicePresence, VideoSlotKind } from '@/types/voice/protocol';
 import { pushVoiceDebug } from './debug';
 import { subscribeVoice, type VoiceTransportOptions } from './transport-core';
-import { PRESENCE_TTL_SECONDS } from '@/constants/voice/transport-core';
+import { PRESENCE_TTL_SECONDS, PRESENCE_SWEEP_MS } from '@/constants/voice/transport-core';
 
 /**
  * Subscribe to presence beacons for a channel.
@@ -32,10 +32,9 @@ export async function subscribeRoster(
     onChange(live);
   }
 
-  // Sweep stale entries roughly twice per TTL so leavers disappear from the
-  // roster even if no new beacons arrive.
+  // Sweep independently of the lease so expiration never waits another half-TTL.
   const sweep = (typeof window !== 'undefined' ? window : globalThis as unknown as { setInterval: typeof setInterval })
-    .setInterval(emit, (PRESENCE_TTL_SECONDS / 2) * 1000);
+    .setInterval(emit, PRESENCE_SWEEP_MS);
 
   // Use the WATCHED variant so the subscription auto-recovers when a relay's
   // WebSocket drops (network blip, server restart, NAT rebind). The raw

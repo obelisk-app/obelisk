@@ -967,18 +967,18 @@ describe('SIGNER_PEER_BUDGET', () => {
 });
 
 describe('VoiceClient bring-up beacon burst', () => {
-  it('skips the burst and uses a 30 s cadence with a remote signer', async () => {
+  it('skips the burst and uses a 60 s cadence with a remote signer', async () => {
     vi.useFakeTimers();
     try {
       const client = new VoiceClient('ch1', { members: [SELF], signer: 'bunker' });
       await client.join();
       expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(1);
 
-      vi.advanceTimersByTime(29_999);
+      await vi.advanceTimersByTimeAsync(59_999);
       await flushMicrotasks(2);
       expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(1);
 
-      vi.advanceTimersByTime(1);
+      await vi.advanceTimersByTimeAsync(1);
       await flushMicrotasks(2);
       expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(2);
       await client.leave();
@@ -996,9 +996,10 @@ describe('VoiceClient bring-up beacon burst', () => {
       expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(1);
 
       // Walk past every front-loaded delay; each must produce a publish.
+      let elapsed = 0;
       for (const t of [300, 900, 1800, 3500, 7000, 12_000, 18_000]) {
-        vi.setSystemTime(t);
-        vi.advanceTimersByTime(t);
+        await vi.advanceTimersByTimeAsync(t - elapsed);
+        elapsed = t;
         await flushMicrotasks(2);
       }
       // 1 (initial) + 7 (burst) before the steady 10 s cadence dominates.
@@ -1017,7 +1018,7 @@ describe('VoiceClient bring-up beacon burst', () => {
       const baseline = transportFake.publishPresenceBeacon.mock.calls.length;
       await client.leave();
       // Advance past every bring-up delay; nothing else should fire.
-      vi.advanceTimersByTime(20_000);
+      await vi.advanceTimersByTimeAsync(20_000);
       await flushMicrotasks(2);
       expect(transportFake.publishPresenceBeacon.mock.calls.length).toBe(baseline);
     } finally {
@@ -1034,13 +1035,13 @@ describe('VoiceClient first-sighting beacon refresh', () => {
       await client.join();
       // Drain the bring-up burst so the assertion focuses on the
       // roster-driven refresh.
-      vi.advanceTimersByTime(15_000);
+      await vi.advanceTimersByTimeAsync(15_000);
       await flushMicrotasks(2);
       const baseline = transportFake.publishPresenceBeacon.mock.calls.length;
 
       // First time we see PEER1 → opportunistic publish (debounced 250 ms).
       transportFake.fireRoster([presence(PEER1)]);
-      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(300);
       await flushMicrotasks(2);
       expect(transportFake.publishPresenceBeacon.mock.calls.length).toBeGreaterThan(baseline);
 
@@ -1048,7 +1049,7 @@ describe('VoiceClient first-sighting beacon refresh', () => {
       // brand-new pubkeys count as a sighting.
       const after = transportFake.publishPresenceBeacon.mock.calls.length;
       transportFake.fireRoster([presence(PEER1)]);
-      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(300);
       await flushMicrotasks(2);
       expect(transportFake.publishPresenceBeacon.mock.calls.length).toBe(after);
       await client.leave();

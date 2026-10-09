@@ -39,7 +39,7 @@ export interface MeshAnnouncerDeps {
 }
 
 export class MeshAnnouncer {
-  private beaconTimer: ReturnType<typeof setInterval> | null = null;
+  private beaconTimer: ReturnType<typeof setTimeout> | null = null;
   private beaconRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   /**
    * Front-loaded extra beacon publishes scheduled when the cadence starts.
@@ -49,6 +49,20 @@ export class MeshAnnouncer {
   private bringupTimers: ReturnType<typeof setTimeout>[] = [];
   /** Coalesce full peer-set gossip across open WebRTC control channels. */
   private controlSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private active = false;
+  private generation = 0;
+  private inFlight: Promise<void> | null = null;
+  private flightGeneration = 0;
+  private lastSnapshot = '';
+  private refreshPending = false;
+
+  private snapshot() {
+    const connected = [...this.deps.room.connectedPubkeys].sort();
+    const known = [...new Set(this.deps.meshKnownPubkeys())].sort();
+    const video = [...this.deps.localMedia.videoTracks()].sort();
+    return { connected, known, video, key: JSON.stringify([connected, known, video]) };
+  }
 
   constructor(private readonly deps: MeshAnnouncerDeps) {}
 
@@ -62,21 +76,45 @@ export class MeshAnnouncer {
    * cap enforcement. Records the failure in the metrics and the debug ring
    * before rethrowing, so the timer call sites may drop the rejection.
    */
-  async publishBeacon(): Promise<void> {
-    if (!this.deps.isJoined() || this.deps.sfuActive()) return;
-    const videoTracks = this.deps.localMedia.videoTracks();
+  publishBeacon(reason: 'heartbeat' | 'state' | 'join' = 'join'): Promise<void> {
+    if (!this.deps.isJoined() || this.deps.sfuActive()) return Promise.resolve();
+    if (this.inFlight) {
+      if (this.flightGeneration !== this.generation) {
+        return this.inFlight.catch(() => {}).then(() => this.publishBeacon(reason));
+      }
+      this.refreshPending = true;
+      return this.inFlight;
+    }
+    const snapshot = this.snapshot();
+    if (reason === 'state' && snapshot.key === this.lastSnapshot) return Promise.resolve();
+    const generation = this.generation;
+    this.flightGeneration = generation;
+    const operation = this.publishSnapshot(snapshot, reason, generation);
+    this.inFlight = operation;
+    void operation.finally(() => {
+      this.inFlight = null;
+      if (generation !== this.generation) return;
+      this.armHeartbeat();
+      if (this.refreshPending) {
+        this.refreshPending = false;
+        this.scheduleBeaconRefresh();
+      }
+    }).catch(() => {});
+    return operation;
+  }
+
+  private async publishSnapshot(snapshot: ReturnType<MeshAnnouncer['snapshot']>, reason: string, generation: number): Promise<void> {
     try {
-      await withRateLimitBackoff(
-        () => this.deps.transport.publishPresenceBeacon(
-          this.deps.channelId,
-          [...this.deps.room.connectedPubkeys],
-          this.deps.meshKnownPubkeys(),
-          videoTracks,
-        ),
-        { metrics: this.deps.metrics },
-      );
+      await withRateLimitBackoff(async () => {
+        if (generation !== this.generation || !this.deps.isJoined() || this.deps.sfuActive()) return;
+        await this.deps.transport.publishPresenceBeacon(
+          this.deps.channelId, snapshot.connected, snapshot.known, snapshot.video,
+        );
+      }, { metrics: this.deps.metrics });
+      if (generation !== this.generation) return;
+      this.lastSnapshot = snapshot.key;
       this.deps.metrics.beacons.sent++;
-      pushVoiceDebug({ kind: 'beacon-sent' });
+      pushVoiceDebug({ kind: 'beacon-sent', payload: { reason } });
     } catch (err) {
       this.deps.metrics.relay.publishFail++;
       this.deps.metrics.relay.lastError = err instanceof Error ? err.message : String(err);
@@ -85,37 +123,37 @@ export class MeshAnnouncer {
     }
   }
 
-  /**
-   * After the first beacon: the bring-up burst, then the steady cadence.
-   * Beacons are ephemeral, so a peer whose relay session was still
-   * completing NIP-42 AUTH on our first beacon needs several more chances
-   * within the user's "is this stuck?" window before the 15 s steady-state
-   * cadence takes over. A remote signer skips the burst: every publish is
-   * a human/relay round trip.
-   */
-  startCadence(): void {
-    for (const delay of this.deps.remoteSigning ? [] : BEACON_BRINGUP_DELAYS_MS) {
-      this.bringupTimers.push(
-        setTimeout(() => { void this.publishBeacon().catch(() => {}); }, delay),
-      );
-    }
-    this.beaconTimer = setInterval(() => {
-      void this.publishBeacon().catch(() => {});
+  private armHeartbeat(): void {
+    if (this.beaconTimer) clearTimeout(this.beaconTimer);
+    this.beaconTimer = null;
+    if (!this.active || !this.deps.isJoined()) return;
+    this.beaconTimer = setTimeout(() => {
+      this.beaconTimer = null;
+      void this.publishBeacon('heartbeat').catch(() => {}).finally(() => {
+        // SFU mode skips mesh publishing but must not leave a tight retry loop.
+        if (!this.beaconTimer) this.armHeartbeat();
+      });
     }, this.deps.remoteSigning ? REMOTE_SIGNER_BEACON_INTERVAL_MS : BEACON_INTERVAL_MS);
   }
 
-  /**
-   * Schedule a beacon refresh after a short debounce. Called when our
-   * connected-peer set changes so the propagation latency for transitive
-   * discovery is one debounce window, not one full BEACON_INTERVAL_MS.
-   */
+  /** Start once; every successful update restarts the heartbeat countdown. */
+  startCadence(): void {
+    if (this.active) return;
+    this.active = true;
+    for (const delay of this.deps.remoteSigning ? [] : BEACON_BRINGUP_DELAYS_MS) {
+      this.bringupTimers.push(setTimeout(() => {
+        void this.publishBeacon('heartbeat').catch(() => {});
+      }, delay));
+    }
+    this.armHeartbeat();
+  }
+
+  /** Coalesce state changes and discard updates identical to our last announcement. */
   scheduleBeaconRefresh(): void {
-    if (!this.deps.isJoined()) return;
-    if (this.beaconRefreshTimer) return;
+    if (!this.deps.isJoined() || this.beaconRefreshTimer) return;
     this.beaconRefreshTimer = setTimeout(() => {
       this.beaconRefreshTimer = null;
-      if (!this.deps.isJoined()) return;
-      void this.publishBeacon().catch(() => {});
+      void this.publishBeacon('state').catch(() => {});
     }, BEACON_REFRESH_DEBOUNCE_MS);
   }
 
@@ -138,7 +176,11 @@ export class MeshAnnouncer {
 
   /** Cancel the cadence, the burst and both pending debounces. */
   stop(): void {
-    if (this.beaconTimer) { clearInterval(this.beaconTimer); this.beaconTimer = null; }
+    this.active = false;
+    this.generation++;
+    this.refreshPending = false;
+    this.lastSnapshot = '';
+    if (this.beaconTimer) { clearTimeout(this.beaconTimer); this.beaconTimer = null; }
     if (this.beaconRefreshTimer) { clearTimeout(this.beaconRefreshTimer); this.beaconRefreshTimer = null; }
     for (const t of this.bringupTimers) clearTimeout(t);
     this.bringupTimers.length = 0;

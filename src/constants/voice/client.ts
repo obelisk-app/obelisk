@@ -6,7 +6,7 @@
 export const SELF_BUILD_TAG = '2026-05-24T01:00:00Z-voice-video-autoplay-retry';
 
 export const BEACON_INTERVAL_MS = 10_000;
-export const REMOTE_SIGNER_BEACON_INTERVAL_MS = 30_000;
+export const REMOTE_SIGNER_BEACON_INTERVAL_MS = 60_000;
 /**
  * Aggressive beacon burst right after `join()`. NIP-29 voice beacons are
  * ephemeral (relays don't backfill them), so a peer who joined a few
@@ -14,7 +14,7 @@ export const REMOTE_SIGNER_BEACON_INTERVAL_MS = 30_000;
  * tick. Firing additional publishes in the first ~12 s collapses that
  * worst-case discovery latency to a few seconds while keeping the
  * total relay traffic bounded (six small events vs ~one event every
- * 15 s in steady state).
+ * 10 s in steady state).
  *
  * Time origin = right after the first `publishBeacon()` returns from
  * `join()`. The schedule is intentionally front-loaded: each step is

@@ -21,7 +21,7 @@ import { PeerControlChannel, decodeControl } from './peer-control';
 import { PeerRemoteTracks } from './peer-remote-tracks';
 import { PeerSessionBinding } from './peer-session-binding';
 import { applyAudioSenderParams, applyVideoSenderParams, type VideoCap } from './peer-sender-params';
-import type { ControlMessage } from '@/constants/voice/control-channel';
+import type { ControlMessage } from '@/types/voice/control-channel';
 import { INITIAL_CONNECT_TIMEOUT_MS } from '@/constants/voice/peer';
 
 export type { PeerEvents, PeerOptions } from '@/types/voice/peer';
@@ -79,6 +79,9 @@ export class Peer {
       events: this.events,
       sessionId: this.sessionId,
       isClosed: () => this.closed,
+      onSignal: (payload) => { void this.handleSignal(payload).catch((error) => {
+        console.warn('[voice] data-channel signal failed', error);
+      }); },
     }, opts.control);
   }
 
@@ -127,7 +130,10 @@ export class Peer {
 
   private async sendSignal(payload: Omit<VoiceSignalPayload, 'sessionId' | 'seq'>): Promise<void> {
     if (this.closed) return;
-    await this.send({ ...payload, sessionId: this.sessionId, seq: ++this.outboundSeq });
+    const signal = { ...payload, sessionId: this.sessionId, seq: ++this.outboundSeq };
+    // Initial negotiation and disconnected/legacy peers still use the relay.
+    if (this.connected && this.control.sendSignal(signal)) return;
+    await this.send(signal);
   }
 
   private handleConnectionState(state: RTCPeerConnectionState): void {

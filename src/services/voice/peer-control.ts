@@ -8,8 +8,10 @@ import {
   DEAD_PEER_TIMEOUT_MS,
   PEER_SNAPSHOT_INTERVAL_MS,
   PING_INTERVAL_MS,
-  type ControlMessage,
 } from '@/constants/voice/control-channel';
+import type { ControlMessage } from '@/types/voice/control-channel';
+import type { VoiceSignalPayload } from '@/types/voice/protocol';
+import { pushVoiceDebug } from './debug';
 import type { PeerEvents, PeerOptions } from '@/types/voice/peer';
 
 export function decodeControl(data: unknown): ControlMessage | null {
@@ -33,10 +35,12 @@ export interface ControlChannelHost {
   readonly events: Pick<PeerEvents, 'onTransitivePeers' | 'onControlPeerSnapshot' | 'onControlPeerAdded' | 'onControlPeerRemoved' | 'onPeerDead'>;
   readonly sessionId: string;
   isClosed(): boolean;
+  onSignal?(payload: VoiceSignalPayload): void;
 }
 
 export class PeerControlChannel {
   private started = false;
+  private remoteSignals = false;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private snapshotTimer: ReturnType<typeof setInterval> | null = null;
   private deadTimer: ReturnType<typeof setTimeout> | null = null;
@@ -59,6 +63,7 @@ export class PeerControlChannel {
       peers: this.control.getCurrentPeers(),
       sessionId: this.host.sessionId,
       build: this.control.selfBuild,
+      signalTransport: 1,
     });
     this.armDeadTimer();
     this.pingTimer = setInterval(
@@ -76,19 +81,33 @@ export class PeerControlChannel {
     this.control.metrics.controlChannel.opened++;
   }
 
-  broadcast(message: ControlMessage): void {
-    if (!this.host.channel.connected) return;
+  sendSignal(payload: VoiceSignalPayload): boolean {
+    if (!this.control || !this.remoteSignals || this.host.isClosed()) return false;
+    const sent = this.broadcast({ type: 'signal', payload });
+    if (sent) pushVoiceDebug({ kind: 'control-msg', payload: { direction: 'send', type: payload.type, seq: payload.seq } });
+    return sent;
+  }
+
+  broadcast(message: ControlMessage): boolean {
+    if (!this.host.channel.connected) return false;
     // simple-peer throws on a channel that closed between the check and the
     // send; the message is best effort by design (the relay bye and the
     // heartbeat timeout cover a lost one).
-    try { this.host.channel.send(JSON.stringify(message)); } catch { /* best effort */ }
+    try { this.host.channel.send(JSON.stringify(message)); return true; } catch { return false; }
   }
 
   handle(message: ControlMessage | null): void {
-    if (!message || typeof message.type !== 'string') return;
+    if (this.host.isClosed() || !message || typeof message.type !== 'string') return;
     this.armDeadTimer();
     switch (message.type) {
+      case 'signal':
+        if (this.control && this.remoteSignals && message.payload && typeof message.payload.type === 'string') {
+          pushVoiceDebug({ kind: 'control-msg', payload: { direction: 'receive', type: message.payload.type, seq: message.payload.seq } });
+          this.host.onSignal?.(message.payload);
+        }
+        break;
       case 'hello':
+        this.remoteSignals = message.signalTransport === 1;
         this.host.events.onTransitivePeers?.(Array.isArray(message.peers) ? message.peers : [], message.build ?? '');
         break;
       case 'peerSnapshot':

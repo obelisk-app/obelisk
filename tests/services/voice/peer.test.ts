@@ -275,3 +275,59 @@ describe('a relay that refuses a signal is reported, not swallowed', () => {
     warn.mockRestore();
   });
 });
+
+describe('negotiated data-channel signaling', () => {
+  function connectedPeer(support = true) {
+    const result = makePeer({ control: { selfBuild: 'test', metrics: emptyVoiceMetrics(), getCurrentPeers: () => [] } });
+    result.simple.connected = true;
+    result.simple.emit('connect');
+    result.simple.emit('data', JSON.stringify({ type: 'hello', peers: [], sessionId: 'remote', build: 'test', signalTransport: support ? 1 : undefined }));
+    return result;
+  }
+  it('sends quality hints and renegotiation without a relay signature after capability negotiation', async () => {
+    const { peer, simple, sent } = connectedPeer();
+    await peer.sendQualityHint({ maxHeight: 360, maxFramerate: 15, maxBitrate: 100000 });
+    simple.emit('signal', { type: 'renegotiate', renegotiate: true });
+    await Promise.resolve();
+    expect(sent).toHaveLength(0);
+    const envelopes = simple.sent.map((data) => JSON.parse(String(data))).filter((data) => data.type === 'signal');
+    expect(envelopes.map((data) => data.payload.type)).toEqual(['qualityhint', 'peer']);
+    peer.close();
+  });
+  it('receives data-channel signaling through the existing session checks', async () => {
+    const { peer, simple } = connectedPeer();
+    await peer.handleSignal({ type: 'peer', sessionId: 'remote', seq: 1, peerSignal: { type: 'answer', sdp: 'original' } });
+    simple.emit('data', JSON.stringify({ type: 'signal', payload: { type: 'peer', sessionId: 'remote', seq: 2, peerSignal: { candidate: 'new' } } }));
+    await Promise.resolve();
+    expect(simple.signaled).toContainEqual({ candidate: 'new' });
+    simple.emit('data', JSON.stringify({ type: 'signal', payload: { type: 'peer', sessionId: 'stale', seq: 3, peerSignal: { candidate: 'stale' } } }));
+    expect(simple.signaled).not.toContainEqual({ candidate: 'stale' });
+    peer.close();
+  });
+  it('keeps relay signaling for legacy peers and falls back when data-channel sending throws', async () => {
+    const legacy = connectedPeer(false);
+    await legacy.peer.sendQualityHint({ maxHeight: null, maxFramerate: null, maxBitrate: null });
+    expect(legacy.sent).toHaveLength(1); legacy.peer.close();
+    const current = connectedPeer();
+    vi.spyOn(current.simple, 'send').mockImplementation(() => { throw new Error('closed'); });
+    await current.peer.sendQualityHint({ maxHeight: null, maxFramerate: null, maxBitrate: null });
+    expect(current.sent).toHaveLength(1); current.peer.close();
+  });
+});
+
+it('exchanges renegotiation between two connected adapters without relay sends', async () => {
+  const control = () => ({ selfBuild: 'test', metrics: emptyVoiceMetrics(), getCurrentPeers: () => [] });
+  const alice = makePeer({ sessionId: 'alice', control: control() });
+  const bob = makePeer({ sessionId: 'bob', polite: true, control: control() });
+  vi.spyOn(alice.simple, 'send').mockImplementation((data) => { bob.simple.emit('data', data); });
+  vi.spyOn(bob.simple, 'send').mockImplementation((data) => { alice.simple.emit('data', data); });
+  alice.simple.connected = bob.simple.connected = true;
+  alice.simple.emit('connect'); bob.simple.emit('connect');
+  alice.simple.emit('signal', { type: 'offer', sdp: 'renegotiation' });
+  bob.simple.emit('signal', { type: 'answer', sdp: 'accepted' });
+  await Promise.resolve();
+  expect(bob.simple.signaled).toContainEqual({ type: 'offer', sdp: 'renegotiation' });
+  expect(alice.simple.signaled).toContainEqual({ type: 'answer', sdp: 'accepted' });
+  expect(alice.sent).toHaveLength(0); expect(bob.sent).toHaveLength(0);
+  alice.peer.close(); bob.peer.close();
+});

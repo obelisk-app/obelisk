@@ -44,6 +44,7 @@ afterEach(() => unregisterBridge());
 import type { NipSigner } from '@/types/nostr/nip-signer';
 import { wrapForSelf } from '@/services/read-state/gift-wrap';
 import { startGroupsRelaySync, startDMRelaySync, D_TAG_GROUPS, READ_STATE_WATCHDOG_MS, __INTERNAL } from '@/services/read-state/relay-sync';
+import { useVoiceStore } from '@/store/voice';
 import { useReadStateStore, READ_STATE_INITIAL } from '@/store/read-state';
 
 function nsecSigner(): NipSigner {
@@ -120,6 +121,23 @@ describe('startGroupsRelaySync ingest', () => {
   afterEach(() => {
     activeCleanups.forEach((c) => c());
     vi.useRealTimers();
+  });
+
+  it('does not encrypt or sign read state for voice presence and speaking updates', async () => {
+    const encrypt = vi.spyOn(signer, 'nip44Encrypt');
+    const sign = vi.spyOn(signer, 'signEvent');
+    const previous = useVoiceStore.getState();
+    activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
+    try {
+      useVoiceStore.setState({ currentVoiceChannelId: 'g1' });
+      for (let tick = 0; tick < 6; tick++) {
+        useVoiceStore.setState({ speakingPubkeys: tick % 2 ? {} : { alice: true } });
+        await vi.advanceTimersByTimeAsync(60_000);
+      }
+      expect(encrypt).not.toHaveBeenCalled();
+      expect(sign).not.toHaveBeenCalled();
+      expect(publishMock).not.toHaveBeenCalled();
+    } finally { useVoiceStore.setState(previous); }
   });
 
   it('subscribes to its own 30078, plus legacy wraps during migration', () => {

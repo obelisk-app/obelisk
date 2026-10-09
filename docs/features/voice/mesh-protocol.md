@@ -17,7 +17,7 @@ Two Nostr event kinds + one in-PC data channel:
   "tags": [
     ["e", "<channel-id>"],
     ["t", "obelisk-voice-presence"],
-    ["expiration", "<unix-seconds, +45 from publish>"],
+    ["expiration", "<unix-seconds, +150 from publish>"],
     ["p", "<connected-peer-pubkey>"], // 0..N: peers we have a live PC to
     ["peer", "<observed-peer-pubkey>"], // 0..N: our PCs + live beacons we received (first-hand only)
     ["v", "camera"], ["v", "screen"],  // 0..2: outbound video tracks
@@ -30,7 +30,7 @@ Two Nostr event kinds + one in-PC data channel:
 
 Cadence:
 
-- **Steady state**: every 10 s (`BEACON_INTERVAL_MS`); 30 s with a NIP-46
+- **Steady state**: every 10 s (`BEACON_INTERVAL_MS`); 60 s with a NIP-46
   bunker (`REMOTE_SIGNER_BEACON_INTERVAL_MS`), which also skips the burst.
 - **Bring-up burst**: at join, additional publishes scheduled at
   `[300, 900, 1800, 3500, 7000, 12000, 18000]` ms
@@ -52,7 +52,7 @@ closed, and `VoiceRoom` returns to the Join screen with the relay error so the
 user can fix access and retry without a beacon/redial loop.
 
 The receiver dedups by `(pubkey, created_at)`: newer beacons replace
-older ones; expired beacons (`expiration` past, normally 45 s after
+older ones; expired beacons (`expiration` past, normally 150 s after
 publish) are swept out by `subscribeRoster`'s
 `(PRESENCE_TTL_SECONDS / 2) * 1000` interval.
 
@@ -165,7 +165,7 @@ kind-25050 `type: 'peer'` event, and the recipient passes `peerSignal` to
 connection watchdog tears down peers that never open. Its budget depends on
 the signer (`SIGNER_PEER_BUDGET`): a local key trickles ICE with 9 s; NIP-07
 bundles candidates into the SDP (`trickle: false`) with 20 s; a bunker does
-the same with 45 s. Every signal is a separately signed event, and an
+the same with 45 s. Initial and fallback relay signals are separately signed events, and an
 extension signs them one at a time; trickle plus 9 s overran routinely. Terminal library/PC
 closure and heartbeat loss converge on `VoiceClient.tearDownPeer`; if the
 pubkey remains present in relay or control discovery, the debounced dial loop
@@ -276,3 +276,14 @@ remote user is present. This prevents reciprocal kind 25050 leave/redial loops.
   list, not WoT distance. WoT applies to surfaces where the user has
   no other filter (chat, profiles); inside a small per-channel voice
   room the operator's member list is the right gate.
+
+
+## Signer-efficient mesh updates
+
+Presence publishing has one in-flight operation per mesh announcer. Concurrent heartbeat and state-change requests coalesce; once signing completes, only the latest changed snapshot is announced. Identical state refreshes are skipped. Starting the cadence twice is harmless, every completed publish restarts the heartbeat countdown, and leaving cancels scheduled work and retry publishing. A bunker uses a 60-second heartbeat and the presence lease is 150 seconds. First sightings still trigger debounced state announcements, so newcomers need not wait for the heartbeat. Existing connected peers detect failures through WebRTC; outside observers may retain an abruptly disconnected participant until the lease expires, with a ten-second roster sweep. Explicit leave events remove presence immediately when delivered.
+
+Mesh peers advertise `signalTransport: 1` in their data-channel hello. When both support it and the connection is live, `signal` envelopes carry the existing session-bound payloads for track information, quality hints and renegotiation over the reliable WebRTC channel. The initial SDP exchange still travels through signed Nostr events. Older peers, SFU peers, disconnected channels and synchronous send failures retain relay signaling. Recovery resets and terminal relay byes remain available because an about-to-close channel cannot guarantee delivery. Video-slot claims still use signed presence so existing clients enforce the same room-wide limits.
+
+The debug ring records `beacon-sent` with `join`, `state` or `heartbeat` as its payload reason, and data-channel signals as `control-msg` with direction, payload type and sequence. `signal-sent` continues to count relay signaling; no SDP or media content is added to the data-channel diagnostics.
+
+Voice presence and signaling are not chat messages and do not advance read cursors. Read-state encryption and application-data signing are a separate, dirty-state-only batched process; an idle voice call must not generate read-state writes. See [read-state synchronization](../../architecture/read-state.md).
