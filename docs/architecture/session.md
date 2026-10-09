@@ -29,3 +29,8 @@ Before bridge adoption, a saved-session marker keeps the reconnecting screen vis
 ## Folder responsibilities
 
 Shared TypeScript contracts live in `src/types/session/`; the React context lives in `src/contexts/session/`; the provider's markup lives in `src/providers/session/`. Pure runtime input validation belongs in `src/schemas/`, while side effects belong in services. Keep component-only props and implementation-private types beside their owners; a central types folder is not a reason to move every local interface.
+
+
+### Concurrent bunker restore
+
+Session prewarm and relay authentication share one pending bunker reconstruction per session generation. A refresh therefore performs one `get_public_key` warmup for a restored QR signer even when multiple relay AUTH requests arrive concurrently. The returned identity must match the persisted account before the signer becomes ready. A failed attempt releases the pending operation for retry; logout or account replacement supersedes it, and an old completion cannot clear a newer attempt. Established signer operations retain bounded concurrency.

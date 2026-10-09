@@ -33,7 +33,7 @@ export type BunkerContext = Pick<BridgeContext, 'session'>;
 export class BunkerModule {
   /** Active NIP-46 signer (when loginMethod === 'bunker'). Reconstructed lazily. */
   signer: RemoteSigner | null = null;
-  private recovery: Promise<RemoteSigner> | null = null;
+  private pending: { session: ReturnType<BunkerContext['session']>; generation: number; promise: Promise<RemoteSigner> } | null = null;
   private generation = 0;
   /** Set by the modal so it can show the auth-challenge URL. */
   onAuth: ((url: string) => void) | null = null;
@@ -59,6 +59,7 @@ export class BunkerModule {
   /** Close and forget the active signer (logout). */
   close(): void {
     this.generation++;
+    this.pending = null;
     this.ready.set(false);
     if (this.signer) {
       try { this.signer.close(); } catch { /* ignore */ }
@@ -89,15 +90,26 @@ export class BunkerModule {
     if (!session || session.loginMethod !== 'bunker' || !session.bunkerUrl || !session.bunkerLocalSecretHex) {
       throw new CodedError('bunker-no-session', 'No bunker session to rehydrate');
     }
+    if (this.pending?.session === session && this.pending.generation === generation) return this.pending.promise;
+    const promise = this.rehydrate(session, generation);
+    const pending = { session, generation, promise };
+    this.pending = pending;
+    void promise.finally(() => {
+      if (this.pending === pending) this.pending = null;
+    }).catch(() => {});
+    return promise;
+  }
+
+  private async rehydrate(session: NonNullable<ReturnType<BunkerContext['session']>>, generation: number): Promise<RemoteSigner> {
     const assertCurrent = () => {
       if (this.ctx.session() !== session || generation !== this.generation) {
         throw new DOMException('Session operation was superseded', 'AbortError');
       }
     };
-    const bp = await parseBunkerInput(session.bunkerUrl);
+    const bp = await parseBunkerInput(session.bunkerUrl!);
     assertCurrent();
     if (!bp) throw new CodedError('bunker-no-session', 'Invalid stored bunker URL');
-    const localSecret = hexToBytes(session.bunkerLocalSecretHex);
+    const localSecret = hexToBytes(session.bunkerLocalSecretHex!);
     const signer = BunkerSigner.fromBunker(localSecret, bp, {
       onauth: (url) => {
         if (this.ctx.session() === session && generation === this.generation) this.openAuthUrl(url);
@@ -112,7 +124,11 @@ export class BunkerModule {
         // the SDK's public API. The client secret is the durable authorization,
         // so warm the RPC channel with get_public_key instead of sending a
         // bogus connect request with an empty secret.
-        await signer.getPublicKey();
+        const pubkey = await signer.getPublicKey();
+        assertCurrent();
+        if (pubkey !== session.pubKeyHex) {
+          throw new Error('Restored signer returned a different account');
+        }
       }
       assertCurrent();
     } catch (error) {
@@ -161,10 +177,7 @@ export class BunkerModule {
         this.signer = null;
         this.ready.set(false);
       }
-      this.recovery ??= this.ensure().finally(() => {
-        this.recovery = null;
-      });
-      return invoke(await this.recovery);
+      return invoke(await this.ensure());
     }
   }
 }

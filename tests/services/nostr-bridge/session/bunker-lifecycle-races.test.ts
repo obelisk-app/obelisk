@@ -47,6 +47,79 @@ describe('remote login ownership', () => {
     bunker.close();
   });
 
+  it('shares one public-key request across prewarm and concurrent relay authentication', async () => {
+    const { state, signer, resolve } = setup();
+    state.session = { pubKeyHex: 'b'.repeat(64), loginMethod: 'bunker', relayUrl: 'wss://relay.example.com', bunkerUrl: 'bunker://test', bunkerLocalSecretHex: '1'.repeat(64) };
+    vi.mocked(BunkerSigner.fromBunker).mockReturnValue(signer as unknown as BunkerSigner);
+    const bunker = new BunkerModule({ session: () => state.session });
+    const prewarm = bunker.ensure();
+    const auth = vi.fn(async () => 'signed');
+    const requests = [bunker.run(auth), bunker.run(auth)];
+    await Promise.resolve();
+    expect(signer.getPublicKey).toHaveBeenCalledOnce();
+    expect(auth).not.toHaveBeenCalled();
+    resolve('b'.repeat(64));
+    expect(await prewarm).toBe(signer);
+    expect(await Promise.all(requests)).toEqual(['signed', 'signed']);
+    await bunker.ensure();
+    expect(signer.getPublicKey).toHaveBeenCalledOnce();
+    bunker.close();
+  });
+
+  it('rejects a restored signer answering with a different account', async () => {
+    const { state, signer, resolve } = setup();
+    state.session = { pubKeyHex: 'b'.repeat(64), loginMethod: 'bunker', relayUrl: 'wss://relay.example.com', bunkerUrl: 'bunker://test', bunkerLocalSecretHex: '1'.repeat(64) };
+    vi.mocked(BunkerSigner.fromBunker).mockReturnValue(signer as unknown as BunkerSigner);
+    const bunker = new BunkerModule({ session: () => state.session });
+    const waiting = bunker.ensure();
+    const assertion = expect(waiting).rejects.toThrow('different account');
+    resolve('c'.repeat(64));
+    await assertion;
+    expect(bunker.signer).toBeNull();
+    expect(bunker.ready.get()).toBe(false);
+    expect(signer.close).toHaveBeenCalledOnce();
+  });
+
+  it('releases failed restores for one shared retry', async () => {
+    const { state, signer, resolve } = setup();
+    state.session = { pubKeyHex: 'b'.repeat(64), loginMethod: 'bunker', relayUrl: 'wss://relay.example.com', bunkerUrl: 'bunker://test', bunkerLocalSecretHex: '1'.repeat(64) };
+    signer.getPublicKey.mockRejectedValueOnce(new Error('offline'));
+    vi.mocked(BunkerSigner.fromBunker).mockReturnValue(signer as unknown as BunkerSigner);
+    const bunker = new BunkerModule({ session: () => state.session });
+    const failures = await Promise.allSettled([bunker.ensure(), bunker.ensure()]);
+    expect(failures.every((result) => result.status === 'rejected')).toBe(true);
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(1);
+    const retries = [bunker.ensure(), bunker.ensure()];
+    resolve('b'.repeat(64)); await Promise.all(retries);
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(2);
+    bunker.close();
+  });
+
+  it('an old restore completion cannot clear a newer pending restore after logout', async () => {
+    const old = setup();
+    const fresh = setup();
+    old.state.session = { pubKeyHex: 'b'.repeat(64), loginMethod: 'bunker', relayUrl: 'wss://relay.example.com', bunkerUrl: 'bunker://test', bunkerLocalSecretHex: '1'.repeat(64) };
+    vi.mocked(BunkerSigner.fromBunker)
+      .mockReturnValueOnce(old.signer as unknown as BunkerSigner)
+      .mockReturnValue(fresh.signer as unknown as BunkerSigner);
+    const bunker = new BunkerModule({ session: () => old.state.session });
+    const first = bunker.ensure();
+    const rejected = expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    await Promise.resolve();
+    bunker.close();
+    old.state.session = { ...old.state.session, pubKeyHex: 'c'.repeat(64) };
+    const second = bunker.ensure();
+    old.resolve('b'.repeat(64)); await rejected;
+    const third = bunker.ensure();
+    await Promise.resolve();
+    expect(fresh.signer.getPublicKey).toHaveBeenCalledOnce();
+    fresh.resolve('c'.repeat(64));
+    expect(await second).toBe(fresh.signer);
+    expect(await third).toBe(fresh.signer);
+    expect(bunker.signer).toBe(fresh.signer);
+    bunker.close();
+  });
+
   it('cancelling a QR during getPublicKey closes the signer and never installs the account', async () => {
     const { login, resolve, signer, state, finalize } = setup();
     const qr = login.createNostrConnectSession();
