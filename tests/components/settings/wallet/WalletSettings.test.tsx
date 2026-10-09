@@ -34,7 +34,7 @@ afterEach(async () => {
 });
 
 async function renderSettings(opts: { mobile?: boolean; locale?: 'en' | 'es' | 'pt' } = {}) {
-  renderWithBridge(<WalletSettings mobile={opts.mobile} />, fakeBridge(), { locale: opts.locale });
+  renderWithBridge(<WalletSettings mobile={opts.mobile} />, fakeBridge({ myLoginMethod: 'nip07' }), { locale: opts.locale });
   await screen.findByTestId('nwc-connect-form');
 }
 
@@ -76,7 +76,7 @@ describe('WalletSettings', () => {
     const readOnly = new FakeNwcWallet({ methods: 'get_balance' });
     resetRelayHubForTests();
     getRelayHub({ relayFactory: readOnly.attach(new FakeRelayFactory()) });
-    renderWithBridge(<WalletSettings />, fakeBridge(), { locale: 'es' });
+    renderWithBridge(<WalletSettings />, fakeBridge({ myLoginMethod: 'nip07' }), { locale: 'es' });
     await screen.findByTestId('nwc-connect-form');
     fireEvent.change(screen.getByTestId('nwc-uri-input'), { target: { value: readOnly.uri } });
     await act(async () => { fireEvent.click(screen.getByTestId('nwc-connect')); });

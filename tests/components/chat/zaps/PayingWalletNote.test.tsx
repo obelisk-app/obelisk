@@ -31,7 +31,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-const renderNote = (locale: 'en' | 'es' | 'pt' = 'en') => renderWithBridge(<PayingWalletNote />, fakeBridge(), { locale });
+const renderNote = (locale: 'en' | 'es' | 'pt' = 'en') => renderWithBridge(<PayingWalletNote />, fakeBridge({ myLoginMethod: 'nip07' }), { locale });
 
 describe('PayingWalletNote', () => {
   it('says nothing when there is no wallet', async () => {

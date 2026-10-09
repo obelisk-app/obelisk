@@ -40,7 +40,7 @@ let webln: {
 };
 
 function renderCard(locale: 'en' | 'es' = 'en') {
-  return renderWithBridge(<InvoiceCard invoice={RAW} />, fakeBridge(), { locale });
+  return renderWithBridge(<InvoiceCard invoice={RAW} />, fakeBridge({ myLoginMethod: 'nip07' }), { locale });
 }
 
 /** Pay, then Confirm, and let the fake wallet answer. */
@@ -106,7 +106,7 @@ describe('InvoiceCard paying', () => {
   it('disables Pay on every card for the invoice while the wallet works', async () => {
     let finish: (v: { preimage: string }) => void = () => {};
     webln.sendPayment.mockImplementation(() => new Promise((r) => { finish = r; }));
-    renderWithBridge(<><InvoiceCard invoice={RAW} /><InvoiceCard invoice={RAW} /></>, fakeBridge());
+    renderWithBridge(<><InvoiceCard invoice={RAW} /><InvoiceCard invoice={RAW} /></>, fakeBridge({ myLoginMethod: 'nip07' }));
     const [first, second] = screen.getAllByTestId('invoice-pay-btn');
 
     fireEvent.click(first);

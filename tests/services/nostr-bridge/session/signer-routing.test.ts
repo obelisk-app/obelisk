@@ -45,7 +45,7 @@ it('rejects queued template, auth, publish and DM calls before touching a change
     buildDmSigner(state.session, { bunker, encryptNip04: vi.fn(), decryptNip04: vi.fn() }, undefined, 'interactive', capture())!.signEvent(template),
   ];
   const settled = Promise.allSettled(calls);
-  state.extensionIdentityPending = true;
+  state.extensionIdentityPending.set(true);
   state.extensionIdentityRevision++;
   release();
   await blocking;

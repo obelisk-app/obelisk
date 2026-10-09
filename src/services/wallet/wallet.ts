@@ -1,3 +1,4 @@
+import { selectWalletKind } from '@/utils/wallet/provider';
 import { captureActiveSession } from '@/services/session/connection';
 import { isWebLNAvailable } from '@nostr-wot/wallet';
 import { ensureNwcWalletLoaded, hasNwcWallet, nwcPayerFor } from './nwc-wallet';
@@ -28,8 +29,7 @@ export type { WalletConnection, WalletKind } from '@/types/wallet/wallet';
 export function walletKindFor(account: string | null): WalletKind | null {
   const session = captureActiveSession(account);
   if (!session) return null;
-  if (hasNwcWallet(account)) return 'nwc';
-  return session.loginMethod === 'nip07' && isWebLNAvailable() ? 'webln' : null;
+  return selectWalletKind({ active: true, loginMethod: session.loginMethod, nwc: hasNwcWallet(account), webln: isWebLNAvailable() });
 }
 
 /** Whether a wallet is there to ask for `account`, without asking it anything. */
