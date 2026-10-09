@@ -17,6 +17,7 @@ export class BrowserConnectionEvents {
   constructor(
     private readonly state: Pick<SessionState, 'session' | 'connectionState'>,
     private readonly retryConnectionNow: () => void,
+    private readonly accountEvents?: { wire(): void; unwire(): void },
   ) {}
 
   private readonly onOffline = (): void => {
@@ -42,6 +43,7 @@ export class BrowserConnectionEvents {
   wire(): void {
     if (typeof window === "undefined" || this.wired) return;
     this.wired = true;
+    this.accountEvents?.wire();
     window.addEventListener("offline", this.onOffline);
     window.addEventListener("online", this.onOnline);
     document.addEventListener("visibilitychange", this.onVisibilityChange);
@@ -50,6 +52,7 @@ export class BrowserConnectionEvents {
   unwire(): void {
     if (typeof window === "undefined" || !this.wired) return;
     this.wired = false;
+    this.accountEvents?.unwire();
     window.removeEventListener("offline", this.onOffline);
     window.removeEventListener("online", this.onOnline);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);

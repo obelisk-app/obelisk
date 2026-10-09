@@ -26,6 +26,7 @@ import { PublishModule } from '../publish/publish';
 import { AuthRepublisher } from '../publish/publish-auth';
 import { RelayAccessModule } from '../relay/relay-access';
 import { seedCacheForRelay } from '../cache/seed';
+import { ExtensionAccountEvents } from '../session/extension-account-events';
 import { BrowserConnectionEvents } from '../session/browser-events';
 import { BunkerModule } from '../session/bunker';
 import { BunkerLogin } from '../session/bunker-login';
@@ -201,7 +202,8 @@ export class BridgeModules {
       if (loggedIn) this.pings.recordRelayUse(this.state.currentRelayUrl.get());
       this.pings.syncBackgroundWatch();
     });
-    this.browserEvents = new BrowserConnectionEvents(this.state, () => this.connection.retryConnectionNow());
+    this.browserEvents = new BrowserConnectionEvents(this.state, () => this.connection.retryConnectionNow(),
+      new ExtensionAccountEvents(this.state, (pubkey) => this.login.loginWithNip07(pubkey)));
     this.lifecycle = {
       state: this.state,
       hub: this.hub,
