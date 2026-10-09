@@ -167,10 +167,15 @@ describe('LoginModal generated identity flow', () => {
     });
   });
 
-  it('leaves NIP-46 relay selection to the signer SDK defaults', () => {
+  it('uses reachable relays for NIP-46 pairing', () => {
     renderLocalized(<LoginModal />);
 
-    expect(sdkProps.nip46Relays).toBeUndefined();
+    expect(sdkProps.nip46Relays).toEqual([
+      'wss://relay.damus.io',
+      'wss://nos.lol',
+      'wss://relay.primal.net',
+      'wss://purplepag.es',
+    ]);
   });
 
   it('hands the SDK-paired remote signer to the bridge', async () => {
