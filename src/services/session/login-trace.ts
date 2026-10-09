@@ -12,7 +12,7 @@ export function traceRelayHost(value: string): string {
 /** Remote error text is untrusted and can echo secrets. Log a bounded category only. */
 export function traceLoginFailure(error: unknown): string {
   const text = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
-  for (const category of ['auth-required', 'rate-limited', 'blocked', 'timeout', 'timed out', 'cancel', 'abort', 'closed', 'network', 'connect', 'secret', 'permission', 'decrypt', 'invalid']) {
+  for (const category of ['timestamp', 'future', 'too old', 'creation date', 'restricted', 'auth-required', 'rate-limited', 'blocked', 'timeout', 'timed out', 'cancel', 'abort', 'closed', 'network', 'connect', 'secret', 'permission', 'decrypt', 'invalid']) {
     if (text.toLowerCase().includes(category)) return category;
   }
   return 'unclassified-error';

@@ -20,6 +20,8 @@ export function traceSignerFrame(data: unknown, direction: 'send' | 'receive', c
     if (type === 'EVENT') {
       const event = frame[direction === 'send' ? 1 : 2];
       if (!event || typeof event !== 'object' || event.kind !== KIND_NOSTR_CONNECT) return;
+      detail.signatureValid = verifyEvent(event);
+      if (typeof event.created_at === 'number') detail.ageSeconds = Math.floor(Date.now() / 1000) - event.created_at;
       detail.contentBytes = typeof event.content === 'string' ? event.content.length : 0;
       detail.encryption = typeof event.content === 'string' && event.content.includes('?iv=') ? 'nip04' : 'nip44-or-unknown';
     }
