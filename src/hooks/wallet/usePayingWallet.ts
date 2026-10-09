@@ -2,15 +2,15 @@
 
 import { useEffect } from 'react';
 import { isWebLNAvailable } from '@nostr-wot/wallet';
-import { useMyPubkey } from '@/hooks/session/useSession';
+import { useMyPubkey, useMyLoginMethod, useIsLoggedIn } from '@/hooks/session/useSession';
 import { ensureNwcWalletLoaded } from '@/services/wallet/nwc-wallet';
-import type { WalletKind } from '@/services/wallet/wallet';
+import { walletKindFor, type WalletKind } from '@/services/wallet/wallet';
 import { useNwcWalletStore, type NwcWalletView } from '@/store/wallet/nwc-wallet';
 
 export interface PayingWallet {
   /**
    * Which wallet a payment would use now: the connected NWC wallet first,
-   * then WebLN. Null when there is none, and while the account's sealed
+   * then WebLN for a NIP-07 session. Null when there is none, and while the account's sealed
    * wallet is still being opened (the answer is not known yet).
    */
   readonly kind: WalletKind | null;
@@ -30,6 +30,8 @@ export interface PayingWallet {
  */
 export function usePayingWallet(): PayingWallet {
   const account = useMyPubkey();
+  const loginMethod = useMyLoginMethod();
+  const loggedIn = useIsLoggedIn();
   const nwc = useNwcWalletStore((s) => (s.account === account && s.status === 'connected' ? s.wallet : null));
   const loading = useNwcWalletStore((s) => s.account !== account || s.status === 'loading');
 
@@ -37,7 +39,7 @@ export function usePayingWallet(): PayingWallet {
     void ensureNwcWalletLoaded(account);
   }, [account]);
 
-  const webln = isWebLNAvailable();
+  const webln = loggedIn && loginMethod === 'nip07' && isWebLNAvailable();
   const pending = !!account && loading;
-  return { kind: nwc ? 'nwc' : pending ? null : webln ? 'webln' : null, nwc, webln, loading: pending };
+  return { kind: pending ? null : walletKindFor(account), nwc, webln, loading: pending };
 }

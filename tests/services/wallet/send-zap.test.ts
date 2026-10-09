@@ -1,3 +1,5 @@
+import type { BridgeImpl } from '@/services/nostr-bridge';
+import { fakeBridge } from '@tests/support/fake-bridge';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const wallet = vi.hoisted(() => ({
@@ -43,7 +45,7 @@ let webln: {
   enable: ReturnType<typeof vi.fn<() => Promise<void>>>;
   sendPayment: ReturnType<typeof vi.fn<(invoice: string) => Promise<{ preimage: string }>>>;
 };
-let publishEvent: ReturnType<typeof vi.fn>;
+let publishEvent: ReturnType<typeof vi.fn<BridgeImpl['publishEvent']>>;
 
 beforeEach(() => {
   calls = [];
@@ -57,8 +59,11 @@ beforeEach(() => {
     calls.push('invoice');
     return { invoice: 'lnbc1invoice', zapRequest: { id: 'zr' } };
   });
-  publishEvent = vi.fn(async () => { calls.push('publish'); });
-  bridge.getBridgeImpl.mockReturnValue({ publishEvent });
+  publishEvent = vi.fn<BridgeImpl['publishEvent']>(async (template) => {
+    calls.push('publish');
+    return { ...template, created_at: 1, id: 'marker', sig: '', pubkey: signer.pubkey };
+  });
+  bridge.getBridgeImpl.mockReturnValue(fakeBridge({ myPubkey: signer.pubkey, myLoginMethod: 'nip07' }, { publishEvent }));
 });
 
 afterEach(() => {
@@ -72,9 +77,9 @@ describe('checkZap', () => {
     wallet.isWebLNAvailable.mockReturnValue(false);
     expect(checkZap(draft({ signer: null, amountSats: 0 }))).toEqual({ ok: false, reason: 'noWallet' });
     wallet.isWebLNAvailable.mockReturnValue(true);
-    expect(checkZap(draft({ signer: null, amountSats: 0 }))).toEqual({ ok: false, reason: 'invalidAmount' });
+    expect(checkZap(draft({ signer: null, amountSats: 0 }))).toEqual({ ok: false, reason: 'noWallet' });
     expect(checkZap(draft({ amountSats: -5 }))).toEqual({ ok: false, reason: 'invalidAmount' });
-    expect(checkZap(draft({ signer: null }))).toEqual({ ok: false, reason: 'noSigner' });
+    expect(checkZap(draft({ signer: null }))).toEqual({ ok: false, reason: 'noWallet' });
   });
 
   it('passes a complete draft through', () => {
@@ -144,7 +149,7 @@ describe('sendZap', () => {
   // Regression: this used to throw after the payment had already gone through,
   // so the modal showed an error and stayed open with Zap pressable again.
   it('does not report a paid zap as failed when the bridge is not ready', async () => {
-    bridge.getBridgeImpl.mockReturnValue(null);
+    webln.sendPayment.mockImplementationOnce(async () => { bridge.getBridgeImpl.mockReturnValue(null); return { preimage: 'p' }; });
     await expect(sendZap(ready())).resolves.toEqual({ markerError: 'no-bridge' });
     expect(webln.sendPayment).toHaveBeenCalledTimes(1);
   });

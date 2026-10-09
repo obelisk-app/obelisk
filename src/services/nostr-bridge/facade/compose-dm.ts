@@ -82,6 +82,7 @@ export class DmModules {
       displayNameFor: (pubkey) => this.m.profiles.displayNameFor(pubkey),
     });
     this.nip04 = new Nip04Module(this.m.ctx, {
+      captureSessionGuard: () => this.m.state.captureSessionGuard(),
       withBunkerSigner: (operation, opts) => this.m.bunker.run(operation, opts),
       fetchRecipientReadRelays: (pubkey) => this.dmRelays.fetchRecipientReadRelays(pubkey),
       decrypt: (sender, ciphertext, lane) => this.m.seams.decryptNip04(sender, ciphertext, lane),

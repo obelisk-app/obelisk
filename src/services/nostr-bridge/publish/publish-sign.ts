@@ -17,6 +17,7 @@ import type { PersistedSession } from '../session/session-storage';
 import type { RemoteSigner } from '../session/bunker';
 
 export interface SignDeps {
+  captureSessionGuard?(): () => void;
   withBunkerSigner<T>(
     operation: (signer: RemoteSigner) => Promise<T>,
     opts?: { lane?: SignerLane; label?: string; startDeadlineMs?: number },
@@ -43,6 +44,15 @@ export async function signForSession(
   template: SignableTemplate,
   opts: { quiet?: boolean; startDeadlineMs?: number } = {},
 ): Promise<NostrEvent> {
+  const assertCurrent = deps.captureSessionGuard?.() ?? (() => {});
+  const checked = async (operation: () => Promise<NostrEvent>) => {
+    assertCurrent();
+    const result = await operation();
+    assertCurrent();
+    if (result.pubkey !== session.pubKeyHex) throw new DOMException('Signing identity changed', 'AbortError');
+    return result;
+  };
+  assertCurrent();
   const queueOpts = opts.startDeadlineMs !== undefined ? { startDeadlineMs: opts.startDeadlineMs } : undefined;
   const signLabel: ActivityCode =
     session.loginMethod === 'nip07' ? 'signExtension' : session.loginMethod === 'bunker' ? 'signBunker' : 'signLocal';
@@ -63,12 +73,12 @@ export async function signForSession(
       event = (await enqueueSignerOp(
         'interactive',
         `signEvent:${template.kind}`,
-        () => win.signEvent(template) as Promise<NostrEvent>,
+        () => checked(() => win.signEvent(template) as Promise<NostrEvent>),
         queueOpts,
       )) as NostrEvent;
     } else if (session.loginMethod === 'bunker') {
       event = await deps.withBunkerSigner(
-        (b) => b.signEvent(template) as Promise<NostrEvent>,
+        (b) => checked(() => b.signEvent(template) as Promise<NostrEvent>),
         { lane: 'interactive', label: `signEvent:${template.kind}`, ...queueOpts },
       );
     } else {

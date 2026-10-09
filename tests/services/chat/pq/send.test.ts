@@ -1,3 +1,5 @@
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
+import { fakeBridge } from '@tests/support/fake-bridge';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { PqAttestation } from '@nostr-wot/pq';
 
@@ -41,12 +43,14 @@ function withSupportingExtension() {
 }
 
 beforeEach(() => {
+  registerBridge(fakeBridge({ myPubkey: ME, myLoginMethod: 'nip07' }));
   getAttestation.mockReset();
   getAttestation.mockImplementation(async () => attestation());
   setPreference('postQuantumEnabled', true);
 });
 
 afterEach(() => {
+  unregisterBridge();
   delete globalThis.window.nostr;
   setPreference('postQuantumEnabled', false);
 });

@@ -78,7 +78,7 @@ export async function resolvePqSend(params: {
     // the attestation lookups cannot change the answer. Checking them first
     // matters now that the preference defaults on: without it, every DM send
     // on every session would pay two relay queries to learn nothing.
-    if (loginMethod !== 'nip07' || !signerSupportsPq()) return null;
+    if (loginMethod !== 'nip07' || !(await signerSupportsPq())) return null;
 
     const self = await selfPqState(myPubkey, loginMethod);
     if (!self.canSend) return null;

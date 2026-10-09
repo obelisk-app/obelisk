@@ -1,3 +1,4 @@
+import { captureActiveSession } from '@/services/session/connection';
 import { requestZapInvoice } from '@nostr-wot/wallet';
 import { getDefaultRelays } from '@nostr-wot/data';
 import { getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
@@ -79,6 +80,7 @@ export interface ZapResult {
  * marker could not be posted.
  */
 export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
+  const session = captureActiveSession(zap.signer.pubkey);
   const wallet = await connectWallet(zap.signer.pubkey);
   if (!wallet) throw new ZapError('noWallet');
 
@@ -100,6 +102,7 @@ export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
   });
 
   await wallet.pay(invoice);
+  if (!session?.isCurrent()) return { markerError: getBridgeImpl() ? 'not-logged-in' : MARKER_NO_BRIDGE };
   return postZapMarker(zap, { invoice, zapRequest, amountMsats });
 }
 

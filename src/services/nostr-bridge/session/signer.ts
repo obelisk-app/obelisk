@@ -21,6 +21,7 @@ export class SessionSigner {
   constructor(
     private readonly ctx: SessionSignerContext,
     private readonly bunker: Pick<BunkerModule, 'run'>,
+    private readonly captureGuard: () => () => void = () => () => {},
   ) {}
 
   /**
@@ -34,6 +35,15 @@ export class SessionSigner {
   ): Promise<NostrEvent> {
     const session = this.ctx.session();
     if (!session) throw new CodedError('not-logged-in', 'Not logged in');
+    const assertCurrent = this.captureGuard();
+    const checked = async (operation: () => Promise<NostrEvent>) => {
+      assertCurrent();
+      const result = await operation();
+      assertCurrent();
+      if (result.pubkey !== session.pubKeyHex) throw new DOMException('Signing identity changed', 'AbortError');
+      return result;
+    };
+    assertCurrent();
     const fullTemplate = {
       kind: template.kind,
       content: template.content,
@@ -52,7 +62,7 @@ export class SessionSigner {
         () => enqueueSignerOp(
           'interactive',
           `signEvent:${template.kind}`,
-          () => win.signEvent(fullTemplate) as Promise<NostrEvent>,
+          () => checked(() => win.signEvent(fullTemplate) as Promise<NostrEvent>),
         ),
         undefined,
         { operation: "sign", eventKind: template.kind, description: eventKindDescription(template.kind) },
@@ -62,7 +72,7 @@ export class SessionSigner {
       return await trackActivity(
         'signBunker' satisfies ActivityCode,
         () => this.bunker.run(
-          (b) => b.signEvent(fullTemplate) as Promise<NostrEvent>,
+          (b) => checked(() => b.signEvent(fullTemplate) as Promise<NostrEvent>),
           { lane: 'interactive', label: `signEvent:${template.kind}` },
         ),
         undefined,
@@ -81,8 +91,17 @@ export class SessionSigner {
   signSessionAuth(evt: EventTemplate): Promise<VerifiedEvent> {
     const session = this.ctx.session();
     if (!session) return Promise.reject(new CodedError('not-logged-in', 'Not logged in'));
+    const assertCurrent = this.captureGuard();
+    const checked = async (operation: () => Promise<VerifiedEvent>) => {
+      assertCurrent();
+      const result = await operation();
+      assertCurrent();
+      if (result.pubkey !== session.pubKeyHex) throw new DOMException('Signing identity changed', 'AbortError');
+      return result;
+    };
     const unsigned = { kind: evt.kind, content: evt.content, tags: evt.tags, created_at: evt.created_at };
     return (async (): Promise<VerifiedEvent> => {
+      assertCurrent();
       if (session.loginMethod === 'nsec' && session.privKeyHex) {
         return finalizeEvent(unsigned, hexToBytes(session.privKeyHex)) as VerifiedEvent;
       }
@@ -96,7 +115,7 @@ export class SessionSigner {
           () => enqueueSignerOp(
             'interactive',
             'nip42-auth',
-            () => win.signEvent(unsigned) as Promise<VerifiedEvent>,
+            () => checked(() => win.signEvent(unsigned) as Promise<VerifiedEvent>),
           ),
           undefined,
           { operation: 'sign', eventKind: evt.kind, description: eventKindDescription(evt.kind) },
@@ -109,7 +128,7 @@ export class SessionSigner {
           // around it so it starts when the request reaches the signer, not
           // when it joins the queue. See that method's doc comment.
           () => this.bunker.run(
-            (b) => b.signEvent(unsigned) as Promise<VerifiedEvent>,
+            (b) => checked(() => b.signEvent(unsigned) as Promise<VerifiedEvent>),
             {
               lane: 'interactive',
               label: 'nip42-auth',
@@ -132,6 +151,11 @@ export class SessionSigner {
    * bridge offers to identify at all (undefined when logged out).
    */
   getAuthSigner(): ((evt: EventTemplate) => Promise<VerifiedEvent>) | undefined {
-    return this.ctx.session() ? (evt) => this.signSessionAuth(evt) : undefined;
+    if (!this.ctx.session()) return undefined;
+    const assertCurrent = this.captureGuard();
+    return async (evt) => {
+      assertCurrent();
+      return this.signSessionAuth(evt);
+    };
   }
 }

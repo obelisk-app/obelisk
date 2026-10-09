@@ -133,7 +133,7 @@ export class BridgeModules {
       activeSocketUp: () => this.connection.activeSocketUp(),
     });
     this.bunker = new BunkerModule(this.ctx);
-    this.signer = new SessionSigner(this.ctx, this.bunker);
+    this.signer = new SessionSigner(this.ctx, this.bunker, () => this.state.captureSessionGuard());
     this.profiles = new ProfilesModule(this.ctx, {
       publishSignedEventToRelays: (ev, relays) => this.publisher.publishSignedEventToRelays(ev, relays),
     });
@@ -181,6 +181,7 @@ export class BridgeModules {
       ensureUserMetadata: (pubkey) => this.profiles.ensure(pubkey),
     });
     this.publisher = new PublishModule(this.ctx, {
+      captureSessionGuard: () => this.state.captureSessionGuard(),
       hub: this.hub,
       getAuthSigner: () => this.signer.getAuthSigner(),
       withBunkerSigner: (operation, opts) => this.bunker.run(operation, opts),
@@ -251,7 +252,7 @@ export class BridgeModules {
       bunker: this.bunker,
       encryptNip04: (recipient, plaintext, l) => this.dm.nip04.encrypt(recipient, plaintext, l),
       decryptNip04: (sender, ciphertext, l) => this.seams.decryptNip04(sender, ciphertext, l),
-    }, pqTrack, lane);
+    }, pqTrack, lane, this.state.captureSessionGuard());
   }
 
   /** The cold paint of every module for `relay` (`./seed.ts`). */

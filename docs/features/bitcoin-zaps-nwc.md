@@ -11,8 +11,7 @@ It picks one, by one rule:
 
 1. the account's **Nostr Wallet Connect** (NIP-47) wallet, when one is
    connected in Settings > Wallet;
-2. otherwise a **WebLN** browser extension (Alby and similar), which puts a
-   provider on `window.webln`;
+2. otherwise, only for an active **NIP-07 extension session**, a **WebLN** browser extension (Alby and similar), which puts a provider on `window.webln`;
 3. otherwise no wallet.
 
 The connected wallet wins because connecting one is a choice made in this
@@ -24,11 +23,13 @@ app, while an extension is merely installed. Settings ("Payments now use:
   would pay, without asking it anything. A sealed NWC record this page has
   not opened yet counts.
 - `connectWallet(account)`: the connected NWC wallet (opening its sealed
-  record first if needed), else WebLN after `enable()`, else `null`. It
+  record first if needed), else WebLN for a NIP-07 session after `enable()`, else `null`. It
   returns `{ kind, pay(invoice) }`.
 
 Both backends take only the invoice, so an invoice that sets no amount
 cannot be paid here; the card says so instead of offering Pay.
+
+Nostr identity and Lightning wallet are separate capabilities. A bunker/Nostr Connect or local-key identity never implicitly opens a browser wallet: connect an NWC wallet for that account. Wallet selection reads the shared session owner, refuses stale/different accounts, and checks it again after wallet loading or extension permission and immediately before payment. A completed payment remains paid even if the account changes afterward; its chat marker is then skipped. Retained NWC payment handles are also retired when the wallet is disconnected or replaced.
 
 ## Nostr Wallet Connect
 

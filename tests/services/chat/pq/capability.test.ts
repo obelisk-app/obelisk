@@ -1,3 +1,5 @@
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
+import { fakeBridge } from '@tests/support/fake-bridge';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const hasUsableKeys = vi.fn();
@@ -8,38 +10,40 @@ import { signerSupportsPq, selfPqState } from '@/services/chat/pq/capability';
 const PUBKEY = 'b'.repeat(64);
 
 beforeEach(() => {
+  registerBridge(fakeBridge({ myPubkey: PUBKEY, myLoginMethod: 'nip07' }));
   hasUsableKeys.mockReset();
 });
 
 afterEach(() => {
+  unregisterBridge();
   delete globalThis.window.nostr;
 });
 
-describe('signerSupportsPq', () => {
-  it('is true when the extension advertises the pq scheme', () => {
+describe('signerSupportsPq', async () => {
+  it('is true when the extension advertises the pq scheme', async () => {
     // @ts-expect-error partial extension shape is enough here
     globalThis.window.nostr = { nip44: { schemes: ['nip44', 'pq'] } };
-    expect(signerSupportsPq()).toBe(true);
+    expect(await signerSupportsPq()).toBe(true);
   });
 
-  it('is false when the extension advertises schemes without pq', () => {
+  it('is false when the extension advertises schemes without pq', async () => {
     // @ts-expect-error partial extension shape is enough here
     globalThis.window.nostr = { nip44: { schemes: ['nip44'] } };
-    expect(signerSupportsPq()).toBe(false);
+    expect(await signerSupportsPq()).toBe(false);
   });
 
-  it('is false when there is no extension at all', () => {
-    expect(signerSupportsPq()).toBe(false);
+  it('is false when there is no extension at all', async () => {
+    expect(await signerSupportsPq()).toBe(false);
   });
 
-  it('is false when the extension publishes no schemes marker', () => {
+  it('is false when the extension publishes no schemes marker', async () => {
     // @ts-expect-error partial extension shape is enough here
     globalThis.window.nostr = { nip44: {} };
-    expect(signerSupportsPq()).toBe(false);
+    expect(await signerSupportsPq()).toBe(false);
   });
 });
 
-describe('selfPqState', () => {
+describe('selfPqState', async () => {
   it('reports no keys when logged out', async () => {
     expect(await selfPqState(null, null)).toEqual({
       canSend: false, capabilityUnknown: false, hasKeys: false, attestationPublished: false,
@@ -102,4 +106,10 @@ describe('selfPqState', () => {
       canSend: false, capabilityUnknown: false, hasKeys: false, attestationPublished: false,
     });
   });
+});
+
+it('does not advertise PQ from an unrelated extension while a bunker is selected', async () => {
+  registerBridge(fakeBridge({ myPubkey: PUBKEY, myLoginMethod: 'bunker' }));
+  Object.assign(window, { nostr: { nip44: { schemes: ['pq'] } } });
+  expect(await signerSupportsPq()).toBe(false);
 });

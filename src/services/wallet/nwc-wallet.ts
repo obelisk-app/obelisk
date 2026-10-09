@@ -169,9 +169,11 @@ export function hasNwcWallet(account: string | null): boolean {
 export function nwcPayerFor(account: string | null): WalletConnection | null {
   const wallet = active;
   if (!account || !wallet || wallet.account !== account) return null;
+  const mine = generation;
   return {
     kind: 'nwc',
     pay: async (invoice) => {
+      if (active !== wallet || generation !== mine) throw new NwcError('wallet-failed', 'not-paid');
       const { preimage } = await clientOf(wallet).payInvoice(invoice);
       return { preimage };
     },

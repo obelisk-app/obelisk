@@ -17,6 +17,7 @@ import type { IngestDmParams } from './thread';
 export type Nip04Context = Pick<BridgeContext, 'session' | 'signAndPublish'>;
 
 export interface Nip04Deps {
+  captureSessionGuard?(): () => void;
   withBunkerSigner<T>(operation: (signer: RemoteSigner) => Promise<T>, opts?: BunkerRunOpts): Promise<T>;
   /** The recipient's NIP-65 read relays (`dm/relays.ts`). */
   fetchRecipientReadRelays(pubkey: string): Promise<string[]>;
@@ -51,13 +52,16 @@ export class Nip04Module {
 
   /** Encrypt, sign and publish a kind 4, then settle the placeholder (`dm/send.ts`). */
   async publish({ recipientPubkey, content, clientTag, createdAt, file }: DmSend): Promise<void> {
+    const assertCurrent = this.deps.captureSessionGuard?.() ?? (() => {});
     try {
+      assertCurrent();
       if (file) throw new CodedError('files-need-nip17', 'NIP-04 cannot carry an encrypted file');
       const cipher = await this.encrypt(recipientPubkey, content);
       // NIP-04 DMs are delivered to the recipient's NIP-65 read relays; without
       // this, sends to anyone whose read set doesn't include the active relays will
       // never reach them. Failure to look up just falls back to the active relays.
       const extraRelays = await this.deps.fetchRecipientReadRelays(recipientPubkey).catch(() => [] as string[]);
+      assertCurrent();
       const event = await this.ctx.signAndPublish(
         {
           kind: KIND_ENCRYPTED_DM,
@@ -66,7 +70,9 @@ export class Nip04Module {
           created_at: createdAt,
         },
         extraRelays,
+        { assertCurrent },
       );
+      assertCurrent();
       this.deps.settle.replacePending(
         recipientPubkey,
         clientTag,
@@ -138,21 +144,30 @@ export class Nip04Module {
   ): Promise<string> {
     const session = this.ctx.session();
     if (!session) throw new CodedError('not-logged-in', 'Not logged in');
-    if (session.loginMethod === 'nsec' && session.privKeyHex) {
-      return nip04.encrypt(session.privKeyHex, recipientPubkey, content);
-    }
-    if (session.loginMethod === 'nip07') {
-      const ext = window.nostr?.nip04;
-      if (!ext?.encrypt) throw new CodedError('extension-no-nip04', 'Extension does not support NIP-04 encryption');
-      return enqueueSignerOp(lane, 'nip04Encrypt', () => ext.encrypt(recipientPubkey, content));
-    }
-    if (session.loginMethod === 'bunker') {
-      return this.deps.withBunkerSigner(
-        (b) => b.nip04Encrypt(recipientPubkey, content),
-        { lane, label: 'nip04Encrypt' },
-      );
-    }
-    throw new CodedError('signer-unsupported', 'Cannot encrypt with current login method');
+    const assertCurrent = this.deps.captureSessionGuard?.() ?? (() => {});
+    const guarded = async <T,>(operation: () => T | Promise<T>): Promise<T> => {
+      assertCurrent();
+      const result = await operation();
+      assertCurrent();
+      return result;
+    };
+    return guarded(async () => {
+      if (session.loginMethod === 'nsec' && session.privKeyHex) {
+        return nip04.encrypt(session.privKeyHex, recipientPubkey, content);
+      }
+      if (session.loginMethod === 'nip07') {
+        const ext = window.nostr?.nip04;
+        if (!ext?.encrypt) throw new CodedError('extension-no-nip04', 'Extension does not support NIP-04 encryption');
+        return enqueueSignerOp(lane, 'nip04Encrypt', () => guarded(() => ext.encrypt(recipientPubkey, content)));
+      }
+      if (session.loginMethod === 'bunker') {
+        return this.deps.withBunkerSigner(
+          (b) => guarded(() => b.nip04Encrypt(recipientPubkey, content)),
+          { lane, label: 'nip04Encrypt' },
+        );
+      }
+      throw new CodedError('signer-unsupported', 'Cannot encrypt with current login method');
+    });
   }
 
   async decrypt(
@@ -162,24 +177,33 @@ export class Nip04Module {
   ): Promise<string> {
     const session = this.ctx.session();
     if (!session) throw new CodedError('not-logged-in', 'Not logged in');
-    if (session.loginMethod === 'nsec' && session.privKeyHex) {
-      return nip04.decrypt(session.privKeyHex, senderPubkey, ciphertext);
-    }
-    if (session.loginMethod === 'nip07') {
-      const ext = window.nostr?.nip04;
-      if (!ext?.decrypt) throw new CodedError('extension-no-nip04', 'Extension does not support NIP-04 decryption');
-      return memoizeDecrypt('nip04', senderPubkey, ciphertext, () =>
-        enqueueSignerOp(lane, 'nip04Decrypt', () => ext.decrypt(senderPubkey, ciphertext)),
-      );
-    }
-    if (session.loginMethod === 'bunker') {
-      return memoizeDecrypt('nip04', senderPubkey, ciphertext, () =>
-        this.deps.withBunkerSigner(
-          (b) => b.nip04Decrypt(senderPubkey, ciphertext),
-          { lane, label: 'nip04Decrypt' },
-        ),
-      );
-    }
-    throw new CodedError('signer-unsupported', 'Cannot decrypt with current login method');
+    const assertCurrent = this.deps.captureSessionGuard?.() ?? (() => {});
+    const guarded = async <T,>(operation: () => T | Promise<T>): Promise<T> => {
+      assertCurrent();
+      const result = await operation();
+      assertCurrent();
+      return result;
+    };
+    return guarded(async () => {
+      if (session.loginMethod === 'nsec' && session.privKeyHex) {
+        return nip04.decrypt(session.privKeyHex, senderPubkey, ciphertext);
+      }
+      if (session.loginMethod === 'nip07') {
+        const ext = window.nostr?.nip04;
+        if (!ext?.decrypt) throw new CodedError('extension-no-nip04', 'Extension does not support NIP-04 decryption');
+        return memoizeDecrypt('nip04', senderPubkey, ciphertext, () =>
+          enqueueSignerOp(lane, 'nip04Decrypt', () => guarded(() => ext.decrypt(senderPubkey, ciphertext))),
+        );
+      }
+      if (session.loginMethod === 'bunker') {
+        return memoizeDecrypt('nip04', senderPubkey, ciphertext, () =>
+          this.deps.withBunkerSigner(
+            (b) => guarded(() => b.nip04Decrypt(senderPubkey, ciphertext)),
+            { lane, label: 'nip04Decrypt' },
+          ),
+        );
+      }
+      throw new CodedError('signer-unsupported', 'Cannot decrypt with current login method');
+    });
   }
 }

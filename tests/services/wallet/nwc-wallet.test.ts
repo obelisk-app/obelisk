@@ -193,3 +193,12 @@ describe('one account never pays from another account\'s wallet', () => {
     expect(window.localStorage.getItem(nwcRecordKey(BOB))).toBeNull();
   });
 });
+
+
+it('retires a retained payment handle when its wallet is disconnected', async () => {
+  await connectNwcWallet(ALICE, wallet.uri);
+  const payer = nwcPayerFor(ALICE)!;
+  await disconnectNwcWallet();
+  await expect(payer.pay('invoice')).rejects.toMatchObject({ code: 'wallet-failed' });
+  expect(wallet.requests.filter((request) => request.method === 'pay_invoice')).toEqual([]);
+});

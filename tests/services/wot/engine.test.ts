@@ -1,3 +1,6 @@
+import '@/services/session/connection';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
+import { fakeBridge } from '@tests/support/fake-bridge';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { WotEngine } from '@/services/wot/engine';
 import { VERDICT_TTL_MS } from '@/constants/wot/verdict-cache';
@@ -17,17 +20,17 @@ beforeEach(() => {
   // Every test, not only the ones that advance time: an engine that enqueued
   // a pubkey under real timers fires its flush 100ms later, inside whichever
   // test is running by then, and eats that test's `mockResolvedValueOnce`.
+  registerBridge(fakeBridge({ myLoginMethod: 'nip07' }));
   vi.useFakeTimers();
   mockApi = {
     getStatus: vi.fn(async () => ({ configured: true })),
     getDistanceBatch: vi.fn(async () => ({}) as Record<string, number | null>),
   };
-  (globalThis as unknown as { window: unknown }).window = {
-    nostr: { wot: mockApi },
-  };
+  Object.assign(window, { nostr: { wot: mockApi } });
 });
 
 afterEach(() => {
+  unregisterBridge();
   vi.useRealTimers();
 });
 

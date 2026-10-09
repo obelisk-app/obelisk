@@ -71,6 +71,8 @@ export class BridgeImpl extends BridgeCommands {
   // ---- methods ---------------------------------------------------------------
 
   /** Identity lifecycle token for rejecting async work from an earlier session. */
+  captureSessionGuard(): () => void { return this.m.state.captureSessionGuard(); }
+
   getSessionGeneration(): number { return this.m.state.sessionGeneration; }
 
   initialize(): Promise<void> {

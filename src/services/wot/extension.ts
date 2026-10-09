@@ -40,14 +40,34 @@ interface NostrWotApi {
   getMinPaths?: (pubkey: string, opts?: { maxHops?: number }) => Promise<number | null | undefined>;
 }
 
-function api(): NostrWotApi | null {
+async function api(): Promise<(NostrWotApi & { account: string; isCurrent(): boolean }) | null> {
   if (typeof window === 'undefined') return null;
+  // Lazy import avoids a bridge -> WoT -> bridge module cycle.
+  const { captureActiveSession } = await import('@/services/session/connection');
+  const session = captureActiveSession();
+  if (session?.loginMethod !== 'nip07') return null;
   const w = window as unknown as { nostr?: { wot?: NostrWotApi } };
-  return w.nostr?.wot ?? null;
+  const provider = w.nostr?.wot;
+  if (!provider) return null;
+  const scoped = <A extends unknown[], R>(method: ((...args: A) => Promise<R>) | undefined) => method
+    ? async (...args: A): Promise<R> => {
+      session.assertCurrent();
+      const result = await method.apply(provider, args);
+      session.assertCurrent();
+      return result;
+    } : undefined;
+  return {
+    account: session.pubkey,
+    isCurrent: session.isCurrent,
+    getStatus: scoped(provider.getStatus),
+    getDistance: scoped(provider.getDistance),
+    getDistanceBatch: scoped(provider.getDistanceBatch),
+    getMinPaths: scoped(provider.getMinPaths),
+  };
 }
 
 export async function wotProbe(): Promise<WotProbe> {
-  const a = api();
+  const a = await api();
   if (!a) return { status: 'absent' };
   // Consider the extension "configured" if ANY distance method exists.
   // Some builds expose `getStatus`, others don't; relying on it is fragile.
@@ -60,7 +80,7 @@ export async function wotProbe(): Promise<WotProbe> {
       const raw = await enqueueSignerOp('background', 'wot:getStatus', () => a.getStatus!());
       if (raw && typeof raw === 'object') {
         const r = raw as { configured?: boolean; user?: string | null };
-        if (r.configured === false) return { status: 'absent' };
+        if (r.configured === false || (r.user && r.user !== a.account)) return { status: 'absent' };
         return { status: 'configured', user: r.user ?? null };
       }
     } catch {
@@ -113,7 +133,7 @@ export async function wotBatch(
   minPaths: number,
 ): Promise<Record<string, WotBatchEntry> | null> {
   if (pubkeys.length === 0) return {};
-  const a = api();
+  const a = await api();
   if (!a) return null;
   try {
     const out: Record<string, WotBatchEntry> = {};
@@ -184,14 +204,14 @@ export async function wotBatch(
         );
       }
     }
-    return out;
+    return a.isCurrent() ? out : null;
   } catch {
     return null;
   }
 }
 
 export async function wotDistance(pubkey: string): Promise<number | null> {
-  const a = api();
+  const a = await api();
   if (!a || typeof a.getDistance !== 'function') return null;
   try {
     const d = await enqueueSignerOp('background', 'wot:getDistance', () => a.getDistance!(pubkey));

@@ -1,3 +1,5 @@
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
+import { fakeBridge } from '@tests/support/fake-bridge';
 /**
  * Paying over Nostr Wallet Connect through the app's one wallet path
  * (`src/services/wallet/wallet.ts`): invoices and zaps, which wallet wins,
@@ -43,6 +45,7 @@ let webln: {
 };
 
 beforeEach(async () => {
+  registerBridge(fakeBridge({ myPubkey: USER, myLoginMethod: 'nip07' }, { publishEvent: vi.fn(async () => { throw new Error('relay unavailable'); }) }));
   vi.stubGlobal('indexedDB', new IDBFactory());
   window.localStorage.clear();
   resetRelayHubForTests();
@@ -61,6 +64,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   vi.useRealTimers();
+  unregisterBridge();
   delete window.webln;
   await ensureNwcWalletLoaded(null);
   resetRelayHubForTests();
@@ -73,8 +77,8 @@ describe('which wallet pays', () => {
     expect((await connectWallet(USER))?.kind).toBe('nwc');
     expect(webln.enable).not.toHaveBeenCalled();
 
-    expect(walletKindFor(OTHER)).toBe('webln');
-    expect(walletKindFor(null)).toBe('webln');
+    expect(walletKindFor(OTHER)).toBeNull();
+    expect(walletKindFor(null)).toBeNull();
   });
 
   it('falls back to WebLN once the wallet is disconnected, and to none without an extension', async () => {
@@ -143,6 +147,7 @@ describe('zapping over NWC', () => {
   };
 
   beforeEach(() => {
+    registerBridge(fakeBridge({ myPubkey: USER, myLoginMethod: 'nip07' }, { publishEvent: vi.fn(async () => { throw new Error('relay unavailable'); }) }));
     sdk.requestZapInvoice.mockResolvedValue({ invoice: 'lnbc1zap', zapRequest: { id: 'zr' } });
   });
 
@@ -154,8 +159,8 @@ describe('zapping over NWC', () => {
     const result = await sendZap(check.zap);
 
     expect(wallet.calls('pay_invoice').map((r) => r.params.invoice)).toEqual(['lnbc1zap']);
-    // No bridge in this suite: the zap is paid, only its channel marker could not be posted.
-    expect(result.markerError).toBe('no-bridge');
+    // A relay outage after payment only fails the channel marker.
+    expect(result.markerError).toBe('relay unavailable');
   });
 
   it('a silent wallet rejects with an error that says money may have moved', async () => {

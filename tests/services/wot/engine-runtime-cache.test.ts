@@ -1,8 +1,12 @@
+import '@/services/session/connection';
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
+import { fakeBridge } from '@tests/support/fake-bridge';
 import { afterEach, expect, it, vi } from 'vitest';
 import { wotEngine } from '@/services/wot/engine';
 import { invalidateRuntimeCaches, inspectRuntimeCaches } from '@/services/local-data/runtime-caches';
 
 afterEach(() => {
+  unregisterBridge();
   wotEngine._reset();
   wotEngine.setOperatorPubkeys([]);
   vi.unstubAllGlobals();
@@ -10,11 +14,12 @@ afterEach(() => {
 });
 
 it('clears verdicts and retires in-flight results without resetting policy or subscribers', async () => {
+  registerBridge(fakeBridge({ myLoginMethod: 'nip07' }));
   vi.useFakeTimers();
   let resolve!: (value: Record<string, number>) => void;
   const old = new Promise<Record<string, number>>((done) => { resolve = done; });
   const batch = vi.fn().mockReturnValueOnce(old).mockResolvedValue({ fresh: 1 });
-  vi.stubGlobal('window', { nostr: { wot: { getStatus: vi.fn(async () => ({ configured: true })), getDistanceBatch: batch } } });
+  Object.assign(window, { nostr: { wot: { getStatus: vi.fn(async () => ({ configured: true })), getDistanceBatch: batch } } });
   wotEngine.configure({ enabled: true, maxHops: 3, minPaths: 1 });
   wotEngine.setOwnPubkey('own');
   wotEngine.setMutedPubkeys(['muted']);

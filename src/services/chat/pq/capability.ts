@@ -49,7 +49,9 @@ function nip44Schemes(): string[] | undefined {
  * declares no post-quantum support (e.g. `['nip44']`). When it is absent,
  * `selfPqState` reports `capabilityUnknown` rather than guessing.
  */
-export function signerSupportsPq(): boolean {
+export async function signerSupportsPq(): Promise<boolean> {
+  const { captureActiveSession } = await import('@/services/session/connection');
+  if (captureActiveSession()?.loginMethod !== 'nip07') return false;
   const schemes = nip44Schemes();
   return Array.isArray(schemes) && schemes.includes('pq');
 }
@@ -62,11 +64,13 @@ export async function selfPqState(
     return { canSend: false, capabilityUnknown: false, hasKeys: false, attestationPublished: false };
   }
 
+  const { captureActiveSession } = await import('@/services/session/connection');
+  const session = captureActiveSession(pubkey);
   const published = await hasUsableKeys(pubkey);
 
   // Only the NIP-07 surface exposes post-quantum encryption. nsec has no seed
   // to derive from, and a bunker signs remotely with no post-quantum path.
-  const viaExtension = loginMethod === 'nip07';
+  const viaExtension = loginMethod === 'nip07' && session?.loginMethod === 'nip07' && session.isCurrent();
 
   // If the extension advertises a `nip44.schemes` marker, trust it, even
   // when it positively declares no post-quantum support. When the extension
@@ -74,7 +78,7 @@ export async function selfPqState(
   // post-quantum, so that state is surfaced explicitly via
   // `capabilityUnknown` rather than guessed as `canSend: true`.
   const markerPresent = Array.isArray(nip44Schemes());
-  const canSend = viaExtension && published && markerPresent && signerSupportsPq();
+  const canSend = viaExtension && published && markerPresent && (await signerSupportsPq());
   const capabilityUnknown = viaExtension && published && !markerPresent;
 
   return { canSend, capabilityUnknown, hasKeys: published, attestationPublished: published };

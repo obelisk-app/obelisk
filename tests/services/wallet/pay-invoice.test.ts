@@ -1,3 +1,5 @@
+import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
+import { fakeBridge } from '@tests/support/fake-bridge';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   InvoicePayError,
@@ -32,6 +34,7 @@ let webln: {
 };
 
 beforeEach(() => {
+  registerBridge(fakeBridge({ myPubkey: PAYER, myLoginMethod: 'nip07' }));
   vi.useFakeTimers();
   vi.setSystemTime(NOW_MS);
   webln = {
@@ -43,6 +46,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  unregisterBridge();
   delete window.webln;
   vi.useRealTimers();
 });
@@ -120,7 +124,7 @@ describe('invoiceRefusal', () => {
     useInvoicePaymentsStore.setState({ byHash: {} });
     expect(invoiceRefusal(invoice({ amountMsats: 0, expiresAt: NOW_S - 1 }))).toBe('noAmount');
     expect(invoiceRefusal(invoice({ expiresAt: NOW_S - 1 }))).toBe('expired');
-    expect(invoiceRefusal(invoice())).toBeNull();
+    expect(invoiceRefusal(invoice(), PAYER)).toBeNull();
   });
 
   it('treats an expiry of 0 as none, as the card does', () => {

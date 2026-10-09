@@ -133,6 +133,7 @@ function reads(s: FakeStores) {
     subscribeDmCallMessages: () => () => {},
     getPublicKey: () => s.myPubkey.get(),
     getSessionGeneration: () => 0,
+    captureSessionGuard: () => () => {},
     displayNameFor: (pk) => {
       const meta = s.userMetadata.get()[pk];
       return meta?.displayName || meta?.name || `${pk.slice(0, 8)}…`;
