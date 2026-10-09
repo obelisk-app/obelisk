@@ -31,7 +31,7 @@ Two Nostr event kinds + one in-PC data channel:
 Cadence:
 
 - **Steady state**: every 10 s (`BEACON_INTERVAL_MS`); 60 s with a NIP-46
-  bunker (`REMOTE_SIGNER_BEACON_INTERVAL_MS`), which also skips the burst.
+  bunker (`REMOTE_SIGNER_BEACON_INTERVAL_MS`). Bunker joins retry their announcement at 2 and 8 seconds to cover a missed ephemeral beacon while subscriptions open.
 - **Bring-up burst**: at join, additional publishes scheduled at
   `[300, 900, 1800, 3500, 7000, 12000, 18000]` ms
   (`BEACON_BRINGUP_DELAYS_MS`) so a peer who joined a few seconds
@@ -137,11 +137,10 @@ Variants:
 
 `sessionId` identifies one **connection attempt**, not the client: every
 `Peer` gets a fresh one. A `Peer` binds to the remote's `sessionId` on its
-first signal and drops anything from another session (a late answer or bye
-for the connection it replaced). An offer under a new session means the
+first SDP offer or answer and drops anything from another session (a late answer or bye for the connection it replaced). An offer under a new session means the
 remote rebuilt: the client replaces its `Peer` and hands it that offer.
 `requestReset`, a `room-full` bye (sent by the client, not a `Peer`) and
-signals without a `sessionId` (older clients) are always accepted.
+signals without a `sessionId` (older clients) retain their compatibility behavior. Once the remote SDP is known, outbound signals also carry `targetSessionId`. The receiver checks this against its own connection before handling any signal, including resets, so a delayed reset or answer for an obsolete connection cannot tear down or bind its replacement.
 
 Negotiation signals may wait at most 15 s for a NIP-07 / NIP-46 signer to
 start on them (`signStartDeadlineMs`); past that the negotiation is stale
@@ -292,3 +291,5 @@ Voice presence and signaling are not chat messages and do not advance read curso
 ### Session binding during rebuilds
 
 A rebuilt peer binds the remote session only from an SDP offer or answer. Track metadata, ICE candidates and renegotiation hints can arrive late from a previous connection and must not decide which session owns the new handshake. Once bound, mismatched-session signals remain rejected; a fresh offer still triggers a deliberate peer replacement. Connection timeout logs include only the peer prefix, connection/ICE/signaling states, SDP types and time budget, without SDP bodies or addresses. The desktop shell preserves `debug=voice` while synchronizing its navigation URL.
+
+A directly observed presence disappearing from the roster overrides stale third-party discovery hints until a fresh direct beacon arrives; an already-live WebRTC connection remains valid across a relay gap. Terminal presence marks the publisher absent immediately even when its relay expiration is still in the future. Peer callbacks from a torn-down connection cannot mutate or redial the replacement connection.

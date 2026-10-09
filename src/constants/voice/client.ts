@@ -7,6 +7,8 @@ export const SELF_BUILD_TAG = '2026-05-24T01:00:00Z-voice-video-autoplay-retry';
 
 export const BEACON_INTERVAL_MS = 10_000;
 export const REMOTE_SIGNER_BEACON_INTERVAL_MS = 60_000;
+/** Two startup retries cover subscriptions still opening without a steady signing burst. */
+export const REMOTE_SIGNER_BRINGUP_DELAYS_MS = [2_000, 8_000];
 /**
  * Aggressive beacon burst right after `join()`. NIP-29 voice beacons are
  * ephemeral (relays don't backfill them), so a peer who joined a few

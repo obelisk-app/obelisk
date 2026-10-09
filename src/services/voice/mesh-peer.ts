@@ -136,6 +136,7 @@ export function openMeshPeer(host: MeshPeerHost, remotePubkey: string): void {
           }
         },
         onPeerDead: (reason) => {
+          if (room.peers.get(remotePubkey) !== peer) return;
           // Active capacity rejection: the remote is telling us the room
           // is full. Surface a clean error and leave; without this, our
           // repeated redial attempts would loop trying to re-dial them.
@@ -204,6 +205,7 @@ export function openMeshPeer(host: MeshPeerHost, remotePubkey: string): void {
           room.endRemoteTrack(trackId);
         },
         onConnectionEstablished: () => {
+          if (room.peers.get(remotePubkey) !== peer) return;
           if (!room.connectedPubkeys.has(remotePubkey)) {
             host.metrics.peers.connected = room.connectedPubkeys.size + 1;
           }
@@ -223,6 +225,7 @@ export function openMeshPeer(host: MeshPeerHost, remotePubkey: string): void {
           room.emitPeerConnectionStates();
         },
         onConnectionLost: () => {
+          if (room.peers.get(remotePubkey) !== peer) return;
           if (room.connectedPubkeys.delete(remotePubkey)) {
             host.scheduleBeaconRefresh();
           }
@@ -238,6 +241,7 @@ export function openMeshPeer(host: MeshPeerHost, remotePubkey: string): void {
           room.ui.setPeerQuality(remotePubkey, sample);
         },
         onConnectionStateChange: (state) => {
+          if (room.peers.get(remotePubkey) !== peer) return;
           room.emitPeerConnectionStates();
           if (state === 'closed') {
             // Drop the peer so a future signal/beacon from the same pubkey

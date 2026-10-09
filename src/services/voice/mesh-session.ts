@@ -100,6 +100,7 @@ export class MeshSession implements MeshSignalHost, MeshDialHost {
   isKnownSfu(pubkey: string): boolean { return this.known.isKnownSfu(pubkey); }
   isKnownMeshTestPeer(pubkey: string): boolean { return this.known.isKnownMeshTestPeer(pubkey); }
   hasPassiveHint(pubkey: string): boolean { return this.known.hasPassiveHint(pubkey); }
+  hasExpiredPresence(pubkey: string): boolean { return this.known.hasExpired(pubkey); }
   hints(): ReadonlySet<string> { return this.known.hints(); }
   roster(): readonly VoicePresence[] { return this.known.roster(); }
   isMember(pubkey: string): boolean { return this.deps.isMember(pubkey); }

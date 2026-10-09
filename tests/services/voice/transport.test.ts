@@ -346,7 +346,7 @@ describe('subscribeRoster', () => {
 
     bridgeFake.inject({
       pubkey: 'p1', kind: KIND_VOICE_PRESENCE, content: '',
-      tags: [['e', 'ch1'], ['t', 'obelisk-voice-presence'], ['status', 'left'], ['expiration', String(now - 1)]],
+      tags: [['e', 'ch1'], ['t', 'obelisk-voice-presence'], ['status', 'left'], ['expiration', String(now + 10)]],
       created_at: now,
     });
     expect(lastRoster).toEqual([]);

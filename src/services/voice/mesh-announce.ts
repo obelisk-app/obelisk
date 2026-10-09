@@ -17,6 +17,7 @@ import { pushVoiceDebug } from './debug';
 import {
   BEACON_INTERVAL_MS,
   REMOTE_SIGNER_BEACON_INTERVAL_MS,
+  REMOTE_SIGNER_BRINGUP_DELAYS_MS,
   BEACON_BRINGUP_DELAYS_MS,
   BEACON_REFRESH_DEBOUNCE_MS,
   CONTROL_SNAPSHOT_DEBOUNCE_MS,
@@ -140,7 +141,7 @@ export class MeshAnnouncer {
   startCadence(): void {
     if (this.active) return;
     this.active = true;
-    for (const delay of this.deps.remoteSigning ? [] : BEACON_BRINGUP_DELAYS_MS) {
+    for (const delay of this.deps.remoteSigning ? REMOTE_SIGNER_BRINGUP_DELAYS_MS : BEACON_BRINGUP_DELAYS_MS) {
       this.bringupTimers.push(setTimeout(() => {
         void this.publishBeacon('heartbeat').catch(() => {});
       }, delay));

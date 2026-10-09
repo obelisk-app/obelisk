@@ -71,7 +71,7 @@ export class Peer {
     this.trickle = opts.trickle ?? true;
     this.connectTimeoutMs = opts.connectTimeoutMs ?? INITIAL_CONNECT_TIMEOUT_MS;
     this.remoteTracks = new PeerRemoteTracks(this.events);
-    this.binding = new PeerSessionBinding({ remotePubkey: this.remotePubkey, events: this.events });
+    this.binding = new PeerSessionBinding({ remotePubkey: this.remotePubkey, sessionId: this.sessionId, events: this.events });
     this.simple = this.createSimplePeer();
     this.pc = this.rawPc();
     this.control = new PeerControlChannel({
@@ -136,13 +136,14 @@ export class Peer {
 
   private async sendSignal(payload: Omit<VoiceSignalPayload, 'sessionId' | 'seq'>): Promise<void> {
     if (this.closed) return;
-    const signal = { ...payload, sessionId: this.sessionId, seq: ++this.outboundSeq };
+    const signal = { ...payload, targetSessionId: this.binding.targetSessionId, sessionId: this.sessionId, seq: ++this.outboundSeq };
     // Initial negotiation and disconnected/legacy peers still use the relay.
     if (this.connected && this.control.sendSignal(signal)) return;
     await this.send(signal);
   }
 
   private handleConnectionState(state: RTCPeerConnectionState): void {
+    if (this.closed) return;
     console.debug('[voice] connection-state', this.remotePubkey.slice(0, 8), state);
     this.events.onConnectionStateChange(state);
     if (state === 'connected') this.handleConnected();
@@ -253,7 +254,7 @@ export class Peer {
    * everything else without a log, so the loss is reported here.
    */
   private sendUnawaited(payload: Omit<VoiceSignalPayload, 'sessionId' | 'seq'>): void {
-    void Promise.resolve(this.send({ ...payload, sessionId: this.sessionId, seq: ++this.outboundSeq })).catch((err) => {
+    void Promise.resolve(this.send({ ...payload, targetSessionId: this.binding.targetSessionId, sessionId: this.sessionId, seq: ++this.outboundSeq })).catch((err) => {
       console.warn(`[voice] ${payload.type} not delivered to`, this.remotePubkey.slice(0, 8), err);
     });
   }

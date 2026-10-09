@@ -18,6 +18,7 @@ export interface MeshDialHost extends MeshPeerHost {
   isMember(pubkey: string): boolean;
   /** The passive participant hints from the bridge's kind 20078 watcher. */
   hints(): ReadonlySet<string>;
+  hasExpiredPresence(pubkey: string): boolean;
 }
 
 export class MeshDialer {
@@ -134,7 +135,9 @@ export class MeshDialer {
       if (host.room.connectedPubkeys.has(pk) || peer.isControlOpen()) set.add(pk);
     }
     set.delete(host.selfPubkey);
-    return Array.from(set).filter((p) => host.isMember(p));
+    return Array.from(set).filter((p) => host.isMember(p) && (
+      !host.hasExpiredPresence(p) || host.room.connectedPubkeys.has(p) || host.room.peers.get(p)?.isControlOpen()
+    ));
   }
 
   /**
@@ -216,7 +219,7 @@ export class MeshDialer {
       host.metrics.peers.tornDown++;
       pushVoiceDebug({ kind: 'peer-torn-down', peer: pubkey });
     }
-    const nextRoster = preservePresence
+    const nextRoster = preservePresence && !host.hasExpiredPresence(pubkey)
       ? room.rosterPubkeys
       : room.rosterPubkeys.filter((pk) => pk !== pubkey);
     const rosterChanged = nextRoster.length !== room.rosterPubkeys.length;

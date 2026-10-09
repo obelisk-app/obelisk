@@ -56,6 +56,8 @@ export interface VoiceSignalPayload {
   /** Random per-session id so a peer who left and rejoined isn't confused
    *  with their previous incarnation. */
   sessionId: string;
+  /** Connection this signal answers; omitted until the remote SDP is known. */
+  targetSessionId?: string;
   /** Monotonic per-(from,to) sequence for diagnostics and rolling compatibility. */
   seq: number;
   /** Optional bye reason. `'room-full'` is sent by every existing peer in a

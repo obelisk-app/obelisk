@@ -38,12 +38,14 @@ export class MeshRoster {
    * video-slot count while local video is starting / running.
    */
   private currentRoster: readonly VoicePresence[] = [];
+  private expiredPubkeys = new Set<string>();
 
   constructor(private readonly selfPubkey: string) {}
 
   isKnownSfu(pubkey: string): boolean { return this.knownSfuPubkeys.has(pubkey); }
   isKnownMeshTestPeer(pubkey: string): boolean { return this.knownMeshTestPeerPubkeys.has(pubkey); }
   hasPassiveHint(pubkey: string): boolean { return this.passiveParticipantHints.has(pubkey); }
+  hasExpired(pubkey: string): boolean { return this.expiredPubkeys.has(pubkey); }
   roster(): readonly VoicePresence[] { return this.currentRoster; }
   hints(): ReadonlySet<string> { return this.passiveParticipantHints; }
 
@@ -57,6 +59,9 @@ export class MeshRoster {
    * had already opened to them on the wrong side of the negotiation.
    */
   ingest(roster: readonly VoicePresence[]): { newMeshTestPeers: string[] } {
+    const live = new Set(roster.map((p) => p.pubkey));
+    for (const p of this.currentRoster) if (!live.has(p.pubkey)) this.expiredPubkeys.add(p.pubkey);
+    for (const pk of live) this.expiredPubkeys.delete(pk);
     this.currentRoster = roster;
     this.knownSfuPubkeys = new Set(roster.filter((r) => r.isSfu).map((r) => r.pubkey));
     const previous = this.knownMeshTestPeerPubkeys;
@@ -107,6 +112,7 @@ export class MeshRoster {
   /** Forget the roster and the hints; the SFU set is refreshed by the next snapshot. */
   forget(): void {
     this.currentRoster = [];
+    this.expiredPubkeys.clear();
     this.knownMeshTestPeerPubkeys.clear();
     this.passiveParticipantHints.clear();
   }

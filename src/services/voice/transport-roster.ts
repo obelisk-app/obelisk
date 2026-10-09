@@ -105,7 +105,7 @@ export async function subscribeRoster(
         pubkey: ev.pubkey,
         channelId,
         createdAt: ev.created_at,
-        expiresAt,
+        expiresAt: terminal ? Math.min(expiresAt, Math.floor(Date.now() / 1000)) : expiresAt,
         connectedTo,
         knownPeers,
         videoTracks,

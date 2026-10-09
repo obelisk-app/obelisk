@@ -215,6 +215,26 @@ describe('Peer session binding', () => {
     peer.close();
   });
 
+  it('ignores answers and resets addressed to a replaced local connection', async () => {
+    const { peer, simple, events } = makePeer({ sessionId: 'new-local' });
+    events.onPeerDead = vi.fn();
+    await peer.handleSignal({ ...answer('old-remote'), targetSessionId: 'old-local' });
+    await peer.handleSignal({ type: 'requestReset', sessionId: 'old-remote', targetSessionId: 'old-local', seq: 2 });
+    expect(simple.signaled).toHaveLength(0);
+    expect(events.onPeerDead).not.toHaveBeenCalled();
+    await peer.handleSignal({ ...answer('current-remote'), targetSessionId: 'new-local' });
+    expect(simple.signaled).toHaveLength(1);
+    peer.close({ notifyRemote: false });
+  });
+
+  it('addresses recovery to the remote connection it negotiated with', async () => {
+    const { peer, sent } = makePeer();
+    await peer.handleSignal(answer('remote-connection'));
+    peer.requestReset();
+    expect(sent).toContainEqual(expect.objectContaining({ type: 'requestReset', targetSessionId: 'remote-connection' }));
+    peer.close({ notifyRemote: false });
+  });
+
   it('drops signals from a remote session other than the one it bound to', async () => {
     const { peer, simple } = makePeer();
     await peer.handleSignal(answer('remote-1'));

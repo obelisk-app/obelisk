@@ -10,6 +10,7 @@ import type { PeerEvents } from '@/types/voice/peer';
 
 export interface SessionBindingHost {
   readonly remotePubkey: string;
+  readonly sessionId: string;
   readonly events: Pick<PeerEvents, 'onRemoteSessionChanged'>;
 }
 
@@ -28,7 +29,10 @@ export class PeerSessionBinding {
    * and a `room-full` bye (sent by the remote client, not by a Peer).
    * Signals without a `sessionId` (older clients) are accepted as before.
    */
+  get targetSessionId(): string | undefined { return this.remoteSessionId ?? undefined; }
+
   accepts(payload: VoiceSignalPayload): boolean {
+    if (payload.targetSessionId && payload.targetSessionId !== this.host.sessionId) return false;
     const incoming = payload.sessionId;
     if (!incoming) return true;
     if (payload.type === 'requestReset') return true;

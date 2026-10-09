@@ -967,20 +967,20 @@ describe('SIGNER_PEER_BUDGET', () => {
 });
 
 describe('VoiceClient bring-up beacon burst', () => {
-  it('skips the burst and uses a 60 s cadence with a remote signer', async () => {
+  it('retries startup twice then uses a 60 s cadence with a remote signer', async () => {
     vi.useFakeTimers();
     try {
       const client = new VoiceClient('ch1', { members: [SELF], signer: 'bunker' });
       await client.join();
       expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(1);
 
-      await vi.advanceTimersByTimeAsync(59_999);
+      await vi.advanceTimersByTimeAsync(67_999);
       await flushMicrotasks(2);
-      expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(1);
+      expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(3);
 
       await vi.advanceTimersByTimeAsync(1);
       await flushMicrotasks(2);
-      expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(2);
+      expect(transportFake.publishPresenceBeacon).toHaveBeenCalledTimes(4);
       await client.leave();
     } finally {
       vi.useRealTimers();
@@ -1371,6 +1371,21 @@ describe('VoiceClient ghost peers', () => {
     { ...presence(PEER1), knownPeers: [PEER2, ghost] },
     { ...presence(PEER2), knownPeers: [PEER1, ghost] },
   ];
+
+  it('does not let stale connected-peer hints revive expired direct presence', async () => {
+    const client = new VoiceClient('ch1', { members: [SELF, PEER1, ghost] });
+    await client.join();
+    transportFake.fireRoster([presence(ghost), presence(PEER1)]);
+    await flushMicrotasks(20);
+    expect(client.getParticipants()).toContain(ghost);
+    transportFake.fireRoster([{ ...presence(PEER1), connectedTo: [ghost] }]);
+    await flushMicrotasks(20);
+    expect(client.getParticipants()).not.toContain(ghost);
+    transportFake.fireRoster([presence(ghost), presence(PEER1)]);
+    await flushMicrotasks(20);
+    expect(client.getParticipants()).toContain(ghost);
+    await client.leave();
+  });
 
   it('neither dials nor re-advertises a peer known only from gossip', async () => {
     transportFake.setSelfPubkey(SELF);
