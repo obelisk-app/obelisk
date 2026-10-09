@@ -5,6 +5,7 @@
  * The NIP-46 logins are `./bunker-login.ts`; the teardown lists are
  * `./reset.ts`. Pure move from `client.ts`.
  */
+import { traceLogin } from '@/services/session/login-trace';
 import { CodedError } from '@/utils/errors/codes';
 import { SESSION_IDENTITY_ID, type Identity } from '@nostr-wot/relay/hub';
 import { resetAllClientState } from '@/services/common/reset';
@@ -114,8 +115,10 @@ export class LoginModule {
       t.lists.resetContactList();
       t.media.reset();
     }
+    traceLogin('bridge.vault.seal.start');
     const sealing = this.store.seal();
     if (sealing) await sealing;
+    traceLogin('bridge.vault.seal.complete');
     state.assertSessionOperation(generation);
     this.persist();
     // Point the seen-wrap ledger at this account before `connect()` opens the
@@ -155,13 +158,16 @@ export class LoginModule {
     }
     useNotificationsStore.getState().registerRelay(sessionRelay);
     try {
+      traceLogin('bridge.relay.connect.start');
       await this.deps.connect(perGroup);
+      traceLogin('bridge.relay.connect.complete');
     } finally {
       state.assertSessionOperation(generation);
     }
     state.myPubkey.set(state.session?.pubKeyHex ?? null);
     state.myLoginMethod.set(state.session?.loginMethod ?? null);
     state.isLoggedIn.set(true);
+    traceLogin('bridge.logged-in');
     // Idempotent with the `isLoggedIn` subscription; needed for an account
     // switch, where the flag stays true and the subscription doesn't fire.
     t.pings.recordRelayUse(sessionRelay);

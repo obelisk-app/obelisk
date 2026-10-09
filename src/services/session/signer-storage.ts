@@ -12,17 +12,23 @@
  * is all its QR retry needs. A "remembered" nsec is dropped outright, so the
  * checkbox (hidden by CSS in `globals.css`) can keep nothing even if ticked.
  */
+import { traceLogin } from './login-trace';
 import { SIGNER_STORAGE_KEY_NSEC, type SignerStorage } from '@nostr-wot/ui';
 
 export function createMemorySignerStorage(): SignerStorage {
   const items = new Map<string, string>();
   return {
-    getItem: (key) => items.get(key) ?? null,
+    getItem: (key) => {
+      traceLogin('sdk.storage.read', { present: items.has(key) });
+      return items.get(key) ?? null;
+    },
     setItem: (key, value) => {
       if (key === SIGNER_STORAGE_KEY_NSEC) return;
+      traceLogin('sdk.storage.write');
       items.set(key, value);
     },
     removeItem: (key) => {
+      traceLogin('sdk.storage.remove');
       items.delete(key);
     },
   };

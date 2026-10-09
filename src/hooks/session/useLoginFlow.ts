@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { profileUrl } from '@/services/social/note-links';
 import { useSessionActions } from '@/hooks/session/useSession';
 import type { GeneratedProfileDraft, LoginArgs } from '@/types/session/login';
 import { isTransientNip46Error } from '@/utils/nip46/signer-link';
+import { installLoginTrace } from '@/services/session/login-trace-sdk';
+import { traceLogin, traceLoginFailure } from '@/services/session/login-trace';
 import { errorText } from '@/utils/errors/error-text';
 
 
@@ -18,6 +20,7 @@ import { errorText } from '@/utils/errors/error-text';
  * connected" error.
  */
 export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; onClose?: () => void }) {
+  useLayoutEffect(installLoginTrace, []);
   const { login, publishGeneratedProfile } = useSessionActions();
   const router = useRouter();
   const t = useTranslations();
@@ -46,16 +49,19 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
   }, []);
 
   const handleSdkError = (message: string) => {
+    traceLogin('modal.sdk-error', { reason: traceLoginFailure(message), retry: isTransientNip46Error(message) });
     if (!isTransientNip46Error(message)) return;
     setHideTransientError(true);
     if (retryTimer.current) clearTimeout(retryTimer.current);
     retryTimer.current = setTimeout(() => {
+      traceLogin('modal.qr-auto-retry', { retry: nip46Retry + 1 });
       setNip46Retry((current) => current + 1);
       setHideTransientError(false);
     }, Math.min(5_000, 250 * 2 ** nip46Retry));
   };
 
   const onLogin = async ({ pubkey, method, nsec, bunkerUri, clientNsec, signer }: LoginArgs) => {
+    traceLogin('modal.sdk-login', { method, pairedSigner: Boolean(signer), clientKeyPresent: Boolean(clientNsec) });
     const args: LoginArgs = {
       method,
       pubkey,
@@ -69,8 +75,15 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
       setGeneratedLogin(args);
       return;
     }
-    await login(args);
-    onSuccess?.();
+    traceLogin('session.login.start', { method });
+    try {
+      await login(args);
+      traceLogin('session.login.success', { method });
+      onSuccess?.();
+    } catch (error) {
+      traceLogin('session.login.failure', { method, reason: traceLoginFailure(error) });
+      throw error;
+    }
   };
 
   /** Finish a generated-key signup: only now does the bridge get the signer. */
