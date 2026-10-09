@@ -42,6 +42,24 @@ warmBridgeModules();
 installFakeRelayPage();
 
 describe('the bridge on the RelayHub', () => {
+  it('authenticates the restored account on a fresh relay socket after reload', async () => {
+    const sk = generateSecretKey();
+    const pk = getPublicKey(sk);
+    const signEvent = vi.fn(async (template: EventTemplate): Promise<VerifiedEvent> => finalizeEvent(template, sk));
+    Object.defineProperty(window, 'nostr', { configurable: true, value: { signEvent, getPublicKey: async () => pk } });
+    localStorage.setItem('obelisk-dex/session', JSON.stringify({
+      v: 2, pubKeyHex: pk, loginMethod: 'nip07', relayUrl: ACTIVE_RELAY,
+    }));
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const restoring = getBridge();
+    await settle();
+    const bridge = await restoring;
+    await settle();
+    expect(bridge.isLoggedIn.get()).toBe(true);
+    expect(authPrompts(signEvent)).toBe(1);
+    expect(FakeRelaySocket.forUrl(ACTIVE_RELAY).at(-1)?.authed).toBe(true);
+  });
+
   it('asks the signer exactly once per socket generation, across a drop and across the retries that used to rebuild the pool', async () => {
     const sk = generateSecretKey();
     const pk = getPublicKey(sk);

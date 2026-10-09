@@ -371,6 +371,37 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     vi.useRealTimers();
   });
 
+  it('does not repeat encryption when pagehide and cleanup run during signer approval', async () => {
+    let approve!: (value: string) => void;
+    const encrypt = vi.spyOn(signer, 'nip44Encrypt').mockImplementationOnce(() => new Promise((resolve) => { approve = resolve; }));
+    const stop = startGroupsRelaySync('wss://relay.test', ['g1']);
+    useReadStateStore.getState().setGroupCursor('g1', 100);
+    await vi.advanceTimersByTimeAsync(8_000);
+    window.dispatchEvent(new Event('pagehide'));
+    stop();
+    expect(encrypt).toHaveBeenCalledTimes(1);
+    approve('encrypted');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(publishMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('saves the newest cursor after an in-flight approval instead of losing it', async () => {
+    let approve!: (value: string) => void;
+    const encrypt = vi.spyOn(signer, 'nip44Encrypt').mockImplementationOnce(() => new Promise((resolve) => { approve = resolve; }));
+    const stop = startGroupsRelaySync('wss://relay.test', ['g1']);
+    activeCleanups.push(stop);
+    useReadStateStore.getState().setGroupCursor('g1', 100);
+    await vi.advanceTimersByTimeAsync(8_000);
+    useReadStateStore.getState().setGroupCursor('g1', 200);
+    await vi.advanceTimersByTimeAsync(8_000);
+    expect(encrypt).toHaveBeenCalledTimes(1);
+    approve('encrypted');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(encrypt).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(encrypt.mock.calls[1][1]).groups.g1.lastReadAt).toBe(200);
+    expect(publishMock).toHaveBeenCalledTimes(2);
+  });
+
   it('does not publish before the 8s window elapses', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
     useReadStateStore.getState().setGroupCursor('g1', 100);

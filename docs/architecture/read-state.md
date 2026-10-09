@@ -338,11 +338,12 @@ The engine subscribes to `useReadStateStore` cursor changes filtered to
 its scope. On any change:
 
 1. Schedule `setTimeout(flush, 8000)`; cancel any prior pending timer.
-2. `flush()` builds the JSON payload, calls `wrapForSelf({ kind: 30078, tags: [['d', dTag]], content }, signer)`,
-   and `bridge.publishEvent(wrap, { extraRelays: [...], mode: 'replace' })`
-   so the publish targets ONLY the scoped relays.
-3. Cache the freshly-published payload to `bridgeCache` so reload paints
-   the latest state without waiting for the relay round trip.
+2. `flush()` builds the JSON payload. Groups use self-encrypted NIP-44 content in a signed, replaceable kind-30078 event on the group's relay. DMs use `wrapForSelf` and `publishSignedEvent` on the configured DM relays, preserving the wrapper's ephemeral signature.
+3. Cache the freshly-published payload so reload paints the latest state without waiting for the relay round trip.
+
+Only one save per watcher may await signer approval at a time. Page-hide and cleanup coalesce with that save rather than requesting encryption again. New cursor advances received during approval are saved afterward; hiding the page alone does not retry a rejected request.
+
+These signer operations support cross-device unread synchronization. Local read tracking does not require encryption or signing. A remote signer can ask to encrypt an outgoing snapshot, decrypt an incoming snapshot, and sign application data (kind 30078); these are separate from permission to decrypt DM contents.
 
 ### NIP-44 + signing
 

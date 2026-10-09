@@ -7,7 +7,6 @@
  */
 import { traceLogin } from '@/services/session/login-trace';
 import { CodedError } from '@/utils/errors/codes';
-import { SESSION_IDENTITY_ID, type Identity } from '@nostr-wot/relay/hub';
 import { resetAllClientState } from '@/services/common/reset';
 import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/store/notifications';
 import { ensureChannelPrefsStoreForAccount } from '@/store/chat/channel-prefs';
@@ -19,8 +18,8 @@ import type { PerGroupReqs } from './fanout';
 import type { LifecycleTargets } from './lifecycle';
 import { SessionPersistence } from './persistence';
 import { clearForLogout, resetSubscriptionState } from './reset';
-import { ANONYMOUS_IDENTITY } from '@/constants/nostr-bridge/session';
 import { restoreSession } from './restore';
+import { installSessionIdentity } from './identity';
 
 export interface LoginDeps {
   connect(perGroup?: PerGroupReqs | null): Promise<void>;
@@ -181,24 +180,6 @@ export class LoginModule {
   }
 
   /**
-   * The hub's view of the session: who signs NIP-42, and whether a signature
-   * is a prompt. Installed on login; the anonymous identity replaces it on
-   * logout. The hub rebinds (closes and reopens) the session's sockets only
-   * when the pubkey changes, so a re-login with the same key keeps them.
-   */
-  private sessionIdentity(): Identity {
-    const session = this.t.state.session;
-    if (!session) return ANONYMOUS_IDENTITY;
-    return {
-      id: SESSION_IDENTITY_ID,
-      pubkey: session.pubKeyHex,
-      signer: (evt) => this.t.signSessionAuth(evt),
-      authPolicy: 'auth-when-challenged',
-      localSigner: session.loginMethod === 'nsec',
-    };
-  }
-
-  /**
    * The session changed: hand the hub the new identity, then restart the
    * subscription bookkeeping. The hub closes and reopens the session's
    * sockets only when the pubkey differs from the one they were bound to (a
@@ -208,7 +189,7 @@ export class LoginModule {
    * replaced: that rebuild was what multiplied signer prompts.
    */
   private resetSessionState(): PerGroupReqs {
-    this.t.hub.setIdentity(this.sessionIdentity());
+    installSessionIdentity(this.t);
     return resetSubscriptionState(this.t);
   }
 

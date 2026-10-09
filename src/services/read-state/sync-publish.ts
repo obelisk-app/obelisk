@@ -70,6 +70,8 @@ export function watchAndPublish(
   if (!impl) return () => {};
 
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let inFlight = false;
+  let flushQueued = false;
   let lastFingerprint = selectFingerprint();
   // Tracks the fingerprint that was last *published*. On flush we bump it
   // forward; if cleanup/page-hide fires while the fingerprint matches the
@@ -81,6 +83,11 @@ export function watchAndPublish(
 
   const flush = async () => {
     timer = null;
+    if (inFlight) {
+      flushQueued = true;
+      return;
+    }
+    if (lastFingerprint === lastPublishedFingerprint) return;
     // Background lane: read-state sync is invisible housekeeping. It must never
     // sit in front of a signature the user is waiting on. (`getNipSigner`
     // defaults to `interactive` because it also backs the zap/NWC flow.)
@@ -90,6 +97,7 @@ export function watchAndPublish(
     if (!payload) return;
     const fpAtFlush = lastFingerprint;
     const createdAt = Math.floor(Date.now() / 1000);
+    inFlight = true;
     try {
       await publishState(impl, signer, opts, payload, createdAt);
       lastPublishedFingerprint = fpAtFlush;
@@ -100,6 +108,13 @@ export function watchAndPublish(
     } catch {
       // Publish errors are best-effort; the next cursor advance will
       // schedule another attempt. Avoid surfacing transient relay errors.
+    } finally {
+      inFlight = false;
+      const followUp = flushQueued && lastFingerprint !== fpAtFlush;
+      flushQueued = false;
+      // Coalesce changes made during approval without retrying a rejected
+      // snapshot just because switching to the signer hid the page.
+      if (followUp && impl.getNipSigner('background')?.pubkey === signer.pubkey) void flush();
     }
   };
 

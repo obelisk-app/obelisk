@@ -15,6 +15,7 @@ import { resetWrapLedger } from '../cache/wrap-ledger';
 import type { LifecycleTargets } from './lifecycle';
 import type { LoginDeps } from './login';
 import type { SessionPersistence } from './persistence';
+import { installSessionIdentity } from './identity';
 
 export interface RestoreDeps extends Pick<LoginDeps, 'connect' | 'restoreConfiguredRelays' | 'ensureRelayInList'> {
   /** The record on disk: opens the sealed secrets, migrates a plaintext record, writes it back. */
@@ -45,6 +46,7 @@ export async function restoreSession(t: LifecycleTargets, deps: RestoreDeps): Pr
     parsed.relayUrl = normalizeConfiguredRelayUrl(parsed.relayUrl);
     if (!isImportableRelayUrl(parsed.relayUrl)) parsed.relayUrl = DEFAULT_RELAY;
     state.session = parsed;
+    installSessionIdentity(t);
     if (parsed.relayUrl !== storedRelayUrl) deps.store.persist();
     t.browserEvents.wire();
     state.currentRelayUrl.set(parsed.relayUrl);
