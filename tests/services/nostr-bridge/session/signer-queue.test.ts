@@ -23,22 +23,22 @@ describe('signer queue', () => {
     resetSignerQueue();
   });
 
-  it('pipelines four bunker requests and correlates out-of-order results', async () => {
-    const gates = Array.from({ length: 6 }, () => deferred<number>());
+  it('pipelines ten bunker requests and correlates out-of-order results', async () => {
+    const gates = Array.from({ length: 12 }, () => deferred<number>());
     const started: number[] = [];
     const results = gates.map((gate, i) => enqueueSignerOp('interactive', 'bunker-sign', () => {
       started.push(i);
       return gate.promise;
     }, { transport: 'bunker' }));
     await Promise.resolve();
-    expect(started).toEqual([0, 1, 2, 3]);
+    expect(started).toEqual(Array.from({ length: 10 }, (_, i) => i));
     gates[2].resolve(2);
     await results[2];
     await Promise.resolve();
     await Promise.resolve();
-    expect(started).toContain(4);
+    expect(started).toContain(10);
     gates.forEach((gate, i) => gate.resolve(i));
-    expect(await Promise.all(results)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(await Promise.all(results)).toEqual(Array.from({ length: 12 }, (_, i) => i));
   });
 
   it('keeps background bunker traffic to one slot and starts interactive work immediately', async () => {

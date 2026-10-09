@@ -25,7 +25,7 @@ function setup() {
 }
 
 describe('remote login ownership', () => {
-  it('runs a burst through the bunker adapter with four concurrent operations', async () => {
+  it('runs a burst through the bunker adapter with ten concurrent operations', async () => {
     const { signer } = setup();
     const bunker = new BunkerModule({ session: () => null });
     bunker.signer = signer as unknown as BunkerSigner;
@@ -39,7 +39,7 @@ describe('remote login ownership', () => {
       if (i === 3) throw new Error('one request refused');
       return i;
     })));
-    expect(peak).toBe(4);
+    expect(peak).toBe(10);
     expect(active).toBe(0);
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(99);
     expect(results[3]).toMatchObject({ status: 'rejected' });

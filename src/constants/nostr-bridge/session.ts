@@ -26,7 +26,7 @@ export const LEGACY_RELAYS_KEY = 'obeliskord/relays';
 /** Extension operations remain serialized to avoid overlapping permission dialogs. */
 export const MAX_IN_FLIGHT = 1;
 /** Bunker RPCs carry independent request IDs and may settle out of order. */
-export const BUNKER_MAX_IN_FLIGHT = 4;
+export const BUNKER_MAX_IN_FLIGHT = 10;
 /** Leave capacity for sends and authentication while reading encrypted history. */
 export const BUNKER_BACKGROUND_MAX_IN_FLIGHT = 1;
 
