@@ -29,6 +29,7 @@ import type { VoiceMetrics } from './metrics';
 import type { VoicePresence, VoiceSignalPayload } from '@/types/voice/protocol';
 import { transitiveParticipants, type VoiceTransport } from './transport';
 import { DiscoveryEngine } from './discovery';
+import { MeshDialBudget } from './mesh-dial-budget';
 import { MeshAnnouncer } from './mesh-announce';
 import { pushVoiceDebug } from './debug';
 import { recordRelayAuthWait, reserveVoiceRelayCapacity } from './relay-prep';
@@ -64,6 +65,8 @@ export class MeshSession implements MeshSignalHost, MeshDialHost {
   /** Whom to dial under the cap, and how a peer is torn down. */
   private readonly dialer: MeshDialer;
 
+  private readonly dialBudget = new MeshDialBudget(() => this.runDialLoop());
+
   private rosterUnsub: (() => void) | null = null;
   private signalsUnsub: (() => void) | null = null;
   private voiceRelayCapacityRelease: (() => void) | null = null;
@@ -95,6 +98,7 @@ export class MeshSession implements MeshSignalHost, MeshDialHost {
 
   // ── MeshPeerHost / MeshSignalHost / MeshDialHost ───────────────────────
 
+  acquirePeerDial(pubkey: string): boolean { return this.dialBudget.acquire(pubkey); }
   isJoined(): boolean { return this.deps.isJoined(); }
   sfuPubkey(): string | null { return this.deps.sfuPubkey(); }
   isKnownSfu(pubkey: string): boolean { return this.known.isKnownSfu(pubkey); }
@@ -269,6 +273,7 @@ export class MeshSession implements MeshSignalHost, MeshDialHost {
   }
 
   private stopTimers(): void {
+    this.dialBudget.clear();
     this.announcer.stop();
     this.dialer.stop();
   }

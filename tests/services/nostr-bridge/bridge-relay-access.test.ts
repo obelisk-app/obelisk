@@ -309,7 +309,8 @@ describe('nostr-bridge', () => {
     bridge.subscribeMessages(groupId, () => {});
     await flush();
 
-    expect(findMessageSubs()).toHaveLength(1);
+    // A fresh holder queues behind the socket-wide quota cooldown.
+    expect(findMessageSubs()).toHaveLength(0);
     expect(impl['messageSubscribedGroups'].has(groupId)).toBe(true);
   });
 

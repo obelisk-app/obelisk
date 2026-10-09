@@ -74,7 +74,7 @@ export function subscribeVoice(
     ({ onQuotaOrRateLimitClose, alive }) => b.subscribeVoiceFilterWatched(
       filter,
       (ev) => { alive(); onEvent(ev); },
-      { ...subscribeOpts(options), onQuotaOrRateLimitClose, onEose: alive, answerAuth: true },
+      { ...subscribeOpts(options), onQuotaOrRateLimitClose, onEose: () => alive('eose'), answerAuth: true },
     ),
     {
       onDegraded: (degraded) => {

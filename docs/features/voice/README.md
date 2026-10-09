@@ -85,3 +85,13 @@ NEXT_PUBLIC_TURN_CREDENTIAL=<credential>
 These `NEXT_PUBLIC_*` values are embedded in the browser bundle, so rebuild
 after changing them. Keep `NEXT_PUBLIC_FORCE_RELAY=0`; set it to `1` only
 for a relay-only connectivity test.
+
+## Relay traffic and retry limits
+
+Mesh connection rebuilds allow an initial handshake and one immediate replacement, then wait 1, 2, 4, 8, 16 and at most 30 seconds between attempts per peer. Repeated roster or reset signals cannot bypass that budget. A connection that survives a minute starts a fresh ladder; leaving cancels its retry timers. Pending signaling retries check that their Peer still owns the connection, so a replaced connection cannot keep publishing old negotiation messages.
+
+Quota-closed roster and signaling subscriptions schedule one recovery timer per generation. Duplicate close callbacks and late callbacks from a retired subscription are ignored. An EVENT proves recovery; EOSE alone must remain healthy for 30 seconds before resetting backoff because nostr-tools also emits EOSE before a CLOSED refusal.
+
+For a suspected flood, run `console.table(window.__obeliskRelayTraffic())` in the browser console after a full reload. It reports the latest 64 hub sockets: sent/received frame counts, UTF-8 bytes, frame verbs and closed state. Compare two snapshots over a measured interval and inspect a row's `frames` map to distinguish outgoing REQ, EVENT and AUTH from incoming EVENT, OK or CLOSED. Counters retain no message contents, public keys, filters or URL tokens. They cover the app RelayHub; bunker signer sockets and direct SFU RPC are separate. Relay log lines are not equivalent to client requests: correlate repeated server lines with these wire counts before assigning a cause.
+
+The relay SDK also enforces a single budget across live subscriptions and one-shot queries. Previously queries bypassed that budget, and quota-close cleanup could immediately admit a queued subscription before the quota penalty took effect. Both paths are now covered by load regressions. A quota-refused socket pauses new REQs for 60 seconds; pending queries that reach their deadline expire without sending. Accepted live subscriptions keep receiving during the pause.

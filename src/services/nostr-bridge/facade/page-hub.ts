@@ -7,7 +7,7 @@
  * same way. A test that wants its own transport creates the hub before
  * importing either (`relay-hub-bridge.test.ts` does).
  */
-import { TextCoercingWebSocket } from '@nostr-wot/data';
+import { MeasuredRelayWebSocket } from '../relay/traffic';
 import { getRelayHub, type RelayHub } from '@nostr-wot/relay/hub';
 import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '@/constants/nostr-bridge/facade';
 
@@ -16,7 +16,7 @@ import { CONNECT_HANDSHAKE_TIMEOUT_MS } from '@/constants/nostr-bridge/facade';
  * nostr-tools' default parser crashes on any non-string payload, silently
  * dropping events; TextCoercingWebSocket UTF-8-decodes binary frames first.
  */
-export const PAGE_WEBSOCKET = TextCoercingWebSocket as unknown as typeof WebSocket;
+export const PAGE_WEBSOCKET = MeasuredRelayWebSocket as unknown as typeof WebSocket;
 
 export function pageRelayHub(): RelayHub {
   return getRelayHub({

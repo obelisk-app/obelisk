@@ -31,6 +31,7 @@ export interface MeshPeerHost {
   readonly localMedia: LocalMedia;
   /** Pubkeys whose `Peer` is being constructed right now (re-entrancy guard). */
   readonly openingPeers: Set<string>;
+  acquirePeerDial(pubkey: string): boolean;
   isJoined(): boolean;
   sfuPubkey(): string | null;
   isKnownSfu(pubkey: string): boolean;
@@ -76,6 +77,7 @@ export function openMeshPeer(host: MeshPeerHost, remotePubkey: string): void {
   // simple-peer path. Don't construct a `Peer` for it.
   const sfuPubkey = host.sfuPubkey();
   if (sfuPubkey && remotePubkey === sfuPubkey) return;
+  if (!host.acquirePeerDial(remotePubkey)) return;
   // Lexicographic roles give exactly one simple-peer initiator per pair.
   // EXCEPTION: peers that are an SFU are ALWAYS treated as remote-impolite
   // (so we are polite). werift's SFU implementation cannot roll back its
@@ -101,7 +103,11 @@ export function openMeshPeer(host: MeshPeerHost, remotePubkey: string): void {
       ...SIGNER_PEER_BUDGET[host.signer],
       bootstrapRecvOnlyMedia: shouldKickRecvOnly,
       send: (payload) => withRateLimitBackoff(
-        () => host.transport.sendSignal(host.channelId, remotePubkey, payload),
+        () => {
+          // A retry that outlived its connection must never publish stale SDP.
+          if (payload.type !== 'bye' && (!host.isJoined() || room.peers.get(remotePubkey) !== peer)) return Promise.resolve();
+          return host.transport.sendSignal(host.channelId, remotePubkey, payload);
+        },
         { metrics: host.metrics },
       ),
       // SFU peers don't speak our control-channel protocol; only mesh

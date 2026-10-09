@@ -81,4 +81,28 @@ describe('resubscribeOnQuotaClose', () => {
     expect(opened).toHaveLength(2);
     expect(onDegraded).toHaveBeenCalledTimes(1);
   });
+  it('coalesces repeated close notifications and ignores late EOSE while waiting', () => {
+    const stop = resubscribeOnQuotaClose(open, { random: () => 0.5 });
+    for (let i = 0; i < 1000; i++) opened[0].onQuotaOrRateLimitClose();
+    opened[0].alive();
+    vi.advanceTimersByTime(5_000);
+    expect(opened).toHaveLength(2);
+    stop();
+    vi.advanceTimersByTime(120_000);
+    expect(opened).toHaveLength(2);
+    expect(closes[0]).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reset backoff for synthetic EOSE immediately followed by another refusal', () => {
+    resubscribeOnQuotaClose(open, { random: () => 0.5 });
+    opened[0].onQuotaOrRateLimitClose();
+    vi.advanceTimersByTime(5_000);
+    opened[1].alive('eose');
+    opened[1].onQuotaOrRateLimitClose();
+    vi.advanceTimersByTime(5_000);
+    expect(opened).toHaveLength(2);
+    vi.advanceTimersByTime(5_000);
+    expect(opened).toHaveLength(3);
+  });
+
 });

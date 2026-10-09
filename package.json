@@ -41,7 +41,7 @@
     "@nostr-wot/data": "^0.7.0",
     "@nostr-wot/dm": "^0.7.1",
     "@nostr-wot/pq": "^0.3.0",
-    "@nostr-wot/relay": "^0.2.0",
+    "@nostr-wot/relay": "^0.2.1",
     "@nostr-wot/signers": "^1.2.2",
     "@nostr-wot/ui": "^0.8.2",
     "@nostr-wot/wallet": "^0.4.1",
@@ -83,5 +83,8 @@
     "tsx": "^4.20.4",
     "typescript": "^5",
     "vitest": "^4.1.3"
+  },
+  "overrides": {
+    "@nostr-wot/relay": "$@nostr-wot/relay"
   }
 }

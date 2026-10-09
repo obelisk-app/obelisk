@@ -69,7 +69,7 @@ export class VoicePresenceModule {
         relays,
         { kinds: [KIND_VOICE_PRESENCE], '#t': ['obelisk-voice-presence'] } as Filter,
         (ev) => { alive(); this.ingestMeshVoicePresence(ev); },
-        alive,
+        () => alive('eose'),
         { affectsRelayAccess: false, onQuotaOrRateLimitClose },
       );
       return () => sub.close();

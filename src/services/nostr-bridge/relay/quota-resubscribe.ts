@@ -14,7 +14,7 @@ export interface QuotaResubscribeHooks {
   /** Pass as `onQuotaOrRateLimitClose` to the watched subscription. */
   onQuotaOrRateLimitClose: () => void;
   /** Call on any EVENT or EOSE: the relay is serving us again. */
-  alive: () => void;
+  alive: (proof?: 'event' | 'eose') => void;
 }
 
 export function resubscribeOnQuotaClose(
@@ -32,6 +32,7 @@ export function resubscribeOnQuotaClose(
   let degraded = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let current: (() => void) | null = null;
+  let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
 
   const setDegraded = (next: boolean) => {
     if (degraded === next) return;
@@ -41,9 +42,19 @@ export function resubscribeOnQuotaClose(
 
   const start = () => {
     const gen = ++generation;
-    current = open({
+    let rejected = false;
+    const recover = () => {
+      if (closed || gen !== generation || rejected) return;
+      attempt = 0;
+      setDegraded(false);
+    };
+    const opened = open({
       onQuotaOrRateLimitClose: () => {
-        if (closed || gen !== generation) return;
+        if (closed || gen !== generation || rejected) return;
+        rejected = true;
+        if (recoveryTimer) clearTimeout(recoveryTimer);
+        recoveryTimer = null;
+        current?.();
         current = null;
         setDegraded(true);
         const base = QUOTA_RESUBSCRIBE_DELAYS_MS[Math.min(attempt, QUOTA_RESUBSCRIBE_DELAYS_MS.length - 1)];
@@ -55,12 +66,19 @@ export function resubscribeOnQuotaClose(
           if (!closed) start();
         }, delay);
       },
-      alive: () => {
-        if (closed || gen !== generation) return;
-        attempt = 0;
-        setDegraded(false);
+      alive: (proof = 'event') => {
+        if (closed || gen !== generation || rejected) return;
+        // nostr-tools also emits EOSE immediately before CLOSED. Only an
+        // event or a sustained quiet subscription proves recovery.
+        if (proof === 'event') recover();
+        else if (!recoveryTimer) recoveryTimer = setTimeout(() => {
+          recoveryTimer = null;
+          recover();
+        }, 30_000);
       },
     });
+    if (rejected || closed) opened();
+    else current = opened;
   };
 
   start();
@@ -69,6 +87,8 @@ export function resubscribeOnQuotaClose(
     closed = true;
     if (timer) clearTimeout(timer);
     timer = null;
+    if (recoveryTimer) clearTimeout(recoveryTimer);
+    recoveryTimer = null;
     current?.();
     current = null;
   };
