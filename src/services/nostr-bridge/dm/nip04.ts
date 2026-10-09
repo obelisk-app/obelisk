@@ -35,6 +35,8 @@ export interface Nip04Deps {
   holdLocked(ev: NostrEvent): boolean;
   /** The encrypted store already holds this event's message. */
   isStored(wireId: string): boolean;
+  /** Retain a failed decrypt for user-triggered retry, without polling the signer. */
+  onDecryptFailure?(ev: NostrEvent): void;
   /** A message arrived while locked: alert with the sender, no text (`dm/thread.ts`). */
   alertLocked(ev: NostrEvent): void;
   /** Keep our own sent message in the encrypted store, so its echo is not decrypted again. */
@@ -110,7 +112,10 @@ export class Nip04Module {
       // on one they just sent. A backlog of these must not delay a signature.
       plaintext = await this.deps.decrypt(counterparty, ev.content, 'background');
     } catch {
-      return; // can't decrypt → skip silently
+      if (this.ctx.session()?.pubKeyHex === me && this.deps.generation() === generation) {
+        this.deps.onDecryptFailure?.(ev);
+      }
+      return;
     }
     if (this.ctx.session()?.pubKeyHex !== me || this.deps.generation() !== generation) return;
     this.deps.ingestDM({

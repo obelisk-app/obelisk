@@ -40,6 +40,8 @@ export interface DmInboxDeps {
   holdLocked(ev: NostrEvent): boolean;
   /** The encrypted store already holds this wrap's message: no signer call needed. */
   isStored(wireId: string): boolean;
+  /** Retain a failed decrypt for user-triggered retry, without polling the signer. */
+  onDecryptFailure?(ev: NostrEvent): void;
 }
 
 export class DmInboxModule {
@@ -181,7 +183,10 @@ export class DmInboxModule {
     try {
       ({ message, senderPubkey } = await unwrapGiftWrap(signer, ev));
     } catch {
-      return; // can't decrypt/verify → skip silently, same as the NIP-04 path
+      if (this.ctx.session()?.pubKeyHex === me && this.deps.generation() === generation) {
+        this.deps.onDecryptFailure?.(ev);
+      }
+      return;
     }
     if (this.ctx.session()?.pubKeyHex !== me || this.deps.generation() !== generation) return;
     // The WoT / mute / block gate, re-applied to the real sender. The

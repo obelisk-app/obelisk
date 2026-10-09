@@ -64,6 +64,21 @@ describe('DmStoreModule', () => {
     await vi.waitFor(() => expect(reingest).toHaveBeenCalledTimes(3));
   });
 
+  it('retains failed messages for explicit retry without retrying on relay duplicates', async () => {
+    const { store, reingest } = build(fakeSigner());
+    const ev = wrap('retry');
+    await store.unlock();
+    store.hold(ev, 'wrap', true);
+    expect(store.lock.get().failedDecryptions).toBe(1);
+    expect(store.hold(ev, 'wrap')).toBe(true);
+    expect(reingest).not.toHaveBeenCalled();
+    await store.unlock();
+    await vi.waitFor(() => expect(reingest).toHaveBeenCalledTimes(1));
+    expect(store.lock.get().failedDecryptions ?? 0).toBe(0);
+    store.attach(null);
+    expect(store.lock.get()).toEqual({ status: 'locked', unopened: [] });
+  });
+
   it('keeps reporting queued message loading after the storage key is unlocked', async () => {
     let finish!: () => void;
     const reingest = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));

@@ -87,6 +87,7 @@
     "unavailable": "Ainda não disponível para esta mensagem."
   },
   "lock": {
+    "messagesFailed": "{count, plural, one {Não foi possível descriptografar uma mensagem.} other {Não foi possível descriptografar # mensagens.}} Tente novamente quando seu assinador estiver pronto.",
     "preview": "Mensagem criptografada · abra a conversa para ler",
     "discover": "Descobrir conversas criptografadas",
     "loading": "Abrindo mensagens: faltam {count}.",

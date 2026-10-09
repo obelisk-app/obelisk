@@ -87,6 +87,7 @@
     "unavailable": "Todavía no está disponible para este mensaje."
   },
   "lock": {
+    "messagesFailed": "{count, plural, one {No se pudo descifrar un mensaje.} other {No se pudieron descifrar # mensajes.}} Probá de nuevo cuando tu firmante esté listo.",
     "preview": "Mensaje encriptado · abrí el chat para leer",
     "discover": "Descubrir chats encriptados",
     "loading": "Abriendo mensajes: quedan {count}.",

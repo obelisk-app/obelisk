@@ -28,6 +28,25 @@ describe('DmUnlock', () => {
     expect(unlockDirectMessages).toHaveBeenCalledTimes(1);
   });
 
+  it('offers an explicit retry for message failures after the store is unlocked', () => {
+    setPreference('directMessagesEnabled', true);
+    const { unlockDirectMessages } = mount({ status: 'unlocked', unopened: [], failedDecryptions: 2 });
+    expect(screen.getByTestId('dm-unlock-failed')).toHaveTextContent('2 messages could not be decrypted');
+    expect(unlockDirectMessages).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('dm-unlock-retry'));
+    expect(unlockDirectMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers discovery from a known thread when unidentified envelopes remain', () => {
+    setPreference('directMessagesEnabled', true);
+    const unlockDirectMessages = vi.fn(async () => undefined);
+    const bridge = fakeBridge({ dmLock: { status: 'unlocked', unopened: [1000] } }, { unlockDirectMessages });
+    renderWithBridge(<DmUnlock peer="alice" />, bridge);
+    expect(unlockDirectMessages).toHaveBeenCalledWith('alice');
+    fireEvent.click(screen.getByTestId('dm-discover'));
+    expect(unlockDirectMessages).toHaveBeenLastCalledWith();
+  });
+
   it('asks nothing while DMs are turned off', () => {
     setPreference('directMessagesEnabled', false);
     const { unlockDirectMessages } = mount({ status: 'locked', unopened: [] });

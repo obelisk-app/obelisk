@@ -85,6 +85,19 @@ async function unlockAndRead(bridge: Awaited<ReturnType<typeof firstVisit>>['bri
 }
 
 describe('encrypted DM store: nothing in the clear on disk', () => {
+  it.each(['nip04', 'nip17'] as const)('retries a failed %s decrypt without reloading or refetching', async (protocol) => {
+    const { alice, ext, bridge, read } = await firstVisit();
+    if (protocol === 'nip04') ext.nip04.decrypt.mockRejectedValueOnce(new Error('signer unavailable'));
+    else ext.nip44.decrypt.mockRejectedValueOnce(new Error('signer unavailable'));
+    await bridge.unlockDirectMessages();
+    await vi.waitFor(() => expect(bridge.dmLock.get().failedDecryptions).toBe(1));
+    await vi.waitFor(() => expect(bridge.dmLock.get().pendingDecryptions ?? 0).toBe(0));
+    expect(read()[alice.pkHex]).toHaveLength(2);
+    await bridge.unlockDirectMessages();
+    expect(await threadTexts(read, alice.pkHex, 3)).toEqual(expect.arrayContaining([FIRST, SECOND, OLD_STYLE]));
+    expect(bridge.dmLock.get().failedDecryptions ?? 0).toBe(0);
+  });
+
   it('keeps received, read and sent DMs only as sealed boxes', async () => {
     const { alice, bridge, read } = await firstVisit();
     expect(await unlockAndRead(bridge, read, alice)).toEqual(expect.arrayContaining([FIRST, SECOND, OLD_STYLE]));

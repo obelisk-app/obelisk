@@ -89,6 +89,7 @@ export class DmModules {
       ingestDM,
       settle: dmSettle,
       holdLocked: holdLocked('nip04'),
+      onDecryptFailure: (ev) => { this.dmStore.hold(ev, 'nip04', true); },
       isStored,
       alertLocked: (ev) => this.dmThread.alertLocked(ev),
       rememberOwn,
@@ -110,6 +111,7 @@ export class DmModules {
       ingestCall: (message, sender) => this.dmCalls.ingest(message, sender),
       ingestDM,
       holdLocked: holdLocked('wrap'),
+      onDecryptFailure: (ev) => { this.dmStore.hold(ev, 'wrap', true); },
       isStored,
     });
   }

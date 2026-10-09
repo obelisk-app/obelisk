@@ -52,6 +52,8 @@ export interface DmLockState {
   readonly status: DmLockStatus;
   /** Held messages still being opened after the local storage key was unlocked. */
   readonly pendingDecryptions?: number;
+  /** Failed message decryptions retained for an explicit retry. */
+  readonly failedDecryptions?: number;
   /** Created-at (unix ms) of each gift wrap held while locked that the store does not hold. */
   readonly unopened: ReadonlyArray<number>;
 }
@@ -84,7 +86,7 @@ export class DmStoreModule {
   /** The stored wire ids are in `known`: until then a held wrap may be one the store already has. */
   private indexed = false;
   private indexing: Promise<void> = Promise.resolve();
-  private readonly held = new Map<string, { ev: NostrEvent; kind: HeldKind }>();
+  private readonly held = new Map<string, { ev: NostrEvent; kind: HeldKind; failed?: boolean }>();
   private deferred: Array<() => void> = [];
   private unlocking: Promise<void> | null = null;
   private writes: Promise<void> = Promise.resolve();
@@ -125,13 +127,14 @@ export class DmStoreModule {
   }
 
   /** While locked, keep `ev` for the unlock instead of opening it. True when held. */
-  hold(ev: NostrEvent, kind: HeldKind): boolean {
-    if (!this.pubkey || (this.isUnlocked() && this.mayOpen(ev, kind))) return false;
+  hold(ev: NostrEvent, kind: HeldKind, failed = false): boolean {
+    failed ||= this.held.get(ev.id)?.failed === true;
+    if (!this.pubkey || (!failed && this.isUnlocked() && this.mayOpen(ev, kind))) return false;
     if (!this.held.has(ev.id) && this.held.size >= MAX_HELD) {
       const oldest = this.held.keys().next().value;
       if (oldest !== undefined) this.held.delete(oldest);
     }
-    this.held.set(ev.id, { ev, kind });
+    this.held.set(ev.id, { ev, kind, failed });
     this.recount();
     return true;
   }
@@ -219,10 +222,13 @@ export class DmStoreModule {
   private recount(): void {
     if (!this.indexed) return;
     const unopened: number[] = [];
-    for (const { ev, kind } of this.held.values()) {
+    let failedDecryptions = 0;
+    for (const { ev, kind, failed } of this.held.values()) {
+      if (failed) failedDecryptions++;
       if (kind === 'wrap' && !this.known.has(ev.id)) unopened.push(ev.created_at * 1000);
     }
-    this.lock.set({ ...this.lock.get(), unopened });
+    const { failedDecryptions: _oldFailures, ...state } = this.lock.get();
+    this.lock.set({ ...state, unopened, ...(failedDecryptions ? { failedDecryptions } : {}) });
   }
 
   /**

@@ -12,7 +12,7 @@ import { useDmUnlock } from '@/hooks/chat/dm/unlock/useDmUnlock';
  */
 export function DmUnlock({ className = '', peer }: { className?: string; peer?: string }) {
   const t = useTranslations();
-  const { status, pendingDecryptions, unopened, enabled, retry } = useDmUnlock(peer);
+  const { status, pendingDecryptions, failedDecryptions, unopened, enabled, retry, discover } = useDmUnlock(peer);
   if (!enabled) return null;
   if (status === 'unlocking' || pendingDecryptions > 0) {
     return (
@@ -21,15 +21,15 @@ export function DmUnlock({ className = '', peer }: { className?: string; peer?: 
       </div>
     );
   }
-  if (!peer && (status === 'locked' || (status === 'unlocked' && unopened > 0))) {
+  if (!failedDecryptions && ((!peer && status === 'locked') || (status === 'unlocked' && unopened > 0))) {
     return <div className={`px-4 py-2 ${className}`}>
-      <Button variant="secondary" size="xs" onClick={retry} data-testid="dm-discover">{t('dm.lock.discover')}</Button>
+      <Button variant="secondary" size="xs" onClick={discover} data-testid="dm-discover">{t('dm.lock.discover')}</Button>
     </div>;
   }
-  if (status !== 'failed') return null;
+  if (status !== 'failed' && !failedDecryptions) return null;
   return (
     <div role="alert" data-testid="dm-unlock-failed" className={`flex items-center gap-3 px-4 py-2 text-xs text-lc-white ${className}`}>
-      <span className="min-w-0 flex-1">{t('dm.lock.failed')}</span>
+      <span className="min-w-0 flex-1">{failedDecryptions ? t('dm.lock.messagesFailed', { count: failedDecryptions }) : t('dm.lock.failed')}</span>
       <Button variant="secondary" size="xs" onClick={retry} data-testid="dm-unlock-retry">
         {t('dm.lock.retry')}
       </Button>

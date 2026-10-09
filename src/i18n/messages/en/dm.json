@@ -87,6 +87,7 @@
     "unavailable": "Not available for this message yet."
   },
   "lock": {
+    "messagesFailed": "{count, plural, one {One message could not be decrypted.} other {# messages could not be decrypted.}} Retry when your signer is ready.",
     "preview": "Encrypted message · open chat to read",
     "discover": "Discover encrypted chats",
     "loading": "Opening messages: {count} remaining.",
