@@ -1,66 +1,22 @@
 /**
- * Priority queue in front of the remote signer (NIP-07 extension / NIP-46
- * bunker).
- *
- * ## Why
- *
- * Every `window.nostr.*` call (`signEvent`, `nip04.*`, `nip44.*`, and the
- * `nostr-wot` extension's `wot.*` namespace) travels the same NIP-07 bridge:
- * page → `postMessage` → content script → `chrome.runtime` → MV3 service
- * worker. Extensions service that channel one request at a time, and an idle
- * MV3 worker adds a cold-start on top. Bunker has the same shape with worse
- * per-request cost: a full relay round-trip, sometimes a user approval prompt.
- *
- * The app produces far more background signer traffic than interactive
- * traffic: inbound gift-wrap decrypts, read-state unwrapping, WoT distance
- * lookups. Without ordering, a user pressing Enter on a message lands behind
- * hundreds of those, and the signature that should take one round-trip takes
- * seconds. Latency was `queue_depth × per_request_cost`.
- *
- * This module makes the depth *ours* instead of the signer's, so we can
- * reorder it.
- *
- * ## Design
- *
- * - **`MAX_IN_FLIGHT = 1`.** The signer is serial anyway, so holding one slot
- *   costs no throughput. It is also the whole point: once a request has been
- *   handed to the extension we cannot take it back, so the cap on in-flight
- *   background work *is* the cap on how long an arriving interactive request
- *   waits. With a cap of 1 it waits for at most one background round-trip.
- * - **Strict priority.** The `interactive` lane drains completely before
- *   `background`; FIFO within a lane. There is deliberately no aging /
- *   anti-starvation heuristic: interactive traffic is rare and bursty (a
- *   keystroke-to-send, a relay AUTH, a zap), so the background lane always
- *   gets the channel back within a few requests. Adding fairness here would
- *   trade the guarantee we actually want for one we don't need.
- * - **The slot is released in `finally`**, so a rejected op never wedges the
- *   drain.
- *
- * ## Scope
- *
- * Only the `nip07` and `bunker` login methods route through here. `nsec` signs
- * and decrypts with local synchronous crypto: queueing it would add latency
- * to buy nothing. Callers keep their existing `if (loginMethod === 'nsec')`
- * early returns and wrap only the two remote branches.
- *
- * ## Lane assignment
- *
- * A lane is a property of the **call site**, not of the operation. The same
- * `nip44Decrypt` is background when it opens an inbound gift wrap and
- * interactive when it decrypts an NWC wallet response the user is waiting on.
- * Signer factories therefore take a lane parameter that **defaults to
- * `interactive`**, and only known-background call sites opt out. A new caller
- * that forgets to think about it gets prioritized, which is the safe failure.
+ * Prioritized signer work: extension requests are serialized; bunker RPCs
+ * use bounded concurrency, with only one background request at a time.
+ * Interactive work is selected before queued background work. Starting
+ * order is FIFO within each transport/lane; results may settle out of order.
+ * Reset generations prevent an old completion releasing a new session slot.
  */
 
 import { CodedError } from '@/utils/errors/codes';
 import { pushRelayDebug } from '../relay/relay-debug';
-import { MAX_IN_FLIGHT } from '@/constants/nostr-bridge/session';
+import { MAX_IN_FLIGHT, BUNKER_MAX_IN_FLIGHT, BUNKER_BACKGROUND_MAX_IN_FLIGHT } from '@/constants/nostr-bridge/session';
+
+type SignerTransport = 'extension' | 'bunker';
 
 export type SignerLane = 'interactive' | 'background';
 
 interface QueueEntry {
   readonly lane: SignerLane;
+  readonly transport: SignerTransport;
   readonly label: string;
   readonly run: () => Promise<unknown>;
   readonly resolve: (value: unknown) => void;
@@ -85,7 +41,9 @@ const lanes: Record<SignerLane, QueueEntry[]> = {
   background: [],
 };
 
-let inFlight = 0;
+let generation = 0;
+let inFlight: Record<SignerTransport, number> = { extension: 0, bunker: 0 };
+let bunkerBackground = 0;
 
 export interface SignerQueueStats {
   interactive: number;
@@ -97,27 +55,41 @@ export function signerQueueStats(): SignerQueueStats {
   return {
     interactive: lanes.interactive.length,
     background: lanes.background.length,
-    inFlight,
+    inFlight: inFlight.extension + inFlight.bunker,
   };
 }
 
 function nextEntry(): QueueEntry | undefined {
-  return lanes.interactive.shift() ?? lanes.background.shift();
+  const available = (entry: QueueEntry) => entry.transport === 'extension'
+    ? inFlight.extension < MAX_IN_FLIGHT
+    : inFlight.bunker < BUNKER_MAX_IN_FLIGHT
+      && (entry.lane === 'interactive' || bunkerBackground < BUNKER_BACKGROUND_MAX_IN_FLIGHT);
+  for (const lane of [lanes.interactive, lanes.background]) {
+    const index = lane.findIndex(available);
+    if (index >= 0) return lane.splice(index, 1)[0];
+  }
 }
 
 function drain(): void {
-  while (inFlight < MAX_IN_FLIGHT) {
-    const entry = nextEntry();
-    if (!entry) return;
-    if (entry.deadline) clearTimeout(entry.deadline);
-    inFlight += 1;
-    // `run` may throw synchronously: Promise.resolve().then keeps that on the
-    // rejection path instead of escaping into the drain loop.
+  for (let entry = nextEntry(); entry; entry = nextEntry()) {
+    const active = entry;
+    const startedGeneration = generation;
+    if (active.deadline) clearTimeout(active.deadline);
+    inFlight[active.transport] += 1;
+    const background = active.transport === 'bunker' && active.lane === 'background';
+    if (background) bunkerBackground += 1;
     void Promise.resolve()
-      .then(entry.run)
-      .then(entry.resolve, entry.reject)
+      .then(() => {
+        if (generation !== startedGeneration) throw new CodedError('signer-reset', 'Signer queue reset');
+        return active.run();
+      })
+      .then(active.resolve, active.reject)
       .finally(() => {
-        inFlight -= 1;
+        // Already-started requests cannot be recalled, but their completion
+        // must not reduce the new account's counters or exceed its limits.
+        if (generation !== startedGeneration) return;
+        inFlight[active.transport] -= 1;
+        if (background) bunkerBackground -= 1;
         drain();
       });
   }
@@ -139,11 +111,12 @@ export function enqueueSignerOp<T>(
   lane: SignerLane,
   label: string,
   run: () => Promise<T>,
-  opts?: { startDeadlineMs?: number },
+  opts?: { startDeadlineMs?: number; transport?: SignerTransport },
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const entry: QueueEntry = {
       lane,
+      transport: opts?.transport ?? 'extension',
       label,
       run: run as () => Promise<unknown>,
       resolve: resolve as (value: unknown) => void,
@@ -186,7 +159,9 @@ export function resetSignerQueue(): void {
   const pending = [...lanes.interactive, ...lanes.background];
   lanes.interactive = [];
   lanes.background = [];
-  inFlight = 0;
+  generation += 1;
+  inFlight = { extension: 0, bunker: 0 };
+  bunkerBackground = 0;
   for (const entry of pending) {
     if (entry.deadline) clearTimeout(entry.deadline);
     try {

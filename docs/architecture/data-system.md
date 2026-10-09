@@ -571,3 +571,9 @@ Per-spec retries: 1. Each spec uses `attachClientCapture` (see
 `src/services/wot/engine.ts` owns synchronous trust decisions, a bounded verdict cache and queued extension lookups; account preferences live in `src/store/wot/`. Unknown verdicts allow content while a batch lookup is pending. Resolved denials can suppress profile lookups and future ingest, but a later trust decision must not delete cached bridge data by itself. Configuration changes invalidate verdicts so policy listeners can reevaluate visible content.
 
 Explicit mutes combine the account’s NIP-51 list and local preferences; explicit blocks remain a hard deny. Those decisions take precedence over own-event, group-metadata and consensual-DM exemptions. The current policy is in `src/services/wot/policy.ts` and `src/constants/wot/policy.ts`; the bridge applies it before ingest in `src/services/nostr-bridge/subscriptions/watched.ts` and avoids resolved-denied metadata requests in `src/services/nostr-bridge/profile/profiles.ts`.
+
+### Remote signer concurrency
+
+Bunker/NIP-46 operations use up to four concurrent RPCs. At most one slot runs background work such as history decryption or read-state sync, leaving capacity for interactive sends and authentication. Requests are matched to their own responses; completion order may differ from enqueue order. Each message still needs its own signature. An always-approve signer can benefit from overlapping relay round trips, but actual throughput remains signer- and relay-dependent.
+
+NIP-07 extension calls remain serialized. Interactive work takes precedence over queued background work for both transports. Failures release their slot, queued start deadlines remain enforced, and queue resets isolate the next session from late completions belonging to the previous one. Local-key signing bypasses the remote signer queue.

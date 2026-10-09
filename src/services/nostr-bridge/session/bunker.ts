@@ -125,7 +125,7 @@ export class BunkerModule {
   }
 
   /**
-   * Run `operation` against the active bunker signer, serialized through the
+   * Run `operation` against the active bunker signer, with bounded concurrency through the
    * signer queue (see `../signer-queue.ts`). NIP-46 round-trips are the
    * slowest thing the app asks a signer to do, a full relay hop, sometimes a
    * user approval prompt, so background traffic (inbound wrap decrypts, WoT
@@ -134,7 +134,7 @@ export class BunkerModule {
    * Two ordering rules are load-bearing here:
    *
    *   - `ensure()` runs **outside** the queued slot. Its lazy
-   *     reconnect costs 1-3s; holding the single in-flight slot for that
+   *     reconnect costs 1-3s; holding an in-flight slot for that
    *     would block every other operation behind a reconnect that isn't a
    *     signer round-trip at all.
    *   - `deadlineMs`, when given, is applied **inside** the slot. A deadline
@@ -150,7 +150,7 @@ export class BunkerModule {
         opts?.deadlineMs
           ? withDeadline(operation(s), opts.deadlineMs, opts.deadlineMessage ?? 'Remote signer timed out') // i18n-exempt: developer message; withDeadline rejects with signer-timeout
           : operation(s),
-        opts?.startDeadlineMs !== undefined ? { startDeadlineMs: opts.startDeadlineMs } : undefined,
+        { transport: 'bunker', startDeadlineMs: opts?.startDeadlineMs },
       );
     const signer = await this.ensure();
     try {

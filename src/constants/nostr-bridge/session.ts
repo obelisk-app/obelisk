@@ -23,12 +23,12 @@ export const LEGACY_STORAGE_KEY = 'obeliskord/session';
 
 export const LEGACY_RELAYS_KEY = 'obeliskord/relays';
 
-/**
- * How many signer requests may be outstanding at once. See the module doc:
- * this is the bound on how long an interactive request waits behind
- * background work, not a throughput knob.
- */
+/** Extension operations remain serialized to avoid overlapping permission dialogs. */
 export const MAX_IN_FLIGHT = 1;
+/** Bunker RPCs carry independent request IDs and may settle out of order. */
+export const BUNKER_MAX_IN_FLIGHT = 4;
+/** Leave capacity for sends and authentication while reading encrypted history. */
+export const BUNKER_BACKGROUND_MAX_IN_FLIGHT = 1;
 
 /**
  * The keys `@nostr-wot/ui`'s login widget writes through its default,

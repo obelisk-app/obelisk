@@ -23,6 +23,56 @@ describe('signer queue', () => {
     resetSignerQueue();
   });
 
+  it('pipelines four bunker requests and correlates out-of-order results', async () => {
+    const gates = Array.from({ length: 6 }, () => deferred<number>());
+    const started: number[] = [];
+    const results = gates.map((gate, i) => enqueueSignerOp('interactive', 'bunker-sign', () => {
+      started.push(i);
+      return gate.promise;
+    }, { transport: 'bunker' }));
+    await Promise.resolve();
+    expect(started).toEqual([0, 1, 2, 3]);
+    gates[2].resolve(2);
+    await results[2];
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(started).toContain(4);
+    gates.forEach((gate, i) => gate.resolve(i));
+    expect(await Promise.all(results)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  it('keeps background bunker traffic to one slot and starts interactive work immediately', async () => {
+    const gate = deferred();
+    const started: string[] = [];
+    const background = [0, 1, 2].map((i) => enqueueSignerOp('background', 'decrypt', async () => {
+      started.push(`bg${i}`);
+      await gate.promise;
+    }, { transport: 'bunker' }));
+    const send = enqueueSignerOp('interactive', 'send', async () => { started.push('send'); }, { transport: 'bunker' });
+    await send;
+    expect(started).toEqual(['bg0', 'send']);
+    gate.resolve();
+    await Promise.all(background);
+  });
+
+  it('an old completion cannot release a new session slot after reset', async () => {
+    const oldGate = deferred();
+    const old = enqueueSignerOp('interactive', 'old', () => oldGate.promise);
+    await Promise.resolve();
+    resetSignerQueue();
+    const newGate = deferred();
+    const current = enqueueSignerOp('interactive', 'current', () => newGate.promise);
+    const nextRun = vi.fn(async () => 'next');
+    const next = enqueueSignerOp('interactive', 'next', nextRun);
+    oldGate.resolve();
+    await old;
+    await Promise.resolve();
+    expect(signerQueueStats().inFlight).toBe(1);
+    expect(nextRun).not.toHaveBeenCalled();
+    newGate.resolve();
+    await Promise.all([current, next]);
+  });
+
   it('runs at most MAX_IN_FLIGHT operations at a time', async () => {
     const gates = [deferred(), deferred(), deferred()];
     let started = 0;
