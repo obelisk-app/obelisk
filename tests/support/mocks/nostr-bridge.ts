@@ -1,3 +1,4 @@
+import { memoizeDecrypt } from '@/services/nostr-bridge/cache/decrypt-cache';
 /**
  * The one type-checked `@/services/nostr-bridge` mock.
  *
@@ -86,6 +87,7 @@ export type BridgeMock =
  * `nostrActions` must have a default, so a new hook in `index.ts` fails here.
  */
 const hookDefaults = {
+  memoizeDecrypt,
   isImportableRelayUrl,
   // The local helpers the front door also exports (the profile-lookup relay
   // list, the localStorage event cache, the quota-close retry schedule, the

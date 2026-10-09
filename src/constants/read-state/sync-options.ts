@@ -10,14 +10,11 @@ export const D_TAG_GROUPS = 'obelisk:readstate:v1';
 /** Inner rumor d-tag for DM-scope state events (also carries inboxLastReadAt). */
 export const D_TAG_DMS = 'obelisk:dm-readstate:v1';
 
-// 8s coalesces a burst of cursor advances during active reading without making
-// the publish feel deferred. The previous 60s window collapsed against
-// real-world usage: users read for less than a minute, then close the tab or
-// navigate, and the cleanup cleared the pending timer before flush, so the
-// gift wrap was never published and devices never converged. We now also
-// flush eagerly on cleanup, visibilitychange to hidden, and pagehide so a
-// partial debounce window doesn't lose the publish.
-export const DEBOUNCE_MS = 8_000;
+/** Batch local read advances, with at least a minute between sync attempts. */
+export const DEBOUNCE_MS = 60_000;
+/** Failed background signer requests back off exponentially, up to one hour. */
+export const SYNC_RETRY_BASE_MS = 5 * 60_000;
+export const SYNC_RETRY_MAX_MS = 60 * 60_000;
 
 /** Schema version for the JSON payload inside the rumor. */
 export const SCHEMA_VERSION = 1;

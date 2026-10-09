@@ -1,16 +1,21 @@
 /**
  * The write half of the read-state sync: watch the stores for changes that
- * affect one scope and publish its state, debounced, flushing early when the
- * page hides or the sync stops. See `relay-sync.ts` for why the two scopes
+ * affect one scope and batch durable snapshots while the page is visible. See `relay-sync.ts` for why the two scopes
  * use different transports and the two traps the gift-wrap branch avoids.
  */
-import { getBridgeImpl, cacheSet } from '@/services/nostr-bridge';
+import { getBridgeImpl, cacheSet, markWrapSeen } from '@/services/nostr-bridge';
 import { wrapForSelf } from '@/services/read-state/gift-wrap';
 import { useReadStateStore } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
 import { KIND_NIP78_APP_DATA as KIND_INNER } from '@/constants/nostr/nip-kinds';
-import { cacheKindFor, type SyncOptions } from './sync-options';
-import { DEBOUNCE_MS } from '@/constants/read-state/sync-options';
+import { cacheKindFor, syncScopeKey, type SyncOptions } from './sync-options';
+import { DEBOUNCE_MS, SYNC_RETRY_BASE_MS, SYNC_RETRY_MAX_MS } from '@/constants/read-state/sync-options';
+
+import { parseSyncCursors } from '@/schemas/read-state/sync-cursors';
+import { memoizeDecrypt } from '@/services/nostr-bridge';
+
+// Active operations, not a cache: a remount must not duplicate signer approval.
+const pending = new Set<string>();
 
 type BridgeImpl = NonNullable<ReturnType<typeof getBridgeImpl>>;
 type Signer = NonNullable<ReturnType<BridgeImpl['getNipSigner']>>;
@@ -21,20 +26,22 @@ type Signer = NonNullable<ReturnType<BridgeImpl['getNipSigner']>>;
  */
 async function publishState(impl: BridgeImpl, signer: Signer, opts: SyncOptions, payload: unknown, createdAt: number): Promise<void> {
   if (opts.transport === 'replaceable') {
+    const plaintext = JSON.stringify(payload);
+    const content = await signer.nip44Encrypt(signer.pubkey, plaintext);
+    if (impl.getNipSigner('background')?.pubkey !== signer.pubkey) return;
+    // The echo contains exactly the plaintext we just encrypted. Reuse the
+    // existing account-cleared decrypt memo before any relay can echo it.
+    await memoizeDecrypt('nip44', signer.pubkey, content, async () => plaintext);
     // Signed normally with the user's own key: the relay must be able to
     // address it by (pubkey, kind, d) to replace the previous one.
     await impl.publishEvent(
       {
         kind: KIND_INNER,
         tags: [['d', opts.dTag]],
-        content: await signer.nip44Encrypt(signer.pubkey, JSON.stringify(payload)),
+        content,
         created_at: createdAt,
       },
-      // `quiet`: this fires on every channel open (the cursor moves, the
-      // fingerprint changes, the debounce flushes). Logging it put a
-      // "Publishing to relays · kind 30078" toast on every screen, which
-      // reads as the app writing settings on navigation. The gift-wrap
-      // branch below has always been quiet for the same reason.
+      // Background cursor batches do not create navigation-time activity toasts.
       { extraRelays: [...opts.relays], mode: 'replace', quiet: true },
     );
     return;
@@ -43,6 +50,10 @@ async function publishState(impl: BridgeImpl, signer: Signer, opts: SyncOptions,
     { kind: KIND_INNER, tags: [['d', opts.dTag]], content: JSON.stringify(payload), created_at: createdAt },
     signer,
   );
+  if (impl.getNipSigner('background')?.pubkey !== signer.pubkey) return;
+  markWrapSeen('readstate:groups', wrap.id);
+  markWrapSeen('readstate:dms', wrap.id);
+  markWrapSeen('dm:inert', wrap.id);
   // Must NOT go through publishEvent: that re-signs the template with the
   // user's key, replacing the throwaway wrap author and leaving the payload
   // undecryptable (the reader derives the conversation key from the wrap's
@@ -52,111 +63,80 @@ async function publishState(impl: BridgeImpl, signer: Signer, opts: SyncOptions,
   await impl.publishSignedEvent(wrap, [...opts.relays], { quiet: true, authMode: 'last-resort' });
 }
 
-/**
- * Watch the read-state store for changes that affect this scope and
- * publish a fresh state event, debounced. Returns a cleanup fn.
- *
- * `selectFingerprint` must produce a stable string from the parts of the
- * store that this scope cares about. Cursors-only changes that happen
- * outside this scope (e.g. another relay's groups when watching the
- * DM scope) won't trigger a publish.
- */
+/** Batch durable local cursors; teardown never starts signer work. */
 export function watchAndPublish(
   opts: SyncOptions,
   selectFingerprint: () => string,
   buildPayload: () => unknown | null,
 ): () => void {
   const impl = getBridgeImpl();
-  if (!impl) return () => {};
-
+  const owner = impl?.getNipSigner('background')?.pubkey;
+  if (!impl || !owner) return () => {};
+  const scope = syncScopeKey(opts, owner);
+  let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let inFlight = false;
-  let flushQueued = false;
-  let lastFingerprint = selectFingerprint();
-  // Tracks the fingerprint that was last *published*. On flush we bump it
-  // forward; if cleanup/page-hide fires while the fingerprint matches the
-  // last publish, there's nothing new to push.
-  let lastPublishedFingerprint = lastFingerprint;
-  // Groups-scope fingerprints span two stores (cursors in read-state, the
-  // mention cursor in notifications), so both are watched.
-  const watchedStores = [useReadStateStore, useNotificationsStore] as const;
-
-  const flush = async () => {
-    timer = null;
-    if (inFlight) {
-      flushQueued = true;
-      return;
-    }
-    if (lastFingerprint === lastPublishedFingerprint) return;
-    // Background lane: read-state sync is invisible housekeeping. It must never
-    // sit in front of a signature the user is waiting on. (`getNipSigner`
-    // defaults to `interactive` because it also backs the zap/NWC flow.)
-    const signer = impl.getNipSigner('background');
-    if (!signer) return;
+  let fingerprint = selectFingerprint();
+  const isCurrent = () => impl.getNipSigner('background')?.pubkey === owner;
+  const isVisible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
+  const dirtyPayload = () => {
     const payload = buildPayload();
-    if (!payload) return;
-    const fpAtFlush = lastFingerprint;
+    const acknowledged = useReadStateStore.getState().syncProgress[scope]?.acknowledged ?? {};
+    return Object.entries(parseSyncCursors(payload)).some(([key, value]) => value > (acknowledged[key] ?? 0)) ? payload : null;
+  };
+  const schedule = () => {
+    if (stopped || timer || !isCurrent() || !isVisible() || !dirtyPayload()) return;
+    const progress = useReadStateStore.getState().syncProgress[scope];
+    // An idle first change starts a fixed batching window. Subsequent changes
+    // do not postpone it, so continuous reading cannot starve sync.
+    const due = Math.max(Date.now() + DEBOUNCE_MS, progress?.retryAt ?? 0);
+    timer = setTimeout(() => { timer = null; void flush(); }, due - Date.now());
+  };
+  const flush = async () => {
+    if (stopped || !isCurrent() || !isVisible()) return;
+    if (pending.has(scope)) { schedule(); return; }
+    const state = useReadStateStore.getState();
+    if ((state.syncProgress[scope]?.retryAt ?? 0) > Date.now()) { schedule(); return; }
+    const payload = dirtyPayload();
+    const signer = impl.getNipSigner('background');
+    if (!payload || !signer) return;
     const createdAt = Math.floor(Date.now() / 1000);
-    inFlight = true;
+    pending.add(scope);
+    state.scheduleSync(scope, Date.now() + DEBOUNCE_MS, state.syncProgress[scope]?.failures ?? 0);
     try {
       await publishState(impl, signer, opts, payload, createdAt);
-      lastPublishedFingerprint = fpAtFlush;
-      // Update cache so a reload paints the freshly-published state
-      // even before the relay ACKs it back.
-      const cacheKind = cacheKindFor(opts.transport);
-      for (const relay of opts.relays) cacheSet(relay, cacheKind, opts.dTag, { payload, createdAt });
+      if (!isCurrent()) return;
+      useReadStateStore.getState().acknowledgeSync(scope, parseSyncCursors(payload));
+      useReadStateStore.getState().scheduleSync(scope, Date.now() + DEBOUNCE_MS, 0);
+      for (const relay of opts.relays) cacheSet(relay, cacheKindFor(opts.transport), opts.dTag, { payload, createdAt });
     } catch {
-      // Publish errors are best-effort; the next cursor advance will
-      // schedule another attempt. Avoid surfacing transient relay errors.
+      if (!isCurrent()) return;
+      const failures = Math.min(10, (useReadStateStore.getState().syncProgress[scope]?.failures ?? 0) + 1);
+      const delay = Math.min(SYNC_RETRY_MAX_MS, SYNC_RETRY_BASE_MS * 2 ** (failures - 1));
+      useReadStateStore.getState().scheduleSync(scope, Date.now() + delay, failures);
     } finally {
-      inFlight = false;
-      const followUp = flushQueued && lastFingerprint !== fpAtFlush;
-      flushQueued = false;
-      // Coalesce changes made during approval without retrying a rejected
-      // snapshot just because switching to the signer hid the page.
-      if (followUp && impl.getNipSigner('background')?.pubkey === signer.pubkey) void flush();
+      pending.delete(scope);
+      schedule();
     }
   };
-
-  // Eager flush: fires immediately if there's a pending publish that hasn't
-  // been sent yet. Used by cleanup, visibilitychange to hidden, and pagehide
-  // so closing the tab or switching devices doesn't drop the publish.
-  const flushNow = () => {
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
-    if (lastFingerprint === lastPublishedFingerprint) return;
-    void flush();
+  const onChange = () => {
+    const next = selectFingerprint();
+    if (next === fingerprint) return;
+    fingerprint = next;
+    schedule();
   };
-
-  const onStoreChange = () => {
-    const fp = selectFingerprint();
-    if (fp === lastFingerprint) return;
-    lastFingerprint = fp;
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => void flush(), DEBOUNCE_MS);
-  };
-  const storeUnsubs = watchedStores.map((s) => s.subscribe(onStoreChange));
-
-  // Browser lifecycle hooks: flush before the page goes away so the
-  // multi-device sync converges even when the user just closes the tab.
-  // `pagehide` is the most reliable on mobile Safari (which often skips
-  // `beforeunload`); `visibilitychange` to hidden covers tab switches and
-  // app-switch on iOS PWA. Both are no-ops in non-browser environments
-  // (tests, SSR).
+  const unsubs = [useReadStateStore.subscribe(onChange), useNotificationsStore.subscribe(onChange)];
   const onVisibility = () => {
-    if (typeof document === 'undefined') return;
-    if (document.visibilityState === 'hidden') flushNow();
+    if (!isVisible() && timer) { clearTimeout(timer); timer = null; }
+    if (isVisible()) schedule();
   };
-  const onPageHide = () => flushNow();
   if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisibility);
-  if (typeof window !== 'undefined') window.addEventListener('pagehide', onPageHide);
-
+  // Existing local cursors not covered by an acknowledgement survive reload
+  // and are batched even if no new message arrives this visit.
+  schedule();
   return () => {
-    storeUnsubs.forEach((fn) => fn());
+    stopped = true;
+    if (timer) clearTimeout(timer);
+    unsubs.forEach((stop) => stop());
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisibility);
-    if (typeof window !== 'undefined') window.removeEventListener('pagehide', onPageHide);
-    flushNow();
   };
 }

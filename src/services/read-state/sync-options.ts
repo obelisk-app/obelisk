@@ -87,3 +87,8 @@ export function parsePayload<T>(rumor: Rumor): T | null {
     return null;
   }
 }
+
+/** Include identity even though the owning store is account scoped. */
+export function syncScopeKey(opts: SyncOptions, pubkey: string): string {
+  return JSON.stringify([pubkey, opts.cacheNamespace, opts.dTag]);
+}

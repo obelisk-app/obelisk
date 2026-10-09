@@ -29,13 +29,13 @@
  *      issue a kind-5 for one. Do not propose it; bound the lifetime with
  *      NIP-40 or use a replaceable event.
  *
- * Both transports debounce by DEBOUNCE_MS and merge newest-wins on read; the
+ * Both transports batch by DEBOUNCE_MS and merge newest-wins on read; the
  * store merge is monotonic, so an out-of-order arrival cannot roll a cursor
  * backwards.
  *
  * This file holds the two scopes. The shared constants, payload shapes and
  * parsers live in `sync-options.ts`, the read half in `sync-ingest.ts` and
- * the debounced write half in `sync-publish.ts`.
+ * the batched write half in `sync-publish.ts`.
  */
 import { useReadStateStore, type RemoteReadState } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';

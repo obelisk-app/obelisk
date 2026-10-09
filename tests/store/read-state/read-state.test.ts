@@ -215,7 +215,7 @@ describe('per-account read-state store', () => {
       { state: typeof READ_STATE_INITIAL } | null)?.state;
   const persistedSlice = () => {
     const { dmCursors, groupCursors, inboxLastReadAt } = useReadStateStore.getState();
-    return { dmCursors, groupCursors, inboxLastReadAt };
+    return { dmCursors, groupCursors, inboxLastReadAt, syncProgress: useReadStateStore.getState().syncProgress };
   };
 
   // Storage is synchronous, so no tick is awaited anywhere here: the factory
@@ -234,6 +234,8 @@ describe('per-account read-state store', () => {
     ensureReadStateStoreForAccount(A);
     useReadStateStore.getState().setDmCursor('peer-1', 100);
     useReadStateStore.getState().setGroupCursor('g1', 200);
+    useReadStateStore.getState().acknowledgeSync('groups:relay', { 'groups:g1': 200 });
+    useReadStateStore.getState().scheduleSync('groups:relay', 500_000, 2);
     const aSlice = persistedSlice();
     expect(stored(A)).toEqual(aSlice);
 
@@ -260,6 +262,8 @@ describe('per-account read-state store', () => {
     const A = 'e'.repeat(64);
     ensureReadStateStoreForAccount(A);
     useReadStateStore.getState().setGroupCursor('g1', 500);
+    useReadStateStore.getState().acknowledgeSync('groups:relay', { 'groups:g1': 200 });
+    useReadStateStore.getState().scheduleSync('groups:relay', 500_000, 2);
     const aSlice = persistedSlice();
 
     ensureReadStateStoreForAccount(null);
@@ -280,7 +284,7 @@ describe('read-state store saved-data migrations', () => {
     ensureReadStateStoreForAccount(pk);
     const { dmCursors, groupCursors, inboxLastReadAt } = useReadStateStore.getState();
     expect({ dmCursors, groupCursors, inboxLastReadAt }).toEqual(saved);
-    expect(readBlob(key(pk))).toEqual({ state: saved, version: READ_STATE_STORE_VERSION });
+    expect(readBlob(key(pk))).toEqual({ state: { ...saved, syncProgress: {} }, version: READ_STATE_STORE_VERSION });
   });
 
   it('drops cursors that are not finite numbers instead of comparing against them', () => {
@@ -302,6 +306,6 @@ describe('read-state store saved-data migrations', () => {
     seedBlob(key(pk), state, version);
     expect(() => ensureReadStateStoreForAccount(pk)).not.toThrow();
     const { dmCursors, groupCursors, inboxLastReadAt } = useReadStateStore.getState();
-    expect({ dmCursors, groupCursors, inboxLastReadAt }).toEqual(READ_STATE_INITIAL);
+    expect({ dmCursors, groupCursors, inboxLastReadAt, syncProgress: useReadStateStore.getState().syncProgress }).toEqual(READ_STATE_INITIAL);
   });
 });

@@ -9,10 +9,14 @@ import { unwrapForSelf } from '@/services/read-state/gift-wrap';
 import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/constants/nostr/nip-kinds';
 import {
   cacheKindFor,
+  syncScopeKey,
   findInnerDTag,
   parsePayload,
   type SyncOptions,
 } from './sync-options';
+import { useReadStateStore } from '@/store/read-state';
+import { parseSyncCursors } from '@/schemas/read-state/sync-cursors';
+import { memoizeDecrypt } from '@/services/nostr-bridge';
 import { READ_STATE_WATCHDOG_MS } from '@/constants/read-state/sync-options';
 
 /**
@@ -32,6 +36,14 @@ export function subscribeAndIngest<T>(
   const signer = impl.getNipSigner('background');
   if (!signer) return () => {};
 
+  const scope = syncScopeKey(opts, signer.pubkey);
+  const accept = (payload: T, createdAt: number) => {
+    // Acknowledge before store subscribers observe the remote merge.
+    useReadStateStore.getState().acknowledgeSync(scope, parseSyncCursors(payload));
+    apply(payload, createdAt);
+  };
+  const isCurrent = () => impl.getNipSigner('background')?.pubkey === signer.pubkey;
+
   // Track newest seen so we don't re-apply older wraps that arrive late
   // from a different relay (DM scope subscribes to multiple relays).
   let newestApplied = 0;
@@ -41,7 +53,7 @@ export function subscribeAndIngest<T>(
   for (const relay of opts.relays) {
     const cached = cacheGet<{ payload: T; createdAt: number }>(relay, cacheKind, opts.dTag);
     if (cached && cached.value.createdAt > newestApplied) {
-      apply(cached.value.payload, cached.value.createdAt);
+      accept(cached.value.payload, cached.value.createdAt);
       newestApplied = cached.value.createdAt;
     }
   }
@@ -58,17 +70,18 @@ export function subscribeAndIngest<T>(
     const filter: Filter = { kinds: [KIND_INNER], authors: [signer.pubkey], '#d': [opts.dTag] };
     for (const relay of opts.relays) {
       const unsub = impl.subscribeFilterWatched(filter, async (ev) => {
-        if (ev.created_at <= newestApplied) return;
+        if (stopped || !isCurrent() || ev.created_at <= newestApplied) return;
         let payload: T | null = null;
         try {
-          payload = JSON.parse(await signer.nip44Decrypt(signer.pubkey, ev.content)) as T;
+          payload = JSON.parse(await memoizeDecrypt('nip44', signer.pubkey, ev.content, () => signer.nip44Decrypt(signer.pubkey, ev.content))) as T;
         } catch {
           // Written by a different app under the same d tag, or a payload we
           // cannot read. Ignore rather than throw: this is background sync.
           return;
         }
+        if (stopped || !isCurrent() || ev.created_at <= newestApplied) return;
         if (!payload || (payload as { v?: number }).v !== 1) return;
-        apply(payload, ev.created_at);
+        accept(payload, ev.created_at);
         newestApplied = ev.created_at;
         cacheSet(relay, KIND_INNER, opts.dTag, { payload, createdAt: ev.created_at });
       }, { relays: [relay], watchdogMs: READ_STATE_WATCHDOG_MS });
@@ -77,7 +90,7 @@ export function subscribeAndIngest<T>(
 
     // Migration: nothing else to do unless we are still reading old wraps.
     if (!opts.alsoReadLegacyWraps) {
-      return () => unsubFns.forEach((fn) => fn());
+      return () => { stopped = true; unsubFns.forEach((fn) => fn()); };
     }
   }
 
@@ -88,7 +101,7 @@ export function subscribeAndIngest<T>(
       if (hasSeenWrap(opts.ledgerScope, ev.id)) return;
       if (impl.isStoredDmWrap(ev.id)) { markWrapSeen(opts.ledgerScope, ev.id); return; }
       const rumor = await unwrapForSelf(ev, signer);
-      if (!rumor) return;
+      if (!rumor || stopped || !isCurrent()) return;
       // Marked before the filters, not after: "not my scope's rumor" is a
       // permanent property of an immutable event, and it is precisely the
       // verdict we don't want to re-buy every reload.
@@ -98,7 +111,7 @@ export function subscribeAndIngest<T>(
       if (rumor.created_at <= newestApplied) return;
       const payload = parsePayload<T>(rumor);
       if (!payload) return;
-      apply(payload, rumor.created_at);
+      accept(payload, rumor.created_at);
       newestApplied = rumor.created_at;
       cacheSet(relay, cacheKind, opts.dTag, { payload, createdAt: rumor.created_at });
     };

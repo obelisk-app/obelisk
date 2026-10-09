@@ -14,6 +14,7 @@
  */
 
 import { useEffect } from 'react';
+import { useMyPubkey } from '@/hooks/session/useSession';
 import { useDirectMessages, useMessages } from '@/services/nostr-bridge';
 import { useDMStore } from '@/store/chat/dm';
 import { useChatStore } from '@/store/chat';
@@ -21,6 +22,7 @@ import { useReadStateStore } from '@/store/read-state';
 import { isUserWatchingChannel, isUserWatchingDM } from '@/services/read-state/read-gates';
 
 export function useAutoMarkRead(): void {
+  const ownPubkey = useMyPubkey();
   const activeDm = useDMStore((s) => s.activeDMPubkey);
   const activeChannel = useChatStore((s) => s.activeChannelId);
   const dmsByPeer = useDirectMessages();
@@ -36,7 +38,9 @@ export function useAutoMarkRead(): void {
       if (!isUserWatchingDM(activeDm)) return;
       const peerMsgs = dmsByPeer[activeDm];
       if (!peerMsgs || peerMsgs.length === 0) return;
-      const latestSec = peerMsgs[peerMsgs.length - 1].createdAt;
+      const latest = peerMsgs.findLast((message) => !message.outgoing);
+      if (!latest) return;
+      const latestSec = latest.createdAt;
       const tsMs = latestSec * 1000;
       useReadStateStore.getState().setDmCursor(activeDm, tsMs);
     };
@@ -63,7 +67,10 @@ export function useAutoMarkRead(): void {
     const advance = () => {
       if (!isUserWatchingChannel(activeChannel)) return;
       if (!channelMessages || channelMessages.length === 0) return;
-      const latestSec = channelMessages[channelMessages.length - 1].createdAt;
+      if (!ownPubkey) return;
+      const latest = channelMessages.findLast((message) => message.pubkey !== ownPubkey);
+      if (!latest) return;
+      const latestSec = latest.createdAt;
       const tsMs = latestSec * 1000;
       useReadStateStore.getState().setGroupCursor(activeChannel, tsMs);
     };
@@ -80,5 +87,5 @@ export function useAutoMarkRead(): void {
       window.removeEventListener('focus', advance);
       window.removeEventListener('blur', advance);
     };
-  }, [activeChannel, channelMessages, isNearBottom]);
+  }, [activeChannel, channelMessages, isNearBottom, ownPubkey]);
 }

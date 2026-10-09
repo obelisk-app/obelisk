@@ -2,9 +2,17 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { quotaSafeLocalStorage } from '@/services/common/quota-safe-storage';
 import { createEnsureForAccount } from '../common/multi-account';
-import { finiteOrUndefined, recordOf, versionedPersist } from '../common/persist-version';
+import { asRecord, finiteOrUndefined, recordOf, versionedPersist } from '../common/persist-version';
+
+interface SyncProgress {
+  acknowledged: Record<string, number>;
+  retryAt: number;
+  failures: number;
+}
 
 interface ReadStatePersisted {
+  /** Account-scoped sync checkpoints; cursors remain the durable pending payload. */
+  syncProgress: Record<string, SyncProgress>;
   /** Per-peer DM read cursor in unix milliseconds. Monotonic: only advances. */
   dmCursors: Record<string, number>;
   /** Per-channel read cursor in unix milliseconds. Monotonic. */
@@ -42,6 +50,8 @@ export interface RemoteReadState {
 }
 
 interface ReadStateActions {
+  acknowledgeSync: (scope: string, cursors: Record<string, number>) => void;
+  scheduleSync: (scope: string, retryAt: number, failures: number) => void;
   /** Advance the DM cursor for `peer` to `tsMs`. No-op if `tsMs` <= existing. */
   setDmCursor: (peer: string, tsMs: number) => void;
   /** Advance the channel cursor. No-op if `tsMs` <= existing. */
@@ -71,17 +81,26 @@ interface ReadStateActions {
 export type ReadStateStore = ReadStatePersisted & ReadStateActions;
 
 export const READ_STATE_INITIAL: ReadStatePersisted = {
+  syncProgress: {},
   dmCursors: {},
   groupCursors: {},
   inboxLastReadAt: 0,
 };
 
 /** Saved-shape version. 0: before versioning, same fields. */
-export const READ_STATE_STORE_VERSION = 1;
+export const READ_STATE_STORE_VERSION = 2;
 
 /** Cursors that are not finite numbers are dropped; a missing one reads as "never read". */
 export function sanitizeReadStatePersisted(raw: Record<string, unknown>): ReadStatePersisted {
   return {
+    syncProgress: recordOf(raw.syncProgress, (value) => {
+      const entry = asRecord(value);
+      return {
+        acknowledged: recordOf(entry.acknowledged, finiteOrUndefined),
+        retryAt: Math.max(0, finiteOrUndefined(entry.retryAt) ?? 0),
+        failures: Math.max(0, Math.min(10, finiteOrUndefined(entry.failures) ?? 0)),
+      };
+    }),
     dmCursors: recordOf(raw.dmCursors, finiteOrUndefined),
     groupCursors: recordOf(raw.groupCursors, finiteOrUndefined),
     inboxLastReadAt: finiteOrUndefined(raw.inboxLastReadAt) ?? 0,
@@ -92,6 +111,21 @@ export const useReadStateStore = create<ReadStateStore>()(
   persist(
     (set) => ({
       ...READ_STATE_INITIAL,
+
+      acknowledgeSync: (scope, cursors) => set((state) => {
+        const prev = state.syncProgress[scope] ?? { acknowledged: {}, retryAt: 0, failures: 0 };
+        const acknowledged = { ...prev.acknowledged };
+        let changed = false;
+        for (const [key, value] of Object.entries(cursors)) {
+          if (value > (acknowledged[key] ?? 0)) { acknowledged[key] = value; changed = true; }
+        }
+        return changed ? { syncProgress: { ...state.syncProgress, [scope]: { ...prev, acknowledged } } } : state;
+      }),
+      scheduleSync: (scope, retryAt, failures) => set((state) => ({
+        syncProgress: { ...state.syncProgress, [scope]: {
+          acknowledged: state.syncProgress[scope]?.acknowledged ?? {}, retryAt, failures,
+        } },
+      })),
 
       setDmCursor: (peer, tsMs) => set((state) => {
         const prev = state.dmCursors[peer] ?? 0;
@@ -173,6 +207,7 @@ export const useReadStateStore = create<ReadStateStore>()(
       name: 'obelisk-read-state',
       storage: createJSONStorage(() => quotaSafeLocalStorage),
       partialize: (state): ReadStatePersisted => ({
+        syncProgress: state.syncProgress,
         dmCursors: state.dmCursors,
         groupCursors: state.groupCursors,
         inboxLastReadAt: state.inboxLastReadAt,

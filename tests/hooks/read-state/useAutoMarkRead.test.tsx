@@ -1,6 +1,6 @@
 vi.mock('@/hooks/session/useSession', async () => {
   const { sessionMock } = await import('@tests/support/mocks/session');
-  return sessionMock();
+  return sessionMock({ useMyPubkey: () => 'me' });
 });
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
@@ -52,12 +52,22 @@ describe('useAutoMarkRead', () => {
       protocolOverrides: {},
       showProtocolPrompt: null,
     });
-    useChatStore.setState({ activeChannelId: null, isNearBottom: true } as any);
+    useChatStore.setState({ activeChannelId: null, isNearBottom: true });
     setVisible(true);
   });
 
   afterEach(() => {
     setVisible(true);
+  });
+
+  it('does not advance either cursor for outgoing messages', () => {
+    mockState.dmsByPeer = { alice: [{ id: 'mine', counterparty: 'alice', outgoing: true, content: 'hi', createdAt: 200 }] };
+    mockState.channelMessages = { g1: [{ id: 'mine', pubkey: 'me', content: 'hi', createdAt: 200, kind: 9, replyToId: null, mentions: [] }] };
+    useDMStore.setState({ activeDMPubkey: 'alice' });
+    useChatStore.setState({ activeChannelId: 'g1' });
+    renderHook(() => useAutoMarkRead());
+    expect(useReadStateStore.getState().dmCursors).toEqual({});
+    expect(useReadStateStore.getState().groupCursors).toEqual({});
   });
 
   it('advances the DM cursor to the latest message when watching', () => {
@@ -138,7 +148,7 @@ describe('useAutoMarkRead', () => {
         { id: 'b', pubkey: 'someone', content: 'hi', createdAt: 150, kind: 9, replyToId: null, mentions: [] },
       ],
     };
-    useChatStore.setState({ activeChannelId: 'g1', isNearBottom: true } as any);
+    useChatStore.setState({ activeChannelId: 'g1', isNearBottom: true });
 
     renderHook(() => useAutoMarkRead());
 
@@ -151,7 +161,7 @@ describe('useAutoMarkRead', () => {
         { id: 'a', pubkey: 'someone', content: 'hi', createdAt: 50, kind: 9, replyToId: null, mentions: [] },
       ],
     };
-    useChatStore.setState({ activeChannelId: 'g1', isNearBottom: false } as any);
+    useChatStore.setState({ activeChannelId: 'g1', isNearBottom: false });
 
     renderHook(() => useAutoMarkRead());
 

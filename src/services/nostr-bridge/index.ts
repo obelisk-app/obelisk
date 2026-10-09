@@ -79,3 +79,5 @@ export type {
 } from './common/types';
 
 export type { LoginMethod } from './session/state';
+
+export { memoizeDecrypt } from './cache/decrypt-cache';

@@ -1,13 +1,13 @@
 /**
- * Phase 5 contract: the NIP-59 relay-sync engine converges cursors
+ * Phase 5 contract: the read-state relay-sync engine converges cursors
  * across devices on the same nsec. Two browser contexts seeded with
- * the same key advance independently; within debounce + grace they
+ * the same key advance independently; within a batch interval plus grace they
  * converge through `applyRemoteState`.
  *
  * Method:
  *   1. Open context A, log in, click into a channel; `useAutoMarkRead`
  *      advances `groupCursors[groupId]` to the latest message's ts.
- *   2. After ~10s (8s debounce + 2s grace), context B (same nsec, fresh
+ *   2. After ~65s (one-minute batch + relay grace), context B (same nsec, fresh
  *      browser context) reads its persisted store and observes the
  *      advanced cursor.
  */
@@ -38,7 +38,7 @@ interface ReadStatePersist {
 }
 
 test('read-state cursors converge across two contexts on the same nsec', async ({ browser }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
 
   const id = generateIdentity();
   logObserved(`shared npub  ${id.npub}`);
@@ -56,13 +56,17 @@ test('read-state cursors converge across two contexts on the same nsec', async (
   await channelA.waitFor({ state: 'visible', timeout: 30_000 });
   await channelA.click();
 
-  // Ensure the selected channel has a fresh message. The production relay can
-  // legitimately return an empty first channel, in which case auto-mark-read
-  // has no timestamp to advance and the convergence assertion is testing a
-  // missing fixture rather than the read-state machinery.
-  const probe = `read-state convergence ${Date.now()} ${id.pkHex.slice(0, 6)}`;
-  await pageA.getByPlaceholder(/^Message #/i).first().waitFor({ state: 'visible', timeout: 15_000 });
-  await sendMessageInActiveChannel(pageA, probe);
+  // A different author supplies an incoming message; sending our own
+  // message intentionally no longer advances the read cursor.
+  const sender = await browser.newContext();
+  await seedSession(sender, nsecSession(generateIdentity(), RELAY_URL));
+  const senderPage = await sender.newPage();
+  await senderPage.goto('/app', { waitUntil: 'domcontentloaded' });
+  await waitForRelayOk(senderPage, 30_000);
+  await firstChannelRow(senderPage).click();
+  await sendMessageInActiveChannel(senderPage, `read-state convergence ${Date.now()}`);
+  await sender.close();
+  await pageA.bringToFront();
 
   // Read the cursor the auto-mark hook should have advanced.
   let preA = await readLocalStorageJSON<ReadStatePersist>(pageA, READ_STATE_KEY(id.pkHex));
@@ -81,9 +85,9 @@ test('read-state cursors converge across two contexts on the same nsec', async (
   const [advancedGroup, advancedAt] = advancedEntries[0];
   logOk(`context A advanced cursor: ${advancedGroup} → ${advancedAt}`);
 
-  // ── Wait long enough for the 8s debounced publish to fire ─────────
-  logStep('Wait for NIP-59 publish + ingest', '~12s = 8s debounce + grace');
-  await pageA.waitForTimeout(12_000);
+  // ── Wait long enough for the one-minute batch to fire ─────────
+  logStep('Wait for read-state publish + ingest', '~65s = one-minute batch + grace');
+  await pageA.waitForTimeout(65_000);
 
   // ── Context B: fresh browser, same nsec; expect convergence ─────
   logStep('Context B: open with the same nsec; expect cursor convergence', '');

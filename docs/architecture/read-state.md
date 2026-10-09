@@ -16,7 +16,7 @@ for message data; `useNotificationsStore` holds the notification card
 logs. Pure selectors derive unread counts and highlights from the
 persisted cursor stores. An auto-mark hook advances
 cursors when the user is watching a channel/DM. A relay-sync engine
-publishes cursor snapshots with an 8-second debounce (a replaceable
+publishes cursor snapshots in one-minute batches (a replaceable
 `kind:30078` for groups scope, a NIP-59 gift wrap for DM scope) and
 subscribes on each device so cursors converge via monotonic `max()` merge.
 
@@ -337,13 +337,17 @@ reload; the live REQ overwrites it as soon as the relay confirms.
 The engine subscribes to `useReadStateStore` cursor changes filtered to
 its scope. On any change:
 
-1. Schedule `setTimeout(flush, 8000)`; cancel any prior pending timer.
-2. `flush()` builds the JSON payload. Groups use self-encrypted NIP-44 content in a signed, replaceable kind-30078 event on the group's relay. DMs use `wrapForSelf` and `publishSignedEvent` on the configured DM relays, preserving the wrapper's ephemeral signature.
-3. Cache the freshly-published payload so reload paints the latest state without waiting for the relay round trip.
+1. Update and persist local cursors immediately, but only advance automatic cursors for incoming messages actually being viewed. Outgoing messages already do not count as unread and cannot advance the automatic cursor. Explicit “mark read” actions still work.
+2. Start a fixed 60-second batching window for unsynced changes. New arrivals join that batch without resetting its deadline. Only one operation per account and scope may await signer approval, including across watcher remounts; subsequent writes wait at least 60 seconds after completion.
+3. Publish the newest combined snapshot: groups use self-encrypted NIP-44 content in a signed, replaceable kind-30078 event on their relay; DMs use `wrapForSelf` and `publishSignedEvent` on the configured DM relays.
+4. Persist monotonic acknowledged cursors, retry timing and failure count in `syncProgress` inside the account's existing read-state store (saved-shape version 2). Local cursors newer than those checkpoints are the pending payload. Startup checks for them even without a new message. Version-1 data keeps its cursors and starts with empty checkpoints; cached relay snapshots seed the checkpoints before scheduling.
+5. A failed encryption, signing or publish attempt retains the pending cursors and backs off for 5, 10, 20, 40, then at most 60 minutes. New messages, refreshes and watcher remounts do not bypass that persisted backoff. Success resets it.
 
-Only one save per watcher may await signer approval at a time. Page-hide and cleanup coalesce with that save rather than requesting encryption again. New cursor advances received during approval are saved afterward; hiding the page alone does not retry a rejected request.
+Hiding the page cancels the scheduled timer. Returning to the page schedules another batch. Page-hide and teardown never initiate signer requests; they rely on the already-persisted local cursors. An operation already awaiting approval may finish. Cross-device updates normally lag local reads by about a minute, plus signer and relay latency; a closed or hidden page waits until a later visible visit.
 
-These signer operations support cross-device unread synchronization. Local read tracking does not require encryption or signing. A remote signer can ask to encrypt an outgoing snapshot, decrypt an incoming snapshot, and sign application data (kind 30078); these are separate from permission to decrypt DM contents.
+Remote snapshots acknowledge their cursors before merging them locally, so receiving remote state alone does not publish it back. Independent newer local cursors remain pending. Groups' own relay echoes use the existing account-cleared decryption memo seeded from the exact ciphertext just produced; known outgoing DM read-state wraps are recorded as inert for DM consumers and seen for read-state consumers before publication. Neither needs a second signer approval to discover the payload we just wrote.
+
+These signer operations support cross-device unread synchronization. Local read tracking does not require encryption or signing. A remote signer can ask to encrypt an outgoing snapshot, decrypt an incoming snapshot from another device, and sign application data (kind 30078); these are separate from permission to decrypt DM contents.
 
 ### NIP-44 + signing
 
@@ -375,8 +379,7 @@ The two scopes have different priorities now:
 
 `useReadyToSync()` waits for either `groupMetadataEose === true` (channel
 menu painted) OR 1000ms post-`Connected` (some relays filter kind 39000
-silently). The 8s debounce in `flush()` keeps mount-delay invisible to
-the user either way.
+silently). Local cursor updates are immediate; the one-minute relay batch runs independently of this mount delay.
 
 See [`data-system.md` §4](data-system.md) for the full priority table.
 
@@ -425,10 +428,7 @@ Two tabs on the same account converge automatically:
    arrives before the parent does won't count toward the channel's reply
    highlight. Acceptable because messages stream in chronologically.
    (Replies produce a `reason: 'reply'` card; see §2b.)
-3. **Gift wrap accumulation**: handled by the 8-second debounce, but
-   long-running users on a single relay will accumulate ~10-30 KB of
-   stale wraps per month. Future cleanup pass (NIP-09 deletions) is a
-   follow-up.
+3. **Gift wrap accumulation**: DM snapshots remain non-replaceable. One-minute batches reduce their frequency but do not bound relay retention. Their ephemeral signing keys are discarded, so NIP-09 deletion is unavailable. Groups use replaceable snapshots and do not accumulate this way.
 
 ## 13. Browser notifications and sound
 
@@ -445,7 +445,7 @@ The active relay supplies group mentions; the background watcher supplies DMs. A
 | `tests/services/nostr-bridge/bridge-mentions.test.ts` (`mention notifications`) | mentions-only ingest, relay stamping, self-mention and reply suppression, cursor-gated backfill |
 | `tests/services/read-state/selectors.test.ts` | unread counts, own-message exclusion, `computeChannelHighlights` ordering, mention + reply union |
 | `tests/services/read-state/replies.test.ts` | NIP-10 strict reply detection, parent lookup, edge cases |
-| `tests/services/read-state/relay-sync.test.ts` | sub/ingest with merged cursors, debounced publish, d-tag filtering, cache-first paint |
+| `tests/services/read-state/relay-sync.test.ts` | sub/ingest with merged cursors, batched publish, durable pending state and backoff, remote/own-echo suppression, d-tag filtering, cache-first paint |
 | `tests/hooks/read-state/useReadyToSync.test.tsx` | `useReadyToSync` gate: false before connect, flips on EOSE, flips after 1000ms grace, no flip if connection drops mid-grace |
 | `tests/services/read-state/gift-wrap.test.ts` | wrap/unwrap roundtrip, null-on-junk, recipient mismatch, ephemeral pubkey privacy |
 | `tests/utils/message-text/mentions.test.ts` | content-only and `#p`-tag mention extraction |
@@ -457,7 +457,7 @@ End-to-end (Playwright):
 
 | Spec | What it asserts |
 |---|---|
-| `scripts/e2e/read-state-convergence.spec.ts` | Two contexts seeded with the same nsec on `public.obelisk.ar`. Context A advances a cursor; within 12s (8s debounce + grace) context B's `obelisk-read-state:<pubkey>.groupCursors[gid]` reflects the advance. |
+| `scripts/e2e/read-state-convergence.spec.ts` | Two contexts seeded with the same nsec on `public.obelisk.ar`. Context A advances a cursor; after a one-minute batch plus relay grace context B's `obelisk-read-state:<pubkey>.groupCursors[gid]` reflects the advance. |
 
 ### Decryption consent
 
