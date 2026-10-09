@@ -175,6 +175,8 @@ describe('LoginModal generated identity flow', () => {
       'wss://nos.lol',
       'wss://relay.primal.net',
       'wss://purplepag.es',
+      'wss://relay.nsec.app',
+      'wss://relay.nostr.band',
     ]);
   });
 
