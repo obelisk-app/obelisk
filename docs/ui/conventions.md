@@ -2,6 +2,14 @@
 
 Where a piece of code goes, and what a component file may hold. The folder table is in [../AGENTS.md](../../AGENTS.md#where-code-goes); this page is the detail behind eight of its rules: where a file goes, what each layer holds, component files are markup, every picture lives in `src/assets/`, text goes through the type pieces, shared animations live in `ui/animations/`, every modal and sheet uses the shared header and footer, and forms are built from the common pieces.
 
+## App interaction guarantees
+
+The viewport gate paints a shared loading state while resolving the responsive shell and downloading it. Only the active desktop or phone shell mounts. Page magnification remains available; custom media gestures must not disable zoom throughout the app.
+
+Desktop destination changes create browser-history entries; initial restoration, replay and transient message-target updates replace the current entry. Message toolbars remain keyboard reachable when visually faded, reveal on focus, and move focus into the action menu. Arrow keys and Home/End move through menu actions; dismissing returns focus when it was inside the menu.
+
+The desktop DM opt-in has one primary explanation and enable action in the main pane. Its sidebar uses a compact fallback, and both react to the same device setting. Composer metadata, membership and bot-profile subscriptions are active only while their relevant picker is open; opening replays the latest bridge snapshot without changing relay-wide mention discovery or WoT filtering.
+
 ## Where a file goes
 
 The layers are `src/components`, `src/hooks`, `src/services`, `src/utils`, `src/constants`, `src/types`, `src/schemas`, `src/store` and `src/lib`. They share the module ownership rules below, and `tests/structure/module-layout.test.ts` holds them to it. `src/assets` is a layer too, split by kind of picture rather than by feature ([Assets](#assets)).

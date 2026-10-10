@@ -28,6 +28,7 @@ const bridge = {
 } as unknown as BridgeImpl;
 const wrapper = bridgeWrapper(bridge);
 
+import { useSubscription } from '@/services/nostr-bridge/hooks/subscription';
 import { useMessages } from '@/services/nostr-bridge/hooks/messages';
 
 const message = (id: string): JsMessage => ({
@@ -41,6 +42,24 @@ const message = (id: string): JsMessage => ({
 });
 
 describe('useSubscription', () => {
+  it('detaches disabled consumers and replays only the latest snapshot when enabled', () => {
+    byGroup.lazy = [message('first')];
+    const { result, rerender } = renderHook(({ enabled }) => useSubscription<ReadonlyArray<JsMessage>>(
+      (b, cb) => b.subscribeMessages('lazy', cb), [] as ReadonlyArray<JsMessage>, [], enabled,
+    ), { initialProps: { enabled: false }, wrapper });
+    expect(listeners.get('lazy')?.size ?? 0).toBe(0);
+    expect(result.current).toEqual([]);
+    rerender({ enabled: true });
+    expect(result.current.map(m => m.id)).toEqual(['first']);
+    expect(listeners.get('lazy')?.size).toBe(1);
+    rerender({ enabled: false });
+    expect(result.current).toEqual([]);
+    expect(listeners.get('lazy')?.size).toBe(0);
+    byGroup.lazy = [message('latest')];
+    rerender({ enabled: true });
+    expect(result.current.map(m => m.id)).toEqual(['latest']);
+  });
+
   it('switching channel A to B never renders a frame with A\'s messages', async () => {
     byGroup.A = [message('a1'), message('a2')];
     byGroup.B = [message('b1')];

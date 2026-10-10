@@ -23,8 +23,8 @@ export function useAdmins(groupId: string | null): ReadonlyArray<string> {
   );
 }
 
-export function useAdminsByGroup(): Readonly<Record<string, ReadonlyArray<string>>> {
-  return useSubscription((b, cb) => b.subscribeAdminsByGroup(cb), {});
+export function useAdminsByGroup(enabled = true): Readonly<Record<string, ReadonlyArray<string>>> {
+  return useSubscription((b, cb) => b.subscribeAdminsByGroup(cb), {}, [], enabled);
 }
 
 export function useMembers(groupId: string | null): ReadonlyArray<string> {
@@ -35,8 +35,8 @@ export function useMembers(groupId: string | null): ReadonlyArray<string> {
   );
 }
 
-export function useMembersByGroup(): Readonly<Record<string, ReadonlyArray<string>>> {
-  return useSubscription((b, cb) => b.subscribeMembersByGroup(cb), {});
+export function useMembersByGroup(enabled = true): Readonly<Record<string, ReadonlyArray<string>>> {
+  return useSubscription((b, cb) => b.subscribeMembersByGroup(cb), {}, [], enabled);
 }
 
 export interface JsMemberInfo {

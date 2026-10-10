@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDismiss } from '@/hooks/common/useDismiss';
 
 /**
@@ -19,6 +19,31 @@ export function useMessageRowMenus() {
   const moreBtnRef = useRef<HTMLButtonElement | null>(null);
   const menuPanelRef = useRef<HTMLDivElement | null>(null);
   const pickerPanelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const panel = menuPanelRef.current;
+    const trigger = moreBtnRef.current;
+    if (!panel) return;
+    const controls = () => Array.from(panel.querySelectorAll<HTMLElement>('button:not(:disabled), [role="menuitem"]:not(:disabled):not([aria-disabled="true"])'));
+    controls()[0]?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      const items = controls();
+      const index = items.indexOf(document.activeElement as HTMLElement);
+      let next: number;
+      if (event.key === 'ArrowDown') next = (index + 1) % items.length;
+      else if (event.key === 'ArrowUp') next = (index - 1 + items.length) % items.length;
+      else if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = items.length - 1;
+      else return;
+      event.preventDefault();
+      items[next]?.focus();
+    };
+    panel.addEventListener('keydown', onKey);
+    return () => {
+      panel.removeEventListener('keydown', onKey);
+      if (document.activeElement === document.body || panel.contains(document.activeElement)) trigger?.focus();
+    };
+  }, [menuOpen]);
   const closeAll = () => { setMenuOpen(false); setPanelPinned(false); setPickerOpen(false); };
   useDismiss({
     refs: [menuRef, menuPanelRef, pickerPanelRef],

@@ -32,9 +32,10 @@ export function useSubscription<T>(
   subscribe: (bridge: BridgeImpl, cb: (value: T) => void) => () => void,
   initial: NoInfer<T>,
   deps: ReadonlyArray<unknown> = [],
+  enabled = true,
 ): T {
   const { bridge } = useBridgeContext();
-  const key = [bridge, ...deps];
+  const key = [bridge, enabled, ...deps];
   const [delivered, setDelivered] = useState<Delivered<T>>(() => ({ key, value: initial }));
   useEffect(() => {
     let unsub: (() => void) | null = null;
@@ -47,7 +48,7 @@ export function useSubscription<T>(
         setDelivered((prev) => (prev.value === value && sameKey(prev.key, key) ? prev : { key, value }));
       });
     };
-    if (bridge) attach(bridge);
+    if (bridge && enabled) attach(bridge);
     return () => {
       cancelled = true;
       unsub?.();

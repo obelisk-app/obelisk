@@ -36,8 +36,8 @@ export function MessageToolbar({
       role="toolbar"
       aria-label={t('shell.desktop.message.moreActions')}
       className={
-        'items-center gap-0.5 rounded-lg border border-lc-border bg-lc-dark p-0.5 shadow-lg ' +
-        (pinned ? 'flex' : 'hidden group-hover:flex')
+        'flex items-center gap-0.5 rounded-lg border border-lc-border bg-lc-dark p-0.5 shadow-lg ' +
+        (pinned ? '' : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100')
       }
       data-testid="message-toolbar"
     >

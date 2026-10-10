@@ -9,19 +9,19 @@ import type { JsGroup } from '../common/types';
 import { useMyPubkey } from '@/hooks/session/useSession';
 import { useSubscription } from './subscription';
 
-export function useGroups(): ReadonlyArray<JsGroup> {
-  const all = useSubscription<ReadonlyArray<JsGroup>>((b, cb) => b.subscribeGroups(cb), []);
+export function useGroups(enabled = true): ReadonlyArray<JsGroup> {
+  const all = useSubscription<ReadonlyArray<JsGroup>>((b, cb) => b.subscribeGroups(cb), [], [], enabled);
   const creators = useSubscription<Readonly<Record<string, string>>>(
     (b, cb) => b.subscribeGroupCreators(cb),
-    {},
+    {}, [], enabled,
   );
   const adminsByGroup = useSubscription<Readonly<Record<string, ReadonlyArray<string>>>>(
     (b, cb) => b.subscribeAdminsByGroup(cb),
-    {},
+    {}, [], enabled,
   );
   const membersByGroup = useSubscription<Readonly<Record<string, ReadonlyArray<string>>>>(
     (b, cb) => b.subscribeMembersByGroup(cb),
-    {},
+    {}, [], enabled,
   );
   const myPubkey = useMyPubkey();
   const wotEnabled = useWotEnabled();
@@ -29,9 +29,9 @@ export function useGroups(): ReadonlyArray<JsGroup> {
   // verdict appear/disappear from the rail.
   const [verdictTick, force] = useState(0);
   useEffect(() => {
-    if (!wotEnabled) return;
+    if (!wotEnabled || !enabled) return;
     return wotEngine.on('verdicts-changed', () => force((n) => n + 1));
-  }, [wotEnabled]);
+  }, [wotEnabled, enabled]);
   return useMemo(() => {
     if (!wotEnabled) return all;
     // Strict policy: a group is shown iff one of these holds:
@@ -97,8 +97,8 @@ export function useChildrenByParent(): Readonly<Record<string, ReadonlyArray<str
   return useSubscription<Readonly<Record<string, ReadonlyArray<string>>>>((b, cb) => b.subscribeChildrenByParent(cb), {});
 }
 
-export function useGroupCreators(): Readonly<Record<string, string>> {
-  return useSubscription((b, cb) => b.subscribeGroupCreators(cb), {});
+export function useGroupCreators(enabled = true): Readonly<Record<string, string>> {
+  return useSubscription((b, cb) => b.subscribeGroupCreators(cb), {}, [], enabled);
 }
 
 /**

@@ -30,10 +30,10 @@ export function useSlashCatalog(relay: string, slashQuery: string | null, metaMa
   const botPubkeysKey = botCommandSets.map((b) => b.pubkey).sort().join(',');
   const bridge = useBridge();
   useEffect(() => {
-    if (!botPubkeysKey || !bridge) return;
+    if (!slashOpen || !botPubkeysKey || !bridge) return;
     const unsubs = botPubkeysKey.split(',').map((pk) => bridge.subscribeUserMetadata(pk, () => {}));
     return () => { unsubs.forEach((u) => u()); };
-  }, [botPubkeysKey, bridge]);
+  }, [botPubkeysKey, bridge, slashOpen]);
   // Keyed on the bots' own name/picture so unrelated kind 0 traffic does
   // not rebuild the picker.
   const botProfilesKey = (botPubkeysKey ? botPubkeysKey.split(',') : [])

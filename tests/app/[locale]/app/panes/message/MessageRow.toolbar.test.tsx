@@ -102,6 +102,22 @@ describe('message hover toolbar', () => {
     expect(bar.textContent).not.toMatch(/[➕+⋯]/);
   });
 
+  it('keeps toolbar controls keyboard reachable and returns focus after Escape', () => {
+    renderRow();
+    const more = screen.getByTestId('message-more');
+    const bar = screen.getByTestId('message-toolbar');
+    expect(bar.classList.contains('hidden')).toBe(false);
+    more.focus();
+    fireEvent.click(more);
+    const menu = screen.getByTestId('message-menu');
+    expect(menu.contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(document.activeElement!, { key: 'End' });
+    expect(document.activeElement).toBe(within(menu).getByTestId('message-menu-mute'));
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+    expect(screen.queryByTestId('message-menu')).toBeNull();
+    expect(document.activeElement).toBe(more);
+  });
+
   it('reacting from the bar sends the reaction and moves it to the front of recents', () => {
     renderRow();
     fireEvent.click(screen.getAllByTestId('message-quick-reaction')[1]);
@@ -264,11 +280,11 @@ describe('message row menu and toolbar actions', () => {
   it('a click on the message body pins the toolbar open, and a second unpins it', () => {
     renderRow();
     const bar = screen.getByTestId('message-toolbar');
-    expect(bar.className).toContain('hidden');
+    expect(bar.className).toContain('opacity-0');
     fireEvent.click(screen.getByText('hello world'));
-    expect(bar.className).not.toContain('hidden');
+    expect(bar.className).not.toContain('opacity-0');
     fireEvent.click(screen.getByText('hello world'));
-    expect(bar.className).toContain('hidden');
+    expect(bar.className).toContain('opacity-0');
   });
 
   it('a click on a button inside the body does not pin the toolbar', () => {
@@ -278,6 +294,6 @@ describe('message row menu and toolbar actions', () => {
     const inner = document.createElement('button');
     body.appendChild(inner);
     fireEvent.click(inner);
-    expect(bar.className).toContain('hidden');
+    expect(bar.className).toContain('opacity-0');
   });
 });

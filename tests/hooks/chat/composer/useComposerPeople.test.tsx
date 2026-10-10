@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { groupFixture, userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
 import { fakeBridge } from '@tests/support/fake-bridge';
@@ -25,6 +25,23 @@ describe('useComposerPeople', () => {
   it('useComposerMetadata follows the bridge store', async () => {
     const { result } = renderHook(() => useComposerMetadata(), { wrapper });
     await waitFor(() => expect(result.current[ALICE]?.displayName).toBe('Alice'));
+  });
+
+  it('ignores metadata traffic while pickers are closed and replays the latest on opening', () => {
+    const fake = fakeBridge({ userMetadata: META });
+    let renders = 0;
+    const { result, rerender } = renderHook(({ open }) => { renders++; return useComposerMetadata(open); }, {
+      initialProps: { open: false }, wrapper: bridgeWrapper(fake),
+    });
+    const before = renders;
+    act(() => fake.stores.userMetadata.set({ ...META, [ALICE]: { ...META[ALICE], displayName: 'Updated' } }));
+    expect(renders).toBe(before);
+    rerender({ open: true });
+    expect(result.current[ALICE].displayName).toBe('Updated');
+    rerender({ open: false });
+    const closed = renders;
+    act(() => fake.stores.userMetadata.set(META));
+    expect(renders).toBe(closed);
   });
 
   it('mention candidates span members and admins, filtered and capped, and are empty while closed', () => {

@@ -3,6 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { useMessageRowMenus } from '@/hooks/shell/panes/message/useMessageRowMenus';
 
 describe('useMessageRowMenus', () => {
+  it('skips native disabled menu items during arrow navigation', () => {
+    const { result } = renderHook(() => useMessageRowMenus());
+    const panel = document.createElement('div');
+    panel.innerHTML = '<button>Forward</button><button role="menuitem" disabled>Zap</button><button role="menuitem">Copy</button>';
+    document.body.append(panel);
+    result.current.menuPanelRef.current = panel;
+    act(() => result.current.toggleMenu());
+    expect(document.activeElement?.textContent).toBe('Forward');
+    act(() => document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })));
+    expect(document.activeElement?.textContent).toBe('Copy');
+    act(() => result.current.closeAll());
+    panel.remove();
+  });
+
   it('opening the picker from the menu closes the menu and pins the toolbar', () => {
     const { result } = renderHook(() => useMessageRowMenus());
     act(() => result.current.toggleMenu());

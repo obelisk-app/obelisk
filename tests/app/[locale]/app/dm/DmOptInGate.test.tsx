@@ -32,6 +32,17 @@ describe('DMOptInBoundary', () => {
     expect(stored[DM_OPT_IN_PREFERENCE_KEY]).toBe(true);
   });
 
+  it('uses one opt-in action across sidebar and main pane, revealing both together', async () => {
+    render(<LocaleProvider initialLocale="en">
+      <DMOptInBoundary surface="sidebar" fallback={<span>DMs are off</span>}><span>Sidebar chats</span></DMOptInBoundary>
+      <DMOptInBoundary surface="desktop"><span>Main chats</span></DMOptInBoundary>
+    </LocaleProvider>);
+    expect(screen.getAllByTestId('enable-dms-button')).toHaveLength(1);
+    fireEvent.click(screen.getByTestId('enable-dms-button'));
+    await waitFor(() => expect(screen.getByText('Sidebar chats')).toBeInTheDocument());
+    expect(screen.getByText('Main chats')).toBeInTheDocument();
+  });
+
   it('shows the mobile DM opt-in gate by default and reveals DMs after enabling', async () => {
     const onSecondary = vi.fn();
 

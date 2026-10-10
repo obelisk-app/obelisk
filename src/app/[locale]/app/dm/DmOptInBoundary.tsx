@@ -7,13 +7,15 @@ import DmOptInGate, { type DmOptInGateProps } from './DmOptInGate';
 /** Its children once DMs are on for this device; the opt-in card until then. */
 export function DMOptInBoundary({
   children,
+  fallback,
   surface = 'desktop',
   secondaryLabel,
   onEnable,
   onSecondary,
-}: DmOptInGateProps & { children: ReactNode }) {
+}: DmOptInGateProps & { children: ReactNode; fallback?: ReactNode }) {
   const enabled = useDmOptInEnabled();
   if (!enabled) {
+    if (fallback !== undefined) return <>{fallback}</>;
     return (
       <DmOptInGate
         surface={surface}

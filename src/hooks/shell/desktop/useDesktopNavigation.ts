@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { nostrActions, useBridge } from '@/services/nostr-bridge';
 import { parseUrl, urlFor, restoredNav, type NavState } from '@/utils/shell/mobile/url-state';
 import { viewForNav, navForView } from '@/utils/shell/desktop/navigation';
 import { subscribeVoiceJump } from '@/services/voice/jump-to-voice';
 import { useChatStore } from '@/store/chat';
 import { useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink';
+import { shortHost } from '@/utils/relay-url/url-host';
 import type { View } from '@/utils/shell/desktop/view';
 
 /**
@@ -24,8 +25,15 @@ export function useDesktopNavigation(relay: string) {
   // in rather than an empty pane. State adjusted during render (the
   // "previous value" pattern), so it is read in the same render it is set
   // and never from a ref whose write may belong to a discarded render.
-  const [view, setView] = useState<View>({ kind: 'empty' });
+  const [view, setViewState] = useState<View>({ kind: 'empty' });
+  const historyReplay = useRef(0);
   const [restored, setRestored] = useState(false);
+  const setView = useCallback((next: View) => {
+    historyReplay.current += 1;
+    setViewState(next);
+    setRestored(true);
+  }, []);
+  const lastDestination = useRef<string | null>(null);
   const inherited = useRef<{ nav: NavState; view: View } | null>(null);
   const [lastGroupId, setLastGroupId] = useState<string | null>(null);
   if (view.kind === 'group' && view.groupId !== lastGroupId) setLastGroupId(view.groupId);
@@ -80,7 +88,7 @@ export function useDesktopNavigation(relay: string) {
     messageGroup.current = pendingJump.groupId;
     setPendingMessageId(pendingJump.messageId ?? null);
     useChatStore.getState().consumeJump();
-  }, [pendingJump]);
+  }, [pendingJump, setView]);
 
   // Deep-link: ?c=<groupId>[&m=<messageId>][&relay=<host>] auto-selects a
   // channel on first render, switches to the requested relay, and (when m is
@@ -118,7 +126,12 @@ export function useDesktopNavigation(relay: string) {
     const url = new URL(urlFor(nav, relay), window.location.origin);
     if (new URLSearchParams(window.location.search).get('debug') === 'voice') url.searchParams.set('debug', 'voice');
     if (pendingMessageId && view.kind === 'group' && messageGroup.current === view.groupId) url.searchParams.set('m', pendingMessageId);
-    window.history.replaceState({ ...window.history.state, nav }, '', url.pathname + url.search);
+    const destination = JSON.stringify(navForView(view));
+    const navigated = lastDestination.current !== null && lastDestination.current !== destination && source?.view !== view;
+    const state = { ...window.history.state, nav };
+    if (navigated) window.history.pushState(state, '', url.pathname + url.search);
+    else window.history.replaceState(state, '', url.pathname + url.search);
+    lastDestination.current = destination;
   }, [view, relay, restored, pendingMessageId]);
 
   // A history entry created on a phone remains navigable after resizing.
@@ -126,16 +139,34 @@ export function useDesktopNavigation(relay: string) {
     const onPop = (event: PopStateEvent) => {
       // The exit sentinel belongs to phone navigation. Desktop Back skips it.
       if (event.state?.guard) { window.history.back(); return; }
+      const params = new URLSearchParams(window.location.search);
       const nav = event.state?.nav ? restoredNav(event.state.nav) : parseUrl(window.location.search).nav;
-      const next = viewForNav(nav);
-      inherited.current = { nav, view: next };
-      setView(next);
-      messageGroup.current = next.kind === 'group' ? next.groupId : null;
-      setPendingMessageId(new URLSearchParams(window.location.search).get('m'));
+      const requested = params.get('relay');
+      const generation = ++historyReplay.current;
+      const apply = (allowed: boolean) => {
+        if (generation !== historyReplay.current) return;
+        const next: View = allowed ? viewForNav(nav) : { kind: 'empty' };
+        inherited.current = { nav: allowed ? nav : navForView(next), view: next };
+        setViewState(next);
+        messageGroup.current = next.kind === 'group' ? next.groupId : null;
+        setPendingMessageId(allowed ? params.get('m') : null);
+        setRestored(true);
+      };
+      if (requested && requested !== shortHost(relay) && requested !== relay) {
+        // Do not select a historical channel on the current, different relay,
+        // or overwrite its URL while the trusted-relay gate is pending.
+        setRestored(false);
+        setViewState({ kind: 'empty' });
+        void switchFromDeepLink(requested).then(
+          outcome => apply(outcome === 'switched' || outcome === 'unchanged'),
+          () => apply(false),
+        );
+      } else apply(true);
     };
     window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, []);
+    return () => { window.removeEventListener('popstate', onPop); };
+  }, [relay, switchFromDeepLink]);
+  useEffect(() => () => { historyReplay.current += 1; }, []);
 
   // Voice status bar "jump back to call" → switch relay if the call lives
   // on a different one (so `useGroups()` resolves the channel before we set
@@ -150,7 +181,7 @@ export function useDesktopNavigation(relay: string) {
       }
       setView({ kind: 'group', groupId: channelId });
     });
-  }, [relay]);
+  }, [relay, setView]);
 
   return { view, setView, lastGroupId, pendingMessageId, setPendingMessageId };
 }

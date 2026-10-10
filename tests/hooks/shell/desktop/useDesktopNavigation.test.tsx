@@ -1,6 +1,7 @@
-import { act, cleanup, renderHook } from '@testing-library/react';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDesktopNavigation } from '@/hooks/shell/desktop/useDesktopNavigation';
+import { useCurrentRelayUrl } from '@/services/nostr-bridge';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { initialNav } from '@/constants/shell/mobile';
@@ -28,6 +29,48 @@ describe('responsive destination handoff', () => {
     window.history.replaceState(null, '', `/es/app${search}`);
     expect(mount().result.current.view).toEqual(expected);
     expect(window.location.pathname).toBe('/es/app');
+  });
+
+  it('pushes deliberate destinations, but does not push again on popstate or message normalization', () => {
+    const { result } = mount();
+    const push = vi.spyOn(window.history, 'pushState');
+    act(() => result.current.setView({ kind: 'dm', peer: 'alice' }));
+    act(() => result.current.setView({ kind: 'dm', peer: 'bob' }));
+    expect(push).toHaveBeenCalledTimes(2);
+    act(() => result.current.setView({ kind: 'dm', peer: 'bob' }));
+    expect(push).toHaveBeenCalledTimes(2);
+    act(() => window.dispatchEvent(new PopStateEvent('popstate', { state: { nav: navForView({ kind: 'dm', peer: 'alice' }) } })));
+    expect(result.current.view).toEqual({ kind: 'dm', peer: 'alice' });
+    expect(push).toHaveBeenCalledTimes(2);
+    act(() => result.current.setPendingMessageId(null));
+    expect(push).toHaveBeenCalledTimes(2);
+    push.mockRestore();
+  });
+
+  it('restores the historical relay before selecting its channel or rewriting its URL', async () => {
+    let finish!: () => void;
+    const gate = new Promise<void>(resolve => { finish = resolve; });
+    const setActiveGroup = vi.fn();
+    const switchRelay = vi.fn(async (url: string) => { await gate; fake.stores.currentRelayUrl.set(url); });
+    const fake = fakeBridge({ currentRelayUrl: 'wss://b.example', configuredRelays: ['wss://a.example', 'wss://b.example'] }, { setActiveGroup, switchRelay });
+    const { result } = renderHook(() => useDesktopNavigation(useCurrentRelayUrl()), { wrapper: bridgeWrapper(fake) });
+    act(() => result.current.setView({ kind: 'group', groupId: 'b-room' }));
+    const nav = navForView({ kind: 'group', groupId: 'a-room' });
+    const push = vi.spyOn(window.history, 'pushState');
+    act(() => {
+      window.history.replaceState({ nav }, '', '/app?relay=a.example&c=a-room');
+      window.dispatchEvent(new PopStateEvent('popstate', { state: { nav } }));
+    });
+    await waitFor(() => expect(switchRelay).toHaveBeenCalledWith('wss://a.example'));
+    expect(result.current.view).toEqual({ kind: 'empty' });
+    expect(setActiveGroup).not.toHaveBeenCalledWith('a-room');
+    expect(window.location.search).toContain('relay=a.example');
+    await act(async () => { finish(); await gate; });
+    await waitFor(() => expect(result.current.view).toEqual({ kind: 'group', groupId: 'a-room' }));
+    expect(setActiveGroup).toHaveBeenLastCalledWith('a-room');
+    expect(window.location.search).toContain('relay=a.example');
+    expect(push).not.toHaveBeenCalled();
+    push.mockRestore();
   });
 
   it('keeps an inherited phone-only destination until desktop navigation clears stale fields', () => {

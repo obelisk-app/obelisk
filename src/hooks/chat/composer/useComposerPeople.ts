@@ -11,13 +11,13 @@ import { displayNameFor } from '@/utils/identity/display-name';
 import { filterMembers, relayMentionCandidates, type MemberInfo } from '@/utils/message-text/mentions';
 
 /** Every kind 0 the bridge holds, live. The mention picker and the bot rail both read names from it. */
-export function useComposerMetadata(): Record<string, JsUserMetadata> {
+export function useComposerMetadata(enabled = true): Record<string, JsUserMetadata> {
   const bridge = useBridge();
   const [metaMap, setMetaMap] = useState<Record<string, JsUserMetadata>>({});
   useEffect(() => {
-    if (!bridge) return;
+    if (!bridge || !enabled) return;
     return bridge.userMetadata.subscribe((m) => setMetaMap(m));
-  }, [bridge]);
+  }, [bridge, enabled]);
   return metaMap;
 }
 
@@ -34,10 +34,11 @@ export function useMentionCandidates(
   metaMap: Record<string, JsUserMetadata>,
   maxMentionResults: number,
 ): MemberInfo[] {
-  const groups = useGroups();
-  const membersByGroup = useMembersByGroup();
-  const adminsByGroup = useAdminsByGroup();
-  const creatorsByGroup = useGroupCreators();
+  const open = mentionQuery !== null;
+  const groups = useGroups(open);
+  const membersByGroup = useMembersByGroup(open);
+  const adminsByGroup = useAdminsByGroup(open);
+  const creatorsByGroup = useGroupCreators(open);
   const visibleGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
   const mentionCandidatePubkeys = useMemo(
     () => relayMentionCandidates(visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup),

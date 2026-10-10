@@ -1,5 +1,6 @@
 'use client';
 
+import Text from '@/components/ui/layout/Text';
 import { useTranslations } from 'next-intl';
 import ServerRail from '../rail/ServerRail';
 import DmList from '../dm/DmList';
@@ -38,7 +39,8 @@ export function DesktopSidebar({
       />
       {view.kind !== 'feed' && <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={onSidebarWidth}>
         {view.kind === 'dm' ? (
-          <DMOptInBoundary surface="sidebar" secondaryLabel={t('dm.optIn.notNow')} onSecondary={leaveDms}>
+          <DMOptInBoundary surface="sidebar" secondaryLabel={t('dm.optIn.notNow')} onSecondary={leaveDms}
+            fallback={<Text as="div" tone="muted" size="sm" className="p-4">{t('dm.optIn.title')}</Text>}>
             <DmList
               activePeer={view.peer}
               onPick={vm.pickPeer}
