@@ -7,6 +7,7 @@ import { MAX_COMPOSER_ATTACHMENTS } from '@/constants/chat/composer';
 import { errorText } from '@/utils/errors/error-text';
 
 export interface ComposerUploadTargets {
+  isCurrent?: () => boolean;
   setDraft: Dispatch<SetStateAction<string>>;
   setDraftSticker: Dispatch<SetStateAction<MessageSticker | null>>;
   setDraftVoiceNote: Dispatch<SetStateAction<MessageVoiceNote | null>>;
@@ -19,7 +20,7 @@ export interface ComposerUploadTargets {
  * a recorded voice note becomes the whole draft. One upload at a time;
  * failures land in `sendError` for the skin to show.
  */
-export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNote, setSendError }: ComposerUploadTargets) {
+export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNote, setSendError, isCurrent = () => true }: ComposerUploadTargets) {
   const t = useTranslations();
   const [uploading, setUploading] = useState(false);
 
@@ -33,6 +34,7 @@ export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNot
     try {
       const { uploadToBlossom } = await import('@/services/media/blossom');
       const urls = await Promise.all(batch.map((f) => uploadToBlossom(f)));
+      if (!isCurrent()) return;
       setDraft((d) => appendMediaUrls(d, urls));
     } catch (err) {
       setSendError(errorText(t, err, 'chat.composer.uploadFailed'));
@@ -48,6 +50,7 @@ export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNot
     try {
       const { uploadToBlossom } = await import('@/services/media/blossom');
       const url = await uploadToBlossom(file);
+      if (!isCurrent()) return;
       setDraft(url);
       setDraftSticker(null);
       setDraftVoiceNote({ url, durationSeconds });

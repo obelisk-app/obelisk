@@ -10,7 +10,7 @@ import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
 import { checkDmAttachment, encryptAndUploadDmFile } from '@/services/chat/dm/dm-attachments';
 import { dmFileCategory } from '@/utils/attachments/dm-file';
 import type { MediaPickerTab } from '@/utils/chat/picker/media-catalog';
-import { usePreviewUrls } from './usePreviewUrls';
+import { useConversationDraft, useDraftField } from '@/hooks/chat/composer/useConversationDraft';
 import {
   draftAfterPick,
   dmTextTags,
@@ -34,15 +34,21 @@ export function useDmComposer(peer: string, inputRef: RefObject<HTMLInputElement
   const serverEmojis = useChatStore((s) => s.serverEmojis);
   const protocol = useDMStore((s) => s.protocolOverrides[peer]) ?? 'nip17';
   const mediaAllowed = protocol === 'nip17';
-  const [draft, setDraft] = useState('');
-  const [files, setFiles] = useState<PendingFile[]>([]);
-  const [voice, setVoice] = useState<PendingVoice | null>(null);
-  const [sticker, setSticker] = useState<MessageSticker | null>(null);
-  const [customEmojis, setCustomEmojis] = useState<CustomEmojiMap>({});
+  const entry = useConversationDraft('dm', peer);
+  const [draft, setDraft] = useDraftField(entry, 'text', '');
+  const [files, setFiles] = useDraftField<PendingFile[]>(entry, 'files', []);
+  const [voice, setVoice] = useDraftField<PendingVoice | null>(entry, 'voice', null);
+  const [sticker, setSticker] = useDraftField<MessageSticker | null>(entry, 'sticker', null);
+  const [customEmojis, setCustomEmojis] = useDraftField<CustomEmojiMap>(entry, 'customEmojis', {});
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerTab, setPickerTab] = useState<MediaPickerTab>('emoji');
   const [error, setError] = useState<string | null>(null);
-  const { preview, release } = usePreviewUrls();
+  const preview = (file: Blob) => {
+    try { const url = URL.createObjectURL(file); entry.urls.add(url); return url; } catch { return null; }
+  };
+  const release = (url: string | null) => {
+    if (url) { URL.revokeObjectURL(url); entry.urls.delete(url); }
+  };
 
   const uploading = files.some((f) => !f.meta && !f.failed) || (voice !== null && !voice.meta);
 
@@ -60,19 +66,19 @@ export function useDmComposer(peer: string, inputRef: RefObject<HTMLInputElement
       }
       const id = nextId();
       const category = dmFileCategory(file.type);
-      const entry: PendingFile = {
+      const pendingFile: PendingFile = {
         id,
         name: file.name,
         mime: file.type,
         previewUrl: category === 'image' || category === 'video' ? preview(file) : null,
         meta: null,
       };
-      setFiles((cur) => [...cur, entry]);
+      setFiles((cur) => [...cur, pendingFile]);
       encryptAndUploadDmFile(file).then(
         (meta) => setFiles((cur) => cur.map((f) => (f.id === id ? { ...f, meta } : f))),
         () => {
           setFiles((cur) => cur.map((f) => (f.id === id ? { ...f, failed: true } : f)));
-          setError(t('dm.file.uploadFailed'));
+          if (entry.active) setError(t('dm.file.uploadFailed'));
         },
       );
     }
@@ -96,8 +102,8 @@ export function useDmComposer(peer: string, inputRef: RefObject<HTMLInputElement
       (meta) => setVoice((cur) => (cur && cur.previewUrl === url ? { ...cur, meta } : cur)),
       () => {
         release(url);
-        setVoice(null);
-        setError(t('dm.file.uploadFailed'));
+        setVoice((current) => current?.previewUrl === url ? null : current);
+        if (entry.active) setError(t('dm.file.uploadFailed'));
       },
     );
   }
@@ -108,7 +114,7 @@ export function useDmComposer(peer: string, inputRef: RefObject<HTMLInputElement
   }
 
   function send() {
-    if (uploading) return;
+    if (uploading || !entry.active) return;
     const text = draft.trim();
     const ready = files.filter((f) => f.meta);
     if (!text && ready.length === 0 && !voice?.meta) return;

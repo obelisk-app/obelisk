@@ -1,7 +1,19 @@
+import { clearConversationDrafts } from '@/store/chat/composer-drafts';
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import { useDmComposer } from '@/hooks/chat/dm/composer/useDmComposer';
+
+const upload = vi.fn();
+vi.mock('@/hooks/session/useSession', async () => {
+  const { sessionMock } = await import('@tests/support/mocks/session');
+  return sessionMock({ useMyPubkey: () => 'account' });
+});
+vi.mock('@/services/chat/dm/dm-attachments', () => ({
+  checkDmAttachment: () => null,
+  encryptAndUploadDmFile: (...args: unknown[]) => upload(...args),
+}));
+beforeEach(() => { clearConversationDrafts(); vi.clearAllMocks(); });
 
 const PEER = 'b'.repeat(64);
 const wrapper = ({ children }: { children: React.ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
@@ -35,4 +47,22 @@ describe('useDmComposer view helpers', () => {
     expect(key('Enter', true)).toBe(0);
     expect(key('a')).toBe(0);
   });
+});
+
+it('keeps a DM draft and pending upload through navigation, then accepts its completion', async () => {
+  let finish!: (value: unknown) => void;
+  upload.mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+  const first = setup();
+  act(() => {
+    first.result.current.typeDraft('attachment context');
+    first.result.current.addFiles([new File(['file'], 'note.txt', { type: 'text/plain' })]);
+  });
+  expect(first.result.current.files).toHaveLength(1);
+  first.unmount();
+  const restored = setup();
+  expect(restored.result.current.draft).toBe('attachment context');
+  expect(restored.result.current.files[0].meta).toBeNull();
+  await act(async () => { finish({ url: 'https://files.example/encrypted' }); });
+  expect(restored.result.current.files[0].meta).toEqual({ url: 'https://files.example/encrypted' });
+  expect(restored.result.current.canSend).toBe(true);
 });

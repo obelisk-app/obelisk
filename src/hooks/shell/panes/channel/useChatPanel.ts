@@ -1,7 +1,9 @@
 'use client';
 
+import { useChannelReplyDraft } from '@/hooks/chat/composer/useConversationDraft';
+
 import { useMemo, useRef, useState } from 'react';
-import { useCurrentRelayUrl, useGroupById, useMessages, useMessagesStatus, useGroupMetadataEose, useReactions, useAdmins, useGroupCreator, useRelayAccess, type JsMessage } from '@/services/nostr-bridge';
+import { useCurrentRelayUrl, useGroupById, useMessages, useMessagesStatus, useGroupMetadataEose, useReactions, useAdmins, useGroupCreator, useRelayAccess } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/hooks/session/useSession';
 import { useVoiceStore } from '@/store/voice';
 import { useChannelHighlights } from '@/hooks/read-state/useChannelHighlights';
@@ -57,13 +59,8 @@ export function useChatPanel({ groupId, showMembers, pendingMessageId, onConsume
   // renders unconditionally: a cached or partial history is more useful than
   // an empty pane, and RelayAccessBanner explains the situation in place.
   const relayAccess = useRelayAccess(relay || null);
-  const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
+  const [replyingTo, setReplyingTo] = useChannelReplyDraft(groupId);
   // Reset the reply target when the channel changes, in the same render.
-  const [replyChannel, setReplyChannel] = useState(groupId);
-  if (replyChannel !== groupId) {
-    setReplyChannel(groupId);
-    setReplyingTo(null);
-  }
   const composerRef = useRef<ComposerHandle>(null);
   useCreatorAdminClaim({ groupId, myPubkey, groupCreator, admins, relay, relayAccess });
   const voiceMainRef = useRef<HTMLDivElement>(null);

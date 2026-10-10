@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useChannelReplyDraft } from '@/hooks/chat/composer/useConversationDraft';
+
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { nostrActions, useLoadEarlier, type JsMessage } from '@/services/nostr-bridge';
 import { useReadStateStore } from '@/store/read-state';
 import { useChatStore } from '@/store/chat';
@@ -26,18 +28,12 @@ export function useEnsureGroupMetadata(groupId: string, groupKnown: boolean) {
 }
 
 /**
- * The message being replied to. Reset when the channel changes (in the same
- * render), and set by "Reply" taps from the message-actions sheet, which is
+ * The conversation-scoped reply draft, restored on return and set by "Reply" taps from the message-actions sheet, which is
  * mounted at the PhoneShell level and so asks through a window event, the
  * same indirection the quick-react buttons use.
  */
 export function useReplyTarget(groupId: string, messages: ReadonlyArray<JsMessage>) {
-  const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
-  const [replyChannel, setReplyChannel] = useState(groupId);
-  if (replyChannel !== groupId) {
-    setReplyChannel(groupId);
-    setReplyingTo(null);
-  }
+  const [replyingTo, setReplyingTo] = useChannelReplyDraft(groupId);
   useEffect(() => {
     const handler = (e: Event) => {
       const ev = e as CustomEvent<{ msgId: string }>;
@@ -46,7 +42,7 @@ export function useReplyTarget(groupId: string, messages: ReadonlyArray<JsMessag
     };
     window.addEventListener('obelisk-mobile:reply', handler);
     return () => window.removeEventListener('obelisk-mobile:reply', handler);
-  }, [messages]);
+  }, [messages, setReplyingTo]);
   return { replyingTo, setReplyingTo };
 }
 

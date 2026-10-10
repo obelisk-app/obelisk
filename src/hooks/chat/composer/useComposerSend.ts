@@ -14,6 +14,8 @@ import { errorText } from '@/utils/errors/error-text';
 
 /** The draft state `send` reads and clears. */
 export interface ComposerDraftState {
+  isCurrent?: () => boolean;
+  clearSubmitted?: () => boolean;
   draft: string;
   setDraft: Dispatch<SetStateAction<string>>;
   setSendError: Dispatch<SetStateAction<string | null>>;
@@ -64,7 +66,7 @@ export function useComposerSend({
   return async function send(e?: FormEvent) {
     e?.preventDefault();
     const content = state.draft.trim();
-    if (!content) return;
+    if (!content || state.isCurrent?.() === false) return;
 
     // /zap [user] [amount], frontend-only:
     //   /zap                -> reply target (or last channel msg from someone else)
@@ -114,18 +116,23 @@ export function useComposerSend({
 
     // Clear only after the prerequisite signature succeeds, preserving the
     // draft if the user rejects the join request in their extension.
-    state.setDraft('');
-    state.setDraftCustomEmojis({});
-    state.setDraftSticker(null);
-    state.setDraftVoiceNote(null);
-    setReplyingTo(null);
+    if (state.isCurrent?.() === false) return;
+    if (state.clearSubmitted) {
+      if (state.clearSubmitted()) setReplyingTo(null);
+    } else {
+      state.setDraft((current) => current === state.draft ? '' : current);
+      state.setDraftCustomEmojis((current) => current === state.draftCustomEmojis ? {} : current);
+      state.setDraftSticker((current) => current === state.draftSticker ? null : current);
+      state.setDraftVoiceNote((current) => current === state.draftVoiceNote ? null : current);
+      state.setDraftMentions((current) => current === state.draftMentions ? [] : current);
+      setReplyingTo(null);
+    }
 
     // The composer holds mentions as readable `@Name`; the wire format is
     // `nostr:npub1...`. Resolve here, past the frontend-only commands and
     // before anything downstream reads the text, or the event carries no
     // `nostr:` token, so no `#p` tag and no mention notification.
     const wire = resolveDraftMentions(content, state.draftMentions);
-    state.setDraftMentions([]);
 
     // Fire-and-forget: the bridge inserts the pending placeholder
     // synchronously and surfaces send failures via the bubble's `failed`

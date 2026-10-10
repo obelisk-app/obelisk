@@ -1,3 +1,4 @@
+import { clearConversationDrafts } from '@/store/chat/composer-drafts';
 import type { BridgeImpl } from '@/services/nostr-bridge';
 import type { SessionActions } from '@/types/session/session';
 import { CodedError } from '@/utils/errors/codes';
@@ -34,6 +35,7 @@ export function createSessionActions(current: BridgeImpl | null): SessionActions
     async logout() {
       const bridge = requireBridge(current);
       nextIntent(bridge);
+      clearConversationDrafts();
       await bridge.logout();
     },
     async updateProfile(values, onUploading) {
@@ -52,6 +54,7 @@ export function createSessionActions(current: BridgeImpl | null): SessionActions
 
 /** Lazy entry for bridge-free marketing and non-React account removal. */
 export async function logoutSession(): Promise<void> {
+  clearConversationDrafts();
   const { getBridgeImpl, logoutPageSession } = await import('@/services/nostr-bridge');
   const bridge = getBridgeImpl();
   if (bridge) nextIntent(bridge);
