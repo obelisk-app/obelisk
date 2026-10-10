@@ -520,5 +520,12 @@
       "offline": "Offline",
       "error": "Error: {detail}"
     }
+  },
+  "loginRecovery": {
+    "chooseRelay": "Choose another relay",
+    "profilePending": "Profile not yet synced",
+    "publishing": "Publishing your profile…",
+    "publishFailed": "Your profile could not be confirmed by a relay. Your draft is kept here. Retry to sync it before entering.",
+    "retryPublish": "Retry profile sync"
   }
 }

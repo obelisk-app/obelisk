@@ -5,7 +5,10 @@ import { shortHost } from '@/utils/relay-url/url-host';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { connectionLabel } from '@/utils/relay/relay-status';
+import { useRelayAccess } from '@/services/nostr-bridge';
+import { useMyLoginMethod } from '@/hooks/session/useSession';
+import { accessDotClass } from '@/utils/relay/relay-status-pill';
+import { relayStatus, connectionLabel } from '@/utils/relay/relay-status';
 import { GearIcon } from '@/assets/icons';
 import Skeleton from '@/components/ui/animations/Skeleton';
 
@@ -24,6 +27,10 @@ export function SidebarHeader({
   relay, conn, branding, brandingLoaded, showTitleSkeleton, isRelayOperator, onOpenSettings,
 }: Props) {
   const t = useTranslations();
+  const access = useRelayAccess(relay);
+  const loginMethod = useMyLoginMethod();
+  const status = relayStatus(conn, access, loginMethod, shortHost(relay), t);
+  const label = status?.label ?? connectionLabel(conn, t);
   return (
     <div
       className="group relative shrink-0 border-b border-transparent shadow-sm transition-colors hover:border-lc-border"
@@ -83,11 +90,11 @@ export function SidebarHeader({
           )}
         </div>
         <span
-          title={connectionLabel(conn, t)}
-          aria-label={connectionLabel(conn, t)}
+          title={label}
+          aria-label={label}
           className={
             'inline-block h-2.5 w-2.5 shrink-0 rounded-full ' +
-            (conn === 'Connected' ? 'bg-lc-green' : conn === 'Connecting' ? 'bg-yellow-500' : 'bg-red-500')
+            (conn === 'Connected' ? accessDotClass(access) : conn === 'Connecting' ? 'bg-yellow-500' : 'bg-red-500')
           }
         />
         {isRelayOperator && (

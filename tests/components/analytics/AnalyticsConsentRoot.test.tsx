@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider, translator } from '@tests/support/intl';
 import AnalyticsConsentRoot from '@/components/analytics/AnalyticsConsentRoot';
 import { reviewAnalyticsConsent } from '@/services/analytics/consent';
@@ -8,13 +8,28 @@ import { ANALYTICS_CONSENT_KEY } from '@/constants/analytics/consent';
 import { SCOPES } from '@/i18n/modules';
 import { googleScripts, optedOut, resetAnalyticsPage, simulateGtagCookies } from '@tests/support/analytics';
 
+const route = vi.hoisted(() => ({ pathname: '/', loggedIn: false }));
+vi.mock('@/i18n/navigation', async (original) => ({ ...await original<typeof import('@/i18n/navigation')>(), usePathname: () => route.pathname }));
+vi.mock('@/hooks/session/useSession', () => ({ useIsLoggedIn: () => route.loggedIn }));
+
 type Locale = 'en' | 'es' | 'pt';
 
 function renderRoot(locale: Locale = 'en') {
   return render(<LocaleProvider initialLocale={locale}><AnalyticsConsentRoot /></LocaleProvider>);
 }
 
-beforeEach(resetAnalyticsPage);
+beforeEach(() => { resetAnalyticsPage(); route.pathname = '/'; route.loggedIn = false; });
+
+it('defers the app prompt until the authenticated mount and never loads analytics without consent', () => {
+  route.pathname = '/app';
+  const view = render(<LocaleProvider initialLocale="en"><AnalyticsConsentRoot /><AnalyticsConsentRoot appSession /></LocaleProvider>);
+  expect(screen.queryByTestId('analytics-consent')).toBeNull();
+  expect(googleScripts()).toEqual([]);
+  route.loggedIn = true;
+  view.rerender(<LocaleProvider initialLocale="en"><AnalyticsConsentRoot /><AnalyticsConsentRoot appSession /></LocaleProvider>);
+  expect(screen.getAllByTestId('analytics-consent')).toHaveLength(1);
+  expect(googleScripts()).toEqual([]);
+});
 
 describe('the Analytics question on first visit', () => {
   it('is not in the server HTML, and nothing from Google is either', () => {

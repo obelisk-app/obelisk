@@ -8,6 +8,9 @@ import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
 type Props = {
+  publishing: boolean;
+  publishError: boolean;
+  onRetryPublish: () => void;
   pubkey: string;
   onClose: () => void;
   onBack: () => void;
@@ -19,7 +22,7 @@ type Props = {
 };
 
 /** After generating a key: show the new npub, offer to copy or share it, then enter. */
-export function GeneratedNpubStep({ pubkey, onClose, onBack, shared, onShare, finishing, finishError, onFinish }: Props) {
+export function GeneratedNpubStep({ publishing, publishError, onRetryPublish, pubkey, onClose, onBack, shared, onShare, finishing, finishError, onFinish }: Props) {
   const t = useTranslations();
   const npub = nip19.npubEncode(pubkey);
   return (
@@ -34,8 +37,8 @@ export function GeneratedNpubStep({ pubkey, onClose, onBack, shared, onShare, fi
       </Button>
       <div className="nui-form obelisk-npub-share" data-testid="generated-npub-step">
         <div className="nui-form-head">
-          <span className="obelisk-step-done" aria-hidden="true">✓</span>
-          <Heading as="h3" className="nui-form-title">{t('shell.login.profileReady')}</Heading>
+          {!publishing && !publishError && <span className="obelisk-step-done" aria-hidden="true">✓</span>}
+          <Heading as="h3" className="nui-form-title">{publishing || publishError ? t('shell.loginRecovery.profilePending') : t('shell.login.profileReady')}</Heading>
           <Text as="p" className="nui-form-sub">{t('shell.login.npubHelp')}</Text>
         </div>
         <div className="nui-key-display">{npub}</div>
@@ -64,8 +67,11 @@ export function GeneratedNpubStep({ pubkey, onClose, onBack, shared, onShare, fi
             {shared ? t('shell.login.linkCopied') : t('shell.login.shareMyProfile')}
           </Button>
         </div>
+        {publishing && <Text as="p" role="status">{t('shell.loginRecovery.publishing')}</Text>}
+        {publishError && <Text as="p" role="alert">{t('shell.loginRecovery.publishFailed')}</Text>}
+        {publishError && <Button onClick={onRetryPublish}>{t('shell.loginRecovery.retryPublish')}</Button>}
         {finishError && <Text as="p" className="nui-error" role="alert">{finishError}</Text>}
-        <Button variant="bare" type="button" className="nui-login-button" disabled={finishing} onClick={onFinish}>
+        <Button variant="bare" type="button" className="nui-login-button" disabled={finishing || publishing || publishError} onClick={onFinish}>
           {finishing ? t('shell.login.connecting') : t('shell.login.enter')}
         </Button>
       </div>

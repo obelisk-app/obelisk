@@ -21,6 +21,8 @@ vi.mock('@/utils/hints/registry', async (importOriginal) => {
   };
 });
 
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
 import HintHost from '@/components/hints/HintHost';
 
 /** The real controls a hint points at. */
@@ -148,4 +150,10 @@ describe('HintHost', () => {
     // whole set back, not just what was left.
     expect(useHintsStore.getState().seen).toEqual([]);
   });
+});
+
+it('suppresses the tour while relay access blocks onboarding', () => {
+  renderWithBridge(<><Anchors /><HintHost surface="server" shell="desktop" /></>, fakeBridge({ currentRelayUrl: 'wss://example.com', relayAccess: { 'wss://example.com': 'restricted' } }));
+  expect(screen.queryByText('Got it')).toBeNull();
+  expect(useHintsStore.getState().seen).toEqual([]);
 });

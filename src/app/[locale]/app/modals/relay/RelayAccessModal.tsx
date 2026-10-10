@@ -1,5 +1,6 @@
 'use client';
 
+import { AddRelayModal } from '../../rail/AddRelayModal';
 import { useState } from 'react';
 import { useCurrentRelayUrl, useRelayAccess } from '@/services/nostr-bridge';
 import { useIsLoggedIn, useMyLoginMethod } from '@/hooks/session/useSession';
@@ -19,11 +20,13 @@ export function RelayAccessModal() {
   // Track which (relay, state) tuple the user has dismissed so the modal
   // doesn't keep popping back. A real state change (e.g. ok -> restricted
   // again on a new relay, or auth-required after restricted) re-arms it.
+  const [choosingRelay, setChoosingRelay] = useState(false);
   const [dismissed, setDismissed] = useState<string | null>(null);
   const surfaceable =
     access === 'restricted' || access === 'auth-required' || access === 'unreachable';
   const key = relay && surfaceable ? `${relay}|${access}` : null;
   if (!isLoggedIn) return null;
+  if (choosingRelay) return <AddRelayModal onClose={() => setChoosingRelay(false)} />;
   if (!key) return null;
   if (dismissed === key) return null;
 
@@ -57,7 +60,7 @@ export function RelayAccessModal() {
       }
     >
       <ModalHeader variant="alert" tone={tone} icon={icon} title={title} subtitle={body} />
-      <ModalFooter variant="alert" actions={[{ label: t('shell.desktop.gotIt'), onClick: () => setDismissed(key) }]} />
+      <ModalFooter variant="alert" actions={[{ label: t('shell.loginRecovery.chooseRelay'), onClick: () => setChoosingRelay(true) }, { label: t('shell.desktop.gotIt'), onClick: () => setDismissed(key) }]} />
     </Modal>
   );
 }

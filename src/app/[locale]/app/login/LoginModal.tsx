@@ -72,6 +72,9 @@ export default function LoginModal({
   if (flow.generatedLogin) {
     return (
       <GeneratedNpubStep
+        publishing={flow.profilePublishing}
+        publishError={flow.profilePublishError}
+        onRetryPublish={() => void flow.retryProfilePublish()}
         pubkey={flow.generatedLogin.pubkey}
         onClose={onClose ?? flow.backFromGenerated}
         onBack={flow.backFromGenerated}
@@ -109,6 +112,9 @@ export default function LoginModal({
           subtitle={subtitle ?? t('shell.login.subtitle')}
           flatLayout
           showRememberToggle={false}
+          // The app owns publication of the complete draft, including the banner.
+          // An empty SDK relay list retains its form without a second network write.
+          profileRelays={[]}
           profileSetup
           nip46Relays={OBELISK_NIP46_RELAYS}
           nip46Connection={{
