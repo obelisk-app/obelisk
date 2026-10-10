@@ -48,7 +48,7 @@
     "@nostr-wot/relay": "^0.2.1",
     "@nostr-wot/signers": "^1.2.2",
     "@nostr-wot/ui": "^0.8.2",
-    "@nostr-wot/wallet": "^0.4.1",
+    "@nostr-wot/wallet": "^0.4.2",
     "gray-matter": "^4.0.3",
     "html-to-image": "^1.11.13",
     "light-bolt11-decoder": "^3.2.0",

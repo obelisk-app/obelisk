@@ -166,6 +166,8 @@ close or reload: the same rule as an nsec login.
    would ask for a fresh invoice and could pay twice. A wallet error that
    moved no money (`not-paid`) re-enables Zap as before.
 
+The LNURL callback carries the signed zap request as JSON in the `nostr` query parameter, URL-encoded exactly once by the SDK. Obelisk requires `@nostr-wot/wallet` 0.4.2 or later: older versions double-encoded it, causing providers such as LaWallet to reject the invoice request with HTTP 400 even when direct Lightning payments worked. The SDK integration test exercises the installed package with fake HTTP and wallet boundaries, so no funds move during verification.
+
 Receipts (kind 9735) are checked with the SDK's `validateZapReceipt` in
 `useMessageZaps`.
 
