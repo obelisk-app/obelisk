@@ -20,6 +20,7 @@ import { mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media/tags/cu
 import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
 import type { MessageVoiceNote } from '@/utils/media/tags/voice-note-tags';
 import { extractUrls, isImageUrl } from '@/utils/message-text/markdown';
+import { clearSubmittedDraft } from '@/store/chat/composer-drafts';
 import { useChatStore } from '@/store/chat';
 import { slashCommandId, type SlashFilter } from '@/services/relay/bot-commands';
 import { pushRecentSlashCommand } from '@/services/chat/slash/recent-slash-commands';
@@ -37,6 +38,7 @@ import {
 import { navigatePicker } from '@/utils/chat/composer/picker-keys';
 import { type ChannelComposer, type ChannelComposerOptions } from '@/types/chat/composer';
 import { MAX_COMPOSER_ATTACHMENTS } from '@/constants/chat/composer';
+import { useConversationDraft, useDraftField, useDraftSendGuard } from './useConversationDraft';
 import { useComposerMetadata, useMentionCandidates } from './useComposerPeople';
 import { useComposerSend } from './useComposerSend';
 import { useComposerUploads } from './useComposerUploads';
@@ -78,32 +80,35 @@ export function useChannelComposer({
   const relay = useCurrentRelayUrl();
   const serverEmojis = useChatStore((s) => s.serverEmojis);
 
-  const [draft, setDraft] = useState('');
+  const entry = useConversationDraft('channel', groupId, relay);
+  const isCurrent = useDraftSendGuard(entry);
+  const submittedValues = entry.values;
+  const [draft, setDraft] = useDraftField(entry, 'text', '');
   const [caret, setCaret] = useState(0);
   const [sendError, setSendError] = useState<string | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [pickerTab, setPickerTab] = useState<MediaPickerTab>('emoji');
-  const [draftCustomEmojis, setDraftCustomEmojis] = useState<CustomEmojiMap>({});
-  const [draftSticker, setDraftSticker] = useState<MessageSticker | null>(null);
-  const [draftVoiceNote, setDraftVoiceNote] = useState<MessageVoiceNote | null>(null);
+  const [draftCustomEmojis, setDraftCustomEmojis] = useDraftField<CustomEmojiMap>(entry, 'draftCustomEmojis', {});
+  const [draftSticker, setDraftSticker] = useDraftField<MessageSticker | null>(entry, 'draftSticker', null);
+  const [draftVoiceNote, setDraftVoiceNote] = useDraftField<MessageVoiceNote | null>(entry, 'draftVoiceNote', null);
   /**
    * Mentions the draft is holding as readable `@Name` text, resolved back to
    * `nostr:npub1...` in `send`. Slash-command slots are not tracked here;
    * those already carry the npub.
    */
-  const [draftMentions, setDraftMentions] = useState<DraftMention[]>([]);
+  const [draftMentions, setDraftMentions] = useDraftField<DraftMention[]>(entry, 'draftMentions', []);
   /** Caret owed to the input once a mention or command insert re-renders. */
   const pendingCaretRef = useRef<number | null>(null);
   const { uploading, onPickFiles, onVoiceRecorded } = useComposerUploads({
-    setDraft, setDraftSticker, setDraftVoiceNote, setSendError,
+    setDraft, setDraftSticker, setDraftVoiceNote, setSendError, isCurrent: () => entry.active,
   });
 
-  const metaMap = useComposerMetadata();
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const metaMap = useComposerMetadata();
   const [mentionIndex, setMentionIndex] = useState(0);
   const filteredMembers = useMentionCandidates(mentionQuery, metaMap, maxMentionResults);
 
-  const [slashQuery, setSlashQuery] = useState<string | null>(null);
   const [slashIndex, setSlashIndex] = useState(0);
   const {
     slashSections, slashRail, slashResults, slashFilter, setSlashFilterState, setRecentSlash, botProfiles,
@@ -118,7 +123,6 @@ export function useChannelComposer({
     setComposerGroupId(groupId);
     setMentionQuery(null);
     setSlashQuery(null);
-    setDraftMentions([]);
     setSendError(null);
   }
 
@@ -247,6 +251,8 @@ export function useChannelComposer({
   const send = useComposerSend({
     groupId, group, relay, messages, replyingTo, setReplyingTo, onOpenNewGame,
     state: {
+      isCurrent,
+      clearSubmitted: () => clearSubmittedDraft(entry, submittedValues),
       draft, setDraft, setSendError, draftMentions, setDraftMentions, serverEmojis,
       draftCustomEmojis, setDraftCustomEmojis, draftSticker, setDraftSticker, draftVoiceNote, setDraftVoiceNote,
     },

@@ -1,3 +1,4 @@
+import { clearConversationDrafts } from '@/store/chat/composer-drafts';
 vi.mock('@/hooks/session/useSession', async () => {
   const { sessionMock } = await import('@tests/support/mocks/session');
   return sessionMock({
@@ -89,6 +90,7 @@ function mount(overrides: Partial<Parameters<typeof useChannelComposer>[0]> = {}
 }
 
 beforeEach(() => {
+  clearConversationDrafts();
   members = [ME];
   admins = [];
   relayAccess = 'ok';
@@ -280,5 +282,52 @@ describe('useChannelComposer: pickers', () => {
     expect(result.current.pickerEmojis).toMatchObject({ cat: 'https://cdn/cat.webp', party: 'https://cdn/party.webp' });
     act(() => result.current.onInput(':cat: hi', 8));
     expect(result.current.draft).toBe(':cat: hi');
+  });
+});
+
+describe('conversation draft lifetime', () => {
+  it('restores text and mention metadata after remount without sharing channels', async () => {
+    const first = mount();
+    act(() => {
+      first.result.current.onInput('@al', 3);
+      first.result.current.applyMention({ pubkey: ALICE, displayName: 'Alice' });
+    });
+    const text = first.result.current.draft;
+    first.unmount();
+    const other = mount({ groupId: 'other' });
+    expect(other.result.current.draft).toBe('');
+    other.unmount();
+    const restored = mount();
+    expect(restored.result.current.draft).toBe(text);
+    await act(async () => restored.result.current.send());
+    expect(sendMessage.mock.calls.at(-1)?.[1]).toContain('nostr:npub');
+  });
+
+  it('keeps edits made while the join signature is pending', async () => {
+    members = [];
+    let resolveJoin!: () => void;
+    joinGroup.mockReturnValueOnce(new Promise<void>((resolve) => { resolveJoin = resolve; }));
+    const { result } = mount();
+    act(() => result.current.onInput('original', 8));
+    let sending!: Promise<void>;
+    act(() => { sending = result.current.send(); });
+    act(() => result.current.onInput('new draft', 9));
+    await act(async () => { resolveJoin(); await sending; });
+    expect(result.current.draft).toBe('new draft');
+    expect(sendMessage).toHaveBeenCalledWith('g', 'original', null, expect.any(Array));
+  });
+
+  it('retires a pending signature when the originating pane unmounts', async () => {
+    members = [];
+    let resolveJoin!: () => void;
+    joinGroup.mockReturnValueOnce(new Promise<void>((resolve) => { resolveJoin = resolve; }));
+    const hook = mount();
+    act(() => hook.result.current.onInput('original', 8));
+    let sending!: Promise<void>;
+    act(() => { sending = hook.result.current.send(); });
+    hook.unmount();
+    await act(async () => { resolveJoin(); await sending; });
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(mount().result.current.draft).toBe('original');
   });
 });
