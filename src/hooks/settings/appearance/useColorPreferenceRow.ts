@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { setPreference } from '@/services/preferences/preferences';
+import { setAppearancePreference } from '@/services/preferences/appearance';
 
 export type AppearanceColorKey = 'accentColor' | 'backgroundColor' | 'buttonColor' | 'bubbleColor';
 
@@ -20,7 +20,7 @@ export function useColorPreferenceRow(key: AppearanceColorKey, value: string) {
 
   const commit = (next: string) => {
     setDraft(next);
-    if (/^#[0-9a-f]{6}$/i.test(next)) setPreference(key, next.toLowerCase());
+    if (/^#[0-9a-f]{6}$/i.test(next)) setAppearancePreference(key, next.toLowerCase());
   };
 
   return { draft, commit };

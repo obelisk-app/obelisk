@@ -21,7 +21,8 @@ function pref(id: string, key: string, match: 'exact' | 'prefix', holds: string,
 
 export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
   // ---- preferences and layout ---------------------------------------------
-  pref('preferences', 'obelisk:preferences', 'exact', 'App settings: sounds, notifications, feed, call and social relays, DM opt-in, post-quantum, appearance.', 'src/services/preferences/preferences.ts'),
+  pref('preferences', 'obelisk:preferences', 'exact', 'App settings: sounds, notifications, feed, call and social relays, DM opt-in, post-quantum.', 'src/services/preferences/preferences.ts'),
+  pref('appearance', 'obelisk:appearance', 'exact', 'Device colors and bubble motion.', 'src/services/preferences/appearance.ts'),
   pref('remote-media', 'obelisk:remote-media', 'exact', 'Whether to load images and embeds from other servers.', 'src/services/media/remote-media.ts'),
   pref('voice-quality', 'obelisk:voice:quality', 'exact', 'Voice and video quality choice.', 'src/store/voice/index.ts'),
   pref('wot', 'obelisk:wot', 'exact', 'Web of trust on or off, hops and minimum paths.', 'src/store/wot/index.ts'),

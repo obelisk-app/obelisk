@@ -12,17 +12,18 @@ describe('useAppearancePreferencesRoot', () => {
 
   it('applies colors and updates animation without rewriting the palette', async () => {
     const { useAppearancePreferencesRoot } = await import('@/hooks/settings/appearance/useAppearancePreferencesRoot');
-    const { setPreference } = await import('@/services/preferences/preferences');
+    const { setAppearancePreference } = await import('@/services/preferences/appearance');
     const writes = vi.spyOn(document.documentElement.style, 'setProperty');
     renderHook(() => useAppearancePreferencesRoot());
     expect(document.documentElement.style.getPropertyValue('--obelisk-accent')).toBe('#b4f953');
     expect(document.documentElement.dataset.bubbleAnimation).toBe('float');
     writes.mockClear();
+    const { setPreference } = await import('@/services/preferences/preferences');
     act(() => setPreference('notificationSounds', false));
-    act(() => setPreference('bubbleAnimation', 'drift'));
+    act(() => setAppearancePreference('bubbleAnimation', 'drift'));
     expect(writes).not.toHaveBeenCalled();
     expect(document.documentElement.dataset.bubbleAnimation).toBe('drift');
-    act(() => setPreference('accentColor', '#7ec8ff'));
+    act(() => setAppearancePreference('accentColor', '#7ec8ff'));
     expect(document.documentElement.style.getPropertyValue('--obelisk-accent')).toBe('#7ec8ff');
     expect(document.documentElement.style.getPropertyValue('--color-lc-green')).toBe('#7ec8ff');
   });

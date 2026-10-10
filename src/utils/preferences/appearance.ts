@@ -1,12 +1,12 @@
 /**
  * Appearance preferences as CSS custom properties: the four user colors plus
- * the tints and readable ink derived from them. Re-exported from `preferences.ts`.
+ * the tints and readable ink derived from them. Shared by the before-paint bootstrap and live appearance updates.
  */
-import { sanitizeHexColor } from '@/schemas/preferences/preferences';
-import type { Preferences } from '@/types/preferences/preferences';
-import { APPEARANCE_DEFAULTS } from '@/constants/preferences/defaults';
+import { sanitizeHexColor } from '@/schemas/preferences/appearance';
+import type { AppearancePreferences } from '@/types/preferences/appearance';
+import { APPEARANCE_DEFAULTS } from '@/constants/preferences/appearance';
 
-export function getAppearanceCssVariables(prefs: Pick<Preferences, 'accentColor' | 'backgroundColor' | 'buttonColor' | 'bubbleColor'>): Record<string, string> {
+export function getAppearanceCssVariables(prefs: Pick<AppearancePreferences, 'accentColor' | 'backgroundColor' | 'buttonColor' | 'bubbleColor'>): Record<string, string> {
   const accent = sanitizeHexColor(prefs.accentColor, APPEARANCE_DEFAULTS.accentColor);
   const background = sanitizeHexColor(prefs.backgroundColor, APPEARANCE_DEFAULTS.backgroundColor);
   const button = sanitizeHexColor(prefs.buttonColor, APPEARANCE_DEFAULTS.buttonColor);

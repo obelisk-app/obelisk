@@ -1,7 +1,7 @@
 'use client';
 
-import { setPreference } from '@/services/preferences/preferences';
-import type { Preferences } from '@/types/preferences/preferences';
+import { setAppearancePreference } from '@/services/preferences/appearance';
+import type { AppearancePreferences } from '@/types/preferences/appearance';
 import Select from '@/components/ui/forms/Select';
 import type { Translate } from '@/i18n/keys';
 
@@ -13,7 +13,7 @@ const BUBBLE_ANIMATION_OPTIONS = [
 ] as const;
 
 /** How the background bubbles move. */
-export default function BubbleAnimationRow({ value, isMobile, t }: { value: Preferences['bubbleAnimation']; isMobile: boolean; t: Translate }) {
+export default function BubbleAnimationRow({ value, isMobile, t }: { value: AppearancePreferences['bubbleAnimation']; isMobile: boolean; t: Translate }) {
   return (
     <div className={isMobile ? 'settings-row appearance-row' : 'rounded-md border border-lc-border bg-lc-black/40 p-3'}>
       <div className={isMobile ? 'appearance-row-copy' : 'mb-2'}>
@@ -27,7 +27,7 @@ export default function BubbleAnimationRow({ value, isMobile, t }: { value: Pref
         size="xs"
         tone="dark"
         value={value}
-        onChange={(e) => setPreference('bubbleAnimation', e.target.value as Preferences['bubbleAnimation'])}
+        onChange={(e) => setAppearancePreference('bubbleAnimation', e.target.value as AppearancePreferences['bubbleAnimation'])}
         data-testid="appearance-bubble-animation"
         aria-label={t('settings.preferences.appearance.bubbleMotion.aria')}
         className={isMobile ? undefined : 'w-full'}

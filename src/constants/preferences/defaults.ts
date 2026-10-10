@@ -36,20 +36,7 @@ export const DEFAULTS: Preferences = {
   backgroundRelayWatch: true,
   socialRelays: [...DEFAULT_SOCIAL_RELAYS],
   feedWidgets: [...DEFAULT_FEED_WIDGETS],
-  accentColor: '#b4f953',
-  backgroundColor: '#0a0a0a',
-  buttonColor: '#b4f953',
-  bubbleColor: '#b4f953',
-  bubbleAnimation: 'float',
   callRelays: [...DEFAULT_CALL_RELAYS],
   callsFrom: 'contacts',
   callIpProtection: 'auto',
 };
-
-export const APPEARANCE_DEFAULTS = {
-  accentColor: DEFAULTS.accentColor,
-  backgroundColor: DEFAULTS.backgroundColor,
-  buttonColor: DEFAULTS.buttonColor,
-  bubbleColor: DEFAULTS.bubbleColor,
-  bubbleAnimation: DEFAULTS.bubbleAnimation,
-} as const;

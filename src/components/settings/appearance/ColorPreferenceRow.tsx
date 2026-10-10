@@ -1,6 +1,6 @@
 'use client';
 
-import { APPEARANCE_DEFAULTS } from '@/services/preferences/preferences';
+import { APPEARANCE_DEFAULTS } from '@/constants/preferences/appearance';
 import Input from '@/components/ui/forms/Input';
 import type { MessageKey, Translate } from '@/i18n/keys';
 import { useColorPreferenceRow, type AppearanceColorKey } from '@/hooks/settings/appearance/useColorPreferenceRow';

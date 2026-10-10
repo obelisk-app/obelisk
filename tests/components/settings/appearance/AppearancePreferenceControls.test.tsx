@@ -11,7 +11,7 @@ describe('AppearancePreferenceControls', () => {
   it('updates accent, background, and button colors', async () => {
     const user = userEvent.setup();
     const { default: AppearancePreferenceControls } = await import('@/components/settings/appearance/AppearancePreferenceControls');
-    const { getPreferences } = await import('@/services/preferences/preferences');
+    const { getAppearancePreferences } = await import('@/services/preferences/appearance');
     const { LocaleProvider } = await import('@tests/support/intl');
 
     render(<LocaleProvider initialLocale="en"><AppearancePreferenceControls /></LocaleProvider>);
@@ -26,7 +26,7 @@ describe('AppearancePreferenceControls', () => {
     await user.type(screen.getByTestId('appearance-bubble-color'), '#ff7ad9');
     await user.selectOptions(screen.getByTestId('appearance-bubble-animation'), 'drift');
 
-    expect(getPreferences()).toMatchObject({
+    expect(getAppearancePreferences()).toMatchObject({
       accentColor: '#7ec8ff',
       backgroundColor: '#111827',
       buttonColor: '#f0c14a',
@@ -38,13 +38,13 @@ describe('AppearancePreferenceControls', () => {
   it('renders the compact mobile controls and resets to defaults', async () => {
     const user = userEvent.setup();
     const { default: AppearancePreferenceControls } = await import('@/components/settings/appearance/AppearancePreferenceControls');
-    const { getPreferences, setPreference } = await import('@/services/preferences/preferences');
+    const { getAppearancePreferences, setAppearancePreference } = await import('@/services/preferences/appearance');
     const { LocaleProvider } = await import('@tests/support/intl');
-    setPreference('accentColor', '#7ec8ff');
-    setPreference('backgroundColor', '#111827');
-    setPreference('buttonColor', '#f0c14a');
-    setPreference('bubbleColor', '#ff7ad9');
-    setPreference('bubbleAnimation', 'orbit');
+    setAppearancePreference('accentColor', '#7ec8ff');
+    setAppearancePreference('backgroundColor', '#111827');
+    setAppearancePreference('buttonColor', '#f0c14a');
+    setAppearancePreference('bubbleColor', '#ff7ad9');
+    setAppearancePreference('bubbleAnimation', 'orbit');
 
     render(<LocaleProvider initialLocale="en"><AppearancePreferenceControls variant="mobile" /></LocaleProvider>);
 
@@ -52,7 +52,7 @@ describe('AppearancePreferenceControls', () => {
 
     await user.click(screen.getByRole('button', { name: /reset appearance/i }));
 
-    expect(getPreferences()).toMatchObject({
+    expect(getAppearancePreferences()).toMatchObject({
       accentColor: '#b4f953',
       backgroundColor: '#0a0a0a',
       buttonColor: '#b4f953',
@@ -77,18 +77,18 @@ describe('AppearancePreferenceControls', () => {
   it('keeps a half-typed colour as a draft, stores a whole one lowercased, and shows a reset', async () => {
     const user = userEvent.setup();
     const { default: AppearancePreferenceControls } = await import('@/components/settings/appearance/AppearancePreferenceControls');
-    const { getPreferences } = await import('@/services/preferences/preferences');
+    const { getAppearancePreferences } = await import('@/services/preferences/appearance');
     const { LocaleProvider } = await import('@tests/support/intl');
     render(<LocaleProvider initialLocale="en"><AppearancePreferenceControls /></LocaleProvider>);
 
-    const before = getPreferences().accentColor;
+    const before = getAppearancePreferences().accentColor;
     const field = screen.getByTestId('appearance-accent-color');
     await user.clear(field);
     await user.type(field, '#12');
     expect(field).toHaveValue('#12');
-    expect(getPreferences().accentColor).toBe(before);
+    expect(getAppearancePreferences().accentColor).toBe(before);
     await user.type(field, 'ABCD');
-    expect(getPreferences().accentColor).toBe('#12abcd');
+    expect(getAppearancePreferences().accentColor).toBe('#12abcd');
     expect(field).toHaveValue('#12abcd');
 
     await user.click(screen.getByRole('button', { name: /reset appearance/i }));

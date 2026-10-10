@@ -253,6 +253,7 @@ if [ "$DEV_ALREADY_RUNNING" = "0" ]; then
     blue "Starting next dev on :$PORT (turbopack) (logs → ./dev.log)…"
   fi
   # shellcheck disable=SC2086
+  npm run appearance:generate
   PORT="$PORT" npx next dev $DEV_FLAGS > dev.log 2>&1 &
   DEV_PID=$!
   for _ in $(seq 1 60); do

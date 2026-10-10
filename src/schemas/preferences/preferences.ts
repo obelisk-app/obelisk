@@ -1,4 +1,4 @@
-import type { NotificationRingtone, BubbleAnimationStyle, CallsFrom, CallIpProtection, Preferences } from '@/types/preferences/preferences';
+import type { NotificationRingtone, CallsFrom, CallIpProtection, Preferences } from '@/types/preferences/preferences';
 import { parseRelayUrl } from '@nostr-wot/relay';
 /**
  * Runtime validation of persisted preferences (old keys, hand-edited values
@@ -10,10 +10,6 @@ import { DEFAULT_CALL_RELAYS, CALL_RELAY_MAX, DEFAULTS } from '@/constants/prefe
 const RINGTONE_VALUES = new Set<NotificationRingtone>(['crystal', 'marimba', 'aurora', 'bubble']);
 const CALLS_FROM_VALUES = new Set<CallsFrom>(['contacts', 'anyone']);
 const CALL_IP_VALUES = new Set<CallIpProtection>(['auto', 'always', 'never']);
-
-const COLOR_KEYS = new Set<keyof Preferences>(['accentColor', 'backgroundColor', 'buttonColor', 'bubbleColor']);
-const BUBBLE_ANIMATION_VALUES = new Set<BubbleAnimationStyle>(['float', 'drift', 'orbit', 'still']);
-const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i;
 
 export function normalizePreferences(value: unknown): Preferences {
   const raw: Record<string, unknown> = value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -48,11 +44,6 @@ export function normalizePreferences(value: unknown): Preferences {
       raw.socialRelays ?? raw.profileFeedRelays,
     ),
     feedWidgets: normalizeFeedWidgets(raw.feedWidgets),
-    accentColor: sanitizeHexColor(raw.accentColor, DEFAULTS.accentColor),
-    backgroundColor: sanitizeHexColor(raw.backgroundColor, DEFAULTS.backgroundColor),
-    buttonColor: sanitizeHexColor(raw.buttonColor, DEFAULTS.buttonColor),
-    bubbleColor: sanitizeHexColor(raw.bubbleColor, DEFAULTS.bubbleColor),
-    bubbleAnimation: normalizeBubbleAnimation(raw.bubbleAnimation),
     callRelays: normalizeCallRelays(raw.callRelays),
     callsFrom: CALLS_FROM_VALUES.has(raw.callsFrom as CallsFrom) ? raw.callsFrom as CallsFrom : DEFAULTS.callsFrom,
     callIpProtection: CALL_IP_VALUES.has(raw.callIpProtection as CallIpProtection)
@@ -82,34 +73,17 @@ export function normalizePreferenceValue<K extends keyof Preferences>(key: K, va
   if (key === 'notificationRingtone') {
     return normalizeRingtone(value) as Preferences[K];
   }
-  if (key === 'bubbleAnimation') {
-    return normalizeBubbleAnimation(value) as Preferences[K];
-  }
   if (key === 'feedWidgets') {
     return normalizeFeedWidgets(value) as Preferences[K];
   }
   if (key === 'callRelays') {
     return normalizeCallRelays(value) as Preferences[K];
   }
-  if (!COLOR_KEYS.has(key)) return value;
-  const fallback = DEFAULTS[key] as string;
-  return sanitizeHexColor(value, fallback) as Preferences[K];
-}
-
-export function sanitizeHexColor(value: unknown, fallback: string): string {
-  if (typeof value !== 'string') return fallback;
-  const trimmed = value.trim();
-  return HEX_COLOR_RE.test(trimmed) ? trimmed.toLowerCase() : fallback;
+  return value;
 }
 
 function normalizeRingtone(value: unknown): NotificationRingtone {
   return RINGTONE_VALUES.has(value as NotificationRingtone)
     ? value as NotificationRingtone
     : DEFAULTS.notificationRingtone;
-}
-
-function normalizeBubbleAnimation(value: unknown): BubbleAnimationStyle {
-  return BUBBLE_ANIMATION_VALUES.has(value as BubbleAnimationStyle)
-    ? value as BubbleAnimationStyle
-    : DEFAULTS.bubbleAnimation;
 }

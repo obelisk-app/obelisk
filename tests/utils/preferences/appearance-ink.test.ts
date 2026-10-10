@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { getAppearanceCssVariables } from '@/services/preferences/preferences-appearance';
-import * as entry from '@/services/preferences/preferences';
+import { getAppearanceCssVariables } from '@/utils/preferences/appearance';
+import { APPEARANCE_DEFAULTS } from '@/constants/preferences/appearance';
 
 describe('preferences-appearance', () => {
   it('picks dark ink on a light button and light ink on a dark one', () => {
@@ -12,10 +12,7 @@ describe('preferences-appearance', () => {
 
   it('falls back to the default palette for an invalid colour', () => {
     const vars = getAppearanceCssVariables({ accentColor: 'nope', backgroundColor: '#0a0a0a', buttonColor: '#b4f953', bubbleColor: '#b4f953' });
-    expect(vars['--obelisk-accent']).toBe(entry.APPEARANCE_DEFAULTS.accentColor);
+    expect(vars['--obelisk-accent']).toBe(APPEARANCE_DEFAULTS.accentColor);
   });
 
-  it('is what the preferences entry point re-exports', () => {
-    expect(entry.getAppearanceCssVariables).toBe(getAppearanceCssVariables);
-  });
 });

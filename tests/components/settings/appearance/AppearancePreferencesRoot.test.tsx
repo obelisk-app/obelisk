@@ -1,3 +1,4 @@
+import { getAppearanceCssVariables } from '@/utils/preferences/appearance';
 import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,20 +12,20 @@ describe('AppearancePreferencesRoot', () => {
 
   it('paints the saved appearance on the page root and follows changes', async () => {
     const { default: AppearancePreferencesRoot } = await import('@/components/settings/appearance/AppearancePreferencesRoot');
-    const { getAppearanceCssVariables, getPreferences, setPreference } = await import('@/services/preferences/preferences');
+    const { getAppearancePreferences, setAppearancePreference } = await import('@/services/preferences/appearance');
     const { container } = render(<AppearancePreferencesRoot />);
     expect(container).toBeEmptyDOMElement();
     const root = document.documentElement;
-    for (const [name, value] of Object.entries(getAppearanceCssVariables(getPreferences()))) {
+    for (const [name, value] of Object.entries(getAppearanceCssVariables(getAppearancePreferences()))) {
       expect(root.style.getPropertyValue(name)).toBe(value);
     }
     expect(root.dataset.bubbleAnimation).toBe('float');
 
     act(() => {
-      setPreference('accentColor', '#7ec8ff');
-      setPreference('bubbleAnimation', 'orbit');
+      setAppearancePreference('accentColor', '#7ec8ff');
+      setAppearancePreference('bubbleAnimation', 'orbit');
     });
-    const vars = getAppearanceCssVariables(getPreferences());
+    const vars = getAppearanceCssVariables(getAppearancePreferences());
     const [someName] = Object.keys(vars);
     expect(root.style.getPropertyValue(someName)).toBe(vars[someName]);
     expect(Object.values(vars)).toContain(root.style.getPropertyValue(someName));

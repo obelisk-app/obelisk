@@ -1,7 +1,5 @@
 export type NotificationRingtone = 'crystal' | 'marimba' | 'aurora' | 'bubble';
 
-export type BubbleAnimationStyle = 'float' | 'drift' | 'orbit' | 'still';
-
 /** Who may ring you for a DM call. Everyone else's invite is dropped silently. */
 export type CallsFrom = 'contacts' | 'anyone';
 
@@ -49,11 +47,6 @@ export interface Preferences {
    * list of six is a sidebar nobody reads.
    */
   feedWidgets: string[];
-  accentColor: string;
-  backgroundColor: string;
-  buttonColor: string;
-  bubbleColor: string;
-  bubbleAnimation: BubbleAnimationStyle;
   /** Relays for DM call negotiation - see {@link DEFAULT_CALL_RELAYS}. */
   callRelays: string[];
   callsFrom: CallsFrom;

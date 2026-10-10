@@ -429,7 +429,7 @@ Preferences > Data on this device) and on `/help/local-data`:
 | `readState` | `obelisk-read-state:*`, `obelisk-notifications:*`, `obelisk-wrap-ledger:*`, the read-state sync cache | reload |
 | `dmMessages` | the `obelisk-dms` IndexedDB database: each account's DM key (wrapped by its signer) and one AES-256-GCM box per opened DM | `forgetDirectMessages()` (stop writing, drop the key), delete the database, reload |
 | `dms` | `obelisk-dm-store:*` (per-peer protocol only) | reload |
-| `preferences` | `obelisk:preferences`, layout widths, collapsed groups, hints, recents, game keys | reload |
+| `preferences` | `obelisk:preferences`, `obelisk:appearance`, layout widths, collapsed groups, hints, recents, game keys | reload |
 | `personal` | `obelisk:moderation:*`, `obelisk-channel-prefs:*`, `obelisk:personal-stickers` (exist only here) | reload |
 | `login` | `obelisk-dex/session`, `obelisk-dex/relays`, the `obelisk-vault` IndexedDB database | logout, delete the database, reload |
 | `wallet` | `obelisk-dex/nwc:*`, the sealed Nostr Wallet Connect link | `disconnectNwcWallet()` (memory and the `wallet-key`), then reload |

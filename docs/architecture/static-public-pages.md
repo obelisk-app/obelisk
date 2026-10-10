@@ -10,7 +10,7 @@ The final build step, `scripts/security/generate-static-csp.ts`, parses prerende
 
 The proxy uses the manifest's exact locale-normalized route map. Static documents authorize their compiled inline scripts by SHA-256; dynamic documents receive a fresh nonce. Dynamic document responses use `private, no-store` so shared caches cannot replay a request nonce. The proxy forwards the actual CSP request header because Next reads that header when stamping its bootstrap scripts. Caller-supplied CSP and nonce headers are replaced. Both policies retain the existing script hosts and prohibit arbitrary inline execution. The static floor in `next.config.ts` continues to cover requests outside the proxy matcher.
 
-PWA launch redirection and registration are same-origin external scripts. The early redirect intentionally uses a native blocking script so installed launches redirect before the landing paints, without an inline Next Script bootstrap. Registration also works when hydration finishes after the load event.
+Saved appearance, PWA launch redirection and registration are same-origin external scripts. The appearance bootstrap is generated from the shared validation and CSS implementation (`npm run appearance:generate`, also run before development and builds); it applies browser-local preferences before first paint without making the HTML request-dependent. The early redirect intentionally uses a native blocking script so installed launches redirect before the landing paints, without an inline Next Script bootstrap. Registration also works when hydration finishes after the load event.
 
 ## Deployment and caches
 

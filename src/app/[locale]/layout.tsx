@@ -65,8 +65,11 @@ export default async function LocaleLayout({ children }: { children: ReactNode }
   const jsonLd = siteJsonLd(await getTranslations({ locale }), locale);
 
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
       <head>
+        {/* Only the root style/data attributes differ: saved appearance is applied before hydration. */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts -- Apply saved appearance before first paint while preserving static HTML and CSP. */}
+        <script src="/appearance.js" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}

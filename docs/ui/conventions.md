@@ -303,3 +303,11 @@ Use the singleton toast store and the locale-root ToastStack for temporary actio
 ## Session consumers
 
 Identity and current-user profile hooks live in `src/hooks/session/useSession.ts`; their context and provider live under `src/contexts/session/` and `src/providers/session/`. Use `useSessionActions` for login, logout and profile editing. Other users' profiles and relay content still use the bridge hooks. See [session ownership](../architecture/session.md) for subscription and lifetime contracts.
+
+## Appearance lifecycle
+
+Appearance is device-wide and independent of notification, relay and call preferences. `src/services/preferences/appearance.ts` owns its stable snapshot, updates, reset and cross-tab subscription. Settings read `useAppearancePreferences` and call `setAppearancePreference`; other preferences continue through `usePreferences`. The `obelisk:appearance` key is listed under preferences in the local-data inventory. The storage adapter migrates the five legacy appearance fields from `obelisk:preferences` before general settings can overwrite them; migration keeps unrelated fields and only removes old colors after the new copy is saved.
+
+The schema in `src/schemas/preferences/appearance.ts` validates both storage and writes. `src/utils/preferences/appearance.ts` derives CSS tokens. `appearance-dom.ts` applies only changed tokens and the bubble-motion attribute. These same modules serve both the generated, same-origin `/appearance.js` script that runs before first paint and the root's live subscription. The root stays a small client lifecycle boundary; it does not put the page tree in a provider or subscribe to unrelated preferences. Settings controls subscribe independently. Storage failures fall back safely and later edits still work in memory.
+
+Run `npm run appearance:generate` after editing shared appearance code. Development launchers and builds generate it automatically; the generated-artifact test rejects stale output. The root HTML suppresses hydration differences only on its own attributes because the bootstrap sets its style and motion before React starts. No cookie lookup, request nonce, inline bootstrap or request-time rendering is added, so public pages retain their static caching and security policy.

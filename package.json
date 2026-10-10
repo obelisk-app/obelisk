@@ -33,7 +33,11 @@
     "snap-guides": "tsx scripts/snap-guide-svgs.ts",
     "snap-og": "tsx scripts/og/snap-og.ts",
     "snap-games": "node scripts/snap-game-shots.mjs",
-    "seo:check": "tsx scripts/seo/check.ts"
+    "seo:check": "tsx scripts/seo/check.ts",
+    "appearance:generate": "tsx scripts/appearance/generate.ts",
+    "predev": "npm run appearance:generate",
+    "predev:next": "npm run appearance:generate",
+    "prebuild": "npm run appearance:generate"
   },
   "dependencies": {
     "@noble/hashes": "^2.0.1",
@@ -82,7 +86,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.20.4",
     "typescript": "^5",
-    "vitest": "^4.1.3"
+    "vitest": "^4.1.3",
+    "esbuild": "^0.27.7"
   },
   "overrides": {
     "@nostr-wot/relay": "$@nostr-wot/relay"

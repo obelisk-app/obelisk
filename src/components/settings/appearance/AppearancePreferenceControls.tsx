@@ -1,7 +1,7 @@
 'use client';
 
-import { resetAppearancePreferences } from '@/services/preferences/preferences';
-import { usePreferences } from '@/hooks/preferences/usePreferences';
+import { resetAppearancePreferences } from '@/services/preferences/appearance';
+import { useAppearancePreferences } from '@/hooks/preferences/useAppearancePreferences';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
 import ColorPreferenceRow, { type ColorControl } from './ColorPreferenceRow';
@@ -40,7 +40,7 @@ const CONTROLS: ColorControl[] = [
 
 export default function AppearancePreferenceControls({ variant = 'desktop' }: AppearancePreferenceControlsProps) {
   const t = useTranslations();
-  const prefs = usePreferences();
+  const prefs = useAppearancePreferences();
   const isMobile = variant === 'mobile';
 
   return (
