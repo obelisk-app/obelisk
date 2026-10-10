@@ -31,6 +31,8 @@ export function useChannelScrollPosition({
   nearBottomPx = CHANNEL_SCROLL_NEAR_BOTTOM_PX,
   onNearBottomChange,
 }: UseChannelScrollPositionOptions): void {
+  const restoreRef = useRef<(() => void) | null>(null);
+  const hasItems = itemCount > 0;
   const restoredKeyRef = useRef<string | null>(null);
   const onNearBottomChangeRef = useRef(onNearBottomChange);
   const getInitialAnchorElementRef = useRef(getInitialAnchorElement);
@@ -58,6 +60,7 @@ export function useChannelScrollPosition({
   }, [nearBottomPx, scrollKey, scrollRef]);
 
   useLayoutEffect(() => {
+    restoreRef.current = null;
     if (!scrollKey) {
       restoredKeyRef.current = null;
       return;
@@ -81,29 +84,50 @@ export function useChannelScrollPosition({
       if (result.complete) restoredKeyRef.current = scrollKey;
     };
 
+    restoreRef.current = applyRestore;
+
     let frame: number | null = null;
     if (restoredKeyRef.current !== scrollKey) {
       applyRestore();
       frame = requestAnimationFrame(applyRestore);
     }
 
-    const el = scrollRef.current;
-    const observer = el && typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(() => {
-          const saved = getChannelScrollPosition(scrollKey);
-          if (!saved || saved.nearBottom) applyRestore();
-        })
-      : null;
-    if (el && observer) {
-      observer.observe(el);
-      for (const child of el.children) observer.observe(child);
-    }
-
     return () => {
       if (frame !== null) cancelAnimationFrame(frame);
-      observer?.disconnect();
     };
   }, [disabled, ignoreSavedOnInitialRestore, initialAnchorKey, itemCount, nearBottomPx, scrollKey, scrollRef]);
+
+  // Keep one resize subscription per conversation. Re-observing every row on
+  // every append made a growing history do quadratic observer setup work.
+  // Child-list mutations attach only new rows; nested media still resizes its
+  // observed row, so images and expanded previews keep bottom lock intact.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !scrollKey || disabled || !hasItems || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      const saved = getChannelScrollPosition(scrollKey);
+      if (!saved || saved.nearBottom) restoreRef.current?.();
+    });
+    observer.observe(el);
+    for (const child of el.children) observer.observe(child);
+    const mutations = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.removedNodes) {
+          if (node instanceof Element) observer.unobserve(node);
+        }
+      }
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node instanceof Element && node.parentElement === el) observer.observe(node);
+        }
+      }
+    });
+    mutations.observe(el, { childList: true });
+    return () => {
+      mutations.disconnect();
+      observer.disconnect();
+    };
+  }, [disabled, hasItems, scrollKey, scrollRef]);
 
   useEffect(() => {
     if (!scrollKey) return;

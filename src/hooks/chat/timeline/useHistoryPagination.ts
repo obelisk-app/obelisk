@@ -100,7 +100,7 @@ export function useHistoryPagination({
 }: UseHistoryPaginationOptions): { atTop: boolean } {
   const [atTop, setAtTop] = useState(false);
   const pendingRef = useRef<PendingPage | null>(null);
-  const inFlightRef = useRef(false);
+  const requestRef = useRef<object | null>(null);
   const releaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** scrollTop we just wrote ourselves, so its scroll event can't re-trigger. */
   const selfScrollTopRef = useRef<number | null>(null);
@@ -136,12 +136,12 @@ export function useHistoryPagination({
   useLayoutEffect(() => {
     if (sessionKeyRef.current === sessionKey) return;
     sessionKeyRef.current = sessionKey;
-    inFlightRef.current = false;
+    requestRef.current = null;
     release();
   }, [release, sessionKey]);
 
   const maybeLoad = useCallback(() => {
-    if (reachedStartRef.current || inFlightRef.current || loadingRef.current) return;
+    if (reachedStartRef.current || requestRef.current || loadingRef.current) return;
     // A page that has landed but not yet committed still owes a correction.
     // Starting the next one here would overwrite its anchor with a capture
     // taken before its rows rendered, and the viewport would snap to the top.
@@ -161,21 +161,24 @@ export function useHistoryPagination({
       scrollHeight: el.scrollHeight,
       itemCount: itemCountRef.current,
     };
-    inFlightRef.current = true;
+    const request = {};
+    requestRef.current = request;
 
     void loadEarlierRef.current()
       .then((result) => {
-        inFlightRef.current = false;
+        if (requestRef.current !== request) return;
+        requestRef.current = null;
         // Nothing landed (end of history, relay hiccup, or a retry window):
         // no correction is owed, so give anchoring back immediately.
         if (result !== 'added') {
           release();
           return;
         }
-        releaseTimerRef.current = setTimeout(release, ANCHOR_RELEASE_MS);
+        if (pendingRef.current) releaseTimerRef.current = setTimeout(release, ANCHOR_RELEASE_MS);
       })
       .catch(() => {
-        inFlightRef.current = false;
+        if (requestRef.current !== request) return;
+        requestRef.current = null;
         release();
       });
   }, [prefetchPx, release, scrollRef]);
@@ -246,7 +249,10 @@ export function useHistoryPagination({
     };
   }, [atTopPx, scrollRef]);
 
-  useEffect(() => release, [release]);
+  useEffect(() => () => {
+    requestRef.current = null;
+    release();
+  }, [release]);
 
   return { atTop };
 }

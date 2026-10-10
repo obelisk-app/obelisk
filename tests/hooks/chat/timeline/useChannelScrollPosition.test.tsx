@@ -49,7 +49,9 @@ function Harness({
         if (node) defineScrollMetrics(node, scrollHeight, 200);
         ref.current = node;
       }}
-    />
+    >
+      {Array.from({ length: itemCount }, (_, i) => <div key={i} data-row={i} />)}
+    </div>
   );
 }
 
@@ -186,4 +188,73 @@ describe('useChannelScrollPosition', () => {
 
     expect(onNearBottomChange).toHaveBeenLastCalledWith(false);
   });
+
+  it.each([100, 1000, 5000])('tracks an appended row without re-observing %i existing rows', async (count) => {
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    const unobserve = vi.fn();
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: ResizeObserverCallback) { resize = callback; }
+      observe = observe;
+      unobserve = unobserve;
+      disconnect = disconnect;
+    });
+    const { rerender, unmount } = render(<Harness scrollKey="relay::large" itemCount={count} />);
+    expect(observe).toHaveBeenCalledTimes(count + 1);
+    observe.mockClear();
+
+    await act(async () => {
+      rerender(<Harness scrollKey="relay::large" itemCount={count + 1} scrollHeight={1200} />);
+    });
+    expect(disconnect).not.toHaveBeenCalled();
+    expect(observe).toHaveBeenCalledTimes(1);
+    expect(observe.mock.calls[0][0]).toHaveAttribute('data-row', String(count));
+
+    await act(async () => {
+      rerender(<Harness scrollKey="relay::large" itemCount={count} scrollHeight={1000} />);
+    });
+    expect(unobserve).toHaveBeenCalledTimes(1);
+    unmount();
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves mid-history reading when a row resizes, but follows media growth at the bottom', () => {
+    render(<Harness scrollKey="relay::g1" itemCount={5} />);
+    const el = screen.getByTestId('scroller') as HTMLDivElement;
+    defineScrollMetrics(el, 1200, 200);
+    act(() => resize([], {} as ResizeObserver));
+    expect(el.scrollTop).toBe(1000);
+
+    act(() => { el.scrollTop = 300; fireEvent.scroll(el); });
+    defineScrollMetrics(el, 1400, 200);
+    act(() => resize([], {} as ResizeObserver));
+    expect(el.scrollTop).toBe(300);
+  });
+
+
+  it('uses the current anchor when media grows after the initial restore', () => {
+    const { rerender } = render(<Harness scrollKey="relay::g1" itemCount={5} initialAnchorOffset={800} ignoreSavedOnInitialRestore />);
+    const el = screen.getByTestId('scroller') as HTMLDivElement;
+    rerender(<Harness scrollKey="relay::g1" itemCount={5} initialAnchorOffset={950} ignoreSavedOnInitialRestore />);
+    defineScrollMetrics(el, 1300, 200);
+    act(() => resize([], {} as ResizeObserver));
+    expect(el.scrollTop).toBe(950);
+  });
+
+  it('disconnects resize tracking for explicit jumps and empty histories', () => {
+    const disconnect = vi.fn();
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      disconnect = disconnect;
+    });
+    const { rerender, unmount } = render(<Harness scrollKey="relay::g1" itemCount={5} />);
+    rerender(<Harness scrollKey="relay::g1" itemCount={5} disabled />);
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    rerender(<Harness scrollKey="relay::g1" itemCount={5} />);
+    rerender(<Harness scrollKey="relay::g1" itemCount={0} />);
+    expect(disconnect).toHaveBeenCalledTimes(2);
+    unmount();
+    expect(disconnect).toHaveBeenCalledTimes(2);
+  });
+
 });

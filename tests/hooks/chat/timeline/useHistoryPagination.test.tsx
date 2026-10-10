@@ -391,4 +391,32 @@ describe('useHistoryPagination', () => {
     scrollTo(20);
     expect(seen.at(-1)).toBe(true);
   });
+
+  it.each(['unavailable', 'rejected'] as const)('ignores a previous channel request settling as %s while the new channel loads', async (outcome) => {
+    let resolveOld!: (r: HistoryLoadResult) => void;
+    let rejectOld!: (reason: Error) => void;
+    const oldLoad = vi.fn(() => new Promise<HistoryLoadResult>((resolve, reject) => {
+      resolveOld = resolve;
+      rejectOld = reject;
+    }));
+    let resolveNew!: (r: HistoryLoadResult) => void;
+    const newLoad = vi.fn(() => new Promise<HistoryLoadResult>((resolve) => { resolveNew = resolve; }));
+    const { rerender } = render(<Harness ids={idsFrom(10, 20)} loadEarlier={oldLoad} />);
+    scrollTo(200);
+    rerender(<Harness ids={idsFrom(10, 20)} loadEarlier={newLoad} sessionKey="relay::g2" />);
+    scrollTo(100);
+    expect(newLoad).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      if (outcome === 'rejected') rejectOld(new Error('old relay disconnected'));
+      else resolveOld('unavailable');
+    });
+    expect(scroller().style.overflowAnchor).toBe('none');
+    scrollTo(50);
+    expect(newLoad).toHaveBeenCalledTimes(1);
+    await act(async () => resolveNew('added'));
+    rerender(<Harness ids={idsFrom(0, 30)} loadEarlier={newLoad} sessionKey="relay::g2" />);
+    expect(scroller().scrollTop).toBe(1050);
+  });
+
 });
