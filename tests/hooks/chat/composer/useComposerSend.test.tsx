@@ -79,7 +79,11 @@ describe('useComposerSend', () => {
     const { send, s, setReplyingTo } = run(' hello ');
     await act(async () => { await send(); });
     expect(sendMessage).toHaveBeenCalledWith('g', 'hello', null, []);
-    expect(s.setDraft).toHaveBeenCalledWith('');
+    const update = vi.mocked(s.setDraft).mock.calls[0][0];
+    expect(typeof update).toBe('function');
+    if (typeof update !== 'function') throw new Error('Expected guarded draft update');
+    expect(update(' hello ')).toBe('');
+    expect(update('new text typed during send')).toBe('new text typed during send');
     expect(setReplyingTo).toHaveBeenCalledWith(null);
   });
 
