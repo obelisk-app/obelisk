@@ -1,7 +1,5 @@
-import { renderHook } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { draftAfterPick, dmTextTags, filesFromClipboard, nextId } from '@/utils/chat/dm/pending';
-import { usePreviewUrls } from '@/hooks/chat/dm/composer/usePreviewUrls';
 
 describe('DM composer helpers', () => {
   it('mints distinct ids', () => {
@@ -32,30 +30,5 @@ describe('DM composer helpers', () => {
     expect(tags.filter((tag) => tag[0] === 'emoji')).toHaveLength(1);
     expect(tags.filter((tag) => tag[0] === 'sticker')).toHaveLength(1);
     expect(dmTextTags('plain', {}, null)).toEqual([]);
-  });
-});
-
-describe('usePreviewUrls', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it('revokes released URLs at once and the rest on unmount', () => {
-    let n = 0;
-    const createObjectURL = vi.fn(() => `blob:${n++}`);
-    const revokeObjectURL = vi.fn();
-    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL }));
-    const { result, unmount } = renderHook(() => usePreviewUrls());
-    const a = result.current.preview(new Blob(['a']));
-    const b = result.current.preview(new Blob(['b']));
-    result.current.release(a);
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:0');
-    unmount();
-    expect(revokeObjectURL).toHaveBeenCalledWith(b);
-    expect(revokeObjectURL).toHaveBeenCalledTimes(2);
-  });
-
-  it('returns null when the browser refuses an object URL', () => {
-    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => { throw new Error('no'); }, revokeObjectURL: vi.fn() }));
-    const { result } = renderHook(() => usePreviewUrls());
-    expect(result.current.preview(new Blob(['a']))).toBeNull();
   });
 });

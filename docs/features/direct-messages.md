@@ -43,6 +43,14 @@ The wrap ledger (`wrap-ledger.ts`, scope `dm:inert`) remembers only wraps that *
 
 Until 2026-10-06 the reload path (`session/restore.ts`) never pointed the ledger at the account, so after a reload it remembered nothing and every inert wrap was opened again; it now does, as `finalizeLogin` always did.
 
+## Composer draft lifetime
+
+`src/store/chat/composer-drafts.ts` holds visit-only drafts shared by the keyed desktop and mobile composers. DMs use the account and peer as their key; channel drafts additionally include the relay and channel. Navigation restores text, custom emoji and sticker metadata, channel mentions and reply targets, and pending DM attachment or voice-note metadata. Draft text and attachment decryption keys are never serialized to browser storage.
+
+Pending DM uploads can finish while their pane is unmounted. Their preview object URLs remain valid until the attachment is removed, sent, or the draft cache is cleared. Logout and runtime account-cache invalidation clear drafts, revoke previews and retire outstanding writes. A page reload also loses unsent drafts. No automatic draft-count eviction discards unsent work during a visit; empty conversation entries share that visit lifetime.
+
+A channel send waiting for a join signature keeps its submitted snapshot separate from later edits. Completion clears the draft only if that snapshot is still current, and navigation away retires the pending send before publication. DM sends retain the bridge's optimistic message and retry behavior.
+
 ## Files, voice notes, stickers
 
 The DM bar is the channel bar (`DmComposer`), with one change: **every file and voice note is encrypted in the browser before it leaves**, and sent as a NIP-17 **kind-15 file message** rather than a URL in the text.
