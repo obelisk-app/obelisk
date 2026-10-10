@@ -1,6 +1,8 @@
 'use client';
 
 import { useAnalyticsConsent, useApplyAnalyticsConsent } from '@/hooks/analytics/useAnalyticsConsent';
+import { usePathname } from '@/i18n/navigation';
+import { useIsLoggedIn } from '@/hooks/session/useSession';
 import ConsentBanner from './ConsentBanner';
 
 /**
@@ -10,9 +12,13 @@ import ConsentBanner from './ConsentBanner';
  * again). On the server it renders nothing, so the first HTML of every page
  * carries no Google script and no banner.
  */
-export default function AnalyticsConsentRoot() {
+export default function AnalyticsConsentRoot({ appSession = false }: { appSession?: boolean }) {
   useApplyAnalyticsConsent();
   const consent = useAnalyticsConsent();
+  const pathname = usePathname();
+  const loggedIn = useIsLoggedIn();
+  const appRoute = pathname === '/app' || pathname?.startsWith('/app/');
+  if (appSession ? !appRoute || !loggedIn : appRoute) return null;
   if (!consent.known) return null;
   if (consent.choice !== null && !consent.reviewing) return null;
   return <ConsentBanner choice={consent.choice} />;

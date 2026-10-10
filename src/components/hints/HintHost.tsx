@@ -19,6 +19,7 @@
  * found the feed button is never told what the feed button is.
  */
 
+import { useRelayAccess } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import type { Shell, SurfaceId } from '@/utils/hints/registry';
 import { useHintHost } from '@/hooks/hints/useHintHost';
@@ -32,7 +33,9 @@ export default function HintHost({
   shell: Shell;
 }) {
   const t = useTranslations();
-  const vm = useHintHost(surface, shell);
+  const access = useRelayAccess();
+  const blocked = access === 'restricted' || access === 'auth-required' || access === 'unreachable';
+  const vm = useHintHost(blocked ? null : surface, shell);
   if (!vm.hint || !vm.anchorEl) return null;
 
   return (

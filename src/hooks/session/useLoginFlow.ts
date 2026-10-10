@@ -25,6 +25,8 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
   const router = useRouter();
   const t = useTranslations();
   const [generatedLogin, setGeneratedLogin] = useState<LoginArgs | null>(null);
+  const [profilePublishing, setProfilePublishing] = useState(false);
+  const [profilePublishError, setProfilePublishError] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState('');
   const [shared, setShared] = useState(false);
@@ -34,6 +36,7 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
   // re-rendered the SDK's profile step and let its autofocused name input snatch
   // focus mid-word, the fields became untypeable after the first character.
   const generatedProfile = useRef<GeneratedProfileDraft>({});
+  const profileAttempt = useRef({ generation: 0, pending: false });
   const [nip46Retry, setNip46Retry] = useState(0);
   const [hideTransientError, setHideTransientError] = useState(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,6 +49,8 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
   }, []);
   useEffect(() => () => {
     if (retryTimer.current) clearTimeout(retryTimer.current);
+    profileAttempt.current.generation += 1;
+    profileAttempt.current.pending = false;
   }, []);
 
   const handleSdkError = (message: string) => {
@@ -71,8 +76,8 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
       ...(signer ? { signer } : {}),
     };
     if (method === 'generate') {
-      if (nsec) await publishGeneratedProfile(nsec, generatedProfile.current);
       setGeneratedLogin(args);
+      if (nsec) await publishProfile(nsec);
       return;
     }
     traceLogin('session.login.start', { method });
@@ -86,9 +91,27 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
     }
   };
 
+  const publishProfile = async (nsec: string) => {
+    if (profileAttempt.current.pending) return;
+    const generation = ++profileAttempt.current.generation;
+    profileAttempt.current.pending = true;
+    setProfilePublishing(true);
+    setProfilePublishError(false);
+    try {
+      await publishGeneratedProfile(nsec, generatedProfile.current);
+    } catch {
+      if (profileAttempt.current.generation === generation) setProfilePublishError(true);
+    } finally {
+      if (profileAttempt.current.generation === generation) {
+        profileAttempt.current.pending = false;
+        setProfilePublishing(false);
+      }
+    }
+  };
+
   /** Finish a generated-key signup: only now does the bridge get the signer. */
   const finish = async () => {
-    if (!generatedLogin) return;
+    if (!generatedLogin || profileAttempt.current.pending || profilePublishing || profilePublishError) return;
     setFinishing(true);
     setFinishError('');
     try {
@@ -118,7 +141,14 @@ export function useLoginFlow({ onSuccess, onClose }: { onSuccess?: () => void; o
 
   return {
     generatedLogin,
-    backFromGenerated: () => setGeneratedLogin(null),
+    profilePublishing,
+    profilePublishError,
+    retryProfilePublish: () => generatedLogin?.nsec && publishProfile(generatedLogin.nsec),
+    backFromGenerated: () => {
+      profileAttempt.current.generation += 1;
+      profileAttempt.current.pending = false;
+      setGeneratedLogin(null);
+    },
     finishing,
     finishError,
     shared,

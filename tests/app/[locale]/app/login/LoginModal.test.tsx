@@ -98,6 +98,7 @@ describe('LoginModal generated identity flow', () => {
     renderLocalized(<LoginModal />);
 
     expect(sdkProps.profileSetup).toBe(true);
+    expect(sdkProps.profileRelays).toEqual([]);
     expect(sdkProps.closeOnSuccess).toBe(false);
     expect(sdkProps.showRememberToggle).toBe(false);
     expect(sdkProps.nip46Metadata).toEqual({
@@ -141,6 +142,48 @@ describe('LoginModal generated identity flow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Enter Obelisk' }));
     await waitFor(() => expect(loginWithNsec).toHaveBeenCalledOnce());
+  });
+
+  it('keeps a rejected profile draft for retry and does not enter prematurely', async () => {
+    publish.mockImplementationOnce(() => [Promise.reject(new Error('rejected'))]);
+    renderLocalized(<LoginModal />);
+    act(() => updateDraft?.({ name: 'Retained', banner: 'https://cdn.example/banner.jpg' }));
+    await act(async () => {
+      await (sdkProps.onLogin as (args: unknown) => Promise<void>)({
+        method: 'generate', pubkey: '1'.repeat(64),
+        nsec: nip19.nsecEncode(new Uint8Array(32).fill(1)),
+      });
+    });
+    expect(screen.getByRole('button', { name: 'Enter Obelisk' })).toBeDisabled();
+    expect(loginWithNsec).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry profile sync' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Enter Obelisk' })).toBeEnabled());
+    const event = publish.mock.calls[1][1] as { content: string };
+    expect(JSON.parse(event.content)).toMatchObject({ name: 'Retained', banner: 'https://cdn.example/banner.jpg' });
+  });
+
+  it('ignores a previous account publish finishing after going back', async () => {
+    let rejectFirst!: (error: Error) => void;
+    let resolveSecond!: (value: string) => void;
+    publish.mockImplementationOnce(() => [new Promise<string>((_, reject) => { rejectFirst = reject; })]);
+    publish.mockImplementationOnce(() => [new Promise<string>((resolve) => { resolveSecond = resolve; })]);
+    renderLocalized(<LoginModal />);
+    let first!: Promise<void>;
+    act(() => {
+      first = (sdkProps.onLogin as (args: unknown) => Promise<void>)({ method: 'generate', pubkey: '1'.repeat(64), nsec: nip19.nsecEncode(new Uint8Array(32).fill(1)) });
+    });
+    await waitFor(() => expect(publish).toHaveBeenCalledOnce());
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    let second!: Promise<void>;
+    act(() => {
+      second = (sdkProps.onLogin as (args: unknown) => Promise<void>)({ method: 'generate', pubkey: '2'.repeat(64), nsec: nip19.nsecEncode(new Uint8Array(32).fill(2)) });
+    });
+    await waitFor(() => expect(publish).toHaveBeenCalledTimes(2));
+    await act(async () => { rejectFirst(new Error('old attempt')); await first; });
+    expect(screen.queryByRole('button', { name: 'Retry profile sync' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Enter Obelisk' })).toBeDisabled();
+    await act(async () => { resolveSecond('ok'); await second; });
+    expect(screen.getByRole('button', { name: 'Enter Obelisk' })).toBeEnabled();
   });
 
   it('publishes a generated name when profile setup is skipped', async () => {

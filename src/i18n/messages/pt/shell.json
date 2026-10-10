@@ -520,5 +520,12 @@
       "offline": "Offline",
       "error": "Erro: {detail}"
     }
+  },
+  "loginRecovery": {
+    "chooseRelay": "Escolher outro relay",
+    "profilePending": "Perfil ainda não sincronizado",
+    "publishing": "Publicando seu perfil…",
+    "publishFailed": "Nenhum relay confirmou seu perfil. Seu rascunho continua aqui. Tente sincronizá-lo novamente antes de entrar.",
+    "retryPublish": "Tentar sincronizar novamente"
   }
 }

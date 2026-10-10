@@ -1,3 +1,4 @@
+import { GENERATED_PROFILE_PUBLISH_TIMEOUT_MS } from '@/constants/session/login';
 import type { LoginArgs, GeneratedProfileDraft } from '@/types/session/login';
 import type { BridgeImpl } from '@/services/nostr-bridge';
 import { finalizeEvent, getPublicKey } from 'nostr-tools/pure';
@@ -65,7 +66,7 @@ const GENERATED_PROFILE_RELAYS = [
 /** Publish a freshly generated key's kind 0 to a few public relays, so the new person is findable. */
 export async function publishGeneratedProfile(nsec: string, profile: GeneratedProfileDraft): Promise<void> {
   const secretKey = nsecToBytes(nsec);
-  if (!secretKey) return;
+  if (!secretKey) throw new Error('Invalid nsec');
   const name = profile.name?.trim() || randomProfileName();
   const content = {
     name,
@@ -80,5 +81,13 @@ export async function publishGeneratedProfile(nsec: string, profile: GeneratedPr
     tags: [],
     content: JSON.stringify(content),
   }, secretKey);
-  try { await Promise.allSettled(getPool().publish(GENERATED_PROFILE_RELAYS, event)); } catch { /* non-fatal */ }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      Promise.any(getPool().publish(GENERATED_PROFILE_RELAYS, event)),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Profile publish timed out')), GENERATED_PROFILE_PUBLISH_TIMEOUT_MS); }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
