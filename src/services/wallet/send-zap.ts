@@ -4,7 +4,7 @@ import { getDefaultRelays } from '@nostr-wot/data';
 import { getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
 import { KIND_REACTION } from '@/constants/nostr/nip-kinds';
 import type { NipSigner } from '@/types/nostr/nip-signer';
-import { codeOrMessage } from '@/utils/errors/codes';
+import { codeOrMessage, errorCodeOf } from '@/utils/errors/codes';
 import { connectWallet, isWalletAvailable } from './wallet';
 import { MARKER_NO_BRIDGE } from '@/constants/wallet/zap';
 
@@ -80,8 +80,24 @@ export interface ZapResult {
  * marker could not be posted.
  */
 export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
+  // One correlation ID per user attempt; never log invoice, event, account or error payloads.
+  const attempt = crypto.randomUUID();
+  const step = async <T>(stage: string, action: () => Promise<T>): Promise<T> => {
+    const trace = (status: string, code: string | null = null) => {
+      if (process.env.NODE_ENV === 'development') console.info('[zap]', { attempt, stage, status, code });
+    };
+    trace('start');
+    try {
+      const result = await action();
+      trace('complete');
+      return result;
+    } catch (error) {
+      trace('failed', errorCodeOf(error));
+      throw error;
+    }
+  };
   const session = captureActiveSession(zap.signer.pubkey);
-  const wallet = await connectWallet(zap.signer.pubkey);
+  const wallet = await step('wallet-connect', () => connectWallet(zap.signer.pubkey));
   if (!wallet) throw new ZapError('noWallet');
 
   const relays = Array.from(new Set([
@@ -89,9 +105,9 @@ export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
     ...getDefaultRelays(),
   ].filter(isImportableRelayUrl)));
   const amountMsats = zap.amountSats * 1000;
-  const { invoice, zapRequest } = await requestZapInvoice({
+  const { invoice, zapRequest } = await step('invoice', () => requestZapInvoice({
     getPublicKey: async () => zap.signer.pubkey,
-    signEvent: (template) => zap.signer.signEvent(template),
+    signEvent: (template) => step('sign-zap', () => zap.signer.signEvent(template)),
   }, {
     recipientPubkey: zap.recipient.recipientPubkey,
     lud16: zap.lud16,
@@ -99,11 +115,11 @@ export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
     amountMsats,
     relays,
     comment: zap.comment.trim() || undefined,
-  });
+  }));
 
-  await wallet.pay(invoice);
+  await step(`payment-${wallet.kind}`, () => wallet.pay(invoice));
   if (!session?.isCurrent()) return { markerError: getBridgeImpl() ? 'not-logged-in' : MARKER_NO_BRIDGE };
-  return postZapMarker(zap, { invoice, zapRequest, amountMsats });
+  return step('channel-marker', () => postZapMarker(zap, { invoice, zapRequest, amountMsats }));
 }
 
 async function postZapMarker(

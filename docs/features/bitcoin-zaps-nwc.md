@@ -231,3 +231,7 @@ Confirms). UI: `WalletSettings`, `PayingWalletNote`, `InvoiceCard`,
 Paying invoices with no amount over NWC, balance and history, emoji zaps,
 per-server zap emojis, sat leaderboards and zap splits are tracked in
 [ROADMAP.md](../../ROADMAP.md#lightning).
+
+### Diagnosing a failed zap
+
+Unknown wallet/extension errors are shown as the provider supplied them instead of being replaced by the generic zap error; known error codes remain translated. Local development logs one `[zap]` attempt ID with connect, invoice, zap-signature, payment-provider and channel-marker stages. Logs contain only stage/status and recognized error codes, never invoices, signed events, account keys, comments or raw provider errors. Signing a zap request and approving a payment are separate operations; two of each for one attempt are not expected. No payment is automatically retried.

@@ -89,6 +89,25 @@ describe('checkZap', () => {
 });
 
 describe('sendZap', () => {
+  it('traces one payment attempt without logging invoice or provider error payloads', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    const log = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const failure = new Error('private-provider-payload');
+    webln.sendPayment.mockRejectedValueOnce(failure);
+    try {
+      await expect(sendZap(ready())).rejects.toBe(failure);
+      const rows = log.mock.calls.map(([, row]) => row);
+      expect(new Set(rows.map(row => row.attempt)).size).toBe(1);
+      expect(rows.filter(row => row.stage === 'payment-webln').map(row => row.status)).toEqual(['start', 'failed']);
+      expect(JSON.stringify(rows)).not.toMatch(/lnbc1invoice|private-provider-payload|ana@example/);
+      expect(webln.sendPayment).toHaveBeenCalledTimes(1);
+      expect(publishEvent).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('enables the wallet, requests the invoice, pays, then posts the marker', async () => {
     const result = await sendZap(ready());
 

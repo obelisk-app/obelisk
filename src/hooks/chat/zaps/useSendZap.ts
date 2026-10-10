@@ -71,7 +71,7 @@ export function useSendZap({ recipient, amountSats, comment, lud16, displayName,
         setBusy(false);
         return; // inFlight stays set: no second payment from this modal
       }
-      setError(e instanceof ZapError ? t(ERROR_KEY[e.code]) : errorText(t, e, 'chat.zap.failed'));
+      setError(e instanceof ZapError ? t(ERROR_KEY[e.code]) : errorText(t, e));
       inFlight.current = false;
       setBusy(false);
       return;

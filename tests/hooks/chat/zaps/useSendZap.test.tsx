@@ -71,13 +71,13 @@ describe('useSendZap', () => {
     warn.mockRestore();
   });
 
-  it('re-enables Zap with a translated error when the payment failed', async () => {
+  it('shows the wallet rejection instead of hiding it behind a generic zap error', async () => {
     zap.sendZap.mockRejectedValueOnce(new Error('insufficient balance'));
     const { result, onSent } = renderSend();
 
     await act(async () => { await result.current.send(); });
 
-    expect(result.current.error).toBe('The zap did not go through.');
+    expect(result.current.error).toBe('insufficient balance');
     expect(result.current.busy).toBe(false);
     expect(onSent).not.toHaveBeenCalled();
     await act(async () => { await result.current.send(); });
