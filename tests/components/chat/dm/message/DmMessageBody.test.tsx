@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DmMessageBody } from '@/components/chat/dm/message/DmMessageBody';
 import { LocaleProvider } from '@tests/support/intl';
@@ -19,6 +19,27 @@ const msg = (over: Partial<JsDirectMessage>): JsDirectMessage => ({
 });
 
 describe('DmMessageBody', () => {
+  it('does not reparse unchanged history on parent renders, but updates replacements and media settings', () => {
+    let reads = 0;
+    const messages = Array.from({ length: 100 }, (_, i) => ({
+      ...msg({ id: String(i) }),
+      get content() { reads++; return `message ${i} https://g.example/${i}.gif`; },
+    }));
+    // Keep provider identity fixed so this measures a parent update, not a locale change.
+    const history = () => <>{messages.map(message => <DmMessageBody key={message.id} message={message} />)}</>;
+    const view = render(history(), { wrapper: ({ children }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider> });
+    const image = screen.getAllByTestId('dm-images')[0];
+    reads = 0;
+    view.rerender(history());
+    expect(reads).toBe(0);
+    expect(screen.getAllByTestId('dm-images')[0]).toBe(image);
+    messages[0] = msg({ id: '0', content: 'updated message' });
+    view.rerender(history());
+    expect(screen.getByText('updated message')).toBeInTheDocument();
+    act(() => setRemoteMediaMode('dm', 'ask'));
+    expect(screen.queryByTestId('dm-images')).toBeNull();
+  });
+
   it('renders plain text with custom emoji and links, but no unfurl card', () => {
     renderLocalized(<DmMessageBody message={msg({ content: 'hi :blob: see https://example.com/page', customEmojis: { blob: 'https://e.example/blob.png' } })} />);
     expect(screen.getByAltText(':blob:')).toHaveAttribute('src', 'https://e.example/blob.png');

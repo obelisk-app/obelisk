@@ -19,7 +19,10 @@ import type { JsMessage, LoadMoreMessagesResult } from '../../common/types';
 import type { MessagesState } from './state';
 import { CACHE_FLUSH_DELAY_MS, LOAD_MORE_PAGE_SIZE, MESSAGE_CACHE_LIMIT } from '@/constants/nostr-bridge/groups';
 
+import { OrderedMessageSnapshot } from './ordered-snapshot';
+
 export class MessageIngest {
+  private readonly ordered = new OrderedMessageSnapshot();
   constructor(
     private readonly s: MessagesState,
     private readonly ctx: MessagesContext,
@@ -48,29 +51,11 @@ export class MessageIngest {
     let replacedClientTag: string | null = null;
     this.s.messagesByGroup.update((prev) => {
       const existing = prev[groupId] ?? [];
-      if (existing.some((m) => m.id === msg.id)) return prev;
-      // Relay echo of an optimistic placeholder we sent, replace in place
-      // so the bubble's React key (msg.id) only changes once. Match on the
-      // tuple we control end-to-end (pubkey, content, created_at) since the
-      // pre-sign placeholder doesn't have an id yet.
-      const pendingIdx = existing.findIndex(
-        (m) =>
-          m.pending === true
-          && m.pubkey === msg.pubkey
-          && m.content === msg.content
-          && m.createdAt === msg.createdAt,
-      );
-      if (pendingIdx >= 0) {
-        replacedClientTag = existing[pendingIdx].clientTag ?? null;
-        const next = [...existing];
-        next[pendingIdx] = msg;
-        next.sort((a, b) => a.createdAt - b.createdAt);
-        isNew = true;
-        return { ...prev, [groupId]: next };
-      }
+      const result = this.ordered.insert(existing, msg);
+      if (result.messages === existing) return prev;
+      replacedClientTag = result.replacedClientTag;
       isNew = true;
-      const next = [...existing, msg].sort((a, b) => a.createdAt - b.createdAt);
-      return { ...prev, [groupId]: next };
+      return { ...prev, [groupId]: result.messages };
     });
     if (replacedClientTag) this.s.pendingSends.delete(replacedClientTag);
     // Lazy metadata fetch for any author we haven't seen yet.
