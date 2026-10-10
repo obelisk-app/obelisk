@@ -23,6 +23,7 @@ describe('disconnect', () => {
     const logout = vi.fn().mockResolvedValue(undefined);
     registerBridge(fakeBridge({}, { logout } as never));
     disconnect();
-    await vi.waitFor(() => expect(logout).toHaveBeenCalled());
+    // Logout lazy-loads the bridge; cold transforms can exceed vi.waitFor's 1 s default.
+    await vi.waitFor(() => expect(logout).toHaveBeenCalled(), { timeout: 10_000 });
   });
 });
