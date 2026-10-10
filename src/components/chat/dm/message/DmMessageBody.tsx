@@ -1,5 +1,7 @@
 'use client';
 
+import { memo } from 'react';
+
 import Link from '@/components/ui/navigation/Link';
 
 /**
@@ -33,7 +35,7 @@ import { TextWithEmoji } from './TextWithEmoji';
 import { useDmEmojis } from '@/hooks/chat/dm/message/useDmEmojis';
 import { splitDmImages } from '@/utils/chat/dm/dm-message-utils';
 
-export function DmMessageBody({ message }: { message: JsDirectMessage }) {
+export const DmMessageBody = memo(function DmMessageBody({ message }: { message: JsDirectMessage }) {
   const media = useRemoteMediaGate('dm', message.counterparty, message.outgoing);
   const emojis = useDmEmojis(message.customEmojis, media.show);
   const onAccent = message.outgoing;
@@ -76,4 +78,4 @@ export function DmMessageBody({ message }: { message: JsDirectMessage }) {
       )}
     </>
   );
-}
+});
