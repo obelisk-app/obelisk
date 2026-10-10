@@ -105,7 +105,7 @@ export function useChannelComposer({
 
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [slashQuery, setSlashQuery] = useState<string | null>(null);
-  const metaMap = useComposerMetadata();
+  const metaMap = useComposerMetadata(mentionQuery !== null || slashQuery !== null);
   const [mentionIndex, setMentionIndex] = useState(0);
   const filteredMembers = useMentionCandidates(mentionQuery, metaMap, maxMentionResults);
 

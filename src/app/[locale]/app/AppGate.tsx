@@ -11,6 +11,7 @@
  */
 
 import dynamic from 'next/dynamic';
+import AnalyticsConsentRoot from '@/components/analytics/AnalyticsConsentRoot';
 import { ShellLoading } from './mounts/ShellLoading';
 // Hoist the mobile shell's stylesheet up to the eagerly-loaded route bundle
 // so it's in place before the dynamic PhoneShell chunk hydrates. Without
@@ -32,6 +33,7 @@ export default function AppGate() {
   if (isMobile === null) return <ShellLoading />;
   return (
     <>
+      <AnalyticsConsentRoot appSession />
       {loggedIn ? <ReadStateRoot /> : null}
       {loggedIn ? <BackgroundVoiceAudio /> : null}
       {loggedIn ? <LazyDmCallLayer /> : null}

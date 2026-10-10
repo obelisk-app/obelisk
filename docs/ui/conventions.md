@@ -10,6 +10,8 @@ Desktop destination changes create browser-history entries; initial restoration,
 
 The desktop DM opt-in has one primary explanation and enable action in the main pane. Its sidebar uses a compact fallback, and both react to the same device setting. Composer metadata, membership and bot-profile subscriptions are active only while their relevant picker is open; opening replays the latest bridge snapshot without changing relay-wide mention discovery or WoT filtering.
 
+Analytics consent stays outside sign-in: the public root suppresses its banner on app routes and the app mount offers it after authentication, using the same stored choice. Signup has one publisher for the complete profile and waits for the first relay acknowledgement, bounded to eight seconds. Failure keeps the profile draft in the signup flow for retry; it does not claim publication succeeded. Relay access failures offer the existing relay chooser, suppress onboarding hints, and show authorization status separately from socket connectivity.
+
 ## Where a file goes
 
 The layers are `src/components`, `src/hooks`, `src/services`, `src/utils`, `src/constants`, `src/types`, `src/schemas`, `src/store` and `src/lib`. They share the module ownership rules below, and `tests/structure/module-layout.test.ts` holds them to it. `src/assets` is a layer too, split by kind of picture rather than by feature ([Assets](#assets)).
