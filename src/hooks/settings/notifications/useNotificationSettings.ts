@@ -8,7 +8,6 @@ import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { desktopNotificationPermission, requestDesktopNotificationPermission } from '@/services/notifications/alert';
 import { previewRingtone } from '@/services/notifications/sound';
 import { watchNotificationPermission, type DesktopPermission } from '@/services/settings/notification-permission';
-import { desktopNotificationHintKey, desktopNotificationsBlocked } from '@/utils/settings/notification-rows';
 
 export type NotificationToggleKey = 'notificationSounds' | 'browserNotifications' | 'backgroundRelayWatch';
 
@@ -56,10 +55,14 @@ export function useNotificationSettings() {
     {
       key: 'browserNotifications',
       label: t('settings.preferences.notifications.desktop.label'),
-      description: t(desktopNotificationHintKey(permission)),
+      description: permission === 'unsupported'
+        ? t('settings.preferences.notifications.desktop.unsupported')
+        : permission === 'denied'
+          ? t('settings.preferences.notifications.desktop.denied')
+          : t('settings.preferences.notifications.desktop.description'),
       on: browserOn,
       onToggle: () => { void toggleDesktop(); },
-      disabled: desktopNotificationsBlocked(permission),
+      disabled: permission === 'unsupported' || permission === 'denied',
     },
     {
       key: 'backgroundRelayWatch',

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { downloadAccountBackup } from '@/services/settings/account-backup';
 import { errorText } from '@/utils/errors/error-text';
-import { failedBackupMedia } from '@/utils/settings/backup-result';
 
 export type BackupStatus = 'idle' | 'working' | 'done' | 'error';
 
@@ -18,7 +17,8 @@ export function useAccountBackupExport() {
     setStatus('working');
     setMessage('');
     try {
-      const failed = failedBackupMedia(await downloadAccountBackup());
+      const backup = await downloadAccountBackup();
+      const failed = backup.media.reduce((count, item) => count + (item.error ? 1 : 0), 0);
       setStatus('done');
       setMessage(failed
         ? t('settings.preferences.backup.partial', { count: String(failed) })

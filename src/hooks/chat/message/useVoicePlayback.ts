@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState, type SyntheticEvent } from 'react';
-import { nextPlaybackRate } from '@/utils/chat/message/voice-playback';
 
 /**
  * Play state of one `<audio>` element: whether it is playing, the speed,
@@ -23,7 +22,7 @@ export function useVoicePlayback(declaredDuration: number) {
     else audio.pause();
   };
   const cyclePlaybackRate = () => {
-    const next = nextPlaybackRate(playbackRate);
+    const next = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1;
     if (audioRef.current) audioRef.current.playbackRate = next;
     setPlaybackRate(next);
   };

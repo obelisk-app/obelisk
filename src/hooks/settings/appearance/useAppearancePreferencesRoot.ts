@@ -2,12 +2,18 @@
 
 import { useEffect } from 'react';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
-import { applyAppearance } from '@/services/settings/apply-appearance';
+import { getAppearanceCssVariables } from '@/services/preferences/preferences-appearance';
 
-/** Keep the page root painted with the saved appearance, repainting on every change. */
+/** Apply saved appearance without repainting for unrelated preference changes. */
 export function useAppearancePreferencesRoot(): void {
-  const prefs = usePreferences();
+  const { accentColor, backgroundColor, buttonColor, bubbleColor, bubbleAnimation } = usePreferences();
   useEffect(() => {
-    applyAppearance(document.documentElement, prefs);
-  }, [prefs]);
+    const root = document.documentElement;
+    for (const [name, value] of Object.entries(getAppearanceCssVariables({ accentColor, backgroundColor, buttonColor, bubbleColor }))) {
+      root.style.setProperty(name, value);
+    }
+  }, [accentColor, backgroundColor, buttonColor, bubbleColor]);
+  useEffect(() => {
+    document.documentElement.dataset.bubbleAnimation = bubbleAnimation;
+  }, [bubbleAnimation]);
 }

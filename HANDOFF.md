@@ -1,22 +1,19 @@
-# Session connection routing
+# Hook wrapper audit
 
-Branch: `fix/session-connection-routing`. Base: `824639f0` on `reorg/pre-launch`. Work remains isolated here; nothing has been merged or pushed, and the canonical development server has not been switched to this branch.
+Branch: `refactor/hook-wrapper-audit`. Base: `9bdc20aa` from main. Changes are isolated in this worktree and are not merged or pushed.
 
 ## Changes
 
-- `efef4f82`: central public-key verification for the extension.
-- `4307faf3`: fence extension capabilities while identity verification is pending.
-- `5df079c0`: react to verified extension account changes through the session lifecycle.
-- `a4d0f476`: verify restored identities, handle account changes during startup, refresh current-user profiles, and expose paused signing/recovery in session UI.
-- `60c50f9b`: route signer, WoT, PQ, wallet, and zap capabilities through the active session. Implicit WebLN is available only for extension login; configured NWC remains usable with other login methods.
-- `0056023c`: share wallet selection policy while keeping the hook subscribed to its mounted session; cover pending identity checks and remote-signer warmup.
+Scanned 371 hook modules, including 104 modules of at most 25 lines, and traced small helper imports to their production callers. Consolidated five clear single-owner wrappers: root appearance application, color input validation, backup failure counting, notification row conditions and voice playback rate cycling. Removed the corresponding helper modules and moved behavioral coverage to their owning hooks. Shared subscriptions, substantial pure transformations and asynchronous lifecycle services retain their boundaries.
+
+Appearance CSS now depends only on the four palette values. Bubble animation is applied separately, so unrelated preferences and animation changes no longer rebuild or rewrite the palette. Backup counting no longer allocates an intermediate filtered array. No measured bundle-size or memory reduction is claimed.
+
+Updated AGENTS.md and UI conventions to allow trivial single-use logic in its owning hook rather than requiring unnecessary helper files.
 
 ## Verification
 
-Final typecheck passed. Full lint had zero errors and 53 warnings; final changed-file lint passed. All 239 architectural guard tests passed. The full test run passed 7,692 tests and failed 10 tests in three WebLN fixture files whose default login method was nsec. Those fixtures now explicitly select nip07. The final rerun of all three affected files plus the wallet hook and signer-routing tests passed all 29 tests. No production build or authenticated browser/signing test was run.
+Typecheck and changed-file ESLint passed. Related tests: 64 files, 532 tests passed. Structural guards: 38 files, 239 tests passed. Final notification permission regression: 5 tests passed. No production build or full-suite run, following repository worktree policy.
 
 ## Remaining
 
-Review/integrate this branch into `reorg/pre-launch` and test extension account switching, reload identity checks, and Nostr Connect isolation against real signers before release. Do not claim it is live or pushed. Do not overwrite other agents' worktrees.
-
-The separate pitch preview is at `/Users/dandelionlabs/development/personal/output/obelisk-call-host-pitch/index.html`, served locally on port 8768. The PDF was intentionally left unchanged pending the user's review of the pitch. Hosting commands and controls in that preview are illustrative, not implemented functionality.
+Review and integrate the branch when requested. The canonical checkout and other agents' worktrees were left unchanged.

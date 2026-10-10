@@ -44,8 +44,8 @@ describe('useNotificationSettings', () => {
     expect(getPreferences().browserNotifications).toBe(false);
   });
 
-  it('disables the browser row where it is blocked', () => {
-    vi.stubGlobal('Notification', { permission: 'denied', requestPermission: vi.fn() });
+  it.each(['denied', 'unsupported'])('disables the browser row when %s', (permission) => {
+    vi.stubGlobal('Notification', permission === 'unsupported' ? undefined : { permission, requestPermission: vi.fn() });
     const { result } = renderHook(() => useNotificationSettings(), { wrapper: LocaleProvider });
     expect(row(result, 'browserNotifications').disabled).toBe(true);
   });

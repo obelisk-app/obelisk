@@ -24,7 +24,15 @@ describe('useAccountBackupExport', () => {
     expect(result.current.message).toBe('Backup downloaded.');
   });
 
-  it('reports a failure', async () => {
+  it('reports the number of files that could not be embedded', async () => {
+    downloadAccountBackup.mockResolvedValue({ media: [{}, { error: 'timeout' }, { error: '' }, { error: '404' }] });
+    const { result } = renderHook(() => useAccountBackupExport(), { wrapper: LocaleProvider });
+    await act(async () => result.current.download());
+    expect(result.current.status).toBe('done');
+    expect(result.current.message).toContain('2');
+  });
+
+  it('reports a failure' , async () => {
     downloadAccountBackup.mockRejectedValue(new Error('boom'));
     const { result } = renderHook(() => useAccountBackupExport(), { wrapper: LocaleProvider });
     await act(async () => result.current.download());

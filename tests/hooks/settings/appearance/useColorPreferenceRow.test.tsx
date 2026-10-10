@@ -11,7 +11,10 @@ describe('useColorPreferenceRow', () => {
     const { useColorPreferenceRow } = await import('@/hooks/settings/appearance/useColorPreferenceRow');
     const { getPreferences } = await import('@/services/preferences/preferences');
     const { result, rerender } = renderHook(({ value }) => useColorPreferenceRow('accentColor', value), { initialProps: { value: '#b4f953' } });
-    act(() => result.current.commit('#7E'));
+    for (const invalid of ['abcdef', '#abcdefg', '#gggggg', '#7E']) {
+      act(() => result.current.commit(invalid));
+      expect(getPreferences().accentColor).toBe('#b4f953');
+    }
     expect(result.current.draft).toBe('#7E');
     expect(getPreferences().accentColor).toBe('#b4f953');
     act(() => result.current.commit('#7EC8FF'));

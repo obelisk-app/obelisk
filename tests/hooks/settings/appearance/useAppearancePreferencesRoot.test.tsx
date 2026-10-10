@@ -1,19 +1,29 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('useAppearancePreferencesRoot', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.resetModules();
+    document.documentElement.removeAttribute('style');
     delete document.documentElement.dataset.bubbleAnimation;
   });
+  afterEach(() => vi.restoreAllMocks());
 
-  it('paints the page root now and again on every change', async () => {
+  it('applies colors and updates animation without rewriting the palette', async () => {
     const { useAppearancePreferencesRoot } = await import('@/hooks/settings/appearance/useAppearancePreferencesRoot');
     const { setPreference } = await import('@/services/preferences/preferences');
+    const writes = vi.spyOn(document.documentElement.style, 'setProperty');
     renderHook(() => useAppearancePreferencesRoot());
+    expect(document.documentElement.style.getPropertyValue('--obelisk-accent')).toBe('#b4f953');
     expect(document.documentElement.dataset.bubbleAnimation).toBe('float');
+    writes.mockClear();
+    act(() => setPreference('notificationSounds', false));
     act(() => setPreference('bubbleAnimation', 'drift'));
+    expect(writes).not.toHaveBeenCalled();
     expect(document.documentElement.dataset.bubbleAnimation).toBe('drift');
+    act(() => setPreference('accentColor', '#7ec8ff'));
+    expect(document.documentElement.style.getPropertyValue('--obelisk-accent')).toBe('#7ec8ff');
+    expect(document.documentElement.style.getPropertyValue('--color-lc-green')).toBe('#7ec8ff');
   });
 });
