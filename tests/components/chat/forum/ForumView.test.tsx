@@ -441,6 +441,23 @@ describe('NewThreadModal tag picker', () => {
     expect(title.value).toBe('cool new title');
   });
 
+  it('the header "New publication" button prefills the title with the search query', () => {
+    mockGroups = [makeForum({ id: 'forum-1' })];
+
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    fireEvent.change(screen.getByTestId('forum-search-input'), { target: { value: '  new  ' } });
+    fireEvent.click(screen.getByTestId('forum-new-thread-btn'));
+    expect((screen.getByTestId('new-thread-title') as HTMLInputElement).value).toBe('new');
+  });
+
+  it('the header "New publication" button opens a blank title when the search is empty', () => {
+    mockGroups = [makeForum({ id: 'forum-1' })];
+
+    renderLocalized(<ForumView groupId="forum-1" onSelectThread={onSelectThread} />);
+    fireEvent.click(screen.getByTestId('forum-new-thread-btn'));
+    expect((screen.getByTestId('new-thread-title') as HTMLInputElement).value).toBe('');
+  });
+
   it('publishes selected topic ids when creating a thread', async () => {
     mockCreateGroup.mockResolvedValue('child-1');
     mockSendMessage.mockResolvedValue(undefined);
