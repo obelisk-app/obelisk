@@ -49,10 +49,11 @@ export function buildMarkdownComponents({
         {children}
       </blockquote>
     ),
-    // Headings (limited like Discord)
-    h1: ({ children }) => <Text as="p" size="lg" tone="default" weight="bold"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
-    h2: ({ children }) => <Text as="p" size="base" tone="default" weight="bold"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
-    h3: ({ children }) => <Text as="p" size="sm" tone="default" weight="bold"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
+    // Headings (limited like Discord): three clear steps above body text,
+    // kept as paragraphs so a message never adds to the page outline.
+    h1: ({ children }) => <Text as="p" size="2xl" tone="default" weight="bold" className="mt-2 mb-1 leading-tight"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
+    h2: ({ children }) => <Text as="p" size="xl" tone="default" weight="bold" className="mt-2 mb-1 leading-tight"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
+    h3: ({ children }) => <Text as="p" size="lg" tone="default" weight="bold" className="mt-1 mb-0.5 leading-snug"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
     // Text formatting
     strong: ({ children }) => <strong className="font-bold text-lc-white"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></strong>,
     em: ({ children }) => <em className="italic text-lc-white/80"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></em>,
@@ -60,9 +61,11 @@ export function buildMarkdownComponents({
     // Lists
     ul: ({ children }) => <List marker="inside" spacing="none" className="my-1 text-lc-white/90">{children}</List>,
     ol: ({ children }) => <List as="ol" marker="inside" spacing="none" className="my-1 text-lc-white/90">{children}</List>,
-    li: ({ children }) => <li className="text-sm"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></li>,
-    // Paragraph: swap mention placeholders
-    p: ({ children }) => <Text as="p" className="my-0"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
+    li: ({ children }) => <li className="text-sm whitespace-pre-line"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></li>,
+    // Paragraph: swap mention placeholders. `pre-line` keeps a single
+    // newline (Shift+Enter in the composer, or any Nostr client) as a line
+    // break instead of collapsing it into a space.
+    p: ({ children }) => <Text as="p" className="my-0 whitespace-pre-line"><MarkdownInline mentions={mentions} emojis={renderEmojis}>{children}</MarkdownInline></Text>,
     // Spoiler nodes (from our remark plugin)
     spoiler: ({ children }: { children?: ReactNode }) => <SpoilerText>{children}</SpoilerText>,
   } as Components;

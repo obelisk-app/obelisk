@@ -23,7 +23,7 @@ export interface ChatComposerProps {
  */
 export function useChatComposer(props: ChatComposerProps, ref: ForwardedRef<ComposerHandle>) {
   const { groupId, group } = props;
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const emojiBtnRef = useRef<HTMLDivElement>(null);
   const composer = useChannelComposer({ ...props, inputRef });
   const { onPickFiles, emojiOpen, setEmojiOpen } = composer;
@@ -52,9 +52,9 @@ export function useChatComposer(props: ChatComposerProps, ref: ForwardedRef<Comp
       composer.onPickMedia(emoji, custom, kind);
       inputRef.current?.focus();
     },
-    onChange: (e: ChangeEvent<HTMLInputElement>) =>
+    onChange: (e: ChangeEvent<HTMLTextAreaElement>) =>
       composer.onInput(e.target.value, e.target.selectionStart ?? e.target.value.length),
-    onSelect: (e: SyntheticEvent<HTMLInputElement>) => {
+    onSelect: (e: SyntheticEvent<HTMLTextAreaElement>) => {
       const el = e.currentTarget;
       composer.onSelect(el.value, el.selectionStart ?? el.value.length);
     },

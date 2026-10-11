@@ -1,8 +1,8 @@
 'use client';
 
 import Button from '@/components/ui/buttons/Button';
-import { forwardRef, type InputHTMLAttributes } from 'react';
-import { MESSAGE_INPUT_PROPS } from '@/constants/chat/composer';
+import { forwardRef } from 'react';
+import { COMPOSER_MAX_ROWS, MESSAGE_TEXTAREA_PROPS } from '@/constants/chat/composer';
 import MessageMediaPicker from '@/components/chat/picker/MessageMediaPicker';
 import { AttachmentMenu } from '@/components/chat/composer/AttachmentMenu';
 import { VoiceNoteButton } from '@/components/chat/composer/VoiceNoteButton';
@@ -13,15 +13,12 @@ import SlashCommandScaffold from '@/components/chat/slash/SlashCommandScaffold';
 import type { ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 import { useChatComposer, type ChatComposerProps } from '@/hooks/shell/panes/channel/useChatComposer';
 import { useTranslations } from 'next-intl';
-import Input from '@/components/ui/forms/Input';
+import TextArea from '@/components/ui/forms/TextArea';
 import { ComposerAttachments } from './ComposerAttachments';
 import { ComposerReplyBar } from './ComposerReplyBar';
 import { SendIcon, StickerIcon } from '@/assets/icons';
 import Text from '@/components/ui/layout/Text';
 import Form from '@/components/ui/forms/Form';
-
-/** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
-const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
 
 /**
  * The desktop composer skin over `useChannelComposer` (through
@@ -45,7 +42,7 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
       {vm.showAttachments && (
         <ComposerAttachments urls={composer.pendingImageUrls} uploading={composer.uploading} onRemove={composer.removeAttachmentUrl} />
       )}
-      <div className="flex min-h-[3.5rem] items-center gap-1 rounded-xl border border-lc-border bg-lc-card px-2 focus-within:border-lc-green">
+      <div className="flex min-h-[3.5rem] items-end gap-1 rounded-xl border border-lc-border bg-lc-card px-2 py-2.5 focus-within:border-lc-green">
         {!composer.draftVoiceNote && (<>
         <AttachmentMenu
           disabled={composer.uploading}
@@ -100,9 +97,12 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
           {composer.draftVoiceNote && (
             <VoiceNoteDraft note={composer.draftVoiceNote} onDiscard={composer.discardVoiceNote} />
           )}
-          <Input
+          <TextArea
             variant="bare"
-            {...messageInputProps}
+            {...MESSAGE_TEXTAREA_PROPS}
+            rows={1}
+            height="auto"
+            maxRows={COMPOSER_MAX_ROWS}
             ref={vm.inputRef}
             value={composer.draft}
             onChange={vm.onChange}
@@ -112,7 +112,7 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
             placeholder={t('shell.desktop.composer.placeholder', { name: vm.channelName })}
             aria-label={t('shell.desktop.composer.placeholder', { name: vm.channelName })}
             data-tour="composer"
-            className={(composer.draftVoiceNote ? "hidden " : "") + "w-full bg-transparent text-sm text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"}
+            className={(composer.draftVoiceNote ? "hidden " : "") + "block w-full bg-transparent py-2 text-sm leading-5 text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"}
           />
         </div>
         {vm.canSend ? (

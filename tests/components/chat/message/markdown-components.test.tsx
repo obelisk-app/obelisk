@@ -23,10 +23,18 @@ describe('markdown renderers', () => {
     const { container } = show('# Hi 〈MENTION:0〉\n\n## two\n\n### three');
     expect(container.querySelector('h1')).toBeNull();
     const ps = container.querySelectorAll('p');
-    expect(ps[0]).toHaveClass('text-lg', 'font-bold');
-    expect(ps[1]).toHaveClass('text-base');
-    expect(ps[2]).toHaveClass('text-sm');
+    expect(ps[0]).toHaveClass('text-2xl', 'font-bold');
+    expect(ps[1]).toHaveClass('text-xl', 'font-bold');
+    expect(ps[2]).toHaveClass('text-lg', 'font-bold');
     expect(screen.getByTestId('mention-highlight')).toHaveTextContent('@Alice');
+  });
+
+  it('a single newline stays a line break inside the paragraph', () => {
+    const { container } = show('first line\nsecond line');
+    const ps = container.querySelectorAll('p');
+    expect(ps).toHaveLength(1);
+    expect(ps[0]).toHaveClass('whitespace-pre-line');
+    expect(ps[0].textContent).toBe('first line\nsecond line');
   });
 
   it('emphasis, strong, strikethrough and list items swap placeholders too', () => {

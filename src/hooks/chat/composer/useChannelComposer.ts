@@ -35,6 +35,7 @@ import {
   withPickedMedia,
 } from '@/utils/chat/composer/draft-text';
 import { navigatePicker } from '@/utils/chat/composer/picker-keys';
+import { composerEnterAction, insertLineBreak } from '@/utils/chat/composer/enter-key';
 import { type ChannelComposer, type ChannelComposerOptions } from '@/types/chat/composer';
 import { MAX_COMPOSER_ATTACHMENTS } from '@/constants/chat/composer';
 import { useComposerMetadata, useMentionCandidates } from './useComposerPeople';
@@ -203,7 +204,7 @@ export function useChannelComposer({
     focusAndPlaceCaret(nextCursor);
   }
 
-  function onKeyDown(e: KeyboardEvent<HTMLInputElement>, submitOnEnter = false) {
+  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (navigatePicker(e, {
       open: slashQuery !== null,
       count: slashResults.length,
@@ -218,13 +219,22 @@ export function useChannelComposer({
       choose: () => applyMention(filteredMembers[mentionIndex]),
       close: () => setMentionQuery(null),
     })) return;
-    if (submitOnEnter && e.key === 'Enter' && !e.shiftKey) {
+    if (e.key !== 'Enter') return;
+    const { key, shiftKey, ctrlKey, metaKey, altKey } = e;
+    const action = composerEnterAction({ key, shiftKey, ctrlKey, metaKey, altKey, isComposing: e.nativeEvent.isComposing });
+    if (action === 'newline') {
+      e.preventDefault();
+      const el = e.currentTarget;
+      const { value, caret: next } = insertLineBreak(draft, el.selectionStart ?? draft.length, el.selectionEnd ?? draft.length);
+      pendingCaretRef.current = next;
+      onInput(value, next);
+    } else if (action === 'send') {
       e.preventDefault();
       void send();
     }
   }
 
-  function onPaste(e: ClipboardEvent<HTMLInputElement>) {
+  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
     const files = pastedMediaFiles(Array.from(e.clipboardData?.items ?? []));
     if (files.length > 0) {
       e.preventDefault();

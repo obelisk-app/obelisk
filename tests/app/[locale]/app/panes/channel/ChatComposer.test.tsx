@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 
@@ -7,7 +7,7 @@ vi.mock('@/services/nostr-bridge', async () => (await import('@tests/support/com
 vi.mock('@/hooks/relay/operator/useBotCommands', () => ({ useBotCommands: () => [] }));
 
 import { ChatComposer } from '@/app/[locale]/app/panes/channel/ChatComposer';
-import { COMPOSER_ALICE, GROUP } from '@tests/support/composer-mount';
+import { COMPOSER_ALICE, GROUP, sendMessage } from '@tests/support/composer-mount';
 import type { ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 import type { JsMessage } from '@/services/nostr-bridge';
 import { displayNameFor } from '@/utils/identity/display-name';
@@ -24,10 +24,26 @@ describe('ChatComposer', () => {
   it('renders the message input named by its placeholder and swaps the mic for a send button once there is a draft', () => {
     mount();
     const input = screen.getByPlaceholderText('Message #general');
-    expect(input.tagName).toBe('INPUT');
+    expect(input.tagName).toBe('TEXTAREA');
     expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
     fireEvent.change(input, { target: { value: 'hello' } });
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
+  });
+
+  it('Ctrl+Enter breaks the line; Enter sends the multi-line draft', async () => {
+    sendMessage.mockClear();
+    sendMessage.mockResolvedValue(undefined);
+    mount();
+    const input = screen.getByPlaceholderText('Message #general') as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'one', selectionStart: 3, selectionEnd: 3 } });
+    input.setSelectionRange(3, 3);
+    fireEvent.keyDown(input, { key: 'Enter', ctrlKey: true });
+    expect(input.value).toBe('one\n');
+    expect(sendMessage).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: 'one\ntwo' } });
+    await act(async () => { fireEvent.keyDown(input, { key: 'Enter' }); await Promise.resolve(); });
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage.mock.calls[0][1]).toBe('one\ntwo');
   });
 
   it('has an accessible name for screen readers', () => {

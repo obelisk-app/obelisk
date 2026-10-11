@@ -1,7 +1,7 @@
 'use client';
 
 import Button from '@/components/ui/buttons/Button';
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef } from 'react';
 import { type JsGroup, type JsMessage } from '@/services/nostr-bridge';
 import { MentionText } from '@/components/chat/mentions/MentionText';
 import MessageMediaPicker from '@/components/chat/picker/MessageMediaPicker';
@@ -11,15 +11,12 @@ import { VoiceNoteDraft } from '@/components/chat/composer/VoiceNoteDraft';
 import { type ComposerHandle } from '@/hooks/chat/composer/useChannelComposer';
 import { usePhoneChannelComposer } from '@/hooks/shell/mobile/screens/channel/usePhoneChannelComposer';
 import { useTranslations } from 'next-intl';
-import { MESSAGE_INPUT_PROPS } from '@/constants/chat/composer';
+import { COMPOSER_MAX_ROWS, MESSAGE_TEXTAREA_PROPS } from '@/constants/chat/composer';
 import { MobileMentionAutocomplete } from './MobileMentionAutocomplete';
-import Input from '@/components/ui/forms/Input';
+import TextArea from '@/components/ui/forms/TextArea';
 import EmojiSheet from '../../sheets/message/EmojiSheet';
 import UserName from '@/components/identity/UserName';
 import { CloseIcon, SendIcon, StickerIcon } from '@/assets/icons';
-
-/** `MESSAGE_INPUT_PROPS` is typed as every input attribute; `size` there is the HTML width hint, not Input's variant. */
-const messageInputProps: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> = MESSAGE_INPUT_PROPS;
 
 /**
  * The phone composer skin over `useChannelComposer`. Its own component so a
@@ -95,9 +92,12 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
         {composer.draftVoiceNote && (
           <VoiceNoteDraft note={composer.draftVoiceNote} onDiscard={composer.discardVoiceNote} />
         )}
-        <Input
+        <TextArea
           variant="bare"
-          {...messageInputProps}
+          {...MESSAGE_TEXTAREA_PROPS}
+          rows={1}
+          height="auto"
+          maxRows={COMPOSER_MAX_ROWS}
           ref={composer.inputRef}
           className={composer.draftVoiceNote ? "hidden" : "composer-input"}
           value={composer.draft}
@@ -106,7 +106,7 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
           onPaste={composer.onPaste}
           placeholder={t('mobile.channel.messagePlaceholder', { name: group?.name ?? t('common.channel') })}
           aria-label={t('mobile.channel.messagePlaceholder', { name: group?.name ?? t('common.channel') })}
-          onKeyDown={(e) => composer.onKeyDown(e, true)}
+          onKeyDown={composer.onKeyDown}
         />
         <div className="composer-btns">
           {composer.draft.trim() ? (

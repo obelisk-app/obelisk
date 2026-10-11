@@ -72,7 +72,7 @@ const MSG: JsMessage = {
 const wrapper = ({ children }: { children: ReactNode }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>;
 
 function mount(overrides: Partial<Parameters<typeof useChannelComposer>[0]> = {}) {
-  const inputRef = createRef<HTMLInputElement>();
+  const inputRef = createRef<HTMLTextAreaElement>();
   const setReplyingTo = vi.fn();
   const onOpenNewGame = vi.fn();
   const hook = renderHook(() => useChannelComposer({
@@ -197,7 +197,7 @@ describe('useChannelComposer: send', () => {
 
 describe('useChannelComposer: channel change', () => {
   it('drops the open @-picker and the last send error in the render that switches channel', async () => {
-    const inputRef = createRef<HTMLInputElement>();
+    const inputRef = createRef<HTMLTextAreaElement>();
     const { result, rerender } = renderHook(
       ({ groupId }: { groupId: string }) => useChannelComposer({
         groupId, group: GROUP, messages: [MSG], replyingTo: null,
@@ -260,6 +260,69 @@ describe('useChannelComposer: attachments', () => {
     await act(() => result.current.onVoiceRecorded(new File(['x'], 'n.webm', { type: 'audio/webm' }), 3));
     expect(result.current.sendError).toBe('Upload failed');
     expect(result.current.draftVoiceNote).toBeNull();
+  });
+});
+
+/** A keydown on a textarea holding `value` with the caret (or selection) at `start`..`end`. */
+function enterKey(value: string, start: number, end = start, over: Record<string, unknown> = {}) {
+  const preventDefault = vi.fn();
+  const event = {
+    key: 'Enter', shiftKey: false, ctrlKey: false, metaKey: false, altKey: false,
+    nativeEvent: { isComposing: false },
+    currentTarget: { selectionStart: start, selectionEnd: end, value },
+    preventDefault,
+    ...over,
+  };
+  return { event: event as never, preventDefault };
+}
+
+describe('useChannelComposer: Enter and line breaks', () => {
+  it('plain Enter sends the draft', async () => {
+    const { result } = mount();
+    act(() => result.current.onInput('hello', 5));
+    const { event, preventDefault } = enterKey('hello', 5);
+    await act(async () => { result.current.onKeyDown(event); await Promise.resolve(); });
+    expect(preventDefault).toHaveBeenCalled();
+    expect(sendMessage).toHaveBeenCalled();
+    expect(sendMessage.mock.calls[0][1]).toBe('hello');
+  });
+
+  it('Ctrl+Enter inserts a line break at the caret and does not send', () => {
+    const { result } = mount();
+    act(() => result.current.onInput('helloworld', 5));
+    const { event, preventDefault } = enterKey('helloworld', 5, 5, { ctrlKey: true });
+    act(() => result.current.onKeyDown(event));
+    expect(preventDefault).toHaveBeenCalled();
+    expect(result.current.draft).toBe('hello\nworld');
+    expect(result.current.caret).toBe(6);
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('Shift+Enter is left to the textarea: no send, no preventDefault', () => {
+    const { result } = mount();
+    act(() => result.current.onInput('hello', 5));
+    const { event, preventDefault } = enterKey('hello', 5, 5, { shiftKey: true });
+    act(() => result.current.onKeyDown(event));
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(result.current.draft).toBe('hello');
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('Enter confirming an IME candidate does not send', () => {
+    const { result } = mount();
+    act(() => result.current.onInput('nihao', 5));
+    const { event, preventDefault } = enterKey('nihao', 5, 5, { nativeEvent: { isComposing: true } });
+    act(() => result.current.onKeyDown(event));
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('sends a multi-line draft with its line breaks intact', async () => {
+    const { result } = mount();
+    act(() => result.current.onInput('line one\nline two', 17));
+    const { event } = enterKey('line one\nline two', 17);
+    await act(async () => { result.current.onKeyDown(event); await Promise.resolve(); });
+    expect(sendMessage.mock.calls[0][1]).toBe('line one\nline two');
   });
 });
 

@@ -80,7 +80,7 @@ export default function MessageContent({
       {voiceNote && <VoiceMessage note={voiceNote} authorPicture={voiceAuthorPicture} timestamp={voiceTimestamp} autoLoad={media.show} />}
       {text && (renderMarkdown
         ? renderMarkdown(text, components)
-        : <span data-testid="message-text-loading">{text}</span>)}
+        : <span data-testid="message-text-loading" className="whitespace-pre-line">{text}</span>)}
       {/* Welcome bot banner: hoisted so it renders with animated stars
           instead of as a generic markdown <img>. */}
       {welcomeBanner && (

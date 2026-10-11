@@ -1839,14 +1839,18 @@
   border-radius: 22px;
   padding: 6px 6px 6px 14px;
   display: flex;
-  align-items: center;
+  /* The field grows with multi-line drafts; the buttons stay on its last line. */
+  align-items: flex-end;
   gap: 8px;
 }
 .obelisk-mobile .composer-input {
   flex: 1;
+  display: block;
   color: var(--app-text);
   font-size: 16px;
-  padding: 6px 0;
+  line-height: 22px;
+  padding: 8px 0;
+  resize: none;
   background: transparent;
   border: none;
   outline: none;
