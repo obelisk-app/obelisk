@@ -112,13 +112,15 @@ describe('switching relays', () => {
     expect(onB.map((s) => s.kind).sort()).toEqual(['branding', 'layout', 'roles']);
   });
 
-  it("never paints relay A's layout, branding or roles on relay B", () => {
+  it("never paints relay A's layout, branding or roles on relay B", async () => {
     const seen: Array<[string, unknown[]]> = [];
     const authors = ['op'];
     const { rerender } = renderHook(({ relay }) => {
       const values = [useChannelLayout(relay, authors), useRelayBranding(relay, authors), useRelayRoles(relay, authors)];
       seen.push([relay, values]);
     }, { initialProps: { relay: A } });
+    // Cached values are delivered a microtask after the subscribing effect.
+    await act(async () => {});
     expect(seen.at(-1)).toEqual([A, [LAYOUT_A, BRANDING_A, ROLES_A]]);
 
     rerender({ relay: B });
@@ -127,13 +129,15 @@ describe('switching relays', () => {
     }
   });
 
-  it('keeps what it has while the operator list for the same relay changes', () => {
+  it('keeps what it has while the operator list for the same relay changes', async () => {
     const { result, rerender } = renderHook(({ authors }) => useChannelLayout(A, authors), {
       initialProps: { authors: ['op'] },
     });
+    await act(async () => {});
     expect(result.current).toBe(LAYOUT_A);
     t.values = {};
     rerender({ authors: ['op', 'op-2'] });
+    await act(async () => {});
     expect(result.current).toBe(LAYOUT_A);
   });
 });
