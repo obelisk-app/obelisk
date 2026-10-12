@@ -38,6 +38,8 @@
  */
 import type { Event as NostrEvent } from 'nostr-tools';
 import { errorCodeOf } from '@/utils/errors/codes';
+import { DmDecryptionProgress } from './decryption-progress';
+import type { DmLockState, HeldKind } from '@/types/chat/dm-lock';
 import type { NipSigner } from '@/types/nostr/nip-signer';
 import { importRecordKey, newRecordKeyBytes, openRecord, sealRecord } from '@/lib/crypto/record-cipher';
 import { StateStore } from '../common/state-store';
@@ -47,19 +49,7 @@ import { decodeRecord, encodeRecord, recordAad } from './store-record';
 import type { IngestDmParams } from './thread';
 import { MAX_HELD, MAX_DEFERRED } from '@/constants/nostr-bridge/dm';
 
-export type DmLockStatus = 'locked' | 'unlocking' | 'unlocked' | 'failed';
-
-export interface DmLockState {
-  readonly status: DmLockStatus;
-  /** Held messages still being opened after the local storage key was unlocked. */
-  readonly pendingDecryptions?: number;
-  /** Failed message decryptions retained for an explicit retry. */
-  readonly failedDecryptions?: number;
-  /** Created-at (unix ms) of each gift wrap held while locked that the store does not hold. */
-  readonly unopened: ReadonlyArray<number>;
-}
-
-export type HeldKind = 'wrap' | 'nip04';
+export type { DmLockStatus, DmLockState, HeldKind } from '@/types/chat/dm-lock';
 
 const LOCKED: DmLockState = { status: 'locked', unopened: [] };
 
@@ -95,6 +85,7 @@ export class DmStoreModule {
   private readonly openedPeers = new Set<string>();
   private readonly openedRecords = new Map<string, IngestDmParams>();
   private pendingDecryptions = 0;
+  private readonly encrypted = new DmDecryptionProgress();
 
   constructor(private readonly deps: DmStoreDeps) {}
 
@@ -108,6 +99,7 @@ export class DmStoreModule {
     this.openedPeers.clear();
     this.openedRecords.clear();
     this.pendingDecryptions = 0;
+    this.encrypted.clear();
     this.memoryOnly = false;
     this.known.clear();
     this.indexed = false;
@@ -136,8 +128,20 @@ export class DmStoreModule {
       if (oldest !== undefined) this.held.delete(oldest);
     }
     this.held.set(ev.id, { ev, kind, failed });
+    if (!this.known.has(ev.id)) this.encrypted.track(this.pubkey, ev, kind, failed ? 'failed' : 'locked');
     this.recount();
     return true;
+  }
+
+  /** The SDK calls this with a sender only after verifying the inner seal. */
+  beginDecrypt(ev: NostrEvent, kind: HeldKind, sender?: string, pq = false): void {
+    if (!this.known.has(ev.id)) this.encrypted.track(this.pubkey, ev, kind, 'decrypting', sender, pq);
+    this.recount();
+  }
+
+  settleDecrypt(id: string): void {
+    this.encrypted.settle(id);
+    this.recount();
   }
 
   /** Block while disabled or logged out; queue while locked. False only when opening is allowed. */
@@ -197,9 +201,7 @@ export class DmStoreModule {
   }
 
   /** Resolves once every write queued so far has landed (or failed). */
-  whenIdle(): Promise<void> {
-    return this.writes;
-  }
+  whenIdle(): Promise<void> { return this.writes; }
 
   /**
    * Settings is about to delete the store's database: stop writing, drop the
@@ -227,14 +229,15 @@ export class DmStoreModule {
 
   private recount(): void {
     if (!this.indexed) return;
+    const encryptedMessages = this.encrypted.snapshot(this.known);
     const unopened: number[] = [];
     let failedDecryptions = 0;
     for (const { ev, kind, failed } of this.held.values()) {
       if (failed) failedDecryptions++;
       if (kind === 'wrap' && !this.known.has(ev.id)) unopened.push(ev.created_at * 1000);
     }
-    const { failedDecryptions: _oldFailures, ...state } = this.lock.get();
-    this.lock.set({ ...state, unopened, ...(failedDecryptions ? { failedDecryptions } : {}) });
+    const { failedDecryptions: _oldFailures, encryptedMessages: _oldMessages, ...state } = this.lock.get();
+    this.lock.set({ ...state, unopened, ...(failedDecryptions ? { failedDecryptions } : {}), ...(encryptedMessages.length ? { encryptedMessages } : {}) });
   }
 
   /**
@@ -353,7 +356,10 @@ export class DmStoreModule {
 
   private mayOpen(ev: NostrEvent, kind: HeldKind): boolean {
     if (this.discoveryEnabled) return true;
-    if (kind === 'wrap') return false;
+    if (kind === 'wrap') {
+      const peer = this.encrypted.peerFor(ev.id);
+      return !!peer && this.openedPeers.has(peer);
+    }
     const peer = ev.pubkey === this.pubkey ? ev.tags.find((t) => t[0] === 'p')?.[1] : ev.pubkey;
     return !!peer && this.openedPeers.has(peer);
   }

@@ -48,18 +48,18 @@ vi.mock('@/components/call/DmCallButtons', () => ({ DmCallButtons: () => null })
 
 import { DmPanel } from '@/app/[locale]/app/panes/dm/DmPanel';
 import { DmThreadScreen } from '@/app/[locale]/app/mobile/screens/dm/DmThreadScreen';
-import { useDMStore, type DMProtocol } from '@/store/chat/dm';
+import { useDMStore, type DmSendMode } from '@/store/chat/dm';
 
 const SHELLS: Array<[string, () => ReactNode]> = [
   ['desktop', () => <DmPanel peer={PEER} onPickPeer={() => {}} />],
   ['phone', () => <DmThreadScreen peer={PEER} back={() => {}} openProfile={() => {}} />],
 ];
 
-let setOverride: ReturnType<typeof vi.fn<(pubkey: string, protocol: DMProtocol) => void>>;
+let setOverride: ReturnType<typeof vi.fn<(pubkey: string, protocol: DmSendMode) => void>>;
 
 beforeEach(() => {
   // Same effect as the store's own action, recorded fresh per test.
-  setOverride = vi.fn<(pubkey: string, protocol: DMProtocol) => void>((pubkey, protocol) =>
+  setOverride = vi.fn<(pubkey: string, protocol: DmSendMode) => void>((pubkey, protocol) =>
     useDMStore.setState((s) => ({ protocolOverrides: { ...s.protocolOverrides, [pubkey]: protocol } })));
   useDMStore.setState({ protocolOverrides: {}, setProtocolOverride: setOverride });
 });
@@ -72,6 +72,17 @@ const selected = (testId: string) => screen.getByTestId(testId).getAttribute('ar
 
 describe.each(SHELLS)('%s DM header protocol switch', (_name, ui) => {
   const mount = () => render(<LocaleProvider initialLocale="en">{ui()}</LocaleProvider>);
+
+  it('offers Quantum, Secured and Legacy with explanations and persists Quantum explicitly', () => {
+    mount();
+    expect(screen.getByTestId('dm-protocol-pq')).toHaveTextContent('Quantum');
+    expect(screen.getByTestId('dm-protocol-nip17')).toHaveTextContent('Secured');
+    expect(screen.getByTestId('dm-protocol-nip04')).toHaveTextContent('Legacy');
+    for (const id of ['pq', 'nip17', 'nip04']) expect(screen.getByTestId(`dm-protocol-${id}`).getAttribute('title')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('dm-protocol-pq'));
+    expect(setOverride).toHaveBeenCalledWith(PEER, 'pq');
+    expect(selected('dm-protocol-pq')).toBe('true');
+  });
 
   it('defaults to NIP-17 when the thread has no override', () => {
     mount();

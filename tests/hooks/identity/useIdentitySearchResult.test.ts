@@ -33,7 +33,8 @@ describe('useIdentitySearchResult', () => {
 
   it('falls back to a short npub and reports no check state without a handle', () => {
     const { result } = renderHook(() => useIdentitySearchResult({ pubkey: PK, displayName: null, picture: null, nip05: null } as never));
-    expect(result.current.sub).toMatch(/^npub1/);
+    expect(result.current.name).toMatch(/^npub1/);
+    expect(result.current.sub).toBeNull();
     expect(result.current.nip05State).toBeUndefined();
   });
 });

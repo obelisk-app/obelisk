@@ -118,12 +118,12 @@ describe('DmStoreModule', () => {
     store.attach(ME);
     expect(store.hold(wrap('w1', 2), 'wrap')).toBe(true);
     await store.unlock();
-    expect(store.lock.get()).toEqual({ status: 'failed', unopened: [2_000] });
+    expect(store.lock.get()).toMatchObject({ status: 'failed', unopened: [2_000], encryptedMessages: [{ id: 'w1', counterparty: null, status: 'locked' }] });
     expect(reingest).not.toHaveBeenCalled();
 
     signer = fakeSigner();
     await store.unlock();
-    expect(store.lock.get()).toEqual({ status: 'unlocked', unopened: [] });
+    expect(store.lock.get()).toMatchObject({ status: 'unlocked', unopened: [] });
     expect(reingest).toHaveBeenCalledWith(expect.objectContaining({ id: 'w1' }), 'wrap');
     expect(store.hold(wrap('w2'), 'wrap')).toBe(false);
   });

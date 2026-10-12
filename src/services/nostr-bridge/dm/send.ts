@@ -36,6 +36,7 @@ export interface DmSend {
   createdAt: number;
   file?: JsDmFile;
   extraTags: string[][];
+  encryption?: 'pq' | 'nip44';
 }
 
 /**
@@ -76,6 +77,7 @@ export class DmSendModule {
     content: string;
     createdAt: number;
     protocol: DMProtocol;
+    encryption?: 'pq' | 'nip44';
     file?: JsDmFile;
     tags?: string[][];
   }>();
@@ -130,6 +132,7 @@ export class DmSendModule {
     // Per-thread override (`useDMStore.protocolOverrides`) if the user
     // picked one, otherwise NIP-17. See `resolveDmProtocol`.
     const protocol = resolveDmProtocol(recipientPubkey);
+    const encryption = useDMStore.getState().protocolOverrides[recipientPubkey] === 'pq' ? 'pq' : 'nip44';
     const tags = protocol === 'nip17' ? extraTags : [];
     const pendingMsg: JsDirectMessage = {
       id: `pending:${clientTag}`,
@@ -150,9 +153,9 @@ export class DmSendModule {
       // marks on in-flight messages so this never flickers a wrong claim.
       pq: false,
     };
-    this.pendingSends.set(clientTag, { recipientPubkey, content, createdAt, protocol, file, tags });
+    this.pendingSends.set(clientTag, { recipientPubkey, content, createdAt, protocol, encryption, file, tags });
     this.upsertPending(recipientPubkey, pendingMsg);
-    this.publish(recipientPubkey, content, clientTag, createdAt, protocol, file, tags);
+    this.publish(recipientPubkey, content, clientTag, createdAt, protocol, file, tags, encryption);
   }
 
   private publish(
@@ -163,8 +166,9 @@ export class DmSendModule {
     protocol: DMProtocol,
     file?: JsDmFile,
     extraTags: string[][] = [],
+    encryption?: 'pq' | 'nip44',
   ): void {
-    const send: DmSend = { recipientPubkey, content, clientTag, createdAt, file, extraTags };
+    const send: DmSend = { recipientPubkey, content, clientTag, createdAt, file, extraTags, encryption };
     void (protocol === 'nip04' ? this.deps.publishNip04(send) : this.deps.publishNip17(send));
   }
 
@@ -175,7 +179,7 @@ export class DmSendModule {
     const msg = list.find((m) => m.clientTag === clientTag);
     if (!msg || !msg.failed) return;
     this.flipToPending(counterparty, clientTag);
-    this.publish(args.recipientPubkey, args.content, clientTag, args.createdAt, args.protocol, args.file, args.tags);
+    this.publish(args.recipientPubkey, args.content, clientTag, args.createdAt, args.protocol, args.file, args.tags, args.encryption);
   }
 
   cancel(counterparty: string, clientTag: string): void {

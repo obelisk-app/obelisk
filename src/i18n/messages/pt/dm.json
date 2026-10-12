@@ -29,11 +29,15 @@
   "encryptedPill": "As mensagens são criptografadas ponta a ponta",
   "protocol": {
     "label": "Protocolo de mensagens",
-    "nip17Title": "Padrão: selado e embrulhado, com anexos",
-    "nip04Title": "Legado, para clientes antigos",
+    "nip17Title": "NIP-17: mensagens criptografadas que ocultam o remetente dos relays.",
+    "nip04Title": "NIP-04: criptografia antiga; relays podem ver quem conversa com quem.",
     "nip04Explain": "O NIP-04 é para clientes antigos que só falam esse protocolo. Os relays podem ver quem fala com quem e quando, e não há anexos.",
     "useNip04": "Usar NIP-04",
-    "keepNip17": "Manter NIP-17"
+    "keepNip17": "Manter NIP-17",
+    "quantum": "Quantum",
+    "secured": "Seguro",
+    "legacy": "Legacy",
+    "quantumTitle": "Criptografia pós-quântica dentro do NIP-17. Requer assinador compatível e chaves publicadas das duas contas."
   },
   "attach": "Anexar",
   "compose": {
@@ -90,9 +94,16 @@
     "messagesFailed": "{count, plural, one {Não foi possível descriptografar uma mensagem.} other {Não foi possível descriptografar # mensagens.}} Tente novamente quando seu assinador estiver pronto.",
     "preview": "Mensagem criptografada · abra a conversa para ler",
     "discover": "Descobrir conversas criptografadas",
-    "loading": "Abrindo mensagens: faltam {count}.",
+    "loading": "Abrindo sua caixa de entrada: faltam {count} mensagens entre todas as conversas.",
     "unlocking": "Abrindo suas mensagens. Seu assinador pode pedir que você aprove.",
     "failed": "Suas mensagens continuam trancadas: o assinador não as abriu.",
-    "retry": "Tentar de novo"
+    "retry": "Tentar de novo",
+    "decryptingMessage": "Mensagem criptografada · descriptografando…",
+    "failedMessage": "Mensagem criptografada · não foi possível descriptografar",
+    "encryptedMessage": "Mensagem criptografada",
+    "postQuantum": "Criptografia pós-quântica",
+    "unknownSender": "Remetente ainda não identificado",
+    "unknownHint": "O remetente fica oculto até abrir o envelope. Estas mensagens podem pertencer a outras conversas.",
+    "conversationLoading": "Descriptografando {count} mensagens desta conversa."
   }
 }

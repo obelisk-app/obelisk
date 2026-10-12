@@ -1,15 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useDMStore, type DMProtocol } from '@/store/chat/dm';
+import { useDMStore, type DmSendMode } from '@/store/chat/dm';
 
 export type DmProtocolChoice = {
   /** What the thread sends with now: the per-thread override, NIP-17 when there is none. */
-  protocol: DMProtocol;
+  protocol: DmSendMode;
   /** True while the one-line NIP-04 explanation is waiting for a yes or no. */
   confirming: boolean;
   /** Pick a protocol. NIP-17 applies at once; NIP-04 asks first. */
-  choose: (next: DMProtocol) => void;
+  choose: (next: DmSendMode) => void;
   confirmNip04: () => void;
   cancel: () => void;
 };
@@ -30,7 +30,7 @@ export type DmProtocolChoice = {
 export function useDmProtocolChoice(peer: string | null): DmProtocolChoice {
   const protocol = useDMStore((s) => (peer ? s.protocolOverrides[peer] : undefined)) ?? 'nip17';
   const [askingFor, setAskingFor] = useState<string | null>(null);
-  const set = (next: DMProtocol) => {
+  const set = (next: DmSendMode) => {
     if (peer) useDMStore.getState().setProtocolOverride(peer, next);
     setAskingFor(null);
   };
@@ -40,7 +40,7 @@ export function useDmProtocolChoice(peer: string | null): DmProtocolChoice {
     choose: (next) => {
       if (next === protocol) setAskingFor(null);
       else if (next === 'nip04') setAskingFor(peer);
-      else set('nip17');
+      else set(next);
     },
     confirmNip04: () => set('nip04'),
     cancel: () => setAskingFor(null),

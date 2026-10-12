@@ -269,6 +269,8 @@ describe('post-quantum DM sending', () => {
     const bridge = await getBridge();
     await bridge.loginWithNip07(alice.pkHex);
     await bridge.unlockDirectMessages();
+    const { useDMStore } = await import('@/store/chat/dm');
+    useDMStore.getState().setProtocolOverride(bob.pkHex, 'pq');
     await bridge.sendDirectMessage(bob.pkHex, 'quantum safe hello');
     const wrap = await waitForWrap();
 
@@ -306,6 +308,8 @@ describe('post-quantum DM sending', () => {
     let last: Record<string, ReadonlyArray<{ pq?: boolean; protocol?: string; pending?: boolean }>> = {};
     bridge.subscribeDirectMessages((byPeer) => { last = byPeer as typeof last; });
 
+    const { useDMStore } = await import('@/store/chat/dm');
+    useDMStore.getState().setProtocolOverride(bob.pkHex, 'pq');
     await bridge.sendDirectMessage(bob.pkHex, 'mine too');
     await waitForWrap();
     await flush();
@@ -344,6 +348,10 @@ describe('post-quantum DM sending', () => {
     expect(settled).toHaveLength(1);
     expect(settled[0].pq).toBe(false);
     expect(settled[0].failed).toBeFalsy();
+    const { useDMStore } = await import('@/store/chat/dm');
+    useDMStore.getState().setProtocolOverride(bob.pkHex, 'pq');
+    await bridge.sendDirectMessage(bob.pkHex, 'must not downgrade without recipient keys');
+    await vi.waitFor(() => expect(last[bob.pkHex]?.some((message) => message.failed)).toBe(true));
   });
 
   it('sends classic when the preference is off, even with keys on both sides', async () => {
@@ -393,7 +401,7 @@ describe('post-quantum DM sending', () => {
     expect(isPqEnvelope(openWrap(wrap, bob.sk).content)).toBe(false);
   });
 
-  it('falls back to classic, still publishing, when the signer refuses post-quantum', async () => {
+  it('does not downgrade an explicit Quantum send when the signer refuses', async () => {
     const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { setPreference } = await import('@/services/preferences/preferences');
 
@@ -421,16 +429,12 @@ describe('post-quantum DM sending', () => {
     let last: Record<string, ReadonlyArray<{ pq?: boolean; pending?: boolean; failed?: boolean }>> = {};
     bridge.subscribeDirectMessages((byPeer) => { last = byPeer as typeof last; });
 
+    const { useDMStore } = await import('@/store/chat/dm');
+    useDMStore.getState().setProtocolOverride(bob.pkHex, 'pq');
     await bridge.sendDirectMessage(bob.pkHex, 'downgraded but delivered');
-    const wrap = await waitForWrap();
-    await flush();
+    await vi.waitFor(() => expect(last[bob.pkHex]?.[0]?.failed).toBe(true));
+    expect(fake.state.published.filter((event) => event.kind === 1059)).toHaveLength(0);
 
-    expect(isPqEnvelope(openWrap(wrap, bob.sk).content)).toBe(false);
-    const settled = (last[bob.pkHex] ?? []).filter((m) => !m.pending);
-    expect(settled).toHaveLength(1);
-    // Recorded honestly as classic, not as the protection we asked for.
-    expect(settled[0].pq).toBe(false);
-    expect(settled[0].failed).toBeFalsy();
   });
 });
 
@@ -462,6 +466,8 @@ describe('post-quantum DM self-copy', () => {
     await bridge.loginWithNip07(alice.pkHex);
     await bridge.unlockDirectMessages();
     bridge.subscribeDirectMessages(() => {});
+    const { useDMStore } = await import('@/store/chat/dm');
+    useDMStore.getState().setProtocolOverride(bob.pkHex, 'pq');
     await bridge.sendDirectMessage(bob.pkHex, 'both copies protected');
     const wraps = await waitForWraps(2);
 
@@ -535,6 +541,8 @@ describe('post-quantum DM self-copy', () => {
     let last: Record<string, ReadonlyArray<{ content: string; pq?: boolean; outgoing: boolean; pending?: boolean }>> = {};
     bridge.subscribeDirectMessages((byPeer) => { last = byPeer as typeof last; });
 
+    const { useDMStore } = await import('@/store/chat/dm');
+    useDMStore.getState().setProtocolOverride(bob.pkHex, 'pq');
     await bridge.sendDirectMessage(bob.pkHex, 'still protected on reload');
     await waitForWraps(2);
     await flush(60);

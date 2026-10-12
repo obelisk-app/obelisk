@@ -12,6 +12,7 @@ import type { JsDirectMessage } from '@/services/nostr-bridge';
 const PEER = 'b'.repeat(64);
 const OTHER = 'c'.repeat(64);
 
+const locked = vi.hoisted(() => ({ messages: [] as import('@/types/chat/dm-encrypted').DmEncryptedMessage[] }));
 const dms = vi.hoisted(() => ({ current: {} as Record<string, JsDirectMessage[]> }));
 const retryDirectMessage = vi.hoisted(() => vi.fn());
 const cancelPendingDirectMessage = vi.hoisted(() => vi.fn());
@@ -21,6 +22,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   return bridgeMock({
 
     useDirectMessages: () => dms.current,
+    useDmLock: () => ({ status: 'unlocked', unopened: [], encryptedMessages: locked.messages }),
     nostrActions: {
       retryDirectMessage: (...a: unknown[]) => retryDirectMessage(...a),
       cancelPendingDirectMessage: (...a: unknown[]) => cancelPendingDirectMessage(...a),
@@ -51,6 +53,7 @@ function msg(over: Partial<JsDirectMessage> & { id: string }): JsDirectMessage {
 
 beforeEach(() => {
   dms.current = {};
+  locked.messages = [];
   retryDirectMessage.mockReset();
   cancelPendingDirectMessage.mockReset();
   setPreference('postQuantumEnabled', true);
@@ -62,6 +65,21 @@ afterEach(() => {
 });
 
 describe('useDmThread', () => {
+  it('shows only this chat’s encrypted placeholders and replaces them with opened messages', () => {
+    locked.messages = [
+      { id: 'wire', counterparty: PEER, outgoing: false, status: 'decrypting', encryption: 'pq' },
+      { id: 'other', counterparty: OTHER, outgoing: false, status: 'failed', encryption: 'nip44' },
+      { id: 'unknown', counterparty: null, outgoing: false, status: 'failed', encryption: 'unknown' },
+    ];
+    const { result, rerender } = renderHook(() => useDmThread(PEER), { wrapper });
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.items).toMatchObject([{ type: 'encrypted', message: { id: 'wire' } }]);
+    dms.current = { [PEER]: [msg({ id: 'wire' })] };
+    rerender();
+    expect(result.current.items.some((item) => item.type === 'encrypted')).toBe(false);
+    expect(result.current.messages).toHaveLength(1);
+  });
+
   it('orders the thread oldest first and keeps only this counterparty', () => {
     dms.current = {
       [PEER]: [

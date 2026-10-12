@@ -5,6 +5,8 @@
  * ingest. Pure move from `client.ts` (`subscribeIncomingDMs`,
  * `disableDirectMessages`, `ingestIncomingGiftWrap`).
  */
+import { isPqEnvelope } from '@nostr-wot/pq';
+import { errorCodeOf } from '@/utils/errors/codes';
 import type { Event as NostrEvent, Filter, UnsignedEvent } from 'nostr-tools';
 import { KIND_DM_CALL_RUMOR, KIND_DM_FILE_RUMOR, KIND_ENCRYPTED_DM } from '@/constants/nostr/nip-kinds';
 import type { AuthLease } from '@nostr-wot/relay/hub';
@@ -42,6 +44,8 @@ export interface DmInboxDeps {
   isStored(wireId: string): boolean;
   /** Retain a failed decrypt for user-triggered retry, without polling the signer. */
   onDecryptFailure?(ev: NostrEvent): void;
+  onDecrypting?(ev: NostrEvent, sender?: string, pq?: boolean): void;
+  onDecryptSettled?(id: string): void;
 }
 
 export class DmInboxModule {
@@ -180,13 +184,22 @@ export class DmInboxModule {
     if (!signer) return;
     let message: (UnsignedEvent & { id: string }) | undefined;
     let senderPubkey: string | undefined;
+    let decryptions = 0;
+    this.deps.onDecrypting?.(ev);
     try {
-      ({ message, senderPubkey } = await unwrapGiftWrap(signer, ev));
-    } catch {
+      ({ message, senderPubkey } = await unwrapGiftWrap({ ...signer, nip44Decrypt: (peer, ciphertext) => {
+        // unwrapGiftWrap verifies the seal before its second decrypt call.
+        if (++decryptions === 2 && this.ctx.session()?.pubKeyHex === me && this.deps.generation() === generation) this.deps.onDecrypting?.(ev, peer, isPqEnvelope(ciphertext));
+        return signer.nip44Decrypt!(peer, ciphertext);
+      } }, ev));
+    } catch (error) {
       if (this.ctx.session()?.pubKeyHex === me && this.deps.generation() === generation) {
+        console.error('[dm] decrypt failed', { protocol: 'nip17', encryption: pqTrack.current ? 'pq' : 'nip44', code: errorCodeOf(error) ?? 'unknown' });
         this.deps.onDecryptFailure?.(ev);
       }
       return;
+    } finally {
+      if (this.ctx.session()?.pubKeyHex === me && this.deps.generation() === generation) this.deps.onDecryptSettled?.(ev.id);
     }
     if (this.ctx.session()?.pubKeyHex !== me || this.deps.generation() !== generation) return;
     // The WoT / mute / block gate, re-applied to the real sender. The

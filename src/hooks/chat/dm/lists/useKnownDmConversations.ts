@@ -1,3 +1,4 @@
+import { useDmLock } from '@/services/nostr-bridge';
 import { useMemo } from 'react';
 import { useDmOptInEnabled } from '../unlock/useDmOptInEnabled';
 import { useDMStore } from '@/store/chat/dm';
@@ -7,6 +8,7 @@ import { useDmNotifications } from '@/hooks/notifications/useNotificationSelecto
 export function useKnownDmConversations(): Readonly<Record<string, number>> {
   const enabled = useDmOptInEnabled();
   const index = useDMStore((s) => s.conversationIndex);
+  const { encryptedMessages } = useDmLock();
   const notifications = useDmNotifications();
   return useMemo(() => {
     if (!enabled) return {};
@@ -15,6 +17,9 @@ export function useKnownDmConversations(): Readonly<Record<string, number>> {
       if (!entry.senderPubkey) continue;
       known[entry.senderPubkey] = Math.max(known[entry.senderPubkey] ?? 0, entry.createdAt / 1000);
     }
+    for (const message of encryptedMessages ?? []) {
+      if (message.counterparty) known[message.counterparty] ??= message.createdAt ?? 0;
+    }
     return known;
-  }, [enabled, index, notifications]);
+  }, [enabled, index, notifications, encryptedMessages]);
 }

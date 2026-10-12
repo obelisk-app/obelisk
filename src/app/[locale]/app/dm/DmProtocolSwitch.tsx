@@ -2,7 +2,7 @@
 
 import SegmentedControl from '@/components/ui/forms/SegmentedControl';
 import { useTranslations } from 'next-intl';
-import type { DMProtocol } from '@/store/chat/dm';
+import type { DmSendMode } from '@/store/chat/dm';
 import type { DmProtocolChoice } from '@/hooks/shell/dm/useDmProtocolChoice';
 
 /**
@@ -13,14 +13,15 @@ import type { DmProtocolChoice } from '@/hooks/shell/dm/useDmProtocolChoice';
 export function DmProtocolSwitch({ choice, className }: { choice: DmProtocolChoice; className?: string }) {
   const t = useTranslations();
   return (
-    <SegmentedControl<DMProtocol>
+    <SegmentedControl<DmSendMode>
       aria-label={t('dm.protocol.label')}
       value={choice.protocol}
       onChange={choice.choose}
       className={className}
       options={[
-        { value: 'nip17', label: 'NIP-17', title: t('dm.protocol.nip17Title'), testId: 'dm-protocol-nip17' },
-        { value: 'nip04', label: 'NIP-04', title: t('dm.protocol.nip04Title'), testId: 'dm-protocol-nip04' },
+        { value: 'pq', label: t('dm.protocol.quantum'), title: t('dm.protocol.quantumTitle'), testId: 'dm-protocol-pq' },
+        { value: 'nip17', label: t('dm.protocol.secured'), title: t('dm.protocol.nip17Title'), testId: 'dm-protocol-nip17' },
+        { value: 'nip04', label: t('dm.protocol.legacy'), title: t('dm.protocol.nip04Title'), testId: 'dm-protocol-nip04' },
       ]}
     />
   );

@@ -29,11 +29,15 @@
   "encryptedPill": "Los mensajes están encriptados end-to-end",
   "protocol": {
     "label": "Protocolo de mensajes",
-    "nip17Title": "Por defecto: sellado y envuelto, con adjuntos",
-    "nip04Title": "Heredado, para clientes viejos",
+    "nip17Title": "NIP-17: mensajes cifrados que ocultan el remitente a los relays.",
+    "nip04Title": "NIP-04: cifrado antiguo; los relays pueden ver quién habla con quién.",
     "nip04Explain": "NIP-04 es para clientes viejos que solo hablan ese protocolo. Los relays pueden ver quién habla con quién y cuándo, y no hay adjuntos.",
     "useNip04": "Usar NIP-04",
-    "keepNip17": "Seguir con NIP-17"
+    "keepNip17": "Seguir con NIP-17",
+    "quantum": "Quantum",
+    "secured": "Seguro",
+    "legacy": "Legacy",
+    "quantumTitle": "Cifrado poscuántico dentro de NIP-17. Requiere un firmante compatible y claves publicadas de ambas cuentas."
   },
   "attach": "Adjuntar",
   "compose": {
@@ -90,9 +94,16 @@
     "messagesFailed": "{count, plural, one {No se pudo descifrar un mensaje.} other {No se pudieron descifrar # mensajes.}} Probá de nuevo cuando tu firmante esté listo.",
     "preview": "Mensaje encriptado · abrí el chat para leer",
     "discover": "Descubrir chats encriptados",
-    "loading": "Abriendo mensajes: quedan {count}.",
+    "loading": "Abriendo tu bandeja: quedan {count} mensajes entre todas las conversaciones.",
     "unlocking": "Abriendo tus mensajes. Puede que tu firmante te pida aprobarlo.",
     "failed": "Tus mensajes siguen cerrados: el firmante no los abrió.",
-    "retry": "Probar de nuevo"
+    "retry": "Probar de nuevo",
+    "decryptingMessage": "Mensaje encriptado · descifrando…",
+    "failedMessage": "Mensaje encriptado · no se pudo descifrar",
+    "encryptedMessage": "Mensaje encriptado",
+    "postQuantum": "Encriptación poscuántica",
+    "unknownSender": "Remitente aún no identificado",
+    "unknownHint": "El remitente está oculto hasta abrir el sobre. Estos mensajes pueden pertenecer a otros chats.",
+    "conversationLoading": "Descifrando {count} mensajes de esta conversación."
   }
 }

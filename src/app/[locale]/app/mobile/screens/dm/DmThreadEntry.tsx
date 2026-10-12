@@ -1,5 +1,7 @@
 'use client';
 
+import { DmEncryptedMessage } from '@/components/chat/dm/message/DmEncryptedMessage';
+
 import Button from '@/components/ui/buttons/Button';
 import PqMessageMark from '@/components/chat/pq/PqMessageMark';
 import { useLocale, useTranslations } from 'next-intl';
@@ -27,6 +29,7 @@ export function DmThreadEntry({
 }) {
   const t = useTranslations();
   const locale = useLocale();
+  if (item.type === 'encrypted') return <DmEncryptedMessage message={item.message} />;
   if (item.type === 'divider') return <div className="day-divider">{item.label}</div>;
   const { msg } = item;
   return (

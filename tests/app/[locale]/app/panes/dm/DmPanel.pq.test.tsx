@@ -62,6 +62,8 @@ vi.mock('@/services/chat/pq/attestations', () => ({
   clearAttestationCache: vi.fn(),
 }));
 
+vi.mock('@/services/chat/pq/capability', () => ({ signerSupportsPq: vi.fn().mockResolvedValue(true) }));
+import { useDMStore } from '@/store/chat/dm';
 import { DmPanel } from '@/app/[locale]/app/panes/dm/DmPanel';
 import { setPreference } from '@/services/preferences/preferences';
 
@@ -84,6 +86,7 @@ function renderPanel() {
 }
 
 beforeEach(() => {
+  useDMStore.setState({ protocolOverrides: {} });
   hasUsableKeys.mockReset();
   hasUsableKeys.mockResolvedValue(false);
   dms.current = {};
@@ -102,7 +105,8 @@ describe('DmPanel: conversation shield', () => {
     expect(screen.queryByText('How to get extra safe')).toBeNull();
   });
 
-  it('confirms when both parties advertise post-quantum keys', async () => {
+  it('confirms when Quantum is selected and both parties advertise keys with a compatible signer', async () => {
+    useDMStore.setState({ protocolOverrides: { [PEER]: 'pq' } });
     hasUsableKeys.mockResolvedValue(true);
     renderPanel();
 

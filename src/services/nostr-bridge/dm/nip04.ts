@@ -3,7 +3,7 @@
  * NIP-04 crypto dispatched by login method, the send for a thread the user
  * pinned to NIP-04, and the inbound ingest. Pure move from `client.ts`.
  */
-import { CodedError } from '@/utils/errors/codes';
+import { CodedError, errorCodeOf } from '@/utils/errors/codes';
 import { nip04, type Event as NostrEvent } from 'nostr-tools';
 import { KIND_ENCRYPTED_DM } from '@/constants/nostr/nip-kinds';
 import type { BridgeContext } from '../facade/context';
@@ -38,6 +38,8 @@ export interface Nip04Deps {
   isStored(wireId: string): boolean;
   /** Retain a failed decrypt for user-triggered retry, without polling the signer. */
   onDecryptFailure?(ev: NostrEvent): void;
+  onDecrypting?(ev: NostrEvent): void;
+  onDecryptSettled?(id: string): void;
   /** A message arrived while locked: alert with the sender, no text (`dm/thread.ts`). */
   alertLocked(ev: NostrEvent): void;
   /** Keep our own sent message in the encrypted store, so its echo is not decrypted again. */
@@ -113,15 +115,19 @@ export class Nip04Module {
     }
     if (this.deps.isStored(ev.id)) return;
     let plaintext: string;
+    this.deps.onDecrypting?.(ev);
     try {
       // Background lane: nobody is waiting on an inbound DM the way they wait
       // on one they just sent. A backlog of these must not delay a signature.
       plaintext = await this.deps.decrypt(counterparty, ev.content, 'background');
-    } catch {
+    } catch (error) {
       if (this.ctx.session()?.pubKeyHex === me && this.deps.generation() === generation) {
+        console.error('[dm] decrypt failed', { protocol: 'nip04', encryption: 'nip04', code: errorCodeOf(error) ?? 'unknown' });
         this.deps.onDecryptFailure?.(ev);
       }
       return;
+    } finally {
+      if (this.ctx.session()?.pubKeyHex === me && this.deps.generation() === generation) this.deps.onDecryptSettled?.(ev.id);
     }
     if (this.ctx.session()?.pubKeyHex !== me || this.deps.generation() !== generation) return;
     this.deps.ingestDM({

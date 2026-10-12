@@ -159,15 +159,15 @@ Without a published kind-10050, no NIP-17 client can reach you, however many wra
 
 The post-quantum envelope replaces the **seal's** ciphertext. Everything outside the seal is unchanged, so a relay or a client that has not implemented it still sees an ordinary kind-1059. `@nostr-wot/pq` owns the envelope; `@nostr-wot/dm` passes an opts bag through to the signer; the signer owns the key material. Obelisk holds no post-quantum secrets and cannot derive any: its logins are `nsec | nip07 | bunker` and it never sees a BIP-39 seed.
 
-**Sending.** `resolvePqSend` (`src/services/chat/pq/send.ts`) returns the peer's ML-KEM key plus our own (for the self-copy), or `null` meaning "send classic". All three of these must hold:
+**Sending.** `resolvePqSend` (`src/services/chat/pq/send.ts`) returns the peer's ML-KEM key plus our own (for the self-copy), or `null` meaning Quantum is unavailable. The selector offers **Quantum / Secured / Legacy**, each with a brief hover explanation. Secured is standard NIP-17, Legacy is NIP-04, and Quantum is an explicit post-quantum NIP-17 send choice. All three of these must hold:
 
 1. The `postQuantumEnabled` preference is on.
 2. `selfPqState().canSend`: the extension advertises `window.nostr.nip44.schemes` including `'pq'`.
 3. The peer publishes a usable `kind:10203` attestation carrying a KEM key.
 
-Condition 2 requires the **explicit marker**, not merely a NIP-07 session with published keys (`capabilityUnknown`). Post-quantum is an optional third argument to `nip44.encrypt`; an unaware extension silently ignores it and returns classic ciphertext, which we would then record as protected. A false claim of protection is worse than an honest classic send, so unknown means classic. No shipping extension advertises the marker yet, so in practice post-quantum sending is reachable only against a signer that opts in.
+Condition 2 requires the **explicit marker**, not merely a NIP-07 session with published keys (`capabilityUnknown`). Post-quantum is an optional third argument to `nip44.encrypt`; an unaware extension silently ignores it and returns classic ciphertext, which we would then record as protected. A false claim of protection is worse than an honest classic send, so an unknown capability cannot authorize a Quantum send. Nostr WoT advertises this marker; compatible published keys are also required.
 
-`resolvePqSend` never throws, and a signer that refuses post-quantum after advertising it falls back to a classic seal. **A message that cannot be protected still sends.** That rule is in the spec and is non-negotiable.
+`resolvePqSend` never throws. An explicitly selected Quantum send fails if the prerequisites are missing or the signer refuses; it never silently falls back to standard NIP-17. Choose Secured explicitly to send a standard message. Retry retains the original encryption choice.
 
 Condition 2 is checked **locally first**, before any relay round trip, because it is free (`loginMethod === 'nip07'` plus the `window.nostr.nip44.schemes` marker) and settles the answer for every session that cannot send post-quantum anyway. Without that short circuit, every DM send on every session would pay two attestation lookups to learn nothing, which matters now that the preference defaults on.
 
@@ -272,7 +272,7 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - **"Older NIP-17 messages vanish after a reload, only new ones show."** That was the wrap ledger recording chat wraps as seen (fixed 2026-09-26, see Protocols). If it comes back, check what `hasSeenWrap` is being asked in `ingestGiftWrap` (`dm/inbox.ts`).
 - **"My DMs are empty after a reload."** Known chats are listed without plaintext; open a thread or choose Discover encrypted chats to decrypt. If the signer was asked and said no (or did not answer), the list shows a retry. Settings > Data on this device > Direct messages (encrypted) > Remove starts the store over.
 - **"My own DMs are missing after a reload."** A message sent from this device is kept in the encrypted store when it settles. One sent from another device comes back only through its self-copy. If an outgoing NIP-17 message never comes back, its self-copy did not land: check whether we have a published kind-10050 (`ensureDmInboxRelaysPublished`) and whether the relay accepted the second wrap. Messages sent before the self-copy shipped are gone from the sender's side for good; the recipient still has them.
-- **"The post-quantum toggle is on but nothing is post-quantum."** Almost certainly `capabilityUnknown`: the extension does not advertise `nip44.schemes`. The settings status row says so explicitly.
+- **"The post-quantum toggle is on but nothing is post-quantum."** Select Quantum in the conversation. Sending also requires a compatible active signer and usable published keys for both participants; the preference alone is insufficient.
 - **"Every old message shows a mark."** It should not: marks aggregate to transitions. If you see one per bubble, `threadMarks` is not being used.
 
 ## Tests
@@ -280,7 +280,7 @@ Incoming DMs push a card onto the DM notification stream (`useNotificationsStore
 - `tests/services/nostr-bridge/dm/store.test.ts`, `store-lifecycle.test.ts`: the encrypted store end to end on the fake relay pool with a fake IndexedDB and a counting NIP-07 extension: no message text anywhere on disk after receiving, reading and sending; a reload shows nothing until the unlock, then everything with exactly one signer decrypt and no wrap re-sent to the signer; the bell without and with text; nsec with no extension call; a tampered box re-fetched; no IndexedDB; logout; Remove; two accounts; the ledger after a reload. `store-module.test.ts` (a refusal and the retry, the read-state wait, a lost key), `store-record.test.ts`, `tests/lib/crypto/record-cipher.test.ts`.
 
 - `tests/services/nostr-bridge/dm-nip17.test.ts`: NIP-17 default, inbox routing, forged-authorship rejection, all three login methods.
-- `tests/services/nostr-bridge/dm-pq-send.test.ts`: post-quantum send and receive, every negative case, the classic fallback.
+- `tests/services/nostr-bridge/dm-pq-send.test.ts`: post-quantum send and receive, every negative case, explicit Quantum failure without downgrade.
 - `tests/services/nostr-bridge/optimistic-send.test.ts`: placeholder lifecycle.
 - `dm-nip17.test.ts` also covers kind-15 send and receive, the NIP-04 refusal, and the 1059 REQ reopening after `switchRelay`.
 - `tests/utils/attachments/dm-file.test.ts`, `tests/services/chat/dm/dm-attachments.test.ts`, `tests/services/media/blossom.test.ts`: the file path end to end, without a relay.
@@ -305,3 +305,7 @@ Unlocking the storage key and opening the queued messages are separate phases. T
 A failed NIP-04 decrypt or NIP-17 unwrap stays in the bounded in-memory pending queue and exposes a retry message instead of silently disappearing. Relay duplicates, chat switches and discovery do not retry failed decryptions or reset their progress; the person retries explicitly after their signer is available. Logout clears the queue, and stale decrypt failures cannot enter another account. Successfully opened messages retain the existing encrypted local cache.
 
 The explicit discovery button is also available inside a known conversation when unidentified gift wraps remain. Opening a peer alone cannot identify which unknown NIP-17 envelopes belong to it without decrypting them. Discovery authorizes that operation across the inbox. The relay inbox still initially requests at most 200 events per filter per relay; this recovery does not add older-history pagination.
+
+### Encrypted message progress
+
+Known encrypted messages remain visible as placeholders in their conversations while opening, and as failed placeholders when decryption fails. Conversation progress excludes other chats. Failed envelopes in the inbox show their verified sender when available, encryption format when detected, and a short event identifier. If the outer gift wrap cannot open, its sender remains unknown; its ephemeral public key must never be presented as the chat partner. Sender attribution happens only after the SDK verifies the seal. Gift-wrap timestamps are fuzzed and are not displayed as real message dates. Progress metadata lives only in memory and is cleared on account changes.

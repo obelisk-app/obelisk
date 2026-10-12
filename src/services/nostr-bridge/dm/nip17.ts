@@ -48,7 +48,7 @@ export class Nip17SendModule {
    * it never touches `signAndPublish`'s session-signing path. Any failure
    * before the recipient's copy is out marks the placeholder failed.
    */
-  async publish({ recipientPubkey, content, clientTag, createdAt, file, extraTags }: DmSend): Promise<void> {
+  async publish({ recipientPubkey, content, clientTag, createdAt, file, extraTags, encryption }: DmSend): Promise<void> {
     let stage = 'session';
     const trace = (next: string) => {
       stage = next;
@@ -82,34 +82,18 @@ export class Nip17SendModule {
         }
         : { ...chat, tags: [...chat.tags, ...extraTags], created_at: createdAt };
       const rumorId = getEventHash(inner);
-      // Post-quantum when the conversation qualifies, classic otherwise.
-      // `resolvePqSend` never throws and returns null for every negative
-      // case, so this cannot block a send.
+      // Resolve Quantum only when explicitly selected. Never downgrade that choice.
       trace('capability');
-      const pqPlan = await resolvePqSend({
+      const pqPlan = encryption !== 'pq' ? null : await resolvePqSend({
         myPubkey: me,
         loginMethod: this.ctx.session()?.loginMethod ?? null,
         recipientPubkey,
       });
+      if (encryption === 'pq' && !pqPlan) throw new CodedError('pq-unavailable', 'Post-quantum requires an enabled preference, compatible signer and published keys for both accounts');
       trace('encrypt-and-sign');
-      let wrap: NostrEvent;
-      let pq = false;
-      if (pqPlan) {
-        try {
-          wrap = await sealAndGiftWrap(signer, recipientPubkey, inner, {
-            pq: { scheme: 'pq', recipientKemKey: pqPlan.recipientKemKey },
-          });
-          pq = true;
-        } catch {
-          // The signer refused post-quantum after advertising it (a stale
-          // `nip44.schemes` marker, a locked extension, a rejected prompt).
-          // Never block a send: fall back to classic NIP-17 and record it
-          // honestly as `pq: false`.
-          wrap = await sealAndGiftWrap(signer, recipientPubkey, inner);
-        }
-      } else {
-        wrap = await sealAndGiftWrap(signer, recipientPubkey, inner);
-      }
+      const pq = !!pqPlan;
+      const wrap = await sealAndGiftWrap(signer, recipientPubkey, inner,
+        pqPlan ? { pq: { scheme: 'pq', recipientKemKey: pqPlan.recipientKemKey } } : undefined);
       // Route to the recipient's NIP-17 inbox (kind 10050) and nowhere else
       // when they have one, see `DmRelaysModule.resolveGiftWrapRelays` for
       // the full ladder and why the old union with the active relays was the leak.

@@ -44,8 +44,7 @@ describe('DmUnlock', () => {
     const bridge = fakeBridge({ dmLock: { status: 'unlocked', unopened: [1000] } }, { unlockDirectMessages });
     renderWithBridge(<DmUnlock peer="alice" />, bridge);
     expect(unlockDirectMessages).toHaveBeenCalledWith('alice');
-    fireEvent.click(screen.getByTestId('dm-discover'));
-    expect(unlockDirectMessages).toHaveBeenLastCalledWith();
+    expect(screen.queryByTestId('dm-discover')).toBeNull();
   });
 
   it('asks nothing while DMs are turned off', () => {

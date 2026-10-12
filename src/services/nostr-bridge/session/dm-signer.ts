@@ -98,7 +98,9 @@ export function buildDmSigner(
             };
           }).nostr;
           if (!w?.nip44?.encrypt) throw new CodedError('extension-no-nip44', 'Extension does not support NIP-44 encryption');
-          return enqueueSignerOp(lane, 'nip44Encrypt:pq', () => guarded(() => w.nip44!.encrypt(recipientPubkey, plaintext, opts)));
+          const ciphertext = await enqueueSignerOp(lane, 'nip44Encrypt:pq', () => guarded(() => w.nip44!.encrypt(recipientPubkey, plaintext, opts)));
+          if (!isPqEnvelope(ciphertext)) throw new CodedError('pq-unavailable', 'Signer returned standard encryption for a post-quantum request');
+          return ciphertext;
         }
         throw new CodedError('pq-unavailable', `Post-quantum NIP-44 encryption is not available for login method ${session.loginMethod}`);
       }

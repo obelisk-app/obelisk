@@ -1,5 +1,7 @@
 'use client';
 
+import { DmEncryptedMessage } from '@/components/chat/dm/message/DmEncryptedMessage';
+
 import Text from '@/components/ui/layout/Text';
 import type { DmThread, DmThreadItem as Item } from '@/hooks/chat/dm/thread/useDmThread';
 import { DmBubble } from './DmBubble';
@@ -11,6 +13,7 @@ import { DmBubble } from './DmBubble';
  * single sitting.
  */
 export function DmThreadItem({ item, thread }: { item: Item; thread: DmThread }) {
+  if (item.type === 'encrypted') return <DmEncryptedMessage message={item.message} />;
   if (item.type === 'divider') {
     return (
       <div className="my-3 flex items-center gap-3" data-testid="dm-day-divider">

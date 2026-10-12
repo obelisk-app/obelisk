@@ -17,7 +17,8 @@
  * every user, and it is one icon, so it cannot nag.
  */
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
-import { nostrActions, useDirectMessages, type JsDirectMessage } from '@/services/nostr-bridge';
+import { nostrActions, useDirectMessages, useDmLock, type JsDirectMessage } from '@/services/nostr-bridge';
+import type { DmEncryptedMessage } from '@/types/chat/dm-encrypted';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { displayNameFor } from '@/utils/identity/display-name';
 import { dayKey, dayLabel } from '@/utils/format/day-label';
@@ -29,6 +30,7 @@ import { useLocale, useTranslations } from 'next-intl';
 
 export type DmThreadItem =
   | { readonly type: 'divider'; readonly key: string; readonly label: string }
+  | { readonly type: 'encrypted'; readonly key: string; readonly message: DmEncryptedMessage }
   | { readonly type: 'msg'; readonly key: string; readonly msg: JsDirectMessage; readonly index: number };
 
 export interface DmThread {
@@ -95,6 +97,7 @@ export function useDmThread(peer: string | null): DmThread {
   const t = useTranslations();
   const locale = useLocale();
   const dms = useDirectMessages();
+  const { encryptedMessages } = useDmLock();
   // Two-tier identity, same as the feed (see `useAuthor`): the bridge alone
   // only knows people from your NIP-29 rooms, so a DM peer from the wider
   // network rendered as a truncated pubkey with a letter avatar.
@@ -131,8 +134,10 @@ export function useDmThread(peer: string | null): DmThread {
       }
       out.push({ type: 'msg', key: msg.id, msg, index });
     });
-    return out;
-  }, [messages, t, locale]);
+    // Encrypted envelope timestamps are fuzzed; do not present them as message dates.
+    const unopened = (encryptedMessages ?? []).filter((m) => m.counterparty === peer && !messages.some((opened) => opened.id === m.id || opened.raw?.wire?.id === m.id));
+    return [...unopened.map((message): DmThreadItem => ({ type: 'encrypted', key: `encrypted-${message.id}`, message })), ...out];
+  }, [messages, encryptedMessages, peer, t, locale]);
 
   const retry = useCallback((clientTag: string) => {
     if (peer) void nostrActions.retryDirectMessage(peer, clientTag);
@@ -147,8 +152,8 @@ export function useDmThread(peer: string | null): DmThread {
     messages,
     items,
     marks,
-    sendProtocol,
-    protection: protectionLevel({ giftWrapped: sendProtocol !== 'nip04', status: pqStatus }),
+    sendProtocol: sendProtocol === 'nip04' ? 'nip04' : 'nip17',
+    protection: protectionLevel({ giftWrapped: sendProtocol !== 'nip04', status: sendProtocol === 'pq' ? pqStatus : 'not-secured' }),
     retry,
     dismiss,
   };

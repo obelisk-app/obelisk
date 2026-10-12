@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useMyPubkey } from '@/hooks/session/useSession';
+import { useMyPubkey, useMyLoginMethod } from '@/hooks/session/useSession';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
+import { signerSupportsPq } from '@/services/chat/pq/capability';
 import { hasUsableKeys } from '@/services/chat/pq/attestations';
 import { conversationStatus, type PqConversationStatus } from '@/services/chat/pq/status';
 
@@ -32,17 +33,18 @@ interface Resolved {
  */
 export function usePqConversationStatus(peer: string | null): PqConversationStatus | null {
   const myPubkey = useMyPubkey();
+  const loginMethod = useMyLoginMethod();
   const enabled = usePreferences().postQuantumEnabled;
-  const key = peer && myPubkey ? `${myPubkey}|${peer}|${enabled}` : null;
+  const key = peer && myPubkey ? `${myPubkey}|${peer}|${enabled}|${loginMethod}` : null;
   const [resolved, setResolved] = useState<Resolved | null>(null);
 
   useEffect(() => {
     if (!key || !peer || !myPubkey) return;
     let cancelled = false;
-    void Promise.all([hasUsableKeys(myPubkey), hasUsableKeys(peer)])
-      .then(([selfHasKeys, peerHasKeys]) => {
+    void Promise.all([hasUsableKeys(myPubkey), hasUsableKeys(peer), signerSupportsPq()])
+      .then(([selfHasKeys, peerHasKeys, canSend]) => {
         if (cancelled) return;
-        setResolved({ key, status: conversationStatus({ enabled, selfHasKeys, peerHasKeys }) });
+        setResolved({ key, status: conversationStatus({ enabled: enabled && canSend, selfHasKeys, peerHasKeys }) });
       })
       // A lookup failure is not evidence of protection. `hasUsableKeys`
       // already swallows relay errors and reports false, so this only fires

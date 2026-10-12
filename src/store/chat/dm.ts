@@ -5,8 +5,9 @@ import { createEnsureForAccount } from '../common/multi-account';
 import { oneOf, recordOf, versionedPersist, type Upgrade } from '../common/persist-version';
 
 export type DMProtocol = 'nip04' | 'nip17';
+export type DmSendMode = DMProtocol | 'pq';
 
-const DM_PROTOCOLS: readonly DMProtocol[] = ['nip04', 'nip17'];
+const DM_PROTOCOLS: readonly DmSendMode[] = ['nip04', 'nip17', 'pq'];
 
 /**
  * In-memory shape used by the UI / store. Plaintext lives only in RAM.
@@ -36,14 +37,8 @@ export interface DMThread {
 interface DMPersistedState {
   /** Known counterparties and latest timestamps only; never message text. */
   conversationIndex: Record<string, number>;
-  /**
-   * Per-peer wire protocol the user chose for a thread. NIP-17 is the
-   * default; NIP-04 is a per-thread opt-out (docs/features/direct-messages.md).
-   * Nothing in the UI writes it today: the protocol prompt that called
-   * `setProtocolOverride` was deleted with the old DM view, so this is
-   * always empty and every reader falls back to NIP-17.
-   */
-  protocolOverrides: Record<string, DMProtocol>;
+  /** Per-peer send mode; Quantum still uses NIP-17 on the wire. */
+  protocolOverrides: Record<string, DmSendMode>;
 }
 
 interface DMState extends DMPersistedState {
@@ -63,7 +58,7 @@ interface DMState extends DMPersistedState {
   showProtocolPrompt: string | null;
 
   rememberConversation: (pubkey: string, createdAt: number) => void;
-  setProtocolOverride: (pubkey: string, protocol: DMProtocol) => void;
+  setProtocolOverride: (pubkey: string, protocol: DmSendMode) => void;
   setShowProtocolPrompt: (pubkey: string | null) => void;
 }
 
