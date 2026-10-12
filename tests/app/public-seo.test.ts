@@ -4,6 +4,9 @@ import { translator } from '@tests/support/intl';
 import { generateMetadata as featuresMetadata } from '@/app/[locale]/(site)/features/page';
 import { generateMetadata as helpMetadata } from '@/app/[locale]/(site)/help/page';
 import { generateMetadata as localDataHelpMetadata } from '@/app/[locale]/(site)/help/local-data/page';
+import { generateMetadata as supportMetadata } from '@/app/[locale]/(site)/support/page';
+import { generateMetadata as privacyMetadata } from '@/app/[locale]/(site)/privacy/page';
+import { generateMetadata as termsMetadata } from '@/app/[locale]/(site)/terms/page';
 import { generateMetadata as desktopMetadata } from '@/app/[locale]/(site)/desktop/page';
 import { generateMetadata as mobileMetadata } from '@/app/[locale]/(site)/mobile/page';
 import { generateMetadata as mediaKitMetadata } from '@/app/[locale]/(site)/media-kit/page';
@@ -32,6 +35,9 @@ const PAGES: Array<[string, Load, string]> = [
   ['features', featuresMetadata, '/features'],
   ['help', helpMetadata, '/help'],
   ['help: local data', localDataHelpMetadata, '/help/local-data'],
+  ['support', supportMetadata, '/support'],
+  ['privacy policy', privacyMetadata, '/privacy'],
+  ['terms of use', termsMetadata, '/terms'],
   ['desktop', desktopMetadata, '/desktop'],
   ['mobile', mobileMetadata, '/mobile'],
   ['media kit', mediaKitMetadata, '/media-kit'],
@@ -96,6 +102,9 @@ describe('indexed pages: one complete set of tags each', () => {
       expect((await at(locale, featuresMetadata)).title).toBe(t('seo.features.title'));
       expect((await at(locale, helpMetadata)).description).toBe(t('seo.help.description'));
       expect((await at(locale, localDataHelpMetadata)).title).toBe(t('seo.helpLocalData.title'));
+      expect((await at(locale, supportMetadata)).title).toBe(t('seo.support.title'));
+      expect((await at(locale, privacyMetadata)).description).toBe(t('seo.privacy.description'));
+      expect((await at(locale, termsMetadata)).title).toBe(t('seo.terms.title'));
       expect((await at(locale, desktopMetadata)).title).toBe(t('seo.desktop.title'));
       expect((await at(locale, mobileMetadata)).description).toBe(t('seo.mobile.description'));
       expect((await at(locale, mediaKitMetadata)).title).toBe(t('seo.mediaKit.title'));

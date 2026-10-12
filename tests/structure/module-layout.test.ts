@@ -44,7 +44,7 @@ const RULE3_ROOTS = [...LAYERS, 'src/app'] as const;
 /** The module map: the feature folders, spelled the same in every layer that has code for them. */
 export const MODULES = [
   'admin', 'analytics', 'call', 'chat', 'common', 'feedback', 'games', 'guides', 'hints', 'i18n',
-  'identity', 'local-data', 'marketing', 'media', 'media-kit', 'moderation', 'notifications',
+  'identity', 'legal', 'local-data', 'marketing', 'media', 'media-kit', 'moderation', 'notifications',
   'preferences', 'read-state', 'relay', 'session', 'seo', 'settings', 'shell', 'social', 'voice', 'wallet', 'wot',
 ] as const;
 

@@ -55,12 +55,14 @@ export default async function Page() {
           ))}
         </div>
 
-        <Link
-          href={guidePath()}
-          variant="button" buttonVariant="pill" size="sm" className="mt-8"
-        >
-          {t('help.all')}
-        </Link>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link href={guidePath()} variant="button" buttonVariant="pill" size="sm">
+            {t('help.all')}
+          </Link>
+          <Link href="/support" variant="button" buttonVariant="pillSecondary" size="sm" data-testid="help-support">
+            {t('help.support')}
+          </Link>
+        </div>
       </Container>
 
     </div>

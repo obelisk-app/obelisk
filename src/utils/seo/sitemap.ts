@@ -29,6 +29,9 @@ export const SITEMAP_PAGES: ReadonlyArray<{ path: string; changeFrequency: Freq;
   { path: '/desktop', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/help', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/help/local-data', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/support', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/privacy', changeFrequency: 'yearly', priority: 0.3 },
+  { path: '/terms', changeFrequency: 'yearly', priority: 0.3 },
   { path: '/media-kit', changeFrequency: 'monthly', priority: 0.5 },
   { path: guidePath(), changeFrequency: 'weekly', priority: 0.7 },
 ];

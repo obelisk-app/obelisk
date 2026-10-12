@@ -31,6 +31,9 @@ describe('Footer', () => {
     expect(links).toContain('/es/guides/what-is-obelisk');
     expect(links).toContain('/es/guides');
     expect(links).toContain('/es/app');
+    expect(links).toContain('/es/privacy');
+    expect(links).toContain('/es/terms');
+    expect(links).toContain('/es/support');
     expect(links).not.toContain('/guides/what-is-obelisk');
     // External links are left alone.
     expect(links).toContain('https://lacrypta.ar');
@@ -46,6 +49,9 @@ describe('Footer', () => {
     expect(links).toContain('/app');
     expect(links).toContain('/#faq');
     expect(links).toContain('/help');
+    expect(links).toContain('/support');
+    expect(links).toContain('/privacy');
+    expect(links).toContain('/terms');
     expect(links).toContain('https://github.com/obelisk-app/obelisk');
     expect(links).toContain('https://lacrypta.ar');
     expect(links).toContain('https://github.com/obelisk-app/obelisk/blob/main/LICENSE');

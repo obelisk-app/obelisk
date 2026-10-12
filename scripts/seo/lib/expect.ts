@@ -63,7 +63,7 @@ export function guideFrontMatter(locale: Locale, slug: string): GuideDates {
 
 /** The pages that must be indexed, in every language, and so in the sitemap. */
 export function indexablePaths(): string[] {
-  const statics = ['/', '/features', '/desktop', '/mobile', '/help', '/help/local-data', '/media-kit', '/guides'];
+  const statics = ['/', '/features', '/desktop', '/mobile', '/help', '/help/local-data', '/support', '/privacy', '/terms', '/media-kit', '/guides'];
   return [...statics, ...guideSlugs().map((s) => `/guides/${s}`)];
 }
 
