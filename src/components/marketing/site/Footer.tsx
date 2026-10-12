@@ -99,6 +99,14 @@ export default function Footer() {
               </li>
               <li>
                 <Link
+                  href="/support"
+                  variant="muted" className="text-sm"
+                >
+                  {t('marketing.footer.support')}
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="https://github.com/obelisk-app/obelisk"
                   target="_blank"
                   variant="muted" className="text-sm"
@@ -142,6 +150,22 @@ export default function Footer() {
               {t('marketing.footer.col.legal')}
             </Heading>
             <List marker="none" spacing="relaxed">
+              <li>
+                <Link
+                  href="/privacy"
+                  variant="muted" className="text-sm"
+                >
+                  {t('marketing.footer.privacy')}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  variant="muted" className="text-sm"
+                >
+                  {t('marketing.footer.terms')}
+                </Link>
+              </li>
               <li>
                 <Link
                   href="https://github.com/obelisk-app/obelisk/blob/main/LICENSE"

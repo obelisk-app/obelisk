@@ -39,6 +39,9 @@ const NO_BRIDGE = [
   'src/app/[locale]/(site)/desktop/page.tsx',
   'src/app/[locale]/(site)/mobile/page.tsx',
   'src/app/[locale]/(site)/help/page.tsx',
+  'src/app/[locale]/(site)/support/page.tsx',
+  'src/app/[locale]/(site)/privacy/page.tsx',
+  'src/app/[locale]/(site)/terms/page.tsx',
   'src/app/[locale]/(site)/guides/page.tsx',
   'src/app/[locale]/(site)/media-kit/page.tsx',
 ];

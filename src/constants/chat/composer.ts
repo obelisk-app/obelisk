@@ -3,7 +3,7 @@
  * kept here so every reader imports the one copy.
  */
 
-import type { InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 /**
  * Attributes every message composer spreads onto its `<input>`.
@@ -22,9 +22,11 @@ import type { InputHTMLAttributes } from 'react';
  *
  * `enterKeyHint` is here for the same reason: credential fields get a
  * "Go"/"Done" return key, message fields get "Send".
+ *
+ * The channel composers are a `<textarea>` (multi-line drafts), which has
+ * no `type`; they spread `MESSAGE_TEXTAREA_PROPS`, the same set without it.
  */
-export const MESSAGE_INPUT_PROPS = {
-  type: 'text',
+const MESSAGE_FIELD_PROPS = {
   name: 'message',
   autoComplete: 'off',
   enterKeyHint: 'send',
@@ -43,7 +45,14 @@ export const MESSAGE_INPUT_PROPS = {
   'data-lpignore': 'true',     // LastPass
   'data-bwignore': 'true',     // Bitwarden
   'data-form-type': 'other',   // Dashlane
-} as InputHTMLAttributes<HTMLInputElement>;
+};
+
+export const MESSAGE_INPUT_PROPS = { type: 'text', ...MESSAGE_FIELD_PROPS } as InputHTMLAttributes<HTMLInputElement>;
+
+export const MESSAGE_TEXTAREA_PROPS = MESSAGE_FIELD_PROPS as TextareaHTMLAttributes<HTMLTextAreaElement>;
+
+/** The tallest the channel composer grows, in lines, before it scrolls. */
+export const COMPOSER_MAX_ROWS = 8;
 
 /** Cap on inline attachments; matches the gallery's 2x2 matrix renderer. */
 export const MAX_COMPOSER_ATTACHMENTS = 4;

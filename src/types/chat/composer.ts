@@ -25,7 +25,7 @@ export interface ChannelComposerOptions {
   readonly messages: ReadonlyArray<JsMessage>;
   readonly replyingTo: JsMessage | null;
   readonly setReplyingTo: (message: JsMessage | null) => void;
-  readonly inputRef: RefObject<HTMLInputElement | null>;
+  readonly inputRef: RefObject<HTMLTextAreaElement | null>;
   /** `/play` opens the table picker; the modal itself belongs to the skin. */
   readonly onOpenNewGame: () => void;
   /** How many rows the mention picker shows (desktop 8, phone 6). */
@@ -41,10 +41,10 @@ export interface ChannelComposer {
   readonly onInput: (value: string, cursor: number) => void;
   /** Caret moved without the text changing: re-run detection only. */
   readonly onSelect: (value: string, cursor: number) => void;
-  /** Arrow/Enter/Tab/Escape inside the mention or slash picker; Enter sends when `submitOnEnter`. */
-  readonly onKeyDown: (event: KeyboardEvent<HTMLInputElement>, submitOnEnter?: boolean) => void;
+  /** Arrow/Enter/Tab/Escape inside the mention or slash picker; otherwise Enter sends, Shift/Ctrl/Cmd+Enter breaks the line. */
+  readonly onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
   /** Pasted image/video files become attachments. */
-  readonly onPaste: (event: ClipboardEvent<HTMLInputElement>) => void;
+  readonly onPaste: (event: ClipboardEvent<HTMLTextAreaElement>) => void;
   readonly send: (event?: FormEvent) => Promise<void>;
   readonly sendError: string | null;
 

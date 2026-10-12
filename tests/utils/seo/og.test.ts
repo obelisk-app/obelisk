@@ -9,6 +9,9 @@ describe('a static page names its card file', () => {
     expect(staticCardFile('en', { page: 'landing' })).toBe('/og/cards/en/home.png');
     expect(staticCardFile('es', { page: 'helpLocalData' })).toBe('/og/cards/es/help/local-data.png');
     expect(staticCardFile('pt', { page: 'mediaKit' })).toBe('/og/cards/pt/media-kit.png');
+    expect(staticCardFile('pt', { page: 'privacy' })).toBe('/og/cards/pt/privacy.png');
+    expect(staticCardFile('es', { page: 'terms' })).toBe('/og/cards/es/terms.png');
+    expect(staticCardFile('en', { page: 'support' })).toBe('/og/cards/en/support.png');
     expect(staticCardFile('es', { guide: 'vesta' })).toBe('/og/cards/es/guides/vesta.png');
   });
 });

@@ -3,8 +3,8 @@ import { useChannelComposer, type ChannelComposerOptions, type ComposerHandle } 
 
 type PhoneComposerOptions = Omit<ChannelComposerOptions, 'inputRef' | 'maxMentionResults'>;
 
-/** Where the caret sits in an input, or its end when the browser does not say. */
-function caretOf(el: HTMLInputElement): number {
+/** Where the caret sits in a textarea, or its end when the browser does not say. */
+function caretOf(el: HTMLTextAreaElement): number {
   return el.selectionStart ?? el.value.length;
 }
 
@@ -14,14 +14,14 @@ function caretOf(el: HTMLInputElement): number {
  * handle `ChannelScreen` drops files through.
  */
 export function usePhoneChannelComposer(options: PhoneComposerOptions, ref: ForwardedRef<ComposerHandle>) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const composer = useChannelComposer({ ...options, inputRef, maxMentionResults: 6 });
   const { onPickFiles } = composer;
   useImperativeHandle(ref, () => ({ pickFiles: (files) => { void onPickFiles(files); } }), [onPickFiles]);
   return {
     ...composer,
     inputRef,
-    onInputChange: (e: ChangeEvent<HTMLInputElement>) => composer.onInput(e.target.value, caretOf(e.target)),
-    onInputSelect: (e: SyntheticEvent<HTMLInputElement>) => composer.onSelect(e.currentTarget.value, caretOf(e.currentTarget)),
+    onInputChange: (e: ChangeEvent<HTMLTextAreaElement>) => composer.onInput(e.target.value, caretOf(e.target)),
+    onInputSelect: (e: SyntheticEvent<HTMLTextAreaElement>) => composer.onSelect(e.currentTarget.value, caretOf(e.currentTarget)),
   };
 }

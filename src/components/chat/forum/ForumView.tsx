@@ -53,7 +53,7 @@ export default function ForumView({ groupId, onSelectThread }: Props) {
         onSearchChange={vm.search.setQuery}
         exactMatch={vm.search.exactMatch}
         onSubmitSearch={vm.search.submit}
-        onClickNewThread={vm.composer.openBlank}
+        onClickNewThread={vm.composer.openFromSearch}
         prefs={vm.prefs}
         onPrefsChange={vm.updatePrefs}
         forumTags={vm.forumTags}

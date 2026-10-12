@@ -26,5 +26,7 @@ describe('HelpPage', () => {
       'href',
       '/es/guides',
     );
+    expect(screen.getByTestId('help-support')).toHaveAttribute('href', '/es/support');
+    expect(screen.getByTestId('help-support')).toHaveTextContent('Contactar a soporte');
   });
 });

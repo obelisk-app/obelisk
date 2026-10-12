@@ -49,7 +49,7 @@ The route tree follows rule 3: Next.js files (`page.tsx`, `layout.tsx`, `route.t
 | `moderation` | Mutes and blocks | |
 | `wot` | Web of trust | |
 | `login`, `analytics`, `local-data`, `hints`, `i18n` | The login widget's storage, consent and gtag, the on-device data inventory, onboarding hints, the runtime translator | |
-| `marketing`, `guides`, `media-kit`, `seo` | The public site | `marketing`: `landing`, `site`, `showcase`; `guides`: `article`, `listing`, `mdx` (the guide artwork is in `src/assets/illustrations/guides/`) |
+| `marketing`, `guides`, `media-kit`, `legal`, `seo` | The public site (`legal`: the privacy policy, the terms of use and the support page) | `marketing`: `landing`, `site`, `showcase`; `guides`: `article`, `listing`, `mdx` (the guide artwork is in `src/assets/illustrations/guides/`) |
 
 Folders one layer has and the others do not: `services/nostr-bridge/` (the bridge, behind its front door), `services/server/` (server-only code) and the `utils` shared topics; each is listed with its reason in `LAYER_ONLY`.
 

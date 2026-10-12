@@ -9,7 +9,7 @@ import { group } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 
 vi.mock('@/hooks/relay/operator/useBotCommands', () => ({ useBotCommands: () => [] }));
 
-const input = (value: string, selectionStart: number | null) => ({ value, selectionStart }) as HTMLInputElement;
+const input = (value: string, selectionStart: number | null) => ({ value, selectionStart }) as HTMLTextAreaElement;
 
 function setup() {
   const ref = createRef<ComposerHandle>();
@@ -22,14 +22,14 @@ function setup() {
 describe('usePhoneChannelComposer', () => {
   it('reads the draft from a change event', () => {
     const { result } = setup();
-    act(() => result.current.onInputChange({ target: input('hello', 5) } as ChangeEvent<HTMLInputElement>));
+    act(() => result.current.onInputChange({ target: input('hello', 5) } as ChangeEvent<HTMLTextAreaElement>));
     expect(result.current.draft).toBe('hello');
   });
 
   it('takes the end of the text as the caret when the browser gives none', () => {
     const { result } = setup();
-    act(() => result.current.onInputChange({ target: input('hey', null) } as ChangeEvent<HTMLInputElement>));
-    act(() => result.current.onInputSelect({ currentTarget: input('hey', null) } as SyntheticEvent<HTMLInputElement>));
+    act(() => result.current.onInputChange({ target: input('hey', null) } as ChangeEvent<HTMLTextAreaElement>));
+    act(() => result.current.onInputSelect({ currentTarget: input('hey', null) } as SyntheticEvent<HTMLTextAreaElement>));
     expect(result.current.draft).toBe('hey');
   });
 

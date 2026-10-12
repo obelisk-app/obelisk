@@ -14,7 +14,7 @@ export interface StaticCspManifest {
   fallback: string[];
 }
 
-const PUBLIC_PAGES = ['', '/features', '/desktop', '/mobile', '/media-kit', '/help', '/help/local-data', '/guides'];
+const PUBLIC_PAGES = ['', '/features', '/desktop', '/mobile', '/media-kit', '/help', '/help/local-data', '/support', '/privacy', '/terms', '/guides'];
 const ERROR_HTML = ['app/_not-found.html', 'app/_global-error.html', 'pages/404.html', 'pages/500.html'];
 
 /**
