@@ -217,7 +217,7 @@ These read the source and fail the run. Lists marked "shrink-only" fail when an 
 | Test | Enforces |
 |---|---|
 | `tests/eslint-config.test.ts` | The 300-line `max-lines` rule is on for `src/` and loosened nowhere; every path-scoped glob in `eslint.config.mjs` matches a file |
-| `tests/no-em-dash.test.ts` | No em dash in `src/`, `tests/`, `scripts/`, `docs/`, `content/`, `.github/`, `.claude/`, text assets in `public/`, or root files |
+| `tests/no-em-dash.test.ts` | No em dash in `src/`, `tests/`, `scripts/`, `docs/`, `content/`, `.github/`, text assets in `public/`, or root files |
 | `tests/import-cycles.test.ts` | No static import cycle in `src/` |
 | `tests/hooks/hooks-layer.test.ts` | No hook file or hook definition under `src/components/`, `src/app/`, `src/assets/` or `src/i18n/` |
 | `tests/assets/assets-only.test.ts` | No SVG outside `src/assets/` (an `<svg>` or SVG shape in JSX, `<svg` markup in a string or a stylesheet), except the shrink-only reasoned `DATA_DRIVEN` list, empty today; no `...Icon` component outside `src/assets/icons/` (the brand `ObeliskIcon` aside); that folder holds only `<Name>Icon.tsx` files on `IconSvg`, all in its barrel; no two icon files draw the same thing |

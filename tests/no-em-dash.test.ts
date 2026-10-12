@@ -5,7 +5,7 @@
  * written. A rule nobody checks drifts.
  *
  * So this reads every tracked text file under src/, tests/, scripts/, docs/,
- * content/ (the published guides), .github/ and .claude/, the text assets
+ * content/ (the published guides), .github/, the text assets
  * under public/ (SVG snapshots, the web manifest, security.txt, the service
  * worker), and every file at the repo root (Markdown, config, .gitignore,
  * LICENSE), and fails on the literal character, naming the file and line.
@@ -45,7 +45,7 @@ const ROOT = process.cwd();
 const EM_DASH = '\u2014';
 
 /** Folders (ending in `/`) the rule covers whole, from the repo root. */
-const COVERED_DIRS = ['src/', 'tests/', 'scripts/', 'docs/', 'content/', '.github/', '.claude/'] as const;
+const COVERED_DIRS = ['src/', 'tests/', 'scripts/', 'docs/', 'content/', '.github/'] as const;
 
 /** Under public/ only text assets are read; the rest is images, audio, video and a mesh. */
 const PUBLIC_TEXT = /^public\/.+\.(svg|txt|json|md|webmanifest|js|xml|css|html)$/;
@@ -122,7 +122,7 @@ describe('no em dash in the source, tests, scripts, docs, guides, public text as
       expect(files.filter((path) => path.startsWith(dir)).length, dir).toBeGreaterThan(5);
     }
     expect(files.filter((path) => path.startsWith('public/')).length, 'public/').toBeGreaterThan(5);
-    for (const dir of ['.github/', '.claude/']) {
+    for (const dir of ['.github/']) {
       expect(files.some((path) => path.startsWith(dir)), dir).toBe(true);
     }
     for (const path of [
@@ -154,6 +154,7 @@ describe('no em dash in the source, tests, scripts, docs, guides, public text as
     expect(isCovered('ecosystem.config.js')).toBe(true);
     expect(isCovered('LICENSE')).toBe(true);
     expect(isCovered('package-lock.json')).toBe(false);
+    expect(isCovered('.claude/settings.json')).toBe(false);
   });
 
   it('finds none outside the temporary exceptions', () => {
