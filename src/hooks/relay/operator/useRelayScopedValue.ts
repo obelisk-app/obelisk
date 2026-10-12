@@ -33,7 +33,7 @@ function sameValue<T>(a: T, b: T): boolean {
  * production bundle hands back a new function on every read of a module
  * export that calls itself by name (the subscribers retry themselves once the
  * bridge is up), so depending on its identity resubscribed on every render:
- * that was the loop behind #185. Authors are compared by content, so a fresh
+ * that was the loop behind #185 (docs/operations/incident-2026-10-12.md). Authors are compared by content, so a fresh
  * array with the same pubkeys does not resubscribe either.
  */
 export function useRelayScopedValue<T>(
