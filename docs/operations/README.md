@@ -19,6 +19,7 @@ Production deployment requires the user's explicit request. `npm run deploy` tar
 | Export a Discord emoji set | [Emoji export](discord-emoji-export.md) |
 | Triage client issues and debt | [Known bugs](known-bugs.md) |
 | Triage SFU server issues | [SFU known bugs](sfu-known-bugs.md) |
+| Why the site went down and the desktop crashed (#185) on 2026-10-12 | [Incident 2026-10-12](incident-2026-10-12.md) |
 | Exercise current voice behavior | [Voice testing](../features/voice/testing.md) |
 
 Issue lists record reported or planned work and are not proof that every entry reproduces on the current build. Reproduce an issue before changing runtime behavior. Use the current subsystem references and test harnesses when reproducing an issue.
