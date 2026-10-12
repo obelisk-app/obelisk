@@ -72,9 +72,8 @@ EXPLANATION.md
 cert.pem.bak
 key.pem.bak
 
-# Claude Code agent state (worktrees + scheduler locks)
-.claude/worktrees/
-.claude/scheduled_tasks.lock
+# Local assistant settings
+.claude/
 *.log
 
 # Git worktrees live inside the repo (see AGENTS.md). Without this line the
