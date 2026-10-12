@@ -13,12 +13,13 @@ import type { AbstractIntlMessages } from 'next-intl';
  * a route reads a module that route does not ship.
  *
  * `seo` is server-only: metadata, JSON-LD and OG images read it through
- * `getTranslations`, and no scope includes it.
+ * `getTranslations`, and no scope includes it. `legal` (the privacy policy,
+ * the terms of use and the support page) is server-rendered copy too.
  */
 
 export const MODULES = [
   'common', 'seo', 'marketing', 'showcase', 'shell', 'mobile', 'chat', 'dm', 'calls', 'social',
-  'settings', 'media', 'games', 'voice', 'admin', 'guides', 'help', 'mediaKit', 'errors',
+  'settings', 'media', 'games', 'voice', 'admin', 'guides', 'help', 'legal', 'mediaKit', 'errors',
 ] as const;
 
 export type Module = (typeof MODULES)[number];

@@ -12,7 +12,7 @@ import { PAGE_CARDS } from '@/constants/seo/cards';
 
 export type OgIconName =
   | 'landing' | 'app' | 'voice' | 'features' | 'desktop' | 'mobile' | 'help' | 'helpLocalData'
-  | 'mediaKit' | 'guides' | 'note' | 'profile' | 'tag';
+  | 'support' | 'privacy' | 'terms' | 'mediaKit' | 'guides' | 'note' | 'profile' | 'tag';
 
 export type OgCardProps = {
   label: string;

@@ -27,6 +27,18 @@
     "title": "Help: what Obelisk keeps on your device",
     "description": "What Obelisk stores in your browser and why, how to remove each part from Settings or from the browser, and what clearing your device does not remove."
   },
+  "support": {
+    "title": "Support: contact, bug reports and abuse reports",
+    "description": "Contact the Obelisk team by email, report a bug on GitHub or report abuse. Short answers on signing in, lost keys, deleting your data and blocking people."
+  },
+  "privacy": {
+    "title": "Privacy policy: what Obelisk knows about you",
+    "description": "Obelisk has no accounts, no ads and no tracking. What goes to Nostr relays, what stays on your device, what the iOS app can access, and how to delete it."
+  },
+  "terms": {
+    "title": "Terms of use: rules for Obelisk and its relays",
+    "description": "The rules for using Obelisk on the web and on iOS: no tolerance for abusive content, how to report and block, your keys, zaps, and the software license."
+  },
   "mediaKit": {
     "title": "Media kit: Obelisk logos, banners and colors",
     "description": "The Obelisk press and media kit: logos, banners, icons, brand colors, ready-made copy and HTML banners you can embed, free to use when you write about it."
@@ -107,6 +119,9 @@
       "mobile": "Mobile tour",
       "help": "Help",
       "helpLocalData": "Help: your data",
+      "support": "Support",
+      "privacy": "Privacy",
+      "terms": "Terms",
       "mediaKit": "Media kit",
       "guides": "Guides",
       "guide": "Guide",

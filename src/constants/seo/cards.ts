@@ -13,6 +13,9 @@ export const PAGE_CARDS = {
   mobile: { copy: 'mobile', path: '/mobile' },
   help: { copy: 'help', path: '/help' },
   helpLocalData: { copy: 'helpLocalData', path: '/help/local-data' },
+  support: { copy: 'support', path: '/support' },
+  privacy: { copy: 'privacy', path: '/privacy' },
+  terms: { copy: 'terms', path: '/terms' },
   mediaKit: { copy: 'mediaKit', path: '/media-kit' },
   guides: { copy: 'guides', path: '/guides' },
 } as const satisfies Record<string, { copy: string; path: string }>;

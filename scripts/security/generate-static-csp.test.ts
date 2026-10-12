@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { generateStaticCsp, hashInlineScripts, publicStaticRoutes } from './generate-static-csp';
 
 const locales = ['en', 'es', 'pt'];
-const pages = ['', '/features', '/desktop', '/mobile', '/media-kit', '/help', '/help/local-data', '/guides'];
+const pages = ['', '/features', '/desktop', '/mobile', '/media-kit', '/help', '/help/local-data', '/support', '/privacy', '/terms', '/guides'];
 const token = (text: string) => `'sha256-${createHash('sha256').update(text, 'utf8').digest('base64')}'`;
 const routes = () => Object.fromEntries(locales.flatMap((locale) => pages.map((page) => [
   `/${locale}${page}`, { initialRevalidateSeconds: false },
@@ -113,7 +113,7 @@ describe('build manifest generation', () => {
     const result = await generateStaticCsp(dir);
     expect(result.version).toBe(1);
     expect(result.buildId).toBe('fixture-build');
-    expect(Object.keys(result.routes)).toHaveLength(24);
+    expect(Object.keys(result.routes)).toHaveLength(33);
     expect(result.routes['/en']).toEqual([token('self.__next_f.push([1,"/en"])')]);
     expect(result.routes['/pt/help/local-data']).toEqual([token('self.__next_f.push([1,"/pt/help/local-data"])')]);
     expect(result.fallback).toEqual([token('notFound()'), token('errorPage()')].sort());

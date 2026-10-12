@@ -1,0 +1,226 @@
+{
+  "links": {
+    "email": "Escrever para {email}",
+    "security": "Segurança: {security}",
+    "issues": "Relatar um erro no GitHub",
+    "license": "A licença (AGPL-3.0)",
+    "abusePolicy": "Política de abuso",
+    "securityPolicy": "Política de segurança",
+    "privacy": "Política de privacidade",
+    "terms": "Termos de uso",
+    "support": "Suporte",
+    "help": "Central de ajuda",
+    "localData": "O que o Obelisk guarda no seu dispositivo"
+  },
+  "privacy": {
+    "title": "Política de privacidade",
+    "updated": "Última atualização: 12 de outubro de 2026",
+    "intro": "Esta política cobre o site e o app web do Obelisk em obelisk.ar e o app do Obelisk para iOS (Obelisk Chat na App Store). O Obelisk é um cliente do Nostr, um protocolo aberto. Ele não tem contas nem um servidor nosso que guarde suas mensagens. Esta página diz o que sai do seu dispositivo, quem recebe e o que fica nele.",
+    "short": {
+      "title": "A versão curta",
+      "i1": "Não existem contas do Obelisk. Você é identificado por uma chave pública do Nostr, não por um e-mail, um número de telefone ou uma senha.",
+      "i2": "Não vendemos dados, não mostramos anúncios e não rastreamos você entre apps e sites.",
+      "i3": "O app para iOS não tem análise de uso, publicidade nem relatórios de falhas. O site carrega o Google Analytics só se você permitir.",
+      "i4": "O que você escreve vai para os relays do Nostr que você e seus grupos escolhem. Cada relay é operado pelo próprio operador e guarda o que recebe segundo as próprias regras.",
+      "i5": "As mensagens diretas são criptografadas de ponta a ponta. Os relays e outros servidores ainda veem alguns metadados, entre eles o seu endereço IP."
+    },
+    "who": {
+      "title": "Quem somos",
+      "p1": "O Obelisk é software de código aberto sob a licença AGPL-3.0. O código-fonte do app web é público em github.com/obelisk-app/obelisk.",
+      "p2": "O app para iOS é publicado na App Store pela Dandelion Labs JSC.",
+      "p3": "Nesta política, \"nós\" é o projeto Obelisk: as pessoas que mantêm o software, o site obelisk.ar e os relays citados abaixo. Você pode nos escrever em {email}."
+    },
+    "identity": {
+      "title": "Sua identidade e suas chaves",
+      "p1": "Sua identidade é um par de chaves do Nostr. A chave pública é pública por natureza: ela acompanha tudo o que você publica e qualquer pessoa pode vê-la.",
+      "p2": "O app para iOS nunca pede, recebe nem guarda a sua chave privada. Você entra com um assinador: o app Nostr WoT no mesmo telefone, ou um bunker do Nostr Connect (NIP-46). Cada assinatura e cada descriptografia é feita por esse assinador.",
+      "p3": "No app web você pode entrar com uma extensão do navegador (NIP-07), com um bunker (NIP-46) ou colando uma chave privada. Uma chave colada fica no seu navegador, criptografada com uma chave que o navegador guarda e não entrega. Ela nunca é enviada para nós."
+    },
+    "publish": {
+      "title": "O que você publica e para onde vai",
+      "p1": "O Obelisk lê e escreve eventos do Nostr em relays. Um relay é um servidor operado por quem o opera. Quando você escreve em um canal, reage, edita seu perfil, entra em um grupo ou envia uma denúncia, o app envia um evento assinado a um relay. O relay guarda o evento e o entrega a outras pessoas segundo as próprias regras.",
+      "p2": "Mensagens de canal, reações, perfis, participação em grupos e denúncias não são privados. Qualquer pessoa que o relay deixe entrar pode ler, e outros relays e apps podem copiar.",
+      "p3": "Um grupo vive em um único relay. O que você faz em um grupo vai para o relay desse grupo e não para outros.",
+      "p4": "Os dois apps buscam perfis em um conjunto pequeno de relays, alguns operados por terceiros. O app web também lê notas públicas e perfis de relays gerais do Nostr operados por terceiros, que você pode trocar em Configurações."
+    },
+    "ourRelays": {
+      "title": "Os relays que operamos",
+      "p1": "Operamos dois relays: wss://public.obelisk.ar e wss://lacrypta-relay.obelisk.ar. Os dois vêm como padrão nos apps.",
+      "p2": "Esses relays guardam os eventos publicados neles, que são assinados e, na maioria, públicos por natureza. Os registros de acesso deles hoje incluem o endereço IP dos clientes. Eles não têm nomes, e-mails, números de telefone nem registros de pagamento, porque o software não trabalha com nada disso.",
+      "p3": "Qualquer outro relay é operado por outra pessoa, com as próprias regras e as próprias práticas de privacidade. Um relay costuma publicar o contato do operador no seu documento de informações (NIP-11), que os apps mostram."
+    },
+    "dms": {
+      "title": "Mensagens diretas",
+      "p1": "As mensagens diretas são criptografadas de ponta a ponta: só você e a pessoa para quem você escreve podem ler. Nós não podemos ler nem recuperar essas mensagens.",
+      "p2": "Por padrão elas usam gift wraps do NIP-17. Um relay que guarda um deles vê um envelope criptografado endereçado à chave pública do destinatário, quando chegou, o tamanho e o endereço IP que o entregou. Ele não vê o texto nem quem enviou.",
+      "p3": "Uma conversa também pode usar o NIP-04, um esquema mais antigo mantido por compatibilidade. O NIP-04 ainda criptografa o texto, mas os relays veem as chaves públicas das duas pessoas.",
+      "p4": "As mensagens diretas passam pelos seus relays de entrada e pelos da outra pessoa, que podem ser relays que não operamos."
+    },
+    "network": {
+      "title": "Servidores que veem o seu endereço IP",
+      "p1": "O Obelisk não tem backend próprio, então o seu dispositivo se conecta direto a cada serviço que usa. Cada um deles vê o seu endereço IP, como qualquer servidor na internet:",
+      "i1": "Os relays aos quais você se conecta, nossos ou de qualquer outra pessoa.",
+      "i2": "Servidores de arquivos. Imagens, arquivos e notas de voz são enviados a servidores Blossom operados por terceiros, e o que outra pessoa publica é carregado de onde estiver hospedado. Um arquivo publicado em um canal pode ser aberto por qualquer pessoa que tenha o endereço dele. Um arquivo enviado por mensagem direta é criptografado antes do envio.",
+      "i3": "Servidores de voz. As chamadas em grupo passam por um servidor de mídia (SFU): o nosso em sfu.obelisk.ar, ou um escolhido pelo operador do canal. Algumas chamadas no app web são ponto a ponto, e então as outras pessoas da chamada veem o seu endereço IP. Iniciar uma chamada também contata servidores STUN públicos do Google e da Cloudflare, e um relay TURN quando há um configurado.",
+      "i4": "Sites vinculados. Abrir um link, ou tocar um vídeo ou uma faixa incorporados, conecta você a esse site.",
+      "i5": "GIPHY. Buscar um GIF ou uma figurinha no app web envia ao GIPHY o que você busca.",
+      "i6": "Provedores de Lightning. Enviar um zap contata o provedor de Lightning do destinatário para pedir uma fatura, e o provedor da sua carteira para pagá-la.",
+      "after": "A menos que esta página diga que operamos um serviço, ele é operado por outra pessoa, com a própria política de privacidade. Não controlamos o que eles registram."
+    },
+    "website": {
+      "title": "O site obelisk.ar",
+      "p1": "O servidor que entrega obelisk.ar recebe o seu endereço IP e dados do seu navegador a cada pedido, como qualquer servidor web.",
+      "p2": "Prévias de links. Quando o app web mostra o cartão de um link em uma mensagem, ele pede a obelisk.ar que busque o título, a descrição e o endereço da imagem dessa página, então o site vinculado vê o nosso servidor e não você. O pedido leva o endereço do link. O servidor conta os pedidos por endereço IP na memória durante um minuto para limitar abusos, e guarda o resultado na memória por até uma hora. Esse código não escreve nada em um registro nem em um banco de dados. A imagem da prévia é carregada depois pelo seu navegador a partir do servidor dela.",
+      "p3": "Google Analytics. O site pergunta se você permite o Google Analytics. Nada do Google carrega a menos que você diga sim. Se você permitir, o Analytics coloca os próprios cookies e informa ao Google quais páginas você abre e, pelo seu endereço IP, mais ou menos onde você está, segundo a política de privacidade do Google. Você pode mudar a resposta quando quiser pelo rodapé deste site ou em Configurações > Dados neste dispositivo.",
+      "p4": "Cookies. O site coloca um único cookie próprio, que lembra o seu idioma. Os cookies do Google Analytics existem só se você permitiu o Analytics."
+    },
+    "device": {
+      "title": "O que fica no seu dispositivo",
+      "p1": "Para abrir rápido e manter você conectado, os apps guardam dados no seu dispositivo: sua chave pública e como você entra, o cache de canais, mensagens e perfis, as posições de leitura, as configurações, as pessoas que você bloqueou e uma conexão de carteira, se você adicionou uma.",
+      "p2": "As mensagens diretas que você abriu são guardadas só criptografadas. Uma conexão de carteira (um link do Nostr Wallet Connect) pode gastar da sua carteira, então o app para iOS a guarda no chaveiro do sistema e o app web a guarda criptografada no navegador. Ela é apagada quando você desconecta a carteira ou sai da conta.",
+      "p3": "Esses dados não são enviados para nós. Duas coisas saem do dispositivo de outra forma: no app web, as posições de leitura são sincronizadas pelos seus relays, criptografadas com a sua própria chave, e no app para iOS, bloquear alguém também adiciona a pessoa à sua lista de silenciados do Nostr, que é pública."
+    },
+    "permissions": {
+      "title": "Permissões no iOS",
+      "i1": "Microfone. Usado só enquanto você está em uma chamada de voz, para que os outros ouçam você. O iOS pergunta na primeira vez que você entra em uma.",
+      "i2": "Câmera. O app não usa a câmera: as chamadas são só de áudio. Ele declara um uso de câmera só porque a biblioteca de chamadas exige.",
+      "i3": "Áudio em segundo plano. Uma chamada continua quando o app está em segundo plano ou o telefone está bloqueado.",
+      "after": "O app não pede seus contatos, sua localização nem suas fotos, e não envia notificações push."
+    },
+    "zaps": {
+      "title": "Pagamentos (zaps)",
+      "p1": "Zaps são pagamentos em Bitcoin pela Lightning feitos pela sua própria carteira. O Obelisk nunca guarda fundos, não vende nada e não tem compras dentro do app. Não existe um servidor de pagamentos do Obelisk.",
+      "p2": "Você pode conectar uma carteira com o Nostr Wallet Connect, passar o pagamento para um app de carteira no seu telefone ou, no app web, usar uma extensão WebLN. O pagamento em si é tratado pelo provedor da sua carteira e pelo provedor de Lightning do destinatário.",
+      "p3": "Os zaps seguem o NIP-57. O pedido de zap que você assina e o recibo que o provedor do destinatário publica são eventos do Nostr, e podem mostrar sua chave pública, o valor e o seu comentário."
+    },
+    "deletion": {
+      "title": "Apagar seus dados",
+      "p1": "No seu dispositivo. No app web, abra Configurações > Dados neste dispositivo para apagar qualquer categoria, ou tudo. No app para iOS, abra a aba Você e depois Dados neste dispositivo. Sair da conta também apaga do dispositivo o seu login, a conexão de carteira e as mensagens diretas guardadas.",
+      "p2": "O que você publicou. O Nostr tem um pedido de exclusão (NIP-09) que pede aos relays que removam um evento que você publicou. Um relay que atende ao pedido apaga a cópia dele. Ninguém consegue fazer todos os relays e todos os apps apagarem as deles, então cópias podem continuar existindo.",
+      "p3": "Nos relays que operamos. Escreva para {email} com o endereço do relay e o ID do evento ou a sua chave pública, e removemos esses eventos dos nossos relays. Cópias em outros relays estão fora do nosso controle.",
+      "p4": "Não existe conta para encerrar."
+    },
+    "children": {
+      "title": "Crianças",
+      "p1": "O Obelisk não é direcionado a crianças com menos de 13 anos, e não coletamos conscientemente informações pessoais delas. O Obelisk mostra conteúdo escrito por outras pessoas que ninguém revisa antes de aparecer."
+    },
+    "changes": {
+      "title": "Mudanças nesta política",
+      "p1": "Quando esta política muda, atualizamos esta página e a data no topo. O histórico dela é público no repositório de código do projeto."
+    },
+    "contact": {
+      "title": "Contato",
+      "p1": "Dúvidas de privacidade, pedidos de suporte e denúncias de abuso vão para {email}. Problemas de segurança vão para {security}."
+    }
+  },
+  "terms": {
+    "title": "Termos de uso",
+    "updated": "Última atualização: 12 de outubro de 2026",
+    "intro": "Estes termos cobrem o site e o app web do Obelisk em obelisk.ar, o app do Obelisk para iOS (Obelisk Chat na App Store) e os relays que o projeto Obelisk opera. Ao usar qualquer um deles você concorda com estes termos. Se não concordar, não use.",
+    "what": {
+      "title": "O que é o Obelisk",
+      "p1": "O Obelisk é um cliente do Nostr, um protocolo aberto. Ele lê e escreve mensagens em relays, que são servidores independentes. Não existem contas do Obelisk, e nenhum servidor do Obelisk guarda suas mensagens.",
+      "p2": "Nós escrevemos o software e operamos dois relays, wss://public.obelisk.ar e wss://lacrypta-relay.obelisk.ar. Qualquer outro relay, servidor de arquivos, assinador ou carteira que você alcança pelo Obelisk é operado por outra pessoa, com os próprios termos.",
+      "p3": "O app para iOS é publicado na App Store pela Dandelion Labs JSC."
+    },
+    "keys": {
+      "title": "Suas chaves são sua responsabilidade",
+      "p1": "Sua identidade é um par de chaves do Nostr que você cria e guarda. Nunca temos a sua chave privada, e não podemos redefinir, recuperar nem substituir essa chave.",
+      "p2": "Se você perder a chave privada, perde essa identidade e a possibilidade de ler as mensagens diretas dela. Se outra pessoa conseguir a chave, pode agir como você. Guarde uma cópia em um lugar seguro, e nunca cole sua chave em um site ou app em que você não confia."
+    },
+    "conduct": {
+      "title": "Sem tolerância para conteúdo inaceitável ou abuso",
+      "p1": "O Obelisk não tolera conteúdo inaceitável nem usuários abusivos. Você é responsável pelo que publica. Você não pode usar o Obelisk, nem os relays que operamos, para publicar, enviar ou vincular:",
+      "i1": "Material de abuso sexual infantil, ou qualquer conteúdo sexual envolvendo menores.",
+      "i2": "Ameaças, incitação à violência ou conteúdo que promova o terrorismo.",
+      "i3": "Assédio, intimidação, perseguição ou doxxing (publicar informações privadas de alguém sem consentimento).",
+      "i4": "Discurso de ódio: ataques a pessoas por raça, etnia, nacionalidade, religião, sexo, identidade de gênero, orientação sexual, deficiência ou idade.",
+      "i5": "Imagens íntimas compartilhadas sem consentimento, e conteúdo sexual explícito enviado a quem não pediu.",
+      "i6": "Spam, golpes, fraude, phishing ou malware.",
+      "i7": "Fingir ser outra pessoa ou organização para enganar.",
+      "i8": "Conteúdo que viole direitos de outra pessoa ou que seja ilegal.",
+      "after": "Você também não pode atacar, sobrecarregar nem tentar acessar sem autorização os relays e servidores que operamos, nem usá-los para contornar um bloqueio ou uma remoção."
+    },
+    "report": {
+      "title": "Denunciar e bloquear",
+      "p1": "No app para iOS, cada mensagem, conversa de mensagens diretas e perfil oferece Denunciar e Bloquear. Uma denúncia é um evento público do Nostr (NIP-56) enviado ao relay em que você está, onde o operador pode agir. Ela identifica você como denunciante. Um bloqueio oculta na hora as mensagens e as conversas dessa pessoa no seu telefone. Você desfaz em Você > Pessoas bloqueadas.",
+      "p2": "No app web, você pode bloquear ou silenciar uma pessoa pelo perfil dela. As mensagens dela ficam ocultas naquele dispositivo. Para denunciar conteúdo pelo app web, escreva para nós.",
+      "p3": "Por e-mail. Escreva para {email} com o endereço do relay, o ID do evento ou a chave pública da pessoa (npub), e o que está errado. Use o e-mail para o que não deve ser público ou precisa que uma pessoa olhe."
+    },
+    "enforcement": {
+      "title": "O que fazemos a respeito",
+      "p1": "Nos relays que operamos, analisamos as denúncias de conteúdo inaceitável e agimos em até 24 horas. Agir é remover o conteúdo e, quando a denúncia se confirma, expulsar quem o publicou: tirar a pessoa do grupo ou bloquear a chave pública dela no relay, o que também pode apagar tudo o que ela publicou ali.",
+      "p2": "Nos relays que não operamos, não podemos apagar, editar nem moderar nada. Só o operador daquele relay pode. Se a sua denúncia é sobre outro relay, indicamos o operador, cujo contato está no documento de informações do relay (NIP-11). O bloqueio funciona em qualquer lugar, porque acontece no seu dispositivo.",
+      "p3": "Em nenhum relay podemos identificar a pessoa por trás de uma chave pública, ler mensagens diretas nem remover um evento de todos os lugares para onde foi copiado.",
+      "p4": "Podemos remover conteúdo ou bloquear uma chave pública nos relays que operamos, sem aviso, quando ela descumpre estes termos."
+    },
+    "thirdParty": {
+      "title": "Relays e serviços de terceiros",
+      "p1": "Relays, servidores de arquivos, assinadores, carteiras, provedores de Lightning, servidores de voz e sites vinculados que não operamos estão fora do nosso controle. Eles têm os próprios termos e políticas de privacidade, e não somos responsáveis pelo conteúdo, pela disponibilidade nem pela conduta deles.",
+      "p2": "O conteúdo no Obelisk é escrito pelas pessoas que o usam, não por nós, e ninguém o revisa antes de aparecer."
+    },
+    "payments": {
+      "title": "Pagamentos (zaps)",
+      "p1": "Zaps são pagamentos em Bitcoin pela Lightning enviados da sua própria carteira para outra pessoa. O Obelisk nunca guarda seus fundos e não é parte do pagamento.",
+      "p2": "Pagamentos pela Lightning são definitivos. Não podemos reverter, reembolsar nem rastrear um zap. Confira o valor e o destinatário antes de enviar. Taxas e pagamentos que falham são entre você e o provedor da sua carteira.",
+      "p3": "Uma conexão de carteira (Nostr Wallet Connect) permite que o app gaste da sua carteira dentro dos limites que a sua carteira definir. Trate-a como uma senha, e desconecte-a se perder o dispositivo."
+    },
+    "software": {
+      "title": "O software e sua licença",
+      "p1": "O Obelisk é software livre sob a Licença Pública Geral Affero GNU, versão 3 (AGPL-3.0). A licença, e não estes termos, rege o seu direito de usar, copiar, modificar e compartilhar o código.",
+      "p2": "O software e os relays que operamos são oferecidos como estão, sem garantia de nenhum tipo, expressa ou implícita. Eles podem mudar, falhar ou parar a qualquer momento, e mensagens podem se perder. A licença traz o texto completo da isenção de garantia e da limitação de responsabilidade."
+    },
+    "age": {
+      "title": "Quem pode usar o Obelisk",
+      "p1": "O Obelisk não é direcionado a crianças com menos de 13 anos. Você precisa ter idade suficiente para aceitar estes termos no lugar onde mora."
+    },
+    "changes": {
+      "title": "Mudanças nestes termos",
+      "p1": "Podemos atualizar estes termos. Quando isso acontece, mudamos esta página e a data no topo. Se você continuar usando o Obelisk depois de uma mudança, aceita os novos termos."
+    },
+    "contact": {
+      "title": "Contato",
+      "p1": "Dúvidas sobre estes termos, pedidos de suporte e denúncias de abuso vão para {email}."
+    }
+  },
+  "support": {
+    "title": "Suporte",
+    "updated": "Última atualização: 12 de outubro de 2026",
+    "intro": "Como falar com as pessoas por trás do Obelisk, para o app web e o app para iOS, e respostas curtas para as perguntas mais comuns.",
+    "contact": {
+      "title": "Fale conosco",
+      "p1": "Escreva para {email} se precisar de ajuda com qualquer um dos apps, tiver uma dúvida de privacidade ou quiser denunciar um abuso. Diga qual app você usa e, se for sobre um relay, o endereço dele.",
+      "p2": "Encontrou um erro? Abra uma issue no GitHub. As issues são públicas, então não inclua nada privado.",
+      "p3": "Para um problema de segurança, escreva para {security} em vez de abrir uma issue."
+    },
+    "abuse": {
+      "title": "Denunciar um abuso",
+      "p1": "No app para iOS, toque em Mais em uma mensagem, ou abra um perfil, para denunciar ou bloquear. No app web, bloqueie uma pessoa pelo perfil dela.",
+      "p2": "Para denunciar por e-mail, envie para {email} o endereço do relay, o ID do evento ou a chave pública da pessoa (npub), e o que está errado. Os termos de uso dizem o que fazemos com uma denúncia, em quanto tempo, e o que não podemos fazer nos relays que não operamos."
+    },
+    "signIn": {
+      "title": "Como eu entro?",
+      "p1": "Não existe conta para criar. Sua chave do Nostr é a sua identidade em todo lugar.",
+      "p2": "No app para iOS, entre com um assinador: o app Nostr WoT no mesmo iPhone, ou qualquer bunker do Nostr Connect (NIP-46), nesse telefone ou em outro dispositivo. O app nunca vê a sua chave privada.",
+      "p3": "No app web, entre com uma extensão do navegador (NIP-07), com um assinador por NIP-46, ou colando a sua chave privada."
+    },
+    "lostKey": {
+      "title": "Perdi minha chave",
+      "p1": "Ninguém consegue recuperá-la, nem nós. O Obelisk nunca tem a sua chave privada, e o Nostr não tem redefinição de senha.",
+      "p2": "Se você guardou uma cópia da chave, ou do seu assinador, restaure ali e entre de novo. Se não, crie uma chave nova e avise seus contatos. A identidade antiga não pode ser recuperada."
+    },
+    "deleteData": {
+      "title": "Como apago meus dados?",
+      "p1": "Do seu dispositivo: Configurações > Dados neste dispositivo no app web, ou Você > Dados neste dispositivo no app para iOS. Nos dois dá para apagar tudo de uma vez.",
+      "p2": "O que você publicou continua nos relays. No app web você pode apagar uma mensagem pelo menu dela, o que envia ao relay um pedido de exclusão (NIP-09). Para os relays que operamos você também pode escrever para {email}. Cópias em outros relays estão fora do nosso controle."
+    },
+    "block": {
+      "title": "Como bloqueio ou denuncio alguém?",
+      "p1": "No app para iOS, toque em Mais em uma das mensagens da pessoa, ou abra o perfil dela, e escolha Bloquear ou Denunciar. No app web, abra o perfil dela e escolha Bloquear.",
+      "p2": "Um bloqueio oculta essa pessoa no seu dispositivo na hora. Você desfaz em Você > Pessoas bloqueadas no app para iOS, ou em Silenciados e bloqueados, nas Configurações do app web."
+    },
+    "more": {
+      "title": "Mais ajuda"
+    }
+  }
+}

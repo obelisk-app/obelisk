@@ -15,7 +15,7 @@ beforeAll(async () => {
 
 describe('sitemap: every indexed page in every language', () => {
   it('lists each indexed page three times: English unprefixed, /es and /pt', () => {
-    for (const path of ['', '/mobile', '/desktop', '/features', '/help', '/help/local-data', '/media-kit', '/guides']) {
+    for (const path of ['', '/mobile', '/desktop', '/features', '/help', '/help/local-data', '/support', '/privacy', '/terms', '/media-kit', '/guides']) {
       for (const url of [`${SITE}${path}`, `${SITE}/es${path}`, `${SITE}/pt${path}`]) {
         expect(entries.some((e) => e.url === url), url).toBe(true);
       }
