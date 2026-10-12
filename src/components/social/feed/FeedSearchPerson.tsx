@@ -28,7 +28,7 @@ export default function FeedSearchPerson({ hit, onOpen }: { hit: UserHit; onOpen
       />
       <span className="min-w-0 flex-1">
         <Text size="sm" weight="semibold" tone="default" truncate="truncate" className="block">{row.name}</Text>
-        <Text tone={row.verified ? 'accent' : 'muted'} size="11" className="block truncate" data-nip05-state={row.nip05State}>{row.sub}</Text>
+        {row.sub && <Text tone={row.verified ? 'accent' : 'muted'} size="11" className="block truncate" data-nip05-state={row.nip05State}>{row.sub}</Text>}
       </span>
     </Button>
   );

@@ -1,38 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { avatarInitials, displayNameFor, petnameFor, randomProfileName } from '@/utils/identity/display-name';
+import { avatarInitials, displayNameFor, randomProfileName } from '@/utils/identity/display-name';
+import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { ADJECTIVES, NOUNS } from '@/constants/identity/display-name';
 
 const PK = 'a'.repeat(64);
-const OTHER = 'b'.repeat(64);
+const LABEL = shortNpubLabel(PK);
 
-describe('petnameFor', () => {
-  it('is stable for a pubkey', () => {
-    // The whole point: a name that changed per render is worse than hex.
-    expect(petnameFor(PK)).toBe(petnameFor(PK));
-  });
-
-  it('does not depend on the case the caller happened to have', () => {
-    expect(petnameFor(PK.toUpperCase())).toBe(petnameFor(PK));
-  });
-
-  it('gives different keys different names', () => {
-    expect(petnameFor(PK)).not.toBe(petnameFor(OTHER));
-  });
-
-  it('reads as a name, not an identifier', () => {
-    const [adjective, noun] = petnameFor(PK).split(' ');
-    expect(ADJECTIVES).toContain(adjective);
-    expect(NOUNS).toContain(noun);
-  });
-
-  it('spreads across the vocabulary rather than clustering', () => {
-    // A hash that marched both words together would yield a handful of
-    // pairs for thousands of keys.
-    const names = new Set<string>();
-    for (let i = 0; i < 2000; i += 1) names.add(petnameFor(i.toString(16).padStart(64, '0')));
-    expect(names.size).toBeGreaterThan(500);
-  });
-});
 
 describe('displayNameFor', () => {
   it('prefers what someone calls themselves', () => {
@@ -44,27 +17,24 @@ describe('displayNameFor', () => {
   });
 
   it('treats a blank field as absent: relays carry plenty of them', () => {
-    expect(displayNameFor(PK, { displayName: '   ', name: '' })).toBe(petnameFor(PK));
+    expect(displayNameFor(PK, { displayName: '   ', name: '' })).toBe(LABEL);
   });
 
-  it('uses the nip05 local part before inventing a name', () => {
-    expect(displayNameFor(PK, { nip05: 'alice@example.com' })).toBe('alice');
+  it('uses the public key when only a NIP-05 address is known', () => {
+    expect(displayNameFor(PK, { nip05: 'alice@example.com' })).toBe(LABEL);
   });
 
   it('ignores a bare _@domain, which names the domain and not the person', () => {
-    expect(displayNameFor(PK, { nip05: '_@example.com' })).toBe(petnameFor(PK));
+    expect(displayNameFor(PK, { nip05: '_@example.com' })).toBe(LABEL);
   });
 
-  it('gives a petname when nothing is known', () => {
-    // Never `6ad13026e1`, and never a fake bech32.
-    const name = displayNameFor(PK, null);
-    expect(name).toBe(petnameFor(PK));
-    expect(name).not.toMatch(/^[0-9a-f]{8}/);
-    expect(name).not.toMatch(/^npub/);
+  it('shows the shortened public key when no profile is known', () => {
+    expect(displayNameFor(PK, null)).toBe(LABEL);
+    expect(displayNameFor(PK, null)).toMatch(/^npub1/);
   });
 
   it('handles undefined metadata', () => {
-    expect(displayNameFor(PK)).toBe(petnameFor(PK));
+    expect(displayNameFor(PK)).toBe(LABEL);
   });
 });
 
@@ -77,11 +47,9 @@ describe('avatarInitials', () => {
     expect(avatarInitials('satoshi', PK)).toBe('SA');
   });
 
-  it('never derives letters from hex', () => {
-    // The member list used to render `6A` from a pubkey slice.
-    const initials = avatarInitials(null, PK);
-    const [adjective, noun] = petnameFor(PK).split(' ');
-    expect(initials).toBe((adjective[0] + noun[0]).toUpperCase());
+  it('uses key characters when there is no name, including a fallback label', () => {
+    expect(avatarInitials(null, PK)).toBe('AA');
+    expect(avatarInitials(LABEL, PK)).toBe('AA');
   });
 
   it('falls back rather than rendering an empty circle', () => {
@@ -90,7 +58,7 @@ describe('avatarInitials', () => {
 });
 
 describe('randomProfileName', () => {
-  it('draws an adjective and a noun from the petname vocabulary', () => {
+  it('draws an adjective and a noun from the suggested-name vocabulary', () => {
     expect(randomProfileName(() => 0)).toBe('Brave Badger');
     const [adjective, noun] = randomProfileName(() => 0.999).split(' ');
     expect(ADJECTIVES).toContain(adjective);

@@ -93,7 +93,13 @@ describe('encrypted DM store: nothing in the clear on disk', () => {
     await vi.waitFor(() => expect(bridge.dmLock.get().failedDecryptions).toBe(1));
     await vi.waitFor(() => expect(bridge.dmLock.get().pendingDecryptions ?? 0).toBe(0));
     expect(read()[alice.pkHex]).toHaveLength(2);
-    await bridge.unlockDirectMessages();
+    const decryptions = ext.nip04.decrypt.mock.calls.length + ext.nip44.decrypt.mock.calls.length;
+    await bridge.unlockDirectMessages(alice.pkHex);
+    await bridge.unlockDirectMessages('b'.repeat(64));
+    expect(ext.nip04.decrypt.mock.calls.length + ext.nip44.decrypt.mock.calls.length).toBe(decryptions);
+    expect(bridge.dmLock.get().pendingDecryptions ?? 0).toBe(0);
+    expect(bridge.dmLock.get().failedDecryptions).toBe(1);
+    await bridge.unlockDirectMessages(undefined, { retryFailed: true });
     expect(await threadTexts(read, alice.pkHex, 3)).toEqual(expect.arrayContaining([FIRST, SECOND, OLD_STYLE]));
     expect(bridge.dmLock.get().failedDecryptions ?? 0).toBe(0);
   });

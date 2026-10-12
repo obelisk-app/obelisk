@@ -17,7 +17,7 @@ export function ComposeUserRow({ hit, onClick }: { hit: UserHit; onClick: () => 
       </div>
       <div className="dm-meta">
         <div className="dm-row-top"><span className="dm-name">{row.name}</span></div>
-        <div className="dm-preview" data-nip05-state={row.nip05State}>{row.sub}</div>
+        {row.sub && <div className="dm-preview" data-nip05-state={row.nip05State}>{row.sub}</div>}
       </div>
     </Button>
   );

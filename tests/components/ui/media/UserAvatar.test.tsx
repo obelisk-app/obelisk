@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import UserAvatar from '@/components/ui/media/UserAvatar';
-import { avatarInitials, petnameFor } from '@/utils/identity/display-name';
+import { avatarInitials } from '@/utils/identity/display-name';
 
 const HEX = '6a'.repeat(32);
 
@@ -32,11 +32,10 @@ describe('UserAvatar', () => {
     expect(screen.getByText('B')).toHaveClass('bg-lc-olive', 'text-lc-green', 'text-xs');
   });
 
-  it('a nameless fallback never reads a letter off the hex key', () => {
+  it('a nameless fallback uses the key', () => {
     const { container } = render(<UserAvatar pubkey={HEX} picture={null} size={8} />);
     const text = container.textContent ?? '';
-    expect(text).not.toBe('6');
-    expect(text).toBe(petnameFor(HEX)[0].toUpperCase());
+    expect(text).toBe('6');
   });
 
   it('two initials come from the same recipe', () => {

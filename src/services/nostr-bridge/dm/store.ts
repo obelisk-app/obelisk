@@ -37,6 +37,7 @@
  * memory only, as the session vault does.
  */
 import type { Event as NostrEvent } from 'nostr-tools';
+import { errorCodeOf } from '@/utils/errors/codes';
 import type { NipSigner } from '@/types/nostr/nip-signer';
 import { importRecordKey, newRecordKeyBytes, openRecord, sealRecord } from '@/lib/crypto/record-cipher';
 import { StateStore } from '../common/state-store';
@@ -149,11 +150,16 @@ export class DmStoreModule {
   }
 
   /** Open the store: one signer call, then everything stored, then what was held. Idempotent. */
-  unlock(peer?: string): Promise<void> {
+  unlock(peer?: string, options?: { retryFailed?: boolean }): Promise<void> {
     const pubkey = this.pubkey;
     if (!pubkey || !this.deps.dmsEnabled()) return Promise.resolve();
     if (peer) this.openedPeers.add(peer);
     else this.discoveryEnabled = true;
+    if (options?.retryFailed) {
+      for (const item of this.held.values()) {
+        if (this.mayOpen(item.ev, item.kind)) item.failed = false;
+      }
+    }
     if (this.isUnlocked()) {
       for (const params of this.openedRecords.values()) {
         if (!peer || params.counterparty === peer) this.deps.replay(params);
@@ -257,7 +263,7 @@ export class DmStoreModule {
     if (epoch !== this.epoch) return;
     if (!this.deps.dmsEnabled()) return this.fail(epoch);
     const signer = this.deps.nipSigner();
-    if (!signer || signer.pubkey !== pubkey) return this.fail(epoch);
+    if (!signer || signer.pubkey !== pubkey) return this.fail(epoch, 'session');
     const db = this.db();
     if (!db) return this.finish(epoch, true);
     let wrapped: unknown;
@@ -270,8 +276,8 @@ export class DmStoreModule {
     let raw: Uint8Array | null = null;
     try {
       if (isWrappedDmKey(wrapped, pubkey)) raw = await unwrapDmKey(signer, wrapped);
-    } catch {
-      return this.fail(epoch);
+    } catch (error) {
+      return this.fail(epoch, 'unwrap-key', error);
     }
     if (epoch !== this.epoch) return void raw?.fill(0);
     if (!this.deps.dmsEnabled()) { raw?.fill(0); return this.fail(epoch); }
@@ -283,9 +289,9 @@ export class DmStoreModule {
       let made: WrappedDmKey;
       try {
         made = await wrapDmKey(signer, raw);
-      } catch {
+      } catch (error) {
         raw.fill(0);
-        return this.fail(epoch);
+        return this.fail(epoch, 'wrap-key', error);
       }
       try {
         await db.clearRecords(pubkey);
@@ -338,8 +344,11 @@ export class DmStoreModule {
     }
   }
 
-  private fail(epoch: number): void {
-    if (epoch === this.epoch) this.lock.set({ ...this.lock.get(), status: 'failed' });
+  private fail(epoch: number, stage = 'consent', error?: unknown): void {
+    if (epoch !== this.epoch) return;
+    // Only classifications, never signer error text, ciphertext or key material.
+    console.error('[dm] unlock failed', { stage, code: errorCodeOf(error) ?? (error instanceof DOMException && error.name === 'AbortError' ? 'session-changed' : 'unknown') });
+    this.lock.set({ ...this.lock.get(), status: 'failed' });
   }
 
   private mayOpen(ev: NostrEvent, kind: HeldKind): boolean {
@@ -357,7 +366,7 @@ export class DmStoreModule {
       this.key = null;
       this.known.clear();
     }
-    const held = [...this.held.values()].filter(({ ev, kind }) => this.mayOpen(ev, kind));
+    const held = [...this.held.values()].filter(({ ev, kind, failed }) => !failed && this.mayOpen(ev, kind));
     for (const { ev } of held) this.held.delete(ev.id);
     this.pendingDecryptions += held.length;
     this.lock.set({ status: 'unlocked', unopened: [], ...(this.pendingDecryptions ? { pendingDecryptions: this.pendingDecryptions } : {}) });

@@ -189,7 +189,7 @@ rooms. A DM peer is usually someone from the wider network with no reason to
 have published there, and `public.obelisk.ar` is whitelist-gated so it
 answers for nobody else at all. The lookup always fired; it just asked relays
 that could not know. Every DM row, thread header and compose row therefore
-rendered a petname and a letter avatar, while the *same person* resolved
+rendered a fallback label and a letter avatar, while the *same person* resolved
 fine in the feed, which had hit this first and grown `useAuthor` to merge
 the group tier with the social one.
 
@@ -207,7 +207,7 @@ interested in that pubkey. It is an unauthenticated REQ, batched with
 unrelated lookups, and it is the same exposure the feed has always had, but
 it is new for DMs. See [dm-metadata-privacy.md](dm-metadata-privacy.md); if
 that trade ever stops being acceptable, the lever is to resolve DM peers from
-cache only and accept the petname fallback.
+cache only and show the shortened public key as fallback.
 
 ## The thread header
 
@@ -302,6 +302,6 @@ Unlocking the storage key and opening the queued messages are separate phases. T
 
 ### Recovering messages that did not open
 
-A failed NIP-04 decrypt or NIP-17 unwrap stays in the bounded in-memory pending queue and exposes a retry message instead of silently disappearing. Relay duplicates do not retry failed decryptions; the person retries explicitly after their signer is available. Logout clears the queue, and stale decrypt failures cannot enter another account. Successfully opened messages retain the existing encrypted local cache.
+A failed NIP-04 decrypt or NIP-17 unwrap stays in the bounded in-memory pending queue and exposes a retry message instead of silently disappearing. Relay duplicates, chat switches and discovery do not retry failed decryptions or reset their progress; the person retries explicitly after their signer is available. Logout clears the queue, and stale decrypt failures cannot enter another account. Successfully opened messages retain the existing encrypted local cache.
 
 The explicit discovery button is also available inside a known conversation when unidentified gift wraps remain. Opening a peer alone cannot identify which unknown NIP-17 envelopes belong to it without decrypting them. Discovery authorizes that operation across the inbox. The relay inbox still initially requests at most 200 events per filter per relay; this recovery does not add older-history pagination.

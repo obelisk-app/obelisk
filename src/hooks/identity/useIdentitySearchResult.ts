@@ -21,11 +21,12 @@ export function useIdentitySearchResult(hit: UserHit) {
   // it turns green only when a lookup elsewhere, such as the NIP-05 search
   // above or an opened popover, already confirmed the pair.
   const nip05State = useNip05Status(hit.pubkey, nip05, 'peek');
+  const sub = nip05 || shortNpubLabel(hit.pubkey);
   return {
     name,
     nip05,
     picture,
-    sub: nip05 ?? shortNpubLabel(hit.pubkey),
+    sub: sub === name ? null : sub,
     verified: nip05State === 'verified',
     /** Only a row with a handle reports its check state. */
     nip05State: nip05 ? nip05State : undefined,

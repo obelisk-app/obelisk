@@ -35,6 +35,7 @@ describe('DmUnlock', () => {
     expect(unlockDirectMessages).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId('dm-unlock-retry'));
     expect(unlockDirectMessages).toHaveBeenCalledTimes(1);
+    expect(unlockDirectMessages).toHaveBeenCalledWith(undefined, { retryFailed: true });
   });
 
   it('offers discovery from a known thread when unidentified envelopes remain', () => {
@@ -62,6 +63,7 @@ describe('DmUnlock', () => {
     expect(unlockDirectMessages).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId('dm-unlock-retry'));
     expect(unlockDirectMessages).toHaveBeenCalledTimes(1);
+    expect(unlockDirectMessages).toHaveBeenCalledWith(undefined, { retryFailed: true });
   });
 
   it('speaks Spanish and Portuguese', () => {

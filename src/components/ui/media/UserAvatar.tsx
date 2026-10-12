@@ -20,12 +20,12 @@ import RemoteImage from './RemoteImage';
 /**
  * How many letters the fallback circle shows. Both come from
  * `avatarInitials`, the one fallback recipe: the name's initials, or the
- * pubkey's petname when there is no name, never letters read off hex.
+ * public key when there is no profile name.
  */
 export type AvatarInitials = 'one' | 'two';
 
 export interface UserAvatarProps {
-  /** Hex pubkey: only used to derive the petname initial when `name` is empty. */
+  /** Hex pubkey: only used to derive the fallback initial when `name` is empty. */
   pubkey: string;
   /** Profile picture URL. `null` / `undefined` → initial circle. */
   picture: string | null | undefined;
@@ -33,7 +33,7 @@ export interface UserAvatarProps {
   size: number;
   /**
    * Display name used to derive the initial. When empty, the initial comes
-   * from the pubkey's petname (`avatarInitials`), not from its hex.
+   * from the public key (`avatarInitials`).
    */
   name?: string;
   /** `one` (default) is the single letter every desktop avatar shows. */

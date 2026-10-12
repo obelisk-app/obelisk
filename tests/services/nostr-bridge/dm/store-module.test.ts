@@ -72,7 +72,13 @@ describe('DmStoreModule', () => {
     expect(store.lock.get().failedDecryptions).toBe(1);
     expect(store.hold(ev, 'wrap')).toBe(true);
     expect(reingest).not.toHaveBeenCalled();
+    await store.unlock('b'.repeat(64));
+    await store.unlock('c'.repeat(64));
     await store.unlock();
+    expect(reingest).not.toHaveBeenCalled();
+    expect(store.lock.get().pendingDecryptions ?? 0).toBe(0);
+    expect(store.lock.get().failedDecryptions).toBe(1);
+    await store.unlock(undefined, { retryFailed: true });
     await vi.waitFor(() => expect(reingest).toHaveBeenCalledTimes(1));
     expect(store.lock.get().failedDecryptions ?? 0).toBe(0);
     store.attach(null);

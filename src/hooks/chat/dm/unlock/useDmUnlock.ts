@@ -18,7 +18,7 @@ export function useDmUnlock(peer?: string): { status: DmLockStatus; pendingDecry
     void bridge.unlockDirectMessages(peer);
   }, [bridge, enabled, peer]);
   const retry = useCallback(() => {
-    if (bridge) void bridge.unlockDirectMessages(peer);
+    if (bridge) void bridge.unlockDirectMessages(peer, { retryFailed: true });
   }, [bridge, peer]);
   const discover = useCallback(() => {
     if (bridge) void bridge.unlockDirectMessages();

@@ -5,7 +5,7 @@
  * devices. Post-quantum when the conversation qualifies. Pure move from
  * `client.ts`; the inbound half is `dm/inbox.ts`.
  */
-import { CodedError } from '@/utils/errors/codes';
+import { CodedError, errorCodeOf } from '@/utils/errors/codes';
 import { getEventHash, type Event as NostrEvent, type UnsignedEvent } from 'nostr-tools';
 import { KIND_DM_FILE_RUMOR } from '@/constants/nostr/nip-kinds';
 import { KIND_GIFT_WRAP, buildChatMessage, sealAndGiftWrap } from '@nostr-wot/dm';
@@ -49,6 +49,11 @@ export class Nip17SendModule {
    * before the recipient's copy is out marks the placeholder failed.
    */
   async publish({ recipientPubkey, content, clientTag, createdAt, file, extraTags }: DmSend): Promise<void> {
+    let stage = 'session';
+    const trace = (next: string) => {
+      stage = next;
+      pushRelayDebug({ kind: 'dm-send-stage', stage, eventKind: KIND_GIFT_WRAP });
+    };
     try {
       const me = this.ctx.session()?.pubKeyHex;
       if (!me) throw new CodedError('not-logged-in', 'Not logged in');
@@ -80,11 +85,13 @@ export class Nip17SendModule {
       // Post-quantum when the conversation qualifies, classic otherwise.
       // `resolvePqSend` never throws and returns null for every negative
       // case, so this cannot block a send.
+      trace('capability');
       const pqPlan = await resolvePqSend({
         myPubkey: me,
         loginMethod: this.ctx.session()?.loginMethod ?? null,
         recipientPubkey,
       });
+      trace('encrypt-and-sign');
       let wrap: NostrEvent;
       let pq = false;
       if (pqPlan) {
@@ -106,6 +113,7 @@ export class Nip17SendModule {
       // Route to the recipient's NIP-17 inbox (kind 10050) and nowhere else
       // when they have one, see `DmRelaysModule.resolveGiftWrapRelays` for
       // the full ladder and why the old union with the active relays was the leak.
+      trace('resolve-inbox');
       const { relays: inboxRelays, source } = await this.deps.resolveGiftWrapRelays(recipientPubkey);
       pushRelayDebug({
         kind: 'dm-wrap-route',
@@ -116,7 +124,9 @@ export class Nip17SendModule {
       // `authMode: 'last-resort'`: never volunteer a NIP-42 AUTH as the real
       // sender on the socket carrying an ephemeral-keyed wrap. See
       // `PublishModule.publishSignedEvent`.
+      trace('publish-recipient');
       await this.deps.publishSignedEvent(wrap, inboxRelays, { authMode: 'last-resort' });
+      trace('recipient-accepted');
       const raw = { rumor: { ...inner, id: rumorId }, wire: wrap };
       this.deps.settle.replacePending(
         recipientPubkey,
@@ -147,7 +157,9 @@ export class Nip17SendModule {
       // durability, not delivery, and it must never gate the send.
       const selfCopyId = await this.publishSelfCopy(me, inner, pq ? pqPlan?.selfKemKey ?? null : null, inboxRelays, own);
       if (!selfCopyId) own(wrap.id);
-    } catch {
+    } catch (error) {
+      // Never log signer error text: it can contain private message or crypto data.
+      console.warn('[dm] send failed', { stage, code: errorCodeOf(error) ?? 'unknown' });
       this.deps.settle.markFailed(recipientPubkey, clientTag);
     }
   }
