@@ -117,3 +117,6 @@ tmp/
 
 # JetBrains IDE settings (per-developer, not shared)
 .idea/
+
+# SWC native binding cache (scripts/deploy.sh, ecosystem.config.js)
+/.swc-native-cache/

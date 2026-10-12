@@ -37,6 +37,10 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: String(PORT),
         HOSTNAME: '127.0.0.1',
+        // `next start` loads next.config, which loads @swc/core through
+        // next-intl; it fails with ERR_SWC_NATIVE_CACHE when ~/.cache is a
+        // symlink, as on this box, and the app crash-loops.
+        SWC_NATIVE_BINDING_CACHE: '/root/obelisk-dex/.swc-native-cache',
       },
     },
   ],

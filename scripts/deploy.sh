@@ -32,6 +32,10 @@ SKIP_BUILD="${SKIP_BUILD:-0}"
 SKIP_TESTS="${SKIP_TESTS:-0}"
 PM2_APP="${PM2_APP:-obelisk-dex}"
 PORT="${PORT:-3001}"
+# next-intl loads @swc/core, which refuses to start when ~/.cache is a
+# symlink (ERR_SWC_NATIVE_CACHE), as it is on the production box. Both the
+# build and `next start` (it loads next.config) need a real directory.
+export SWC_NATIVE_BINDING_CACHE="${SWC_NATIVE_BINDING_CACHE:-$PWD/.swc-native-cache}"
 
 # ── Pre-flight ───────────────────────────────────────────────────
 step "Pre-flight"
@@ -103,7 +107,8 @@ fi
 
 # ── Restart app ──────────────────────────────────────────────────
 step "Restart $PM2_APP"
-pm2 restart "$PM2_APP"
+# --update-env so the process picks up SWC_NATIVE_BINDING_CACHE from above.
+pm2 restart "$PM2_APP" --update-env
 green "Restart issued."
 
 # ── Health check ─────────────────────────────────────────────────
