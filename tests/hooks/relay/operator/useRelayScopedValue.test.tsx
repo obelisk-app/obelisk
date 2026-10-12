@@ -61,6 +61,21 @@ describe('useRelayScopedValue', () => {
     expect(result.current).toEqual({ updatedAt: 5, name: 'cached' });
   });
 
+  it('a new subscribe function each render does not resubscribe (the production #185 loop)', async () => {
+    const sub = cachedSubscriber({ updatedAt: 5, name: 'cached' });
+    // The production bundle returns a fresh function on every read of a
+    // self-recursive module export, so the hook sees a new `subscribe` each render.
+    const { result, rerender } = renderHook(() =>
+      useRelayScopedValue(RELAY, AUTHORS, (...args: Parameters<typeof sub.subscribe>) => sub.subscribe(...args), EMPTY),
+    );
+    await flush();
+    rerender();
+    rerender();
+    await flush();
+    expect(sub.subscribe).toHaveBeenCalledTimes(1);
+    expect(result.current).toEqual({ updatedAt: 5, name: 'cached' });
+  });
+
   it('ignores a delivery after unmount', async () => {
     const { subscribe } = cachedSubscriber({ updatedAt: 5, name: 'cached' });
     const { unmount } = renderHook(() => useRelayScopedValue(RELAY, AUTHORS, subscribe, EMPTY));

@@ -29,8 +29,12 @@ function sameValue<T>(a: T, b: T): boolean {
  * being a nested update of the commit that ran the effect; and a value equal
  * to the one already held does not set state at all.
  *
- * `subscribe` must be a stable module function. Authors are compared by
- * content, so a fresh array with the same pubkeys does not resubscribe.
+ * `subscribe` is read once, on mount, and is not an effect dependency. The
+ * production bundle hands back a new function on every read of a module
+ * export that calls itself by name (the subscribers retry themselves once the
+ * bridge is up), so depending on its identity resubscribed on every render:
+ * that was the loop behind #185. Authors are compared by content, so a fresh
+ * array with the same pubkeys does not resubscribe either.
  */
 export function useRelayScopedValue<T>(
   relayUrl: string | null,
@@ -40,6 +44,7 @@ export function useRelayScopedValue<T>(
 ): T {
   const authorsKey = [...authors].sort().join(',');
   const authorList = useMemo(() => (authorsKey ? authorsKey.split(',') : []), [authorsKey]);
+  const [subscribeOnce] = useState(() => subscribe);
   const [latest, setLatest] = useState<{ relayUrl: string; value: T } | null>(null);
   useEffect(() => {
     if (!relayUrl || authorList.length === 0) return;
@@ -49,7 +54,7 @@ export function useRelayScopedValue<T>(
       if (!active) return;
       setLatest((prev) => (prev && prev.relayUrl === relayUrl && sameValue(prev.value, value) ? prev : { relayUrl, value }));
     };
-    const unsubscribe = subscribe(relayUrl, authorList, (value) => {
+    const unsubscribe = subscribeOnce(relayUrl, authorList, (value) => {
       if (subscribing) queueMicrotask(() => deliver(value));
       else deliver(value);
     });
@@ -58,6 +63,6 @@ export function useRelayScopedValue<T>(
       active = false;
       unsubscribe();
     };
-  }, [relayUrl, authorList, subscribe]);
+  }, [relayUrl, authorList, subscribeOnce]);
   return latest && latest.relayUrl === relayUrl ? latest.value : empty;
 }
