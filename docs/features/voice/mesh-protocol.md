@@ -293,3 +293,8 @@ Voice presence and signaling are not chat messages and do not advance read curso
 A rebuilt peer binds the remote session only from an SDP offer or answer. Track metadata, ICE candidates and renegotiation hints can arrive late from a previous connection and must not decide which session owns the new handshake. Once bound, mismatched-session signals remain rejected; a fresh offer still triggers a deliberate peer replacement. Connection timeout logs include only the peer prefix, connection/ICE/signaling states, SDP types and time budget, without SDP bodies or addresses. The desktop shell preserves `debug=voice` while synchronizing its navigation URL.
 
 A directly observed presence disappearing from the roster overrides stale third-party discovery hints until a fresh direct beacon arrives; an already-live WebRTC connection remains valid across a relay gap. Terminal presence marks the publisher absent immediately even when its relay expiration is still in the future. Peer callbacks from a torn-down connection cannot mutate or redial the replacement connection.
+
+
+## Interactive mobile approval
+
+A signed kind 20078 beacon may advertise `["signer", "interactive"]`. For that publisher, a new mesh connection uses gathered ICE and a fixed 150-second initial timeout, allowing its wallet approval to finish. This is a timing hint, not an admission grant. Membership checks still apply. Ordinary peers retain the local signer's existing timeout, beacon updates do not renew a running connection's deadline, and closing the peer cancels the timer. Older web deployments ignore this tag and can time out before mobile approval completes.

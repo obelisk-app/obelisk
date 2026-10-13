@@ -281,6 +281,17 @@ describe('subscribeRoster', () => {
     unsub();
   });
 
+  it('recognizes only the exact interactive signer marker on that participant', async () => {
+    let roster: { pubkey: string; interactiveSigner?: boolean }[] = [];
+    const unsub = await subscribeRoster('ch1', r => { roster = r; });
+    const now = Math.floor(Date.now() / 1000);
+    for (const [key, marker] of [['mobile', 'interactive'], ['ordinary', 'local'], ['unbounded', '999999999']]) {
+      bridgeFake.inject({ pubkey: key, kind: KIND_VOICE_PRESENCE, content: '', created_at: now, tags: [['e', 'ch1'], ['expiration', String(now + 180)], ['signer', marker]] });
+    }
+    expect(roster.map(p => [p.pubkey, p.interactiveSigner])).toEqual([['mobile', true], ['ordinary', false], ['unbounded', false]]);
+    unsub();
+  });
+
   it('parses marked mesh test peer beacons', async () => {
     let lastRoster: { pubkey: string; isMeshTestPeer?: boolean }[] = [];
     const unsub = await subscribeRoster('ch1', (r) => { lastRoster = r; });

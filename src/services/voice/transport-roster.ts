@@ -111,6 +111,7 @@ export async function subscribeRoster(
         videoTracks,
         isSfu,
         isMeshTestPeer,
+        interactiveSigner: ev.tags.some((t) => t[0] === 'signer' && t[1] === 'interactive'),
       });
       emit();
     },

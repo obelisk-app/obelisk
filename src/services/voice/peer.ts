@@ -22,7 +22,7 @@ import { PeerRemoteTracks } from './peer-remote-tracks';
 import { PeerSessionBinding } from './peer-session-binding';
 import { applyAudioSenderParams, applyVideoSenderParams, type VideoCap } from './peer-sender-params';
 import type { ControlMessage } from '@/types/voice/control-channel';
-import { INITIAL_CONNECT_TIMEOUT_MS } from '@/constants/voice/peer';
+import { INITIAL_CONNECT_TIMEOUT_MS, INTERACTIVE_PEER_CONNECT_TIMEOUT_MS } from '@/constants/voice/peer';
 
 export type { PeerEvents, PeerOptions } from '@/types/voice/peer';
 export { REMOTE_VIDEO_MUTE_GRACE_MS } from '@/constants/voice/peer-remote-tracks';
@@ -45,7 +45,8 @@ export class Peer {
   private readonly iceTransportPolicy: RTCIceTransportPolicy;
   private readonly initiator: boolean;
   private readonly trickle: boolean;
-  private readonly connectTimeoutMs: number;
+  private connectTimeoutMs: number;
+  private readonly openedAt = Date.now();
   private recvOnlyBootstrapped = false;
   private readonly simple: SimplePeerInstance;
   private readonly control: PeerControlChannel;
@@ -116,6 +117,20 @@ export class Peer {
       if (!this.closed) this.handleConnectionState('closed');
     });
 
+    this.armConnectWatchdog(pc);
+    console.log('[voice] simple-peer PC', this.remotePubkey.slice(0, 8), 'initiator=', this.initiator);
+    return simple;
+  }
+
+  /** A late roster can identify a mobile signer after passive discovery opened us. */
+  allowInteractiveApproval(): void {
+    if (this.closed || this.connected || this.connectTimeoutMs >= INTERACTIVE_PEER_CONNECT_TIMEOUT_MS) return;
+    this.connectTimeoutMs = INTERACTIVE_PEER_CONNECT_TIMEOUT_MS;
+    this.armConnectWatchdog(this.pc);
+  }
+
+  private armConnectWatchdog(pc: RTCPeerConnection): void {
+    if (this.connectWatchdog) clearTimeout(this.connectWatchdog);
     this.connectWatchdog = setTimeout(() => {
       this.connectWatchdog = null;
       if (!this.closed && !this.connected) {
@@ -125,9 +140,7 @@ export class Peer {
         });
         this.events.onPeerDead?.('open-timeout');
       }
-    }, this.connectTimeoutMs);
-    console.log('[voice] simple-peer PC', this.remotePubkey.slice(0, 8), 'initiator=', this.initiator);
-    return simple;
+    }, Math.max(0, this.openedAt + this.connectTimeoutMs - Date.now()));
   }
 
   private rawPc(): RTCPeerConnection {

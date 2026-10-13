@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installWebRtcMocks } from '@tests/support/mocks/webrtc';
 import { Peer } from '@/services/voice/peer';
+import { SIGNER_PEER_BUDGET, INTERACTIVE_PEER_BUDGET, INTERACTIVE_PEER_CONNECT_TIMEOUT_MS } from '@/constants/voice/client';
 import { INITIAL_CONNECT_TIMEOUT_MS } from '@/constants/voice/peer';
 
 let webrtc: ReturnType<typeof installWebRtcMocks>;
@@ -62,6 +63,24 @@ describe('Peer lifecycle recovery hooks', () => {
     vi.advanceTimersByTime(45_000 - INITIAL_CONNECT_TIMEOUT_MS);
     expect(onPeerDead).toHaveBeenCalledWith('open-timeout');
     peer.close();
+  });
+
+  it('keeps ordinary deadlines while allowing a bounded mobile approval, cancelled by leave', () => {
+    expect(SIGNER_PEER_BUDGET.nsec).toEqual({ trickle: true });
+    expect(SIGNER_PEER_BUDGET.nip07.connectTimeoutMs).toBe(20_000);
+    expect(SIGNER_PEER_BUDGET.bunker.connectTimeoutMs).toBe(45_000);
+    const dead = vi.fn();
+    const make = () => new Peer({ remotePubkey: 'b'.repeat(64), polite: false, sessionId: 'mobile', ...INTERACTIVE_PEER_BUDGET, send: vi.fn(), events: { onRemoteTrack: vi.fn(), onRemoteTrackEnded: vi.fn(), onConnectionStateChange: vi.fn(), onPeerDead: dead } });
+    const peer = make();
+    vi.advanceTimersByTime(60_000);
+    expect(dead).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(INTERACTIVE_PEER_CONNECT_TIMEOUT_MS - 60_000);
+    expect(dead).toHaveBeenCalledExactlyOnceWith('open-timeout');
+    peer.close(); dead.mockClear();
+    const cancelled = make();
+    vi.advanceTimersByTime(10_000); cancelled.close();
+    vi.advanceTimersByTime(INTERACTIVE_PEER_CONNECT_TIMEOUT_MS);
+    expect(dead).not.toHaveBeenCalled();
   });
 
   it('emits established/lost edges from the underlying connection', () => {

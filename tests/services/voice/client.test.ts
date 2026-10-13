@@ -402,6 +402,27 @@ describe('VoiceClient signaling degradation', () => {
 });
 
 describe('VoiceClient roster → peer lifecycle', () => {
+  it('a mobile beacon extends only the new peer deadline and repeats cannot renew it', async () => {
+    vi.useFakeTimers();
+    const client = new VoiceClient('ch1', { members: [SELF, PEER1] });
+    try {
+      await client.join();
+      transportFake.fireRoster([presence(PEER1)]);
+      await flushMicrotasks(8);
+      await vi.advanceTimersByTimeAsync(1000);
+      const mobile = { ...presence(PEER1), interactiveSigner: true };
+      transportFake.fireRoster([mobile]);
+      await flushMicrotasks(8);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(client.metrics.peers.tornDown).toBe(0);
+      transportFake.fireRoster([mobile]);
+      await vi.advanceTimersByTimeAsync(88_999);
+      expect(client.metrics.peers.tornDown).toBe(0);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(client.metrics.peers.tornDown).toBeGreaterThan(0);
+    } finally { await client.leave(); vi.useRealTimers(); }
+  });
+
   it('creates a peer for each member in the roster (excluding self)', async () => {
     const client = new VoiceClient('ch1', { members: [SELF, PEER1, PEER2] });
     await client.join();
