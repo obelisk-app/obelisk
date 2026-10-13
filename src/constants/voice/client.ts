@@ -3,6 +3,10 @@
  * signal bounds, SFU bootstrap timing, and the per-signer negotiation
  * budget. Each constant keeps the reasoning it was written with.
  */
+import { INTERACTIVE_PEER_CONNECT_TIMEOUT_MS } from './peer';
+
+export { INTERACTIVE_PEER_CONNECT_TIMEOUT_MS } from './peer';
+
 export const SELF_BUILD_TAG = '2026-05-24T01:00:00Z-voice-video-autoplay-retry';
 
 export const BEACON_INTERVAL_MS = 10_000;
@@ -53,6 +57,9 @@ export const SIGNER_PEER_BUDGET: Readonly<Record<VoiceSigner, { trickle: boolean
   nip07: { trickle: false, connectTimeoutMs: 20_000 },
   bunker: { trickle: false, connectTimeoutMs: 45_000 },
 };
+/** A remote wallet may need human approval even when our own signer is instant. */
+export const INTERACTIVE_PEER_BUDGET = { trickle: false, connectTimeoutMs: INTERACTIVE_PEER_CONNECT_TIMEOUT_MS } as const;
+
 /**
  * Independent room-wide media caps: four cameras and one screen share.
  * Beyond this, mesh uplink becomes

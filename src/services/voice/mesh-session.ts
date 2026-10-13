@@ -192,6 +192,7 @@ export class MeshSession implements MeshSignalHost, MeshDialHost {
 
   private onRosterSnapshot(roster: VoicePresence[]): void {
     const { newMeshTestPeers } = this.known.ingest(roster);
+    for (const presence of roster) if (presence.interactiveSigner) this.room.peers.get(presence.pubkey)?.allowInteractiveApproval();
     for (const pk of newMeshTestPeers) {
       // A passive active-call hint can open the peer before the roster
       // beacon reveals it as a mesh test peer. Rebuild so the browser

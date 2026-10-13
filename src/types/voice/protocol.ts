@@ -101,6 +101,8 @@ export interface VoicePresence {
    * docs/features/sfu-system.md §3.4.
    */
   isSfu: boolean;
+  /** Signed presence advertises a human approval during the initial handshake. */
+  interactiveSigner?: boolean;
   /**
    * Diagnostic mesh peers are synthetic ffmpeg-driven clients spawned by an
    * operator from the SFU admin UI. They are not SFUs and still negotiate

@@ -16,7 +16,7 @@ import type { VoiceTransport } from './transport';
 import type { VoiceMetrics } from './metrics';
 import type { VoicePresence, VoiceSignalPayload } from '@/types/voice/protocol';
 import { pushVoiceDebug } from './debug';
-import { SELF_BUILD_TAG, SIGNER_PEER_BUDGET, type VoiceSigner } from '@/constants/voice/client';
+import { SELF_BUILD_TAG, SIGNER_PEER_BUDGET, INTERACTIVE_PEER_BUDGET, type VoiceSigner } from '@/constants/voice/client';
 import { withRateLimitBackoff } from './failure-handlers';
 
 /** What a mesh peer's event wiring needs from the session that owns it. */
@@ -100,7 +100,7 @@ export function openMeshPeer(host: MeshPeerHost, remotePubkey: string): void {
       // Per connection, not per client: a rebuilt Peer must not accept
       // answers and candidates the remote sent to the one it replaced.
       sessionId: randomId(),
-      ...SIGNER_PEER_BUDGET[host.signer],
+      ...(host.roster().some((presence) => presence.pubkey === remotePubkey && presence.interactiveSigner === true) ? INTERACTIVE_PEER_BUDGET : SIGNER_PEER_BUDGET[host.signer]),
       bootstrapRecvOnlyMedia: shouldKickRecvOnly,
       send: (payload) => withRateLimitBackoff(
         () => {
