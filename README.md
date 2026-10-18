@@ -1,27 +1,35 @@
 
-<p align="center">
-  <img src="public/obelisk-md.gif" alt="Obelisk" width="50%" style="max-height: 320px; object-fit: cover;" />
+<div align="center">
+
+<a href="https://obelisk.ar"><img src="docs/readme/hero.svg" alt="Obelisk: the Discord alternative with Nostr login. Signed messages arrive from a relay into a group chat." width="100%"></a>
+
+<p>
+  <a href="https://obelisk.ar"><img alt="obelisk.ar status" src="https://img.shields.io/website?url=https%3A%2F%2Fobelisk.ar&style=for-the-badge&label=obelisk.ar&up_message=online&up_color=b4f953&down_message=down&down_color=ef4444&labelColor=0a0a0a"></a>
+  <a href="https://github.com/obelisk-app/obelisk/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/obelisk-app/obelisk?style=for-the-badge&logo=github&label=stars&color=b4f953&labelColor=0a0a0a"></a>
+  <a href="https://github.com/obelisk-app/obelisk/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/obelisk-app/obelisk?style=for-the-badge&color=8fd3ff&labelColor=0a0a0a"></a>
+  <a href="https://github.com/obelisk-app/obelisk/graphs/commit-activity"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/obelisk-app/obelisk?style=for-the-badge&color=8fd3ff&labelColor=0a0a0a"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/obelisk-app/obelisk?style=for-the-badge&color=b4f953&labelColor=0a0a0a"></a>
+</p>
+<p>
+  <img alt="Next.js 16" src="https://img.shields.io/badge/next.js-16-ffffff?style=flat-square&logo=nextdotjs&logoColor=white&labelColor=0a0a0a">
+  <img alt="React 19" src="https://img.shields.io/badge/react-19-61dafb?style=flat-square&logo=react&logoColor=white&labelColor=0a0a0a">
+  <img alt="Tailwind v4" src="https://img.shields.io/badge/tailwind-v4-38bdf8?style=flat-square&logo=tailwindcss&logoColor=white&labelColor=0a0a0a">
+  <img alt="Nostr" src="https://img.shields.io/badge/nostr-15%20NIPs-7c5cff?style=flat-square&labelColor=0a0a0a">
+  <img alt="English, Spanish, Portuguese" src="https://img.shields.io/badge/i18n-en%20%C2%B7%20es%20%C2%B7%20pt-b4f953?style=flat-square&labelColor=0a0a0a">
+  <img alt="No backend" src="https://img.shields.io/badge/backend-none-b4f953?style=flat-square&labelColor=0a0a0a">
 </p>
 
-<h1 align="center">Obelisk</h1>
+<h3>
+  <a href="https://obelisk.ar">💬 Live app</a>
+  &nbsp;·&nbsp;
+  <a href="ROADMAP.md">🗺️ Roadmap</a>
+  &nbsp;·&nbsp;
+  <a href="docs/">📚 Docs</a>
+  &nbsp;·&nbsp;
+  <a href="#the-obelisk-family">🗿 Sibling repos</a>
+</h3>
 
-<p align="center">
-  <b>The Discord alternative with Nostr login.</b><br/>
-  Group chat, voice, and DMs. No email, no password, no backend. Just your keys.
-</p>
-
-<p align="center">
-  <a href="https://obelisk.ar">Live app</a> ·
-  <a href="ROADMAP.md">Roadmap</a> ·
-  <a href="docs/">Docs</a> ·
-  <a href="#the-obelisk-family">Sibling repos</a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/obelisk-app/obelisk/stargazers"><img src="https://img.shields.io/github/stars/obelisk-app/obelisk?style=flat&logo=github&color=b4f953&labelColor=0a0a0a" alt="GitHub stars" /></a>
-  <a href="https://obelisk.ar"><img src="https://img.shields.io/badge/chat-obelisk.ar-b4f953?style=flat&labelColor=0a0a0a" alt="Join the Obelisk server" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/obelisk-app/obelisk?style=flat&color=b4f953&labelColor=0a0a0a" alt="License" /></a>
-</p>
+</div>
 
 ---
 
@@ -42,7 +50,15 @@ https://github.com/user-attachments/assets/4b6e31a9-a30d-43b3-b18a-dd21c1cf9c15
 
 Full guided tours: [obelisk.ar/desktop](https://obelisk.ar/desktop) · [obelisk.ar/mobile](https://obelisk.ar/mobile).
 
+<p align="center">
+  <a href="https://obelisk.ar"><img src="docs/readme/tour.webp" alt="A tour of Obelisk on desktop: group chat with the member list, forum channels, voice messages, emoji and sticker packs, and a voice channel" width="100%"></a>
+</p>
+
 ### Desktop
+
+<details>
+<summary><b>Full-size desktop screenshots</b></summary>
+<br>
 
 <p align="center">
   <img src="public/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png" alt="Obelisk desktop: public General Chat with server rail, channel list, message stream and live NIP-29 member list" width="90%" />
@@ -60,7 +76,20 @@ Full guided tours: [obelisk.ar/desktop](https://obelisk.ar/desktop) · [obelisk.
   <img src="public/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png" alt="Obelisk desktop: voice channel in SFU mode with a test peer streaming an SMPTE color-bar pattern" width="90%" />
 </p>
 
-<p align="center"><sub>Voice scales from a P2P mesh to a mediasoup SFU when the relay advertises one. Same UI, same kind-25050 signaling on Nostr, just more peers and screen-share.</sub></p>
+<p align="center"><sub>Voice scales from a P2P mesh to a mediasoup SFU when the relay advertises one. Same UI: the mesh signals over Nostr with kind 25050 events; with an SFU the client signs a kind 22242 challenge on its RPC socket, then takes more peers and screen-share.</sub></p>
+
+<table>
+<tr>
+<td width="50%"><img src="public/pictures-for-posts/voice-messages.png" alt="Voice messages and stickers in a channel, with a profile card open"></td>
+<td width="50%"><img src="public/pictures-for-posts/stickers-marketplace.png" alt="The media library: emoji, GIF and sticker packs to save or create"></td>
+</tr>
+<tr>
+<td align="center"><sub>Voice messages and stickers in the chat.</sub></td>
+<td align="center"><sub>The media library: save or make emoji and sticker packs.</sub></td>
+</tr>
+</table>
+
+</details>
 
 ### Mobile
 
@@ -94,7 +123,7 @@ For HTTPS dev (needed for NIP-07 / mobile testing): `npm run dev:raise` (require
 ## Architecture
 
 <p align="center">
-  <img src="public/og/guides/relay-groups.png" alt="NIP-29 relay-based group: the relay holds the membership list (kind 39002), admin list (kind 39001), and message events (kind 9), and the client subscribes by group id. No central Obelisk server needed." width="85%" />
+  <img src="docs/readme/groups.svg" alt="NIP-29 relay-based group: your browser signs a kind 9 message; the relay holds the group's metadata (kind 39000), admin list (kind 39001), member list (kind 39002) and messages; every member subscribed by group id receives it. No central Obelisk server needed." width="100%" />
 </p>
 
 <p align="center"><sub>The relay hosts the group. Members, admins, and messages are signed Nostr events; the client just subscribes.</sub></p>
@@ -121,8 +150,12 @@ See [architecture](docs/architecture/README.md), [UI conventions](docs/ui/conven
 | [**obelisk-app/obelisk**](https://github.com/obelisk-app/obelisk) | This repo: the chat app (relay-only) |
 | [obelisk-app/obelisk-relay](https://github.com/obelisk-app/obelisk-relay) | NIP-29 groups relay (Rust, fork of `verse-pbc/groups_relay`) |
 | [obelisk-app/obelisk-sfu](https://github.com/obelisk-app/obelisk-sfu) | mediasoup SFU for voice channels (Node, Nostr-RPC signaling) |
-| [obelisk-app/obelisk-bots](https://github.com/obelisk-app/obelisk-bots) | Nostr bots toolkit (price ticker, admin/welcome bots, agent-friendly CLI) |
-| [obelisk-app/obelisk-classic](https://github.com/obelisk-app/obelisk-classic) | The original Postgres + Socket.io stack ([classic.obelisk.ar](https://classic.obelisk.ar)) |
+| [obelisk-app/obelisk-agents](https://github.com/obelisk-app/obelisk-agents) | Nostr bots for NIP-29 groups (price ticker, admin/welcome bots, agent-friendly CLI) |
+| [obelisk-app/obelisk-sky](https://github.com/obelisk-app/obelisk-sky) | A 3D village that is an Obelisk client ([sky.obelisk.ar](https://sky.obelisk.ar)) |
+| [obelisk-app/obelisk-apps](https://github.com/obelisk-app/obelisk-apps) | Games and apps published as Nostr events, run sandboxed by the client |
+| [obelisk-app/obelisk-menhir](https://github.com/obelisk-app/obelisk-menhir) | Host a private chat server from your own computer, over Tor (MVP) |
+| [obelisk-app/obelisk-design](https://github.com/obelisk-app/obelisk-design) | Design system, security workflows and development style |
+| [obelisk-app/obelisk-classic](https://github.com/obelisk-app/obelisk-classic) | Retired July 28, 2026: the original Postgres + Socket.io stack |
 
 ## Auth
 
@@ -172,6 +205,17 @@ Issues and PRs welcome.
 4. New relay-derived data goes through the bridge (StateStore + ingest method + subscribeXxx + useXxx hook).
 
 See [AGENTS.md](AGENTS.md) for the full guide.
+
+## Star history
+
+<p align="center">
+<a href="https://star-history.com/#obelisk-app/obelisk&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=obelisk-app/obelisk&type=Date&theme=dark">
+    <img alt="Star history of obelisk-app/obelisk" src="https://api.star-history.com/svg?repos=obelisk-app/obelisk&type=Date" width="640">
+  </picture>
+</a>
+</p>
 
 ## Legal
 

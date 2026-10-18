@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400" role="img" aria-labelledby="t d">
+  <title id="t">How a NIP-29 group works in Obelisk</title>
+  <desc id="d">Your browser signs a kind 9 message tagged with the group id and sends it to the relay. The relay holds the group: its metadata (kind 39000), admins (kind 39001) and members (kind 39002). Every member subscribed to the group receives the message. No Obelisk server in between.</desc>
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M 32 0 L 0 0 0 32" fill="none" stroke="#ffffff" stroke-opacity="0.04"/></pattern>
+    <clipPath id="frame"><rect width="1200" height="400" rx="24"/></clipPath>
+    <filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
+  </defs>
+  <g clip-path="url(#frame)" font-family="Inter, 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif">
+    <rect width="1200" height="400" fill="#0a0a0a"/><rect width="1200" height="400" fill="url(#grid)"/>
+
+    <!-- wires -->
+    <g stroke="#2e2e2e" stroke-width="2" fill="none" stroke-dasharray="4 6">
+      <path d="M 250 200 L 450 200"/>
+      <path d="M 750 200 C 830 200 850 110 950 110"/>
+      <path d="M 750 200 C 830 200 850 290 950 290"/>
+    </g>
+
+    <!-- your browser -->
+    <g transform="translate(40 130)">
+      <rect width="210" height="140" rx="16" fill="#141414" stroke="#2a2a2a"/>
+      <text x="20" y="32" font-size="13" font-weight="700" fill="#a3a3a3">YOUR BROWSER</text>
+      <circle cx="36" cy="66" r="16" fill="#7c5cff"/><text x="36" y="71" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">L</text>
+      <text x="62" y="62" font-size="14" font-weight="700" fill="#ffffff">lucia</text>
+      <text x="62" y="80" font-size="12" fill="#737373">your key signs</text>
+      <rect x="20" y="98" width="170" height="26" rx="13" fill="#1f2a12" stroke="#5a8f1f"/>
+      <text x="105" y="115" font-size="12" font-weight="700" fill="#c5ff6e" text-anchor="middle">🔑 signed locally</text>
+    </g>
+
+    <!-- the relay holds the group -->
+    <g transform="translate(450 60)">
+      <rect width="300" height="280" rx="18" fill="#141414" stroke="#b4f953" stroke-opacity="0.6" stroke-width="2"/>
+      <text x="24" y="36" font-size="13" font-weight="700" fill="#a3a3a3">NIP-29 RELAY</text>
+      <text x="276" y="36" font-size="12" fill="#737373" text-anchor="end">group #general-chat</text>
+      <g font-size="13">
+        <rect x="24" y="56" width="252" height="40" rx="10" fill="#1a1a1a" stroke="#2e2e2e"/>
+        <text x="40" y="81" font-weight="700" fill="#c5ff6e">39000</text><text x="96" y="81" fill="#e5e5e5">metadata: name, picture</text>
+        <rect x="24" y="104" width="252" height="40" rx="10" fill="#1a1a1a" stroke="#2e2e2e"/>
+        <text x="40" y="129" font-weight="700" fill="#c5ff6e">39001</text><text x="96" y="129" fill="#e5e5e5">admins and their roles</text>
+        <rect x="24" y="152" width="252" height="40" rx="10" fill="#1a1a1a" stroke="#2e2e2e"/>
+        <text x="40" y="177" font-weight="700" fill="#c5ff6e">39002</text><text x="96" y="177" fill="#e5e5e5">members</text>
+      </g>
+      <!-- the stored messages stack -->
+      <rect x="24" y="208" width="252" height="48" rx="10" fill="#1f2a12" stroke="#5a8f1f"/>
+      <text x="40" y="229" font-size="13" font-weight="700" fill="#c5ff6e">kind 9</text>
+      <text x="96" y="229" font-size="13" fill="#e5e5e5">chat messages</text>
+      <text x="40" y="246" font-size="11" fill="#86c93a">tagged ["h", "general-chat"]</text>
+      <rect x="24" y="208" width="252" height="48" rx="10" fill="none" stroke="#c5ff6e" stroke-width="2" opacity="0">
+        <animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.36;0.4;0.5;1" values="0;0;1;0;0"/>
+      </rect>
+    </g>
+
+    <!-- members subscribed -->
+    <g transform="translate(950 50)">
+      <rect width="210" height="120" rx="16" fill="#141414" stroke="#2a2a2a"/>
+      <circle cx="36" cy="40" r="16" fill="#f59e0b"/><text x="36" y="45" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">M</text>
+      <text x="62" y="45" font-size="14" font-weight="700" fill="#ffffff">mati</text>
+      <rect x="20" y="70" width="170" height="34" rx="10" fill="#1f1f1f"/>
+      <text x="32" y="92" font-size="12" fill="#e5e5e5" opacity="0">gm everyone 👋<animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.62;0.66;0.94;0.98;1" values="0;0;1;1;0;0"/></text>
+    </g>
+    <g transform="translate(950 230)">
+      <rect width="210" height="120" rx="16" fill="#141414" stroke="#2a2a2a"/>
+      <circle cx="36" cy="40" r="16" fill="#14b8a6"/><text x="36" y="45" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">J</text>
+      <text x="62" y="45" font-size="14" font-weight="700" fill="#ffffff">jack</text>
+      <rect x="20" y="70" width="170" height="34" rx="10" fill="#1f1f1f"/>
+      <text x="32" y="92" font-size="12" fill="#e5e5e5" opacity="0">gm everyone 👋<animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.62;0.66;0.94;0.98;1" values="0;0;1;1;0;0"/></text>
+    </g>
+
+    <!-- the event travels -->
+    <g>
+      <animateMotion dur="8s" repeatCount="indefinite" keyTimes="0;0.1;0.36;1" keyPoints="0;0;1;1" calcMode="linear" path="M 250 200 L 450 200"/>
+      <g opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.1;0.12;0.34;0.36;1" values="0;0;1;1;0;0"/>
+        <circle r="12" fill="#b4f953" filter="url(#g)"/><rect x="-34" y="-12" width="68" height="24" rx="12" fill="#c5ff6e"/><text y="5" font-size="12" font-weight="800" fill="#0a0a0a" text-anchor="middle">kind 9</text></g>
+    </g>
+    <g fill="#c5ff6e">
+      <circle r="6" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.44;0.46;0.6;0.62;1" values="0;0;1;1;0;0"/><animateMotion dur="8s" repeatCount="indefinite" keyTimes="0;0.44;0.62;1" keyPoints="0;0;1;1" calcMode="linear" path="M 750 200 C 830 200 850 110 950 110"/></circle>
+      <circle r="6" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.44;0.46;0.6;0.62;1" values="0;0;1;1;0;0"/><animateMotion dur="8s" repeatCount="indefinite" keyTimes="0;0.44;0.62;1" keyPoints="0;0;1;1" calcMode="linear" path="M 750 200 C 830 200 850 290 950 290"/></circle>
+    </g>
+
+    <!-- caption -->
+    <text x="600" y="380" font-size="13" fill="#737373" text-anchor="middle">No Obelisk server in between: the relay hosts the group, members subscribe by group id.</text>
+  </g>
+</svg>
