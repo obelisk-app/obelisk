@@ -455,7 +455,63 @@
       "fallbackHint": "Alternativa: copiala y después, en Amber, abrí New application → Paste from clipboard."
     },
     "keyLoginFailed": "No se pudo iniciar sesión con esa clave.",
-    "finishFailed": "No se pudo terminar de configurar tu cuenta. Probá de nuevo."
+    "finishFailed": "No se pudo terminar de configurar tu cuenta. Probá de nuevo.",
+    "sdk": {
+      "back": "← Volver",
+      "signingIn": "Entrando…",
+      "methods": {
+        "extension": "Extensión del navegador",
+        "extensionHint": "NIP-07: Alby, nos2x, Flamingo",
+        "bunker": "Firmador remoto (bunker)",
+        "bunkerHint": "NIP-46: Amber, Nsec.app, Keychat",
+        "generate": "Crear una cuenta nueva",
+        "generateHint": "Genera un par de claves nuevo en este dispositivo",
+        "import": "Pegar clave privada",
+        "importHint": "nsec o hex de 64 caracteres, riesgoso en un navegador"
+      },
+      "noExtension": {
+        "title": "Instalá la extensión Nostr WoT",
+        "hint": "Extensión del navegador con firmador NIP-07 y filtro de spam por Web of Trust ↗",
+        "error": "No encontramos una extensión NIP-07. Instalá Alby, nos2x u otra extensión firmadora de Nostr y recargá la página."
+      },
+      "import": {
+        "warning": "⚠️ Pegar tu clave privada en una página web es riesgoso. Si podés, usá una extensión del navegador (NIP-07) o un firmador remoto (NIP-46).",
+        "placeholder": "nsec1… o hex de 64 caracteres",
+        "signIn": "Entrar",
+        "invalidKey": "Pegá una clave privada nsec1… o en hex de 64 caracteres.",
+        "invalidNsec": "nsec inválida"
+      },
+      "generated": {
+        "title": "Tu clave nueva",
+        "backupLead": "Guardá una copia",
+        "backupWhen": "antes",
+        "backupTail": "de continuar. Si la perdés, perdés tu identidad y no hay forma de recuperarla.",
+        "nsecLabel": "Clave privada (nsec): guardala en secreto",
+        "copyNsec": "Copiar nsec",
+        "download": "Descargar .txt",
+        "acknowledge": "Ya guardé una copia de mi nsec. Entiendo que si la pierdo, pierdo el acceso a esta cuenta para siempre.",
+        "continue": "Continuar"
+      },
+      "profile": {
+        "title": "Armá tu perfil",
+        "displayName": "Nombre",
+        "aboutPlaceholder": "Programo, cocino, salgo en bici.",
+        "save": "Guardar el perfil y continuar",
+        "publishing": "Publicando…"
+      },
+      "bunker": {
+        "scanQr": "Escanear QR",
+        "authTitle": "Acción requerida",
+        "authBody": "Aprobá el pedido en tu app firmadora y esto sigue solo. Tocá para abrirla ↗",
+        "qrLabel": "Código QR de Nostr Connect",
+        "qrHint": "Escanealo con Amber, Nsec.app, Keychat o cualquier firmador NIP-46.",
+        "slowHint": "¿Sigue esperando? Algunas apps firmadoras escanean una sola vez por defecto: probá abrir el escáner de nuevo.",
+        "restart": "Reiniciar",
+        "generatingQr": "Generando QR…",
+        "pasteLabel": "Pegá una URI bunker:// de tu firmador remoto",
+        "connect": "Conectar"
+      }
+    }
   },
   "channel": {
     "create": {
