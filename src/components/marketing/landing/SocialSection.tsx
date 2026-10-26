@@ -5,7 +5,7 @@ import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
 import { ExternalIcon, InstagramIcon, XLogoIcon, YouTubeIcon } from '@/assets/icons';
-import { SOCIAL_ACCOUNTS, type SocialAccountId } from '@/constants/marketing/landing';
+import { SOCIAL_ACCOUNTS, type SocialAccountId } from '@/constants/marketing/social';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 

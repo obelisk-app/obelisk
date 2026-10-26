@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@tests/support/intl';
 import SocialSection from '@/components/marketing/landing/SocialSection';
-import { SOCIAL_ACCOUNTS } from '@/constants/marketing/landing';
+import { SOCIAL_ACCOUNTS } from '@/constants/marketing/social';
 
 class MockIntersectionObserver {
   observe = vi.fn();

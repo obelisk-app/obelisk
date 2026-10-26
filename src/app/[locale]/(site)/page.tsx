@@ -44,10 +44,10 @@ export default async function Page() {
           <LearnSection />
           <StackSection />
           <CtaSection />
-          <SocialSection />
           <FaqSection />
 
           <PostQuantumSection />
+          <SocialSection />
         </div>
       </main>
     </>
