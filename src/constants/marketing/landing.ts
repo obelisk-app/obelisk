@@ -52,6 +52,29 @@ export const TECH_STACK: { name: string; descKey: MessageKey; color: string; ico
 /** youtu.be/Z86oghQkUbk: the Obelisk walkthrough shown under the hero. */
 export const DEMO_VIDEO_ID = 'Z86oghQkUbk';
 
+/**
+ * The hero's two looping product clips (muted, no captions), recorded from the
+ * live app with the throwaway "Capitán Mate" account by obelisk-media's
+ * recording kit. The poster is the clip's first frame, so the picture paints
+ * first and the video fades in over it without a jump.
+ */
+export const HERO_CLIPS = {
+  desktop: {
+    webm: '/landing/hero-desktop.webm',
+    mp4: '/landing/hero-desktop.mp4',
+    poster: '/landing/hero-desktop.webp',
+    width: 1280,
+    height: 720,
+  },
+  mobile: {
+    webm: '/landing/hero-mobile.webm',
+    mp4: '/landing/hero-mobile.mp4',
+    poster: '/landing/hero-mobile.webp',
+    width: 540,
+    height: 1200,
+  },
+} as const;
+
 /** The guide cards in the Learn section, in order. */
 export const LEARN_GUIDES = [
   { slug: 'what-is-obelisk', tKey: 'whatIsObelisk' },

@@ -1,58 +1,50 @@
-import Container from '@/components/ui/layout/Container';
-import Image from 'next/image';
+import ObeliskIcon from '@/assets/brand/ObeliskIcon';
 import { useTranslations } from 'next-intl';
+import { HERO_CLIPS } from '@/constants/marketing/landing';
+import HeroClip from './HeroClip';
 
 type HeroProductPreviewProps = {
   desktopAlt: string;
   mobileAlt: string;
 };
 
-/** The desktop and phone screenshots under the hero, with the live badges. */
+/**
+ * The hero's right column: the desktop app looping in a browser window and
+ * the phone app looping in a phone frame that overlaps its corner. Below `md`
+ * only the phone shows. Both frames bob slowly, as Obelisk Sky's porthole does.
+ */
 export default function HeroProductPreview({ desktopAlt, mobileAlt }: HeroProductPreviewProps) {
   const t = useTranslations();
   return (
-    <Container width="5xl"
-      data-testid="hero-product-preview"
-      className="relative mt-8 w-full md:mt-10"
-    >
+    <div data-testid="hero-product-preview" className="relative mx-auto w-full max-w-[640px] min-w-0 md:pb-16 lg:pb-20">
       <div
         aria-hidden="true"
-        className="absolute inset-x-10 inset-y-8 -z-10 rounded-[2rem] bg-lc-green/[0.06] blur-[80px] pointer-events-none"
+        className="absolute inset-x-6 inset-y-10 -z-10 rounded-[2rem] bg-lc-green/[0.08] blur-[80px] pointer-events-none"
       />
 
-      <figure className="hidden overflow-hidden rounded-2xl border border-lc-border bg-lc-dark/80 shadow-2xl shadow-black/40 backdrop-blur-sm md:block lg:mr-20">
-        <Image
-          src="/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png"
-          alt={desktopAlt}
-          width={1470}
-          height={799}
-          priority
-          className="block h-auto w-full"
-          sizes="(max-width: 1024px) 95vw, 960px"
-        />
+      <figure className="hidden md:block mr-16 lg:mr-20 overflow-hidden rounded-xl border border-lc-border bg-lc-dark/90 shadow-2xl shadow-black/50 animate-lc-float">
+        <div className="flex items-center gap-1.5 border-b border-lc-border bg-lc-black/60 px-3 py-2" aria-hidden="true">
+          <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
+          <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
+          <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
+          <span className="ml-3 truncate rounded-full bg-white/5 px-3 py-0.5 text-[11px] text-lc-muted">obelisk.ar/app</span>
+        </div>
+        <HeroClip {...HERO_CLIPS.desktop} alt={desktopAlt} priority sizes="(max-width: 1024px) 80vw, 560px" />
       </figure>
 
-      <div className="hidden md:block absolute left-12 top-10 h-3 w-3 rounded-full bg-lc-green shadow-[0_0_18px_rgba(180,249,83,0.85)] animate-dot-pulse" aria-hidden="true" />
-      <div className="hidden md:block absolute right-28 top-14 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-lg animate-glow-pulse" aria-hidden="true">
-        3
-      </div>
-      <div className="hidden md:flex absolute right-40 bottom-8 items-center gap-2 rounded-full border border-lc-green/30 bg-lc-black/80 px-3 py-1.5 text-xs font-semibold text-lc-green shadow-xl shadow-black/40" aria-hidden="true">
+      <figure className="relative mx-auto w-[200px] sm:w-[220px] md:absolute md:right-0 md:bottom-0 md:w-[190px] lg:w-[210px] overflow-hidden rounded-[2rem] border-[6px] border-lc-dark bg-lc-black shadow-2xl shadow-black/70 ring-1 ring-lc-border animate-lc-float [animation-delay:-3.5s]">
+        <span aria-hidden="true" className="absolute left-1/2 top-1.5 z-10 h-1.5 w-14 -translate-x-1/2 rounded-full bg-lc-black/90" />
+        <HeroClip {...HERO_CLIPS.mobile} alt={mobileAlt} sizes="220px" />
+      </figure>
+
+      <div
+        aria-hidden="true"
+        className="hidden md:flex absolute left-4 bottom-6 lg:bottom-10 items-center gap-2 rounded-full border border-lc-green/30 bg-lc-black/85 px-3 py-1.5 text-xs font-semibold text-lc-green shadow-xl shadow-black/40"
+      >
+        <ObeliskIcon className="h-4 w-4" />
         <span className="h-2 w-2 rounded-full bg-lc-green animate-dot-pulse" />
         {t('marketing.landing.voiceLive')}
       </div>
-
-      <div className="mx-auto w-[168px] sm:w-[190px] md:mt-6 lg:mt-0 lg:mx-0 lg:w-[210px] lg:absolute lg:right-0 lg:-bottom-10">
-        <figure className="overflow-hidden rounded-[1.75rem] border-2 border-lc-border bg-lc-dark/90 shadow-2xl shadow-black/70">
-          <Image
-            src="/pictures-for-posts/mobile-server-and-channels-view.png"
-            alt={mobileAlt}
-            width={720}
-            height={1600}
-            className="block h-auto w-full"
-            sizes="(max-width: 1024px) 190px, 210px"
-          />
-        </figure>
-      </div>
-    </Container>
+    </div>
   );
 }

@@ -2,6 +2,8 @@
 
 Issue and debt tracking for Obelisk. Entries retain the reports and hypotheses from their original investigation; this documentation pass has not reproduced or recertified every issue. Check current code and reproduction steps before treating an old symptom or proposed fix as current behavior. Larger initiatives belong in [ROADMAP.md](../../ROADMAP.md).
 
+The recording pass of 2026-10-26 found a batch of onboarding, profile and translation problems; they are listed in [flow-review-2026-10-26.md](flow-review-2026-10-26.md), starting with a new account being unable to save its first profile while a lookup relay is down.
+
 ## Relay reports to recheck
 
 - **Test content on `public.obelisk.ar`** (`# Stress Test`, channels of

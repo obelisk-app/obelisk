@@ -58,7 +58,7 @@ describe('landing route', async () => {
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
   });
 
-  it('renders the transparent animation and restored hero screenshots beside the current CTA copy', async () => {
+  it('lays the copy beside looping desktop and phone clips, with the highlight shimmering', async () => {
     render(
       <LocaleProvider initialLocale="en">
         {await Page()}
@@ -66,26 +66,25 @@ describe('landing route', async () => {
     );
 
     const hero = screen.getByTestId('landing-hero');
-    expect(within(hero).getByRole('heading', { level: 1 })).toHaveTextContent('Your communities, under your control');
+    const heading = within(hero).getByRole('heading', { level: 1 });
+    expect(heading).toHaveTextContent('Your communities, under your control');
+    expect(heading.querySelector('.lc-shine-text')).toHaveTextContent('under your control');
     expect(within(hero).getByText('Discord-style group chat built directly on Nostr relays.')).toBeInTheDocument();
     expect(within(hero).getByText('No accounts. No backend. Your keys, your relays.')).toBeInTheDocument();
 
-    const animation = within(hero).getByTestId('hero-animation');
-    expect(animation.className).toContain('overflow-visible');
-    expect(animation.querySelector('.animate-float-up')).not.toBeNull();
-    expect(animation.querySelector('.animate-orbit')).not.toBeNull();
-    expect(animation.querySelector('.animate-orbit-vertical')).not.toBeNull();
-    expect(animation.querySelector('.animate-particle')).not.toBeNull();
-
     const heroPreview = within(hero).getByTestId('hero-product-preview');
-    expect(within(heroPreview).getByAltText(/Obelisk desktop screenshot/i)).toHaveAttribute(
-      'src',
-      '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png',
-    );
-    expect(within(heroPreview).getByAltText(/Obelisk mobile screenshot/i)).toHaveAttribute(
-      'src',
-      '/pictures-for-posts/mobile-server-and-channels-view.png',
-    );
+    expect(within(heroPreview).getByAltText(/Obelisk desktop screenshot/i)).toHaveAttribute('src', '/landing/hero-desktop.webp');
+    expect(within(heroPreview).getByAltText(/Obelisk mobile screenshot/i)).toHaveAttribute('src', '/landing/hero-mobile.webp');
+    const videos = heroPreview.querySelectorAll('video');
+    expect(videos).toHaveLength(2);
+    for (const video of videos) {
+      expect(video.muted).toBe(true);
+      expect(video).toHaveAttribute('preload', 'none');
+      expect(video.hasAttribute('autoplay')).toBe(false);
+    }
+    expect([...heroPreview.querySelectorAll('source')].map((s) => s.getAttribute('src'))).toEqual([
+      '/landing/hero-desktop.webm', '/landing/hero-desktop.mp4', '/landing/hero-mobile.webm', '/landing/hero-mobile.mp4',
+    ]);
   });
 
   it('keeps the latest screenshot preview cards below the hero', async () => {

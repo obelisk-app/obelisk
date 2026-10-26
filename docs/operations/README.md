@@ -18,6 +18,7 @@ Production deployment requires the user's explicit request. `npm run deploy` tar
 | Develop and release shared Nostr packages | [Nostr WoT SDK](nostr-wot-sdk.md) |
 | Export a Discord emoji set | [Emoji export](discord-emoji-export.md) |
 | Triage client issues and debt | [Known bugs](known-bugs.md) |
+| Flows that broke while recording the site videos (2026-10-26) | [Flow review](flow-review-2026-10-26.md) |
 | Triage SFU server issues | [SFU known bugs](sfu-known-bugs.md) |
 | Why the site went down and the desktop crashed (#185) on 2026-10-12 | [Incident 2026-10-12](incident-2026-10-12.md) |
 | Exercise current voice behavior | [Voice testing](../features/voice/testing.md) |

@@ -826,8 +826,39 @@ button:not(:disabled),
   animation: dot-pulse 3s ease-in-out infinite;
 }
 
+/* Hero highlight: Obelisk Sky's headline shimmer in Sky's lime, a light sweeping through it and a soft glow. */
+.lc-shine-text {
+  background: linear-gradient(100deg, #8bc34a 0%, #b4f953 30%, #f1ffd0 46%, #d4ff8f 54%, #b4f953 70%, #8bc34a 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 14px rgba(180, 249, 83, 0.35));
+  animation: lc-shine 4.5s ease-in-out infinite;
+}
+
+@keyframes lc-shine {
+  0% { background-position: 100% 0; }
+  60%, 100% { background-position: 0% 0; }
+}
+
+/* A slow bob for the hero's device frames, as on Obelisk Sky's porthole. */
+@keyframes lc-float {
+  50% { transform: translateY(-10px); }
+}
+
+.animate-lc-float {
+  animation: lc-float 7s ease-in-out infinite;
+}
+
 /* Accessibility: disable all hero animations */
 @media (prefers-reduced-motion: reduce) {
+  .lc-shine-text {
+    animation: none;
+    background-position: 50% 0;
+  }
+
+  .animate-lc-float,
   .animate-fade-in-up,
   .animate-float-up,
   .animate-orbit,
