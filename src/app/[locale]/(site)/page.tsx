@@ -36,6 +36,7 @@ export default async function Page() {
         <div className="relative z-10">
           <LandingHero />
           <DemoVideoSection />
+          <SocialSection />
           <RelayPulse />
           <PreviewSection />
           <FeaturesSection />
@@ -47,7 +48,6 @@ export default async function Page() {
           <FaqSection />
 
           <PostQuantumSection />
-          <SocialSection />
         </div>
       </main>
     </>
