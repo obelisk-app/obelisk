@@ -73,5 +73,17 @@
     "currentGranted": "Right now: allowed.",
     "currentDenied": "Right now: not allowed.",
     "more": "What Obelisk keeps on your device"
+  },
+  "relayInvite": {
+    "joining": "Opening your invite…",
+    "invalid": "This invite link is not valid.",
+    "deadTitle": "Invite link",
+    "dead": {
+      "unknown": "This invite link does not exist on this relay.",
+      "revoked": "This invite link was turned off by whoever shared it.",
+      "expired": "This invite link has expired. Ask for a new one.",
+      "exhausted": "This invite link has been used up. Ask for a new one.",
+      "inactive": "Whoever shared this invite can no longer invite people. Ask for a new one."
+    }
   }
 }

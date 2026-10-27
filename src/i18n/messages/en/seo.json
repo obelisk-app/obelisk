@@ -131,5 +131,9 @@
       "relay": "Nostr relay",
       "voice": "Voice room"
     }
+  },
+  "relayInvite": {
+    "title": "You are invited to Obelisk",
+    "description": "Open the link to join this Obelisk relay: chat, voice and channels, no email or password."
   }
 }

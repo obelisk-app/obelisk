@@ -73,5 +73,17 @@
     "currentGranted": "Ahora: permitido.",
     "currentDenied": "Ahora: no permitido.",
     "more": "Qué guarda Obelisk en tu dispositivo"
+  },
+  "relayInvite": {
+    "joining": "Abriendo tu invitación…",
+    "invalid": "Este enlace de invitación no es válido.",
+    "deadTitle": "Enlace de invitación",
+    "dead": {
+      "unknown": "Este enlace de invitación no existe en este relay.",
+      "revoked": "Quien compartió este enlace de invitación lo desactivó.",
+      "expired": "Este enlace de invitación venció. Pedí uno nuevo.",
+      "exhausted": "Este enlace de invitación ya se usó todas las veces. Pedí uno nuevo.",
+      "inactive": "Quien compartió esta invitación ya no puede invitar. Pedí una nueva."
+    }
   }
 }

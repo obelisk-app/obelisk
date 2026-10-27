@@ -206,6 +206,10 @@
     "data": {
       "label": "Data on this device",
       "desc": "What Obelisk keeps in this browser and why. Remove any of it here."
+    },
+    "invites": {
+      "label": "Invite people",
+      "desc": "Links that let new people into this relay"
     }
   },
   "openPreferences": "Preferences",
@@ -371,6 +375,28 @@
       "offline": "The saved app files are deleted. Obelisk downloads them again the next time it loads, and will not open offline until then.",
       "language": "Obelisk forgets the language you picked and goes back to your browser's language. The page reloads.",
       "analytics": "Your answer about Google Analytics and its cookies are deleted. Analytics stops, and Obelisk asks again; nothing from Google loads unless you allow it."
+    }
+  },
+  "invites": {
+    "title": "Invite people",
+    "intro": "Each link lets new people into {relay}. Whoever opens it gets an account made for them and lands straight in the app.",
+    "notAllowed": "You cannot invite people to this relay. Its operator decides who can.",
+    "quota": "You can still bring in {people, plural, one {# person} other {# people}} with up to {links, plural, one {# more link} other {# more links}}.",
+    "quotaAdmin": "You run this relay, so your links have no quota.",
+    "create": "Create invite link",
+    "copied": "Invite link copied",
+    "copy": "Copy link",
+    "revoke": "Turn off",
+    "failed": "Could not change your invite links.",
+    "uses": "{uses} of {max} used",
+    "usesUnlimited": "{uses} used",
+    "expires": "expires {date}",
+    "joined": "Joined: {people}",
+    "status": {
+      "active": "Active",
+      "revoked": "Turned off",
+      "expired": "Expired",
+      "exhausted": "Used up"
     }
   }
 }

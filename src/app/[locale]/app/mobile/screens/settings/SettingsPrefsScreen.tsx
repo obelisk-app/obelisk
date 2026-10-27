@@ -13,6 +13,7 @@ import WalletSettings from '@/components/settings/wallet/WalletSettings';
 import AccountBackupExport from '@/components/settings/account/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/account/DeveloperSignatureTest';
 import LocalDataPanel from '@/components/settings/privacy/LocalDataPanel';
+import RelayInviteSettings from '@/components/settings/invite/RelayInviteSettings';
 import { useTranslations } from 'next-intl';
 import { useSettingsPrefsScreen } from '@/hooks/shell/mobile/screens/settings/useSettingsPrefsScreen';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
@@ -34,6 +35,14 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
     );
   }
 
+  if (vm.view === 'invites') {
+    return (
+      <SettingsSubScreen screen="settings-invites" title={t('settings.section.invites.label')} onBack={vm.closeView} backTestId="relay-invites-back">
+        <RelayInviteSettings mobile />
+      </SettingsSubScreen>
+    );
+  }
+
   if (vm.view === 'data') {
     return (
       <SettingsSubScreen screen="settings-data" title={t('settings.section.data.label')} onBack={vm.closeView} backTestId="local-data-back">
@@ -51,6 +60,17 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
         <Heading as="h2">{t('settings.preferencesTitle')}</Heading>
       </div>
       <div className="settings-body">
+        {vm.canInvite && (
+          <Section variant="mobile" headingAs="h3" title={t('settings.section.invites.label')} >
+            <Button variant="mobileRow" type="button" onClick={() => vm.openView('invites')} data-testid="mobile-invites-submenu">
+              <span style={{ minWidth: 0, flex: 1 }}>
+                <span style={{ display: 'block' }}>{t('settings.invites.create')}</span>
+                <span className="settings-row-meta muted" style={{ display: 'block', maxWidth: '100%', marginTop: 3 }}>{t('settings.section.invites.desc')}</span>
+              </span>
+              <span className="settings-row-meta muted" aria-hidden="true">›</span>
+            </Button>
+          </Section>
+        )}
         <Section variant="mobile" headingAs="h3" title={t('settings.preferences.mobile.app')} >
           <LanguagePreference variant="mobile" />
           <Button

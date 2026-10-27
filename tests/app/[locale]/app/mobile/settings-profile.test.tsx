@@ -134,6 +134,8 @@ const PUBKEY = '1'.repeat(64);
 beforeEach(() => {
   localStorage.clear();
   setDmOptInEnabled(false);
+  // The relay's invite API (`useCanInvite`): no such API unless a test says so.
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 404 })));
   mockPubkey = PUBKEY;
   mockMeta = {
     pubkey: PUBKEY,
@@ -153,6 +155,7 @@ afterEach(() => {
   mockPublishProfile.mockReset().mockResolvedValue(undefined);
   vi.clearAllTimers();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe("SettingsProfileScreen", () => {
@@ -187,6 +190,28 @@ describe("SettingsPrefsScreen", () => {
     expect(screen.getByTestId('language-option-en')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByTestId('mobile-download-backup')).toBeInTheDocument();
     expect(screen.getByTestId('developer-signature-test')).toBeInTheDocument();
+  });
+
+  it('offers Invite people only when the relay lets this account invite', async () => {
+    // Its own account: the invite status is cached per relay and account.
+    mockPubkey = '2'.repeat(64);
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      pubkey: mockPubkey, admitted: true, can_mint: true, is_admin: false,
+      codes_left: 2, admits_left: 5, admits_used: 0, codes: [],
+    }), { status: 200 })));
+    renderWithLocale(<SettingsPrefsScreen go={vi.fn()} />);
+
+    fireEvent.click(await screen.findByTestId('mobile-invites-submenu'));
+    expect(await screen.findByTestId('relay-invite-settings')).toBeInTheDocument();
+    expect(await screen.findByTestId('relay-invites-quota')).toHaveTextContent('5 people');
+  });
+
+  it('shows no Invite people row on a relay without the invite API', async () => {
+    renderWithLocale(<SettingsPrefsScreen go={vi.fn()} />);
+    // Let the (cached or stubbed) 404 settle before looking.
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByTestId('language-preference')).toBeInTheDocument();
+    expect(screen.queryByTestId('mobile-invites-submenu')).not.toBeInTheDocument();
   });
 
   it("keeps media management and disconnect in preferences", async () => {

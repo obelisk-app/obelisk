@@ -12,7 +12,7 @@ export const ERROR_CODES = [
   'invalid-relay-url', 'dms-off', 'files-need-nip17', 'search-timeout', 'own-packs-only',
   'profile-load-failed', 'profile-lookup-timeout', 'mute-list-load-failed',
   'invalid-bunker-url', 'bunker-missing-secret', 'bunker-no-session', 'nostrconnect-cancelled',
-  'call-relay-failed', 'game-unconfirmed',
+  'call-relay-failed', 'game-unconfirmed', 'relay-invite-failed',
   // A Nostr Wallet Connect wallet (`@nostr-wot/wallet/nwc`, whose `NwcErrorCode` is this subset).
   'nwc-invalid-uri', 'nwc-unreachable', 'nwc-cannot-pay', 'wallet-timeout', 'wallet-relay-failed',
   'wallet-rate-limited', 'wallet-not-supported', 'wallet-insufficient-balance', 'wallet-quota-exceeded',

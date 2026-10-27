@@ -18,6 +18,7 @@ import {
   ShieldIcon,
   SmileIcon,
   UserIcon,
+  UserPlusIcon,
   WrenchIcon,
   ZapIcon,
 } from '@/assets/icons';
@@ -31,30 +32,41 @@ import NotificationSettings from '@/components/settings/notifications/Notificati
 import { PrivacySettingsSection } from '../settings/PrivacySettingsSection';
 import SocialRelaySettings from '@/components/settings/social-relays/SocialRelaySettings';
 import WalletSettings from '@/components/settings/wallet/WalletSettings';
+import RelayInviteSettings from '@/components/settings/invite/RelayInviteSettings';
+import { useCanInvite } from '@/hooks/settings/invite/useCanInvite';
 import type { MessageKey } from '@/i18n/keys';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
-const SETTINGS_NAV: ReadonlyArray<{
+type SettingsNavGroup = {
   label: MessageKey;
   items: ReadonlyArray<{ id: SettingsSection; Icon: (p: { size?: number }) => React.ReactElement }>;
-}> = [
-    { label: 'settings.group.user', items: [{ id: 'profile', Icon: UserIcon }] },
-    {
-      label: 'settings.group.app',
-      items: [
-        { id: 'general', Icon: GearIcon },
-        { id: 'appearance', Icon: PaletteIcon },
-        { id: 'notifications', Icon: BellIcon },
-        { id: 'relays', Icon: ServerIcon },
-        { id: 'privacy', Icon: ShieldIcon },
-        { id: 'wallet', Icon: ZapIcon },
-        { id: 'media', Icon: SmileIcon },
-        { id: 'data', Icon: FileIcon },
-        { id: 'advanced', Icon: WrenchIcon },
-      ],
-    },
-  ];
+};
+
+const USER_NAV: SettingsNavGroup = { label: 'settings.group.user', items: [{ id: 'profile', Icon: UserIcon }] };
+// Only for accounts the relay lets invite (`useCanInvite`).
+const USER_NAV_WITH_INVITES: SettingsNavGroup = {
+  label: 'settings.group.user',
+  items: [{ id: 'profile', Icon: UserIcon }, { id: 'invites', Icon: UserPlusIcon }],
+};
+
+const APP_NAV: SettingsNavGroup = {
+  label: 'settings.group.app',
+  items: [
+    { id: 'general', Icon: GearIcon },
+    { id: 'appearance', Icon: PaletteIcon },
+    { id: 'notifications', Icon: BellIcon },
+    { id: 'relays', Icon: ServerIcon },
+    { id: 'privacy', Icon: ShieldIcon },
+    { id: 'wallet', Icon: ZapIcon },
+    { id: 'media', Icon: SmileIcon },
+    { id: 'data', Icon: FileIcon },
+    { id: 'advanced', Icon: WrenchIcon },
+  ],
+};
+
+const SETTINGS_NAV: ReadonlyArray<SettingsNavGroup> = [USER_NAV, APP_NAV];
+const SETTINGS_NAV_WITH_INVITES: ReadonlyArray<SettingsNavGroup> = [USER_NAV_WITH_INVITES, APP_NAV];
 
 type Props = {
   pubkey: string;
@@ -70,6 +82,7 @@ type Props = {
 /** Fullscreen user settings: the section nav on the left, the open section on the right. */
 export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setSettingsTab, onDone, onLogout }: Props) {
   const t = useTranslations();
+  const nav = useCanInvite() ? SETTINGS_NAV_WITH_INVITES : SETTINGS_NAV;
   return createPortal(
     <div
       className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm p-10 md:p-24 flex items-stretch justify-stretch"
@@ -95,7 +108,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
             </div>
           </div>
           <nav className="flex-1 overflow-y-auto p-2" aria-label={t('shell.user.settings')}>
-            {SETTINGS_NAV.map((group) => (
+            {nav.map((group) => (
               <div key={group.label} className="mb-3">
                 {/* The header card above already says "User settings". */}
                 {group.label !== 'settings.group.user' && (
@@ -152,6 +165,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
                   onSaved={onDone}
                 />
               )}
+              {settingsTab === 'invites' && <RelayInviteSettings />}
               {settingsTab === 'general' && <GeneralSettingsSection />}
               {settingsTab === 'appearance' && <AppearancePreferenceControls />}
               {settingsTab === 'notifications' && <NotificationSettings />}

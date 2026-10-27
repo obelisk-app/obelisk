@@ -73,5 +73,17 @@
     "currentGranted": "Agora: permitido.",
     "currentDenied": "Agora: não permitido.",
     "more": "O que o Obelisk guarda no seu dispositivo"
+  },
+  "relayInvite": {
+    "joining": "Abrindo seu convite…",
+    "invalid": "Este link de convite não é válido.",
+    "deadTitle": "Link de convite",
+    "dead": {
+      "unknown": "Este link de convite não existe neste relay.",
+      "revoked": "Quem compartilhou este link de convite o desativou.",
+      "expired": "Este link de convite expirou. Peça um novo.",
+      "exhausted": "Este link de convite já foi usado todas as vezes. Peça um novo.",
+      "inactive": "Quem compartilhou este convite não pode mais convidar. Peça um novo."
+    }
   }
 }

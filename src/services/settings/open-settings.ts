@@ -20,6 +20,7 @@ import { OPEN_SETTINGS_EVENT, RELAY_SETTINGS_ANCHOR } from '@/constants/settings
  */
 export type SettingsSection =
   | 'profile'
+  | 'invites'
   | 'general'
   | 'appearance'
   | 'notifications'

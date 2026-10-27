@@ -120,6 +120,13 @@ export const KIND_NIP78_APP_DATA = 30078;
 export const KIND_HTTP_AUTH = 27235;
 
 /**
+ * NIP-43: relay join request. Carries `["claim", <invite code>]`; obelisk-relay
+ * redeems it as a relay invitation code before admission (obelisk-relay
+ * `docs/relay-invites.md`). Ephemeral: the relay never stores or relays it.
+ */
+export const KIND_RELAY_INVITE_CLAIM = 28934;
+
+/**
  * Obelisk voice: ephemeral presence beacon for voice-channel rosters.
  * Re-published every ~15s while a peer is in a voice channel; tagged with
  * `["e", channelId]` and `["expiration", now+30]` so any compliant relay

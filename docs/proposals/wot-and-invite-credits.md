@@ -1,6 +1,6 @@
 # Web of Trust + Activity-Based Invite Credits
 
-**Status: proposal.** This is a server-admission and invite-credit design, not a statement that this client implements every described capability. It is distinct from the current client WoT filter. Validate implementation status in the owning relay or client code before relying on it.
+**Status: proposal, partly shipped.** Relay-level invite links with operator-granted quotas and referral tracking shipped on 2026-10-27 ([relay invite links](../features/relay-invites.md), obelisk-relay `docs/relay-invites.md`); tenure-earned credits below are still a proposal. This is a server-admission and invite-credit design, not a statement that this client implements every described capability. It is distinct from the current client WoT filter. Validate implementation status in the owning relay or client code before relying on it.
 
 > Obelisk's core anti-spam features. They turn the server's social graph into
 > a self-serving access-control system: trusted users get in automatically,

@@ -180,6 +180,12 @@ seeds the layout-author set used by NIP-78 channel-layout queries. See
 
 ## 5. Whitelist preflight
 
+**Getting in with an invite.** A refused key that holds a relay invite does
+not wait on the operator: `useRelayInviteRedeemer` redeems the stored code
+with a NIP-43 claim and, on `OK true`, calls `switchRelay` on the same relay,
+which resets the access map and reruns this preflight with the key now
+admitted. See [relay invite links](../features/relay-invites.md).
+
 `preflightRelayAccess()` fires `{kinds:[0], authors:[me], limit:1}` on the
 active relay with these `subscribeWatched` options:
 
