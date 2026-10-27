@@ -10,6 +10,7 @@ import FeaturesSection from '@/components/marketing/landing/FeaturesSection';
 import LandingHero from '@/components/marketing/landing/LandingHero';
 import LearnSection from '@/components/marketing/landing/LearnSection';
 import PostQuantumSection from '@/components/marketing/landing/PostQuantumSection';
+import ProductStage from '@/components/marketing/landing/ProductStage';
 import PreviewSection from '@/components/marketing/landing/PreviewSection';
 import RelayPulse from '@/assets/illustrations/marketing/RelayPulse';
 import RoadmapSection from '@/components/marketing/landing/RoadmapSection';
@@ -35,6 +36,7 @@ export default async function Page() {
         <ShootingStars />
         <div className="relative z-10">
           <LandingHero />
+          <ProductStage />
           <DemoVideoSection />
           <SocialSection />
           <RelayPulse />

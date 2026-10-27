@@ -58,7 +58,7 @@ describe('landing route', async () => {
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
   });
 
-  it('lays the copy beside looping desktop and phone clips, with the highlight shimmering', async () => {
+  it('lays the copy beside the looping phone clip, with the highlight shimmering', async () => {
     render(
       <LocaleProvider initialLocale="en">
         {await Page()}
@@ -73,18 +73,43 @@ describe('landing route', async () => {
     expect(within(hero).getByText('No accounts. No backend. Your keys, your relays.')).toBeInTheDocument();
 
     const heroPreview = within(hero).getByTestId('hero-product-preview');
-    expect(within(heroPreview).getByAltText(/Obelisk desktop screenshot/i)).toHaveAttribute('src', '/landing/hero-desktop.webp');
     expect(within(heroPreview).getByAltText(/Obelisk mobile screenshot/i)).toHaveAttribute('src', '/landing/hero-mobile.webp');
-    const videos = heroPreview.querySelectorAll('video');
+    expect([...heroPreview.querySelectorAll('source')].map((s) => s.getAttribute('src'))).toEqual([
+      '/landing/hero-mobile.webm', '/landing/hero-mobile.mp4',
+    ]);
+  });
+
+  it('shows the desktop clip full width on its own stage right after the hero', async () => {
+    render(
+      <LocaleProvider initialLocale="en">
+        {await Page()}
+      </LocaleProvider>,
+    );
+
+    const hero = screen.getByTestId('landing-hero');
+    const stage = screen.getByTestId('landing-stage');
+    expect(hero.nextElementSibling).toBe(stage);
+    expect(within(stage).getByAltText(/Obelisk desktop screenshot/i)).toHaveAttribute('src', '/landing/hero-desktop.webp');
+    expect([...stage.querySelectorAll('source')].map((s) => s.getAttribute('src'))).toEqual([
+      '/landing/hero-desktop.webm', '/landing/hero-desktop.mp4',
+    ]);
+  });
+
+  it('keeps both clips muted and lazy, never autoplaying', async () => {
+    render(
+      <LocaleProvider initialLocale="en">
+        {await Page()}
+      </LocaleProvider>,
+    );
+
+    const videos = [screen.getByTestId('hero-product-preview'), screen.getByTestId('landing-stage')]
+      .flatMap((el) => [...el.querySelectorAll('video')]);
     expect(videos).toHaveLength(2);
     for (const video of videos) {
       expect(video.muted).toBe(true);
       expect(video).toHaveAttribute('preload', 'none');
       expect(video.hasAttribute('autoplay')).toBe(false);
     }
-    expect([...heroPreview.querySelectorAll('source')].map((s) => s.getAttribute('src'))).toEqual([
-      '/landing/hero-desktop.webm', '/landing/hero-desktop.mp4', '/landing/hero-mobile.webm', '/landing/hero-mobile.mp4',
-    ]);
   });
 
   it('keeps the latest screenshot preview cards below the hero', async () => {

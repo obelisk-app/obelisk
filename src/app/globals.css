@@ -851,6 +851,23 @@ button:not(:disabled),
   animation: lc-float 7s ease-in-out infinite;
 }
 
+/* The landing's desktop stage: tilted back, it settles flat as it scrolls into view. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lc-stage-tilt {
+      transform-origin: 50% 0;
+      animation: lc-stage-tilt linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 45%;
+    }
+  }
+}
+
+@keyframes lc-stage-tilt {
+  from { transform: rotateX(22deg) scale(0.9); opacity: 0.55; }
+  to   { transform: none; opacity: 1; }
+}
+
 /* Accessibility: disable all hero animations */
 @media (prefers-reduced-motion: reduce) {
   .lc-shine-text {
