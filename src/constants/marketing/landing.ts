@@ -64,14 +64,14 @@ export const HERO_CLIPS = {
     mp4: '/landing/hero-desktop.mp4',
     poster: '/landing/hero-desktop.webp',
     width: 1280,
-    height: 720,
+    height: 800,
   },
   mobile: {
     webm: '/landing/hero-mobile.webm',
     mp4: '/landing/hero-mobile.mp4',
     poster: '/landing/hero-mobile.webp',
-    width: 540,
-    height: 1200,
+    width: 412,
+    height: 914,
   },
 } as const;
 
