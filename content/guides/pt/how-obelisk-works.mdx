@@ -58,6 +58,8 @@ Grupos são grupos **NIP-29**. Quem os guarda é o relay, não nós.
 
 Os grupos pertencem ao relay que você está vendo, então trocar de relay é trocar de servidor. O app não se importa com qual relay é, desde que ele fale NIP-29.
 
+<Clip name="app/create-channel" caption="Criar um canal: você vira admin, e o canal vive no relay, não num servidor do Obelisk." />
+
 ## E os perfis e os DMs?
 
 Perfis e mensagens diretas não ficam no seu servidor. O app busca sozinho outros relays Nostr para eles:
@@ -66,6 +68,8 @@ Perfis e mensagens diretas não ficam no seu servidor. O app busca sozinho outro
 - **DMs** ficam desligados até você ativá-los nas configurações. O Obelisk os envia como **NIP-17**: com "gift wrap" e cifrados com NIP-44, entregues nos relays de caixa de entrada do destinatário, então um relay não vê nem quem envia nem o conteúdo. Ele ainda lê as mensagens **NIP-04** mais antigas (kind 4), para que as conversas que você já tinha apareçam.
 
 Os dois são cifrados ponta a ponta: só quem envia e quem recebe têm as chaves para decifrar.
+
+<Clip name="app/profile" caption="Seu nome, foto e capa são um evento de perfil do Nostr que você assina; qualquer app de Nostr consegue ler." />
 
 ## E a voz?
 

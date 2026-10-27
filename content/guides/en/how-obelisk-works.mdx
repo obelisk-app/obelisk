@@ -58,6 +58,8 @@ Groups are **NIP-29** groups. The relay holds them, not us.
 
 Groups belong to the relay you are browsing, so switching relays is switching servers. The app doesn't care which relay it is, as long as it speaks NIP-29.
 
+<Clip name="app/create-channel" caption="Creating a channel: you become its admin, and it lives on the relay, not on an Obelisk server." />
+
 ## What about profiles and DMs?
 
 Profiles and direct messages don't live on your server. The app reaches other Nostr relays for them itself:
@@ -66,6 +68,8 @@ Profiles and direct messages don't live on your server. The app reaches other No
 - **DMs** are off until you turn them on in settings. Obelisk sends them as **NIP-17**: "gift-wrapped" and encrypted with NIP-44, delivered to the recipient's inbox relays, so a relay sees neither the sender nor the content. It still reads older **NIP-04** messages (kind 4), so existing conversations show up.
 
 Both are end-to-end encrypted: only the sender and the recipient hold the keys to decrypt.
+
+<Clip name="app/profile" caption="Your name, picture and banner are a Nostr profile event you sign; every Nostr app can read it." />
 
 ## What about voice?
 

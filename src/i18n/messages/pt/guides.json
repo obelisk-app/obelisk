@@ -26,7 +26,10 @@
       "relayInstall": "Dois comandos são a instalação inteira: ./setup.sh te dá um relay em localhost, ./expose.sh abre uma porta para o mundo, sem sessão SSH e sem YAML para editar à mão.",
       "relayLadder": "A admissão é uma escada, não um interruptor: o Tier 1 é adicionado à mão, o Tier 2 fica a dois saltos no grafo de follows, o Tier 3 a três, e uma lista de bloqueio anula os três.",
       "relayNumbers": "O alcance de uma única conta de referência no relay público do Obelisk: 166.735 chaves admitidas no total, divididas entre Tier 1 com 1.062, Tier 2 com 45.966 e Tier 3 com 119.708 ou mais.",
-      "relaySnapshot": "Uma mensagem denunciada ainda legível na fila de moderação depois que o autor a apagou, porque o relay guardou a própria cópia quando a denúncia chegou."
+      "relaySnapshot": "Uma mensagem denunciada ainda legível na fila de moderação depois que o autor a apagou, porque o relay guardou a própria cópia quando a denúncia chegou.",
+      "appChat": "Duas pessoas conversam num canal do Obelisk: uma pergunta quem topa um chimarrão, a outra responde que leva alfajores, chega uma reação e a primeira diz que zarpam em cinco.",
+      "appCreateChannel": "Criar um canal num relay: o + ao lado da lista de canais, um nome, Criar, e o canal novo abre com você como admin.",
+      "appProfile": "Editar seu perfil em Ajustes: escolha uma foto e uma capa do seu computador, escreva um nome e uma bio, e salve; as imagens são enviadas ao publicar."
     }
   },
   "shot": {

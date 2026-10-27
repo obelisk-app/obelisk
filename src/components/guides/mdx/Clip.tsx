@@ -58,6 +58,24 @@ export const CLIP_META: Record<string, ClipMeta> = {
     seconds: 32,
     altKey: 'guides.clip.alt.relaySnapshot',
   },
+  'app/chat': {
+    width: 640,
+    height: 400,
+    seconds: 26,
+    altKey: 'guides.clip.alt.appChat',
+  },
+  'app/create-channel': {
+    width: 640,
+    height: 360,
+    seconds: 25,
+    altKey: 'guides.clip.alt.appCreateChannel',
+  },
+  'app/profile': {
+    width: 640,
+    height: 360,
+    seconds: 30,
+    altKey: 'guides.clip.alt.appProfile',
+  },
 };
 
 /**
