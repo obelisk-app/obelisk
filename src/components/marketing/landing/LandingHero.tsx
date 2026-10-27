@@ -10,25 +10,25 @@ import Text from '@/components/ui/layout/Text';
 
 /**
  * The hero, laid out like Obelisk Sky's: headline, pitch and the launch and
- * GitHub buttons on the left, the app looping on desktop and on a phone on
- * the right. The highlighted words shimmer in Sky's lime.
+ * GitHub buttons on the left, the phone app looping in a glowing porthole on
+ * the right, both centred in the first screen. The highlighted words shimmer
+ * in Sky's lime. The desktop app follows full width in `ProductStage`.
  */
 export default function LandingHero() {
   const t = useTranslations();
   return (
     <section
       data-testid="landing-hero"
-      className="relative pt-20 pb-14 md:pt-24 md:pb-20 px-6 overflow-hidden"
+      className="relative flex flex-col justify-center px-6 pt-24 pb-12 lg:min-h-[min(100svh,960px)] lg:pt-20 lg:pb-10 overflow-hidden"
     >
       <div className="absolute inset-0 bg-lc-black/35 pointer-events-none" aria-hidden="true" />
       <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[520px] h-[520px] bg-lc-green/3 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-lc-black pointer-events-none" aria-hidden="true" />
-
-      <Container width="6xl" className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10 lg:items-center relative z-10">
+      
+      <Container width="6xl" className="relative z-10 grid w-full items-center gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-12">
         <div className="flex min-w-0 flex-col items-center text-center lg:items-start lg:text-left">
-          <Heading as="h1" className="w-full max-w-[640px] text-4xl font-extrabold leading-[1.05] tracking-normal sm:text-5xl lg:text-6xl mb-4">
+          <Heading as="h1" className="w-full max-w-[680px] text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl mb-5">
             {t('marketing.hero.title')}{' '}
-            <span className="lc-shine-text">{t('marketing.hero.titleHighlight')}</span>
+            <span className="lc-shine-text lg:block">{t('marketing.hero.titleHighlight')}</span>
           </Heading>
           <Text as="p" size="base" tone="default" className="md:text-xl max-w-xl leading-relaxed">
             {t('marketing.hero.subtitle')}
@@ -53,7 +53,6 @@ export default function LandingHero() {
         </div>
 
         <HeroProductPreview
-          desktopAlt={t('marketing.landing.preview.desktop.alt')}
           mobileAlt={t('marketing.landing.preview.mobile.alt')}
         />
       </Container>

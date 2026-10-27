@@ -4,7 +4,7 @@ import { buildImportGraph, staticClosure } from '@tests/support/import-graph';
 
 const page = 'src/app/[locale]/(site)/page.tsx';
 const staticSections = [
-  'LandingHero', 'HeroProductPreview', 'PreviewSection',
+  'LandingHero', 'HeroProductPreview', 'ProductStage', 'PreviewSection',
   'FeaturesSection', 'StepsSection', 'RoadmapSection', 'RoadmapPhase',
   'LearnSection', 'StackSection', 'PostQuantumSection', 'CtaSection', 'FaqSection', 'DemoVideoSection',
 ];
