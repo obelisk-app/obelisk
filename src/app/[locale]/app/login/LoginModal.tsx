@@ -21,12 +21,17 @@
  * signer storage (`src/services/session/signer-storage.ts`), so the widget never writes a
  * pairing key or a "remembered" nsec to localStorage, and `autoRestore` is
  * off: the bridge, not the SDK, restores sessions.
+ *
+ * The widget has no prop for its own copy (method names, the paste and
+ * new-key steps), so `useSdkLoginCopy` rewrites that text in place with
+ * Obelisk's messages (`services/session/sdk-login-copy.ts`).
  */
 
 import { LoginModal as SdkLoginModal, NostrSessionProvider, type LoginMethodId } from '@nostr-wot/ui';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePastedKeyStep } from '@/hooks/session/usePastedKeyStep';
+import { useSdkLoginCopy } from '@/hooks/session/useSdkLoginCopy';
 import { OBELISK_NIP46_RELAYS } from '@/constants/nostr/nip46-relays';
 import GeneratedProfileEnhancements from './GeneratedProfileEnhancements';
 import { GeneratedNpubStep } from './GeneratedNpubStep';
@@ -68,6 +73,7 @@ export default function LoginModal({
   const t = useTranslations();
   const flow = useLoginFlow({ onSuccess, onClose });
   const pasted = usePastedKeyStep(flow.onLogin);
+  useSdkLoginCopy();
 
   if (flow.generatedLogin) {
     return (

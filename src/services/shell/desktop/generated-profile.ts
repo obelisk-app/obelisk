@@ -89,7 +89,10 @@ export function attachGeneratedProfileEnhancements(t: Translate, onDraftChange: 
       });
     }
 
-    const aboutInput = modal.querySelector<HTMLInputElement>('input[placeholder*="Builder"]');
+    const aboutInput = modal.querySelector<HTMLInputElement>(
+      // The placeholder may already be localized (`sdk-login-copy.ts` keeps the original).
+      'input[placeholder*="Builder"], input[data-obelisk-sdk-placeholder*="Builder"]', // i18n-exempt: selector for the SDK's placeholder
+    );
     if (aboutInput && !aboutInput.dataset.obeliskTracked) {
       aboutInput.dataset.obeliskTracked = 'true';
       aboutInput.addEventListener('input', () => onDraftChange({ about: aboutInput.value }));

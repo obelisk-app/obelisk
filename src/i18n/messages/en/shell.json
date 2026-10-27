@@ -455,7 +455,63 @@
       "fallbackHint": "Fallback: copy it, then in Amber open New application → Paste from clipboard."
     },
     "keyLoginFailed": "Could not log in with that key.",
-    "finishFailed": "Could not finish setting up your account. Try again."
+    "finishFailed": "Could not finish setting up your account. Try again.",
+    "sdk": {
+      "back": "← Back",
+      "signingIn": "Signing in…",
+      "methods": {
+        "extension": "Browser extension",
+        "extensionHint": "NIP-07: Alby, nos2x, Flamingo",
+        "bunker": "Remote signer (bunker)",
+        "bunkerHint": "NIP-46: Amber, Nsec.app, Keychat",
+        "generate": "Create a new account",
+        "generateHint": "Generates a fresh keypair on this device",
+        "import": "Paste private key",
+        "importHint": "nsec or 64-character hex, risky in a browser"
+      },
+      "noExtension": {
+        "title": "Get the Nostr WoT extension",
+        "hint": "Browser extension with a NIP-07 signer and Web of Trust spam filtering ↗",
+        "error": "No NIP-07 extension detected. Install Alby, nos2x, or another Nostr signer extension and reload."
+      },
+      "import": {
+        "warning": "⚠️ Pasting your private key into a web page is risky. Prefer a browser extension (NIP-07) or a remote signer (NIP-46) when possible.",
+        "placeholder": "nsec1… or 64-character hex",
+        "signIn": "Sign in",
+        "invalidKey": "Paste an nsec1… or a 64-character hex private key.",
+        "invalidNsec": "Invalid nsec"
+      },
+      "generated": {
+        "title": "Your new key",
+        "backupLead": "Back this up",
+        "backupWhen": "before",
+        "backupTail": "you continue. If you lose it, your identity is gone and there is no recovery.",
+        "nsecLabel": "Private key (nsec), keep it secret",
+        "copyNsec": "Copy nsec",
+        "download": "Download .txt",
+        "acknowledge": "I have backed up my nsec. I understand that losing it means losing access to this account permanently.",
+        "continue": "Continue"
+      },
+      "profile": {
+        "title": "Set up your profile",
+        "displayName": "Display name",
+        "aboutPlaceholder": "Builder, chef, occasional cyclist.",
+        "save": "Save profile and continue",
+        "publishing": "Publishing…"
+      },
+      "bunker": {
+        "scanQr": "Scan QR",
+        "authTitle": "Action required",
+        "authBody": "Approve the request in your signer app, then this will continue automatically. Click to open ↗",
+        "qrLabel": "Nostr Connect QR code",
+        "qrHint": "Scan with Amber, Nsec.app, Keychat, or any NIP-46 signer.",
+        "slowHint": "Still waiting? Some signer apps scan only once by default, so try reopening the scanner.",
+        "restart": "Restart",
+        "generatingQr": "Generating QR…",
+        "pasteLabel": "Paste a bunker:// URI from your remote signer",
+        "connect": "Connect"
+      }
+    }
   },
   "channel": {
     "create": {
