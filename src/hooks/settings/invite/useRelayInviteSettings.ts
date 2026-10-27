@@ -14,7 +14,7 @@ import { copyWithToast } from '@/services/common/clipboard';
 import { relayInviteLink } from '@/utils/relay/relay-invite';
 import { relayHostLabel } from '@/utils/relay-url/relay-host';
 import { errorText } from '@/utils/errors/error-text';
-import { shortNpubLabel } from '@/utils/identity/short-npub';
+import { inviteUsage } from '@/utils/relay/relay-invite';
 
 /**
  * Settings > Invite people: this account's invite links on the relay in
@@ -29,21 +29,23 @@ export function useRelayInviteSettings() {
   const key = `${relay}|${pubkey ?? ''}`;
   // The answer is tagged with the relay and account it is for, so switching
   // either reads as loading again without resetting state in an effect.
-  const [answer, setAnswer] = useState<{ key: string; me: RelayInviteMe | null } | null>(null);
+  const [answer, setAnswer] = useState<{ key: string; me: RelayInviteMe | null; at: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The link whose Copy button just worked, so it can say so for a moment.
+  const [copied, setCopied] = useState<string | null>(null);
 
   const load = useCallback(async (fresh: boolean) => {
     if (!pubkey || !relay) return;
     const me = await fetchInviteStatus(relay, pubkey, fresh);
-    setAnswer({ key: `${relay}|${pubkey}`, me });
+    setAnswer({ key: `${relay}|${pubkey}`, me, at: Date.now() });
   }, [relay, pubkey]);
 
   useEffect(() => {
     if (!signerReady || !pubkey || !relay) return;
     let cancelled = false;
     void fetchInviteStatus(relay, pubkey).then((me) => {
-      if (!cancelled) setAnswer({ key: `${relay}|${pubkey}`, me });
+      if (!cancelled) setAnswer({ key: `${relay}|${pubkey}`, me, at: Date.now() });
     });
     return () => {
       cancelled = true;
@@ -79,13 +81,18 @@ export function useRelayInviteSettings() {
     rows: (me?.codes ?? []).map((invite) => ({
       invite,
       link: linkFor(invite.code),
-      joined: invite.redemptions.map((r) => shortNpubLabel(r.pubkey)).join(', '),
+      copied: copied === invite.code,
+      ...inviteUsage(invite, answer?.at ?? 0),
     })),
     create: () => act(async () => {
       const invite = await createInviteCode(relay);
       copyWithToast(linkFor(invite.code), t('settings.invites.copied'));
     }),
-    copy: (code: string) => copyWithToast(linkFor(code), t('settings.invites.copied')),
+    copy: (code: string) => {
+      copyWithToast(linkFor(code), t('settings.invites.copied'));
+      setCopied(code);
+      setTimeout(() => setCopied((c) => (c === code ? null : c)), 2000);
+    },
     revoke: (code: string) => act(() => revokeInviteCode(relay, code)),
   };
 }

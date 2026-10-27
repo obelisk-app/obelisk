@@ -51,6 +51,9 @@ export default function RelayInviteSettings({ mobile = false }: { mobile?: boole
               key={row.invite.code}
               invite={row.invite}
               link={row.link}
+              copied={row.copied}
+              usedPercent={row.usedPercent}
+              daysLeft={row.daysLeft}
               joined={row.joined}
               busy={vm.busy}
               onCopy={() => vm.copy(row.invite.code)}

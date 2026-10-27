@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BridgeImpl } from '@/services/nostr-bridge/facade/client';
 import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
 import { pageRelayHub } from '@/services/nostr-bridge';
-import { redeemInvite } from '@/services/relay/relay-invite';
+import { enterInviteRelay, redeemInvite } from '@/services/relay/relay-invite';
 import { readStoredInvite, storeInvite } from '@/services/relay/relay-invite-storage';
 import { KIND_RELAY_INVITE_CLAIM } from '@/constants/nostr/nip-kinds';
 
@@ -52,3 +52,23 @@ describe('redeemInvite', () => {
     expect(readStoredInvite()).toEqual({ code: 'code-1', relay: RELAY, redeemed: [] });
   });
 });
+
+describe('enterInviteRelay', () => {
+  it('adds the invite relay to the rail and switches to it, even when it is already there', async () => {
+    const addRelay = vi.fn().mockRejectedValueOnce(new Error('relay already added')).mockResolvedValue(undefined);
+    const switchRelay = vi.fn().mockResolvedValue(undefined);
+    registerBridge({ addRelay, switchRelay } as unknown as BridgeImpl);
+    await enterInviteRelay('wss://relay.wearebitcoin.org');
+    await enterInviteRelay('wss://relay.wearebitcoin.org');
+    expect(addRelay).toHaveBeenCalledWith('wss://relay.wearebitcoin.org');
+    expect(switchRelay).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not switch when the relay cannot be added', async () => {
+    const switchRelay = vi.fn();
+    registerBridge({ addRelay: vi.fn().mockRejectedValue(new Error('invalid relay URL')), switchRelay } as unknown as BridgeImpl);
+    await expect(enterInviteRelay('wss://bad')).rejects.toThrow('invalid');
+    expect(switchRelay).not.toHaveBeenCalled();
+  });
+});
+

@@ -388,15 +388,19 @@
     "copy": "Copiar enlace",
     "revoke": "Desactivar",
     "failed": "No se pudieron cambiar tus enlaces de invitación.",
-    "uses": "{uses} de {max} usados",
-    "usesUnlimited": "{uses} usados",
-    "expires": "vence el {date}",
-    "joined": "Entraron: {people}",
     "status": {
       "active": "Activo",
       "revoked": "Desactivado",
       "expired": "Vencido",
       "exhausted": "Agotado"
-    }
+    },
+    "linkTitle": "Enlace de invitación",
+    "copiedShort": "Copiado ✓",
+    "people": "Entraron {uses} de {max} personas",
+    "peopleUnlimited": "{uses, plural, one {Entró # persona} other {Entraron # personas}}, sin límite",
+    "expiresIn": "{days, plural, =0 {vence hoy} one {vence mañana} other {vence en # días}} ({date})",
+    "joinedTitle": "Quiénes entraron ({count})",
+    "joinedAgo": "entró {time}",
+    "nobodyYet": "Todavía no entró nadie. Compartí el enlace."
   }
 }

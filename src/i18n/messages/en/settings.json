@@ -388,15 +388,19 @@
     "copy": "Copy link",
     "revoke": "Turn off",
     "failed": "Could not change your invite links.",
-    "uses": "{uses} of {max} used",
-    "usesUnlimited": "{uses} used",
-    "expires": "expires {date}",
-    "joined": "Joined: {people}",
     "status": {
       "active": "Active",
       "revoked": "Turned off",
       "expired": "Expired",
       "exhausted": "Used up"
-    }
+    },
+    "linkTitle": "Invite link",
+    "copiedShort": "Copied ✓",
+    "people": "{uses} of {max} people joined",
+    "peopleUnlimited": "{uses, plural, one {# person} other {# people}} joined, no limit",
+    "expiresIn": "{days, plural, =0 {expires today} one {expires tomorrow} other {expires in # days}} ({date})",
+    "joinedTitle": "Who joined ({count})",
+    "joinedAgo": "joined {time}",
+    "nobodyYet": "Nobody has joined yet. Share the link."
   }
 }

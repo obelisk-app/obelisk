@@ -72,3 +72,16 @@ export function inviteLinkRelay(raw: string | string[] | undefined): string {
   const relay = Array.isArray(raw) ? raw[0] : raw;
   return relay ? normalizeDeepLinkRelay(relay) : DEFAULT_RELAY;
 }
+
+/** What the invite card shows about a code's use: how full it is and how long it has left. */
+export function inviteUsage(
+  invite: { uses: number; max_uses: number | null; expires_at: number | null; redemptions: { pubkey: string; at: number }[] },
+  nowMs: number,
+): { usedPercent: number | null; daysLeft: number | null; joined: { pubkey: string; at: number }[] } {
+  const usedPercent = invite.max_uses ? Math.min(100, Math.round((invite.uses / invite.max_uses) * 100)) : null;
+  const daysLeft = invite.expires_at == null ? null : Math.max(0, Math.ceil((invite.expires_at * 1000 - nowMs) / 86_400_000));
+  // Newest first: who just came in is what the inviter wants to see.
+  const joined = [...invite.redemptions].sort((a, b) => b.at - a.at);
+  return { usedPercent, daysLeft, joined };
+}
+

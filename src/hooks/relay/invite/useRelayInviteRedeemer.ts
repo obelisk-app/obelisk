@@ -4,12 +4,18 @@ import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { nostrActions, useCurrentRelayUrl } from '@/services/nostr-bridge';
 import { useIsLoggedIn, useMyPubkey, useSessionActions, useSessionReady, useSignerReady } from '@/hooks/session/useSession';
-import { loginWithFreshKey, redeemInvite } from '@/services/relay/relay-invite';
-import { hasInviteWaitingForKey, pendingInviteFor } from '@/services/relay/relay-invite-storage';
+import { enterInviteRelay, loginWithFreshKey, redeemInvite } from '@/services/relay/relay-invite';
+import { hasInviteWaitingForKey, pendingInviteFor, readStoredInvite } from '@/services/relay/relay-invite-storage';
+import { normalizeDeepLinkRelay, sameRelay } from '@/utils/relay/deep-link';
 import { useToastStore } from '@/store/feedback/toast';
 
 /**
  * Redeem a stored relay invite for whichever key is in use (`RelayInviteRoot`).
+ *
+ * A fresh invite (no key let in yet) first takes the app to its relay: the
+ * link's `?relay=` is only read by the chat shell, which a visitor with no
+ * account never mounts, so without this the invite waited on the default
+ * relay forever.
  *
  * Runs on every pubkey and relay change, so a generated, imported, extension
  * or bunker login, a restore, and a key made later all get let in by the same
@@ -27,7 +33,20 @@ export function useRelayInviteRedeemer(): void {
   const relay = useCurrentRelayUrl();
   const actions = useSessionActions();
   const making = useRef(false);
+  const steering = useRef<string | null>(null);
   const inFlight = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!ready) return;
+    const invite = readStoredInvite();
+    if (!invite || invite.redeemed.length > 0 || sameRelay(relay, normalizeDeepLinkRelay(invite.relay))) return;
+    if (steering.current === invite.relay) return;
+    steering.current = invite.relay;
+    enterInviteRelay(invite.relay).catch(() => {
+      // Unreachable or invalid: let the next change try again.
+      steering.current = null;
+    });
+  }, [ready, relay]);
 
   useEffect(() => {
     if (!ready || loggedIn || making.current || !hasInviteWaitingForKey(relay)) return;

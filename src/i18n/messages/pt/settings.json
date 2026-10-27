@@ -388,15 +388,19 @@
     "copy": "Copiar link",
     "revoke": "Desativar",
     "failed": "Não foi possível alterar seus links de convite.",
-    "uses": "{uses} de {max} usados",
-    "usesUnlimited": "{uses} usados",
-    "expires": "expira em {date}",
-    "joined": "Entraram: {people}",
     "status": {
       "active": "Ativo",
       "revoked": "Desativado",
       "expired": "Expirado",
       "exhausted": "Esgotado"
-    }
+    },
+    "linkTitle": "Link de convite",
+    "copiedShort": "Copiado ✓",
+    "people": "Entraram {uses} de {max} pessoas",
+    "peopleUnlimited": "{uses, plural, one {Entrou # pessoa} other {Entraram # pessoas}}, sem limite",
+    "expiresIn": "{days, plural, =0 {expira hoje} one {expira amanhã} other {expira em # dias}} ({date})",
+    "joinedTitle": "Quem entrou ({count})",
+    "joinedAgo": "entrou {time}",
+    "nobodyYet": "Ninguém entrou ainda. Compartilhe o link."
   }
 }

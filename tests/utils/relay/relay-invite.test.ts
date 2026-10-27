@@ -3,6 +3,7 @@ import {
   cleanInviteCode,
   inviteLinkRelay,
   inviteNeedsRedeem,
+  inviteUsage,
   isDeadInviteReason,
   relayHttpOrigin,
   relayInviteApiUrl,
@@ -64,5 +65,14 @@ describe('relay invite utils', () => {
     expect(inviteNeedsRedeem(invite, 'wss://public.obelisk.ar', 'old')).toBe(false);
     expect(inviteNeedsRedeem(invite, 'wss://other.example', 'new')).toBe(false);
     expect(inviteNeedsRedeem(null, 'wss://public.obelisk.ar', 'new')).toBe(false);
+  });
+
+  it('measures a code for its card', () => {
+    const now = 1_000_000_000_000;
+    const u = inviteUsage({ uses: 3, max_uses: 10, expires_at: now / 1000 + 86_400 * 2.5, redemptions: [{ pubkey: 'a', at: 1 }, { pubkey: 'b', at: 5 }] }, now);
+    expect(u.usedPercent).toBe(30);
+    expect(u.daysLeft).toBe(3);
+    expect(u.joined.map((p) => p.pubkey)).toEqual(['b', 'a']);
+    expect(inviteUsage({ uses: 3, max_uses: null, expires_at: null, redemptions: [] }, now)).toEqual({ usedPercent: null, daysLeft: null, joined: [] });
   });
 });

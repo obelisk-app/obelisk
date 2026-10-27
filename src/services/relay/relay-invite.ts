@@ -61,3 +61,20 @@ export async function redeemInvite(invite: StoredRelayInvite, pubkey: string): P
   }
   return { status: 'retry', reason: row?.reason ?? null };
 }
+
+/**
+ * Put the app on the invite's relay: into the rail if it is new, then
+ * switch. Following an invite link is the person asking to join that relay,
+ * so a fresh invite does this itself; the `?relay=` deep link alone is only
+ * read by the chat shell, which a visitor with no account never mounts.
+ */
+export async function enterInviteRelay(relay: string): Promise<void> {
+  try {
+    await nostrActions.addRelay(relay);
+  } catch (e) {
+    // Already in the rail is fine; anything else (a bad URL) is not.
+    if (!/already/i.test((e as Error).message || '')) throw e;
+  }
+  await nostrActions.switchRelay(relay);
+}
+

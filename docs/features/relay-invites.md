@@ -27,6 +27,7 @@ relay.
 |---|---|---|
 | Keep the code | `/invite/[code]` (`page.tsx`, `RelayInviteLanding.tsx`, `useRelayInviteLanding`) | Stores `{code, relay, redeemed: []}` under `obelisk-dex/relay-invite` (`services/relay/relay-invite-storage.ts`), then `router.replace('/app?relay=<host>')`. The page ships no bridge |
 | Relay trust | `/app`, `useRelayDeepLink` | The usual `?relay=` gate: silent for the current or a known relay, a question for a new one. An invite link is never a way to point someone at a relay silently |
+| Its relay | `useRelayInviteRedeemer` → `enterInviteRelay` | A fresh invite (no key let in yet) on another relay: add the invite relay to the rail and switch to it. The `?relay=` deep link alone is only read by the chat shell, which a visitor with no account never mounts, so without this step the invite waited on the default relay |
 | A key, if none | `RelayInviteRoot` → `useRelayInviteRedeemer` | Bridge restored, logged out, and the stored invite is fresh (no key redeemed yet): `loginWithFreshKey` makes a key and logs in with `method: 'generate'`, skipping the widget's backup steps, and publishes a random-name kind 0 like any generated account. Back up the key later in Settings |
 | Redeem | `useRelayInviteRedeemer` → `redeemInvite` (`services/relay/relay-invite.ts`) | For every pubkey and relay change, if this pubkey is not in `redeemed`: sign a NIP-43 kind 28934 `["claim", code]` (`KIND_RELAY_INVITE_CLAIM`) and publish it through the page hub to the invite relay only, `authMode: 'never'` (the signature is the proof), with an 8 s ack wait |
 | Admitted | same | `OK true`: add the pubkey to `redeemed`, then `switchRelay(relay)` to re-enter it, so the access verdict and every refused REQ start over |
@@ -58,8 +59,10 @@ console, can make links themselves.
   stays hidden.
 - The panel (`components/settings/invite/RelayInviteSettings.tsx`,
   `useRelayInviteSettings`): the quota left, **Create invite link** (7-day
-  link, copied on creation), and each link with its use, expiry, who joined
-  and **Copy link** / **Turn off**. Turning a link off stops new joins; only
+  link, copied on creation), and a card per link (`RelayInviteCodeCard`): its
+  state, the link with **Copy link** (reads "Copied" for two seconds), how
+  full it is as a bar, days left, and who joined, by name and picture
+  (`useAuthor`) with when; **Turn off**. Turning a link off stops new joins; only
   the relay operator can remove people who already joined.
 
 ## Storage
