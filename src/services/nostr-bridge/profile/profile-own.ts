@@ -73,11 +73,15 @@ export class OwnProfileModule {
       // the edit, so it must be the relays' newest copy (a cached one up to
       // a minute old could drop a change made in another client), and the
       // answer is stale the moment the edit publishes, so it is not stored.
+      // A relay that is down or refused the REQ cannot hold a newer profile
+      // we would overwrite, so it does not block the edit: otherwise one
+      // dead lookup relay keeps a new account (no kind 0 anywhere) from ever
+      // saving its first profile. A relay that was up and went quiet does.
       const profileQuery = await this.ctx.queryRelaysWithConfidence(
         profileRelays,
         { kinds: [KIND_METADATA], authors: [me], limit: 5 },
         PROFILE_LOOKUP_MAX_WAIT_MS,
-        { cache: 'bypass' },
+        { cache: 'bypass', deadRelaysAnswerEmpty: true },
       );
       assertCurrent();
       existingEvent = newestEvent([

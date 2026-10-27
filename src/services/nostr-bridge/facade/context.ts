@@ -55,6 +55,15 @@ export interface WatchedSubOptions {
  */
 export interface QueryOpts {
   readonly cache?: QueryCacheMode;
+  /**
+   * Count a relay we never reached (its handshake failed) or that refused
+   * the REQ (CLOSED) as having answered with nothing, so `complete` holds
+   * once every other relay sent EOSE and at least one did. Only a relay that
+   * was up and went quiet keeps the answer uncertain. For a read whose
+   * question is "could a relay hold something newer that a write would
+   * overwrite?": a relay that never served us cannot. Off by default.
+   */
+  readonly deadRelaysAnswerEmpty?: boolean;
 }
 
 export type AuthSigner = (evt: EventTemplate) => Promise<VerifiedEvent>;

@@ -7,7 +7,7 @@
  * is a refcount on its filter. Pure move from `client.ts`.
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { queryAuthorsBatched, type RelayHub } from '@nostr-wot/relay/hub';
+import { queryAuthorsBatched, type QueryResult, type RelayHub } from '@nostr-wot/relay/hub';
 import type { WatchHold, WatchStreamCallbacks } from '../relay/background-watch';
 import type { QueryOpts, TrackedSub, WatchedSubOptions } from '../facade/context';
 import { uniqueRelayUrls } from '../relay/relay-list';
@@ -18,7 +18,7 @@ import { openWatchedReq, type WatchedReqDeps } from './watched';
 export { RELAY_SWITCH_GRACE_MS } from '@/constants/nostr-bridge/subscriptions';
 
 export interface RequestsDeps {
-  readonly hub: Pick<RelayHub, 'subscribe' | 'query' | 'acquireAuthLease' | 'disconnect'>;
+  readonly hub: Pick<RelayHub, 'subscribe' | 'query' | 'acquireAuthLease' | 'disconnect' | 'status'>;
   /** The active relay list, read live. */
   relays(): string[];
   readonly watched: WatchedReqDeps;
@@ -82,6 +82,13 @@ export class RequestsModule {
    * the hub's TTL is answered from memory with no REQ, and identical reads
    * in flight share one REQ. A caller that must see the wire passes
    * `opts.cache` and says why at its call site.
+   *
+   * `opts.deadRelaysAnswerEmpty` loosens `complete` for one call (see
+   * `QueryOpts`): a CLOSED or a relay whose socket never came up counts as
+   * an empty answer. The hub reports a relay it kept retrying through the
+   * whole wait as `timeout`, so the socket's own state tells the two
+   * timeouts apart: up (a relay that went quiet mid-answer) stays
+   * uncertain, down with a connect error counts as unreachable.
    */
   async queryRelaysWithConfidence(
     relays: readonly string[],
@@ -98,7 +105,19 @@ export class RequestsModule {
       label: 'obelisk-query',
       cache: { mode: opts?.cache ?? 'cached-ok' },
     });
-    return { events: Array.from(result.events), complete: result.complete };
+    const complete = result.complete || (opts?.deadRelaysAnswerEmpty === true && this.answeredOrDead(result));
+    return { events: Array.from(result.events), complete };
+  }
+
+  /** At least one relay sent EOSE, and every other one refused the REQ or could not be reached. */
+  private answeredOrDead(result: QueryResult): boolean {
+    const outcomes = Object.entries(result.perRelay);
+    if (!outcomes.some(([, outcome]) => outcome === 'eose')) return false;
+    return outcomes.every(([url, outcome]) => {
+      if (outcome !== 'timeout') return true;
+      const status = this.deps.hub.status(url);
+      return status.connection !== 'connected' && status.lastError !== null;
+    });
   }
 
   /**
