@@ -66,9 +66,16 @@ export function parseRelayRejection(reason: string): RelayAccessState | null {
  * and attempted, but failed with: …` instead. So a bare `auth-required: `
  * reaching us on such a sub can only be the *resubscribed* REQ's answer: the
  * relay accepted our AUTH and still refused us. That is a whitelist refusal,
- * not an authentication problem: obelisk-relay's read path answers both
- * cases with the same `auth-required:` string (see docs/architecture/data-system.md
- * "Relay-side contract for access rejection").
+ * not an authentication problem. obelisk-relay itself now answers an
+ * authenticated key it doesn't admit with `restricted: … not whitelisted`
+ * (docs/architecture/data-system.md "Relay-side contract for access
+ * rejection"); this branch covers relays that still answer `auth-required:`
+ * both before and after AUTH.
+ *
+ * Any other `restricted:` comes back as 'restricted' too, including
+ * per-channel ones such as `restricted: Access denied to private group`, so
+ * a caller must not treat it as relay-wide on its own (watched.ts gates that
+ * on AFFECTS_ACCESS and `isWhitelistRefusal`).
  */
 export function classifyAccessClose(reason: string, hadOnAuth: boolean): RelayAccessState | null {
   if (hadOnAuth && reason.startsWith('auth-required: ')) return 'restricted';
