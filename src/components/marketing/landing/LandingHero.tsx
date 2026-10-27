@@ -26,8 +26,9 @@ export default function LandingHero() {
       
       <Container width="6xl" className="relative z-10 grid w-full items-center gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-12">
         <div className="flex min-w-0 flex-col items-center text-center lg:items-start lg:text-left">
-          <Heading as="h1" className="w-full max-w-[680px] text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl mb-5">
-            {t('marketing.hero.title')}{' '}
+          <Heading as="h1" className="w-full max-w-[680px] text-[2rem] font-extrabold leading-[1.05] tracking-tight min-[400px]:text-4xl sm:text-5xl lg:text-[3.4rem] xl:text-6xl mb-5">
+            {/* The first phrase never breaks ("Your communities," on one line), in every language. */}
+            <span className="whitespace-nowrap">{t('marketing.hero.title')}</span>{' '}
             <span className="lc-shine-text lg:block">{t('marketing.hero.titleHighlight')}</span>
           </Heading>
           <Text as="p" size="base" tone="default" className="md:text-xl max-w-xl leading-relaxed">
