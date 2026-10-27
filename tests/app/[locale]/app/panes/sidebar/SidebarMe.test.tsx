@@ -10,6 +10,7 @@ import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { BRIDGE_MOCK_PUBKEY, userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
 import { openSettings } from '@/services/settings/open-settings';
 import type { JsUserMetadata } from '@/services/nostr-bridge';
+import { avatarInitials } from '@/utils/identity/display-name';
 
 vi.mock('@/app/[locale]/app/user-panel/UserPanel', () => ({
   default: ({ initialTab, initialEditing, isMe, onClose }: { initialTab: string; initialEditing: boolean; isMe: boolean; onClose: () => void }) => (
@@ -64,5 +65,14 @@ describe('SidebarMe', () => {
     fireEvent.click(screen.getByText('close panel'));
     fireEvent.click(screen.getByTestId('user-settings-button'));
     expect(screen.getByTestId('user-panel').dataset.tab).toBe('general');
+  });
+
+  it('the avatar fallback is the shared one-letter recipe: the name, else the npub, never hex', () => {
+    const { unmount } = mount({ displayName: 'Ana' });
+    expect(screen.getByTestId('sidebar-profile-button').firstElementChild?.textContent).toBe('A');
+    unmount();
+    mount();
+    const letter = avatarInitials(null, BRIDGE_MOCK_PUBKEY).slice(0, 1);
+    expect(screen.getByTestId('sidebar-profile-button').firstElementChild?.textContent).toBe(letter);
   });
 });

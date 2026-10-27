@@ -44,6 +44,7 @@ export function ServerChannelList({ vm }: { vm: Omit<ServerScreenModel, 'channel
           relayAccess={vm.relayAccess}
           connectionState={vm.connectionState}
           metadataEose={vm.metadataEose}
+          onChooseRelay={vm.openAddRelay}
         />
       )}
     </>

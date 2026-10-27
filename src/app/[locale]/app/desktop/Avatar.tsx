@@ -1,7 +1,8 @@
 'use client';
 
 import RemoteImage from '@/components/ui/media/RemoteImage';
-import { avatarHue, avatarInitials } from '@/utils/shell/desktop/avatar';
+import { avatarHue } from '@/utils/shell/desktop/avatar';
+import { avatarInitials } from '@/utils/identity/display-name';
 import { hideBrokenImage } from '@/utils/media/remote/hide-broken-image';
 
 export function Avatar({ pubkey, size, picture }: { pubkey: string; size: number; picture: string | null }) {
@@ -22,7 +23,7 @@ export function Avatar({ pubkey, size, picture }: { pubkey: string; size: number
       style={{ width: px, height: px, background: `hsl(${avatarHue(pubkey)} 60% 30%)` }}
       className="flex items-center justify-center rounded-full font-mono text-[10px] font-bold text-lc-white"
     >
-      {avatarInitials(pubkey)}
+      {avatarInitials(null, pubkey)}
     </div>
   );
 }

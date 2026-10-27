@@ -154,7 +154,7 @@
     "skip": "Skip for now",
     "cancel": "Cancel",
     "confirmTitle": "Confirm profile changes",
-    "confirmDesc": "This will publish your updated profile (kind 0) to Nostr relays. Your other profile fields (NIP-05, Lightning, etc.) will be preserved.",
+    "confirmDesc": "This will publish your updated public profile to Nostr relays. Your other profile fields (NIP-05, Lightning, etc.) will be preserved.",
     "confirmPublish": "Publish changes",
     "changed": "updated",
     "avatarAlt": "Avatar"
@@ -169,7 +169,7 @@
   "section": {
     "profile": {
       "label": "Profile",
-      "desc": "Your name, picture, banner and links, published to Nostr as your kind-0 profile."
+      "desc": "Your name, picture, banner and links, published to Nostr as your public profile."
     },
     "general": {
       "label": "General",

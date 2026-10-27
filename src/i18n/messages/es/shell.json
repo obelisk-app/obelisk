@@ -67,7 +67,11 @@
     },
     "nameRequired": "El nombre es obligatorio",
     "notSignedIn": "No iniciaste sesión",
-    "publishFailed": "No se pudo publicar"
+    "publishFailed": "No se pudo publicar",
+    "placeholder": {
+      "nip05": "vos@ejemplo.com",
+      "lud16": "vos@walletofsatoshi.com"
+    }
   },
   "desktop": {
     "empty": {
@@ -566,8 +570,7 @@
       "authBunker": "Aprobá la solicitud de firma en tu app de bunker para completar el AUTH NIP-42.",
       "authNip07": "Aprobá la solicitud de firma en tu extensión de Nostr para completar el AUTH NIP-42.",
       "authFailed": "El AUTH NIP-42 no se completó. Probá recargar o entrar con otro método.",
-      "unreachable": "El relay no responde. Puede estar caído, bloqueado por tu red o no disponible por un rato. Vamos a seguir intentando en segundo plano. Cambiá de relay si necesitás seguir trabajando.",
-      "restricted": "Este relay aceptó tu firma pero no entrega ni acepta eventos de tu pubkey. Pedile al operador que te agregue a su whitelist, o cambiá de relay."
+      "unreachable": "El relay no responde. Puede estar caído, bloqueado por tu red o no disponible por un rato. Vamos a seguir intentando en segundo plano. Cambiá de relay si necesitás seguir trabajando."
     },
     "connection": {
       "connected": "Conectado",
@@ -583,5 +586,11 @@
     "publishing": "Publicando tu perfil…",
     "publishFailed": "Ningún relay confirmó tu perfil. Tu borrador sigue acá. Reintentá para sincronizarlo antes de entrar.",
     "retryPublish": "Reintentar sincronización"
+  },
+  "relayAccess": {
+    "title": "{host} todavía no te dejó entrar",
+    "body": "Este relay solo acepta las claves de su lista. Pedile a quien lo administra que agregue la tuya: mandale tu npub.",
+    "npubLabel": "Tu npub",
+    "other": "O elegí un relay que esté abierto para vos."
   }
 }

@@ -43,7 +43,7 @@ describe('ChannelListEmptyState', () => {
   it('shows the reason in the reader language', () => {
     render(
       <LocaleProvider initialLocale="es">
-        <ChannelListEmptyState relayAccess="ok" connectionState="Connected" metadataEose />
+        <ChannelListEmptyState relayAccess="ok" connectionState="Connected" metadataEose onChooseRelay={() => {}} />
       </LocaleProvider>,
     );
     const state = screen.getByTestId('channels-empty');
@@ -54,7 +54,7 @@ describe('ChannelListEmptyState', () => {
   it('spins while the channels load', () => {
     render(
       <LocaleProvider initialLocale="en">
-        <ChannelListEmptyState relayAccess="unknown" connectionState="Connecting" metadataEose={false} />
+        <ChannelListEmptyState relayAccess="unknown" connectionState="Connecting" metadataEose={false} onChooseRelay={() => {}} />
       </LocaleProvider>,
     );
     expect(screen.getByTestId('channels-loading')).toHaveTextContent('Channels loading…');

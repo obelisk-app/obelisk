@@ -54,7 +54,7 @@ export default function EditProfileFields({ vm }: { vm: EditProfileScreenModel }
             id={nip05Id}
             value={vm.nip05}
             onChange={(e) => vm.setNip05(e.target.value)}
-            placeholder="you@domain.com"
+            placeholder={t('shell.user.placeholder.nip05')}
             inputMode="email"
             autoCapitalize="off"
             autoCorrect="off"
@@ -69,7 +69,7 @@ export default function EditProfileFields({ vm }: { vm: EditProfileScreenModel }
             id={lud16Id}
             value={vm.lud16}
             onChange={(e) => vm.setLud16(e.target.value)}
-            placeholder="you@walletofsatoshi.com"
+            placeholder={t('shell.user.placeholder.lud16')}
             inputMode="email"
             autoCapitalize="off"
             autoCorrect="off"

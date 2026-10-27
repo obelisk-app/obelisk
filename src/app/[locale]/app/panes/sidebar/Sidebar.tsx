@@ -1,11 +1,9 @@
 'use client';
 
 import Text from '@/components/ui/layout/Text';
-import VoiceStatusBar from '@/components/voice/status-bar/VoiceStatusBar';
 import { useTranslations } from 'next-intl';
 import type { View } from '@/utils/shell/desktop/view';
 import { CreateGroupSection } from './CreateGroupSection';
-import { SidebarMe } from './SidebarMe';
 import { ChannelTree } from './ChannelTree';
 import { RelayAdminModals } from './RelayAdminModals';
 import { SidebarHeader } from './SidebarHeader';
@@ -93,13 +91,6 @@ export function Sidebar({
         emojiSet={vm.operator.emojiSet}
         relayRoles={vm.operator.relayRoles}
       />
-
-      <div className="shrink-0 border-t border-lc-border bg-lc-card/50 md:hidden">
-        <VoiceStatusBar />
-        <div className="p-2">
-          <SidebarMe />
-        </div>
-      </div>
     </>
   );
 }

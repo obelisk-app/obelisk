@@ -9,7 +9,7 @@ import Modal from '@/components/ui/overlays/Modal';
 import { useTranslations } from 'next-intl';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
-import { LockIcon, ServerIcon, ShieldIcon } from '@/assets/icons';
+import { LockIcon, ServerIcon } from '@/assets/icons';
 
 export function RelayAccessModal() {
   const t = useTranslations();
@@ -18,12 +18,15 @@ export function RelayAccessModal() {
   const loginMethod = useMyLoginMethod();
   const isLoggedIn = useIsLoggedIn();
   // Track which (relay, state) tuple the user has dismissed so the modal
-  // doesn't keep popping back. A real state change (e.g. ok -> restricted
-  // again on a new relay, or auth-required after restricted) re-arms it.
+  // doesn't keep popping back. A real state change (e.g. ok -> unreachable
+  // on a new relay, or auth-required after that) re-arms it.
   const [choosingRelay, setChoosingRelay] = useState(false);
   const [dismissed, setDismissed] = useState<string | null>(null);
-  const surfaceable =
-    access === 'restricted' || access === 'auth-required' || access === 'unreachable';
+  // Not `restricted`: a refused key already gets the activity stack's status
+  // row and, in the main pane, the empty state that says how to get in (the
+  // npub for the operator, another relay). A modal on top was a third copy
+  // of the same sentence.
+  const surfaceable = access === 'auth-required' || access === 'unreachable';
   const key = relay && surfaceable ? `${relay}|${access}` : null;
   if (!isLoggedIn) return null;
   if (choosingRelay) return <AddRelayModal onClose={() => setChoosingRelay(false)} />;
@@ -32,24 +35,17 @@ export function RelayAccessModal() {
 
   const host = shortHost(relay);
   const isAuth = access === 'auth-required';
-  const isUnreachable = access === 'unreachable';
-  const title = isAuth
-    ? t('shell.status.authRequired.title', { host })
-    : isUnreachable
-      ? t('shell.status.cannotReach', { host })
-      : t('shell.status.restricted.title', { host });
+  const title = isAuth ? t('shell.status.authRequired.title', { host }) : t('shell.status.cannotReach', { host });
   const body = isAuth
     ? loginMethod === 'bunker'
       ? t('shell.status.modal.authBunker')
       : loginMethod === 'nip07'
         ? t('shell.status.modal.authNip07')
         : t('shell.status.modal.authFailed')
-    : isUnreachable
-      ? t('shell.status.modal.unreachable')
-      : t('shell.status.modal.restricted');
+    : t('shell.status.modal.unreachable');
 
   const tone = isAuth ? 'warning' : 'danger';
-  const icon = isAuth ? <LockIcon size={22} /> : isUnreachable ? <ServerIcon size={22} /> : <ShieldIcon size={22} />;
+  const icon = isAuth ? <LockIcon size={22} /> : <ServerIcon size={22} />;
 
   return (
     <Modal
