@@ -77,6 +77,8 @@ invite, rotation, logout rule), `tests/services/relay/relay-invite.test.ts`
 
 ## For nostr-wot-sdk
 
+Proposed upstream as [nostr-wot/nostr-wot-sdk#26](https://github.com/nostr-wot/nostr-wot-sdk/issues/26).
+
 The redeem-on-every-identity-change step is the same in every client and
 only needs the hub and the signer. obelisk-relay's doc §7 proposes it as
 `redeemRelayInvite` in `@nostr-wot/relay` and a `pendingRelayInvite` replayed
