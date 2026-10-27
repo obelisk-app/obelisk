@@ -1,20 +1,21 @@
 import { useTranslations } from 'next-intl';
-import KeyCard from '../how-it-works/KeyCard';
-import BrowserApp from '../how-it-works/BrowserApp';
-import ServerRelay from '../how-it-works/ServerRelay';
-import Elsewhere from '../how-it-works/Elsewhere';
+import Lane from '../how-it-works/Lane';
+import ServerGlyph from '../how-it-works/ServerGlyph';
+import MiniObelisk from '../how-it-works/MiniObelisk';
+import KeyGlyph from '../how-it-works/KeyGlyph';
 
 /**
- * The how-obelisk-works guide's hero: the architecture as the code has it.
- * The key stays with its owner and signs for the web app in the browser. The
- * app's one connection manager (the RelayHub) sends those signed events over
- * a WebSocket straight to the community's server, which is the NIP-29 relay
- * itself (the Obelisco), and reaches other Nostr relays itself for profiles
- * and DMs. Voice goes peer to peer or through an SFU; zaps are paid by the
- * person's own Lightning wallet. No Obelisk server sits in between.
+ * The how-obelisk-works guide's hero, as a comparison with the same shape on
+ * both rows: you, the thing in the middle, your community. On a usual chat
+ * platform the middle is the company's server, holding your account, your
+ * data and its rules. In Obelisk you sign with your own key and the middle is
+ * your community's relay (the NIP-29 relay, drawn as the Obelisco), which the
+ * community picks or runs. The app only signs and shows: no Obelisk server in
+ * between. The architecture's details are the guide's text.
  */
 export default function HowObeliskWorksHero() {
   const t = useTranslations();
+  const k = (key: string) => t(`guides.art.howObeliskWorks.${key}` as Parameters<typeof t>[0]);
 
   return (
     <svg
@@ -30,60 +31,59 @@ export default function HowObeliskWorksHero() {
       <defs>
         <linearGradient id="sky-how" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#0a0a0a" />
-          <stop offset="100%" stopColor="#1e2812" />
+          <stop offset="100%" stopColor="#141c0c" />
         </linearGradient>
         <linearGradient id="how-obelisk-body" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#b4f953" />
           <stop offset="100%" stopColor="#8bc34a" />
         </linearGradient>
         <radialGradient id="how-server-glow" cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0%" stopColor="#b4f953" stopOpacity="0.28" />
+          <stop offset="0%" stopColor="#b4f953" stopOpacity="0.22" />
           <stop offset="100%" stopColor="#b4f953" stopOpacity="0" />
         </radialGradient>
         <marker id="how-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#b4f953" />
         </marker>
+        <marker id="how-arrow-dim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#737373" />
+        </marker>
       </defs>
 
       <rect width="800" height="400" fill="url(#sky-how)" />
-      <g opacity="0.12" stroke="#b4f953" strokeWidth="0.5">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <line key={`g${i}`} x1="0" y1={50 + i * 50} x2="800" y2={50 + i * 50} />
-        ))}
-      </g>
 
-      <KeyCard />
-      <BrowserApp />
-      <ServerRelay />
-      <Elsewhere />
+      {/* A usual chat platform: the company's server sits in the middle. */}
+      <Lane y={108} label={k('laneUsual')} you={k('you')} sent={k('sent')} community={k('community')} lit={false}>
+        <rect x="268" y="66" width="280" height="84" rx="12" fill="#141414" stroke="#404040" strokeWidth="1.6" />
+        <ServerGlyph x={288} y={92} color="#737373" />
+        <text x="334" y="101" fontSize="14.5" fontWeight="700" fill="#d4d4d4">{k('company')}</text>
+        <text x="334" y="122" fontSize="11.5" fill="#f87171">{k('companyHas')}</text>
+      </Lane>
 
-      {/* key -> app: the key signs, the app never holds it */}
-      <line x1="216" y1="125" x2="268" y2="125" stroke="#b4f953" strokeWidth="2" strokeDasharray="5 5"
-        className="animate-dash-flow" markerEnd="url(#how-arrow)" />
-      <rect x="216" y="96" width="52" height="20" rx="10" fill="#b4f953" />
-      <text x="242" y="110" textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#0a0a0a">
-        {t('guides.art.howObeliskWorks.sign')}
-      </text>
+      <line x1="24" y1="190" x2="776" y2="190" stroke="#262626" strokeWidth="1" strokeDasharray="4 6" />
 
-      {/* app <-> server: signed events, straight over a WebSocket */}
-      <line x1="490" y1="125" x2="612" y2="125" stroke="#b4f953" strokeWidth="2" strokeDasharray="6 6"
-        className="animate-dash-flow" markerStart="url(#how-arrow)" markerEnd="url(#how-arrow)" />
-      <text x="551" y="113" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953">
-        {t('guides.art.howObeliskWorks.flowSigned')}
-      </text>
-      <text x="551" y="145" textAnchor="middle" fontSize="11" fill="#a3a3a3">
-        {t('guides.art.howObeliskWorks.flowSocket')}
-      </text>
+      {/* Obelisk: you sign with your key; the middle is your community's relay. */}
+      <Lane
+        y={282} label={k('laneObelisk')} you={k('youKey')} sent={k('signed')} community={k('community')} lit
+        badge={(
+          <g>
+            <circle cx="120" cy="294" r="12" fill="#0a0a0a" stroke="#b4f953" strokeWidth="1.6" />
+            <KeyGlyph x={121} y={294} />
+          </g>
+        )}
+      >
+        <circle cx="300" cy="282" r="54" fill="url(#how-server-glow)"
+          className="animate-glow-pulse"
+          style={{ transformOrigin: '300px 282px', transformBox: 'fill-box' } as React.CSSProperties}
+        />
+        <rect x="268" y="236" width="280" height="92" rx="12" fill="#0f160a" stroke="#b4f953" strokeWidth="1.8" />
+        <MiniObelisk x={300} y={250} />
+        <text x="334" y="268" fontSize="14.5" fontWeight="700" fill="#fafafa">{k('relay')}</text>
+        <text x="334" y="289" fontSize="11.5" fill="#b4f953">{k('relayPick')}</text>
+        <text x="334" y="306" fontSize="11.5" fill="#b4f953">{k('relayRun')}</text>
+      </Lane>
 
-      {/* app -> what it reaches on its own: other relays, voice, the wallet */}
-      <g stroke="#8bc34a" strokeWidth="1.5" fill="none" strokeDasharray="4 6" opacity="0.85">
-        <path d="M362 210 C 362 248, 138 244, 138 280" className="animate-dash-flow" markerEnd="url(#how-arrow)" />
-        <path d="M378 210 L 400 280" className="animate-dash-flow" markerEnd="url(#how-arrow)" />
-        <path d="M394 210 C 394 248, 662 244, 662 280" className="animate-dash-flow" markerEnd="url(#how-arrow)" />
-      </g>
-
-      <text x="400" y="384" textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#b4f953">
-        {t('guides.art.howObeliskWorks.noServer')}
+      <text x="400" y="378" textAnchor="middle" fontSize="13" fontWeight="700" fill="#b4f953">
+        {k('footer')}
       </text>
     </svg>
   );
