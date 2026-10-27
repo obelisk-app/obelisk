@@ -7,7 +7,7 @@ These documents describe feature contracts and code maps. Cross-cutting ownershi
 | Direct messages | [DM implementation](direct-messages.md), [metadata privacy](dm-metadata-privacy.md) |
 | Voice and calls | [Voice index](voice/README.md), [SFU](sfu-system.md) |
 | Social surfaces | [Feeds and profiles](social-feeds.md), [search](search.md) |
-| Relay administration | [Layout and branding](relay-layout-and-branding.md), [roles](relay-roles.md), [server banner](server-banner.md) |
+| Relay administration | [Layout and branding](relay-layout-and-branding.md), [roles](relay-roles.md), [server banner](server-banner.md), [invite links](relay-invites.md) |
 | Media | [Uploads](uploads.md), [composer attachments](chat-composer-attachments.md), [media packs](media-packs.md) |
 | Payments | [Bitcoin zaps and Nostr Wallet Connect](bitcoin-zaps-nwc.md) |
 | Games | [Games and migration direction](games.md) |

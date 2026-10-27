@@ -17,6 +17,7 @@
     "publish-timeout": "Nenhum relay respondeu a tempo. Verifique sua conexão e tente de novo.",
     "auth-refused": "O relay não aceitou sua autenticação.",
     "not-whitelisted": "Este relay só aceita as chaves da lista dele, e a sua não está nela.",
+    "relay-invite-failed": "O relay não conseguiu criar nem alterar esse convite.",
     "relay-error": "O relay recusou o pedido.",
     "invalid-relay-url": "Esse não é um endereço de relay válido. Use um endereço wss:// público.",
     "dms-off": "As mensagens diretas estão desativadas nas suas configurações.",

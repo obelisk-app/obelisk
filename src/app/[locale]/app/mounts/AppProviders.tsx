@@ -19,11 +19,13 @@
 import type { ReactNode } from 'react';
 import { BridgeProvider } from '@/services/nostr-bridge';
 import RuntimeTranslator from '@/components/i18n/RuntimeTranslator';
+import RelayInviteRoot from '@/components/relay/RelayInviteRoot';
 
 export default function AppProviders({ children }: { children: ReactNode }) {
   return (
     <BridgeProvider>
       <RuntimeTranslator />
+      <RelayInviteRoot />
       {children}
     </BridgeProvider>
   );

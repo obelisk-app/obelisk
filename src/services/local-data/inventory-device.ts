@@ -87,6 +87,12 @@ export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
     perAccount: false, sensitive: true, source: 'src/services/nostr-bridge/session/relays.ts',
   },
   {
+    id: 'relay-invite', area: LS, key: 'obelisk-dex/relay-invite', match: 'exact', category: 'login',
+    holds: 'A relay invite code from a link, its relay, and the keys it already let in.',
+    why: 'A key you make later is let into the relay with the same code. Kept across logout.',
+    perAccount: false, sensitive: true, source: 'src/services/relay/relay-invite.ts',
+  },
+  {
     id: 'vault', area: 'indexedDB', key: VAULT_DB, match: 'exact', category: 'login',
     holds: 'One non-extractable AES-GCM key that seals the session secrets.',
     why: 'Keeps the nsec and bunker secrets off disk in the clear.', perAccount: false, sensitive: true, source: 'src/lib/crypto/session-vault.ts',

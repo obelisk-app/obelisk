@@ -206,6 +206,10 @@
     "data": {
       "label": "Dados neste dispositivo",
       "desc": "O que o Obelisk guarda neste navegador e para quê. Apague o que quiser aqui."
+    },
+    "invites": {
+      "label": "Convidar pessoas",
+      "desc": "Links que deixam pessoas novas entrarem neste relay"
     }
   },
   "openPreferences": "Preferências",
@@ -371,6 +375,28 @@
       "offline": "Os arquivos salvos do app são apagados. O Obelisk baixa tudo de novo da próxima vez que carregar, e até lá não abre sem conexão.",
       "language": "O Obelisk esquece o idioma que você escolheu e volta ao idioma do seu navegador. A página recarrega.",
       "analytics": "Sua resposta sobre o Google Analytics e os cookies dele são apagados. O Analytics para, e o Obelisk pergunta de novo; nada do Google carrega se você não permitir."
+    }
+  },
+  "invites": {
+    "title": "Convidar pessoas",
+    "intro": "Cada link deixa pessoas novas entrarem em {relay}. Quem abre recebe uma conta criada para ela e entra direto no app.",
+    "notAllowed": "Você não pode convidar pessoas para este relay. Quem o opera decide quem pode.",
+    "quota": "Você ainda pode trazer {people, plural, one {# pessoa} other {# pessoas}} com até {links, plural, one {# link a mais} other {# links a mais}}.",
+    "quotaAdmin": "Você opera este relay, então seus links não têm cota.",
+    "create": "Criar link de convite",
+    "copied": "Link de convite copiado",
+    "copy": "Copiar link",
+    "revoke": "Desativar",
+    "failed": "Não foi possível alterar seus links de convite.",
+    "uses": "{uses} de {max} usados",
+    "usesUnlimited": "{uses} usados",
+    "expires": "expira em {date}",
+    "joined": "Entraram: {people}",
+    "status": {
+      "active": "Ativo",
+      "revoked": "Desativado",
+      "expired": "Expirado",
+      "exhausted": "Esgotado"
     }
   }
 }

@@ -17,6 +17,7 @@
     "publish-timeout": "No relay answered in time. Check your connection and try again.",
     "auth-refused": "The relay did not accept your authentication.",
     "not-whitelisted": "This relay only accepts keys on its list, and yours is not on it.",
+    "relay-invite-failed": "The relay could not create or change that invite.",
     "relay-error": "The relay rejected the request.",
     "invalid-relay-url": "That is not a valid relay address. Use a public wss:// address.",
     "dms-off": "Direct messages are turned off in your settings.",
