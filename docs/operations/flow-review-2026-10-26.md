@@ -64,7 +64,7 @@ keep the console errors and failed requests of every shot.
   `shell.login.sdk.*` messages in place (`src/constants/session/sdk-login-copy.ts`); a test
   checks every string against the installed package, so an SDK rewording fails CI instead of
   showing English. Upstream ask for `@nostr-wot/ui`: a `labels`/`messages` prop on
-  `LoginWidgetProps`, then this workaround goes. The downloaded nsec `.txt` is still English.
+  `LoginWidgetProps`, then this workaround goes: nostr-wot/nostr-wot-sdk#25. The downloaded nsec `.txt` is still English.
 - **low: the "Your new key" copy has em dashes** (between "Private key (nsec)" and "keep
   secret", and before "there's no recovery"), which the repo bans everywhere else.
   **Fixed** with the entry above (Obelisk's copy has none); the SDK's default copy still does.
@@ -75,7 +75,7 @@ keep the console errors and failed requests of every shot.
 - **low: a pasted-key login skips the profile step** the new-account flow shows, so the user
   is left as "Vos" / "Anónimo" with no prompt to name themselves. **Open**: needs a dependable
   "this account has no profile" signal first (a lookup that failed must never lead to a new
-  kind 0 overwriting a real one) and an Obelisk-owned profile form.
+  kind 0 overwriting a real one) and an Obelisk-owned profile form. Tracked in #41.
 
 ## Profile and settings
 
@@ -111,21 +111,27 @@ keep the console errors and failed requests of every shot.
 - **low: the last channels hide behind the user panel.** At 1280×800 the sidebar's final rows
   ("Canal Robert", a new channel) sit under the "Capitán Mate" panel at the bottom; a click
   there lands on the panel. The channel list needs bottom padding equal to the panel's height
-  (or the panel should not overlap the scroll area). **Open.**
+  (or the panel should not overlap the scroll area). **Fixed** (`383ccde4`): the panel publishes
+  how much of the shell it covers as a CSS variable and the channel and DM lists pad by it.
 - **low: a new, empty channel says "Cargando mensajes..."** instead of an empty state, until
-  the first message arrives. **Open.**
+  the first message arrives. **Fixed** (`383ccde4`): the empty answer ran the retry ladder meant
+  for relays that answer "empty" before login completes; a channel created in this session now
+  takes its first empty answer as final. Channels others just created still wait the ladder.
 - **low: the "No hay mensajes anteriores" pill overlaps the first message** at the top of a short
-  history (desktop and phone). **Open.**
+  history (desktop and phone). **Fixed** (`383ccde4`): the lists start below the pill.
 - **low: "kind 9" in the activity toast** ("Publicado · Enviar mensaje · kind 9"). The kind id
-  is jargon; the description alone says it. **Open.**
+  is jargon; the description alone says it. **Fixed** (`ff22b119`); the relay debug log keeps
+  the number. The marketing, showcase and phone-profile copy no longer says "kind 0" either.
 - **low: on the phone, your own new message flashes as `npub13xl44...4xlk`** with a placeholder
-  avatar for a moment before your name and picture appear. **Open.**
+  avatar for a moment before your name and picture appear. **Fixed** (`383ccde4`): message rows
+  got the profile one frame late; your own rows now fall back to the session's profile.
 
 - **low: the picker button left of the message box has no accessible name** (no
   `aria-label`, no `title`), so screen readers announce an unlabeled button and tests cannot
-  find it. **Open.**
+  find it. **Fixed** (`383ccde4`): `chat.composer.mediaPicker` on desktop and phone, with
+  `data-testid="composer-picker-button"`; the textarea has `data-testid="composer-input"`.
 - **low: on the phone the composer placeholder wraps** ("Mensaje #🧉 Cubierta del Capitán")
-  onto a second line that is cut off. It should truncate on one line. **Open.**
+  onto a second line that is cut off. **Fixed** (`383ccde4`): one line with an ellipsis.
 
 ## Content audit of the site's screenshots (2026-10-27)
 
@@ -148,7 +154,8 @@ Replaced with captures of the demo personas' own channel (`obelisk-media/recordi
   a "Dummy" avatar that is a photo of an artist's mannequin (source unknown) and a channel
   called "BoyVip". **Removed**; replaced by fresh phone captures.
 
-Still to re-shoot (left in place because there is no clean replacement yet):
+Still to re-shoot (left in place because there is no clean replacement yet; tracked in
+obelisk-app/obelisk-media#2):
 
 - `mobile-channel-view-with-sfu-test-peer-trasmission.png` (/mobile, voice) shows the
   mannequin-photo avatar small, under the call. Needs a voice call between the two personas
@@ -158,6 +165,7 @@ Still to re-shoot (left in place because there is no clean replacement yet):
 - The relay's **custom emoji set** on public.obelisk.ar (the picker's "Emojis del servidor")
   includes the Barbie and X logos, Tether's mark, a Doge meme and a photo of a person. That is
   operator content, not the app, but it means no marketing capture may show that tab.
+  Decision tracked in #42.
 
 ## Third parties seen during the pass
 
