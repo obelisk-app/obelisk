@@ -11,6 +11,10 @@ import TextButton from '@/components/ui/buttons/TextButton';
 import { reviewAnalyticsConsent } from '@/services/analytics/consent';
 import Text from '@/components/ui/layout/Text';
 import Heading from '@/components/ui/layout/Heading';
+import Row from '@/components/ui/layout/Row';
+import type { ReactElement } from 'react';
+import { InstagramIcon, XLogoIcon, YouTubeIcon } from '@/assets/icons';
+import { SOCIAL_ACCOUNTS, type SocialAccountId } from '@/constants/marketing/social';
 
 export const GUIDE_SLUGS = [
   { slug: 'what-is-obelisk', tKey: 'marketing.learn.card.whatIsObelisk.title' },
@@ -18,6 +22,12 @@ export const GUIDE_SLUGS = [
   { slug: 'web-of-trust', tKey: 'marketing.learn.card.webOfTrust.title' },
   { slug: 'future-nostr-relays', tKey: 'marketing.learn.card.futureNostrRelays.title' },
 ] as const;
+
+const SOCIAL_ICONS: Record<SocialAccountId, ReactElement> = {
+  instagram: <InstagramIcon size={18} />,
+  youtube: <YouTubeIcon size={18} />,
+  x: <XLogoIcon size={18} />,
+};
 
 export default function Footer() {
   const t = useTranslations();
@@ -37,6 +47,23 @@ export default function Footer() {
             <Text as="p" variant="muted" className="leading-6 max-w-xs">
               {t('marketing.footer.brandBlurb')}
             </Text>
+            <nav aria-label={t('marketing.footer.follow')} className="mt-5">
+              <Row gap="2">
+                {SOCIAL_ACCOUNTS.map((account) => (
+                  <Link
+                    key={account.id}
+                    href={account.href}
+                    target="_blank"
+                    aria-label={`${account.network} ${account.handle}`}
+                    title={`${account.network} ${account.handle}`}
+                    data-testid={`footer-social-${account.id}`}
+                    className="w-9 h-9 rounded-full border border-lc-border/70 text-lc-muted flex items-center justify-center transition-colors hover:border-lc-green hover:text-lc-green hover:bg-lc-olive/20"
+                  >
+                    {SOCIAL_ICONS[account.id]}
+                  </Link>
+                ))}
+              </Row>
+            </nav>
           </div>
 
           {/* Guides */}

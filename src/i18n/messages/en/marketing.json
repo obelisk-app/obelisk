@@ -269,6 +269,11 @@
     "subtitle": "Open the app, log in with your Nostr keys, pick a relay. That's it.",
     "button": "Launch Obelisk"
   },
+  "social": {
+    "heading": "Follow Obelisk",
+    "subtitle": "News, videos and what's next, wherever you scroll.",
+    "follow": "Follow"
+  },
   "footer": {
     "tagline": "Obelisk: A pure Nostr client. ",
     "brandBlurb": "Discord-style group chat with no backend. Your keys, your relays, signed Nostr events.",
@@ -291,7 +296,8 @@
     "license": "License",
     "abuse": "Abuse & takedowns",
     "security": "Security",
-    "analytics": "Google Analytics choice"
+    "analytics": "Google Analytics choice",
+    "follow": "Follow Obelisk"
   },
   "landing": {
     "video": {

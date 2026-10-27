@@ -269,6 +269,11 @@
     "subtitle": "Abra o app, entre com as suas chaves Nostr, escolha um relay. É só isso.",
     "button": "Abrir o Obelisk"
   },
+  "social": {
+    "heading": "Siga o Obelisk",
+    "subtitle": "Novidades, vídeos e o que vem por aí, nas suas redes.",
+    "follow": "Seguir"
+  },
   "footer": {
     "tagline": "Obelisk: um cliente 100% Nostr. ",
     "brandBlurb": "Chat em grupo estilo Discord sem backend. Suas chaves, seus relays, eventos Nostr assinados.",
@@ -291,7 +296,8 @@
     "license": "Licença",
     "abuse": "Abusos e remoções",
     "security": "Segurança",
-    "analytics": "Sua escolha sobre o Google Analytics"
+    "analytics": "Sua escolha sobre o Google Analytics",
+    "follow": "Siga o Obelisk"
   },
   "landing": {
     "video": {

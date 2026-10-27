@@ -13,6 +13,7 @@ import PostQuantumSection from '@/components/marketing/landing/PostQuantumSectio
 import PreviewSection from '@/components/marketing/landing/PreviewSection';
 import RelayPulse from '@/assets/illustrations/marketing/RelayPulse';
 import RoadmapSection from '@/components/marketing/landing/RoadmapSection';
+import SocialSection from '@/components/marketing/landing/SocialSection';
 import StackSection from '@/components/marketing/landing/StackSection';
 import StepsSection from '@/components/marketing/landing/StepsSection';
 import JsonLd from '@/components/seo/JsonLd';
@@ -35,6 +36,7 @@ export default async function Page() {
         <div className="relative z-10">
           <LandingHero />
           <DemoVideoSection />
+          <SocialSection />
           <RelayPulse />
           <PreviewSection />
           <FeaturesSection />

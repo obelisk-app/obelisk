@@ -5,8 +5,23 @@ import Footer from '@/components/marketing/site/Footer';
 import AnalyticsConsentRoot from '@/components/analytics/AnalyticsConsentRoot';
 import { setAnalyticsConsent } from '@/services/analytics/consent';
 import { resetAnalyticsPage } from '@tests/support/analytics';
+import { SOCIAL_ACCOUNTS } from '@/constants/marketing/social';
 
 describe('Footer', () => {
+  it('links the official social accounts as named icons, each in a new tab', () => {
+    render(
+      <LocaleProvider initialLocale="en">
+        <Footer />
+      </LocaleProvider>,
+    );
+    for (const account of SOCIAL_ACCOUNTS) {
+      const link = screen.getByTestId(`footer-social-${account.id}`);
+      expect(link).toHaveAttribute('href', account.href);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAccessibleName(`${account.network} ${account.handle}`);
+    }
+  });
+
   it('renders the 4 guide links using the context locale', () => {
     render(
       <LocaleProvider initialLocale="en">
