@@ -156,12 +156,12 @@
       "voiceMessages": {
         "title": "Voice messages",
         "description": "Record and send voice notes from the composer. Audio is uploaded to Blossom and delivered as a signed Nostr message with its duration intact.",
-        "alt": "Obelisk desktop message composer where voice notes can be recorded"
+        "alt": "Obelisk desktop message composer holding a recorded voice note, ready to send"
       },
       "stickers": {
         "title": "Sticker marketplace",
         "description": "Discover media packs, keep favorites, create personal stickers, and let relay operators publish server-wide emoji, GIF, and sticker collections.",
-        "alt": "Obelisk desktop sticker, emoji, and GIF marketplace"
+        "alt": "Obelisk desktop emoji, GIF and sticker picker open in a channel"
       },
       "games": {
         "title": "Games in the channel",
@@ -171,7 +171,7 @@
       "pwa": {
         "title": "Mobile PWA",
         "description": "Install Obelisk from the browser and use the complete responsive app: relays, channels, DMs, profiles, notifications, and calls.",
-        "alt": "Obelisk mobile PWA showing login, channels, a video call, and a Nostr profile"
+        "alt": "Obelisk mobile PWA showing the channel list, a channel conversation and a Nostr profile"
       },
       "p2p": {
         "title": "Peer-to-peer video calls",
@@ -306,14 +306,14 @@
         "badge": "Desktop",
         "title": "Discord-style chat, on the open Nostr stack",
         "desc": "Server rail, categorized channels, publications, member list, voice with SFU. The full workspace in your browser.",
-        "alt": "Obelisk desktop screenshot: General Chat with server rail, channel list, message stream and member list.",
+        "alt": "Obelisk desktop screenshot: a channel with server rail, channel list, a conversation between two members with a reaction, and the member list.",
         "cta": "Tour the desktop UI"
       },
       "mobile": {
         "badge": "Mobile",
         "title": "Mobile-first server and channel list",
         "desc": "Tap your way through servers, categories, voice and publications. Install it as a PWA, no app store required.",
-        "alt": "Obelisk mobile screenshot: server icons, General Chat, nested publication channels, voice channel and uncategorized list.",
+        "alt": "Obelisk mobile screenshot: a channel conversation between two members, with the message box and the bottom navigation.",
         "cta": "Tour the mobile UI"
       }
     },

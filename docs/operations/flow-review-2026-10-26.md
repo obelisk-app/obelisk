@@ -121,6 +121,44 @@ keep the console errors and failed requests of every shot.
 - **low: on the phone, your own new message flashes as `npub13xl44...4xlk`** with a placeholder
   avatar for a moment before your name and picture appear. **Open.**
 
+- **low: the picker button left of the message box has no accessible name** (no
+  `aria-label`, no `title`), so screen readers announce an unlabeled button and tests cannot
+  find it. **Open.**
+- **low: on the phone the composer placeholder wraps** ("Mensaje #🧉 Cubierta del Capitán")
+  onto a second line that is cut off. It should truncate on one line. **Open.**
+
+## Content audit of the site's screenshots (2026-10-27)
+
+The marketing pages, the tours, the README and the guides were checked for third-party
+material we have no rights to show, real people's conversations, and offensive text.
+Replaced with captures of the demo personas' own channel (`obelisk-media/recording/stills.py`):
+
+- `voice-messages.png` (on /features twice, and the README): a message with a vulgar insult
+  in Spanish, a real person's photo and a cat photo of unknown origin. **Removed.**
+- `stickers-marketplace.png` (/features, README): sticker packs "warioland4" (Nintendo sprites)
+  and "Exodia" (Yu-Gi-Oh! card art), both copyrighted. **Removed**; /features now shows the
+  picker on its Unicode-emoji tab.
+- `dekstop-public-general-chat-view-with-member-list.png` (/desktop, /features, README): a real
+  conversation between real members, with a screenshot of another chat inside it. **Removed.**
+- `desktop-forums-view.png`: a thread called "Only-Claws" and a pasted Google image URL.
+  **Replaced** by `desktop-publications.png`, the same picture with those two blurred.
+- `desktop-large-voice-channel-with-sfu-peer-trasmission-test.png`: the sidebar repeated
+  "Only-Claws". **Replaced** by `desktop-voice-call.png`, the call without the sidebar.
+- `mobile-showcase-readme.png`, `mobile-own-profile-view.png`, `mobile-server-and-channels-view.png`:
+  a "Dummy" avatar that is a photo of an artist's mannequin (source unknown) and a channel
+  called "BoyVip". **Removed**; replaced by fresh phone captures.
+
+Still to re-shoot (left in place because there is no clean replacement yet):
+
+- `mobile-channel-view-with-sfu-test-peer-trasmission.png` (/mobile, voice) shows the
+  mannequin-photo avatar small, under the call. Needs a voice call between the two personas
+  in a voice channel of their own.
+- `mobile-login-modal.png` (/mobile) shows the old login UI. Re-shoot after the translated
+  login ships.
+- The relay's **custom emoji set** on public.obelisk.ar (the picker's "Emojis del servidor")
+  includes the Barbie and X logos, Tether's mark, a Doge meme and a photo of a person. That is
+  operator content, not the app, but it means no marketing capture may show that tab.
+
 ## Third parties seen during the pass
 
 - `wss://purplepag.es` answered HTTP 502 to every connection attempt (it is one of the three

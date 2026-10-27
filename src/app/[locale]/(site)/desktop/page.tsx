@@ -14,9 +14,9 @@ import { ShowcaseRow, type ShowcaseItem } from '@/components/marketing/showcase/
 const TOUR: Tour = {
   page: 'desktop',
   shots: [
-    { path: '/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png', nameKey: 'seo.desktop.shots.chat', width: 1470, height: 799 },
-    { path: '/pictures-for-posts/desktop-forums-view.png', nameKey: 'seo.desktop.shots.publications', width: 1470, height: 799 },
-    { path: '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png', nameKey: 'seo.desktop.shots.voice', width: 1470, height: 799 },
+    { path: '/pictures-for-posts/desktop-channel-chat.png', nameKey: 'seo.desktop.shots.chat', width: 1470, height: 799 },
+    { path: '/pictures-for-posts/desktop-publications.png', nameKey: 'seo.desktop.shots.publications', width: 1470, height: 799 },
+    { path: '/pictures-for-posts/desktop-voice-call.png', nameKey: 'seo.desktop.shots.voice', width: 1130, height: 799 },
   ],
   keywords: [
     'Discord alternative desktop', 'Nostr desktop chat', 'NIP-29 group chat', 'mediasoup SFU voice',
@@ -36,7 +36,7 @@ export default async function DesktopPage() {
   const jsonLd = tourJsonLd(TOUR, t, locale);
   const items: ShowcaseItem[] = [
     {
-      src: '/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png',
+      src: '/pictures-for-posts/desktop-channel-chat.png',
       alt: t('showcase.desktop.shot1.alt'),
       width: 1470,
       height: 799,
@@ -48,7 +48,7 @@ export default async function DesktopPage() {
       priority: true,
     },
     {
-      src: '/pictures-for-posts/desktop-forums-view.png',
+      src: '/pictures-for-posts/desktop-publications.png',
       alt: t('showcase.desktop.shot2.alt'),
       width: 1470,
       height: 799,
@@ -59,9 +59,9 @@ export default async function DesktopPage() {
       features: t('showcase.desktop.shot2.features').split('|'),
     },
     {
-      src: '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png',
+      src: '/pictures-for-posts/desktop-voice-call.png',
       alt: t('showcase.desktop.shot3.alt'),
-      width: 1470,
+      width: 1130,
       height: 799,
       orientation: 'landscape',
       badge: t('showcase.desktop.shot3.badge'),

@@ -39,7 +39,7 @@ export default function PreviewSection() {
             >
               <figure className="rounded-xl border border-lc-border overflow-hidden bg-lc-dark">
                 <Image
-                  src="/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png"
+                  src="/pictures-for-posts/desktop-channel-chat.png"
                   alt={t('marketing.landing.preview.desktop.alt')}
                   width={1470}
                   height={799}
@@ -75,7 +75,7 @@ export default function PreviewSection() {
             >
               <figure className="lg:order-2 mx-auto w-full max-w-[200px] lg:mx-0 lg:max-w-none lg:w-full rounded-[2rem] border border-lc-border overflow-hidden bg-lc-dark">
                 <Image
-                  src="/pictures-for-posts/mobile-server-and-channels-view.png"
+                  src="/pictures-for-posts/mobile-channel-chat.png"
                   alt={t('marketing.landing.preview.mobile.alt')}
                   width={720}
                   height={1600}

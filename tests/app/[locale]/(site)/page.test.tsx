@@ -98,11 +98,11 @@ describe('landing route', async () => {
     const mobilePreview = screen.getByTestId('landing-preview-mobile');
     expect(within(desktopPreview).getByAltText(/Obelisk desktop screenshot/i)).toHaveAttribute(
       'src',
-      '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png',
+      '/pictures-for-posts/desktop-channel-chat.png',
     );
     expect(within(mobilePreview).getByAltText(/Obelisk mobile screenshot/i)).toHaveAttribute(
       'src',
-      '/pictures-for-posts/mobile-server-and-channels-view.png',
+      '/pictures-for-posts/mobile-channel-chat.png',
     );
   });
 

@@ -20,18 +20,18 @@ import Text from '@/components/ui/layout/Text';
 const FEATURES = [
   {
     id: 'groups',
-    image: '/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png',
+    image: '/pictures-for-posts/desktop-channel-chat.png',
     width: 1470, height: 799,
   },
   {
     id: 'voiceMessages',
-    image: '/pictures-for-posts/voice-messages.png',
-    width: 2940, height: 1678,
+    image: '/pictures-for-posts/desktop-voice-note.png',
+    width: 1470, height: 799,
   },
   {
     id: 'stickers',
-    image: '/pictures-for-posts/stickers-marketplace.png',
-    width: 2940, height: 1596,
+    image: '/pictures-for-posts/desktop-emoji-picker.png',
+    width: 1470, height: 799,
   },
   {
     id: 'games',
@@ -40,23 +40,23 @@ const FEATURES = [
   },
   {
     id: 'pwa',
-    image: '/pictures-for-posts/mobile-showcase-readme.png',
-    width: 3320, height: 1840,
+    image: '/pictures-for-posts/mobile-showcase.png',
+    width: 2400, height: 1680,
   },
   {
     id: 'p2p',
-    image: '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png',
-    width: 1470, height: 799,
+    image: '/pictures-for-posts/desktop-voice-call.png',
+    width: 1130, height: 799,
   },
   {
     id: 'sfu',
-    image: '/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png',
-    width: 1470, height: 799,
+    image: '/pictures-for-posts/desktop-voice-call.png',
+    width: 1130, height: 799,
   },
   {
     id: 'profiles',
-    image: '/pictures-for-posts/voice-messages.png',
-    width: 2940, height: 1678,
+    image: '/pictures-for-posts/desktop-profile-card.png',
+    width: 1470, height: 799,
   },
 ] as const;
 

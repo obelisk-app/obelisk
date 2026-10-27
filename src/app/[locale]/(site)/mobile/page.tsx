@@ -14,10 +14,10 @@ import { ShowcaseRow, type ShowcaseItem } from '@/components/marketing/showcase/
 const TOUR: Tour = {
   page: 'mobile',
   shots: [
-    { path: '/pictures-for-posts/mobile-server-and-channels-view.png', nameKey: 'seo.mobile.shots.channels', width: 720, height: 1600 },
+    { path: '/pictures-for-posts/mobile-channels.png', nameKey: 'seo.mobile.shots.channels', width: 720, height: 1600 },
     { path: '/pictures-for-posts/mobile-channel-view-with-sfu-test-peer-trasmission.png', nameKey: 'seo.mobile.shots.voice', width: 720, height: 1600 },
     { path: '/pictures-for-posts/mobile-login-modal.png', nameKey: 'seo.mobile.shots.login', width: 720, height: 1600 },
-    { path: '/pictures-for-posts/mobile-own-profile-view.png', nameKey: 'seo.mobile.shots.profile', width: 720, height: 1600 },
+    { path: '/pictures-for-posts/mobile-profile.png', nameKey: 'seo.mobile.shots.profile', width: 720, height: 1600 },
   ],
   keywords: [
     'mobile Discord alternative', 'Nostr mobile chat', 'mobile group chat app', 'NIP-29 mobile',
@@ -37,7 +37,7 @@ export default async function MobilePage() {
   const jsonLd = tourJsonLd(TOUR, t, locale);
   const items: ShowcaseItem[] = [
     {
-      src: '/pictures-for-posts/mobile-server-and-channels-view.png',
+      src: '/pictures-for-posts/mobile-channels.png',
       alt: t('showcase.mobile.shot1.alt'),
       width: 720,
       height: 1600,
@@ -71,7 +71,7 @@ export default async function MobilePage() {
       features: t('showcase.mobile.shot3.features').split('|'),
     },
     {
-      src: '/pictures-for-posts/mobile-own-profile-view.png',
+      src: '/pictures-for-posts/mobile-profile.png',
       alt: t('showcase.mobile.shot4.alt'),
       width: 720,
       height: 1600,

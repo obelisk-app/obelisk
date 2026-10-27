@@ -61,31 +61,31 @@ Full guided tours: [obelisk.ar/desktop](https://obelisk.ar/desktop) · [obelisk.
 <br>
 
 <p align="center">
-  <img src="public/pictures-for-posts/dekstop-public-general-chat-view-with-member-list.png" alt="Obelisk desktop: public General Chat with server rail, channel list, message stream and live NIP-29 member list" width="90%" />
+  <img src="public/pictures-for-posts/desktop-channel-chat.png" alt="Obelisk desktop: a channel on the public relay with server rail, channel list, a conversation with a reaction and the live NIP-29 member list" width="90%" />
 </p>
 
-<p align="center"><sub>Public General Chat: server rail, channel list, message stream with reactions, and the live NIP-29 member list. Every message is a signed Nostr event.</sub></p>
+<p align="center"><sub>A channel on the public relay: server rail, channel list, message stream with reactions, and the live NIP-29 member list. Every message is a signed Nostr event.</sub></p>
 
 <p align="center">
-  <img src="public/pictures-for-posts/desktop-forums-view.png" alt="Obelisk desktop: publications view of plaza-publica with OP, message count and last reply time" width="90%" />
+  <img src="public/pictures-for-posts/desktop-publications.png" alt="Obelisk desktop: publications view of plaza-publica with OP, message count and last reply time" width="90%" />
 </p>
 
 <p align="center"><sub>Publication-kind channels become a tidy feed: a list of posts, OP and last-reply metadata, each with its own chat, same NIP-29 moderation as every other channel.</sub></p>
 
 <p align="center">
-  <img src="public/pictures-for-posts/desktop-large-voice-channel-with-sfu-peer-trasmission-test.png" alt="Obelisk desktop: voice channel in SFU mode with a test peer streaming an SMPTE color-bar pattern" width="90%" />
+  <img src="public/pictures-for-posts/desktop-voice-call.png" alt="Obelisk desktop: voice channel in SFU mode with a test peer streaming an SMPTE color-bar pattern" width="90%" />
 </p>
 
 <p align="center"><sub>Voice scales from a P2P mesh to a mediasoup SFU when the relay advertises one. Same UI: the mesh signals over Nostr with kind 25050 events; with an SFU the client signs a kind 22242 challenge on its RPC socket, then takes more peers and screen-share.</sub></p>
 
 <table>
 <tr>
-<td width="50%"><img src="public/pictures-for-posts/voice-messages.png" alt="Voice messages and stickers in a channel, with a profile card open"></td>
-<td width="50%"><img src="public/pictures-for-posts/stickers-marketplace.png" alt="The media library: emoji, GIF and sticker packs to save or create"></td>
+<td width="50%"><img src="public/pictures-for-posts/desktop-voice-note.png" alt="A recorded voice note in the message composer, ready to send"></td>
+<td width="50%"><img src="public/pictures-for-posts/desktop-emoji-picker.png" alt="The emoji, GIF and sticker picker open in a channel"></td>
 </tr>
 <tr>
-<td align="center"><sub>Voice messages and stickers in the chat.</sub></td>
-<td align="center"><sub>The media library: save or make emoji and sticker packs.</sub></td>
+<td align="center"><sub>Voice notes, recorded right in the composer.</sub></td>
+<td align="center"><sub>Emoji, GIFs and stickers, one picker away.</sub></td>
 </tr>
 </table>
 
@@ -94,10 +94,10 @@ Full guided tours: [obelisk.ar/desktop](https://obelisk.ar/desktop) · [obelisk.
 ### Mobile
 
 <p align="center">
-  <img src="public/pictures-for-posts/mobile-showcase-readme.png" alt="Obelisk mobile: server and channel list, voice channel with SFU test peer, three-way Nostr login modal, and own kind-0 profile view, each rendered as a phone-framed screen" width="95%" />
+  <img src="public/pictures-for-posts/mobile-showcase.png" alt="Obelisk mobile: the channel list, a channel conversation and your own Nostr profile" width="95%" />
 </p>
 
-<p align="center"><sub>The three-way Nostr login (NIP-46 / generate / import) · your portable kind-0 Nostr profile · mobile-first server list · voice with SFU.</sub></p>
+<p align="center"><sub>Mobile-first server and channel list · a channel conversation · your portable Nostr profile.</sub></p>
 
 ## Try it
 

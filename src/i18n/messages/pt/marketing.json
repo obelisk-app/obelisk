@@ -156,12 +156,12 @@
       "voiceMessages": {
         "title": "Mensagens de voz",
         "description": "Grave e envie áudios direto do editor de mensagens. O áudio vai para o Blossom e chega como uma mensagem Nostr assinada, com a duração intacta.",
-        "alt": "Editor de mensagens do Obelisk no computador, onde se gravam áudios"
+        "alt": "Editor de mensagens do Obelisk no computador com um áudio gravado, pronto para enviar"
       },
       "stickers": {
         "title": "Mercado de figurinhas",
         "description": "Descubra pacotes, guarde favoritos, crie suas próprias figurinhas e deixe os operadores do relay publicarem coleções de emojis, GIFs e figurinhas para o servidor inteiro.",
-        "alt": "Mercado de figurinhas, emojis e GIFs do Obelisk no computador"
+        "alt": "Seletor de emojis, GIFs e figurinhas do Obelisk aberto num canal, no computador"
       },
       "games": {
         "title": "Jogos no canal",
@@ -171,7 +171,7 @@
       "pwa": {
         "title": "PWA móvel",
         "description": "Instale o Obelisk pelo navegador e use o app completo e responsivo: relays, canais, DMs, perfis, notificações e chamadas.",
-        "alt": "PWA móvel do Obelisk mostrando login, canais, uma chamada de vídeo e um perfil Nostr"
+        "alt": "PWA móvel do Obelisk mostrando a lista de canais, a conversa de um canal e um perfil Nostr"
       },
       "p2p": {
         "title": "Chamadas de vídeo peer-to-peer",
@@ -306,14 +306,14 @@
         "badge": "Computador",
         "title": "Chat estilo Discord, na stack aberta do Nostr",
         "desc": "Barra de servidores, canais por categoria, publicações, lista de membros, voz com SFU. O workspace completo no seu navegador.",
-        "alt": "Captura do Obelisk no computador: Chat Geral com a barra de servidores, a lista de canais, as mensagens e a lista de membros.",
+        "alt": "Captura do Obelisk no computador: um canal com a barra de servidores, a lista de canais, uma conversa entre dois membros com uma reação, e a lista de membros.",
         "cta": "Fazer o tour no computador"
       },
       "mobile": {
         "badge": "Celular",
         "title": "Lista de servidores e canais pensada para o celular",
         "desc": "Navegue por servidores, categorias, voz e publicações com o polegar. Instale como PWA, sem loja de aplicativos.",
-        "alt": "Captura do Obelisk no celular: ícones de servidores, Chat Geral, canais de publicação aninhados, canal de voz e lista sem categoria.",
+        "alt": "Captura do Obelisk no celular: a conversa de um canal entre dois membros, com a caixa de mensagem e a navegação inferior.",
         "cta": "Fazer o tour no celular"
       }
     },

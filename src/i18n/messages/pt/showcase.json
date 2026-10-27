@@ -11,7 +11,7 @@
     "shot1": {
       "badge": "Servidores e canais",
       "title": "Lista de servidores estilo Discord, feita para o celular",
-      "alt": "Início do Obelisk no celular, com ícones de servidores em cima e canais por categoria: Chat Geral, Publicações (Finanças, Bitcoin, RUNSTR), Canal de Voz, Feedback, Sem categoria.",
+      "alt": "Início do Obelisk no celular, com ícones de servidores à esquerda e os canais do relay por categoria: Voz, Geral, Obelisk e Publicações.",
       "desc": "Os seus relays aparecem como servidores. Dentro de cada um, os canais ficam agrupados nas categorias que o operador publica (chat geral, publicações, voz, o que você quiser), com marcadores de não lido e indicadores ao vivo, igual ao Discord.",
       "features": "Barra de servidores fixa no topo|Categorias controladas pelo operador|Publicações aninhadas sob o canal pai|Indicadores ao vivo nos canais de voz ativos"
     },
@@ -32,7 +32,7 @@
     "shot4": {
       "badge": "Perfil e identidade",
       "title": "O seu perfil Nostr, as suas configurações",
-      "alt": "Tela de perfil do Obelisk no celular: banner, avatar, npub e chave pública em hex, botão Editar perfil Nostr, botão Desconectar e uma aba de Preferências.",
+      "alt": "Tela de perfil do Obelisk no celular: banner, avatar, nome, npub com botão de copiar, bio, botão Editar perfil e as abas do perfil.",
       "desc": "O mesmo perfil kind 0 que todo cliente Nostr usa: nome de exibição, banner, bio, NIP-05, endereço Lightning. Edite uma vez e todos os apps Nostr veem a mudança.",
       "features": "Copie a npub ou a chave em hex com um toque|Compartilhe um link público do seu perfil|Preferências por aparelho guardadas no localStorage"
     },
@@ -54,7 +54,7 @@
     "shot1": {
       "badge": "Chat em grupo",
       "title": "Chat em três painéis, lista de membros e reações",
-      "alt": "Obelisk no computador, no Chat Geral público: barra de servidores, lista de canais, mensagens no centro com reações e prévia de link, e a lista de membros à direita.",
+      "alt": "Obelisk no computador, num canal do relay público: barra de servidores, lista de canais, uma conversa entre dois membros com uma reação, e a lista de membros à direita.",
       "desc": "O layout familiar do Discord (barra de servidores, lista de canais, fluxo de mensagens, barra lateral de membros) ligado direto aos eventos NIP-29 do relay. Cada mensagem é um evento Nostr assinado: sem backend, sem formato proprietário.",
       "features": "Respostas, reações e prévias de link|A lista de membros mostra ao vivo os membros NIP-29 do relay|Mande um zap Lightning em qualquer mensagem via NIP-57, pago via NWC ou uma extensão WebLN"
     },

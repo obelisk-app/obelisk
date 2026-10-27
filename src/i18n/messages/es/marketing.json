@@ -156,12 +156,12 @@
       "voiceMessages": {
         "title": "Mensajes de voz",
         "description": "Grabá y mandá notas de voz desde el editor de mensajes. El audio se sube a Blossom y llega como un mensaje Nostr firmado, con su duración intacta.",
-        "alt": "Editor de mensajes de Obelisk en la computadora, donde se graban notas de voz"
+        "alt": "Editor de mensajes de Obelisk en la computadora con una nota de voz grabada, lista para mandar"
       },
       "stickers": {
         "title": "Mercado de stickers",
         "description": "Descubrí packs, guardá favoritos, creá tus propios stickers y dejá que los operadores del relay publiquen colecciones de emojis, GIFs y stickers para todo el servidor.",
-        "alt": "Mercado de stickers, emojis y GIFs de Obelisk en la computadora"
+        "alt": "Selector de emojis, GIFs y stickers de Obelisk abierto en un canal, en la computadora"
       },
       "games": {
         "title": "Juegos en el canal",
@@ -171,7 +171,7 @@
       "pwa": {
         "title": "PWA móvil",
         "description": "Instalá Obelisk desde el navegador y usá la app completa y responsiva: relays, canales, DMs, perfiles, notificaciones y llamadas.",
-        "alt": "PWA móvil de Obelisk mostrando login, canales, una videollamada y un perfil Nostr"
+        "alt": "PWA móvil de Obelisk mostrando la lista de canales, la charla de un canal y un perfil Nostr"
       },
       "p2p": {
         "title": "Videollamadas peer-to-peer",
@@ -306,14 +306,14 @@
         "badge": "Escritorio",
         "title": "Chat estilo Discord, sobre el stack abierto de Nostr",
         "desc": "Barra de servidores, canales por categoría, publicaciones, lista de miembros, voz con SFU. El espacio de trabajo completo en tu navegador.",
-        "alt": "Captura de Obelisk en la computadora: General Chat con la barra de servidores, la lista de canales, los mensajes y la lista de miembros.",
+        "alt": "Captura de Obelisk en la computadora: un canal con la barra de servidores, la lista de canales, una charla entre dos miembros con una reacción, y la lista de miembros.",
         "cta": "Recorrer la versión de escritorio"
       },
       "mobile": {
         "badge": "Celular",
         "title": "Servidores y canales pensados para el celular",
         "desc": "Recorré servidores, categorías, voz y publicaciones. Instalala como PWA, sin tienda de apps.",
-        "alt": "Captura de Obelisk en el celular: íconos de servidores, General Chat, canales de publicaciones anidados, canal de voz y lista sin categoría.",
+        "alt": "Captura de Obelisk en el celular: la charla de un canal entre dos miembros, con el cuadro de mensaje y la navegación de abajo.",
         "cta": "Recorrer la versión para celular"
       }
     },
