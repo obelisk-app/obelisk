@@ -332,7 +332,7 @@ describe('EditProfileScreen accessibility', () => {
     renderWithLocale(<EditProfileScreen go={vi.fn()} />);
     expect(screen.getByLabelText('Display name')).toBe(screen.getByTestId('edit-name'));
     expect(screen.getByLabelText('About')).toBe(screen.getByTestId('edit-about'));
-    expect(screen.getByLabelText('NIP-05')).toHaveAttribute('placeholder', 'you@domain.com');
+    expect(screen.getByLabelText('NIP-05')).toHaveAttribute('placeholder', 'you@example.com');
     expect(screen.getByLabelText('Lightning address')).toHaveAttribute('inputmode', 'email');
     expect(screen.getByLabelText('Picture')).toHaveClass('setup-input');
     expect(screen.getByLabelText('Banner')).toHaveClass('setup-input');

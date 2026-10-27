@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import { avatarInitials } from '@/utils/identity/display-name';
+import { shortNpubLabel } from '@/utils/identity/short-npub';
 
 const HEX = '6a'.repeat(32);
 
@@ -32,10 +33,14 @@ describe('UserAvatar', () => {
     expect(screen.getByText('B')).toHaveClass('bg-lc-olive', 'text-lc-green', 'text-xs');
   });
 
-  it('a nameless fallback uses the key', () => {
+  it('a nameless fallback uses the npub, not the hex key', () => {
     const { container } = render(<UserAvatar pubkey={HEX} picture={null} size={8} />);
-    const text = container.textContent ?? '';
-    expect(text).toBe('6');
+    expect(container.textContent).toBe(shortNpubLabel(HEX).slice(5, 6).toUpperCase());
+  });
+
+  it('a short-npub display name falls back the same way as no name', () => {
+    const { container } = render(<UserAvatar pubkey={HEX} picture={null} size={8} name={shortNpubLabel(HEX)} />);
+    expect(container.textContent).toBe(shortNpubLabel(HEX).slice(5, 6).toUpperCase());
   });
 
   it('two initials come from the same recipe', () => {

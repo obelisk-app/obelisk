@@ -47,9 +47,20 @@ describe('avatarInitials', () => {
     expect(avatarInitials('satoshi', PK)).toBe('SA');
   });
 
-  it('uses key characters when there is no name, including a fallback label', () => {
-    expect(avatarInitials(null, PK)).toBe('AA');
-    expect(avatarInitials(LABEL, PK)).toBe('AA');
+  it('uses the npub characters when there is no name, including a fallback label', () => {
+    const fromNpub = LABEL.slice(5, 7).toUpperCase();
+    expect(avatarInitials(null, PK)).toBe(fromNpub);
+    expect(avatarInitials(LABEL, PK)).toBe(fromNpub);
+  });
+
+  it('never shows hex digits of the key', () => {
+    const hex = '89' + 'f'.repeat(62);
+    expect(avatarInitials(null, hex)).not.toBe('89');
+    expect(avatarInitials(null, hex)).toBe(shortNpubLabel(hex).slice(5, 7).toUpperCase());
+  });
+
+  it('keeps an id that is not a key (a group id) as it is', () => {
+    expect(avatarInitials(null, 'lobby')).toBe('LO');
   });
 
   it('falls back rather than rendering an empty circle', () => {

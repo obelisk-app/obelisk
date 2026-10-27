@@ -7,9 +7,9 @@ import UserAvatar from '@/components/ui/media/UserAvatar';
 import LazyMediaLibraryModal from '@/components/media/library/LazyMediaLibraryModal';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
+import CloseButton from '@/components/ui/buttons/CloseButton';
 import {
   BellIcon,
-  CloseIcon,
   FileIcon,
   LogOutIcon,
   PaletteIcon,
@@ -76,16 +76,13 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
       data-testid="user-edit-modal"
     >
       <div className="relative flex w-full rounded-2xl overflow-hidden border border-lc-border shadow-2xl bg-lc-black">
-        <Button
-          variant="danger"
-          size="icon"
+        {/* The neutral dismiss every dialog uses (ModalHeader's), not a red "destructive" circle. */}
+        <CloseButton
           onClick={onDone}
-          className="absolute right-5 top-5 z-10 h-12 w-12 shadow-lg shadow-red-500/30"
-          aria-label={t('common.close')}
+          className="absolute right-4 top-4 z-10"
           title={`${t('common.close')} (Esc)`}
-        >
-          <CloseIcon size={20} strokeWidth={3} />
-        </Button>
+          data-testid="user-settings-close"
+        />
         <aside className="w-64 shrink-0 bg-lc-dark border-r border-lc-border flex flex-col">
           <div className="px-5 py-5 border-b border-lc-border">
             <Text as="div" variant="label" size="10" tone="muted" weight="semibold" className="mb-2">{t('shell.user.settings')}</Text>
@@ -149,6 +146,7 @@ export function UserSettingsModal({ pubkey, meta, displayName, settingsTab, setS
               </div>
               {settingsTab === 'profile' && (
                 <EditProfileForm
+                  pubkey={pubkey}
                   initial={meta}
                   onCancel={onDone}
                   onSaved={onDone}

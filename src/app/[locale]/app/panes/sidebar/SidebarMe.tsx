@@ -5,7 +5,7 @@ import Button from '@/components/ui/buttons/Button';
 import UserPanel from '../../user-panel/UserPanel';
 import { GearIcon } from '@/assets/icons';
 import { useTranslations } from 'next-intl';
-import { Avatar } from '../../desktop/Avatar';
+import UserAvatar from '@/components/ui/media/UserAvatar';
 import { useSidebarMe } from '@/hooks/shell/panes/sidebar/useSidebarMe';
 
 /** The signed-in account at the foot of the sidebar: avatar, name, handle, and the settings gear. */
@@ -31,7 +31,8 @@ export function SidebarMe({ collapsible = false }: { collapsible?: boolean }) {
         data-testid="sidebar-profile-button"
         data-tour="profile-button"
       >
-        <Avatar pubkey={vm.myPubkey} size={8} picture={vm.meta?.picture ?? null} />
+        {/* The same avatar and fallback letter as the settings header and the profile editor. */}
+        <UserAvatar pubkey={vm.myPubkey} picture={vm.meta?.picture ?? null} size={8} name={vm.name ?? undefined} initialClassName="text-sm" />
         <div className={`min-w-0 flex-1 flex-col ${revealed}`}>
           <Text as="div" size="sm" tone="default" weight="semibold" className="truncate">
             {vm.name || t('shell.desktop.me.you')}

@@ -117,4 +117,13 @@ describe('Sidebar', () => {
     mount();
     expect(document.querySelector('[data-tour="channels-list"]')!.className).toContain('md:pb-52');
   });
+
+  it('draws no account pill or voice bar of its own: the floating user panel is the only one', () => {
+    // A second, CSS-hidden copy (`md:hidden`, never visible in the desktop
+    // shell) put two "Preferences" buttons in the accessibility tree.
+    mount();
+    expect(screen.queryByTestId('user-settings-button')).toBeNull();
+    expect(screen.queryByTestId('sidebar-profile-button')).toBeNull();
+    expect(screen.queryByTestId('voice-status-bar')).toBeNull();
+  });
 });

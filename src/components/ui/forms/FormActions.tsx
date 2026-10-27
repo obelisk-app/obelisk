@@ -27,6 +27,8 @@ export interface FormActionsProps {
   /** The id of the form this submits, when the row sits outside it. */
   form?: string;
   submitTestId?: string;
+  /** The row's own `data-testid`. */
+  testId?: string;
   className?: string;
 }
 
@@ -39,12 +41,12 @@ const ROW: Record<FormActionsVariant, string | undefined> = {
 
 /** One look per role, so a form's submit means the same thing wherever the form sits. */
 export default function FormActions({
-  submitLabel, busyLabel, busy = false, disabled = false, cancel, variant = 'block', form, submitTestId, className,
+  submitLabel, busyLabel, busy = false, disabled = false, cancel, variant = 'block', form, submitTestId, testId, className,
 }: FormActionsProps) {
   const label = busy && busyLabel !== undefined ? busyLabel : submitLabel;
   const off = disabled || busy;
   return (
-    <div className={cn(ROW[variant], className)}>
+    <div className={cn(ROW[variant], className)} data-testid={testId}>
       {variant === 'sheet' && (
         <Button variant="mobilePrimary" type="submit" form={form} disabled={off}  data-testid={submitTestId}>{label}</Button>
       )}
