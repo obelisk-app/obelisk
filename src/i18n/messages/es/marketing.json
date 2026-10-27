@@ -15,6 +15,8 @@
     "heading": "Aprendé",
     "subtitle": "Cómo funciona un cliente 100% Nostr, qué son los grupos NIP-29 y cómo usar tu propio relay.",
     "cta": "Ver todas las guías",
+    "prev": "Guías anteriores",
+    "next": "Más guías",
     "card": {
       "whatIsObelisk": {
         "title": "¿Qué es Obelisk?",
@@ -101,37 +103,33 @@
   "features": {
     "heading": "Por qué Obelisk",
     "subtitle": "Todo el chat. Ningún servidor. Tus claves, tus relays, eventos firmados.",
-    "nostrIdentity": {
-      "title": "Login Nostr: tus claves, tu cuenta",
-      "desc": "Entrá con una extensión del navegador (NIP-07), una app firmante por NIP-46 o tu nsec. No hay cuenta de Obelisk que crear. Tu clave Nostr es la cuenta, en todos lados."
-    },
     "realtimeChat": {
-      "title": "Grupos NIP-29",
-      "desc": "Canales, miembros, admins y expulsiones son eventos NIP-29 estándar en el relay. Protocolo abierto, sin formato propietario, sin lock-in."
+      "title": "Grupos en cualquier relay",
+      "desc": "Canales y miembros son eventos NIP-29 abiertos. Sin lock-in."
     },
     "encryptedDMs": {
-      "title": "DMs cifrados",
-      "desc": "Los mensajes directos son DMs de Nostr cifrados de punta a punta, con gift wrap NIP-17 por defecto y NIP-04 cuando la conversación lo necesita. Solo vos y el destinatario los pueden leer."
+      "title": "DMs privados",
+      "desc": "Cifrados de punta a punta. Solo vos y el destinatario los leen."
     },
     "voice": {
-      "title": "Canales de voz P2P sobre Nostr",
-      "desc": "Hablá con cualquiera en un canal sin un servidor de medios en el medio. La voz es WebRTC peer-to-peer; la señalización viaja en eventos Nostr, igual que cualquier otro mensaje."
+      "title": "Voz, peer to peer",
+      "desc": "Las llamadas van directo de navegador a navegador."
     },
     "selfHosted": {
-      "title": "Sin backend, sin base de datos",
-      "desc": "Obelisk es un frontend. No hay Postgres, ni servidor Socket.io, ni servicio de autenticación. Cada mensaje es un evento firmado que va directo al relay."
+      "title": "Sin backend",
+      "desc": "Sin base de datos ni servidores. Tu navegador habla directo con el relay."
     },
     "spamResistant": {
       "title": "Hosteo propio simple",
       "desc": "Hostearlo vos mismo es correr una sola app de Next.js. Sin base de datos que operar, sin Docker obligatorio. Correlo desde tu notebook, detrás de un túnel o en cualquier host de Node."
     },
     "zaps": {
-      "title": "Zaps de Bitcoin en el chat",
-      "desc": "Mandá sats desde cualquier mensaje con zaps NIP-57, pagados por una billetera que conectás con Nostr Wallet Connect (NIP-47) o por una extensión WebLN del navegador. Sin custodio, sin comisión de plataforma, sin intermediarios."
+      "title": "Zaps de Bitcoin",
+      "desc": "Mandá sats desde cualquier mensaje. Sin custodio, sin comisión de plataforma."
     },
     "games": {
-      "title": "Juegos sobre el relay",
-      "desc": "Chain Reaction, Vesta y Stacker corren dentro de un canal, sin servidor de juego. Cada jugada es un evento firmado, y todos los clientes reproducen el mismo log y llegan al mismo tablero."
+      "title": "Juegos en el chat",
+      "desc": "Chain Reaction, Vesta y Stacker, sin servidor de juego."
     },
     "adminCli": {
       "title": "Código abierto",

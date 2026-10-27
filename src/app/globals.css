@@ -868,6 +868,82 @@ button:not(:disabled),
   to   { transform: none; opacity: 1; }
 }
 
+/* The landing feature icons (FeatureGlyph), after Obelisk Sky's feature tiles: a 56 px tile, each
+   drawing a little scene that moves on its own (32-unit viewBox; transform origins are in its
+   units). The tile springs on hover; reduced motion stills it all. */
+.lc-ico {
+  --ico-ink: var(--color-lc-green);
+  --ico-fill: var(--color-lc-black);
+  display: block; width: 56px; height: 56px; padding: 7px; border-radius: 16px; overflow: visible;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--color-lc-olive) 85%, transparent) 0%, var(--color-lc-olive-dark) 100%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-lc-green) 22%, transparent), 0 8px 22px rgba(0, 0, 0, 0.35);
+  fill: none; stroke: var(--ico-ink); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1), box-shadow 0.35s;
+}
+.lc-feature:hover .lc-ico {
+  transform: scale(1.08) rotate(-4deg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-lc-green) 40%, transparent), 0 0 26px color-mix(in srgb, var(--color-lc-green) 22%, transparent);
+}
+.lc-ico * { transform-box: view-box; }
+
+.lc-ico-realtimeChat .hub { fill: var(--ico-ink); }
+.lc-ico-realtimeChat .node { fill: var(--ico-fill); transform-box: fill-box; transform-origin: center; animation: lc-ico-arrive 1.8s ease-out infinite; }
+.lc-ico-realtimeChat .sig { stroke-width: 2.6; stroke-dasharray: 2.5 12.5; stroke-dashoffset: 2.5; animation: lc-ico-signal 1.8s linear infinite; }
+.lc-ico-realtimeChat .s2, .lc-ico-realtimeChat .n2 { animation-delay: 0.6s; }
+.lc-ico-realtimeChat .s3, .lc-ico-realtimeChat .n3 { animation-delay: 1.2s; }
+@keyframes lc-ico-signal { 0% { stroke-dashoffset: 2.5; } 70%, 100% { stroke-dashoffset: -10; } }
+@keyframes lc-ico-arrive { 0%, 50%, 85%, 100% { fill: var(--ico-fill); transform: scale(1); } 60% { fill: var(--ico-ink); transform: scale(1.2); } }
+
+.lc-ico-encryptedDMs .body { fill: var(--ico-fill); }
+.lc-ico-encryptedDMs .shackle { animation: lc-ico-shackle 3.2s cubic-bezier(0.5, 0, 0.3, 1.4) infinite; }
+@keyframes lc-ico-shackle { 0%, 15%, 90%, 100% { transform: translateY(-3px); } 35%, 75% { transform: translateY(0); } }
+.lc-ico-encryptedDMs .hole { stroke-width: 2.2; animation: lc-ico-hole 3.2s steps(1) infinite; }
+@keyframes lc-ico-hole { 0%, 100% { opacity: 0.35; } 35%, 75% { opacity: 1; } }
+.lc-ico-encryptedDMs .spark { fill: var(--ico-ink); stroke: none; transform-box: fill-box; transform-origin: center; animation: lc-ico-glint 3.2s ease-out infinite; }
+@keyframes lc-ico-glint { 0%, 35%, 62%, 100% { opacity: 0; transform: scale(0); } 46% { opacity: 1; transform: scale(1.2) rotate(45deg); } }
+
+.lc-ico-voice .mic { fill: var(--ico-fill); }
+.lc-ico-voice .eq { stroke-width: 1.6; transform-origin: 16px 11px; animation: lc-ico-eq 0.8s ease-in-out infinite alternate; }
+.lc-ico-voice .e2 { animation-duration: 0.55s; }
+.lc-ico-voice .e3 { animation-duration: 0.7s; animation-delay: -0.2s; }
+@keyframes lc-ico-eq { from { transform: scaleY(0.35); } to { transform: scaleY(1.25); } }
+.lc-ico-voice .wave { animation: lc-ico-wave 1.6s ease-out infinite; }
+.lc-ico-voice .w2 { animation-delay: 0.25s; }
+@keyframes lc-ico-wave { 0%, 60%, 100% { opacity: 0.2; } 25% { opacity: 1; } }
+
+.lc-ico-selfHosted .win, .lc-ico-selfHosted .relay { fill: var(--ico-fill); }
+.lc-ico-selfHosted .link { stroke-dasharray: 1 2; opacity: 0.5; }
+.lc-ico-selfHosted .packet { fill: var(--ico-ink); stroke: none; animation: lc-ico-packet 2s ease-in infinite; }
+@keyframes lc-ico-packet { 0% { opacity: 0; transform: translateX(-3px); } 15% { opacity: 1; } 55% { opacity: 1; transform: translateX(6px); } 60%, 100% { opacity: 0; transform: translateX(6px); } }
+.lc-ico-selfHosted .relay { animation: lc-ico-relay 2s ease-out infinite; }
+@keyframes lc-ico-relay { 0%, 55%, 85%, 100% { fill: var(--ico-fill); } 62% { fill: var(--ico-ink); } }
+.lc-ico-selfHosted .ping { stroke-width: 1.2; vector-effect: non-scaling-stroke; opacity: 0; transform-origin: 27px 14px; animation: lc-ico-ping 2s ease-out infinite; }
+@keyframes lc-ico-ping { 0%, 58% { opacity: 0; transform: scale(1); } 60% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(2.4); } }
+
+.lc-ico-zaps .bolt { fill: var(--ico-fill); transform-origin: 16px 16px; animation: lc-ico-strike 2.4s ease-out infinite; }
+@keyframes lc-ico-strike { 0%, 12%, 100% { fill: var(--ico-fill); transform: scale(1); } 4% { fill: var(--ico-ink); transform: scale(1.12) rotate(-3deg); } 30% { fill: var(--ico-fill); } }
+.lc-ico-zaps .sat { fill: var(--ico-ink); stroke: none; opacity: 0; transform-box: fill-box; transform-origin: center; animation: lc-ico-sat 2.4s ease-out infinite; }
+.lc-ico-zaps .t2 { animation-delay: 0.12s; }
+.lc-ico-zaps .t3 { animation-delay: 0.24s; }
+@keyframes lc-ico-sat { 0%, 2% { opacity: 0; transform: scale(0); } 10% { opacity: 1; transform: scale(1.3); } 40% { opacity: 0; transform: scale(0.6) translateY(-3px); } 100% { opacity: 0; } }
+
+.lc-ico-games .pad { transform-origin: 16px 16px; animation: lc-ico-rock 3s ease-in-out infinite; }
+@keyframes lc-ico-rock { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.lc-ico-games .body { fill: var(--ico-fill); }
+.lc-ico-games .key { stroke-width: 1.2; fill: var(--ico-fill); transform-box: fill-box; transform-origin: center; animation: lc-ico-press 1.5s ease-in-out infinite; }
+.lc-ico-games .k2 { animation-delay: -0.75s; }
+@keyframes lc-ico-press { 0%, 40%, 100% { fill: var(--ico-fill); transform: scale(1); } 15%, 25% { fill: var(--ico-ink); transform: scale(0.8); } }
+.lc-ico-games .orb { fill: var(--ico-ink); stroke-width: 1.3; transform-box: fill-box; transform-origin: center; animation: lc-ico-orb 2.4s ease-out infinite; }
+.lc-ico-games .o2 { animation-delay: 0.2s; }
+.lc-ico-games .o3 { animation-delay: 0.4s; }
+@keyframes lc-ico-orb { 0% { opacity: 0; transform: scale(0); } 12% { opacity: 1; transform: scale(1.35); } 22%, 70% { opacity: 1; transform: scale(1); } 85%, 100% { opacity: 0; transform: scale(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lc-ico * { animation: none !important; }
+  .lc-ico { transition: none; }
+  .lc-feature:hover .lc-ico { transform: none; }
+}
+
 /* Accessibility: disable all hero animations */
 @media (prefers-reduced-motion: reduce) {
   .lc-shine-text {

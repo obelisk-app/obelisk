@@ -8,7 +8,7 @@ import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
 /**
- * The feature grid.
+ * The feature grid: six cards, each with a small animated scene for an icon.
  */
 export default function FeaturesSection() {
   const t = useTranslations();
@@ -25,11 +25,9 @@ export default function FeaturesSection() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {FEATURE_KEYS.map((f) => (
-            <Card variant="interactive" padding="2xl" key={f.titleKey} className="group">
-              <div className="w-12 h-12 rounded-xl bg-lc-olive/50 flex items-center justify-center text-lc-green mb-4 group-hover:bg-lc-olive transition-colors">
-                <FeatureGlyph feature={f.id} />
-              </div>
-              <Heading as="h3" variant="card" className="mb-2">{t(f.titleKey)}</Heading>
+            <Card variant="interactive" padding="2xl" key={f.titleKey} className="lc-feature">
+              <FeatureGlyph feature={f.id} />
+              <Heading as="h3" variant="card" className="mt-5 mb-1.5">{t(f.titleKey)}</Heading>
               <Text as="p" variant="muted" className="leading-relaxed">{t(f.descKey)}</Text>
             </Card>
           ))}

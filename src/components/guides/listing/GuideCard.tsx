@@ -5,13 +5,17 @@ import { guidePath } from '@/utils/guides/guide-urls';
 import { HERO_REGISTRY } from '@/assets/illustrations/guides';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
+import { cn } from '@/utils/style/cn';
 
 interface Props {
   slug: string;
   frontmatter: GuideFrontmatter;
+  /** h2 on the guides index; h3 where the cards sit under a section heading (the landing). */
+  headingAs?: 'h2' | 'h3';
+  className?: string;
 }
 
-export default function GuideCard({ slug, frontmatter }: Props) {
+export default function GuideCard({ slug, frontmatter, headingAs = 'h2', className }: Props) {
   const Hero = HERO_REGISTRY[frontmatter.heroComponent];
 
   return (
@@ -19,14 +23,14 @@ export default function GuideCard({ slug, frontmatter }: Props) {
       <Link
         href={guidePath(slug)}
         variant="card"
-        className="group block overflow-hidden"
+        className={cn('group block overflow-hidden', className)}
         data-testid={`guide-card-${slug}`}
       >
         <div className="aspect-[16/8] bg-lc-black border-b border-lc-border overflow-hidden">
           {Hero ? <Hero /> : <div className="w-full h-full bg-lc-olive-dark" />}
         </div>
         <div className="p-5">
-          <Heading as="h2" variant="cardLink">
+          <Heading as={headingAs} variant="cardLink">
             {frontmatter.title}
           </Heading>
           <Text as="p" variant="muted" className="mt-2 line-clamp-2">{frontmatter.description}</Text>

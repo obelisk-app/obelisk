@@ -8,7 +8,6 @@ import type { MessageKey } from '@/i18n/keys';
 
 /** The feature grid, in order; `id` picks the card's icon. */
 export const FEATURE_KEYS = [
-  { id: 'nostrIdentity', titleKey: 'marketing.features.nostrIdentity.title', descKey: 'marketing.features.nostrIdentity.desc' },
   { id: 'realtimeChat', titleKey: 'marketing.features.realtimeChat.title', descKey: 'marketing.features.realtimeChat.desc' },
   { id: 'encryptedDMs', titleKey: 'marketing.features.encryptedDMs.title', descKey: 'marketing.features.encryptedDMs.desc' },
   { id: 'voice', titleKey: 'marketing.features.voice.title', descKey: 'marketing.features.voice.desc' },
@@ -75,14 +74,14 @@ export const HERO_CLIPS = {
   },
 } as const;
 
-/** The guide cards in the Learn section, in order. */
+/** The guides that lead the Learn carousel, in order; every other guide follows, newest first. */
 export const LEARN_GUIDES = [
-  { slug: 'what-is-obelisk', tKey: 'whatIsObelisk' },
-  { slug: 'how-obelisk-works', tKey: 'howObeliskWorks' },
-  { slug: 'web-of-trust', tKey: 'webOfTrust' },
-  { slug: 'bitcoin-zaps', tKey: 'bitcoinZaps' },
-  { slug: 'admin-cli', tKey: 'adminCli' },
-  { slug: 'future-nostr-relays', tKey: 'futureNostrRelays' },
+  'what-is-obelisk',
+  'how-obelisk-works',
+  'web-of-trust',
+  'bitcoin-zaps',
+  'admin-cli',
+  'future-nostr-relays',
 ] as const;
 
 /** FAQ entries, in order; copy lives under `faq.<id>.question` / `.answer`. */

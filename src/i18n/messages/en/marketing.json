@@ -15,6 +15,8 @@
     "heading": "Learn",
     "subtitle": "How a pure Nostr client works, what NIP-29 groups are, and how to bring your own relay.",
     "cta": "Read all guides",
+    "prev": "Previous guides",
+    "next": "More guides",
     "card": {
       "whatIsObelisk": {
         "title": "What is Obelisk?",
@@ -101,37 +103,33 @@
   "features": {
     "heading": "Why Obelisk",
     "subtitle": "All the chat. None of the servers. Your keys, your relays, signed events.",
-    "nostrIdentity": {
-      "title": "Nostr login: your keys, your account",
-      "desc": "Sign in with a browser extension (NIP-07), a signer app over NIP-46, or your nsec. There is no Obelisk account to create. Your Nostr key is the account, everywhere."
-    },
     "realtimeChat": {
-      "title": "NIP-29 groups",
-      "desc": "Channels, members, admins and removals are all standard NIP-29 events on the relay. Open protocol, no proprietary format, no lock-in."
+      "title": "Groups on any relay",
+      "desc": "Channels and members are open NIP-29 events. No lock-in."
     },
     "encryptedDMs": {
-      "title": "Encrypted DMs",
-      "desc": "Direct messages are end-to-end encrypted Nostr DMs, gift-wrapped with NIP-17 by default and NIP-04 when a conversation needs it. Only you and the recipient can read them."
+      "title": "Private DMs",
+      "desc": "End-to-end encrypted. Only you and the recipient can read them."
     },
     "voice": {
-      "title": "P2P voice channels over Nostr",
-      "desc": "Talk to anyone in a channel with no media server in the middle. Voice is WebRTC peer-to-peer; signaling rides on Nostr events, just like every other message."
+      "title": "Voice, peer to peer",
+      "desc": "Calls go straight from browser to browser."
     },
     "selfHosted": {
-      "title": "No backend, no database",
-      "desc": "Obelisk is a frontend. There is no Postgres, no Socket.io server, no auth service. Every message is a signed event sent straight to a relay."
+      "title": "No backend",
+      "desc": "No database, no servers. Your browser talks straight to the relay."
     },
     "spamResistant": {
       "title": "Simple self-hosting",
       "desc": "Self-hosting means running one Next.js app. No database to operate, no Docker required. Run it from your laptop, behind a tunnel, or on any Node host."
     },
     "zaps": {
-      "title": "Bitcoin zaps in chat",
-      "desc": "Send sats from any message via NIP-57 zaps, paid by a wallet you connect with Nostr Wallet Connect (NIP-47) or by a WebLN browser extension. No custodian, no platform fee, no middleman."
+      "title": "Bitcoin zaps",
+      "desc": "Send sats from any message. No custodian, no platform fee."
     },
     "games": {
-      "title": "Games on the relay",
-      "desc": "Chain Reaction, Vesta and Stacker run inside a channel with no game server. Every move is a signed event, and every client replays the same log to the same board."
+      "title": "Games in chat",
+      "desc": "Chain Reaction, Vesta and Stacker, with no game server."
     },
     "adminCli": {
       "title": "Open source",
