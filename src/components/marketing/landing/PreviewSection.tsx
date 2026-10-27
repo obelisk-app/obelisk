@@ -8,11 +8,14 @@ import { LogInIcon } from '@/assets/icons';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
+type Device = 'desktop' | 'mobile';
+
 /**
- * Product preview: desktop + mobile screenshots that link out to the
- * per-device tour pages (/desktop and /mobile). Each card shows a real
- * product screenshot with descriptive alt text for SEO; the CTAs below
- * bounce visitors straight into /app.
+ * Product preview: one tile per device, side by side on md+, each linking to
+ * its tour page (/desktop and /mobile). The top of a tile is a lit stage the
+ * real screenshot rises out of (a browser window, a phone), cropped by the
+ * stage's bottom edge so both tiles keep the same height; the copy sits
+ * below. The CTA under them bounces visitors straight into /app.
  */
 export default function PreviewSection() {
   const t = useTranslations();
@@ -28,78 +31,10 @@ export default function PreviewSection() {
           </Text>
         </div>
 
-        <Container width="5xl" className="space-y-6">
-          {/* Desktop card: image left, content right on lg+ (image on top, content below on small) */}
-          <Card variant="interactive" padding="2xl" asChild>
-            <Link
-              href="/desktop"
-              variant="card"
-              className="group lg:p-8 flex flex-col lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-10 lg:items-center"
-              data-testid="landing-preview-desktop"
-            >
-              <figure className="rounded-xl border border-lc-border overflow-hidden bg-lc-dark">
-                <Image
-                  src="/pictures-for-posts/desktop-channel-chat.png"
-                  alt={t('marketing.landing.preview.desktop.alt')}
-                  width={1470}
-                  height={799}
-                  className="w-full h-auto block transition-transform duration-500 group-hover:scale-[1.015]"
-                  sizes="(max-width: 1024px) 90vw, 600px"
-                />
-              </figure>
-              <div className="mt-6 lg:mt-0 flex flex-col">
-                <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
-                  {t('marketing.landing.preview.desktop.badge')}
-                </span>
-                <Heading as="h3" className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
-                  {t('marketing.landing.preview.desktop.title')}
-                </Heading>
-                <Text as="p" variant="muted" className="mt-2 md:text-base leading-relaxed">
-                  {t('marketing.landing.preview.desktop.desc')}
-                </Text>
-                <span className="mt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
-                  {t('marketing.landing.preview.desktop.cta')}
-                  <span aria-hidden="true">→</span>
-                </span>
-              </div>
-            </Link>
-          </Card>
-
-          {/* Mobile card: content left, phone right on lg+ (phone on top, content below on small) */}
-          <Card variant="interactive" padding="2xl" asChild>
-            <Link
-              href="/mobile"
-              variant="card"
-              className="group lg:p-8 flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_220px] lg:gap-10 lg:items-center"
-              data-testid="landing-preview-mobile"
-            >
-              <figure className="lg:order-2 mx-auto w-full max-w-[200px] lg:mx-0 lg:max-w-none lg:w-full rounded-[2rem] border border-lc-border overflow-hidden bg-lc-dark">
-                <Image
-                  src="/pictures-for-posts/mobile-channel-chat.png"
-                  alt={t('marketing.landing.preview.mobile.alt')}
-                  width={720}
-                  height={1600}
-                  className="w-full h-auto block transition-transform duration-500 group-hover:scale-[1.015]"
-                  sizes="(max-width: 1024px) 60vw, 220px"
-                />
-              </figure>
-              <div className="lg:order-1 mt-6 lg:mt-0 flex flex-col">
-                <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
-                  {t('marketing.landing.preview.mobile.badge')}
-                </span>
-                <Heading as="h3" className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
-                  {t('marketing.landing.preview.mobile.title')}
-                </Heading>
-                <Text as="p" variant="muted" className="mt-2 md:text-base leading-relaxed">
-                  {t('marketing.landing.preview.mobile.desc')}
-                </Text>
-                <span className="mt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
-                  {t('marketing.landing.preview.mobile.cta')}
-                  <span aria-hidden="true">→</span>
-                </span>
-              </div>
-            </Link>
-          </Card>
+        <Container width="5xl" className="grid gap-6 md:grid-cols-2">
+          {(['desktop', 'mobile'] as const).map((device) => (
+            <TourTile key={device} device={device} />
+          ))}
         </Container>
 
         <div className="mt-10 flex justify-center">
@@ -110,5 +45,66 @@ export default function PreviewSection() {
         </div>
       </Container>
     </Reveal>
+  );
+}
+
+function TourTile({ device }: { device: Device }) {
+  const t = useTranslations();
+  return (
+    <Card variant="interactive" padding="none" asChild>
+      <Link
+        href={`/${device}`}
+        variant="card"
+        className="group flex flex-col overflow-hidden"
+        data-testid={`landing-preview-${device}`}
+      >
+        <div className="relative h-64 sm:h-72 overflow-hidden border-b border-lc-border bg-[radial-gradient(ellipse_at_50%_115%,rgba(180,249,83,0.18)_0%,rgba(180,249,83,0.04)_45%,transparent_70%)]">
+          {device === 'desktop' ? (
+            <figure className="absolute left-8 top-10 w-[125%] sm:w-[118%] overflow-hidden rounded-t-xl border border-b-0 border-lc-border bg-lc-dark shadow-2xl shadow-black/60 transition-transform duration-500 ease-out group-hover:-translate-y-2">
+              <div aria-hidden="true" className="flex items-center gap-1.5 border-b border-lc-border bg-lc-black px-3 py-2">
+                <span className="size-2 rounded-full bg-lc-border" />
+                <span className="size-2 rounded-full bg-lc-border" />
+                <span className="size-2 rounded-full bg-lc-border" />
+              </div>
+              <Image
+                src="/pictures-for-posts/desktop-channel-chat.png"
+                alt={t(`marketing.landing.preview.${device}.alt`)}
+                width={1470}
+                height={799}
+                className="block h-auto w-full"
+                sizes="(max-width: 768px) 110vw, 640px"
+              />
+            </figure>
+          ) : (
+            <figure className="absolute left-1/2 top-10 w-48 sm:w-52 -translate-x-1/2 overflow-hidden rounded-t-[2rem] border-[6px] border-b-0 border-lc-dark bg-lc-black shadow-2xl shadow-black/60 ring-1 ring-lc-green/20 transition-transform duration-500 ease-out group-hover:-translate-y-2">
+              <span aria-hidden="true" className="absolute left-1/2 top-1.5 z-10 h-1 w-12 -translate-x-1/2 rounded-full bg-lc-black/90" />
+              <Image
+                src="/pictures-for-posts/mobile-channel-chat.png"
+                alt={t(`marketing.landing.preview.${device}.alt`)}
+                width={720}
+                height={1600}
+                className="block h-auto w-full"
+                sizes="210px"
+              />
+            </figure>
+          )}
+        </div>
+        <div className="flex flex-1 flex-col p-6 lg:p-8">
+          <span className="self-start inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lc-olive/40 border border-lc-green/20 text-xs font-semibold text-lc-green tracking-wide uppercase">
+            {t(`marketing.landing.preview.${device}.badge`)}
+          </span>
+          <Heading as="h3" className="mt-4 text-xl md:text-2xl font-bold text-lc-white">
+            {t(`marketing.landing.preview.${device}.title`)}
+          </Heading>
+          <Text as="p" variant="muted" className="mt-2 md:text-base leading-relaxed">
+            {t(`marketing.landing.preview.${device}.desc`)}
+          </Text>
+          <span className="mt-auto pt-6 text-sm font-semibold text-lc-green inline-flex items-center gap-2 group-hover:underline">
+            {t(`marketing.landing.preview.${device}.cta`)}
+            <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+          </span>
+        </div>
+      </Link>
+    </Card>
   );
 }

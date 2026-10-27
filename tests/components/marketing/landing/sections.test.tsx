@@ -11,6 +11,8 @@ import RoadmapSection from '@/components/marketing/landing/RoadmapSection';
 import LearnSection from '@/components/marketing/landing/LearnSection';
 import StackSection from '@/components/marketing/landing/StackSection';
 import FaqSection from '@/components/marketing/landing/FaqSection';
+import { listAllGuides } from '@/services/guides/guides';
+import { guidePath } from '@/utils/guides/guide-urls';
 import RelayPulse from '@/assets/illustrations/marketing/RelayPulse';
 import { FAQ_IDS, FEATURE_KEYS, LEARN_GUIDES, ROADMAP_PHASES, TECH_STACK } from '@/constants/marketing/landing';
 
@@ -48,14 +50,16 @@ describe('landing sections', () => {
     expect(github).toHaveClass('lc-pill-secondary', 'text-base');
   });
 
-  it('data-driven sections render one card per entry', () => {
+  it('data-driven sections render one card per entry', async () => {
     const { container } = renderEn(
-      <><FeaturesSection /><StepsSection /><RoadmapSection /><LearnSection /><StackSection /></>,
+      <><FeaturesSection /><StepsSection /><RoadmapSection /><LearnSection guides={await listAllGuides('en')} /><StackSection /></>,
     );
     expect(container.querySelector('#features')?.querySelectorAll('.lc-card')).toHaveLength(FEATURE_KEYS.length);
     expect(container.querySelector('#how-it-works')?.querySelectorAll('.lc-card')).toHaveLength(3);
     expect(container.querySelector('#roadmap')?.querySelectorAll('.lc-card')).toHaveLength(ROADMAP_PHASES.length);
-    expect(container.querySelector('#learn')?.querySelectorAll('a.lc-card')).toHaveLength(LEARN_GUIDES.length);
+    const learn = [...(container.querySelector('#learn')?.querySelectorAll('a.lc-card') ?? [])].map((a) => a.getAttribute('href'));
+    expect(learn.length).toBeGreaterThan(LEARN_GUIDES.length);
+    expect(learn.slice(0, LEARN_GUIDES.length)).toEqual(LEARN_GUIDES.map((slug) => guidePath(slug)));
     const stack = container.querySelector('#stack');
     expect(stack?.querySelectorAll('a[target="_blank"]')).toHaveLength(TECH_STACK.length);
   });

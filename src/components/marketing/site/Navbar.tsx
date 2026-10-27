@@ -14,7 +14,6 @@ import NavAccountMenu from './NavAccountMenu';
 const SIMPLE_LINKS = [
   { href: '/features', key: 'marketing.nav.features' },
   { href: '/#how-it-works', key: 'marketing.nav.howItWorks' },
-  { href: '/#roadmap', key: 'marketing.nav.roadmap' },
 ] as const;
 
 /**

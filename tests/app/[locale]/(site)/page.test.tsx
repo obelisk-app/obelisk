@@ -179,7 +179,7 @@ describe('landing route', async () => {
 
   it('lists the games among the features, in both locales', async () => {
     render(<LocaleProvider>{await Page()}</LocaleProvider>);
-    expect(screen.getByRole('heading', { name: 'Games on the relay' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Games in chat' })).toBeInTheDocument();
     expect(screen.getByText(/Chain Reaction, Vesta and Stacker/)).toBeInTheDocument();
   });
 
