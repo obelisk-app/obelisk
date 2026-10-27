@@ -203,4 +203,19 @@ describe('server rail labels', () => {
     expect(body).toContain('-webkit-line-clamp: 2');
     expect(body).not.toContain('white-space: nowrap');
   });
+
+  it('starts the message list below the floating history pill (top 12px + 32px tall)', () => {
+    const top = Number(ruleBody('.obelisk-mobile .messages').match(/padding:\s*(\d+)px/)?.[1]);
+    expect(top).toBeGreaterThanOrEqual(12 + 32 + 8);
+  });
+
+  it('keeps the composer placeholder on one line with an ellipsis', () => {
+    for (const selector of ['.obelisk-mobile .composer-input::placeholder', '.obelisk-mobile .composer-input:placeholder-shown']) {
+      const body = ruleBody(selector);
+      expect(body).toContain('white-space: nowrap');
+      expect(body).toContain('text-overflow: ellipsis');
+      expect(body).toContain('overflow: hidden');
+    }
+    expect(ruleBody('.obelisk-mobile .composer-input')).not.toContain('white-space: nowrap');
+  });
 });

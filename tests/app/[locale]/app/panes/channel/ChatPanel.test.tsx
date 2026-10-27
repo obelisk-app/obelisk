@@ -110,6 +110,13 @@ describe('ChatLayout: a text channel', () => {
     expect(screen.queryByTestId('messages-gated-by-auth')).toBeNull();
   });
 
+  it('starts the list below the floating history pill, so the pill never covers the first message', () => {
+    setup();
+    const list = screen.getByTestId('row-m1').parentElement!;
+    expect(list.className).toContain('overflow-y-auto');
+    expect(list.className).toContain('pt-14');
+  });
+
   it('shows the members column only when asked', () => {
     setup({ showMembers: true });
     expect(screen.getByTestId('members-panel').dataset.group).toBe('g');

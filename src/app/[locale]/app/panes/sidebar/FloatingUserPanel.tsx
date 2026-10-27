@@ -2,6 +2,7 @@
 
 import VoiceStatusBar from '@/components/voice/status-bar/VoiceStatusBar';
 import { SidebarMe } from './SidebarMe';
+import { useFloatingUserPanel } from '@/hooks/shell/panes/sidebar/useFloatingUserPanel';
 
 export function FloatingUserPanel({
   sidebarWidth,
@@ -22,8 +23,11 @@ export function FloatingUserPanel({
   // Server rail is 72px wide; panel sits 8px from left with 8px right gap to
   // the sidebar's right edge, so it spans the full sidebar+rail width.
   const width = 72 + sidebarWidth - 16;
+  const panelRef = useFloatingUserPanel();
   return (
     <div
+      ref={panelRef}
+      data-testid="floating-user-panel"
       className={`group/me pointer-events-none absolute bottom-3 left-2 z-30 hidden flex-col gap-2 md:flex ${
         collapsed ? 'w-14 transition-[width] duration-200 ease-out hover:w-64' : ''
       }`}

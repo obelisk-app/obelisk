@@ -50,6 +50,12 @@ export class MessageStream {
         if (msgs.length > 0) {
           this.s.setStatus(groupId, 'has-messages');
           this.m.retry.clear(groupId);
+        } else if (this.s.createdHere.has(groupId)) {
+          // We created this channel moments ago and the relay accepted it:
+          // nothing can be hiding behind an AUTH race, so empty is final. A
+          // first message still promotes it through the ingest.
+          this.s.setStatus(groupId, 'empty-confirmed');
+          this.m.retry.clear(groupId);
         } else if (this.s.messagesStatusByGroup.get()[groupId] !== 'empty-confirmed') {
           // Once the ladder has promoted status to `empty-confirmed`, additional
           // empty EOSEs (typically caused by the hub re-issuing the REQ

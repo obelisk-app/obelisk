@@ -1380,7 +1380,10 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 14px 14px 8px;
+  /* 56px on top: the floating "No earlier messages" pill
+     (HistoryPaginationStatus: top 12px, at least 32px tall) sits over the top
+     of the list, so the first message needs to start below it. */
+  padding: 56px 14px 8px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1858,6 +1861,17 @@
 }
 .obelisk-mobile .composer-input::placeholder {
   color: var(--app-text-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A long channel name wrapped the placeholder onto a second line the
+   one-line box cut off. While empty, keep it on one line with an ellipsis;
+   typed text still wraps. */
+.obelisk-mobile .composer-input:placeholder-shown {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .obelisk-mobile .composer-btns {
   display: flex;

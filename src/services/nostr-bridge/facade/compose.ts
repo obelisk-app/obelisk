@@ -150,7 +150,11 @@ export class BridgeModules {
       ensureUserMetadata: (pubkey) => this.profiles.ensure(pubkey),
     });
     this.metadata = new GroupMetadataModule(this.ctx, {
-      recordCreator: (groupId, pubkey) => this.membership.recordCreator(groupId, pubkey),
+      recordCreator: (groupId, pubkey) => {
+        this.membership.recordCreator(groupId, pubkey);
+        // Only `createGroup` records a creator: the channel is new and empty.
+        this.messageState.createdHere.add(groupId);
+      },
       onGroupDiscovered: (groupId) => this.messages.queue.queue(groupId),
     });
     this.moderation = new ModerationModule(this.ctx, {

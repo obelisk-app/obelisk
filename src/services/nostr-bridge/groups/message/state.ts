@@ -92,6 +92,13 @@ export class MessagesState {
    */
   readonly querySyncFallbackFired = new Set<string>();
   /**
+   * Channels this session created (its kind 9007 was accepted). Such a
+   * channel is empty by construction, so its first empty EOSE is the truth:
+   * the stream confirms it at once instead of running the retry ladder, which
+   * kept a brand-new channel on "Loading messages..." for ten seconds or more.
+   */
+  readonly createdHere = new Set<string>();
+  /**
    * Per-group debounce timers for message-cache flushes. Coalesces a burst
    * of `ingestMessage` calls (typical of a kind 9 limit:50 backfill arriving
    * in one tick) into a single localStorage.setItem at the end of the
