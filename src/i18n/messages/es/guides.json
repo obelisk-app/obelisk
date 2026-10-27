@@ -90,8 +90,6 @@
       "sessionSub": "en este dispositivo",
       "sign": "Firmar",
       "browser": "En tu navegador",
-      "pages": "Páginas estáticas",
-      "pagesSub": "inicio, guías, ayuda",
       "app": "La app de Obelisk",
       "appSub": "chat, voz, DMs, zaps",
       "hub": "Un solo gestor de conexiones",
@@ -102,12 +100,12 @@
       "serverDoes": "guarda el grupo y hace cumplir sus reglas",
       "relays": "Otros relays Nostr",
       "relayRoles": "Perfiles · DMs (NIP-17)",
-      "flowProfile": "perfiles + DMs",
       "voice": "Voz",
       "voiceMesh": "de par a par (malla WebRTC)",
       "voiceSfu": "o un SFU que elige el admin",
       "wallet": "Wallet Lightning",
-      "walletDoes": "zaps, por WebLN o NWC"
+      "walletDoes": "zaps, por WebLN o NWC",
+      "noServer": "Ningún servidor de Obelisk en el medio."
     },
     "quantumSafe": {
       "title": "Un mensaje sellado por dos capas de protección",

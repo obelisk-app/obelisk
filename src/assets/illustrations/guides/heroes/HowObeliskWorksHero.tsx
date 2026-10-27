@@ -52,42 +52,39 @@ export default function HowObeliskWorksHero() {
         ))}
       </g>
 
-      <ServerRelay />
       <KeyCard />
       <BrowserApp />
+      <ServerRelay />
       <Elsewhere />
 
+      {/* key -> app: the key signs, the app never holds it */}
+      <line x1="216" y1="125" x2="268" y2="125" stroke="#b4f953" strokeWidth="2" strokeDasharray="5 5"
+        className="animate-dash-flow" markerEnd="url(#how-arrow)" />
+      <rect x="216" y="96" width="52" height="20" rx="10" fill="#b4f953" />
+      <text x="242" y="110" textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#0a0a0a">
+        {t('guides.art.howObeliskWorks.sign')}
+      </text>
+
       {/* app <-> server: signed events, straight over a WebSocket */}
-      <path
-        d="M258 292 C 300 292, 326 256, 380 256"
-        stroke="#b4f953" strokeWidth="2" fill="none" strokeDasharray="6 6"
-        className="animate-dash-flow"
-        markerStart="url(#how-arrow)" markerEnd="url(#how-arrow)"
-      />
-      <text x="326" y="232" textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#b4f953">
+      <line x1="490" y1="125" x2="612" y2="125" stroke="#b4f953" strokeWidth="2" strokeDasharray="6 6"
+        className="animate-dash-flow" markerStart="url(#how-arrow)" markerEnd="url(#how-arrow)" />
+      <text x="551" y="113" textAnchor="middle" fontSize="12" fontWeight="700" fill="#b4f953">
         {t('guides.art.howObeliskWorks.flowSigned')}
       </text>
-      <text x="326" y="245" textAnchor="middle" fontSize="9.5" fill="#a3a3a3">
+      <text x="551" y="145" textAnchor="middle" fontSize="11" fill="#a3a3a3">
         {t('guides.art.howObeliskWorks.flowSocket')}
       </text>
 
-      {/* app -> other relays: the app fetches profiles and DMs itself */}
-      <path
-        d="M256 284 C 300 0, 560 0, 640 98"
-        stroke="#8bc34a" strokeWidth="1.6" fill="none" strokeDasharray="5 7" opacity="0.85"
-        className="animate-dash-flow"
-        style={{ animationDuration: '3s' } as React.CSSProperties}
-        markerEnd="url(#how-arrow)"
-      />
-      <text x="482" y="30" textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#8bc34a">
-        {t('guides.art.howObeliskWorks.flowProfile')}
-      </text>
-
-      {/* app -> voice and wallet, outside the relays */}
-      <g stroke="#8bc34a" strokeWidth="1.4" fill="none" strokeDasharray="3 6" opacity="0.8">
-        <path d="M252 304 C 330 376, 480 376, 552 312" className="animate-dash-flow" markerEnd="url(#how-arrow)" />
-        <path d="M252 306 C 330 396, 480 396, 552 367" className="animate-dash-flow" markerEnd="url(#how-arrow)" />
+      {/* app -> what it reaches on its own: other relays, voice, the wallet */}
+      <g stroke="#8bc34a" strokeWidth="1.5" fill="none" strokeDasharray="4 6" opacity="0.85">
+        <path d="M362 210 C 362 248, 138 244, 138 280" className="animate-dash-flow" markerEnd="url(#how-arrow)" />
+        <path d="M378 210 L 400 280" className="animate-dash-flow" markerEnd="url(#how-arrow)" />
+        <path d="M394 210 C 394 248, 662 244, 662 280" className="animate-dash-flow" markerEnd="url(#how-arrow)" />
       </g>
+
+      <text x="400" y="384" textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#b4f953">
+        {t('guides.art.howObeliskWorks.noServer')}
+      </text>
     </svg>
   );
 }

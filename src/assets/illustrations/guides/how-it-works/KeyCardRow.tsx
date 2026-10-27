@@ -4,8 +4,8 @@ import KeyRowGlyph from './KeyRowGlyph';
 export default function KeyCardRow({ y, glyph, label }: { y: number; glyph: 'ext' | 'phone' | 'lock'; label: string }) {
   return (
     <g>
-      <KeyRowGlyph kind={glyph} x={36} y={y - 4} />
-      <text x="50" y={y} fontSize="10.5" fontWeight="600" fill="#fafafa">
+      <KeyRowGlyph kind={glyph} x={38} y={y - 4.5} />
+      <text x="54" y={y} fontSize="13" fontWeight="600" fill="#fafafa">
         {label}
       </text>
     </g>
