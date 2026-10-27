@@ -12,7 +12,7 @@
     "addBanner": "Toque para adicionar um banner",
     "changeBannerImage": "Trocar a imagem do banner",
     "changeProfilePicture": "Trocar a foto de perfil",
-    "uploadTip": "Toque no avatar ou no banner para enviar uma imagem nova. As suas mudanças são publicadas como metadados kind:0.",
+    "uploadTip": "Toque no avatar ou no banner para enviar uma imagem nova. As suas mudanças são publicadas no seu perfil público do Nostr.",
     "displayName": "Nome de exibição",
     "yourName": "Seu nome",
     "aboutPlaceholder": "Uma bio curta...",

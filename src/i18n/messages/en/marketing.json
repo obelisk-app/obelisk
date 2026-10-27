@@ -185,7 +185,7 @@
       },
       "profiles": {
         "title": "Nostr profile explorer",
-        "description": "Open any member’s portable kind-0 identity, follow them, inspect their NIP-05 name, and start a DM without creating another account.",
+        "description": "Open any member’s portable, public Nostr profile, follow them, inspect their NIP-05 name, and start a DM without creating another account.",
         "alt": "Obelisk interface with portable Nostr profiles"
       }
     }
@@ -214,7 +214,7 @@
     "upcoming": "Upcoming",
     "phase0": {
       "title": "Identity",
-      "items": "NIP-07 browser-extension login|nsec login|Profile editor (kind 0)"
+      "items": "NIP-07 browser-extension login|nsec login|Public Nostr profile editor"
     },
     "phase1": {
       "title": "NIP-29 Groups",

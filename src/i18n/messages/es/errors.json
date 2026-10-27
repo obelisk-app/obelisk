@@ -94,7 +94,6 @@
     }
   },
   "kinds": {
-    "number": "kind {kind}",
     "relayAuth": "Autenticación NIP-42 con el relay",
     "message": "Enviar mensaje",
     "dm": "Mensaje directo",

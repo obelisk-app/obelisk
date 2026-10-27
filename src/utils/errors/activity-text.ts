@@ -18,13 +18,14 @@ export function activityTitle(t: Translate, entry: ActivityEntry): string {
   return t(`errors.activity.${entry.label}.${entry.status}`, { target: entry.detail ?? '' });
 }
 
-/** The event kind, named and numbered (`Send message · kind 9`), or null when the entry has neither. */
+/**
+ * The event kind by name (`Send message`), or null when the entry has none.
+ * The kind number is protocol jargon, so it is never shown here; the relay
+ * debug panel keeps it.
+ */
 export function activityKind(t: Translate, entry: ActivityEntry): string | null {
-  const name = entry.description === undefined
-    ? null
-    : isEventKindLabel(entry.description) ? t(`errors.kinds.${entry.description}`) : entry.description;
-  const kind = entry.eventKind == null ? null : t('errors.kinds.number', { kind: entry.eventKind });
-  return [name, kind].filter(Boolean).join(' · ') || null;
+  if (entry.description === undefined) return null;
+  return isEventKindLabel(entry.description) ? t(`errors.kinds.${entry.description}`) : entry.description;
 }
 
 /**

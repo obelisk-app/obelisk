@@ -12,7 +12,7 @@
     "addBanner": "Tap to add banner",
     "changeBannerImage": "Change banner image",
     "changeProfilePicture": "Change profile picture",
-    "uploadTip": "Tap your avatar or banner to upload a new image. Your changes are published as kind:0 metadata.",
+    "uploadTip": "Tap your avatar or banner to upload a new image. Your changes are published to your public Nostr profile.",
     "displayName": "Display name",
     "yourName": "Your name",
     "aboutPlaceholder": "A short bio...",

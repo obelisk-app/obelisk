@@ -94,7 +94,6 @@
     }
   },
   "kinds": {
-    "number": "kind {kind}",
     "relayAuth": "NIP-42 relay auth",
     "message": "Send message",
     "dm": "Direct message",

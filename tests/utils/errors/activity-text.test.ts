@@ -21,15 +21,15 @@ describe('activity text', () => {
       .toBe('Authenticating with relay.example');
   });
 
-  it('names and numbers the event kind', () => {
-    expect(activityKind(translator('pt'), entry({ description: 'dm', eventKind: 4 }))).toBe('Mensagem direta · kind 4');
+  it('names the event kind without its number', () => {
+    expect(activityKind(translator('pt'), entry({ description: 'dm', eventKind: 4 }))).toBe('Mensagem direta');
     expect(activityKind(translator('en'), entry({}))).toBeNull();
   });
 
   it('explains a coded failure, else falls back to the kind, else the raw detail', () => {
     const t = translator('es');
     expect(activityDetail(t, entry({ status: 'error', detail: 'offline', eventKind: 9 }))).toBe('Estás sin conexión. Revisá tu conexión.');
-    expect(activityDetail(t, entry({ status: 'error', detail: 'relay said no', eventKind: 9 }))).toBe('kind 9');
+    expect(activityDetail(t, entry({ status: 'error', detail: 'relay said no', description: 'message', eventKind: 9 }))).toBe('Enviar mensaje');
     expect(activityDetail(t, entry({ label: 'connect', detail: 'wss://a.example' }))).toBe('wss://a.example');
   });
 

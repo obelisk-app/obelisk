@@ -185,7 +185,7 @@
       },
       "profiles": {
         "title": "Explorador de perfis Nostr",
-        "description": "Abra a identidade portátil kind-0 de qualquer membro, siga a pessoa, veja seu nome NIP-05 e comece um DM sem criar outra conta.",
+        "description": "Abra o perfil público e portátil do Nostr de qualquer membro, siga a pessoa, veja seu nome NIP-05 e comece um DM sem criar outra conta.",
         "alt": "Interface do Obelisk com perfis Nostr portáteis"
       }
     }
@@ -214,7 +214,7 @@
     "upcoming": "Em breve",
     "phase0": {
       "title": "Identidade",
-      "items": "Login com extensão NIP-07|Login com nsec|Editor de perfil (kind 0)"
+      "items": "Login com extensão NIP-07|Login com nsec|Editor do perfil público do Nostr"
     },
     "phase1": {
       "title": "Grupos NIP-29",

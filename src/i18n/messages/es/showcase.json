@@ -33,7 +33,7 @@
       "badge": "Perfil e identidad",
       "title": "Tu perfil Nostr, tus ajustes",
       "alt": "Pantalla de perfil de Obelisk en el celular: banner, avatar, nombre, npub con botón para copiar, bio, botón Editar perfil y las pestañas del perfil.",
-      "desc": "El mismo perfil kind 0 que usa todo cliente Nostr: nombre, banner, bio, NIP-05, dirección Lightning. Lo editás una vez y todas las apps Nostr ven el cambio.",
+      "desc": "El mismo perfil público que usa todo cliente Nostr: nombre, banner, bio, NIP-05, dirección Lightning. Lo editás una vez y todas las apps Nostr ven el cambio.",
       "features": "Copiá npub o pubkey hex con un toque|Compartí un link público a tu perfil|Preferencias por dispositivo guardadas en localStorage"
     },
     "cta": {

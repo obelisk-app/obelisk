@@ -39,7 +39,7 @@ describe('MobileSigningIndicator', () => {
     expect(indicator).toHaveAttribute('data-status', 'pending');
     fireEvent.click(indicator);
     expect(screen.getByText('Waiting for bunker signature')).toBeInTheDocument();
-    expect(screen.getByText('Send message · kind 9')).toBeInTheDocument();
+    expect(screen.getByText('Send message')).toBeInTheDocument();
 
     resolveActivity(id);
     await waitFor(() => expect(indicator).toHaveAttribute('data-status', 'ok'));

@@ -33,7 +33,7 @@
       "badge": "Profile & identity",
       "title": "Your Nostr profile, your settings",
       "alt": "Obelisk mobile profile screen: banner, avatar, name, npub with a copy button, bio, an Edit profile button and the profile's tabs.",
-      "desc": "The same kind 0 profile every Nostr client uses: display name, banner, bio, NIP-05, Lightning address. Edit it once and every Nostr app sees the change.",
+      "desc": "The same public profile every Nostr client uses: display name, banner, bio, NIP-05, Lightning address. Edit it once and every Nostr app sees the change.",
       "features": "Copy npub or hex pubkey with one tap|Share a public link to your profile|Per-device preferences kept in localStorage"
     },
     "cta": {
