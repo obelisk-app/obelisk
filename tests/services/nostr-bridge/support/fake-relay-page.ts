@@ -35,6 +35,13 @@ export class FakeRelaySocket implements SocketHandlers {
   static readonly CLOSED = 3;
   static sockets: FakeRelaySocket[] = [];
   static seq = 0;
+  /**
+   * URLs whose handshake fails, as a relay behind a proxy answering HTTP 502
+   * does: the socket errors and closes without ever opening.
+   */
+  static deadUrls = new Set<string>();
+  /** URLs that connect but never answer a REQ: a relay that went quiet mid-answer. */
+  static silentUrls = new Set<string>();
 
   readonly url: string;
   readonly challenge: string;
@@ -63,10 +70,18 @@ export class FakeRelaySocket implements SocketHandlers {
   static reset(): void {
     FakeRelaySocket.sockets = [];
     FakeRelaySocket.seq = 0;
+    FakeRelaySocket.deadUrls = new Set();
+    FakeRelaySocket.silentUrls = new Set();
   }
 
   open(): void {
     if (this.readyState !== FakeRelaySocket.CONNECTING) return;
+    if (FakeRelaySocket.deadUrls.has(this.url)) {
+      this.readyState = FakeRelaySocket.CLOSED;
+      this.onerror?.();
+      this.onclose?.({ message: 'Unexpected server response: 502' });
+      return;
+    }
     this.readyState = FakeRelaySocket.OPEN;
     this.onopen?.();
     this.reply(['AUTH', this.challenge]);
@@ -77,6 +92,7 @@ export class FakeRelaySocket implements SocketHandlers {
     this.sent.push(frame);
     const [kind, a, b] = frame;
     if (kind === 'REQ') {
+      if (FakeRelaySocket.silentUrls.has(this.url)) return;
       const id = String(a);
       if (!this.authed) this.reply(['CLOSED', id, 'auth-required: this relay only serves authenticated clients']);
       else this.reply(['EOSE', id]);

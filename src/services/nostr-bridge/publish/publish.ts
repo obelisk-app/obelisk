@@ -18,7 +18,7 @@ import { pushRelayDebug } from '../relay/relay-debug';
 import { eventKindDescription } from '../common/kind-description';
 import { uniqueRelayUrls } from '../relay/relay-list';
 import type { AuthSigner, BridgeContext, PublishRelayOpts } from '../facade/context';
-import { publishRound } from './publish-round';
+import { publishRound, publishRoundSettling } from './publish-round';
 import { signForSession, type SignDeps, type SignableTemplate } from './publish-sign';
 import {
   acceptedOf,
@@ -57,7 +57,7 @@ const EPHEMERAL_CALLER_WAIT_MS = 750;
 const EPHEMERAL_ROUND_WAIT_MS = 4000;
 
 export interface PublishDeps extends SignDeps {
-  readonly hub: Pick<RelayHub, 'publish' | 'acquireAuthLease'>;
+  readonly hub: Pick<RelayHub, 'publish' | 'acquireAuthLease' | 'status' | 'onStatus'>;
   getAuthSigner(): AuthSigner | undefined;
   /** AUTH one socket explicitly and republish; null when AUTH cannot help (`publish-auth.ts`). */
   authAndRepublish(url: string, event: NostrEvent): Promise<PromiseSettledResult<string> | null>;
@@ -243,11 +243,12 @@ export class PublishModule {
    * that the round finishes in the background and this returns null (sent,
    * fire-and-forget). Explicit rejections usually arrive at once, though,
    * and must flow through the normal error path; otherwise voice claims it
-   * joined while every beacon and signal was denied.
+   * joined while every beacon and signal was denied. Any other kind stops
+   * waiting on a dead relay once another accepted (`publishRoundSettling`).
    */
   private async firstRound(event: NostrEvent, targets: readonly string[], auth: PublishAuthMode): Promise<PublishResults | null> {
     const ephemeral = event.kind >= 20000 && event.kind < 30000;
-    if (!ephemeral) return publishRound(this.deps.hub, targets, event, auth);
+    if (!ephemeral) return publishRoundSettling(this.deps.hub, targets, event, auth);
     const round = publishRound(this.deps.hub, targets, event, auth, EPHEMERAL_ROUND_WAIT_MS);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const settled = await Promise.race([

@@ -11,7 +11,9 @@ events.
 1. Hash the file with SHA-256.
 2. Sign a short-lived kind `24242` Blossom authorization event.
 3. `PUT` the bytes to the configured Blossom servers, trying each until one
-   succeeds.
+   succeeds (`BLOSSOM_SERVERS` in `src/constants/media/blossom.ts`:
+   blossom.band, then blossom.primal.net; nostr.build is left out because
+   its upload preflight sends no CORS header, so a browser can never reach it).
 4. Validate the returned descriptor against the uploaded hash and size, including the hash in its URL path.
 5. Store the returned absolute HTTP(S) URL in the Nostr event.
 

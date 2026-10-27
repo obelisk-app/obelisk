@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { BlossomUploadError, uploadEncryptedBlob, uploadToBlossom } from '@/services/media/blossom';
-import { ENCRYPTED_BLOSSOM_SERVERS } from '@/constants/media/blossom';
+import { BLOSSOM_SERVERS, ENCRYPTED_BLOSSOM_SERVERS } from '@/constants/media/blossom';
 
 const { signEventTemplate } = vi.hoisted(() => ({ signEventTemplate: vi.fn() }));
 vi.mock('@/services/nostr-bridge', () => ({ nostrActions: { signEventTemplate } }));
@@ -38,6 +38,18 @@ describe('uploadToBlossom', () => {
     expect(event.kind).toBe(24242);
     expect(event.pubkey).toBe(getPublicKey(secretKey));
     expect(signEventTemplate).not.toHaveBeenCalled();
+  });
+
+  it('tries only servers a browser can upload to, blossom.band first', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+    const file = { type: 'image/png', arrayBuffer: async () => new Uint8Array([4]).buffer } as File;
+    await expect(uploadToBlossom(file, new Uint8Array(32).fill(4))).rejects.toThrow();
+    const hosts = fetchMock.mock.calls.map((c) => new URL(c[0]).origin);
+    expect(hosts).toEqual(BLOSSOM_SERVERS);
+    expect(hosts[0]).toBe('https://blossom.band');
+    // No CORS on its upload preflight: every browser upload to it fails.
+    expect(hosts).not.toContain('https://nostr.build');
   });
 
   it('cancels after signing rather than sending an upload for a replaced account', async () => {
@@ -85,7 +97,7 @@ describe('uploadToBlossom', () => {
     const file = { type: 'image/png', arrayBuffer: async () => new Uint8Array([1]).buffer } as File;
     const err = await uploadToBlossom(file, new Uint8Array(32).fill(2)).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(BlossomUploadError);
-    expect((err as BlossomUploadError).reasons).toHaveLength(3);
+    expect((err as BlossomUploadError).reasons).toHaveLength(BLOSSOM_SERVERS.length);
     expect((err as BlossomUploadError).reasons[0]).toContain('413 too big');
     warn.mockRestore();
   });
