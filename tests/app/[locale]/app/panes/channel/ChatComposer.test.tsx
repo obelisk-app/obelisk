@@ -50,6 +50,14 @@ describe('ChatComposer', () => {
     mount();
     expect(screen.getByRole('textbox', { name: 'Message #general' })).toBeInTheDocument();
   });
+
+  it('names the picker button and gives it and the input test ids', () => {
+    mount();
+    const button = screen.getByTestId('composer-picker-button');
+    expect(button).toHaveAccessibleName('Emoji, GIFs and stickers');
+    expect(button).toHaveAttribute('title', 'Emoji, GIFs and stickers');
+    expect(screen.getByTestId('composer-input').tagName).toBe('TEXTAREA');
+  });
 });
 
 describe('ChatComposer around the input', () => {
@@ -89,7 +97,7 @@ describe('ChatComposer around the input', () => {
 
   it('the picker button opens and closes the picker, and a click elsewhere closes it', () => {
     mount();
-    const button = screen.getByRole('button', { name: 'Open emoji, GIF, and sticker picker' });
+    const button = screen.getByRole('button', { name: 'Emoji, GIFs and stickers' });
     expect(button.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(button);
     expect(button.getAttribute('aria-expanded')).toBe('true');
@@ -102,7 +110,7 @@ describe('ChatComposer around the input', () => {
 
   it('a click inside the picker area keeps it open', () => {
     mount();
-    const button = screen.getByRole('button', { name: 'Open emoji, GIF, and sticker picker' });
+    const button = screen.getByRole('button', { name: 'Emoji, GIFs and stickers' });
     fireEvent.click(button);
     fireEvent.mouseDown(button);
     expect(button.getAttribute('aria-expanded')).toBe('true');

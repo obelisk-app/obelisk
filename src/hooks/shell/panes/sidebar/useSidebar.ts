@@ -7,7 +7,6 @@ import {
   useChildrenByParent,
   useRelayAccess,
 } from '@/services/nostr-bridge';
-import { useVoiceStore } from '@/store/voice';
 import { applyLayout } from '@/services/relay/channel-layout';
 import type { View } from '@/utils/shell/desktop/view';
 import { indexGroupsById, rootGroups } from '@/utils/shell/panes/sidebar/sidebar-groups';
@@ -43,10 +42,6 @@ export function useSidebar(relay: string, setView: (v: View) => void) {
   );
   const groupMetadataEose = useGroupMetadataEose();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // The desktop FloatingUserPanel (SidebarMe pill, plus VoiceStatusBar when a
-  // call is active) sits absolutely over the bottom of the channel list; the
-  // list pads further while in a call so its last channels scroll clear.
-  const inVoice = useVoiceStore((s) => !!s.currentVoiceChannelId);
 
   return {
     groups,
@@ -58,7 +53,6 @@ export function useSidebar(relay: string, setView: (v: View) => void) {
     groupDistanceById,
     channelsVisible: relayAccess === 'ok',
     groupMetadataEose,
-    inVoice,
     settingsOpen,
     openSettings: () => setSettingsOpen(true),
     closeSettings: () => setSettingsOpen(false),

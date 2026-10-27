@@ -101,7 +101,7 @@ export default function DmList({
         over the bottom of this column too, and this scroller had none - so
         the last conversation sat permanently behind the "You" pill.
       */}
-      <div className="flex-1 overflow-y-auto pb-2 md:pb-28">
+      <div className="flex-1 overflow-y-auto pb-2 md:pb-[calc(var(--floating-user-panel-clearance,7rem)+0.5rem)]">
         {!vm.hasConversations && vm.loading ? null : !vm.hasConversations ? (
           <div className="p-4 text-center">
             <Text as="p" variant="muted">{t('dm.noConversations')}</Text>

@@ -56,7 +56,9 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
             type="button"
             onClick={vm.toggleEmoji}
             className="flex h-9 w-9 items-center justify-center rounded-full text-lc-muted hover:bg-white/5 hover:text-lc-white"
-            aria-label={t('mobile.composer.openPicker')}
+            aria-label={t('chat.composer.mediaPicker')}
+            title={t('chat.composer.mediaPicker')}
+            data-testid="composer-picker-button"
             aria-haspopup="dialog"
             aria-expanded={composer.emojiOpen}
           >
@@ -112,6 +114,7 @@ export const ChatComposer = forwardRef<ComposerHandle, ChatComposerProps>(functi
             placeholder={t('shell.desktop.composer.placeholder', { name: vm.channelName })}
             aria-label={t('shell.desktop.composer.placeholder', { name: vm.channelName })}
             data-tour="composer"
+            data-testid="composer-input"
             className={(composer.draftVoiceNote ? "hidden " : "") + "block w-full bg-transparent py-2 text-sm leading-5 text-lc-white outline-none placeholder:text-lc-muted disabled:opacity-50"}
           />
         </div>

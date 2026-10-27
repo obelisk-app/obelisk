@@ -1,6 +1,7 @@
 import { useRef, type MouseEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { useUserMetadata, type JsMessage } from '@/services/nostr-bridge';
+import type { JsMessage } from '@/services/nostr-bridge';
+import { useMessageAuthor } from '@/hooks/chat/message/useMessageAuthor';
 import { displayNameFor } from '@/utils/identity/display-name';
 import {
   useMessageModeration,
@@ -31,7 +32,7 @@ export function useChannelMessage({
   onLongPress: (message: JsMessage) => void;
 }) {
   const t = useTranslations();
-  const meta = useUserMetadata(msg.pubkey);
+  const meta = useMessageAuthor(msg.pubkey);
   const { grouped, toggle } = useMessageReactions(msg, groupId, reactions, myPubkey, isAdmin);
   const { retry, dismissFailed } = useMessageModeration(msg, groupId, isAdmin, msg.pubkey === myPubkey, moderationLabelsFrom(t));
 

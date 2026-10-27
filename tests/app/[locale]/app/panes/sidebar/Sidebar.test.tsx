@@ -107,15 +107,10 @@ describe('Sidebar', () => {
     expect(screen.getByTestId('channel-row-g1')).toBeInTheDocument();
   });
 
-  it('leaves room for the floating user panel', () => {
+  it('pads the list by the floating user panel\'s measured clearance, in a call or not', () => {
     mount();
-    expect(document.querySelector('[data-tour="channels-list"]')!.className).toContain('md:pb-28');
-  });
-
-  it('pads further while in a voice call', () => {
-    useVoiceStore.setState({ currentVoiceChannelId: 'v1' });
-    mount();
-    expect(document.querySelector('[data-tour="channels-list"]')!.className).toContain('md:pb-52');
+    expect(screen.getByTestId('channels-scroll').className)
+      .toContain('md:pb-[calc(var(--floating-user-panel-clearance,7rem)+0.5rem)]');
   });
 
   it('draws no account pill or voice bar of its own: the floating user panel is the only one', () => {

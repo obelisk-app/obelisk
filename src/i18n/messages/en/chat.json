@@ -122,6 +122,7 @@
   "composer": {
     "dropFiles": "Drop files to attach",
     "addAttachment": "Add attachment",
+    "mediaPicker": "Emoji, GIFs and stickers",
     "document": "Document",
     "photos": "Photos & videos",
     "camera": "Camera",

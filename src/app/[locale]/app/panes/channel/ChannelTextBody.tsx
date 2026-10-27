@@ -26,7 +26,11 @@ export function ChannelTextBody({ vm, scrollRef, composerRef }: {
   return (
     <>
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4" data-testid={vm.messagesVisible ? undefined : 'messages-gated-by-auth'}>
+        {/*
+          `pt-14`: the history pill below floats over the top of this list
+          (top 12px, at least 32px tall), so the first message starts under it.
+        */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pt-14 pb-4" data-testid={vm.messagesVisible ? undefined : 'messages-gated-by-auth'}>
           <ChannelMessageList
             groupId={vm.groupId}
             group={vm.group}

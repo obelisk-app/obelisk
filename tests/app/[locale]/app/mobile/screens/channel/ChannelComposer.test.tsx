@@ -30,4 +30,11 @@ describe('ChannelComposer (mobile)', () => {
     mount();
     expect(screen.getByRole('textbox', { name: 'Message #general' })).toBeInTheDocument();
   });
+
+  it('names the picker button', () => {
+    mount();
+    const button = screen.getByTestId('composer-picker-button');
+    expect(button).toHaveAccessibleName('Emoji, GIFs and stickers');
+    expect(button).toHaveAttribute('title', 'Emoji, GIFs and stickers');
+  });
 });

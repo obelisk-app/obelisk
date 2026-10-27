@@ -83,7 +83,9 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
           variant="bare"
           type="button"
           className="composer-emoji"
-          aria-label={t('mobile.composer.openPicker')}
+          aria-label={t('chat.composer.mediaPicker')}
+          title={t('chat.composer.mediaPicker')}
+          data-testid="composer-picker-button"
           onClick={() => composer.openPicker('emoji')}
         >
           <StickerIcon size={null} className="h-5 w-5" />

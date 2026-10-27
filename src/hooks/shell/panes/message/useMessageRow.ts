@@ -1,7 +1,8 @@
 'use client';
 
 import type { MouseEvent } from 'react';
-import { useUserMetadata as useProfile, type JsMessage } from '@/services/nostr-bridge';
+import type { JsMessage } from '@/services/nostr-bridge';
+import { useMessageAuthor } from '@/hooks/chat/message/useMessageAuthor';
 import { useChatStore } from '@/store/chat';
 import { displayNameFor } from '@/utils/identity/display-name';
 import type { MessageReactionInput } from '@/hooks/chat/message/useMessageActions';
@@ -20,7 +21,7 @@ export function useMessageRow({ msg, groupId, isAdmin, reactions }: {
   isAdmin: boolean;
   reactions: ReadonlyArray<MessageReactionInput>;
 }) {
-  const meta = useProfile(msg.pubkey);
+  const meta = useMessageAuthor(msg.pubkey);
   const menus = useMessageRowMenus();
   const actions = useMessageRowActions({ msg, groupId, isAdmin, reactions, meta });
   return {

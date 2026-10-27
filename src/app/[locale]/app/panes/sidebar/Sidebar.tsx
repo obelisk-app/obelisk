@@ -47,12 +47,13 @@ export function Sidebar({
       )}
 
       <div
-        // `pb-28`, not `pb-20`: the panel is `bottom-3` (12px) plus a pill
-        // whose `min-h-[3.5rem]` is only a floor - `SidebarMe` stacks the
-        // name over a truncated npub and puts a gear beside them, so the
-        // real height overran the 80px reserved and the last channel
-        // (`HACKATONS 2026` on La Crypta) scrolled in behind it.
-        className={`flex-1 overflow-y-auto px-2 pb-2 ${vm.inVoice ? 'md:pb-52' : 'md:pb-28'}`}
+        // `FloatingUserPanel` floats over the foot of this list. It publishes
+        // how much it covers (its height, a call bar included, plus its 12px
+        // offset) as `--floating-user-panel-clearance`; the list pads by that
+        // plus a gap, so its last channel scrolls fully clear of the panel.
+        // 7rem is the fallback before the first measure.
+        className="flex-1 overflow-y-auto px-2 pb-2 md:pb-[calc(var(--floating-user-panel-clearance,7rem)+0.5rem)]"
+        data-testid="channels-scroll"
         data-tour="channels-list"
       >
         {/* Relay/AUTH state lives in the unified bottom-right activity stack. */}
