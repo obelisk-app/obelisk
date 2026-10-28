@@ -15,7 +15,7 @@ export default function ProductStage() {
   const t = useTranslations();
   return (
     <section data-testid="landing-stage" className="relative hidden md:block px-6 pb-16 [perspective:1600px]">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/4 mx-auto h-2/3 max-w-5xl rounded-full bg-lc-green/10 blur-[140px]" />
+      <Container width="5xl" aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/4 h-2/3 rounded-full bg-lc-green/10 blur-[140px]" />
       <Container width="6xl" className="relative">
         <figure className="lc-stage-tilt overflow-hidden rounded-2xl border border-lc-border bg-lc-dark shadow-[0_40px_120px_-20px_rgba(0,0,0,0.8),0_0_0_1px_rgba(180,249,83,0.08)]">
           <div className="flex items-center gap-2 border-b border-lc-border bg-lc-black/70 px-4 py-2.5" aria-hidden="true">

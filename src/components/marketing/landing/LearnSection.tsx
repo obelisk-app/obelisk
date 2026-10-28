@@ -5,6 +5,7 @@ import Link from '@/components/ui/navigation/Link';
 import { guidePath } from '@/utils/guides/guide-urls';
 import type { GuideFrontmatter } from '@/services/guides/guides';
 import { LEARN_GUIDES } from '@/constants/marketing/landing';
+import { orderLearnGuides } from '@/utils/marketing/learn-guides';
 import GuideCard from '@/components/guides/listing/GuideCard';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
@@ -18,9 +19,7 @@ const TRACK_ID = 'learn-track';
  */
 export default function LearnSection({ guides: all }: { guides: readonly { slug: string; frontmatter: GuideFrontmatter }[] }) {
   const t = useTranslations();
-  const lead: readonly string[] = LEARN_GUIDES;
-  const rank = (slug: string) => (lead.includes(slug) ? lead.indexOf(slug) : lead.length);
-  const guides = [...all].sort((a, b) => rank(a.slug) - rank(b.slug));
+  const guides = orderLearnGuides(all, LEARN_GUIDES);
 
   return (
     <PageSection reveal id="learn">
