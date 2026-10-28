@@ -53,7 +53,7 @@
   "asset": {
     "alt": {
       "whatIsObelisk": "Obelisk overview: an obelisk monument surrounded by orbiting Nostr keys and floating chat bubbles, illustrating a Discord-like group chat where identity is a Nostr keypair.",
-      "howObeliskWorks": "How Obelisk works, compared with a usual chat platform: there, your message goes through the company's server, which holds your account, your data and its rules. In Obelisk you sign it with your own key and it goes straight to your community's relay, which your community picks or runs. The Obelisk app only signs and shows, with no Obelisk server in between.",
+      "howObeliskWorks": "How Obelisk works, compared with a usual chat platform: there, your message goes through the company's server, which holds your account, your data and its rules. In Obelisk you sign it with your own key and it goes straight to your community's relay, which can be Obelisk's or your own.",
       "wot": "Nostr Web of Trust graph for spam protection: your pubkey at the center, lime-green high-trust nodes connected through your follows, and red-outlined spam nodes pushed to the periphery.",
       "futureRelays": "The future of Nostr: a mesh of relay-based groups exchanging encrypted NIP-29 messages with no central server, every relay equal.",
       "bitcoinZaps": "Bitcoin Lightning zaps in chat: a chat message with a glowing lightning bolt flowing into it, orbited by satoshi particles, representing a zap paid from your Lightning wallet, through Nostr Wallet Connect (NIP-47) or a WebLN browser extension.",
@@ -82,7 +82,7 @@
     },
     "howObeliskWorks": {
       "title": "How Obelisk works",
-      "desc": "On a usual chat platform, your account, your data and the rules live on the company's server, between you and your community. In Obelisk you sign each message with your own key and it goes straight to your community's relay, a NIP-29 relay your community picks or runs itself. The Obelisk app only signs and shows. There is no Obelisk server in between.",
+      "desc": "On a usual chat platform, your account, your data and the rules live on the company's server, between you and your community. In Obelisk you sign each message with your own key and it goes straight to your community's relay, a NIP-29 relay: Obelisk runs a public one, and anyone can run their own. The Obelisk app only signs and shows.",
       "laneUsual": "A USUAL CHAT PLATFORM",
       "laneObelisk": "OBELISK",
       "you": "You",
@@ -92,10 +92,10 @@
       "company": "The company's server",
       "companyHas": "your account · your data · its rules",
       "relay": "Your community's relay",
-      "relayPick": "your community picks it",
-      "relayRun": "or you run it yourself",
+      "relayPick": "Obelisk's relay",
+      "relayRun": "or your own",
       "community": "Your community",
-      "footer": "The Obelisk app only signs and shows. No Obelisk server in between."
+      "footer": "Use Obelisk's relay or run your own: your community depends on no one."
     },
     "quantumSafe": {
       "title": "A message sealed by two layers of protection",

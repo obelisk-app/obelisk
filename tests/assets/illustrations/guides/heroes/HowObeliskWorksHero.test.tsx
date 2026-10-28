@@ -25,11 +25,12 @@ describe('HowObeliskWorksHero', () => {
     expect(text).toContain("Your community's relay");
   });
 
-  it('says there is no Obelisk server in between', () => {
+  it("says the relay can be Obelisk's or your own", () => {
     const text = render(<HowObeliskWorksHero />).container.textContent ?? '';
     expect(text).not.toMatch(OLD_LABELS);
-    expect(text).toContain('There is no Obelisk server in between.');
-    expect(text).toContain('No Obelisk server in between.');
+    expect(text).toContain("Obelisk's relay");
+    expect(text).toContain('or your own');
+    expect(text).toContain("Use Obelisk's relay or run your own");
   });
 
   it('draws its labels in the page language', () => {

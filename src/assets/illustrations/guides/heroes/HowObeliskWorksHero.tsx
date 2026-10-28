@@ -9,9 +9,8 @@ import KeyGlyph from '../how-it-works/KeyGlyph';
  * both rows: you, the thing in the middle, your community. On a usual chat
  * platform the middle is the company's server, holding your account, your
  * data and its rules. In Obelisk you sign with your own key and the middle is
- * your community's relay (the NIP-29 relay, drawn as the Obelisco), which the
- * community picks or runs. The app only signs and shows: no Obelisk server in
- * between. The architecture's details are the guide's text.
+ * your community's relay (the NIP-29 relay, drawn as the Obelisco): Obelisk's
+ * public one or your own. The app only signs and shows. The architecture's details are the guide's text.
  */
 export default function HowObeliskWorksHero() {
   const t = useTranslations();
