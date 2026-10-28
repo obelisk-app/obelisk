@@ -2,7 +2,7 @@ import PageSection from '@/components/ui/layout/PageSection';
 import Container from '@/components/ui/layout/Container';
 import Card from '@/components/ui/layout/Card';
 import { useTranslations } from 'next-intl';
-import FeatureGlyph from './FeatureGlyph';
+import FeatureGlyph from '@/assets/illustrations/marketing/FeatureGlyph';
 import { FEATURE_KEYS } from '@/constants/marketing/landing';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
