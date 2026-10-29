@@ -13,6 +13,8 @@ const writeText = vi.fn().mockResolvedValue(undefined);
 
 function mount(methods: Record<string, unknown> = {}) {
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+  // No invite API on these relays: the invite row shares the bare relay link.
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })));
   const close = vi.fn();
   const bridge = fakeBridge({ configuredRelays: [URL_A, URL_B] }, methods as never);
   renderWithBridge(<><ToastStack /><ConfirmDialogHost /><RelayMenuSheet close={close} relayUrl={URL_A} label="Alpha" iconUrl={null} /></>, bridge);
@@ -20,6 +22,7 @@ function mount(methods: Record<string, unknown> = {}) {
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   useToastStore.getState().clearToasts();
   writeText.mockClear();
   Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
@@ -34,7 +37,7 @@ describe('RelayMenuSheet actions', () => {
 
   it('copies the invite and says so', async () => {
     mount();
-    fireEvent.click(screen.getByText('Invite people…'));
+    fireEvent.click(screen.getByText('Share relay link'));
     expect(writeText).toHaveBeenCalledWith('Join Alpha on Obelisk: wss://a.test');
     expect(await screen.findByText('Invite copied')).toBeInTheDocument();
   });

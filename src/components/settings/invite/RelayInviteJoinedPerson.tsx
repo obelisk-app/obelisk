@@ -1,23 +1,31 @@
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import UserAvatar from '@/components/ui/media/UserAvatar';
 import Text from '@/components/ui/layout/Text';
 import { useAuthor } from '@/hooks/social/profile/useAuthor';
+import { useFormat } from '@/hooks/common/useFormat';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
-import { relativeTime } from '@/utils/format/relative-time';
 
-/** One person who came in on an invite link: their picture, their name (a short npub until the profile loads) and when. */
-export default function RelayInviteJoinedPerson({ pubkey, at }: { pubkey: string; at: number }) {
+/**
+ * One person who came in on an invite link: picture, name, short npub and
+ * the day. Someone the relay's operator later took out is marked removed.
+ */
+export default function RelayInviteJoinedPerson({ pubkey, at, removed }: { pubkey: string; at: number; removed: boolean }) {
   const t = useTranslations();
-  const locale = useLocale();
+  const { formatDate } = useFormat();
   const author = useAuthor(pubkey);
 
   return (
-    <li className="flex items-center gap-2 min-w-0" data-testid="relay-invite-joined-person">
+    <li className={`flex items-center gap-2 min-w-0 ${removed ? 'opacity-60' : ''}`} data-testid="relay-invite-joined-person" data-removed={removed || undefined}>
       <UserAvatar pubkey={pubkey} picture={author.picture} name={author.name ?? undefined} size={6} />
-      <Text as="span" size="xs" tone="default" className="truncate">{author.name ?? shortNpubLabel(pubkey)}</Text>
-      <Text as="span" size="xs" tone="muted" className="ml-auto shrink-0">{t('settings.invites.joinedAgo', { time: relativeTime(at, t, locale) })}</Text>
+      <div className="min-w-0">
+        <Text as="span" size="xs" tone="default" className={`block truncate ${removed ? 'line-through' : ''}`}>{author.name ?? shortNpubLabel(pubkey)}</Text>
+        {author.name && <Text as="span" size="xs" tone="muted" className="block truncate font-mono">{shortNpubLabel(pubkey)}</Text>}
+      </div>
+      <Text as="span" size="xs" tone={removed ? 'danger' : 'muted'} className="ml-auto shrink-0">
+        {removed ? t('settings.invites.removed') : t('settings.invites.joinedOn', { date: formatDate(at * 1000) })}
+      </Text>
     </li>
   );
 }

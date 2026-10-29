@@ -88,7 +88,7 @@ export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
   },
   {
     id: 'relay-invite', area: LS, key: 'obelisk-dex/relay-invite', match: 'exact', category: 'login',
-    holds: 'A relay invite code from a link, its relay, and the keys it already let in.',
+    holds: 'A relay invite code from a link, its relay, the keys it already let in, and whether the app already offered to open that relay.',
     why: 'A key you make later is let into the relay with the same code. Kept across logout.',
     perAccount: false, sensitive: true, source: 'src/services/relay/relay-invite.ts',
   },

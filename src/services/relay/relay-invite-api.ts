@@ -1,44 +1,25 @@
 /**
  * The relay's invite minter API (obelisk-relay `/api/invites`, NIP-98
- * authenticated): whether this account may invite people, and the codes it
- * made. Called straight from the browser; the relay's CORS is open and the
- * signature is the only credential, so no server of ours holds anything.
+ * authenticated): whether this account may invite people on a relay, and the
+ * codes it made there. Called straight from the browser; the relay's CORS is
+ * open and the signature is the only credential, so no server of ours holds
+ * anything. Each request is signed for its own URL (the `u` tag), so a
+ * signature for one relay is worthless on another.
  */
 import { KIND_HTTP_AUTH } from '@/constants/nostr/nip-kinds';
-import { RELAY_INVITE_DEFAULT_TTL_SECS } from '@/constants/relay/relay-invite';
+import {
+  RELAY_INVITE_API_TIMEOUT_MS,
+  RELAY_INVITE_DEFAULT_TTL_SECS,
+  RELAY_INVITE_NO_API_STATUSES,
+} from '@/constants/relay/relay-invite';
 import { nostrActions } from '@/services/nostr-bridge';
+import type { RelayInviteCode, RelayInviteCreateOptions, RelayInviteMe } from '@/types/relay/relay-invite';
 import { CodedError } from '@/utils/errors/codes';
 import { relayInviteApiUrl } from '@/utils/relay/relay-invite';
+import { inviteMeFromJson } from '@/utils/relay/relay-invite-panel';
+import { normalizeDeepLinkRelay } from '@/utils/relay/deep-link';
 
-export interface RelayInviteRedemption {
-  pubkey: string;
-  npub: string;
-  at: number;
-  evicted_at?: number;
-}
-
-export interface RelayInviteCode {
-  code: string;
-  label: string | null;
-  status: 'active' | 'revoked' | 'expired' | 'exhausted';
-  created_at: number;
-  max_uses: number | null;
-  uses: number;
-  expires_at: number | null;
-  redemptions: RelayInviteRedemption[];
-}
-
-export interface RelayInviteMe {
-  pubkey: string;
-  admitted: boolean;
-  can_mint: boolean;
-  is_admin: boolean;
-  codes_left: number | null;
-  admits_left: number | null;
-  admits_used: number;
-  codes: RelayInviteCode[];
-}
-
+/** The NIP-98 `Authorization` value for one request: a kind 27235 naming the exact URL and method. */
 async function nip98Header(url: string, method: string): Promise<string> {
   const event = await nostrActions.signEventTemplate({
     kind: KIND_HTTP_AUTH,
@@ -49,7 +30,10 @@ async function nip98Header(url: string, method: string): Promise<string> {
   return `Nostr ${btoa(JSON.stringify(event))}`;
 }
 
-async function call<T>(relay: string, path: string, method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> {
+/** A relay that answered "no such API": not a failure, there is nothing to ask. */
+class NoInviteApi extends Error {}
+
+async function call(relay: string, path: string, method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<unknown> {
   const url = relayInviteApiUrl(relay, path);
   const res = await fetch(url, {
     method,
@@ -58,40 +42,84 @@ async function call<T>(relay: string, path: string, method: 'GET' | 'POST' | 'DE
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    ...(typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(RELAY_INVITE_API_TIMEOUT_MS) } : {}),
   });
   if (!res.ok) {
+    if (RELAY_INVITE_NO_API_STATUSES.includes(res.status)) throw new NoInviteApi(`HTTP ${res.status}`);
     const detail = await res.json().then((b: { error?: string }) => b.error).catch(() => undefined);
     throw new CodedError('relay-invite-failed', detail ?? `HTTP ${res.status}`);
   }
-  return (res.status === 204 ? undefined : await res.json()) as T;
+  return res.status === 204 ? undefined : res.json();
 }
 
-// One answer per relay and account for the visit. Each call is a NIP-98
-// signature, and with an extension or a bunker a signature can be a prompt:
-// the settings nav and the invite panel both ask, and must not ask twice.
-const statusCache = new Map<string, Promise<RelayInviteMe | null>>();
+// Answers per relay and account. Each request is a NIP-98 signature, and
+// with an extension or a bunker a signature can be a prompt, so the settings
+// nav, the relay menu and the invite panel share one answer. Only answers
+// are kept (a status, or "this relay has no invite API"); a failed request
+// (network, timeout, 5xx) is forgotten at once, so the next look asks again.
+const settled = new Map<string, RelayInviteMe | null>();
+const inFlight = new Map<string, Promise<RelayInviteMe | null>>();
+const listeners = new Set<() => void>();
+
+function statusKey(relay: string, pubkey: string): string {
+  return `${normalizeDeepLinkRelay(relay)}|${pubkey}`;
+}
 
 /**
  * Where this account stands on `relay`. Null when the relay has no invite
- * API (any relay but obelisk-relay): the settings entry simply stays hidden.
- * `fresh` skips the cache, after this account changed something.
+ * API (any relay but obelisk-relay). Rejects when the relay could not be
+ * asked; that is not remembered. `fresh` skips the remembered answer, after
+ * this account changed something.
  */
 export function fetchInviteStatus(relay: string, pubkey: string, fresh = false): Promise<RelayInviteMe | null> {
-  const key = `${relay}|${pubkey}`;
-  const cached = statusCache.get(key);
-  if (cached && !fresh) return cached;
-  const pending = call<RelayInviteMe>(relay, '/me', 'GET').catch(() => null);
-  statusCache.set(key, pending);
-  return pending;
+  const key = statusKey(relay, pubkey);
+  if (!fresh && settled.has(key)) return Promise.resolve(settled.get(key) ?? null);
+  const pending = inFlight.get(key);
+  if (pending && !fresh) return pending;
+  const request = call(relay, '/me', 'GET')
+    .then((raw) => inviteMeFromJson(raw), (err: unknown) => {
+      if (err instanceof NoInviteApi) return null;
+      throw err;
+    })
+    .then((me) => {
+      settled.set(key, me);
+      for (const l of listeners) l();
+      return me;
+    })
+    .finally(() => {
+      if (inFlight.get(key) === request) inFlight.delete(key);
+    });
+  inFlight.set(key, request);
+  return request;
 }
 
-export function createInviteCode(relay: string, label?: string): Promise<RelayInviteCode> {
-  return call<RelayInviteCode>(relay, '', 'POST', {
-    ...(label ? { label } : {}),
-    expires_in: RELAY_INVITE_DEFAULT_TTL_SECS,
-  });
+/**
+ * The remembered answer for `relay`, without asking: the status, null for a
+ * relay with no invite API, undefined when it was never answered.
+ */
+export function peekInviteStatus(relay: string, pubkey: string): RelayInviteMe | null | undefined {
+  const key = statusKey(relay, pubkey);
+  return settled.has(key) ? settled.get(key) ?? null : undefined;
 }
 
-export function revokeInviteCode(relay: string, code: string): Promise<void> {
-  return call<void>(relay, `/${encodeURIComponent(code)}`, 'DELETE');
+/** Called whenever a new answer is remembered. Returns an unsubscribe. */
+export function subscribeInviteStatus(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** Make a link. The relay clamps the uses and lifetime to what this account is allowed. */
+export async function createInviteCode(relay: string, options: RelayInviteCreateOptions = {}): Promise<RelayInviteCode> {
+  return (await call(relay, '', 'POST', {
+    ...(options.label ? { label: options.label } : {}),
+    ...(options.maxUses ? { max_uses: options.maxUses } : {}),
+    expires_in: options.expiresInSecs ?? RELAY_INVITE_DEFAULT_TTL_SECS,
+  })) as RelayInviteCode;
+}
+
+/** Turn a link off. People who already came in on it stay. */
+export async function revokeInviteCode(relay: string, code: string): Promise<void> {
+  await call(relay, `/${encodeURIComponent(code)}`, 'DELETE');
 }

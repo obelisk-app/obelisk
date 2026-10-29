@@ -209,7 +209,7 @@
     },
     "invites": {
       "label": "Convidar pessoas",
-      "desc": "Links que deixam pessoas novas entrarem neste relay"
+      "desc": "Links que deixam pessoas novas entrarem nos seus relays"
     }
   },
   "openPreferences": "Preferências",
@@ -379,10 +379,6 @@
   },
   "invites": {
     "title": "Convidar pessoas",
-    "intro": "Cada link deixa pessoas novas entrarem em {relay}. Quem abre recebe uma conta criada para ela e entra direto no app.",
-    "notAllowed": "Você não pode convidar pessoas para este relay. Quem o opera decide quem pode.",
-    "quota": "Você ainda pode trazer {people, plural, one {# pessoa} other {# pessoas}} com até {links, plural, one {# link a mais} other {# links a mais}}.",
-    "quotaAdmin": "Você opera este relay, então seus links não têm cota.",
     "create": "Criar link de convite",
     "copied": "Link de convite copiado",
     "copy": "Copiar link",
@@ -400,7 +396,49 @@
     "peopleUnlimited": "{uses, plural, one {Entrou # pessoa} other {Entraram # pessoas}}, sem limite",
     "expiresIn": "{days, plural, =0 {expira hoje} one {expira amanhã} other {expira em # dias}} ({date})",
     "joinedTitle": "Quem entrou ({count})",
-    "joinedAgo": "entrou {time}",
-    "nobodyYet": "Ninguém entrou ainda. Compartilhe o link."
+    "nobodyYet": "Ninguém entrou ainda. Compartilhe o link.",
+    "relayLabel": "Criar links para",
+    "relayHint": "Escolha um dos seus relays. Isso só muda este painel, não o relay que você está vendo.",
+    "relayOption": "{name} ({host})",
+    "relayOptionCurrent": "{relay}, aberto agora",
+    "basis": {
+      "owner": "Como dono de {relay} você pode trazer até {total, plural, one {# pessoa} other {# pessoas}}, em um link ou em vários.",
+      "admin": "Como admin de {relay} você pode trazer até {total, plural, one {# pessoa} other {# pessoas}}, em um link ou em vários.",
+      "reference": "Como conta de referência de {relay} você pode trazer até {total, plural, one {# pessoa} other {# pessoas}}, em um link ou em vários.",
+      "grant": "Um admin de {relay} permite que você convide até {total, plural, one {# pessoa} other {# pessoas}}.",
+      "none": "Só o dono, os admins e as contas de referência deste relay podem criar links de convite ({total} pessoas cada). Peça um link a algum deles, ou um admin pode te dar uma cota."
+    },
+    "allowanceLabel": "Pessoas que você ainda pode convidar",
+    "allowanceLeft": "Restam {left} de {total}",
+    "spent": "Você já usou toda a sua cota em {relay}. Seus links e quem entrou com eles continuam abaixo.",
+    "invitedBy": "Convidado por {name} em {date}",
+    "loadFailed": "Não foi possível acessar o serviço de convites de {relay}.",
+    "retry": "Tentar de novo",
+    "noApi": "{relay} não oferece links de convite.",
+    "form": {
+      "title": "Novo link de convite",
+      "label": "Rótulo (opcional)",
+      "labelHint": "Só você vê.",
+      "people": "Quantas pessoas podem usar este link",
+      "peopleHint": "De 1 a {max}",
+      "days": "Expira em (dias)",
+      "daysHint": "De 1 a {max}",
+      "creating": "Criando…",
+      "labelTooLong": "O rótulo é longo demais.",
+      "peopleRange": "Escolha quantas pessoas, dentro do que você ainda tem.",
+      "daysRange": "Escolha quantos dias o link dura, dentro do limite indicado."
+    },
+    "newLinkTitle": "Seu novo link de convite",
+    "newLinkHint": "Envie para as pessoas que você quer trazer. Funciona até se esgotar, expirar ou você desativá-lo.",
+    "share": "Compartilhar",
+    "shareTitle": "Entre em {relay}",
+    "shareText": "Entre em {relay} no Obelisk",
+    "copyRefused": "Não foi possível copiar. Selecione o link e copie à mão.",
+    "activeTitle": "Links ativos",
+    "pastTitle": "Links anteriores ({count})",
+    "revokeConfirm": "Desativar este link? Ninguém novo poderá entrar com ele. Quem já entrou continua.",
+    "revokeKeep": "Manter",
+    "removed": "removido",
+    "joinedOn": "entrou em {date}"
   }
 }

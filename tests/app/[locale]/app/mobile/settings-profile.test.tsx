@@ -203,7 +203,7 @@ describe("SettingsPrefsScreen", () => {
 
     fireEvent.click(await screen.findByTestId('mobile-invites-submenu'));
     expect(await screen.findByTestId('relay-invite-settings')).toBeInTheDocument();
-    expect(await screen.findByTestId('relay-invites-quota')).toHaveTextContent('5 people');
+    expect(await screen.findByTestId('relay-invites-quota')).toHaveTextContent('5 of 5 left');
   });
 
   it('shows no Invite people row on a relay without the invite API', async () => {
