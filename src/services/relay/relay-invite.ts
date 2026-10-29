@@ -1,13 +1,9 @@
 /**
- * Relay invitation codes, client side: keep the code from the link, make a
- * key when there is none, and redeem the code for every key the person ends
- * up using on that relay. Protocol: obelisk-relay `docs/relay-invites.md`;
+ * Relay invitation codes, client side: keep the code from the link and
+ * redeem it for every key the person ends up using on that relay. Protocol: obelisk-relay `docs/relay-invites.md`;
  * flow: `docs/features/relay-invites.md`.
  */
-import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
-import { nsecEncode } from 'nostr-tools/nip19';
 import { nostrActions, pageRelayHub } from '@/services/nostr-bridge';
-import type { SessionActions } from '@/types/session/session';
 import { RELAY_INVITE_CLAIM_TIMEOUT_MS, RELAY_INVITE_RETRY_DELAY_MS } from '@/constants/relay/relay-invite';
 import { forgetInvite, markInviteSteered, markRedeemed } from './relay-invite-storage';
 import {
@@ -26,19 +22,6 @@ export type RedeemOutcome =
   | { status: 'admitted' }
   | { status: 'dead'; reason: RelayInviteDeadReason }
   | { status: 'retry'; reason: string | null };
-
-/**
- * Make a key and log in with it, without the widget's backup steps: the
- * person followed an invite and expects to land in the app. Backing up the
- * key is offered later, in settings.
- */
-export async function loginWithFreshKey(actions: SessionActions): Promise<void> {
-  const sk = generateSecretKey();
-  const nsec = nsecEncode(sk);
-  await actions.login({ method: 'generate', pubkey: getPublicKey(sk), nsec });
-  // Findable under a random name, like any generated account. Best effort.
-  void actions.publishGeneratedProfile(nsec, {}).catch(() => undefined);
-}
 
 /** Sign a fresh claim (a new `created_at` each time) and send it to the invite's relay only. */
 async function sendClaim(invite: StoredRelayInvite) {

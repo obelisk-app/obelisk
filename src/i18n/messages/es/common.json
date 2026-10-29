@@ -88,7 +88,6 @@
     "confirmTitle": "¿Unirte a {host}?",
     "confirmBody": "Tu enlace de invitación es para {host}, un relay que no agregaste. Conectarte le envía tu clave pública y le deja ver tu dirección IP. También puedes quedarte donde estás.",
     "switchFailed": "No se pudo abrir {relay}. Abre el enlace de invitación otra vez para reintentar.",
-    "keyFailed": "No se pudo crear una cuenta para tu invitación. Recarga la página para intentarlo de nuevo.",
     "redeemFailed": "Todavía no se pudo entrar a {relay} con tu invitación. Se volverá a intentar la próxima vez que abras la app."
   }
 }

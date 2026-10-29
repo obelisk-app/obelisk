@@ -3,9 +3,9 @@
 import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { nostrActions, useConfiguredRelays, useCurrentRelayUrl } from '@/services/nostr-bridge';
-import { useIsLoggedIn, useMyPubkey, useSessionActions, useSessionReady, useSignerReady } from '@/hooks/session/useSession';
-import { enterInviteRelay, loginWithFreshKey, redeemInvite, steerToInviteRelay } from '@/services/relay/relay-invite';
-import { hasInviteWaitingForKey, pendingInviteFor, readStoredInvite } from '@/services/relay/relay-invite-storage';
+import { useIsLoggedIn, useMyPubkey, useSessionReady, useSignerReady } from '@/hooks/session/useSession';
+import { enterInviteRelay, redeemInvite, steerToInviteRelay } from '@/services/relay/relay-invite';
+import { pendingInviteFor, readStoredInvite } from '@/services/relay/relay-invite-storage';
 import { confirmDialog } from '@/services/common/confirm-dialog';
 import { relayHostLabel } from '@/utils/relay-url/relay-host';
 import { useToastStore } from '@/store/feedback/toast';
@@ -22,10 +22,9 @@ import { useToastStore } from '@/store/feedback/toast';
  *
  * Runs on every pubkey and relay change, so a generated, imported, extension
  * or bunker login, a restore, and a key made later all get let in by the same
- * code. With no account at all and a fresh invite, it makes a key first: the
- * person followed a link and should land in the app, not a key ceremony.
- * Once the code has let any key in, logging out leaves the login screen
- * alone, so the person can still choose their own key.
+ * code. With no account the visitor gets the login screen, which leads with
+ * "Create a new account" and has them save the key file first; no key is
+ * made behind their back.
  */
 export function useRelayInviteRedeemer(): void {
   const t = useTranslations();
@@ -35,8 +34,6 @@ export function useRelayInviteRedeemer(): void {
   const pubkey = useMyPubkey();
   const relay = useCurrentRelayUrl();
   const configured = useConfiguredRelays();
-  const actions = useSessionActions();
-  const making = useRef(false);
   const steering = useRef(false);
   const inFlight = useRef<string | null>(null);
   const configuredRef = useRef(configured);
@@ -70,21 +67,6 @@ export function useRelayInviteRedeemer(): void {
         steering.current = false;
       });
   }, [ready, loggedIn, relay, t]);
-
-  useEffect(() => {
-    if (!ready || loggedIn || making.current || !hasInviteWaitingForKey(relay)) return;
-    making.current = true;
-    loginWithFreshKey(actions)
-      .catch(() => {
-        useToastStore.getState().pushToast({
-          title: t('common.relayInvite.deadTitle'),
-          body: t('common.relayInvite.keyFailed'),
-        });
-      })
-      .finally(() => {
-        making.current = false;
-      });
-  }, [ready, loggedIn, relay, actions, t]);
 
   useEffect(() => {
     if (!ready || !loggedIn || !signerReady || !pubkey) return;

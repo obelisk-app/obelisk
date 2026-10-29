@@ -88,7 +88,6 @@
     "confirmTitle": "Join {host}?",
     "confirmBody": "Your invite link is for {host}, a relay you have not added. Connecting sends it your public key and lets it see your IP address. You can also stay where you are.",
     "switchFailed": "Could not open {relay}. Open the invite link again to retry.",
-    "keyFailed": "Could not create an account for your invite. Reload the page to try again.",
     "redeemFailed": "Could not join {relay} with your invite yet. It will try again next time you open the app."
   }
 }
