@@ -176,25 +176,16 @@ const nextConfig: NextConfig = {
         source: '/og/cards/:path*',
         headers: [{ key: 'Cache-Control', value: OG_STATIC_CACHE }],
       },
-      // Belt + suspenders: keep hashed Next.js static assets immutable
-      // forever in production. In dev the chunk filenames are derived from
-      // the source path (not content-hashed), so the same URL serves new
-      // bytes after every rebuild. Marking those `immutable` poisons the
-      // dev tunnel's CDN cache (Cloudflare keeps the stale chunk for a
-      // year). Use no-store in dev so dev-raise tunnels always get fresh
-      // bundles after edits.
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value:
-              process.env.NODE_ENV === 'production'
-                ? 'public, max-age=31536000, immutable'
-                : 'no-store, must-revalidate',
-          },
-        ],
-      },
+      // In production Next.js already marks the hashed files it serves
+      // `immutable`, and only those. A rule here would also stamp its 404 for
+      // a file that is not there yet (a request during a deploy), and
+      // Cloudflare then served that HTML page in place of the stylesheet for
+      // a year (2026-10-29: the login modal lost its styles). In dev the
+      // chunk names follow the source path, not the content, so dev-raise
+      // tunnels get no-store and always fetch fresh bundles after edits.
+      ...(process.env.NODE_ENV === 'production'
+        ? []
+        : [{ source: '/_next/static/:path*', headers: [{ key: 'Cache-Control', value: 'no-store, must-revalidate' }] }]),
     ];
   },
   /*
@@ -207,6 +198,12 @@ const nextConfig: NextConfig = {
    */
   webpack(config, { isServer }) {
     config.module.rules.push({ test: /[\\/]src[\\/]assets[\\/].*\.tsx?$/, sideEffects: false });
+    /*
+     * Salt for every content hash. Changing it gives every chunk and
+     * stylesheet a new URL, the way out when a CDN holds a bad copy of one
+     * (Cloudflare cannot be purged from the deploy box).
+     */
+    config.output = { ...config.output, hashSalt: 'obelisk-2026-10-29' };
     /*
      * The type pieces (`Heading`, `Text`) and `cn` render nearly every
      * heading and paragraph, so the layout chunk and each page chunk would
