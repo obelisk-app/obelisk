@@ -3,8 +3,11 @@ import {
   cleanInviteCode,
   inviteLinkRelay,
   inviteNeedsRedeem,
+  inviteSteerTarget,
   inviteUsage,
   isDeadInviteReason,
+  isRetryableClaimAnswer,
+  isTrustedInviteRelay,
   relayHttpOrigin,
   relayInviteApiUrl,
   relayInviteClaimTemplate,
@@ -73,6 +76,36 @@ describe('relay invite utils', () => {
     expect(u.usedPercent).toBe(30);
     expect(u.daysLeft).toBe(3);
     expect(u.joined.map((p) => p.pubkey)).toEqual(['b', 'a']);
+    expect(u.joined.every((p) => !p.removed)).toBe(true);
+    expect(inviteUsage({ uses: 1, max_uses: 1, expires_at: null, redemptions: [{ pubkey: 'a', at: 1, evicted_at: 9 }] }, now).joined)
+      .toEqual([{ pubkey: 'a', at: 1, removed: true }]);
     expect(inviteUsage({ uses: 3, max_uses: null, expires_at: null, redemptions: [] }, now)).toEqual({ usedPercent: null, daysLeft: null, joined: [] });
+  });
+
+  it('retries only a stale claim or one nobody answered', () => {
+    expect(isRetryableClaimAnswer('rejected', 'restricted: invite stale: clock')).toBe(true);
+    expect(isRetryableClaimAnswer('timeout', null)).toBe(true);
+    expect(isRetryableClaimAnswer('unreachable', null)).toBe(true);
+    expect(isRetryableClaimAnswer('ok', 'no ack (ephemeral kind)')).toBe(true);
+    expect(isRetryableClaimAnswer('ok', null)).toBe(false);
+    expect(isRetryableClaimAnswer('rejected', 'restricted: invite expired: x')).toBe(false);
+    expect(isRetryableClaimAnswer('rejected', 'blocked: no')).toBe(false);
+  });
+
+  it('trusts the person\'s own relays and the built-in defaults, nothing else', () => {
+    expect(isTrustedInviteRelay('wss://public.obelisk.ar', [])).toBe(true);
+    expect(isTrustedInviteRelay('lacrypta-relay.obelisk.ar', [])).toBe(true);
+    expect(isTrustedInviteRelay('relay.mine.example', ['wss://relay.mine.example/'])).toBe(true);
+    expect(isTrustedInviteRelay('wss://evil.example', ['wss://relay.mine.example'])).toBe(false);
+  });
+
+  it('steers a fresh invite once, and not to the relay already in view', () => {
+    const invite = { code: 'c', relay: 'relay.x.example', redeemed: [] as string[] };
+    expect(inviteSteerTarget(invite, 'wss://public.obelisk.ar')).toBe('wss://relay.x.example');
+    expect(inviteSteerTarget(invite, 'wss://relay.x.example/')).toBeNull();
+    expect(inviteSteerTarget({ ...invite, steer: 'declined' }, null)).toBeNull();
+    expect(inviteSteerTarget({ ...invite, steer: 'offered' }, null)).toBeNull();
+    expect(inviteSteerTarget({ ...invite, redeemed: ['pk'] }, null)).toBeNull();
+    expect(inviteSteerTarget(null, null)).toBeNull();
   });
 });

@@ -329,7 +329,7 @@ describe('RelayMenuSheet rows', () => {
       />,
     );
     const branding = screen.getByText('Edit branding').closest('button')!;
-    const invite = screen.getByText('Invite people…').closest('button')!;
+    const invite = screen.getByText('Share relay link').closest('button')!;
     invite.focus();
     expect(document.activeElement).toBe(invite);
 
@@ -337,7 +337,7 @@ describe('RelayMenuSheet rows', () => {
     fireEvent.click(invite);
 
     expect(screen.getByText('Edit branding').closest('button')).toBe(branding);
-    expect(screen.getByText('Invite people…').closest('button')).toBe(invite);
+    expect(screen.getByText('Share relay link').closest('button')).toBe(invite);
     expect(document.activeElement).toBe(invite);
   });
 });

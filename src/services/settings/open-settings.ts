@@ -33,13 +33,36 @@ export type SettingsSection =
 
 export interface OpenSettingsDetail {
   section: SettingsSection;
+  /** For `invites`: the relay the panel opens on, instead of the one in view. */
+  relay?: string;
 }
 
-export function openSettings(section: SettingsSection): void {
+// The last request, for a panel that mounts only after the event fired (the
+// shell opens settings in response, and the panel renders a frame later).
+let pendingRequest: OpenSettingsDetail | null = null;
+
+export function openSettings(section: SettingsSection, options: { relay?: string } = {}): void {
   if (typeof window === 'undefined') return;
+  pendingRequest = { section, ...(options.relay ? { relay: options.relay } : {}) };
   window.dispatchEvent(
-    new CustomEvent<OpenSettingsDetail>(OPEN_SETTINGS_EVENT, { detail: { section } }),
+    new CustomEvent<OpenSettingsDetail>(OPEN_SETTINGS_EVENT, { detail: pendingRequest }),
   );
+}
+
+/** The section the last request asked for, if no panel has taken it yet. */
+export function requestedSettingsSection(): SettingsSection | null {
+  return pendingRequest?.section ?? null;
+}
+
+/**
+ * The relay the last `invites` request named, once: the invite panel takes it
+ * when it mounts, so a later visit opens on the relay in view again.
+ */
+export function takeRequestedInviteRelay(): string | null {
+  if (pendingRequest?.section !== 'invites') return null;
+  const relay = pendingRequest.relay ?? null;
+  pendingRequest = null;
+  return relay;
 }
 
 /**

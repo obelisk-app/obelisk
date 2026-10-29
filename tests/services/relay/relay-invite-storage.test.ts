@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   forgetInvite,
   hasInviteWaitingForKey,
+  markInviteSteered,
   markRedeemed,
   pendingInviteFor,
   readStoredInvite,
@@ -44,5 +45,17 @@ describe('relay invite storage', () => {
     storeInvite('code-1', RELAY);
     forgetInvite();
     expect(localStorage.getItem(RELAY_INVITE_KEY)).toBeNull();
+  });
+
+  it('remembers that the relay was offered or declined for this code, until the link is opened again', () => {
+    storeInvite('code-1', RELAY);
+    markInviteSteered('other-code', 'declined');
+    expect(readStoredInvite()?.steer).toBeUndefined();
+    markInviteSteered('code-1', 'declined');
+    expect(readStoredInvite()).toEqual({ code: 'code-1', relay: RELAY, redeemed: [], steer: 'declined' });
+    markRedeemed('pk1');
+    expect(readStoredInvite()?.steer).toBe('declined');
+    storeInvite('code-1', RELAY);
+    expect(readStoredInvite()).toEqual({ code: 'code-1', relay: RELAY, redeemed: ['pk1'] });
   });
 });

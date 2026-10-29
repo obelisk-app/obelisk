@@ -209,7 +209,7 @@
     },
     "invites": {
       "label": "Invite people",
-      "desc": "Links that let new people into this relay"
+      "desc": "Links that let new people into your relays"
     }
   },
   "openPreferences": "Preferences",
@@ -379,10 +379,6 @@
   },
   "invites": {
     "title": "Invite people",
-    "intro": "Each link lets new people into {relay}. Whoever opens it gets an account made for them and lands straight in the app.",
-    "notAllowed": "You cannot invite people to this relay. Its operator decides who can.",
-    "quota": "You can still bring in {people, plural, one {# person} other {# people}} with up to {links, plural, one {# more link} other {# more links}}.",
-    "quotaAdmin": "You run this relay, so your links have no quota.",
     "create": "Create invite link",
     "copied": "Invite link copied",
     "copy": "Copy link",
@@ -400,7 +396,49 @@
     "peopleUnlimited": "{uses, plural, one {# person} other {# people}} joined, no limit",
     "expiresIn": "{days, plural, =0 {expires today} one {expires tomorrow} other {expires in # days}} ({date})",
     "joinedTitle": "Who joined ({count})",
-    "joinedAgo": "joined {time}",
-    "nobodyYet": "Nobody has joined yet. Share the link."
+    "nobodyYet": "Nobody has joined yet. Share the link.",
+    "relayLabel": "Create links for",
+    "relayHint": "Pick one of your relays. This only changes this panel, not the relay you are browsing.",
+    "relayOption": "{name} ({host})",
+    "relayOptionCurrent": "{relay}, open now",
+    "basis": {
+      "owner": "As the owner of {relay} you can bring in up to {total, plural, one {# person} other {# people}}, in one link or several.",
+      "admin": "As an admin of {relay} you can bring in up to {total, plural, one {# person} other {# people}}, in one link or several.",
+      "reference": "As a reference account of {relay} you can bring in up to {total, plural, one {# person} other {# people}}, in one link or several.",
+      "grant": "An admin of {relay} lets you invite up to {total, plural, one {# person} other {# people}}.",
+      "none": "Only this relay's owner, admins and reference accounts can create invite links ({total} people each). Ask one of them for a link, or an admin can give you an allowance."
+    },
+    "allowanceLabel": "People you can still invite",
+    "allowanceLeft": "{left} of {total} left",
+    "spent": "You have used your whole allowance on {relay}. Your links and who joined on them stay below.",
+    "invitedBy": "Invited by {name} on {date}",
+    "loadFailed": "Could not reach {relay}'s invite service.",
+    "retry": "Retry",
+    "noApi": "{relay} does not offer invite links.",
+    "form": {
+      "title": "New invite link",
+      "label": "Label (optional)",
+      "labelHint": "Only you see it.",
+      "people": "How many people can use this link",
+      "peopleHint": "1 to {max}",
+      "days": "Expires after (days)",
+      "daysHint": "1 to {max}",
+      "creating": "Creating…",
+      "labelTooLong": "The label is too long.",
+      "peopleRange": "Choose how many people, within what you have left.",
+      "daysRange": "Choose how many days the link lasts, within the limit shown."
+    },
+    "newLinkTitle": "Your new invite link",
+    "newLinkHint": "Send it to the people you want to bring in. It works until it is used up, expires or you turn it off.",
+    "share": "Share",
+    "shareTitle": "Join {relay}",
+    "shareText": "Join me on {relay} on Obelisk",
+    "copyRefused": "Could not copy. Select the link and copy it by hand.",
+    "activeTitle": "Active links",
+    "pastTitle": "Past links ({count})",
+    "revokeConfirm": "Turn this link off? Nobody new can join with it. People who already joined stay.",
+    "revokeKeep": "Keep it",
+    "removed": "removed",
+    "joinedOn": "joined {date}"
   }
 }

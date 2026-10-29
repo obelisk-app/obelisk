@@ -9,16 +9,22 @@ import {
   RELAY_INVITE_DEAD_REASONS,
   RELAY_INVITE_REFUSAL_PREFIX,
 } from '@/constants/relay/relay-invite';
-import { DEFAULT_RELAY } from '@/constants/nostr-bridge/relay';
-import { normalizeDeepLinkRelay } from './deep-link';
+import { DEFAULT_RELAY, DEFAULT_RELAYS } from '@/constants/nostr-bridge/relay';
+import { classifyDeepLinkRelay, normalizeDeepLinkRelay, sameRelay } from './deep-link';
 
 export type RelayInviteDeadReason = (typeof RELAY_INVITE_DEAD_REASONS)[number];
 
-/** What the app keeps between visits. `redeemed` is every pubkey already let in. */
+/**
+ * What the app keeps between visits. `redeemed` is every pubkey already let
+ * in; `steer` records that the app already took (or tried to take) the
+ * person to the invite's relay (`offered`) or they said no (`declined`), so a
+ * reload does not do it again.
+ */
 export interface StoredRelayInvite {
   code: string;
   relay: string;
   redeemed: string[];
+  steer?: 'offered' | 'declined';
 }
 
 /** A code from a link, or null when it cannot be one (empty, too long, odd characters). */
@@ -38,6 +44,16 @@ export function relayInviteRefusalReason(message: string | null | undefined): st
   if (!message?.startsWith(RELAY_INVITE_REFUSAL_PREFIX)) return null;
   const word = message.slice(RELAY_INVITE_REFUSAL_PREFIX.length).split(':')[0].trim();
   return word || null;
+}
+
+/**
+ * Whether a claim's answer is worth one more try with a fresh `created_at`:
+ * the relay called it `stale` (clock skew), or never answered.
+ */
+export function isRetryableClaimAnswer(status: string | undefined, reason: string | null | undefined): boolean {
+  const word = relayInviteRefusalReason(reason);
+  if (word) return word === 'stale';
+  return status === 'timeout' || status === 'unreachable' || (status === 'ok' && !!reason);
 }
 
 /** Whether a refusal means the code is gone for good. */
@@ -67,21 +83,51 @@ export function inviteNeedsRedeem(invite: StoredRelayInvite | null, relay: strin
   return !invite.redeemed.includes(pubkey);
 }
 
+/**
+ * The relay a stored invite still has to take the app to, or null: only a
+ * fresh invite (no key let in yet), only once (`steer`), and only when the
+ * app is not there already.
+ */
+export function inviteSteerTarget(invite: StoredRelayInvite | null, current: string | null | undefined): string | null {
+  if (!invite || invite.redeemed.length > 0 || invite.steer) return null;
+  const target = normalizeDeepLinkRelay(invite.relay);
+  return sameRelay(current, target) ? null : target;
+}
+
+/**
+ * Whether the app may switch to `relay` without asking: it is in the
+ * person's relay list or one of the built-in defaults. Anything else is a
+ * relay they never chose, and an invite link must not point them at it
+ * silently (obelisk-relay `docs/relay-invites.md` §6 step 2).
+ */
+export function isTrustedInviteRelay(relay: string, configured: ReadonlyArray<string>): boolean {
+  return classifyDeepLinkRelay(relay, null, [...configured, ...DEFAULT_RELAYS]) !== 'unknown';
+}
+
 /** The relay an invite link names in `?relay=`, or the default relay when it names none. */
 export function inviteLinkRelay(raw: string | string[] | undefined): string {
   const relay = Array.isArray(raw) ? raw[0] : raw;
   return relay ? normalizeDeepLinkRelay(relay) : DEFAULT_RELAY;
 }
 
+/** One person who came in on a link; `removed` when the relay's operator later took them out. */
+export interface InviteJoinedPerson {
+  pubkey: string;
+  at: number;
+  removed: boolean;
+}
+
 /** What the invite card shows about a code's use: how full it is and how long it has left. */
 export function inviteUsage(
-  invite: { uses: number; max_uses: number | null; expires_at: number | null; redemptions: { pubkey: string; at: number }[] },
+  invite: { uses: number; max_uses: number | null; expires_at: number | null; redemptions: { pubkey: string; at: number; evicted_at?: number | null }[] },
   nowMs: number,
-): { usedPercent: number | null; daysLeft: number | null; joined: { pubkey: string; at: number }[] } {
+): { usedPercent: number | null; daysLeft: number | null; joined: InviteJoinedPerson[] } {
   const usedPercent = invite.max_uses ? Math.min(100, Math.round((invite.uses / invite.max_uses) * 100)) : null;
   const daysLeft = invite.expires_at == null ? null : Math.max(0, Math.ceil((invite.expires_at * 1000 - nowMs) / 86_400_000));
   // Newest first: who just came in is what the inviter wants to see.
-  const joined = [...invite.redemptions].sort((a, b) => b.at - a.at);
+  const joined = [...invite.redemptions]
+    .sort((a, b) => b.at - a.at)
+    .map((r) => ({ pubkey: r.pubkey, at: r.at, removed: r.evicted_at != null }));
   return { usedPercent, daysLeft, joined };
 }
 

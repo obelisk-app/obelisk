@@ -76,8 +76,8 @@ export function RelayMenuSheet({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <RelayMenuRow
           icon={<UserPlusIcon size={20} strokeWidth={1.5} />}
-          rowLabel={t('mobile.space.invite')}
-          hint={vm.busy === 'invite' ? '…' : t('mobile.space.copyLinkHint')}
+          rowLabel={vm.canMint ? t('mobile.space.invite') : t('mobile.space.shareRelayLink')}
+          hint={vm.busy === 'invite' ? '…' : vm.canMint ? t('mobile.space.inviteHint') : t('mobile.space.copyLinkHint')}
           onClick={vm.invite}
         />
         <RelayMenuRow

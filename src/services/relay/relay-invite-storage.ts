@@ -14,7 +14,9 @@ export function readStoredInvite(): StoredRelayInvite | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<StoredRelayInvite>;
     if (typeof parsed.code !== 'string' || typeof parsed.relay !== 'string') return null;
-    return { code: parsed.code, relay: parsed.relay, redeemed: Array.isArray(parsed.redeemed) ? parsed.redeemed.filter((p) => typeof p === 'string') : [] };
+    const redeemed = Array.isArray(parsed.redeemed) ? parsed.redeemed.filter((p) => typeof p === 'string') : [];
+    const steer = parsed.steer === 'offered' || parsed.steer === 'declined' ? parsed.steer : undefined;
+    return { code: parsed.code, relay: parsed.relay, redeemed, ...(steer ? { steer } : {}) };
   } catch {
     return null;
   }
@@ -30,11 +32,22 @@ function writeStoredInvite(invite: StoredRelayInvite | null): void {
   }
 }
 
-/** Keep the code from a link. A new code replaces any older one; keys it already let in stay recorded. */
+/**
+ * Keep the code from a link. A new code replaces any older one; keys it
+ * already let in stay recorded. Opening a link is asking to go to its relay
+ * again, so whether that was offered before is forgotten.
+ */
 export function storeInvite(code: string, relay: string): void {
   const prev = readStoredInvite();
   const keep = prev && prev.code === code && prev.relay === relay ? prev.redeemed : [];
   writeStoredInvite({ code, relay, redeemed: keep });
+}
+
+/** The app took (or tried to take) the person to the invite's relay, or they said no: not again for this code. */
+export function markInviteSteered(code: string, steer: 'offered' | 'declined'): void {
+  const invite = readStoredInvite();
+  if (!invite || invite.code !== code) return;
+  writeStoredInvite({ ...invite, steer });
 }
 
 export function forgetInvite(): void {

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useConfiguredRelays } from '@/services/nostr-bridge';
 import { confirmLeaveRelay, leaveRelay, shareRelayInvite } from '@/services/shell/mobile/relay-menu';
+import { openSettings } from '@/services/settings/open-settings';
+import { useCanMintOn } from '@/hooks/settings/invite/useCanInvite';
 
 /** The admin panels the relay menu can stack over itself. */
 export type RelayMenuPanel = 'branding' | 'emojis' | 'categories' | 'members' | 'roles';
@@ -11,12 +13,16 @@ export type RelayMenuPanel = 'branding' | 'emojis' | 'categories' | 'members' | 
 /**
  * The phone relay menu: invite, share, copy URL and leave, each with its
  * busy hint and shared confirmation toast, and which admin panel is open.
+ * "Invite people" opens Settings > Invite people on this relay when this
+ * account may create links there; elsewhere the row copies the bare relay
+ * link instead, and says so ("Share relay link").
  */
 export function useRelayMenuSheet({ relayUrl, label, close }: { relayUrl: string; label: string; close: () => void }) {
   const t = useTranslations();
   const relays = useConfiguredRelays();
   const [busy, setBusy] = useState<string | null>(null);
   const [adminPanel, setAdminPanel] = useState<RelayMenuPanel | null>(null);
+  const canMint = useCanMintOn(relayUrl);
 
   const flash = (msg: string) => {
     useToastStore.getState().pushToast({ title: msg, body: '' });
@@ -24,6 +30,11 @@ export function useRelayMenuSheet({ relayUrl, label, close }: { relayUrl: string
   const inviteText = t('mobile.space.inviteText', { name: label, url: relayUrl });
 
   const invite = async () => {
+    if (canMint) {
+      close();
+      openSettings('invites', { relay: relayUrl });
+      return;
+    }
     setBusy('invite');
     try {
       await writeClipboardText(inviteText);
@@ -62,6 +73,7 @@ export function useRelayMenuSheet({ relayUrl, label, close }: { relayUrl: string
   return {
     relays,
     busy,
+    canMint,
     adminPanel,
     openPanel: setAdminPanel,
     closePanel: () => setAdminPanel(null),

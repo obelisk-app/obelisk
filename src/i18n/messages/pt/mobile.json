@@ -228,7 +228,9 @@
     "inviteCopied": "Convite copiado",
     "copiedClipboard": "Copiado para a área de transferência",
     "urlCopied": "URL do relay copiada",
-    "copyLinkHint": "copiar link"
+    "copyLinkHint": "copiar link",
+    "shareRelayLink": "Compartilhar link do relay",
+    "inviteHint": "criar um link"
   },
   "field": {
     "description": "Descrição",
