@@ -24,10 +24,14 @@ export const SDK_LOGIN_COPY: Readonly<Record<string, MessageKey>> = {
   'NIP-07 \u2014 Alby, nos2x, Flamingo': 'shell.login.sdk.methods.extensionHint',
   'Remote signer (bunker)': 'shell.login.sdk.methods.bunker',
   'NIP-46 \u2014 Amber, Nsec.app, Keychat': 'shell.login.sdk.methods.bunkerHint',
+  'NIP-46 \u2014 Amber, Nsec.app': 'shell.login.sdk.methods.bunkerHint',
   'Create a new account': 'shell.login.sdk.methods.generate',
   'Generates a fresh keypair on this device': 'shell.login.sdk.methods.generateHint',
   'Paste private key': 'shell.login.sdk.methods.import',
   'nsec or 64-char hex \u2014 risky in browsers': 'shell.login.sdk.methods.importHint',
+  'Private key or key file': 'shell.login.sdk.methods.importOrFile',
+  'Paste your nsec, or upload the key file you saved': 'shell.login.sdk.methods.importOrFileHint',
+  'I already have an account': 'shell.login.existingAccount',
 
   'Get the Nostr WoT extension': 'shell.login.sdk.noExtension.title',
   'Browser extension with NIP-07 signer + Web of Trust spam filtering ↗': 'shell.login.sdk.noExtension.hint',
@@ -40,6 +44,12 @@ export const SDK_LOGIN_COPY: Readonly<Record<string, MessageKey>> = {
   'Sign in': 'shell.login.sdk.import.signIn',
   'Paste an nsec1… or a 64-char hex private key.': 'shell.login.sdk.import.invalidKey',
   'Invalid nsec': 'shell.login.sdk.import.invalidNsec',
+  or: 'shell.login.sdk.import.or',
+  'Upload key file': 'shell.login.sdk.import.uploadFile',
+  'The .txt you saved when you created the account': 'shell.login.sdk.import.uploadFileHint',
+  'No private key (nsec) found in that file.': 'shell.login.sdk.import.fileNoKey',
+  'That file is too big to be a key file.': 'shell.login.sdk.import.fileTooBig',
+  "Couldn't read that file.": 'shell.login.sdk.import.fileUnreadable',
 
   'Your new key': 'shell.login.sdk.generated.title',
   'Back this up': 'shell.login.sdk.generated.backupLead',
@@ -51,6 +61,9 @@ export const SDK_LOGIN_COPY: Readonly<Record<string, MessageKey>> = {
   'I have backed up my nsec. I understand that losing it means losing access to this account permanently.':
     'shell.login.sdk.generated.acknowledge',
   Continue: 'shell.login.sdk.generated.continue',
+  '⬇ Download your key file': 'shell.login.sdk.generated.downloadFile',
+  '✓ Key file saved (download again)': 'shell.login.sdk.generated.downloadedFile',
+  'Save it somewhere safe. To log in again, upload it or paste the nsec inside.': 'shell.login.sdk.generated.downloadHint',
 
   'Set up your profile': 'shell.login.sdk.profile.title',
   'Display name': 'shell.login.sdk.profile.displayName',

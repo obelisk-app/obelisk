@@ -116,7 +116,13 @@ export default function LoginModal({
           closeOnSuccess={false}
           title={title ?? t('shell.login.title')}
           subtitle={subtitle ?? t('shell.login.subtitle')}
-          flatLayout
+          // New people start with a new account; an existing one comes in by the
+          // extension (only when one is installed), the key or its file, or a signer.
+          layout="create-first"
+          existingAccountLabel={t('shell.login.existingAccount')}
+          hideUnavailableNip07
+          // A new key is only kept if its file was saved, which the import step reads back.
+          requireKeyDownload
           showRememberToggle={false}
           // The app owns publication of the complete draft, including the banner.
           // An empty SDK relay list retains its form without a second network write.

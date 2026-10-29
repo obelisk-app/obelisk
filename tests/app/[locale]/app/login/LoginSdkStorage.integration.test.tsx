@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { saveNewKeyFile } from '@tests/support/login-key-file';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 import LoginModal from '@/app/[locale]/app/login/LoginModal';
 import { fakeBridge } from '@tests/support/fake-bridge';
@@ -62,7 +63,7 @@ describe('the SDK login widget in Obelisk (real SDK)', () => {
     const sk = generateSecretKey();
     const nsec = nip19.nsecEncode(sk);
     renderModal(['import']);
-    fireEvent.click(await screen.findByText('Paste private key'));
+    fireEvent.click(await screen.findByText('Private key or key file'));
     fireEvent.change(await screen.findByPlaceholderText(/nsec1/), { target: { value: nsec } });
     const remember = screen.getByRole('checkbox', { name: /remember on this device/i });
     fireEvent.click(remember);
@@ -84,14 +85,29 @@ describe('the SDK login widget in Obelisk (real SDK)', () => {
     expect(everyStoredString()).not.toContain(nsec);
   });
 
+  it('the key file a new account saved logs back in, behind the same notice as a pasted key', async () => {
+    const sk = generateSecretKey();
+    const file = new File([`Nostr private key (nsec)\n\n${nip19.nsecEncode(sk)}\n\nPublic key (npub)\n\n${nip19.npubEncode(getPublicKey(sk))}\n`], 'nostr-key.txt', { type: 'text/plain' });
+    renderModal(['generate', 'import']);
+    fireEvent.click(await screen.findByText('Private key or key file'));
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } });
+
+    expect(await screen.findByTestId('pasted-key-notice')).toBeInTheDocument();
+    expect(loginWithNsec).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with this key' }));
+    await waitFor(() => expect(loginWithNsec).toHaveBeenCalledTimes(1));
+    expect((loginWithNsec.mock.calls[0] as [string, string])[1]).toBe(getPublicKey(sk));
+    expect(everyStoredString()).not.toContain(nip19.nsecEncode(sk));
+  });
+
   it('"Use an extension or bunker" drops the pasted key and returns to the methods', async () => {
     renderModal(['import', 'nip46']);
-    fireEvent.click(await screen.findByText('Paste private key'));
+    fireEvent.click(await screen.findByText('Private key or key file'));
     fireEvent.change(await screen.findByPlaceholderText(/nsec1/), { target: { value: nip19.nsecEncode(generateSecretKey()) } });
     fireEvent.click(screen.getByRole('button', { name: /^(log in|sign in|continue|import)/i }));
     fireEvent.click(await screen.findByRole('button', { name: 'Use an extension or bunker' }));
 
-    expect(await screen.findByText('Paste private key')).toBeInTheDocument();
+    expect(await screen.findByText('Private key or key file')).toBeInTheDocument();
     expect(screen.queryByTestId('pasted-key-notice')).toBeNull();
     expect(loginWithNsec).not.toHaveBeenCalled();
   });
@@ -108,6 +124,7 @@ describe('the SDK login widget in Obelisk (real SDK)', () => {
 
     fireEvent.click(ack);
     fireEvent.click(remember);
+    await saveNewKeyFile();
     fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
     await screen.findByPlaceholderText('Builder, chef, occasional cyclist.');
     expect(localStorage.getItem('@nostr-wot/ui:nsec')).toBeNull();

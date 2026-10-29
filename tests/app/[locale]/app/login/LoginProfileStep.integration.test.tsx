@@ -9,6 +9,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { saveNewKeyFile } from '@tests/support/login-key-file';
 import LoginModal from '@/app/[locale]/app/login/LoginModal';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
@@ -36,6 +37,7 @@ async function gotoProfileStep() {
 
   const ack = await screen.findByRole('checkbox', { name: /backed up my nsec/i }, { timeout: 3000 });
   fireEvent.click(ack);
+  await saveNewKeyFile();
   fireEvent.click(await screen.findByRole('button', { name: /^continue$/i }));
 
   return await screen.findByPlaceholderText('Builder, chef, occasional cyclist.');
