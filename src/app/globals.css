@@ -1275,6 +1275,23 @@ button:not(:disabled),
   background: color-mix(in oklab, var(--color-lc-dark) 90%, var(--color-lc-green) 10%);
   outline: none;
 }
+/* "Create a new account" leads in lime; the dark surface above would
+ * otherwise win over the SDK's primary rule and leave dark text on black. */
+.nui-modal .nui-method-button.nui-method-primary {
+  background: var(--color-lc-green);
+  border-color: var(--color-lc-green);
+  color: var(--color-lc-black);
+}
+.nui-modal .nui-method-button.nui-method-primary:hover,
+.nui-modal .nui-method-button.nui-method-primary:focus-visible {
+  background: color-mix(in oklab, var(--color-lc-green) 85%, white 15%);
+  border-color: var(--color-lc-green);
+}
+.nui-modal .nui-method-primary .nui-method-icon {
+  background: rgba(0, 0, 0, 0.12);
+  border-color: transparent;
+  color: var(--color-lc-black);
+}
 .nui-modal .nui-method-icon {
   width: 40px;
   height: 40px;
