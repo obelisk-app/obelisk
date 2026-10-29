@@ -471,7 +471,9 @@
         "generate": "Create a new account",
         "generateHint": "Generates a fresh keypair on this device",
         "import": "Paste private key",
-        "importHint": "nsec or 64-character hex, risky in a browser"
+        "importHint": "nsec or 64-character hex, risky in a browser",
+        "importOrFile": "Private key or key file",
+        "importOrFileHint": "Paste your nsec, or upload the key file you saved"
       },
       "noExtension": {
         "title": "Get the Nostr WoT extension",
@@ -483,7 +485,13 @@
         "placeholder": "nsec1… or 64-character hex",
         "signIn": "Sign in",
         "invalidKey": "Paste an nsec1… or a 64-character hex private key.",
-        "invalidNsec": "Invalid nsec"
+        "invalidNsec": "Invalid nsec",
+        "or": "or",
+        "uploadFile": "Upload key file",
+        "uploadFileHint": "The .txt you saved when you created the account",
+        "fileNoKey": "No private key (nsec) found in that file.",
+        "fileTooBig": "That file is too big to be a key file.",
+        "fileUnreadable": "Couldn't read that file."
       },
       "generated": {
         "title": "Your new key",
@@ -494,7 +502,10 @@
         "copyNsec": "Copy nsec",
         "download": "Download .txt",
         "acknowledge": "I have backed up my nsec. I understand that losing it means losing access to this account permanently.",
-        "continue": "Continue"
+        "continue": "Continue",
+        "downloadFile": "⬇ Download your key file",
+        "downloadedFile": "✓ Key file saved (download again)",
+        "downloadHint": "Save it somewhere safe. To log in again, upload it or paste the nsec inside."
       },
       "profile": {
         "title": "Set up your profile",
@@ -515,7 +526,8 @@
         "pasteLabel": "Paste a bunker:// URI from your remote signer",
         "connect": "Connect"
       }
-    }
+    },
+    "existingAccount": "I already have an account"
   },
   "channel": {
     "create": {

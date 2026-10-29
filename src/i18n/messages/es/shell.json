@@ -471,7 +471,9 @@
         "generate": "Crear una cuenta nueva",
         "generateHint": "Genera un par de claves nuevo en este dispositivo",
         "import": "Pegar clave privada",
-        "importHint": "nsec o hex de 64 caracteres, riesgoso en un navegador"
+        "importHint": "nsec o hex de 64 caracteres, riesgoso en un navegador",
+        "importOrFile": "Clave privada o archivo de clave",
+        "importOrFileHint": "Pegá tu nsec o subí el archivo de clave que guardaste"
       },
       "noExtension": {
         "title": "Instalá la extensión Nostr WoT",
@@ -483,7 +485,13 @@
         "placeholder": "nsec1… o hex de 64 caracteres",
         "signIn": "Entrar",
         "invalidKey": "Pegá una clave privada nsec1… o en hex de 64 caracteres.",
-        "invalidNsec": "nsec inválida"
+        "invalidNsec": "nsec inválida",
+        "or": "o",
+        "uploadFile": "Subir archivo de clave",
+        "uploadFileHint": "El .txt que guardaste al crear la cuenta",
+        "fileNoKey": "No encontramos una clave privada (nsec) en ese archivo.",
+        "fileTooBig": "Ese archivo es demasiado grande para ser un archivo de clave.",
+        "fileUnreadable": "No pudimos leer ese archivo."
       },
       "generated": {
         "title": "Tu clave nueva",
@@ -494,7 +502,10 @@
         "copyNsec": "Copiar nsec",
         "download": "Descargar .txt",
         "acknowledge": "Ya guardé una copia de mi nsec. Entiendo que si la pierdo, pierdo el acceso a esta cuenta para siempre.",
-        "continue": "Continuar"
+        "continue": "Continuar",
+        "downloadFile": "⬇ Descargá tu archivo de clave",
+        "downloadedFile": "✓ Archivo de clave guardado (descargar de nuevo)",
+        "downloadHint": "Guardalo en un lugar seguro. Para volver a entrar, subilo o pegá la nsec que tiene adentro."
       },
       "profile": {
         "title": "Armá tu perfil",
@@ -515,7 +526,8 @@
         "pasteLabel": "Pegá una URI bunker:// de tu firmador remoto",
         "connect": "Conectar"
       }
-    }
+    },
+    "existingAccount": "Ya tengo una cuenta"
   },
   "channel": {
     "create": {
