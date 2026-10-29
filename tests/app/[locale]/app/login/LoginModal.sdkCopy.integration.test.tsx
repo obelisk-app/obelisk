@@ -6,7 +6,7 @@
  */
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { saveNewKeyFile } from '@tests/support/login-key-file';
+import { lastKeyFileName, saveNewKeyFile } from '@tests/support/login-key-file';
 import LoginModal from '@/app/[locale]/app/login/LoginModal';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
@@ -69,6 +69,7 @@ describe('the SDK login widget in Spanish (real SDK)', () => {
     expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
     const file = await saveNewKeyFile();
     expect(file).toMatch(/nsec1[02-9ac-hj-np-z]{58}/);
+    expect(lastKeyFileName).toMatch(/^obelisk-npub1[02-9ac-hj-np-z]{58}\.txt$/);
     expect(await screen.findByRole('button', { name: '✓ Archivo de clave guardado (descargar de nuevo)' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 

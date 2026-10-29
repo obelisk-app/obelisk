@@ -60,6 +60,8 @@ interface LoginModalProps {
   subtitle?: string;
   /** Optional node rendered above the title - e.g. the obelisk hero mark on mobile. */
   headerSlot?: ReactNode;
+  /** A new account's key file is `<keyFilePrefix>-<npub>.txt`. Default "obelisk". */
+  keyFilePrefix?: string;
 }
 
 export default function LoginModal({
@@ -69,6 +71,7 @@ export default function LoginModal({
   title,
   subtitle,
   headerSlot,
+  keyFilePrefix = 'obelisk',
 }: LoginModalProps = {}) {
   const t = useTranslations();
   const flow = useLoginFlow({ onSuccess, onClose });
@@ -123,6 +126,7 @@ export default function LoginModal({
           hideUnavailableNip07
           // A new key is only kept if its file was saved, which the import step reads back.
           requireKeyDownload
+          keyFilePrefix={keyFilePrefix}
           showRememberToggle={false}
           // The app owns publication of the complete draft, including the banner.
           // An empty SDK relay list retains its form without a second network write.

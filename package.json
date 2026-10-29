@@ -47,7 +47,7 @@
     "@nostr-wot/pq": "^0.3.0",
     "@nostr-wot/relay": "^0.2.1",
     "@nostr-wot/signers": "^1.2.2",
-    "@nostr-wot/ui": "file:vendor/nostr-wot-ui-0.8.3-obelisk.1.tgz",
+    "@nostr-wot/ui": "file:vendor/nostr-wot-ui-0.8.3-obelisk.2.tgz",
     "@nostr-wot/wallet": "^0.4.2",
     "gray-matter": "^4.0.3",
     "html-to-image": "^1.11.13",
