@@ -22,7 +22,7 @@ export function createFilePicker(
   label.dataset.kind = kind;
   const prompt = document.createElement('span');
   prompt.className = 'obelisk-media-prompt';
-  prompt.textContent = kind === 'picture' ? '＋' : bannerPrompt;
+  prompt.textContent = kind === 'picture' ? '+' : bannerPrompt;
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';

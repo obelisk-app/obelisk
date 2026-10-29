@@ -25,7 +25,7 @@ describe('createFilePicker', () => {
   });
 
   it('shows a plus on the picture picker', () => {
-    expect(createFilePicker('picture', 'Upload banner', vi.fn()).querySelector('.obelisk-media-prompt')?.textContent).toBe('＋');
+    expect(createFilePicker('picture', 'Upload banner', vi.fn()).querySelector('.obelisk-media-prompt')?.textContent).toBe('+');
   });
 });
 
