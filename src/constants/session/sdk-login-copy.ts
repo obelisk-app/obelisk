@@ -21,7 +21,7 @@ export const SDK_LOGIN_COPY: Readonly<Record<string, MessageKey>> = {
   'Connecting': 'shell.login.connecting',
 
   'Browser extension': 'shell.login.sdk.methods.extension',
-  'NIP-07 \u2014 Alby, nos2x, Flamingo': 'shell.login.sdk.methods.extensionHint',
+  'NIP-07: Nostr WoT, Alby, nos2x': 'shell.login.sdk.methods.extensionHint',
   'Remote signer (bunker)': 'shell.login.sdk.methods.bunker',
   'NIP-46 \u2014 Amber, Nsec.app, Keychat': 'shell.login.sdk.methods.bunkerHint',
   'NIP-46 \u2014 Amber, Nsec.app': 'shell.login.sdk.methods.bunkerHint',
@@ -35,7 +35,7 @@ export const SDK_LOGIN_COPY: Readonly<Record<string, MessageKey>> = {
 
   'Get the Nostr WoT extension': 'shell.login.sdk.noExtension.title',
   'Browser extension with NIP-07 signer + Web of Trust spam filtering ↗': 'shell.login.sdk.noExtension.hint',
-  'No NIP-07 extension detected. Install Alby, nos2x, or another Nostr signer extension and reload.':
+  'No NIP-07 extension detected. Install the Nostr WoT extension (nostr-wot.com/download), Alby, nos2x or another Nostr signer and reload.':
     'shell.login.sdk.noExtension.error',
 
   '⚠️ Pasting your private key into a web page is risky. Prefer a browser extension (NIP-07) or a remote signer (NIP-46) when possible.':

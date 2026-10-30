@@ -32,12 +32,20 @@ export default defineConfig({
         // Vitest to transform it rather than hand it to Node as-is.
         // next-intl and use-intl are inlined so a test's `vi.mock('next/navigation')`
         // also reaches the router and pathname hooks next-intl wraps.
-        inline: [/@nostr-wot\//, 'vesta', 'next-intl', 'use-intl'],
+        // nostr-wot-sdk is where the @nostr-wot packages' code now lives.
+        inline: [/@nostr-wot\//, /nostr-wot-sdk/, 'vesta', 'next-intl', 'use-intl'],
       },
     },
   },
   resolve: {
-    alias: {
+    alias: [
+      // @nostr-wot/data, relay, signers and blossom are re-exports of
+      // nostr-wot-sdk's modules, which the SDK's own code imports directly.
+      // Resolving both names to the one module lets a test's
+      // `vi.mock('@nostr-wot/data')` reach the pool the relay hub and the
+      // login widget use, instead of only the re-export.
+      { find: /^@nostr-wot\/(data|relay|signers|blossom)(\/.*)?$/, replacement: 'nostr-wot-sdk/$1$2' },
+      ...Object.entries({
       '@tests': path.resolve(__dirname, './tests'),
       '@': path.resolve(__dirname, './src'),
       'server-only': path.resolve(__dirname, './tests/support/server-only-stub.ts'),
@@ -51,6 +59,7 @@ export default defineConfig({
       // hooks because the contexts/dispatchers are different instances.
       react: path.resolve(__dirname, './node_modules/react'),
       'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
-    },
+      }).map(([find, replacement]) => ({ find, replacement })),
+    ],
   },
 });

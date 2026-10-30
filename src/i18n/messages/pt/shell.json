@@ -465,7 +465,7 @@
       "signingIn": "Entrando…",
       "methods": {
         "extension": "Extensão do navegador",
-        "extensionHint": "NIP-07: Alby, nos2x, Flamingo",
+        "extensionHint": "NIP-07: Nostr WoT, Alby, nos2x",
         "bunker": "Assinador remoto (bunker)",
         "bunkerHint": "NIP-46: Amber, Nsec.app, Keychat",
         "generate": "Criar uma conta nova",
@@ -478,7 +478,7 @@
       "noExtension": {
         "title": "Instale a extensão Nostr WoT",
         "hint": "Extensão do navegador com assinador NIP-07 e filtro de spam por Web of Trust ↗",
-        "error": "Nenhuma extensão NIP-07 encontrada. Instale Alby, nos2x ou outra extensão de assinatura Nostr e recarregue a página."
+        "error": "Nenhuma extensão NIP-07 encontrada. Instale a extensão Nostr WoT (nostr-wot.com/download), Alby, nos2x ou outro assinador Nostr e recarregue a página."
       },
       "import": {
         "warning": "⚠️ Colar sua chave privada numa página web é arriscado. Quando puder, prefira uma extensão do navegador (NIP-07) ou um assinador remoto (NIP-46).",
