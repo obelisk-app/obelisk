@@ -222,10 +222,19 @@ describe('ChatLayout: a voice channel', () => {
   });
 });
 
-describe('ChatLayout: a channel the relay does not show', () => {
-  it('still renders the pane and the composer', async () => {
-    setup({ groupId: 'unknown' });
+describe('ChatLayout: unavailable channel metadata', () => {
+  it('waits for channel metadata before rendering a composer', async () => {
+    const { bridge } = setup({ groupId: 'unknown' });
     await act(async () => {});
+    expect(screen.queryByTestId('composer')).toBeNull();
+    act(() => bridge.stores.groups.set([groupFixture({ id: 'unknown', name: 'Available now' })]));
     expect(screen.getByTestId('composer').dataset.group).toBe('unknown');
+  });
+
+  it('removes the composer when a channel is removed from the relay metadata', () => {
+    const { bridge } = setup();
+    expect(screen.getByTestId('composer')).toBeInTheDocument();
+    act(() => bridge.stores.groups.set([]));
+    expect(screen.queryByTestId('composer')).toBeNull();
   });
 });
