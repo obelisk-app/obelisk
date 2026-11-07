@@ -20,10 +20,10 @@ export function usePopoverMember(pubkey: string) {
     if (!memberFromList && !meta) return undefined;
     return {
       pubkey,
-      displayName: meta?.displayName ?? meta?.name ?? memberFromList?.displayName ?? displayNameFor(pubkey),
-      picture: meta?.picture ?? memberFromList?.picture,
+      displayName: meta?.displayName ?? meta?.name ?? (meta?.createdAt ? undefined : memberFromList?.displayName) ?? displayNameFor(pubkey),
+      picture: meta?.createdAt ? meta.picture ?? undefined : meta?.picture ?? memberFromList?.picture,
       banner: meta?.banner ?? undefined,
-      nip05: meta?.nip05 ?? memberFromList?.nip05,
+      nip05: meta?.createdAt ? meta.nip05 ?? undefined : meta?.nip05 ?? memberFromList?.nip05,
       about: meta?.about ?? undefined,
       website: meta?.website ?? undefined,
       lud16: meta?.lud16 ?? undefined,

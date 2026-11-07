@@ -1,6 +1,6 @@
 import { mayHavePaid } from '@nostr-wot/wallet/nwc';
 import { captureActiveSession } from '@/services/session/connection';
-import { requestZapInvoice } from '@nostr-wot/wallet';
+import { requestZapInvoice } from './lnurl-zap';
 import { getDefaultRelays } from '@nostr-wot/data';
 import { getBridgeImpl, isImportableRelayUrl } from '@/services/nostr-bridge';
 import { KIND_REACTION } from '@/constants/nostr/nip-kinds';
@@ -47,9 +47,9 @@ export interface ZapDraft {
   currentRelay: string | null;
 }
 
-/** A draft that passed `checkZap`: address and signer are known. */
+/** Local checks passed; the recipient address is revalidated before invoice creation. */
 export interface ReadyZap extends ZapDraft {
-  lud16: string;
+  lud16: string | null;
   signer: ZapSigner;
 }
 
@@ -58,7 +58,6 @@ export type ZapCheck = { ok: true; zap: ReadyZap } | { ok: false; reason: ZapErr
 /** The first reason this zap cannot start, before anything leaves the browser. */
 export function checkZap(draft: ZapDraft): ZapCheck {
   if (draft.signer?.pubkey === draft.recipient.recipientPubkey) return { ok: false, reason: 'self' };
-  if (!draft.lud16) return { ok: false, reason: 'noAddress' };
   if (!isWalletAvailable(draft.signer?.pubkey ?? null)) return { ok: false, reason: 'noWallet' };
   if (!Number.isSafeInteger(draft.amountSats) || draft.amountSats <= 0 || draft.amountSats > Math.floor(Number.MAX_SAFE_INTEGER / 1000)) return { ok: false, reason: 'invalidAmount' };
   if (!draft.signer) return { ok: false, reason: 'noSigner' };
@@ -89,10 +88,16 @@ export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
   const previous = attempts.get(key);
   if (previous) throw new ZapError(previous.uncertain ? 'unconfirmed' : 'pending');
   const session = captureActiveSession(zap.signer.pubkey);
-  const attempt = { current: () => session?.isCurrent() ?? true, uncertain: false };
+  if (!session) throw new ZapError('noSigner');
+  const attempt = { current: () => session.isCurrent(), uncertain: false };
   attempts.set(key, attempt);
   try {
-    return await payZap(zap);
+    const bridge = getBridgeImpl();
+    if (!bridge) throw new ZapError('noSigner');
+    const profile = await bridge.refreshUserMetadata(zap.recipient.recipientPubkey);
+    session.assertCurrent();
+    if (!profile?.lud16) throw new ZapError('noAddress');
+    return await payZap({ ...zap, lud16: profile.lud16 });
   } catch (error) {
     if (mayHavePaid(error)) attempt.uncertain = true;
     throw error;
@@ -130,10 +135,13 @@ async function payZap(zap: ReadyZap): Promise<ZapResult> {
   const amountMsats = zap.amountSats * 1000;
   const { invoice, zapRequest } = await step('invoice', () => requestZapInvoice({
     getPublicKey: async () => zap.signer.pubkey,
-    signEvent: (template) => step('sign-zap', () => zap.signer.signEvent(template)),
+    signEvent: (template) => {
+      session?.assertCurrent();
+      return step('sign-zap', () => zap.signer.signEvent(template));
+    },
   }, {
     recipientPubkey: zap.recipient.recipientPubkey,
-    lud16: zap.lud16,
+    lud16: zap.lud16!,
     eventId: zap.recipient.messageId ?? undefined,
     amountMsats,
     relays,

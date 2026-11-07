@@ -19,7 +19,7 @@ it('requests a parseable zap invoice before paying through the active extension'
   const recipient = 'ab'.repeat(32);
   const signEvent = vi.fn(async (template: Parameters<typeof finalizeEvent>[0]) => finalizeEvent(template, secret));
   const publishEvent = vi.fn<BridgeImpl['publishEvent']>(async (template) => finalizeEvent({ ...template, created_at: Math.floor(Date.now() / 1000) }, secret));
-  registerBridge(fakeBridge({ myPubkey: pubkey, myLoginMethod: 'nip07' }, { publishEvent }));
+  registerBridge(fakeBridge({ myPubkey: pubkey, myLoginMethod: 'nip07' }, { publishEvent, refreshUserMetadata: async () => ({ lud16: 'alice@example.com' } as never) }));
   const sendPayment = vi.fn(async () => ({ preimage: 'test-preimage' }));
   window.webln = { enable: vi.fn(async () => {}), sendPayment };
   const fetchMock = vi.fn<typeof fetch>(async (input) => {

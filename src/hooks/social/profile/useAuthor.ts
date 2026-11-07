@@ -3,17 +3,9 @@
 /**
  * The display identity for a feed author.
  *
- * Two sources, deliberately layered rather than one replacing the other:
- *
- *  - The **bridge** (`useUserMetadata`) already holds kind 0 for anyone in
- *    your NIP-29 rooms, warm and free. If it has them, use it.
- *  - The **social resolver** covers everyone else, which on the open network
- *    is most people, including direct follows, because the bridge only looks
- *    at the group/profile-lookup relay tier.
- *
- * Merged field-by-field rather than picking a winner: the bridge may know a
- * name while the social relays have a newer picture, and a half-populated
- * record from either side shouldn't blank out what the other knows.
+ * The newest timestamped kind 0 is authoritative across bridge and social
+ * sources, including intentionally removed fields. Legacy cache entries
+ * without a timestamp remain field-by-field display fallbacks.
  */
 
 import { useEffect } from 'react';
@@ -43,9 +35,10 @@ export function useAuthor(pubkey: string | null | undefined): AuthorIdentity {
     void Promise.resolve(nostrActions.ensureUserMetadata?.(pubkey)).catch(() => {});
   }, [pubkey]);
 
-  const pick = (key: keyof AuthorIdentity): string | null => (
-    (bridge as Partial<AuthorIdentity> | null)?.[key] || social?.[key] || null
-  );
+  const latest = (social?.createdAt ?? 0) > (bridge?.createdAt ?? 0) ? social : bridge;
+  const fallback = latest === social ? bridge : social;
+  const pick = (key: keyof AuthorIdentity): string | null => latest?.createdAt
+    ? latest[key] ?? null : latest?.[key] || fallback?.[key] || null;
 
   return {
     displayName: pick('displayName'),

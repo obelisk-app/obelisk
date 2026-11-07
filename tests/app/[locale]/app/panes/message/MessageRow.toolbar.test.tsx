@@ -247,11 +247,12 @@ describe('message row menu and toolbar actions', () => {
     expect(screen.queryByTestId('message-menu')).toBeNull();
   });
 
-  it('menu Zap opens the zap dialog for the author and closes the menu', () => {
+  it('menu Zap sends the default amount immediately and closes the menu', () => {
     renderRow();
     openMenu();
     fireEvent.click(screen.getByTestId('message-menu-zap'));
-    expect(useMessageZapStore.getState().target).toMatchObject({ messageId: msg.id, recipientPubkey: msg.pubkey, groupId: 'here' });
+    expect(quickZap).toHaveBeenCalledWith(expect.objectContaining({ messageId: msg.id, recipientPubkey: msg.pubkey, groupId: 'here' }), 21);
+    expect(useMessageZapStore.getState().target).toBeNull();
     expect(screen.queryByTestId('message-menu')).toBeNull();
   });
 

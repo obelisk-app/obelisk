@@ -148,3 +148,36 @@ describe('ProfilesModule', () => {
     profiles.dispose();
   });
 });
+
+describe('explicit profile refresh', () => {
+  it('bypasses query caches and shares concurrent requests', async () => {
+    const { profiles, query } = makeProfiles({ found: [pk(1)] });
+    await Promise.all([profiles.refresh(pk(1)), profiles.refresh(pk(1))]);
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(query.mock.calls[0][3]).toEqual({ cache: 'fresh' });
+    expect(profiles.userMetadata.get()[pk(1)]?.createdAt).toBe(1_700_000_000);
+    profiles.dispose();
+  });
+  it('rejects incomplete lookups even when cached data exists', async () => {
+    const { profiles } = makeProfiles({ complete: false });
+    profiles.ingest(kind0(pk(1)));
+    await expect(profiles.refresh(pk(1))).rejects.toMatchObject({ code: 'profile-lookup-timeout' });
+    profiles.dispose();
+  });
+  it('keeps newer cached revisions when relays answer with an older event', async () => {
+    const { profiles } = makeProfiles({ found: [pk(1)] });
+    profiles.ingest({ ...kind0(pk(1), 1_800_000_000), content: JSON.stringify({ name: 'New', lud16: 'new@example.com' }) });
+    await expect(profiles.refresh(pk(1))).resolves.toMatchObject({ name: 'New', lud16: 'new@example.com' });
+    profiles.dispose();
+  });
+});
+
+it('rejects a malformed refresh result without overwriting the known profile', async () => {
+  const { profiles, query } = makeProfiles();
+  profiles.ingest(kind0(pk(5)));
+  await Promise.resolve();
+  query.mockResolvedValueOnce({ perFilter: [[{ ...kind0(pk(5), 1_800_000_000), content: '[]' }]], complete: true });
+  await expect(profiles.refresh(pk(5))).rejects.toMatchObject({ code: 'profile-load-failed' });
+  expect(profiles.userMetadata.get()[pk(5)].createdAt).toBe(1_700_000_000);
+  profiles.dispose();
+});

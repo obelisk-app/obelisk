@@ -269,7 +269,13 @@
     "unconfirmed": "Your wallet did not confirm this zap. Check your wallet before zapping again.",
     "sendNow": "Send {amount} sats now",
     "unpaidReactions": "{count, plural, one {# unpaid reaction} other {# unpaid reactions}}",
-    "pending": "Payment is already pending."
+    "pending": "Payment is already pending.",
+    "resolveFailed": "Could not resolve the Lightning address.",
+    "unsupported": "This address does not accept Nostr zaps.",
+    "invalidMetadata": "The Lightning provider returned invalid payment limits.",
+    "amountRange": "Amount must be between {min} and {max} sats.",
+    "callbackFailed": "Lightning provider returned HTTP {status}.",
+    "noInvoice": "The Lightning provider did not return an invoice."
   },
   "profilePopover": {
     "zap": "Zap",

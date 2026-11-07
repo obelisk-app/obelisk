@@ -151,7 +151,8 @@ export function groupEqual(a: JsGroup, b: JsGroup): boolean {
  */
 export function userMetadataEqual(a: JsUserMetadata, b: JsUserMetadata): boolean {
   if (a === b) return true;
-  return a.pubkey === b.pubkey
+  return a.createdAt === b.createdAt
+    && a.pubkey === b.pubkey
     && a.name === b.name
     && a.displayName === b.displayName
     && a.picture === b.picture

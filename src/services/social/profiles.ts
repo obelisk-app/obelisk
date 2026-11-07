@@ -41,6 +41,7 @@ export type SocialProfile = {
   lud16: string | null;
   /** When we last resolved it, for TTL. */
   fetchedAt: number;
+  createdAt?: number;
 };
 
 /**
@@ -99,6 +100,7 @@ function fromEvent(event: NostrEvent): SocialProfile {
     nip05: entry.nip05 ?? null,
     lud16: entry.lud16 ?? null,
     fetchedAt: Date.now(),
+    createdAt: event.created_at,
   };
 }
 
@@ -158,6 +160,8 @@ export async function ensureSocialProfiles(pubkeys: readonly string[]): Promise<
       }
       for (const event of newest.values()) {
         if (owner !== generation) return;
+        const existing = getSocialProfile(event.pubkey);
+        if ((existing?.createdAt ?? 0) > event.created_at) continue;
         const profile = fromEvent(event);
         remember(profile);
         if (owner === generation) writeCache(profile);

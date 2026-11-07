@@ -10,8 +10,8 @@ Settings > Wallet includes device-local zap presets: ⚡ 21, 🔥 100,
 🚀 1,000 and 💎 10,000 sats by default. The base ⚡ amount can be
 changed; additional Unicode emoji presets can be added, edited or removed.
 Selecting a preset emoji pays immediately, including from the reaction picker.
-The explicit Zap menu action still opens the custom amount and optional message
-popup. Missing wallets or Lightning addresses produce feedback, never a free
+The desktop and mobile message Zap menu actions send the configured base
+amount immediately. Missing wallets or Lightning addresses produce feedback, never a free
 reaction in place of a payment.
 
 `/zap <npub|nprofile|hex|@mention>` opens that popup. Adding an amount,
@@ -272,3 +272,18 @@ per-server zap emojis, sat leaderboards and zap splits are tracked in
 ### Diagnosing a failed zap
 
 Unknown wallet/extension errors are shown as the provider supplied them instead of being replaced by the generic zap error; known error codes remain translated. Local development logs one `[zap]` attempt ID with connect, invoice, zap-signature, payment-provider and channel-marker stages. Logs contain only stage/status and recognized error codes, never invoices, signed events, account keys, comments or raw provider errors. Signing a zap request and approving a payment are separate operations; two of each for one attempt are not expected. No payment is automatically retried.
+
+## Recipient freshness and provider errors
+
+Every zap attempt revalidates the recipient kind 0 through the hub, bypassing
+the display cache and sharing concurrent lookups. Incomplete lookups stop the
+payment with a retryable error. The latest profile address is authoritative;
+a removed address never falls back to the address captured by a dialog.
+Opened profiles also revalidate on opening and window focus, at most once a
+minute per author, while keeping cached data visible.
+
+Invoice acquisition lives in `src/services/wallet/lnurl-zap.ts`. It checks
+provider amount limits before signing, respects callback comment limits, and
+preserves provider error reasons, including HTTP 200 error responses. The full
+comment stays in the signed request. Payment and uncertain-payment guards
+remain in `send-zap.ts`.

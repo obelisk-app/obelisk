@@ -9,6 +9,7 @@ const wallet = vi.hoisted(() => ({
 const bridge = vi.hoisted(() => ({ getBridgeImpl: vi.fn() }));
 
 vi.mock('@nostr-wot/wallet', () => wallet);
+vi.mock('@/services/wallet/lnurl-zap', () => ({ requestZapInvoice: wallet.requestZapInvoice }));
 vi.mock('@nostr-wot/data', () => ({ getDefaultRelays: () => ['wss://default.example', 'not-a-relay'] }));
 vi.mock('@/services/nostr-bridge', () => ({
   getBridgeImpl: bridge.getBridgeImpl,
@@ -64,7 +65,7 @@ beforeEach(() => {
     calls.push('publish');
     return { ...template, created_at: 1, id: 'marker', sig: '', pubkey: signer.pubkey };
   });
-  bridge.getBridgeImpl.mockReturnValue(fakeBridge({ myPubkey: signer.pubkey, myLoginMethod: 'nip07' }, { publishEvent }));
+  bridge.getBridgeImpl.mockReturnValue(fakeBridge({ myPubkey: signer.pubkey, myLoginMethod: 'nip07' }, { publishEvent, refreshUserMetadata: vi.fn(async () => ({ lud16: 'ana@example.com' } as never)) }));
 });
 
 afterEach(() => {
@@ -74,7 +75,7 @@ afterEach(() => {
 
 describe('checkZap', () => {
   it('reports the first missing piece, in the order the user can fix them', () => {
-    expect(checkZap(draft({ lud16: null, signer: null, amountSats: 0 }))).toEqual({ ok: false, reason: 'noAddress' });
+    expect(checkZap(draft({ lud16: null, signer: null, amountSats: 0 }))).toEqual({ ok: false, reason: 'noWallet' });
     wallet.isWebLNAvailable.mockReturnValue(false);
     expect(checkZap(draft({ signer: null, amountSats: 0 }))).toEqual({ ok: false, reason: 'noWallet' });
     wallet.isWebLNAvailable.mockReturnValue(true);
@@ -192,7 +193,7 @@ describe('shared zap payment guards', () => {
     await expect(sendZap(ready())).rejects.toMatchObject({ outcome: 'unknown' });
     await expect(sendZap(ready())).rejects.toMatchObject({ code: 'unconfirmed' });
     expect(wallet.requestZapInvoice).toHaveBeenCalledTimes(1);
-    bridge.getBridgeImpl.mockReturnValue(fakeBridge({ myPubkey: signer.pubkey, myLoginMethod: 'nip07' }, { publishEvent }));
+    bridge.getBridgeImpl.mockReturnValue(fakeBridge({ myPubkey: signer.pubkey, myLoginMethod: 'nip07' }, { publishEvent, refreshUserMetadata: vi.fn(async () => ({ lud16: 'ana@example.com' } as never)) }));
     await expect(sendZap(ready())).resolves.toEqual({ markerError: null });
   });
 
@@ -200,4 +201,35 @@ describe('shared zap payment guards', () => {
     expect(checkZap(draft({ recipient: { recipientPubkey: signer.pubkey, groupId: 'g' } }))).toMatchObject({ ok: false, reason: 'self' });
     expect(checkZap(draft({ amountSats: 1.5 }))).toMatchObject({ ok: false, reason: 'invalidAmount' });
   });
+});
+
+it('refreshes an outdated address before requesting the invoice', async () => {
+  bridge.getBridgeImpl().refreshUserMetadata.mockResolvedValue({ lud16: 'new@example.com' });
+  await sendZap(ready());
+  expect(wallet.requestZapInvoice.mock.calls.at(-1)?.[1].lud16).toBe('new@example.com');
+});
+
+it('never signs or pays when profile refresh is incomplete', async () => {
+  bridge.getBridgeImpl().refreshUserMetadata.mockRejectedValue(new CodedError('profile-lookup-timeout', 'timeout'));
+  await expect(sendZap(ready())).rejects.toMatchObject({ code: 'profile-lookup-timeout' });
+  expect(wallet.requestZapInvoice).not.toHaveBeenCalled();
+  expect(webln.sendPayment).not.toHaveBeenCalled();
+});
+
+it('does not resurrect an address removed by the latest profile', async () => {
+  bridge.getBridgeImpl().refreshUserMetadata.mockResolvedValue({ lud16: null });
+  await expect(sendZap(ready())).rejects.toMatchObject({ code: 'noAddress' });
+  expect(wallet.requestZapInvoice).not.toHaveBeenCalled();
+  expect(webln.sendPayment).not.toHaveBeenCalled();
+});
+
+it('stops an account change during profile refresh before requesting an invoice', async () => {
+  let finish!: (profile: unknown) => void;
+  bridge.getBridgeImpl().refreshUserMetadata.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  const pending = sendZap(ready());
+  bridge.getBridgeImpl.mockReturnValue(null);
+  finish({ lud16: 'new@example.com' });
+  await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+  expect(wallet.requestZapInvoice).not.toHaveBeenCalled();
+  expect(webln.sendPayment).not.toHaveBeenCalled();
 });

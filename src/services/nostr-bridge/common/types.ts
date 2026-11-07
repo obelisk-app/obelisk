@@ -145,6 +145,7 @@ export interface JsSearchResponse {
 }
 
 export interface JsUserMetadata {
+  readonly createdAt?: number;
   readonly pubkey: string;
   readonly name: string | null;
   readonly displayName: string | null;

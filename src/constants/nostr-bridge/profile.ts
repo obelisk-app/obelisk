@@ -40,3 +40,5 @@ export const PROFILE_LOOKUP_MAX_WAIT_MS = 3500;
  * `syncOwnProfileToActiveRelay` re-fetches on a cache miss.
  */
 export const PROFILE_SYNC_CACHE_LIMIT = 300;
+
+export const PROFILE_OPEN_REFRESH_MS = 60_000;

@@ -82,6 +82,7 @@ export const nostrActions = {
 
   setActiveGroup: async (groupId: string | null) =>
     (await getBridge()).setActiveGroup(groupId),
+  refreshUserMetadata: async (pubkey: string) => (await getBridge()).refreshUserMetadata(pubkey),
   ensureUserMetadata: async (pubkey: string) =>
     (await getBridge()).ensureUserMetadata(pubkey),
   searchMessages: async (opts: JsSearchOptions): Promise<JsSearchResponse> =>

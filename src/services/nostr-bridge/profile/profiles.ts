@@ -1,3 +1,5 @@
+import { ProfileRefresh } from './profile-refresh';
+import { parseProfileContent } from '@/schemas/identity/profile';
 import type { ProfileEditOptions } from '@/types/session/profile';
 /**
  * Profiles (kind 0): the batched lookup queue, the active-relay one-shot
@@ -83,6 +85,7 @@ export class ProfilesModule {
   private readonly requested = new BoundedMap<string, true>({ maxEntries: BOOKKEEPING_MAX, policy: 'fifo' });
   private readonly lookup: ProfileLookup;
   private readonly batch: ProfileBatcher;
+  private readonly refresher: ProfileRefresh;
   /**
    * View changes waiting for the next flush: a profile to show, or `null` to
    * drop one. A burst of kind 0 events (a member list, a relay replaying
@@ -118,12 +121,19 @@ export class ProfilesModule {
       ingest: (ev, cacheRelayScoped) => this.ingest(ev, { cacheRelayScoped }),
       lookupExternal: (authors) => this.lookupExternal(authors),
     });
+    this.refresher = new ProfileRefresh(ctx, () => this.lookup.lookupRelays(), (ev) => this.ingest(ev, { cacheRelayScoped: false }));
     this.own = new OwnProfileModule(ctx, {
       ingest: (ev) => this.ingest(ev, { cacheRelayScoped: false }),
       ingestRelayScoped: (ev) => this.ingest(ev, { cacheRelayScoped: true }),
       lookupRelays: () => this.lookup.lookupRelays(),
       publishSignedEventToRelays: (ev, relays) => deps.publishSignedEventToRelays(ev, relays),
     });
+  }
+
+  async refresh(pubkey: string): Promise<JsUserMetadata | null> {
+    await this.refresher.refresh(pubkey);
+    this.flushView();
+    return this.userMetadata.get()[pubkey] ?? null;
   }
 
   /** Cache occupancy, for tests and the status panel. */
@@ -189,9 +199,11 @@ export class ProfilesModule {
     const prevAt = this.cache.peek(ev.pubkey)?.createdAt ?? 0;
     if (ev.created_at <= prevAt) return;
     try {
-      const data = JSON.parse(ev.content) as Record<string, unknown>;
+      const data = parseProfileContent(ev.content);
+      if (!data) return;
       const meta: JsUserMetadata = {
         pubkey: ev.pubkey,
+        createdAt: ev.created_at,
         name: (data.name as string) ?? null,
         displayName: (data.display_name as string) ?? null,
         picture: (data.picture as string) ?? null,
@@ -202,10 +214,8 @@ export class ProfilesModule {
         website: (data.website as string) ?? null,
       };
       this.remember(ev.pubkey, meta, ev.created_at);
-      // Skip the write when the cached profile already matches: kind 0
-      // events are republished often (nip-05 verifier handshakes, profile
-      // editor saves with the same fields, multi-relay re-broadcast) and
-      // localStorage.setItem on a popular profile is a real cost.
+      // Persist the revision too: restoring an older timestamp could let a
+      // stale relay replay replace a newer profile after reload.
       if (opts.cacheRelayScoped !== false) {
         const relay = this.ctx.currentRelayUrl.get();
         const cached = cacheGet<{ meta: JsUserMetadata; createdAt: number }>(relay, KIND_METADATA, ev.pubkey);
@@ -225,8 +235,9 @@ export class ProfilesModule {
       if (!entry) continue;
       const { meta, createdAt } = entry.value;
       if ((this.cache.peek(pubkey)?.createdAt ?? 0) >= createdAt) continue;
-      this.cache.set(pubkey, { meta, createdAt });
-      this.queueView(pubkey, meta);
+      const revision = { ...meta, createdAt };
+      this.cache.set(pubkey, { meta: revision, createdAt });
+      this.queueView(pubkey, revision);
     }
   }
 

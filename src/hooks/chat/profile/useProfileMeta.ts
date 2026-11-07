@@ -1,5 +1,6 @@
 'use client';
 
+import { useProfileRefresh } from './useProfileRefresh';
 import { useEffect, useMemo } from 'react';
 import { nostrActions, useUserMetadata, type JsUserMetadata } from '@/services/nostr-bridge';
 import { stripEmpty } from '@/utils/identity/profile-labels';
@@ -11,9 +12,10 @@ import { stripEmpty } from '@/utils/identity/profile-labels';
  * the profile if it has not seen it.
  */
 export function useProfileMeta(pubkey: string, initialMeta: Partial<JsUserMetadata> | null) {
+  useProfileRefresh(pubkey);
   const live = useUserMetadata(pubkey);
   const meta = useMemo(
-    () => (initialMeta ? { ...initialMeta, ...stripEmpty(live) } : live),
+    () => (live?.createdAt ? live : initialMeta ? { ...initialMeta, ...stripEmpty(live) } : live),
     [initialMeta, live],
   );
 

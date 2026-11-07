@@ -7,6 +7,9 @@ import type { NavState } from '@/utils/shell/mobile/url-state';
 import { initialNav } from '@/constants/shell/mobile';
 import { useMobileNavActions } from '@/hooks/shell/mobile/nav/useMobileNavActions';
 
+const quickZap = vi.hoisted(() => vi.fn(async (_target: { messageId?: string; recipientPubkey: string; groupId: string; displayName: string }, _amount: number) => true));
+vi.mock('@/hooks/chat/zaps/useQuickZap', () => ({ useQuickZap: () => quickZap }));
+
 const ME = 'a'.repeat(64);
 const BOB = 'b'.repeat(64);
 
@@ -24,6 +27,7 @@ function harness(over: { nav?: NavState; dmOptInEnabled?: boolean } = {}) {
 }
 
 beforeEach(() => {
+  quickZap.mockClear();
   useChatStore.setState({ activeChannelId: 'old', isNearBottom: true });
   useDMStore.setState({ activeDMPubkey: 'old' });
   useMessageZapStore.setState({ target: null });
@@ -117,7 +121,7 @@ describe('useMobileNavActions: go and sheets', () => {
     h.actions.openZap({ id: 'mine', pubkey: ME, content: 'x' });
     expect(useMessageZapStore.getState().target).toBeNull();
     h.actions.openZap({ id: 'm2', pubkey: BOB, content: 'y' });
-    const target = useMessageZapStore.getState().target;
+    const target = quickZap.mock.calls[0]?.[0];
     expect(target).toMatchObject({ messageId: 'm2', recipientPubkey: BOB, groupId: 'g1' });
     expect(target?.displayName).toMatch(/^npub1/);
     expect(target?.displayName).not.toContain('bbbbbbbb');

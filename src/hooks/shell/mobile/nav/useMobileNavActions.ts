@@ -20,7 +20,8 @@ import type { JsGroup } from '@/services/nostr-bridge';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/chat/dm';
-import { useMessageZapStore } from '@/store/chat/message-zap';
+import { useQuickZap } from '@/hooks/chat/zaps/useQuickZap';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { type ScreenName, type NavState } from '@/utils/shell/mobile/url-state';
 import { initialNav, NAV_ORDER } from '@/constants/shell/mobile';
 
@@ -177,21 +178,22 @@ export function useMobileNavActions({
   const closeSheet = useCallback(() => {
     if (typeof window !== 'undefined') window.history.back();
   }, []);
-  const openSharedZap = useMessageZapStore((s) => s.open);
+  const quickZap = useQuickZap();
+  const { zapPresets } = usePreferences();
   const openZap = useCallback((msg: { id: string; pubkey: string; content: string }) => {
     const groupId = navRef.current.groupId;
     if (!groupId || msg.pubkey === myPubkey) return;
-    openSharedZap({
+    void quickZap({
       messageId: msg.id,
       recipientPubkey: msg.pubkey,
       recipientLud16: null,
       displayName: shortNpubLabel(msg.pubkey),
       groupId,
-    });
+    }, zapPresets[0].amountSats);
     if (navRef.current.screen === 'msg-actions') {
       closeSheet();
     }
-  }, [closeSheet, myPubkey, openSharedZap, navRef]);
+  }, [closeSheet, myPubkey, quickZap, zapPresets, navRef]);
   const backFromChannel = useCallback(() => {
     if (typeof window !== 'undefined') window.history.back();
   }, []);

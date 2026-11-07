@@ -1,5 +1,6 @@
 'use client';
 
+import { useProfileRefresh } from './useProfileRefresh';
 
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -22,6 +23,7 @@ import { usePopoverPlacement } from './usePopoverPlacement';
  * copy-npub actions.
  */
 export function useProfilePopover(pubkey: string, onClose: () => void) {
+  useProfileRefresh(pubkey);
   const t = useTranslations();
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
   const serverEmojis = useChatStore((s) => s.serverEmojis);

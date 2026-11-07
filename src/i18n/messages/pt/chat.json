@@ -269,7 +269,13 @@
     "unconfirmed": "Sua carteira não confirmou este zap. Confira sua carteira antes de enviar outro zap.",
     "sendNow": "Enviar {amount} sats agora",
     "unpaidReactions": "{count, plural, one {# reação sem pagamento} other {# reações sem pagamento}}",
-    "pending": "Já existe um pagamento pendente."
+    "pending": "Já existe um pagamento pendente.",
+    "resolveFailed": "Não foi possível resolver o endereço Lightning.",
+    "unsupported": "Este endereço não aceita zaps Nostr.",
+    "invalidMetadata": "O provedor Lightning retornou limites de pagamento inválidos.",
+    "amountRange": "O valor deve estar entre {min} e {max} sats.",
+    "callbackFailed": "O provedor Lightning retornou HTTP {status}.",
+    "noInvoice": "O provedor Lightning não retornou uma fatura."
   },
   "profilePopover": {
     "zap": "Zap",

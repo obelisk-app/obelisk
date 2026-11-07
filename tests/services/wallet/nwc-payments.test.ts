@@ -11,6 +11,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const sdk = vi.hoisted(() => ({ requestZapInvoice: vi.fn() }));
+vi.mock('@/services/wallet/lnurl-zap', () => ({ requestZapInvoice: sdk.requestZapInvoice }));
 vi.mock('@nostr-wot/wallet', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@nostr-wot/wallet')>()),
   // The LNURL round trip is the only part of a zap that is not the wallet's.
@@ -45,7 +46,7 @@ let webln: {
 };
 
 beforeEach(async () => {
-  registerBridge(fakeBridge({ myPubkey: USER, myLoginMethod: 'nip07' }, { publishEvent: vi.fn(async () => { throw new Error('relay unavailable'); }) }));
+  registerBridge(fakeBridge({ myPubkey: USER, myLoginMethod: 'nip07' }, { publishEvent: vi.fn(async () => { throw new Error('relay unavailable'); }), refreshUserMetadata: async () => ({ lud16: 'bob@example.com' } as never) }));
   vi.stubGlobal('indexedDB', new IDBFactory());
   window.localStorage.clear();
   resetRelayHubForTests();
@@ -147,7 +148,7 @@ describe('zapping over NWC', () => {
   };
 
   beforeEach(() => {
-    registerBridge(fakeBridge({ myPubkey: USER, myLoginMethod: 'nip07' }, { publishEvent: vi.fn(async () => { throw new Error('relay unavailable'); }) }));
+    registerBridge(fakeBridge({ myPubkey: USER, myLoginMethod: 'nip07' }, { publishEvent: vi.fn(async () => { throw new Error('relay unavailable'); }), refreshUserMetadata: async () => ({ lud16: 'bob@example.com' } as never) }));
     sdk.requestZapInvoice.mockResolvedValue({ invoice: 'lnbc1zap', zapRequest: { id: 'zr' } });
   });
 

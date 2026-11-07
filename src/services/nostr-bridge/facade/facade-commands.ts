@@ -130,6 +130,10 @@ export abstract class BridgeCommands extends BridgeReads {
     return this.m.metadata.editGroupMetadata(opts);
   }
 
+  refreshUserMetadata(pubkey: string) {
+    return this.m.profiles.refresh(pubkey);
+  }
+
   editUserMetadata(opts: EditUserMetadataOptions, options: ProfileEditOptions = {}): Promise<void> {
     return this.m.profiles.edit(opts, options);
   }
