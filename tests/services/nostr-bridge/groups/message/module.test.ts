@@ -24,8 +24,9 @@ function setup() {
   const queries: Filter[] = [];
   const published: Array<{ kind: number; tags: string[][]; content: string; created_at: number }> = [];
   let publishFails = false;
+  const session = { pubKeyHex: ME, loginMethod: 'nsec' as const, relayUrl: RELAY };
   const ctx: MessagesContext = {
-    session: () => ({ pubKeyHex: ME, loginMethod: 'nsec', relayUrl: RELAY }),
+    session: () => session,
     relays: () => [RELAY],
     currentRelayUrl: new StateStore(RELAY),
     relayAccess: new StateStore<Record<string, RelayAccessState>>({ [RELAY]: 'ok' }),
