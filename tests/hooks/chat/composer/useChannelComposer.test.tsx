@@ -46,6 +46,7 @@ vi.mock('@/services/nostr-bridge', async () => {
     useAdmins: () => admins,
     useMembers: () => members,
     useGroups: () => [groupFixture({ id: 'g' })],
+    useRelayPeople: () => [{ pubkey: ALICE, displayName: 'Alice', role: 'member' }],
     useMembersByGroup: () => ({ g: [ALICE] }),
     useAdminsByGroup: () => ({}),
     useGroupCreators: () => ({}),

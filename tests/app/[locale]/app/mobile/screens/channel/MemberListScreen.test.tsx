@@ -5,6 +5,7 @@ import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { useChatStore } from '@/store/chat';
 import { presenceActivityKey } from '@/utils/chat/members/presence';
 import { MemberListScreen } from '@/app/[locale]/app/mobile/screens/channel/MemberListScreen';
+import { shortNpubLabel } from '@/utils/identity/short-npub';
 import { group } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 
 vi.mock('@/hooks/chat/members/useNostrPresence', async (orig) => ({
@@ -50,7 +51,7 @@ describe('MemberListScreen (phone) presence and states', () => {
 
   it('opens a profile from a row and goes back from the header', () => {
     const { openProfile, back } = mount();
-    fireEvent.click(document.querySelectorAll('.member-row')[1]);
+    fireEvent.click(screen.getAllByText(shortNpubLabel(B))[0].closest('button')!);
     expect(openProfile).toHaveBeenCalledWith(B);
     fireEvent.click(document.querySelector('.chat-title-block button')!);
     expect(back).toHaveBeenCalled();

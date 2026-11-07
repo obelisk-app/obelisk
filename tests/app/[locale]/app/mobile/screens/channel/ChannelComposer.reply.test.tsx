@@ -21,7 +21,7 @@ function mount(props: Partial<React.ComponentProps<typeof ChannelComposer>> = {}
       groups: [GROUP],
       membersByGroup: { g: [ALICE] },
       userMetadata: { [ALICE]: { name: 'alice', displayName: 'Alice' } as never },
-    }),
+    }, { ensureUserMetadata: async () => {} }),
   );
   return { ref, setReplyingTo };
 }
