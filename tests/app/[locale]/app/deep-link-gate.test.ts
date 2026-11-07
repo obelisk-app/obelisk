@@ -35,8 +35,11 @@ describe('deep-link relay gate', () => {
     expect(read('../../../hooks/shell/desktop/useDesktopShell.ts')).toContain('useDesktopNavigation(relay');
     const shell = read('../../../hooks/shell/desktop/useDesktopNavigation.ts');
     expect(shell).toContain("import { useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink'");
-    const effect = deepLinkEffect(shell, "const r = params.get('relay')", 'viewForNav(source)');
-    expect(effect).toContain('switchFromDeepLink(r)');
+    const effect = deepLinkEffect(shell, "const r = params.get('relay')", '}, []);');
+    expect(effect).toContain('switchFromDeepLink(r).then(');
+    expect(effect).toContain("apply(outcome === 'switched' || outcome === 'unchanged')");
+    expect(effect).toContain("setView(allowed ? next : { kind: 'empty' })");
+    expect(effect).toContain('() => apply(false)');
     expect(effect).not.toContain('switchRelay');
   });
 
@@ -47,10 +50,15 @@ describe('deep-link relay gate', () => {
     expect(read('../../../hooks/shell/mobile/nav/usePhoneShell.ts')).toContain('useMobileHistorySync(');
     const shell = read('../../../hooks/shell/mobile/nav/useMobileHistorySync.ts');
     expect(shell).toContain("from '@/hooks/relay/deep-link/useRelayDeepLink'");
-    const effect = deepLinkEffect(shell, 'parseUrl(window.location.search)', 'buildSeedHistory(');
-    expect(effect).toContain('switchFromDeepLink(relay)');
+    const effect = deepLinkEffect(shell, 'parseUrl(window.location.search)', '}, [bridge, isLoggedIn');
+    expect(effect).toContain('switchFromDeepLink(relay).then(');
+    expect(effect).toContain("apply(outcome === 'switched' || outcome === 'unchanged')");
+    expect(effect).toContain('() => apply(false)');
     expect(effect).not.toContain('switchRelay');
-    // A relay still behind the dialog must not be what a refresh reopens.
-    expect(effect).toContain("classifyDeepLinkRelay(relay, currentRelayUrl, configuredRelays) !== 'unknown'");
+    // Only the gate's successful outcome restores the requested destination.
+    // Seed history from the relay actually selected by the bridge.
+    expect(effect).toContain('const target = allowed ? parsed : initialNav');
+    expect(effect).toContain('bridge?.currentRelayUrl.get()');
+    expect(effect).toContain('buildSeedHistory(target, seedRelay)');
   });
 });
