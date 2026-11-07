@@ -17,7 +17,6 @@ export function ReplyPreviewRow({
   const t = useTranslations();
   const meta = useProfile(parent.pubkey);
   const name = displayNameFor(parent.pubkey, meta);
-  const preview = parent.content.replace(/\s+/g, ' ').slice(0, 120);
   return (
     <Button
       variant="bare"
@@ -28,7 +27,7 @@ export function ReplyPreviewRow({
     >
       <span className="text-lc-green">↩</span>
       <span className="font-semibold text-lc-white/80">{name}</span>
-      <span className="truncate text-lc-muted"><MentionText content={preview} /></span>
+      <span className="truncate text-lc-muted"><MentionText content={parent.content} max={120} /></span>
     </Button>
   );
 }

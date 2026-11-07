@@ -15,6 +15,7 @@
  * Our own events never ping.
  */
 import type { MentionReason } from '@/store/notifications';
+import { messagePreviewSegments } from '@/utils/message-text/preview';
 import { translate } from '@/i18n/runtime';
 
 export interface ClassifyInput {
@@ -58,10 +59,9 @@ export function groupPingTitle(
 }
 
 /** Strip `nostr:` URIs down to something readable for a popup body. */
-export function previewText(content: string, max = 140): string {
-  const flat = content
-    .replace(/nostr:(npub|nprofile|note|nevent|naddr)1[02-9ac-hj-np-z]+/gi, '@…')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+export function previewText(content: string, max = 140, nameFor?: (pubkey: string) => string): string {
+  return messagePreviewSegments(content, {
+    image: translate('common.preview.image'), video: translate('common.preview.video'),
+    audio: translate('common.preview.audio'), file: translate('common.preview.file'),
+  }, max).map((segment) => segment.type === 'text' ? segment.text.replace(/nostr:(npub|nprofile|note|nevent|naddr)1[02-9ac-hj-np-z]+/gi, '@…') : `@${nameFor?.(segment.pubkey) ?? segment.displayName}`).join('');
 }

@@ -72,7 +72,7 @@ describe('ChatComposer around the input', () => {
     );
     const bar = screen.getByText(/Replying to/);
     expect(bar.querySelector('.font-semibold')?.textContent).toBe(displayNameFor(COMPOSER_ALICE, null));
-    expect(screen.getByText('x'.repeat(80))).toBeInTheDocument();
+    expect(screen.getByText('x'.repeat(79) + '…')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel reply' }));
     expect(setReplyingTo).toHaveBeenCalledWith(null);
   });

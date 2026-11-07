@@ -89,5 +89,11 @@
     "confirmBody": "Seu link de convite é para {host}, um relay que você não adicionou. Conectar envia a ele sua chave pública e permite que veja seu endereço IP. Você também pode ficar onde está.",
     "switchFailed": "Não foi possível abrir {relay}. Abra o link de convite de novo para tentar outra vez.",
     "redeemFailed": "Ainda não foi possível entrar em {relay} com o seu convite. Vamos tentar de novo na próxima vez que você abrir o app."
+  },
+  "preview": {
+    "image": "Imagem",
+    "video": "Vídeo",
+    "audio": "Áudio",
+    "file": "Arquivo"
   }
 }

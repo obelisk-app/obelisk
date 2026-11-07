@@ -41,7 +41,7 @@ export const ChannelComposer = forwardRef<ComposerHandle, {
             <span className="composer-reply-label">
               {t('mobile.channel.replyingTo')} <UserName pubkey={replyingTo.pubkey} className="composer-reply-author" />
             </span>
-            <span className="composer-reply-text"><MentionText content={replyingTo.content.slice(0, 80)} /></span>
+            <span className="composer-reply-text"><MentionText content={replyingTo.content} max={80} /></span>
           </div>
           <Button
             variant="bare"

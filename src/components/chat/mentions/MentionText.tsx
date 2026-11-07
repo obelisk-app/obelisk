@@ -1,4 +1,4 @@
-import { parseMentions } from '@/utils/message-text/mentions';
+import { useMentionPreview } from '@/hooks/chat/mentions/useMentionPreview';
 import { Fragment } from 'react';
 import { MentionName } from './MentionName';
 
@@ -8,8 +8,9 @@ import { MentionName } from './MentionName';
  * message (notification cards, reply previews) so mentions don't surface as
  * raw npubs.
  */
-export function MentionText({ content }: { content: string }) {
-  return <>{parseMentions(content, []).map((segment, i) => (
+export function MentionText({ content, max = 140 }: { content: string; max?: number }) {
+  const segments = useMentionPreview(content, max);
+  return <>{segments.map((segment, i) => (
     <Fragment key={i}>
       {segment.type === 'text' ? segment.text : <MentionName pubkey={segment.pubkey} />}
     </Fragment>

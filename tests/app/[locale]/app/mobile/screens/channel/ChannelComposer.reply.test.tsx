@@ -32,7 +32,7 @@ describe('ChannelComposer (mobile) reply and handle', () => {
     mount({ replyingTo: message({ id: 'p', pubkey: ALICE, content: long }) });
     const preview = screen.getByTestId('mobile-reply-preview');
     expect(preview).toHaveTextContent('Alice');
-    expect(preview.querySelector('.composer-reply-text')?.textContent).toBe('x'.repeat(80));
+    expect(preview.querySelector('.composer-reply-text')?.textContent).toBe('x'.repeat(79) + '…');
   });
 
   it('cancels the reply from its close button', () => {

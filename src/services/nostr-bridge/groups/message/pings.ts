@@ -170,7 +170,7 @@ export class PingsModule {
         relay,
         channelId,
         senderPubkey: ev.pubkey,
-        preview: ev.content.slice(0, 280),
+        preview: ev.content,
         createdAt: ev.created_at * 1000,
         reason,
       });
@@ -182,7 +182,7 @@ export class PingsModule {
         id: ev.id,
         createdAt: ev.created_at * 1000,
         title: groupPingTitle(reason, this.deps.displayNameFor(ev.pubkey), where),
-        body: previewText(ev.content),
+        body: previewText(ev.content, 140, this.deps.displayNameFor),
       });
       return;
     }
@@ -194,7 +194,7 @@ export class PingsModule {
       title: where
         ? translate('common.ping.postedIn', { sender: this.deps.displayNameFor(ev.pubkey), where })
         : this.deps.displayNameFor(ev.pubkey),
-      body: previewText(ev.content),
+      body: previewText(ev.content, 140, this.deps.displayNameFor),
     });
   }
 }
