@@ -1,3 +1,4 @@
+import { normalizeZapPresets } from './zap-presets';
 import type { NotificationRingtone, CallsFrom, CallIpProtection, Preferences } from '@/types/preferences/preferences';
 import { parseRelayUrl } from '@nostr-wot/relay';
 /**
@@ -15,6 +16,7 @@ export function normalizePreferences(value: unknown): Preferences {
   const raw: Record<string, unknown> = value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown> : {};
   return {
+    zapPresets: normalizeZapPresets(raw.zapPresets),
     showActivityIndicator: typeof raw.showActivityIndicator === 'boolean'
       ? raw.showActivityIndicator
       : DEFAULTS.showActivityIndicator,
@@ -67,6 +69,7 @@ export function normalizeCallRelays(value: unknown): string[] {
 }
 
 export function normalizePreferenceValue<K extends keyof Preferences>(key: K, value: Preferences[K]): Preferences[K] {
+  if (key === 'zapPresets') return normalizeZapPresets(value) as Preferences[K];
   if (key === 'socialRelays') {
     return normalizeSocialRelays(value) as Preferences[K];
   }

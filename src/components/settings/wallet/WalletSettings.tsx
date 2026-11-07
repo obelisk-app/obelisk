@@ -6,6 +6,7 @@
  * `useWalletSettings`; the rule for which wallet pays is
  * `src/services/wallet/wallet.ts`. See docs/features/bitcoin-zaps-nwc.md.
  */
+import ZapPresets from './ZapPresets';
 import Section from '@/components/ui/layout/Section';
 import { useTranslations } from 'next-intl';
 import Text from '@/components/ui/layout/Text';
@@ -52,6 +53,7 @@ export default function WalletSettings({ mobile = false }: { mobile?: boolean })
         </Text>
       )}
       <Text as="p" size="xs" tone="muted">{t('settings.wallet.precedence')}</Text>
+      <ZapPresets />
     </>
   );
 

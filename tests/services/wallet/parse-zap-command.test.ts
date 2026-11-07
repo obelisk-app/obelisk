@@ -149,3 +149,29 @@ describe('parseZapCommand', () => {
     expect(r.token).toBe('nobody');
   });
 });
+
+describe('zap command payment intent', () => {
+  const parse = (args: string) => parseZapCommand(`/zap ${args}`, 'group-1', [], MY_PUBKEY, null);
+  it('opens the popup for a recipient alone', () => {
+    expect(parse(RECIPIENT_NPUB)).toMatchObject({ ok: true, immediate: false, comment: '' });
+  });
+  it('pays a recipient and amount immediately with an optional message', () => {
+    expect(parse(`${RECIPIENT_NPUB} 21`)).toMatchObject({ ok: true, immediate: true, comment: '', target: { defaultAmountSats: 21 } });
+    expect(parse('@Dum 100 thanks for the 21 tips')).toMatchObject({ ok: true, immediate: true, comment: 'thanks for the 21 tips', target: { defaultAmountSats: 100 } });
+  });
+  it('rejects explicitly invalid amounts rather than substituting a default', () => {
+    for (const amount of ['0', '-21', '1.5', '1e3', '21sats', 'Infinity', 'NaN', '9007199254740991']) {
+      expect(parse(`${RECIPIENT_NPUB} ${amount}`)).toMatchObject({ ok: false, error: 'invalid' });
+    }
+  });
+  it('does not mistake an all-digit hex public key for an amount', () => {
+    expect(parse('1'.repeat(64))).toMatchObject({ ok: true, immediate: false, target: { recipientPubkey: '1'.repeat(64) } });
+  });
+});
+
+it('preserves complete multiword display names that contain numbers', () => {
+  bridgeState.metadata[RECIPIENT_HEX] = { displayName: 'Agent 47' };
+  const parse = (args: string) => parseZapCommand(`/zap ${args}`, 'group-1', [], MY_PUBKEY, null);
+  expect(parse('@Agent 47')).toMatchObject({ ok: true, immediate: false });
+  expect(parse('@Agent 47 21 thanks')).toMatchObject({ ok: true, immediate: true, comment: 'thanks', target: { defaultAmountSats: 21 } });
+});

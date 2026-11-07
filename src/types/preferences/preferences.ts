@@ -12,7 +12,10 @@ export type CallsFrom = 'contacts' | 'anyone';
  */
 export type CallIpProtection = 'auto' | 'always' | 'never';
 
+export interface ZapPreset { emoji: string; amountSats: number }
+
 export interface Preferences {
+  zapPresets: ZapPreset[];
   showActivityIndicator: boolean;
   developerRelayDebug: boolean;
   directMessagesEnabled: boolean;

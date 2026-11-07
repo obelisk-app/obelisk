@@ -289,7 +289,7 @@ describe('nostr-bridge', () => {
     const cached = cacheGet<Record<string, { emoji: string }[]>>(
       impl.currentRelayUrl.get(),
       7,
-      groupId,
+      groupId + '/zap-markers-v1',
     );
     expect(cached).toBeTruthy();
     expect(cached!.value['tgt-1']).toBeDefined();
@@ -298,7 +298,7 @@ describe('nostr-bridge', () => {
     // Now wipe in-memory state and verify the seed re-populates from cache.
     impl.reactionsByGroup.set({});
     // Write a sentinel cache value so we can prove the seed read it.
-    cacheSet(impl.currentRelayUrl.get(), 7, groupId, {
+    cacheSet(impl.currentRelayUrl.get(), 7, groupId + '/zap-markers-v1', {
       'tgt-2': [{ id: 'r2', pubkey: pk, emoji: '👀', targetEventId: 'tgt-2', createdAt: 1 }],
     });
     await bridge.switchRelay(impl.currentRelayUrl.get());

@@ -1,5 +1,7 @@
 'use client';
 
+import UnifiedZapPill from '@/components/chat/zaps/UnifiedZapPill';
+import type { MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import Button from '@/components/ui/buttons/Button';
 import { avatarInitials } from '@/utils/identity/display-name';
 import { memo } from 'react';
@@ -30,11 +32,13 @@ export const ChannelMessage = memo(function ChannelMessage({
   isAdmin,
   groupId,
   reactions,
+  zapTotal = null,
   onLongPress,
   onAvatar,
 }: {
   msg: JsMessage;
   parent?: JsMessage | null;
+  zapTotal?: MessageZapTotal | null;
   myPubkey: string | null;
   isAdmin?: boolean;
   groupId: string;
@@ -43,6 +47,7 @@ export const ChannelMessage = memo(function ChannelMessage({
     pubkey: string;
     emoji: string;
     customEmojis?: Readonly<Record<string, string>>;
+    zapMarker?: boolean;
   }>;
   onLongPress: (message: JsMessage) => void;
   onAvatar: (pubkey: string) => void;
@@ -122,6 +127,7 @@ export const ChannelMessage = memo(function ChannelMessage({
             </Button>
           </div>
         )}
+        <UnifiedZapPill message={msg} groupId={groupId} reactions={reactions} total={zapTotal} isAdmin={isAdmin} />
         {vm.grouped.length > 0 && (
           <div className="reactions">
             {vm.grouped.map((r) => (

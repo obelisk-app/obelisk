@@ -64,6 +64,7 @@ export function ChannelScreen({
             messagesStatus={vm.messagesStatus}
             messagesById={vm.messagesById}
             reactions={vm.reactions}
+            zapTotals={vm.zapTotals}
             myPubkey={vm.myPubkey}
             isAdmin={vm.isChannelAdmin}
             groupId={groupId}

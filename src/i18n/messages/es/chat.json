@@ -266,7 +266,10 @@
     "noBridge": "La app no estaba conectada al relay.",
     "failed": "El zap no se pudo enviar.",
     "markerRejected": "El relay no la aceptó.",
-    "unconfirmed": "Tu billetera no confirmó este zap. Revisá tu billetera antes de volver a hacer zap."
+    "unconfirmed": "Tu billetera no confirmó este zap. Revisá tu billetera antes de volver a hacer zap.",
+    "sendNow": "Enviar {amount} sats ahora",
+    "unpaidReactions": "{count, plural, one {# reacción sin pago} other {# reacciones sin pago}}",
+    "pending": "Ya hay un pago pendiente."
   },
   "profilePopover": {
     "zap": "Zap",
@@ -291,7 +294,8 @@
     "zap": "Mandale sats a alguien de este canal",
     "zapUser": "A quién hacerle el zap (mención, npub o nombre)",
     "zapAmount": "Monto en sats",
-    "play": "Jugá en este canal: {games}"
+    "play": "Jugá en este canal: {games}",
+    "zapMessage": "Mensaje opcional después del monto"
   },
   "channelLink": {
     "publication": "Publicación en #{channel}",

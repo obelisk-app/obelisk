@@ -4,6 +4,7 @@
  * (round 4 plan, step 13). Moderation owns the tombstones; this module asks
  * it before ingesting and removes what it says is gone (`removeDeleted`).
  */
+import { zapReactionEntry } from '@/utils/wallet/zap-events';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { KIND_EVENT_DELETION, KIND_REACTION } from '@/constants/nostr/nip-kinds';
 import { customEmojiMapFromTags } from '@/utils/media/tags/custom-emoji-tags';
@@ -15,6 +16,8 @@ import type { JsReaction } from '../../common/types';
 
 /** Reactions kept on disk per channel, oldest dropped first. */
 const REACTION_CACHE_LIMIT = 500;
+/** Old cache rows did not distinguish paid markers from unpaid reactions. */
+const REACTION_CACHE_SUFFIX = '/zap-markers-v1';
 /** How long a burst of ingests waits before one localStorage write; see the messages flush. */
 const CACHE_FLUSH_DELAY_MS = 200;
 
@@ -130,6 +133,7 @@ export class ReactionsModule {
     if (this.deps.isModerated(groupId, targetEventId)) return;
     const reaction: JsReaction = {
       id: ev.id,
+      zapMarker: !!zapReactionEntry(ev, [targetEventId]),
       pubkey: ev.pubkey,
       emoji: ev.content || '+',
       customEmojis: customEmojiMapFromTags(ev.tags),
@@ -140,9 +144,10 @@ export class ReactionsModule {
     this.reactionsByGroup.update((all) => {
       const forGroup = { ...(all[groupId] ?? {}) };
       const existing = forGroup[targetEventId] ?? [];
-      if (existing.some((r) => r.id === reaction.id)) return all;
+      const previous = existing.find((r) => r.id === reaction.id);
+      if (previous && previous.zapMarker === reaction.zapMarker) return all;
       changed = true;
-      forGroup[targetEventId] = [...existing, reaction];
+      forGroup[targetEventId] = [...existing.filter((r) => r.id !== reaction.id), reaction];
       return { ...all, [groupId]: forGroup };
     });
     // Persist reactions so emoji badges paint instantly on cold load, same
@@ -214,13 +219,13 @@ export class ReactionsModule {
     if (!this.ctx.session()) return;
     const byTarget = this.reactionsByGroup.get()[groupId];
     if (!byTarget) {
-      cacheDelete(this.ctx.currentRelayUrl.get(), KIND_REACTION, groupId);
+      cacheDelete(this.ctx.currentRelayUrl.get(), KIND_REACTION, groupId + REACTION_CACHE_SUFFIX);
       return;
     }
     let total = 0;
     for (const arr of Object.values(byTarget)) total += arr.length;
     if (total === 0) {
-      cacheDelete(this.ctx.currentRelayUrl.get(), KIND_REACTION, groupId);
+      cacheDelete(this.ctx.currentRelayUrl.get(), KIND_REACTION, groupId + REACTION_CACHE_SUFFIX);
       return;
     }
     let toCache: Record<string, JsReaction[]> = byTarget;
@@ -236,7 +241,7 @@ export class ReactionsModule {
       }
       toCache = regrouped;
     }
-    cacheSet(this.ctx.currentRelayUrl.get(), KIND_REACTION, groupId, toCache);
+    cacheSet(this.ctx.currentRelayUrl.get(), KIND_REACTION, groupId + REACTION_CACHE_SUFFIX, toCache);
   }
 
   /** Drop every pending flush: a debounce armed under the previous relay must not write under the new key. */
@@ -249,10 +254,12 @@ export class ReactionsModule {
   seedFromCache(relay: string, hiddenGroupIds: ReadonlySet<string>, idsFor: (kind: number) => string[]): void {
     const cachedReactions: Record<string, Record<string, JsReaction[]>> = {};
     const currentReactions = this.reactionsByGroup.get();
-    for (const groupId of idsFor(KIND_REACTION)) {
+    for (const cacheId of idsFor(KIND_REACTION)) {
+      if (!cacheId.endsWith(REACTION_CACHE_SUFFIX)) continue;
+      const groupId = cacheId.slice(0, -REACTION_CACHE_SUFFIX.length);
       if (hiddenGroupIds.has(groupId)) continue;
       if (currentReactions[groupId]) continue;
-      const entry = cacheGet<Record<string, JsReaction[]>>(relay, KIND_REACTION, groupId);
+      const entry = cacheGet<Record<string, JsReaction[]>>(relay, KIND_REACTION, groupId + REACTION_CACHE_SUFFIX);
       if (entry) cachedReactions[groupId] = entry.value;
     }
     if (Object.keys(cachedReactions).length > 0) {

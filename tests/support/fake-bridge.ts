@@ -132,6 +132,8 @@ function reads(s: FakeStores) {
     subscribeActiveCallByChannel: (cb) => s.activeCallByChannel.subscribe(cb),
     subscribeDmCallMessages: () => () => {},
     getPublicKey: () => s.myPubkey.get(),
+    getNipSigner: () => null,
+    subscribeFilterWatched: () => () => {},
     getSessionGeneration: () => 0,
     captureSessionGuard: () => () => {},
     displayNameFor: (pk) => {

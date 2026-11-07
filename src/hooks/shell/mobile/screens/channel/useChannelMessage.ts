@@ -45,7 +45,7 @@ export function useChannelMessage({
   return {
     meta,
     name: displayNameFor(msg.pubkey, meta),
-    grouped,
+    grouped: grouped.filter((r) => r.emoji.replace(/\uFE0F/g, '') !== '⚡'),
     /** An admin's tap removes the reaction for everyone; anyone else's adds or takes back their own. */
     toggleReaction: (r: GroupedReaction) =>
       void toggle(r.emoji, r.customEmojis, r.myReactionId, isAdmin ? r.reactionIds : undefined),

@@ -64,5 +64,5 @@ export function quickReactionSlots(
   quick: ReadonlyArray<RecentEmoji>,
   myReactedEmojis: ReadonlySet<string>,
 ): QuickReactionSlot[] {
-  return quick.map((emoji) => ({ emoji, mine: myReactedEmojis.has(emoji.char) }));
+  return quick.map((emoji) => ({ emoji, mine: !('amountSats' in emoji) && myReactedEmojis.has(emoji.char) }));
 }

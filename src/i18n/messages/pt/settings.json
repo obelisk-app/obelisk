@@ -337,6 +337,15 @@
       "nwc": "Esta carteira conectada",
       "webln": "Sua extensão do navegador (WebLN)",
       "none": "Nenhuma carteira ainda"
+    },
+    "presets": {
+      "title": "Valores de zap",
+      "intro": "Selecionar um destes emojis paga imediatamente. Todos os zaps compartilham um total.",
+      "emoji": "Emoji",
+      "amount": "Valor (sats)",
+      "add": "Adicionar valor",
+      "invalid": "Use emojis únicos e valores inteiros positivos. O primeiro deve ser ⚡.",
+      "details": "Detalhes de zaps e reações"
     }
   },
   "localData": {

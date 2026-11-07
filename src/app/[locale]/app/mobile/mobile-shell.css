@@ -3509,11 +3509,15 @@
 }
 .obelisk-mobile .ma-quick-reactions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   justify-content: space-between;
   padding: 6px 4px;
   margin: 4px 0 4px;
 }
 .obelisk-mobile .ma-quick-react {
+  flex-direction: column;
+  gap: 2px;
   width: 42px;
   height: 42px;
   background: var(--app-surface);

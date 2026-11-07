@@ -157,6 +157,7 @@ export interface JsUserMetadata {
 }
 
 export interface JsReaction {
+  readonly zapMarker?: boolean;
   readonly id: string;
   readonly pubkey: string;
   readonly emoji: string;

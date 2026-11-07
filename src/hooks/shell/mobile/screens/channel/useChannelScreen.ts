@@ -1,3 +1,4 @@
+import { useMessageZaps } from '@/hooks/chat/zaps/useMessageZaps';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useAdmins, useCurrentRelayUrl, useGroupById, useGroups, useMessages, useMessagesStatus, useReactions, type JsMessage } from '@/services/nostr-bridge';
@@ -40,6 +41,8 @@ export function useChannelScreen({ groupId, openMsgActions, openProfile }: {
   const groups = useGroups();
   const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
   const messages = useMessages(groupId);
+  const zapIds = useMemo(() => messages.map((m) => m.id), [messages]);
+  const zapTotals = useMessageZaps(zapIds);
   // Reply parents resolved once per batch, so a row's `parent` prop is the
   // same object across renders and the memoized rows stay quiet.
   const messagesById = useMemo(() => new Map(messages.map((m) => [m.id, m] as const)), [messages]);
@@ -85,6 +88,7 @@ export function useChannelScreen({ groupId, openMsgActions, openProfile }: {
     messagesById,
     messagesStatus,
     reactions,
+    zapTotals,
     myPubkey,
     isChannelAdmin,
     timeline,

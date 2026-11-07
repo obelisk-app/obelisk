@@ -3,7 +3,7 @@
 import { useId } from 'react';
 import type { ZapTarget } from '@/store/chat/message-zap';
 import { useUserMetadata } from '@/services/nostr-bridge';
-import { DEFAULT_ZAP_AMOUNT_SATS } from '@/constants/wallet/zap';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { useForm } from '@/hooks/common/useForm';
 import { useSendZap } from './useSendZap';
 
@@ -17,17 +17,19 @@ import { useSendZap } from './useSendZap';
  * than the form's. A sent zap closes the dialog.
  */
 export function useMessageZapForm(target: ZapTarget, close: () => void) {
+  const { zapPresets } = usePreferences();
   const amountId = useId();
   const commentId = useId();
   const meta = useUserMetadata(target.recipientPubkey);
   const lud16 = meta?.lud16 ?? target.recipientLud16 ?? null;
   const displayName = meta?.displayName || meta?.name || target.displayName;
   const form = useForm({
-    initial: () => ({ amount: target.defaultAmountSats ?? DEFAULT_ZAP_AMOUNT_SATS, comment: '' }),
+    initial: () => ({ amount: target.defaultAmountSats ?? zapPresets[0].amountSats, comment: '' }),
     submit: () => zap.send(),
   });
   const zap = useSendZap({ recipient: target, amountSats: form.values.amount, comment: form.values.comment, lud16, displayName, onSent: close });
   return {
+    quickAmounts: zapPresets.map((p) => p.amountSats),
     amountId,
     commentId,
     amount: form.values.amount,
@@ -39,6 +41,6 @@ export function useMessageZapForm(target: ZapTarget, close: () => void) {
     error: zap.error,
     canSend: !zap.busy && !zap.unconfirmed && !!form.values.amount,
     setAmount: (value: number) => form.set('amount', value),
-    setAmountText: (value: string) => form.set('amount', parseInt(value, 10) || 0),
+    setAmountText: (value: string) => form.set('amount', Number(value) || 0),
   };
 }

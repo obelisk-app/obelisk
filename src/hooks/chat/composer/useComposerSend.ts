@@ -1,3 +1,4 @@
+import { useQuickZap } from '@/hooks/chat/zaps/useQuickZap';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
 import { nostrActions, useAdmins, useMembers, useRelayAccess, type JsGroup, type JsMessage } from '@/services/nostr-bridge';
@@ -59,6 +60,7 @@ export function useComposerSend({
 }: ComposerSendOptions): (event?: FormEvent) => Promise<void> {
   const t = useTranslations();
   const myPubkey = useMyPubkey();
+  const quickZap = useQuickZap();
   const relayAccess = useRelayAccess(relay || null);
   const admins = useAdmins(groupId);
   const memberPubkeys = useMembers(groupId);
@@ -72,10 +74,19 @@ export function useComposerSend({
     //   /zap                -> reply target (or last channel msg from someone else)
     //   /zap 100            -> same target, with amount preset
     //   /zap <npub|hex|@name> [amount] -> that channel member
-    if (/^\/zap(\s|$)/.test(content)) {
-      const parsed = parseZapCommand(content, groupId, messages, myPubkey, replyingTo);
+    if (/^\/zap(\s|$)/i.test(content)) {
+      const parsed = parseZapCommand(resolveDraftMentions(content, state.draftMentions), groupId, messages, myPubkey, replyingTo);
       if (!parsed.ok) {
         state.setSendError(t(zapCommandErrorKey(parsed.error), { name: parsed.token ?? '' }));
+        return;
+      }
+      if (parsed.immediate) {
+        const paid = await quickZap(parsed.target, parsed.target.defaultAmountSats!, parsed.comment);
+        if (paid && state.isCurrent?.() !== false) {
+          state.setSendError(null);
+          state.setDraft((draft) => draft === content ? '' : draft);
+          setReplyingTo(null);
+        }
         return;
       }
       useMessageZapStore.getState().open(parsed.target);

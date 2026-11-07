@@ -1,5 +1,7 @@
 'use client';
 
+import { findZapPreset } from '@/utils/wallet/zap-presets';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
 import type { MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import type { MessageRowActions } from '@/hooks/shell/panes/message/useMessageRowActions';
 import { hasReactionRow, reactionPills, zapPillTotal, type ReactionPill } from '@/utils/shell/panes/message/reaction-pills';
@@ -10,10 +12,11 @@ import { hasReactionRow, reactionPills, zapPillTotal, type ReactionPill } from '
  * removes that emoji's reactions for everyone.
  */
 export function useReactionPills(actions: MessageRowActions, zapTotal: MessageZapTotal | null, isAdmin: boolean) {
+  const { zapPresets } = usePreferences();
   return {
     visible: hasReactionRow(actions.counts, zapTotal),
     zap: zapPillTotal(zapTotal),
-    pills: reactionPills(actions.counts, actions.myReactedEmojis, isAdmin),
+    pills: reactionPills(actions.counts.filter((r) => r.emoji.replace(/\uFE0F/g, '') !== '⚡'), actions.myReactedEmojis, isAdmin).map((pill) => ({ ...pill, amountSats: findZapPreset(zapPresets, pill.emoji)?.amountSats })),
     toggle: (p: ReactionPill) => actions.onReactionClick(p.emoji, p.customEmojis, p.myReactionId, p.removeIds),
   };
 }

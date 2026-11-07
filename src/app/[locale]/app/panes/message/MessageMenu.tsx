@@ -47,7 +47,7 @@ export function MessageMenu({ msg, actions, menus, isAdmin, onReply }: {
               onClick={() => vm.react(e)}
               disabled={mine}
               className="flex h-11 items-center justify-center rounded-lg bg-lc-card text-xl transition-colors hover:bg-lc-green/15 disabled:cursor-default disabled:opacity-40"
-              title={mine ? t('shell.desktop.reactions.alreadyReacted') : t('shell.desktop.reactions.reactEmoji', { emoji: e.char })}
+              title={'amountSats' in e ? t('chat.zap.sendNow', { amount: String(e.amountSats) }) : mine ? t('shell.desktop.reactions.alreadyReacted') : t('shell.desktop.reactions.reactEmoji', { emoji: e.char })}
               data-testid="message-menu-quick-reaction"
             >
               {e.url ? <RemoteImage src={e.url} alt={e.char} className="h-6 w-6 object-contain" /> : e.char}

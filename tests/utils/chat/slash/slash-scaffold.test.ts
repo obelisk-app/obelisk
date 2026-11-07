@@ -65,7 +65,16 @@ describe('scaffoldSlots', () => {
     expect(s.slots).toEqual([
       { name: 'user', text: '@ana', filled: true, active: false, optional: true },
       { name: 'amount', text: 'amount', filled: false, active: true, optional: true },
+      { name: 'message', text: 'message', filled: false, active: false, optional: true },
     ]);
     expect(s.activeParam?.name).toBe('amount');
   });
+});
+
+it('offers the optional message after recipient and amount', () => {
+  const command = COMMANDS.find((c) => c.name === 'zap')!;
+  const input = '/zap @ana 21 thanks for the help';
+  const result = scaffoldSlots(command, input, input.length)!;
+  expect(result.activeParam?.name).toBe('message');
+  expect(result.slots[2]).toMatchObject({ name: 'message', optional: true, active: true, filled: true });
 });

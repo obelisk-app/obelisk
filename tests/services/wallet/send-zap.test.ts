@@ -15,6 +15,7 @@ vi.mock('@/services/nostr-bridge', () => ({
   isImportableRelayUrl: (u: string) => u.startsWith('wss://'),
 }) satisfies Partial<typeof import('@/services/nostr-bridge')>);
 
+import { NwcError } from '@nostr-wot/wallet/nwc';
 import { CodedError } from '@/utils/errors/codes';
 import { checkZap, sendZap, ZapError, type ZapDraft } from '@/services/wallet/send-zap';
 import { KIND_REACTION } from '@/constants/nostr/nip-kinds';
@@ -171,5 +172,32 @@ describe('sendZap', () => {
     webln.sendPayment.mockImplementationOnce(async () => { bridge.getBridgeImpl.mockReturnValue(null); return { preimage: 'p' }; });
     await expect(sendZap(ready())).resolves.toEqual({ markerError: 'no-bridge' });
     expect(webln.sendPayment).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('shared zap payment guards', () => {
+  it('blocks a concurrent payment to the same message even when its amount differs', async () => {
+    let finish!: (value: { invoice: string; zapRequest: unknown }) => void;
+    wallet.requestZapInvoice.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    const first = sendZap(ready());
+    await expect(sendZap({ ...ready(), amountSats: 1000 })).rejects.toMatchObject({ code: 'pending' });
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
+    finish({ invoice: 'lnbc1invoice', zapRequest: {} });
+    await first;
+    expect(webln.sendPayment).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an uncertain payment locked across entry points until its session ends', async () => {
+    webln.sendPayment.mockRejectedValueOnce(new NwcError('wallet-timeout', 'unknown'));
+    await expect(sendZap(ready())).rejects.toMatchObject({ outcome: 'unknown' });
+    await expect(sendZap(ready())).rejects.toMatchObject({ code: 'unconfirmed' });
+    expect(wallet.requestZapInvoice).toHaveBeenCalledTimes(1);
+    bridge.getBridgeImpl.mockReturnValue(fakeBridge({ myPubkey: signer.pubkey, myLoginMethod: 'nip07' }, { publishEvent }));
+    await expect(sendZap(ready())).resolves.toEqual({ markerError: null });
+  });
+
+  it('rejects self-zaps and nonintegral amounts before paying', () => {
+    expect(checkZap(draft({ recipient: { recipientPubkey: signer.pubkey, groupId: 'g' } }))).toMatchObject({ ok: false, reason: 'self' });
+    expect(checkZap(draft({ amountSats: 1.5 }))).toMatchObject({ ok: false, reason: 'invalidAmount' });
   });
 });

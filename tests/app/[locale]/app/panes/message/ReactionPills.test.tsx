@@ -8,6 +8,9 @@ import type { MessageRowActions } from '@/hooks/shell/panes/message/useMessageRo
 import type { MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import type { GroupedReaction } from '@/utils/message-text/emoji-shortcodes';
 
+const pay = vi.hoisted(() => vi.fn());
+vi.mock('@/hooks/chat/zaps/useQuickZap', () => ({ useQuickZap: () => pay }));
+
 const A = 'a'.repeat(64);
 const B = 'b'.repeat(64);
 
@@ -17,6 +20,7 @@ function pill(over: Partial<GroupedReaction> & { emoji: string }): GroupedReacti
 
 function actions(over: Partial<MessageRowActions> = {}): MessageRowActions {
   return {
+    msg: { id: 'm', pubkey: B }, groupId: 'g', reactions: [],
     counts: [],
     myReactedEmojis: new Set<string>(),
     onReactionClick: vi.fn(),
@@ -45,44 +49,43 @@ describe('ReactionPills', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('shows the zap total, its zappers largest first, and opens the zap flow', () => {
+  it('shows one combined total and pays the base amount immediately', () => {
     const a = actions();
     mount(a, zaps([[A, 21], [B, 1000]]));
-    const zap = screen.getByRole('button', { name: /1,021/ });
-    fireEvent.click(zap);
-    expect(a.onZapClick).toHaveBeenCalledTimes(1);
-    const card = screen.getByRole('tooltip');
-    expect(card.textContent).toContain('1,021 sats · 2 zaps');
-    expect(within(card).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Bea1,000', 'Ana21']);
+    fireEvent.click(screen.getByRole('button', { name: /1,021/ }));
+    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ messageId: 'm', recipientPubkey: B }), 21);
+    expect(screen.getAllByTestId('unified-zap')).toHaveLength(1);
   });
 
   it('disables the zap pill on your own message', () => {
-    mount(actions({ isOwn: true }), zaps([[A, 5]]));
+    const a = actions({ msg: { id: 'm', pubkey: A } as never });
+    const bridge = fakeBridge({ myPubkey: A });
+    renderWithBridge(<ReactionPills actions={a} zapTotal={zaps([[A, 5]])} isAdmin={false} />, bridge);
     expect(screen.getByRole('button', { name: /5/ })).toBeDisabled();
   });
 
   it('a pill shows the emoji and count, names who reacted, and reacts on click', () => {
-    const a = actions({ counts: [pill({ emoji: '🔥', count: 2, pubkeys: new Set([A, B]), myReactionId: null })] });
+    const a = actions({ counts: [pill({ emoji: '❤️', count: 2, pubkeys: new Set([A, B]), myReactionId: null })] });
     mount(a);
     const button = screen.getByTitle('React');
-    expect(button.textContent).toBe('🔥2');
+    expect(button.textContent).toBe('❤️2');
     fireEvent.click(button);
-    expect(a.onReactionClick).toHaveBeenCalledWith('🔥', {}, null, undefined);
+    expect(a.onReactionClick).toHaveBeenCalledWith('❤️', {}, null, undefined);
     const card = screen.getByRole('tooltip');
-    expect(card.textContent).toContain('🔥 2 reactions');
+    expect(card.textContent).toContain('❤️ 2 reactions');
     expect(within(card).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ana', 'Bea']);
   });
 
   it('your own reaction is lit and a click retracts it', () => {
     const a = actions({
-      counts: [pill({ emoji: '🔥', myReactionId: 'mine', mine: true })],
-      myReactedEmojis: new Set(['🔥']),
+      counts: [pill({ emoji: '❤️', myReactionId: 'mine', mine: true })],
+      myReactedEmojis: new Set(['❤️']),
     });
     mount(a);
     const button = screen.getByTitle('Remove your reaction');
     expect(button.className).toContain('border-lc-green/60');
     fireEvent.click(button);
-    expect(a.onReactionClick).toHaveBeenCalledWith('🔥', {}, 'mine', undefined);
+    expect(a.onReactionClick).toHaveBeenCalledWith('❤️', {}, 'mine', undefined);
   });
 
   it('for an admin a click removes every reaction of that emoji', () => {
@@ -107,4 +110,13 @@ describe('ReactionPills', () => {
     expect(items).toHaveLength(21);
     expect(items[20].textContent).toBe('...and 3 more');
   });
+});
+
+it('merges unpaid lightning reactions without counting them as sats or rendering another pill', () => {
+  mount(actions({ counts: [pill({ emoji: '⚡' })], reactions: [
+    { id: 'plain', pubkey: A, emoji: '⚡' },
+    { id: 'paid', pubkey: B, emoji: '⚡', zapMarker: true },
+  ] }), zaps([[B, 21]]));
+  expect(screen.getAllByTestId('unified-zap')).toHaveLength(1);
+  expect(screen.getByRole('button', { name: /21 sats.*1 unpaid reaction/ })).toBeTruthy();
 });

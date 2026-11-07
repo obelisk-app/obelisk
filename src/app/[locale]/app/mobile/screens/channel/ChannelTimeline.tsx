@@ -1,5 +1,6 @@
 'use client';
 
+import type { MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import type { JsMessage, JsReaction, MessagesStatus } from '@/services/nostr-bridge';
 import { useTranslations } from 'next-intl';
 import { ChannelTimelineItem } from './ChannelTimelineItem';
@@ -12,6 +13,7 @@ type Props = {
   /** Reply parents resolved once per batch, so a row's `parent` prop is stable. */
   messagesById: ReadonlyMap<string, JsMessage>;
   reactions: Readonly<Record<string, ReadonlyArray<JsReaction>>>;
+  zapTotals?: ReadonlyMap<string, MessageZapTotal>;
   myPubkey: string | null;
   isAdmin: boolean;
   groupId: string;
@@ -22,7 +24,7 @@ type Props = {
 
 /** The phone channel's messages with day dividers, or the loading / empty state. */
 export function ChannelTimeline({
-  items, messagesStatus, messagesById, reactions, myPubkey, isAdmin, groupId, onLongPress, onAvatar,
+  items, messagesStatus, messagesById, reactions, zapTotals, myPubkey, isAdmin, groupId, onLongPress, onAvatar,
 }: Props) {
   const t = useTranslations();
   if (items.length === 0) {
@@ -50,6 +52,7 @@ export function ChannelTimeline({
           item={it}
           messagesById={messagesById}
           reactions={reactions}
+          zapTotals={zapTotals}
           myPubkey={myPubkey}
           isAdmin={isAdmin}
           groupId={groupId}

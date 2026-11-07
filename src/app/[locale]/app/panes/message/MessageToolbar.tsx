@@ -50,8 +50,8 @@ export function MessageToolbar({
           onClick={() => vm.react(e)}
           disabled={mine}
           className="text-lg"
-          aria-label={t('shell.desktop.reactions.reactEmoji', { emoji: e.char })}
-          title={mine ? t('shell.desktop.reactions.alreadyReacted') : t('shell.desktop.reactions.reactEmoji', { emoji: e.char })}
+          aria-label={'amountSats' in e ? t('chat.zap.sendNow', { amount: String(e.amountSats) }) : t('shell.desktop.reactions.reactEmoji', { emoji: e.char })}
+          title={'amountSats' in e ? t('chat.zap.sendNow', { amount: String(e.amountSats) }) : mine ? t('shell.desktop.reactions.alreadyReacted') : t('shell.desktop.reactions.reactEmoji', { emoji: e.char })}
           data-testid="message-quick-reaction"
         >
           {e.url

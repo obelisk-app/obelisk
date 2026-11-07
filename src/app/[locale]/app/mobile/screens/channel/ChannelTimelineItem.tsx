@@ -1,5 +1,6 @@
 'use client';
 
+import type { MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import type { JsMessage, JsReaction } from '@/services/nostr-bridge';
 import type { TimelineItem } from '@/utils/chat/timeline/channel-timeline';
 import { reactionsFor, replyParentOf } from '@/utils/shell/mobile/channel-timeline';
@@ -7,11 +8,12 @@ import { ChannelMessage } from './ChannelMessage';
 
 /** One timeline entry: a day divider, or a message tile with its reply parent and reactions. */
 export function ChannelTimelineItem({
-  item, messagesById, reactions, myPubkey, isAdmin, groupId, onLongPress, onAvatar,
+  item, messagesById, reactions, zapTotals, myPubkey, isAdmin, groupId, onLongPress, onAvatar,
 }: {
   item: TimelineItem;
   messagesById: ReadonlyMap<string, JsMessage>;
   reactions: Readonly<Record<string, ReadonlyArray<JsReaction>>>;
+  zapTotals?: ReadonlyMap<string, MessageZapTotal>;
   myPubkey: string | null;
   isAdmin: boolean;
   groupId: string;
@@ -22,6 +24,7 @@ export function ChannelTimelineItem({
   return (
     <ChannelMessage
       msg={item.msg}
+      zapTotal={zapTotals?.get(item.msg.id) ?? null}
       parent={replyParentOf(item.msg, messagesById)}
       myPubkey={myPubkey}
       isAdmin={isAdmin}

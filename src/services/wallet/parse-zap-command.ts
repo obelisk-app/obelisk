@@ -21,7 +21,7 @@ export interface ParsedMessage {
 export type ZapCommandError = 'invalid' | 'ambiguous' | 'unknown-user' | 'no-target' | 'self';
 
 export type ParseResult =
-  | { ok: true; target: ZapTarget }
+  | { ok: true; target: ZapTarget; immediate: boolean; comment: string }
   | { ok: false; error: ZapCommandError; token?: string };
 
 /**
@@ -43,16 +43,44 @@ export function parseZapCommand(
   if (!m) return { ok: false, error: 'invalid' };
   const args = (m[1] ?? '').trim().split(/\s+/).filter(Boolean);
 
-  let amount: number | undefined;
-  // Strip a trailing integer as the amount.
-  if (args.length > 0 && /^\d+$/.test(args[args.length - 1])) {
-    amount = parseInt(args.pop()!, 10);
-  }
-  const userToken = args.join(' ');
-
   const bridge = getBridgeImpl();
   const metadata = bridge?.userMetadata.get() ?? {};
   const memberList = bridge?.membersByGroup.get()[groupId] ?? [];
+
+  const exactName = (tokens: string[]) => {
+    const name = tokens.join(' ').replace(/^@/, '').toLowerCase();
+    return memberList.some((pk) => [metadata[pk]?.name, metadata[pk]?.displayName]
+      .some((value) => value?.toLowerCase() === name));
+  };
+  let amount: number | undefined;
+  let comment = '';
+  // An amount separates the recipient from an optional free-text message.
+  let amountIndex = args.findIndex((arg) => !/^[0-9a-f]{64}$/i.test(arg) && /^(?:[-+]?\d|\.\d|Infinity$|NaN$)/.test(arg));
+  if (exactName(args)) amountIndex = -1;
+  else {
+    for (let index = args.length - 1; index > 0; index--) {
+      if (/^(?:[-+]?\d|\.\d)/.test(args[index]) && exactName(args.slice(0, index))) {
+        amountIndex = index;
+        break;
+      }
+    }
+  }
+  const hasExplicitRecipient = amountIndex > 0;
+  if (amountIndex >= 0) {
+    if (!/^\d+$/.test(args[amountIndex])) return { ok: false, error: 'invalid' };
+    amount = Number(args[amountIndex]);
+    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > Number.MAX_SAFE_INTEGER / 1000) {
+      return { ok: false, error: 'invalid' };
+    }
+    comment = args.slice(amountIndex + 1).join(' ');
+    if (!hasExplicitRecipient && comment) return { ok: false, error: 'invalid' };
+    args.splice(amountIndex);
+  }
+  const userToken = args.join(' ');
+  if (amountIndex < 0 && args.some((arg) => /^(?:@?nostr:)?(?:npub1|nprofile1)/.test(arg)) && args.length > 1) {
+    return { ok: false, error: 'invalid' };
+  }
+
 
   let recipientPubkey: string | null = null;
 
@@ -90,6 +118,8 @@ export function parseZapCommand(
 
   return {
     ok: true,
+    immediate: hasExplicitRecipient,
+    comment,
     target: {
       messageId,
       recipientPubkey,

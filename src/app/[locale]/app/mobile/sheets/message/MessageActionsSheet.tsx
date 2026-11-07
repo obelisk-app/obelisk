@@ -4,7 +4,6 @@ import Button from '@/components/ui/buttons/Button';
 import EmojiPicker from '@/components/chat/picker/EmojiPicker';
 import { useTranslations } from 'next-intl';
 import { useMessageActionsSheet, type MobileActionMessage } from '@/hooks/shell/mobile/sheets/message/useMessageActionsSheet';
-import { QUICK_REACTIONS } from '@/constants/shell/mobile';
 import EmojiSheet from './EmojiSheet';
 import { ZapIcon, CopyIcon, ReplyIcon, TrashIcon } from '@/assets/icons';
 
@@ -32,8 +31,8 @@ export function MessageActionsSheet({
       <div className="sheet native-scroll-y">
         <div className="sheet-handle" />
         <div className="ma-quick-reactions">
-          {QUICK_REACTIONS.map((e) => (
-            <Button variant="bare" key={e} className="ma-quick-react" onClick={() => vm.quickReact(e)}>{e}</Button>
+          {vm.quickReactions.map((e) => (
+            <Button variant="bare" key={e} title={vm.reactionTitle(e)} aria-label={vm.reactionTitle(e)} className="ma-quick-react" onClick={() => vm.quickReact(e)}>{e}<span className="text-[9px] leading-none">{vm.reactionAmount(e)}</span></Button>
           ))}
         </div>
         {vm.pickerOpen && (

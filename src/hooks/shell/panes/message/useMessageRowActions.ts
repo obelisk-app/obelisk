@@ -1,5 +1,6 @@
 'use client';
 
+import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { useMemo, useSyncExternalStore } from 'react';
 import { nostrActions, useCurrentRelayUrl, useMyMutes, type JsMessage, type JsUserMetadata } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/hooks/session/useSession';
@@ -44,7 +45,11 @@ export function useMessageRowActions({
   const relay = useCurrentRelayUrl();
   // Quick reactions = your most recent picks (shared snapshot across rows).
   const recentEmojis = useSyncExternalStore(subscribeRecentEmojis, getRecentEmojisSnapshot, getServerRecentEmojisSnapshot);
-  const quick4 = useMemo(() => quickReactions(recentEmojis, 4), [recentEmojis]);
+  const { zapPresets } = usePreferences();
+  const quick4 = useMemo(() => [
+    ...zapPresets.map((p) => ({ char: p.emoji, amountSats: p.amountSats })),
+    ...quickReactions(recentEmojis, 4).filter((e) => !zapPresets.some((p) => p.emoji === e.char)),
+  ], [recentEmojis, zapPresets]);
   const myPubkey = useMyPubkey();
   const isOwn = msg.pubkey === myPubkey;
   const myMutes = useMyMutes();
@@ -97,10 +102,11 @@ export function useMessageRowActions({
   const moderation = useMessageModeration(msg, groupId, isAdmin, isOwn, moderationLabelsFrom(t));
 
   return {
+    msg, groupId, reactions,
     isOwn,
     isMuted,
     quick4,
-    quick3: quick4.slice(0, 3),
+    quick3: quick4.slice(0, 4),
     counts,
     myReactedEmojis,
     onReactionClick,

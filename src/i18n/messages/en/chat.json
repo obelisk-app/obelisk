@@ -266,7 +266,10 @@
     "noBridge": "The app was not connected to the relay.",
     "failed": "The zap did not go through.",
     "markerRejected": "The relay did not accept it.",
-    "unconfirmed": "Your wallet did not confirm this zap. Check your wallet before zapping again."
+    "unconfirmed": "Your wallet did not confirm this zap. Check your wallet before zapping again.",
+    "sendNow": "Send {amount} sats now",
+    "unpaidReactions": "{count, plural, one {# unpaid reaction} other {# unpaid reactions}}",
+    "pending": "Payment is already pending."
   },
   "profilePopover": {
     "zap": "Zap",
@@ -291,7 +294,8 @@
     "zap": "Send sats to a user in this channel",
     "zapUser": "User to zap (mention, npub, or display name)",
     "zapAmount": "Amount in sats",
-    "play": "Play a game in this channel: {games}"
+    "play": "Play a game in this channel: {games}",
+    "zapMessage": "Optional message after the amount"
   },
   "channelLink": {
     "publication": "Publication in #{channel}",

@@ -1,3 +1,4 @@
+import { mayHavePaid } from '@nostr-wot/wallet/nwc';
 import { captureActiveSession } from '@/services/session/connection';
 import { requestZapInvoice } from '@nostr-wot/wallet';
 import { getDefaultRelays } from '@nostr-wot/data';
@@ -20,7 +21,7 @@ import { MARKER_NO_BRIDGE } from '@/constants/wallet/zap';
  */
 
 /** Why a zap cannot start, in the order the checks run. The UI translates these. */
-export type ZapErrorCode = 'noAddress' | 'noWallet' | 'invalidAmount' | 'noSigner';
+export type ZapErrorCode = 'noAddress' | 'noWallet' | 'invalidAmount' | 'noSigner' | 'pending' | 'unconfirmed' | 'self';
 
 export class ZapError extends Error {
   constructor(readonly code: ZapErrorCode) {
@@ -56,9 +57,10 @@ export type ZapCheck = { ok: true; zap: ReadyZap } | { ok: false; reason: ZapErr
 
 /** The first reason this zap cannot start, before anything leaves the browser. */
 export function checkZap(draft: ZapDraft): ZapCheck {
+  if (draft.signer?.pubkey === draft.recipient.recipientPubkey) return { ok: false, reason: 'self' };
   if (!draft.lud16) return { ok: false, reason: 'noAddress' };
   if (!isWalletAvailable(draft.signer?.pubkey ?? null)) return { ok: false, reason: 'noWallet' };
-  if (!draft.amountSats || draft.amountSats <= 0) return { ok: false, reason: 'invalidAmount' };
+  if (!Number.isSafeInteger(draft.amountSats) || draft.amountSats <= 0 || draft.amountSats > Math.floor(Number.MAX_SAFE_INTEGER / 1000)) return { ok: false, reason: 'invalidAmount' };
   if (!draft.signer) return { ok: false, reason: 'noSigner' };
   return { ok: true, zap: { ...draft, lud16: draft.lud16, signer: draft.signer } };
 }
@@ -79,7 +81,27 @@ export interface ZapResult {
  * succeeds the result is always a success, with `markerError` set if the
  * marker could not be posted.
  */
+const attempts = new Map<string, { current: () => boolean; uncertain: boolean }>();
+
 export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
+  for (const [key, attempt] of attempts) if (!attempt.current()) attempts.delete(key);
+  const key = `${zap.signer.pubkey}:${zap.recipient.messageId || zap.recipient.recipientPubkey}`;
+  const previous = attempts.get(key);
+  if (previous) throw new ZapError(previous.uncertain ? 'unconfirmed' : 'pending');
+  const session = captureActiveSession(zap.signer.pubkey);
+  const attempt = { current: () => session?.isCurrent() ?? true, uncertain: false };
+  attempts.set(key, attempt);
+  try {
+    return await payZap(zap);
+  } catch (error) {
+    if (mayHavePaid(error)) attempt.uncertain = true;
+    throw error;
+  } finally {
+    if (!attempt.uncertain) attempts.delete(key);
+  }
+}
+
+async function payZap(zap: ReadyZap): Promise<ZapResult> {
   // One correlation ID per user attempt; never log invoice, event, account or error payloads.
   const attempt = crypto.randomUUID();
   const step = async <T>(stage: string, action: () => Promise<T>): Promise<T> => {
@@ -104,6 +126,7 @@ export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
     ...(zap.currentRelay ? [zap.currentRelay] : []),
     ...getDefaultRelays(),
   ].filter(isImportableRelayUrl)));
+  session?.assertCurrent();
   const amountMsats = zap.amountSats * 1000;
   const { invoice, zapRequest } = await step('invoice', () => requestZapInvoice({
     getPublicKey: async () => zap.signer.pubkey,
@@ -117,6 +140,7 @@ export async function sendZap(zap: ReadyZap): Promise<ZapResult> {
     comment: zap.comment.trim() || undefined,
   }));
 
+  session?.assertCurrent();
   await step(`payment-${wallet.kind}`, () => wallet.pay(invoice));
   if (!session?.isCurrent()) return { markerError: getBridgeImpl() ? 'not-logged-in' : MARKER_NO_BRIDGE };
   return step('channel-marker', () => postZapMarker(zap, { invoice, zapRequest, amountMsats }));

@@ -12,6 +12,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     params: [
       { name: 'user', descriptionKey: 'chat.slash.zapUser', kind: 'mention', optional: true },
       { name: 'amount', descriptionKey: 'chat.slash.zapAmount', kind: 'number', optional: true },
+      { name: 'message', descriptionKey: 'chat.slash.zapMessage', kind: 'string', optional: true },
     ],
   },
   // `/play` lists the games from the catalog (see `commandDescription`), so

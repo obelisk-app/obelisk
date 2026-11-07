@@ -337,6 +337,15 @@
       "nwc": "This connected wallet",
       "webln": "Your browser extension (WebLN)",
       "none": "No wallet yet"
+    },
+    "presets": {
+      "title": "Zap presets",
+      "intro": "Selecting one of these emojis pays immediately. All zaps share one lightning total.",
+      "emoji": "Emoji",
+      "amount": "Amount (sats)",
+      "add": "Add preset",
+      "invalid": "Use unique emojis and positive whole-sat amounts. The first preset must be ⚡.",
+      "details": "Zap and reaction details"
     }
   },
   "localData": {

@@ -4,6 +4,7 @@
  * reader imports the one copy.
  */
 
+import { DEFAULT_ZAP_PRESETS } from '@/constants/wallet/zap';
 import { DEFAULT_SOCIAL_RELAYS } from '@/constants/social/relays';
 import { DEFAULT_FEED_WIDGETS } from '@/constants/social/widgets';
 import type { Preferences } from '@/types/preferences/preferences';
@@ -19,6 +20,7 @@ export const DEFAULT_CALL_RELAYS: readonly string[] = ['wss://relay.damus.io', '
 export const CALL_RELAY_MAX = 4;
 
 export const DEFAULTS: Preferences = {
+  zapPresets: DEFAULT_ZAP_PRESETS,
   showActivityIndicator: true,
   developerRelayDebug: false,
   directMessagesEnabled: false,

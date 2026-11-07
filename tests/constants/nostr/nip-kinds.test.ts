@@ -20,7 +20,6 @@ const SOURCE_OF_TRUTH = 'src/constants/nostr/nip-kinds.ts';
 const KNOWN_LOCAL_KIND_FILES = new Set<string>([]);
 
 const KNOWN_RAW_KIND_FILTER_FILES = new Set([
-  'src/hooks/chat/zaps/useMessageZaps.ts',
   'src/services/server/viewer/nostr-fetch.ts',
 ]);
 

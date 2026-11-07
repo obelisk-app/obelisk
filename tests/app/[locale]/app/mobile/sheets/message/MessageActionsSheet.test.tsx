@@ -4,6 +4,9 @@ import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { MessageActionsSheet } from '@/app/[locale]/app/mobile/sheets/message/MessageActionsSheet';
 
+const pay = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('@/hooks/chat/zaps/useQuickZap', () => ({ useQuickZap: () => pay }));
+
 const MSG = { id: 'evt-1', pubkey: 'b'.repeat(64), content: 'copy me' };
 const writeText = vi.fn().mockResolvedValue(undefined);
 
@@ -29,9 +32,9 @@ describe('MessageActionsSheet', () => {
     window.addEventListener('obelisk-mobile:react', listener as EventListener);
     try {
       const { close } = mount();
-      fireEvent.click(screen.getByText('🔥'));
+      fireEvent.click(screen.getByText('👍'));
       const ev = listener.mock.calls[0][0] as CustomEvent<{ msg: typeof MSG; emoji: string; customEmojis?: unknown }>;
-      expect(ev.detail).toEqual({ msg: MSG, emoji: '🔥', customEmojis: undefined });
+      expect(ev.detail).toEqual({ msg: MSG, emoji: '👍', customEmojis: undefined });
       expect(close).toHaveBeenCalledTimes(1);
     } finally {
       window.removeEventListener('obelisk-mobile:react', listener as EventListener);
@@ -67,4 +70,20 @@ describe('MessageActionsSheet', () => {
     mount();
     expect(screen.queryByTestId('mobile-msg-actions-delete')).toBeNull();
   });
+  it('pays the preset immediately from a message with channel context', () => {
+    mount({ msg: { ...MSG, groupId: 'g' } });
+    fireEvent.click(screen.getByTitle('Send 100 sats now'));
+    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ messageId: MSG.id, groupId: 'g' }), 100);
+  });
+
+  it('never emits an unpaid preset reaction when channel context is missing', () => {
+    const listener = vi.fn();
+    window.addEventListener('obelisk-mobile:react', listener);
+    try {
+      mount();
+      fireEvent.click(screen.getByTitle('Send 100 sats now'));
+      expect(listener).not.toHaveBeenCalled();
+    } finally { window.removeEventListener('obelisk-mobile:react', listener); }
+  });
+
 });

@@ -4,6 +4,43 @@ Obelisk pays Lightning from chat in two places: a **zap** on a message or a
 person, and the **Pay** button on a BOLT11 invoice someone posted in a
 channel. Both pay through the same wallet path, and there is no other.
 
+## Zap presets and commands
+
+Settings > Wallet includes device-local zap presets: ⚡ 21, 🔥 100,
+🚀 1,000 and 💎 10,000 sats by default. The base ⚡ amount can be
+changed; additional Unicode emoji presets can be added, edited or removed.
+Selecting a preset emoji pays immediately, including from the reaction picker.
+The explicit Zap menu action still opens the custom amount and optional message
+popup. Missing wallets or Lightning addresses produce feedback, never a free
+reaction in place of a payment.
+
+`/zap <npub|nprofile|hex|@mention>` opens that popup. Adding an amount,
+as in `/zap @person 21`, pays immediately. Text after the amount is the
+optional zap message: `/zap @person 21 thanks for the help`. A bare `/zap`
+or `/zap 21` keeps the popup for the inferred reply or last-message target.
+
+Desktop and mobile show one ⚡ pill containing the combined sats and a
+separately labeled unpaid reaction count. Details list payers and reactors;
+ordinary reactions may be removed there without initiating a payment. Larger
+preset emojis are sending shortcuts: all payments still publish the canonical
+⚡ marker. Plain emoji reactions from other clients never add sats.
+Markers and receipts with the same invoice count once; receipt data takes
+precedence. Group zap subscriptions use the bridge and the active relay only.
+Legacy amount-bearing zap markers remain supported, as before; they are
+client payment announcements rather than independent proofs of settlement.
+
+All entry points share an account-and-target payment guard. Concurrent payments
+are rejected; an uncertain wallet outcome locks that target until the session
+ends. A paid invoice whose channel marker failed is reported as paid, with a
+visibility warning, and is never automatically retried.
+
+SDK compatibility was checked against npm and upstream on 2026-11-07:
+`nostr-wot-sdk` 3.0.1 and the current `@nostr-wot/*` releases are installed.
+The UI remains pinned to `vendor/nostr-wot-ui-2.0.1-obelisk.2.tgz` to retain
+the fork's create-first layout, key-file flow, and extension copy. The fork's
+base matches upstream `6e8c75458dca1afeec8c4d88d547c2c0afd04510`; no dependency
+upgrade or replacement of that tarball was needed for this change.
+
 ## The wallet path
 
 `src/services/wallet/wallet.ts` is the one module that talks to a wallet.

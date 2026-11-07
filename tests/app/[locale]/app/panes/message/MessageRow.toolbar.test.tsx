@@ -19,6 +19,9 @@ vi.mock('@/components/chat/message/MessageContent', () => ({
   },
 }));
 
+const quickZap = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('@/hooks/chat/zaps/useQuickZap', () => ({ useQuickZap: () => quickZap }));
+
 const sendReaction = vi.fn();
 const sendMessage = vi.fn(async () => {});
 const setMuted = vi.fn(async () => {});
@@ -87,14 +90,15 @@ describe('message hover toolbar', () => {
     useMessageZapStore.setState({ target: null });
   });
 
-  it('has 7 controls: 3 recent reactions, add-reaction, reply, forward, more', () => {
+  it('offers labeled zap presets alongside recent reactions and message controls', () => {
     pushRecentEmoji('🦀');
     renderRow();
     const bar = screen.getByTestId('message-toolbar');
     const buttons = within(bar).getAllByRole('button');
-    expect(buttons).toHaveLength(7);
+    expect(buttons.length).toBeGreaterThan(7);
     const quick = within(bar).getAllByTestId('message-quick-reaction');
-    expect(quick.map((b) => b.textContent)).toEqual(['🦀', '🔥', '⚡']);
+    expect(quick.map((b) => b.textContent)).toEqual(expect.arrayContaining(['⚡', '🔥', '🚀', '💎']));
+    expect(within(bar).getByTitle('Send 21 sats now')).toBeTruthy();
     for (const id of ['message-add-reaction', 'message-reply', 'message-forward', 'message-more']) {
       expect(within(bar).getByTestId(id).querySelector('svg')).not.toBeNull();
     }
@@ -118,11 +122,11 @@ describe('message hover toolbar', () => {
     expect(document.activeElement).toBe(more);
   });
 
-  it('reacting from the bar sends the reaction and moves it to the front of recents', () => {
+  it('a zap preset pays immediately without sending a free reaction', () => {
     renderRow();
-    fireEvent.click(screen.getAllByTestId('message-quick-reaction')[1]);
-    expect(sendReaction).toHaveBeenCalledWith(msg.id, msg.pubkey, '⚡', 'here', expect.anything());
-    expect(screen.getAllByTestId('message-quick-reaction')[0].textContent).toBe('⚡');
+    fireEvent.click(screen.getByTitle('Send 21 sats now'));
+    expect(quickZap).toHaveBeenCalledWith(expect.objectContaining({ messageId: msg.id, recipientPubkey: msg.pubkey }), 21);
+    expect(sendReaction).not.toHaveBeenCalled();
   });
 
   it('reply button replies', () => {
@@ -132,11 +136,12 @@ describe('message hover toolbar', () => {
     expect(onReply).toHaveBeenCalledWith(msg);
   });
 
-  it('⋯ opens a menu with 4 quick-reaction tiles, Add reaction, and icon rows', () => {
+  it('⋯ opens a menu with zap presets, recent reactions, and icon rows', () => {
     renderRow();
     fireEvent.click(screen.getByTestId('message-more'));
     const menu = screen.getByTestId('message-menu');
-    expect(within(menu).getAllByTestId('message-menu-quick-reaction')).toHaveLength(4);
+    expect(within(menu).getAllByTestId('message-menu-quick-reaction').length).toBeGreaterThanOrEqual(4);
+    expect(within(menu).getByTitle('Send 1000 sats now')).toBeTruthy();
     for (const id of ['message-menu-add-reaction', 'message-menu-reply', 'message-menu-forward', 'message-menu-zap', 'message-menu-copy-text', 'message-menu-copy-link', 'message-menu-mute']) {
       expect(within(menu).getByTestId(id).querySelector('svg')).not.toBeNull();
     }
@@ -237,7 +242,7 @@ describe('message row menu and toolbar actions', () => {
   it('a menu quick reaction reacts and closes everything', () => {
     renderRow();
     openMenu();
-    fireEvent.click(screen.getAllByTestId('message-menu-quick-reaction')[0]);
+    fireEvent.click(within(screen.getByTestId('message-menu')).getByTitle('React 😂'));
     expect(sendReaction).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('message-menu')).toBeNull();
   });

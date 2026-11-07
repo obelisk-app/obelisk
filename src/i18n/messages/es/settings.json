@@ -337,6 +337,15 @@
       "nwc": "Esta billetera conectada",
       "webln": "Tu extensión del navegador (WebLN)",
       "none": "Todavía ninguna billetera"
+    },
+    "presets": {
+      "title": "Montos de zap",
+      "intro": "Elegir uno de estos emojis paga inmediatamente. Todos los zaps comparten un total.",
+      "emoji": "Emoji",
+      "amount": "Monto (sats)",
+      "add": "Agregar monto",
+      "invalid": "Usá emojis únicos y montos enteros positivos. El primero debe ser ⚡.",
+      "details": "Detalles de zaps y reacciones"
     }
   },
   "localData": {

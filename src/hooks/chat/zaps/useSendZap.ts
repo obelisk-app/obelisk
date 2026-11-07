@@ -22,6 +22,9 @@ const ERROR_KEY = {
   noWallet: 'chat.zap.errorNoWallet',
   invalidAmount: 'chat.zap.errorInvalidAmount',
   noSigner: 'chat.zap.errorNoSigner',
+  pending: 'chat.zap.pending',
+  unconfirmed: 'chat.zap.unconfirmed',
+  self: 'chat.zapCommand.self',
 } as const satisfies Record<ZapErrorCode, string>;
 
 export interface UseSendZapArgs {
@@ -65,7 +68,7 @@ export function useSendZap({ recipient, amountSats, comment, lud16, displayName,
     try {
       ({ markerError } = await sendZap(check.zap));
     } catch (e) {
-      if (mayHavePaid(e)) {
+      if (mayHavePaid(e) || (e instanceof ZapError && e.code === 'unconfirmed')) {
         setError(t('chat.zap.unconfirmed'));
         setUnconfirmed(true);
         setBusy(false);

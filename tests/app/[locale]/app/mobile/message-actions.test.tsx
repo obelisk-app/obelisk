@@ -156,14 +156,14 @@ describe('ChannelMessage kebab button', () => {
         reactions={[{
           id: 'reaction-1',
           pubkey: 'b'.repeat(64),
-          emoji: '🔥',
+          emoji: '👍',
         }]}
         onLongPress={() => {}}
         onAvatar={() => {}}
       />,
     );
 
-    fireEvent.click(screen.getByText(/🔥/));
+    fireEvent.click(screen.getByText(/👍/));
     await vi.waitFor(() => {
       expect(nostrActions.removeReaction).toHaveBeenCalledWith('rly/group', 'reaction-1');
     });

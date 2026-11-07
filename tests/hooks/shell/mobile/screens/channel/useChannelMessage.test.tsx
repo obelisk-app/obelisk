@@ -62,7 +62,7 @@ describe('useChannelMessage', () => {
 
   it('lets an admin remove a reaction for everyone', async () => {
     const deleteGroupEvent = vi.fn().mockResolvedValue(undefined);
-    const reactions = [{ id: 'r1', pubkey: 'c'.repeat(64), emoji: '🔥' }];
+    const reactions = [{ id: 'r1', pubkey: 'c'.repeat(64), emoji: '👍' }];
     const { result } = setup({ reactions, isAdmin: true }, { deleteGroupEvent });
     expect(result.current.grouped).toHaveLength(1);
     act(() => result.current.toggleReaction(result.current.grouped[0]));

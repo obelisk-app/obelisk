@@ -1,3 +1,8 @@
+import { useToastStore } from '@/store/feedback/toast';
+import { findZapPreset } from '@/utils/wallet/zap-presets';
+import { useQuickZap } from '@/hooks/chat/zaps/useQuickZap';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
+import { QUICK_REACTIONS } from '@/constants/shell/mobile';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useUserMetadata } from '@/services/nostr-bridge';
@@ -28,16 +33,33 @@ export interface MobileActionMessage {
  */
 export function useMessageActionsSheet(msg: MobileActionMessage, close: () => void) {
   const t = useTranslations();
+  const quickZap = useQuickZap();
+  const { zapPresets } = usePreferences();
   const meta = useUserMetadata(msg.pubkey);
   const [pickerOpen, setPickerOpen] = useState(false);
   const { canDelete, deleteMessage: confirmAndDelete } = useMessageModeration(
     msg, msg.groupId, !!msg.canModerate, !!msg.canDeleteOwn, moderationLabelsFrom(t),
   );
   const react = (emoji: string, custom?: PickedCustomEmoji) => {
-    emitMobileReaction(msg, emoji, custom);
+    const preset = findZapPreset(zapPresets, emoji);
+    if (preset) {
+      if (!msg.groupId) {
+        useToastStore.getState().pushToast({ title: t('chat.zapCommand.noTarget'), body: '' });
+        close();
+        return;
+      }
+      void quickZap({ messageId: msg.id, recipientPubkey: msg.pubkey, groupId: msg.groupId,
+        recipientLud16: meta?.lud16, displayName: displayNameFor(msg.pubkey, meta) }, preset.amountSats);
+    } else emitMobileReaction(msg, emoji, custom);
     close();
   };
   return {
+    quickReactions: [...new Set([...zapPresets.map((p) => p.emoji), ...QUICK_REACTIONS])],
+    reactionAmount: (emoji: string) => findZapPreset(zapPresets, emoji)?.amountSats,
+    reactionTitle: (emoji: string) => {
+      const preset = findZapPreset(zapPresets, emoji);
+      return preset ? t('chat.zap.sendNow', { amount: String(preset.amountSats) }) : emoji;
+    },
     name: displayNameFor(msg.pubkey, meta),
     pickerOpen,
     closePicker: () => setPickerOpen(false),

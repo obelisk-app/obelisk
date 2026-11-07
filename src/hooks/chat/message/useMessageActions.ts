@@ -1,5 +1,10 @@
 'use client';
 
+import { findZapPreset } from '@/utils/wallet/zap-presets';
+import { useQuickZap } from '@/hooks/chat/zaps/useQuickZap';
+import { usePreferences } from '@/hooks/preferences/usePreferences';
+import { useMessageAuthor } from './useMessageAuthor';
+import { displayNameFor } from '@/utils/identity/display-name';
 import { useCallback, useMemo } from 'react';
 import { nostrActions } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
@@ -9,6 +14,7 @@ import { confirmDialog } from '@/services/common/confirm-dialog';
 import type { ModerationLabels } from '@/utils/chat/message/moderation-labels';
 
 export interface MessageReactionInput {
+  readonly zapMarker?: boolean;
   readonly id: string;
   readonly pubkey: string;
   readonly emoji: string;
@@ -50,9 +56,12 @@ export function useMessageReactions(
   myPubkey: string | null,
   isAdmin: boolean,
 ): MessageReactions {
+  const quickZap = useQuickZap();
+  const { zapPresets } = usePreferences();
+  const meta = useMessageAuthor(msg.pubkey);
   const serverEmojis = useChatStore((s) => s.serverEmojis);
   const grouped = useMemo(
-    () => groupReactions(reactions, myPubkey, serverEmojis),
+    () => groupReactions(reactions.filter((r) => !r.zapMarker).map((r) => r.emoji.replace(/\uFE0F/g, '') === '⚡' ? { ...r, emoji: '⚡' } : r), myPubkey, serverEmojis),
     [reactions, myPubkey, serverEmojis],
   );
   const myReactedEmojis = useMemo(
@@ -67,6 +76,12 @@ export function useMessageReactions(
     reactionIds?: ReadonlyArray<string>,
   ) => {
     try {
+      const preset = findZapPreset(zapPresets, emoji);
+      if (preset) {
+        await quickZap({ messageId: msg.id, recipientPubkey: msg.pubkey, groupId,
+          recipientLud16: meta?.lud16, displayName: displayNameFor(msg.pubkey, meta) }, preset.amountSats);
+        return;
+      }
       if (isAdmin && reactionIds && reactionIds.length > 0) {
         await Promise.all(reactionIds.map((id) => nostrActions.deleteGroupEvent(groupId, id)));
         return;
@@ -81,7 +96,7 @@ export function useMessageReactions(
     } catch (err) {
       console.warn('[reactions] toggle failed', err);
     }
-  }, [groupId, isAdmin, msg.id, msg.pubkey, myReactedEmojis, serverEmojis]);
+  }, [groupId, isAdmin, msg.id, msg.pubkey, myReactedEmojis, serverEmojis, quickZap, zapPresets, meta]);
 
   return { grouped, myReactedEmojis, toggle };
 }

@@ -4,10 +4,14 @@
  */
 
 /** The amount pre-filled when a zap opens without one, in sats. */
-export const DEFAULT_ZAP_AMOUNT_SATS = 100;
-
-/** One-tap amounts offered under the amount field, in sats. */
-export const ZAP_QUICK_AMOUNTS_SATS: readonly number[] = [21, 100, 500, 1000, 5000, 21000];
+export const DEFAULT_ZAP_AMOUNT_SATS = 21;
 
 /** `markerError` when there was no bridge to post the marker with; the UI words it. */
 export const MARKER_NO_BRIDGE = 'no-bridge';
+
+export const DEFAULT_ZAP_PRESETS = [
+  { emoji: '⚡', amountSats: DEFAULT_ZAP_AMOUNT_SATS },
+  { emoji: '🔥', amountSats: 100 },
+  { emoji: '🚀', amountSats: 1000 },
+  { emoji: '💎', amountSats: 10000 },
+];
