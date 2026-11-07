@@ -8,7 +8,7 @@
  * without the clear every one of them is dropped (login-race Fix E).
  */
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-import { KIND_GROUP_METADATA } from '@/constants/nostr/nip-kinds';
+import { KIND_GROUP_DELETE, KIND_GROUP_METADATA } from '@/constants/nostr/nip-kinds';
 import { cacheGet, cacheSet } from '../../cache/cache';
 import { groupEqual, parseGroupMetadataTags } from './group-metadata';
 import { StateStore } from '../../common/state-store';
@@ -19,6 +19,7 @@ import { MetadataEoseLadder } from './metadata-eose';
 import { GroupNesting } from './nesting';
 import { createGroup, editGroupMetadata } from './metadata-commands';
 import type { CreateGroupOptions, EditGroupMetadataOptions } from './metadata-tags';
+import { GroupDeletions } from './deletions';
 
 export type GroupMetadataContext = Pick<
   BridgeContext,
@@ -30,12 +31,17 @@ export interface GroupMetadataDeps {
   recordCreator(groupId: string, pubkey: string): void;
   /** A channel's metadata arrived: the messages module starts (or queues) its kind 9 stream. */
   onGroupDiscovered(groupId: string): void;
+  onGroupDeleted?(groupId: string): void;
 }
 
 export type { CreateGroupOptions, EditGroupMetadataOptions } from './metadata-tags';
 
 export class GroupMetadataModule {
   readonly groups = new StateStore<JsGroup[]>([]);
+  private epoch = 0;
+  private readonly deletions = new GroupDeletions();
+
+  isDeleted(groupId: string): boolean { return this.deletions.has(groupId); }
   /**
    * `true` once the relay has emitted EOSE for the global kind 39000 sub on
    * the active relay. Lets the empty-state UI distinguish "still loading"
@@ -64,16 +70,33 @@ export class GroupMetadataModule {
     });
   }
 
+  private commandContext(): GroupMetadataContext {
+    const epoch = this.epoch;
+    const assertCurrent = () => {
+      if (epoch !== this.epoch) throw new DOMException('Channel command was superseded', 'AbortError');
+    };
+    return {
+      ...this.ctx,
+      signAndPublish: async (template, relays, opts) => {
+        const guard = () => { assertCurrent(); opts?.assertCurrent?.(); };
+        guard();
+        const event = await this.ctx.signAndPublish(template, relays, { ...opts, assertCurrent: guard });
+        guard();
+        return event;
+      },
+    };
+  }
+
   // ---- actions ------------------------------------------------------------
 
   /** Create a channel (kind 9007) and set its metadata (`./metadata-commands.ts`). */
   createGroup(opts: CreateGroupOptions): Promise<string> {
-    return createGroup(this.ctx, (groupId, pubkey) => this.deps.recordCreator(groupId, pubkey), opts);
+    return createGroup(this.commandContext(), (groupId, pubkey) => this.deps.recordCreator(groupId, pubkey), opts);
   }
 
   /** Edit a channel's metadata (kind 9002). */
   editGroupMetadata(opts: EditGroupMetadataOptions): Promise<void> {
-    return editGroupMetadata(this.ctx, opts);
+    return editGroupMetadata(this.commandContext(), opts);
   }
 
   /**
@@ -95,7 +118,9 @@ export class GroupMetadataModule {
       '#d': [groupId],
       limit: 1,
     };
-    const { events } = await this.ctx.queryRelaysWithConfidence(this.ctx.relays(), filter, 4000);
+    const epoch = this.epoch;
+    const { events } = await this.ctx.queryRelaysWithConfidence([...this.ctx.relays()], filter, 4000);
+    if (epoch !== this.epoch) return false;
     let added = 0;
     for (const ev of events) {
       const before = this.groups.get().length;
@@ -109,7 +134,7 @@ export class GroupMetadataModule {
   // ---- the relay-wide REQ -------------------------------------------------
 
   subscribe(): void {
-    const filter: Filter = { kinds: [KIND_GROUP_METADATA] };
+    const filter: Filter = { kinds: [KIND_GROUP_METADATA, KIND_GROUP_DELETE] };
     const sub = this.ctx.subscribeWatched(
       this.ctx.relays(),
       filter,
@@ -123,12 +148,20 @@ export class GroupMetadataModule {
   // ---- ingest -------------------------------------------------------------
 
   ingest(ev: NostrEvent): void {
+    if (ev.kind === KIND_GROUP_DELETE) {
+      const groupId = this.deletions.ingest(this.ctx.currentRelayUrl.get(), ev);
+      if (!groupId) return;
+      this.nesting.move(groupId, null);
+      this.groups.update((groups) => groups.filter((group) => group.id !== groupId));
+      this.deps.onGroupDeleted?.(groupId);
+      return;
+    }
     // Single-pass parse: see {@link parseGroupMetadataTags} for the
     // tag-precedence rules (preserved bit-for-bit from the previous
     // multi-scan version).
     const t = parseGroupMetadataTags(ev.tags);
     const groupId = t.d;
-    if (!groupId) return;
+    if (!groupId || this.isDeleted(groupId)) return;
     // Drop older revisions arriving out-of-order from slower relays so the
     // sidebar doesn't oscillate. The cached seed (with its own created_at)
     // also participates in this guard.
@@ -204,11 +237,13 @@ export class GroupMetadataModule {
    * other seeds skip them too. `renderable` says whether anything painted.
    */
   seedFromCache(relay: string, idsFor: (kind: number) => string[]): { hiddenGroupIds: Set<string>; renderable: boolean } {
+    this.deletions.seed(relay, idsFor(KIND_GROUP_DELETE));
     let renderable = false;
-    const hiddenGroupIds = new Set<string>();
+    const hiddenGroupIds = new Set(idsFor(KIND_GROUP_DELETE).filter((id) => this.isDeleted(id)));
     const cachedGroups: JsGroup[] = [];
     const cachedChildren: Record<string, string[]> = {};
     for (const groupId of idsFor(KIND_GROUP_METADATA)) {
+      if (this.isDeleted(groupId)) continue;
       const entry = cacheGet<{ group: JsGroup; createdAt: number }>(relay, KIND_GROUP_METADATA, groupId);
       if (!entry) continue;
       const { group: cached, createdAt } = entry.value;
@@ -254,6 +289,8 @@ export class GroupMetadataModule {
 
   /** Logout and relay switch: the list belongs to the relay (and the identity) being left. */
   clearGroups(): void {
+    this.epoch++;
+    this.deletions.clear();
     this.groups.set([]);
   }
 
@@ -265,6 +302,7 @@ export class GroupMetadataModule {
    * user toggles relays or refreshes.
    */
   forgetRevisions(): void {
+    this.epoch++;
     this.groupMetadataLatestAt.clear();
   }
 

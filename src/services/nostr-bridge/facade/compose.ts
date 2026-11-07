@@ -156,6 +156,7 @@ export class BridgeModules {
         this.messageState.createdHere.add(groupId);
       },
       onGroupDiscovered: (groupId) => this.messages.queue.queue(groupId),
+      onGroupDeleted: (groupId) => this.messages.removeGroup(groupId),
     });
     this.moderation = new ModerationModule(this.ctx, {
       removeMessages: (groupId, ids, author) => this.messages.removeDeleted(groupId, ids, author),
@@ -182,6 +183,7 @@ export class BridgeModules {
     this.media = new MediaPacksModule(this.ctx);
     this.messages = new MessagesModule(this.messageState, this.ctx, {
       waitForRelayAuth: (timeoutMs) => this.access.waitForAuth(timeoutMs),
+      isGroupDeleted: (groupId) => this.metadata.isDeleted(groupId),
       moderation: this.moderation,
       pings: this.pings,
       ensureUserMetadata: (pubkey) => this.profiles.ensure(pubkey),

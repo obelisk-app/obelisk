@@ -4,6 +4,7 @@ import { editMetadataTags } from '@/services/nostr-bridge/groups/metadata/metada
 import { GroupNesting } from '@/services/nostr-bridge/groups/metadata/nesting';
 import { MetadataEoseLadder } from '@/services/nostr-bridge/groups/metadata/metadata-eose';
 import { StateStore } from '@/services/nostr-bridge/common/state-store';
+import { KIND_GROUP_METADATA } from '@/constants/nostr/nip-kinds';
 import type { JsGroup } from '@/services/nostr-bridge/common/types';
 
 describe('groups/metadata-tags', () => {
@@ -81,4 +82,23 @@ describe('groups/metadata-eose', () => {
     ladder.handleEose();
     expect(eose.get()).toBe(true);
   });
+});
+
+it('drops a metadata fallback after reset even when the relay URL is unchanged', async () => {
+  vi.useFakeTimers();
+  try {
+    let resolve!: (value: { events: NostrEvent[]; complete: boolean }) => void;
+    const ingest = vi.fn();
+    const ladder = new MetadataEoseLadder({
+      session: () => ({ pubKeyHex: 'a', loginMethod: 'nsec', relayUrl: 'wss://r' }),
+      relays: () => ['wss://r'], currentRelayUrl: new StateStore('wss://r'),
+      queryRelaysWithConfidence: vi.fn(() => new Promise((done) => { resolve = done; })),
+    }, { groups: new StateStore<JsGroup[]>([]), groupMetadataEose: new StateStore(false), ingest });
+    ladder.handleEose();
+    await vi.advanceTimersByTimeAsync(1500);
+    ladder.clear();
+    resolve({ events: [{ kind: KIND_GROUP_METADATA } as NostrEvent], complete: true });
+    await Promise.resolve();
+    expect(ingest).not.toHaveBeenCalled();
+  } finally { vi.useRealTimers(); }
 });

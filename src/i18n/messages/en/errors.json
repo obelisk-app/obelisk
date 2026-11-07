@@ -1,6 +1,7 @@
 {
   "generic": "Something went wrong. Try again.",
   "codes": {
+    "group-deleted": "This channel was deleted. You can no longer send messages here.",
     "not-logged-in": "You are not logged in. Log in and try again.",
     "not-ready": "Obelisk is still starting. Try again in a moment.",
     "offline": "You are offline. Check your connection.",

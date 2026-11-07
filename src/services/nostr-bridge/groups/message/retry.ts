@@ -129,6 +129,7 @@ export class MessageRetry {
    * caller stands, no further action needed.
    */
   async querySyncFallback(groupId: string): Promise<void> {
+    const epoch = this.s.epoch;
     if (!this.ctx.session()) return;
     const filter: Filter = {
       kinds: [KIND_GROUP_CHAT_MESSAGE],
@@ -149,7 +150,7 @@ export class MessageRetry {
     // user has since switched to a different active channel and an
     // unrelated path already flipped status (don't fight ingest races).
     if (!this.ctx.session()) return;
-    if (events.length === 0) return;
+    if (epoch !== this.s.epoch || events.length === 0) return;
     for (const ev of events) this.m.ingestor.ingest(groupId, ev);
   }
 

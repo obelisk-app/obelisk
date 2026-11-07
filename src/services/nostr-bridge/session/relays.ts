@@ -86,15 +86,9 @@ export class RelayRail {
     if (!isImportableRelayUrl(normalized)) throw new CodedError('invalid-relay-url', "relay URL must be a public wss:// hostname");
     const previousRelays = [...state.relays];
     t.connection.generation++;
-    // Preserve only the mounted channel. Background subscriptions belong to
-    // the old relay and reopening them here can exhaust the new relay quota.
-    const activeGroup = t.messages.activeGroupId();
-    const perGroup: PerGroupReqs | null = activeGroup ? {
-      messages: [activeGroup],
-      reactions: t.reactions.hasPerGroup(activeGroup) ? [activeGroup] : [],
-      adminMember: t.membership.hasPerGroup(activeGroup) ? [activeGroup] : [],
-      metadata: [],
-    } : null;
+    // A channel id belongs to the relay being left. Only explicit navigation
+    // after the switch may activate a channel on the new relay.
+    t.messages.clearActiveGroup();
     t.reqs.closeAll();
     t.dmInbox.dropHandles();
     t.connection.forgetSocketsUp();
@@ -124,7 +118,7 @@ export class RelayRail {
     // overwrite as they arrive.
     t.seedCacheForRelay(normalized);
     try {
-      await this.deps.connect(perGroup);
+      await this.deps.connect(null);
       void t.profiles.syncOwn('switch');
     } catch {
       // The handshake failed. The hub keeps the socket held and retries with

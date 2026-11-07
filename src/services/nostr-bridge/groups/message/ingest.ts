@@ -31,6 +31,7 @@ export class MessageIngest {
   ) {}
 
   ingest(groupId: string, ev: NostrEvent): void {
+    if (this.deps.isGroupDeleted?.(groupId)) return;
     if (this.deps.moderation.isModerated(groupId, ev.id)) return;
     if (this.deps.moderation.isDeletedByAuthor(groupId, ev.id, ev.pubkey)) return;
     const replyTo = ev.tags.find((t) => t[0] === 'e' && t[3] === 'reply')?.[1] ?? null;
@@ -197,6 +198,7 @@ export class MessageIngest {
     // The UI must only show "no earlier messages" for 'end'. Everything
     // else remains retryable so AUTH races and normal relay hiccups do not
     // become false history-end signals.
+    const epoch = this.s.epoch;
     const existing = this.s.messagesByGroup.get()[groupId] ?? [];
     if (existing.length === 0) return 'unavailable';
     const oldest = existing.reduce((a, m) => (m.createdAt < a ? m.createdAt : a), existing[0].createdAt);
@@ -204,7 +206,7 @@ export class MessageIngest {
     const accessBefore = this.ctx.relayAccess.get()[relayKey] ?? 'unknown';
     if (accessBefore === 'authenticating') {
       const settled = await this.deps.waitForRelayAuth(3500);
-      if (settled !== 'ok') return 'unavailable';
+      if (settled !== 'ok' || epoch !== this.s.epoch) return 'unavailable';
     }
     const filter: Filter = {
       kinds: [KIND_GROUP_CHAT_MESSAGE],
@@ -217,7 +219,7 @@ export class MessageIngest {
     // the cache keeps an uncertain answer for 10 s, which would hand the
     // retry the same failure. The fresh answer still refreshes the cache.
     const { events, complete } = await this.ctx.queryRelaysWithConfidence(this.ctx.relays(), filter, 5000, { cache: 'fresh' });
-    if (this.ctx.currentRelayUrl.get() !== relayBefore) return 'unavailable';
+    if (epoch !== this.s.epoch || this.ctx.currentRelayUrl.get() !== relayBefore) return 'unavailable';
     const accessAfter = this.ctx.relayAccess.get()[relayKey] ?? 'unknown';
     if (events.length === 0) return complete && accessAfter === 'ok' ? 'end' : 'unavailable';
     let added = 0;

@@ -280,7 +280,7 @@ describe('nostr-bridge', () => {
   });
 
 
-  it("keeps mounted channel subscriptions alive across relay switches", async () => {
+  it("requires explicit channel navigation after a relay switch", async () => {
     const { getBridge } = await import("@/services/nostr-bridge/facade/client");
     const { skHex, pkHex } = makeKeypair();
     const bridge = await getBridge();
@@ -293,6 +293,12 @@ describe('nostr-bridge', () => {
 
     await bridge.switchRelay("wss://other.example");
     await flush();
+    expect(fake.state.subscriptions.some((sub) => {
+      const filter = sub.filter as { kinds?: number[]; "#h"?: string[] };
+      return sub.relays?.includes(onWire("wss://other.example"))
+        && filter.kinds?.includes(9) && filter["#h"]?.includes(groupId);
+    })).toBe(false);
+    bridge.setActiveGroup(groupId);
     deliver(await fakeRelayMessage({ groupId, content: "loaded without refresh" }));
     await flush();
 

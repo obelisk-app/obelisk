@@ -1,6 +1,7 @@
 {
   "generic": "Algo deu errado. Tente de novo.",
   "codes": {
+    "group-deleted": "Este canal foi excluído. Você não pode mais enviar mensagens aqui.",
     "not-logged-in": "Você não está conectado. Entre e tente de novo.",
     "not-ready": "O Obelisk ainda está iniciando. Tente de novo em um instante.",
     "offline": "Você está sem conexão. Verifique sua conexão.",

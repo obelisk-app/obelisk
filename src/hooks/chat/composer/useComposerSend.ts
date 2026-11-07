@@ -125,9 +125,17 @@ export function useComposerSend({
       }
     }
 
-    // Clear only after the prerequisite signature succeeds, preserving the
-    // draft if the user rejects the join request in their extension.
+    // Enqueue before clearing: the bridge can reject a deleted channel before
+    // inserting an optimistic message. Keep its draft and show the reason.
     if (state.isCurrent?.() === false) return;
+    const wire = resolveDraftMentions(content, state.draftMentions);
+    const tags = outgoingTags(wire, state);
+    try {
+      await nostrActions.sendMessage(groupId, wire, replyToCopy, tags);
+    } catch (err) {
+      if (state.isCurrent?.() !== false) state.setSendError(errorText(t, err, 'errors.codes.publish-rejected'));
+      return;
+    }
     if (state.clearSubmitted) {
       if (state.clearSubmitted()) setReplyingTo(null);
     } else {
@@ -139,18 +147,5 @@ export function useComposerSend({
       setReplyingTo(null);
     }
 
-    // The composer holds mentions as readable `@Name`; the wire format is
-    // `nostr:npub1...`. Resolve here, past the frontend-only commands and
-    // before anything downstream reads the text, or the event carries no
-    // `nostr:` token, so no `#p` tag and no mention notification.
-    const wire = resolveDraftMentions(content, state.draftMentions);
-
-    // Fire-and-forget: the bridge inserts the pending placeholder
-    // synchronously and surfaces send failures via the bubble's `failed`
-    // flag (with retry).
-    const tags = outgoingTags(wire, state);
-    nostrActions.sendMessage(groupId, wire, replyToCopy, tags).catch((err) => {
-      console.error('send failed', err);
-    });
   };
 }

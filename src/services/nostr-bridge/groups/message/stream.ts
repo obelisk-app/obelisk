@@ -21,7 +21,7 @@ export class MessageStream {
   ) {}
 
   subscribe(groupId: string): void {
-    if (this.s.subscribedGroups.has(groupId)) return;
+    if (this.deps.isGroupDeleted?.(groupId) || this.s.subscribedGroups.has(groupId)) return;
     this.s.subscribedGroups.add(groupId);
     // Initial status: if the bridge already has cached messages for this
     // group (e.g. a returning subscriber after a relay switch), keep

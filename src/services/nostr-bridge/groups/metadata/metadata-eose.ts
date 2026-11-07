@@ -24,6 +24,7 @@ export class MetadataEoseLadder {
   private static readonly EMPTY_RETRY_DELAYS = [1500, 3000, 5000] as const;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private attempts = 0;
+  private epoch = 0;
 
   constructor(
     private readonly ctx: MetadataEoseContext,
@@ -31,6 +32,7 @@ export class MetadataEoseLadder {
   ) {}
 
   clear(): void {
+    this.epoch++;
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
@@ -61,6 +63,7 @@ export class MetadataEoseLadder {
 
   private async querySyncFallback(): Promise<void> {
     if (!this.ctx.session()) return;
+    const epoch = this.epoch;
     const relay = this.ctx.currentRelayUrl.get();
     const relays = [...this.ctx.relays()];
     let events: NostrEvent[];
@@ -72,11 +75,11 @@ export class MetadataEoseLadder {
       events = result.events;
       if (events.length === 0 && !result.complete) return;
     } catch {
-      if (!this.ctx.session() || this.ctx.currentRelayUrl.get() !== relay) return;
+      if (epoch !== this.epoch || !this.ctx.session() || this.ctx.currentRelayUrl.get() !== relay) return;
       this.handleEose();
       return;
     }
-    if (!this.ctx.session() || this.ctx.currentRelayUrl.get() !== relay) return;
+    if (epoch !== this.epoch || !this.ctx.session() || this.ctx.currentRelayUrl.get() !== relay) return;
     for (const ev of events) this.stores.ingest(ev);
     if (this.stores.groups.get().length > 0) {
       this.clear();

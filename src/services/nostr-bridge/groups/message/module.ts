@@ -43,6 +43,7 @@ export interface MessagesDeps {
   readonly moderation: Pick<ModerationModule, 'isModerated' | 'isDeletedByAuthor' | 'ingestEventDeletion' | 'ingestGroupEventDeletion'>;
   readonly pings: Pick<PingsModule, 'recordRelayUse' | 'deliverGroupPing'>;
   ensureUserMetadata(pubkey: string): void;
+  isGroupDeleted?(groupId: string): boolean;
 }
 
 /** How the parts reach each other (always through the module, at call time). */
@@ -81,6 +82,26 @@ export class MessagesModule implements MessagesParts {
       messagesStatusByGroup: state.messagesStatusByGroup,
       setStatus: (groupId, status) => state.setStatus(groupId, status),
     };
+  }
+
+  removeGroup(groupId: string): void {
+    const sub = this.state.subByGroup.get(groupId);
+    sub?.close();
+    this.forgetSub(groupId);
+    this.retry.clear(groupId);
+    this.state.pendingSet.delete(groupId);
+    this.state.pendingQueue = this.state.pendingQueue.filter((id) => id !== groupId);
+    const timer = this.state.cacheFlushTimers.get(groupId);
+    if (timer) clearTimeout(timer);
+    this.state.cacheFlushTimers.delete(groupId);
+    for (const [tag, send] of this.state.pendingSends) {
+      if (send.groupId === groupId) this.state.pendingSends.delete(tag);
+    }
+    this.state.messagesByGroup.update((prev) => {
+      const next = { ...prev };
+      delete next[groupId];
+      return next;
+    });
   }
 
   forgetSub(groupId: string): void {
@@ -129,10 +150,11 @@ export class MessagesModule implements MessagesParts {
       subscribedGroups: () => Array.from(s.subscribedGroups),
       activeGroupId: () => s.activeGroupId,
       forgetSubscriptions: () => {
+        s.epoch++;
         s.subscribedGroups.clear();
         s.subByGroup.clear();
       },
-      clearStore: () => s.messagesByGroup.set({}),
+      clearStore: () => { s.epoch++; s.messagesByGroup.set({}); },
       clearPendingSends: () => s.pendingSends.clear(),
       resetStatus: () => s.messagesStatusByGroup.set({}),
       clearAllRetry: () => this.retry.clearAll(),

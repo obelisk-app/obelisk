@@ -383,6 +383,7 @@ replaces entries through `cacheSet`.
 | 39000 (group metadata) | `groups/metadata.ts` (`ingest`) | `seedCacheForRelay` (`seed.ts`) |
 | 39001 (admin lists) | `groups/membership.ts` (`ingestAdminMember`) | `seedCacheForRelay` |
 | 39002 (member lists) | `groups/membership.ts` (`ingestAdminMember`) | `seedCacheForRelay` |
+| 9008 (deleted groups) | `groups/metadata/deletions.ts` | `seedCacheForRelay` before group metadata |
 | 9007 (group creators) | `groups/membership.ts` (`ingestGroupCreator`) | `seedCacheForRelay` |
 | 0 (user metadata) | `profiles.ts` (`ingest`) | `seedCacheForRelay` (≤500 pubkeys) |
 | 30078 layout | `channel-layout.ts:subscribeLayout` | self-seeds via `cacheGet` |
@@ -396,6 +397,21 @@ Invalidation is explicit only:
 
 Cache is **never** invalidated on relay switch: caches for the previous
 relay stay on disk and re-paint instantly on switch-back.
+
+Relay switches retire the previous channel selection and its subscriptions.
+Metadata/history query epochs reject delayed results even after A -> B -> A.
+In-flight message sends keep their original relay and an operation guard, so
+signer completions and acknowledgements cannot recreate messages after reset.
+
+Accepted, signature-verified kind 9008 events on the active relay remove the
+channel and its cached metadata, roster and messages. The relay validates
+administrative authority before accepting these requests, as it does for
+kind 9005 moderation. Bounded in-memory tombstones and cached deletion markers
+prevent older metadata from resurrecting a deleted channel. Both shells hide
+the composer when channel metadata disappears; the bridge also rejects sends
+and retries to a known deleted channel before signing. Unknown metadata is
+not a deletion signal. Relay-side enforcement remains necessary for stale
+clients that have not received the deletion.
 
 ## 10. UI loading states
 

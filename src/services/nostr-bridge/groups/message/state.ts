@@ -11,6 +11,7 @@ import { StateStore } from '../../common/state-store';
 import type { JsMessage, MessagesStatus } from '../../common/types';
 
 export class MessagesState {
+  epoch = 0;
   /** The channel in view; its REQ goes first and pauses the background drain. */
   activeGroupId: string | null = null;
   readonly messagesByGroup = new StateStore<Record<string, JsMessage[]>>({});

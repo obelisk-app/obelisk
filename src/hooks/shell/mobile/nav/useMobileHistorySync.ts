@@ -4,9 +4,10 @@ import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction }
 import { useTranslations } from 'next-intl';
 import { useToastStore } from '@/store/feedback/toast';
 import { useRouter } from '@/i18n/navigation';
-import { useConfiguredRelays } from '@/services/nostr-bridge';
+import { useBridge } from '@/services/nostr-bridge';
 import { useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink';
-import { classifyDeepLinkRelay } from '@/utils/relay/deep-link';
+import { initialNav } from '@/constants/shell/mobile';
+import { normalizeDeepLinkRelay } from '@/utils/relay/deep-link';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/chat/dm';
 import { type NavState, urlFor, parseUrl, restoredNav } from '@/utils/shell/mobile/url-state';
@@ -36,10 +37,13 @@ export interface MobileHistorySyncInputs {
 export function useMobileHistorySync({
   isLoggedIn, dmOptInEnabled, currentRelayUrl, nav, navRef, relayRef, setNav, setSlideDir, suppressSlideRef,
 }: MobileHistorySyncInputs) {
-  const configuredRelays = useConfiguredRelays();
+  const bridge = useBridge();
+  const initReadyRef = useRef(false);
   const switchFromDeepLink = useRelayDeepLink();
   const didInitRef = useRef(false);
   const exitArmedRef = useRef<number>(0);
+  const historyReplay = useRef(0);
+  useEffect(() => () => { historyReplay.current++; }, []);
   const exitToastId = useRef<string | null>(null);
   const t = useTranslations();
   useEffect(() => () => {
@@ -48,6 +52,21 @@ export function useMobileHistorySync({
     exitToastId.current = null;
   }, [nav, isLoggedIn, currentRelayUrl]);
   const router = useRouter();
+  useEffect(() => {
+    if (!bridge) return;
+    let previous = bridge.currentRelayUrl.get();
+    return bridge.currentRelayUrl.subscribe((next) => {
+      if (next === previous) return;
+      previous = next;
+      relayRef.current = next;
+      const current = navRef.current;
+      if (current.groupId || current.forumGroupId || current.msgContext) {
+        navRef.current = initialNav;
+        setNav(initialNav);
+        useChatStore.setState({ activeChannelId: null });
+      }
+    });
+  }, [bridge, navRef, relayRef, setNav]);
 
   // ── initial URL parse + history seeding ─────────────────────────────
   useEffect(() => {
@@ -58,45 +77,46 @@ export function useMobileHistorySync({
     const { nav: fromUrl, relay } = parseUrl(window.location.search);
     const saved = window.history.state?.nav as NavState | undefined;
     const parsed = saved ? restoredNav(saved) : fromUrl;
-    // A relay outside the user's list is confirmed first; see
-    // `useRelayDeepLink` for why the order matters. The seeded history
-    // only carries the linked relay when the switch is immediate: a relay
-    // still waiting on the dialog (or declined) must not be what a refresh
-    // reopens.
-    if (relay) void switchFromDeepLink(relay);
-    const seedRelay = relay && classifyDeepLinkRelay(relay, currentRelayUrl, configuredRelays) !== 'unknown'
-      ? relay
-      : currentRelayUrl ?? null;
-    // Setting state here is deliberate. Deep-link seam, same as DesktopShell's URL parse: the one-shot init also seeds the history guard and the store, and is gated on `isLoggedIn`, so it cannot be a lazy initializer without re-plumbing the sequence `navigation-invariants.test.ts` protects. See audits/obelisk/round9/FIX-lint-warnings.md.
-    setNav(parsed);
-    navRef.current = parsed;
-    if (parsed.screen === 'channel' && parsed.groupId) {
-      useChatStore.setState({ activeChannelId: parsed.groupId, isNearBottom: false });
-    } else if (dmOptInEnabled && parsed.screen === 'dm-thread' && parsed.dmPeer) {
-      useDMStore.setState({ activeDMPubkey: parsed.dmPeer });
-    }
-    // Guard entry: a sentinel sits BEHIND the current nav so the first
-    // press of back lands on the guard (we re-push and arm the toast),
-    // and a second press within 2 s confirms exit to the landing page.
-    // For sub-screens (e.g. deep-linked into a channel) `buildSeedHistory`
-    // also seeds the parent tab between the guard and the sub-screen, so
-    // the channel header's back arrow climbs up to the channel list rather
-    // than dropping straight onto the guard and showing the exit toast.
-    if (saved && window.history.state?.phoneHistory) return; // The current app entry already has a stack; resizing must not grow it.
-    const entries = buildSeedHistory(parsed, seedRelay);
-    try {
-      window.history.replaceState({ ...window.history.state, nav: undefined, phoneHistory: true, ...entries[0].state }, '', entries[0].url);
-      for (let i = 1; i < entries.length; i++) {
-        window.history.pushState({ ...entries[i].state, phoneHistory: true }, '', entries[i].url);
+    const apply = (allowed: boolean) => {
+      const target = allowed ? parsed : initialNav;
+      const seedRelay = bridge?.currentRelayUrl.get() ?? currentRelayUrl ?? null;
+      initReadyRef.current = true;
+      // Setting state here is deliberate. Deep-link seam, same as DesktopShell's URL parse: the one-shot init also seeds the history guard and the store, and is gated on `isLoggedIn`, so it cannot be a lazy initializer without re-plumbing the sequence `navigation-invariants.test.ts` protects. See audits/obelisk/round9/FIX-lint-warnings.md.
+      setNav(target);
+      navRef.current = target;
+      if (target.screen === 'channel' && target.groupId) {
+        useChatStore.setState({ activeChannelId: target.groupId, isNearBottom: false });
+      } else if (dmOptInEnabled && target.screen === 'dm-thread' && target.dmPeer) {
+        useDMStore.setState({ activeDMPubkey: target.dmPeer });
       }
-    } catch { /* ignore */ }
-  }, [isLoggedIn, currentRelayUrl, configuredRelays, dmOptInEnabled, switchFromDeepLink, navRef, setNav]);
+      // Guard entry: a sentinel sits BEHIND the current nav so the first
+      // press of back lands on the guard (we re-push and arm the toast),
+      // and a second press within 2 s confirms exit to the landing page.
+      // For sub-screens (e.g. deep-linked into a channel) `buildSeedHistory`
+      // also seeds the parent tab between the guard and the sub-screen, so
+      // the channel header's back arrow climbs up to the channel list rather
+      // than dropping straight onto the guard and showing the exit toast.
+      if (saved && window.history.state?.phoneHistory) return; // The current app entry already has a stack; resizing must not grow it.
+      const entries = buildSeedHistory(target, seedRelay);
+      try {
+        window.history.replaceState({ ...window.history.state, nav: undefined, phoneHistory: true, ...entries[0].state }, '', entries[0].url);
+        for (let i = 1; i < entries.length; i++) {
+          window.history.pushState({ ...entries[i].state, phoneHistory: true }, '', entries[i].url);
+        }
+      } catch { /* ignore */ }
+    };
+    if (relay) void switchFromDeepLink(relay).then(
+      (outcome) => apply(outcome === 'switched' || outcome === 'unchanged'),
+      () => apply(false),
+    );
+    else apply(true);
+  }, [bridge, isLoggedIn, currentRelayUrl, dmOptInEnabled, switchFromDeepLink, navRef, setNav]);
 
   // Keep relayRef + URL relay param in sync without pushing history entries.
   useEffect(() => {
     relayRef.current = currentRelayUrl ?? null;
     if (typeof window === 'undefined') return;
-    if (!didInitRef.current) return;
+    if (!initReadyRef.current) return;
     const url = urlFor(navRef.current, currentRelayUrl ?? null);
     try {
       window.history.replaceState(window.history.state, '', url);
@@ -127,33 +147,50 @@ export function useMobileHistorySync({
       }
       if (s?.nav) {
         if (exitToastId.current) useToastStore.getState().dismissToast(exitToastId.current);
-        const next = restoredNav(s.nav);
-        const prev = navRef.current.screen;
-        const isSettingsTabSwitch =
-          (prev === 'settings-profile' && next.screen === 'settings-prefs') ||
-          (prev === 'settings-prefs' && next.screen === 'settings-profile');
-        // The msg-actions sheet floats over a base screen with its own
-        // vertical slide-up animation. Any popstate that opens or closes it
-        // must NOT also animate the base
-        // layer, otherwise the channel underneath slides laterally while the
-        // sheet appears/disappears, which reads as a glitchy refresh.
-        const isSheetTransition = prev === 'msg-actions' || next.screen === 'msg-actions';
-        if (isSettingsTabSwitch || isSheetTransition) {
-          suppressSlideRef.current = true;
-          setSlideDir(null);
-        } else {
-          setSlideDir('back');
-        }
-        setNav(next);
-        navRef.current = next;
-        useChatStore.setState({
-          activeChannelId: next.screen === 'channel' ? next.groupId : null,
-          isNearBottom: false,
-        });
-        useDMStore.setState({ activeDMPubkey: dmOptInEnabled && next.screen === 'dm-thread' ? next.dmPeer : null });
+        const destination = restoredNav(s.nav);
+        const generation = ++historyReplay.current;
+        const requested = new URLSearchParams(window.location.search).get('relay');
+        const apply = (allowed: boolean) => {
+          if (generation !== historyReplay.current) return;
+          initReadyRef.current = true;
+          const next = allowed ? destination : initialNav;
+          const prev = navRef.current.screen;
+          const isSettingsTabSwitch =
+            (prev === 'settings-profile' && next.screen === 'settings-prefs') ||
+            (prev === 'settings-prefs' && next.screen === 'settings-profile');
+          // The msg-actions sheet floats over a base screen with its own
+          // vertical slide-up animation. Any popstate that opens or closes it
+          // must NOT also animate the base
+          // layer, otherwise the channel underneath slides laterally while the
+          // sheet appears/disappears, which reads as a glitchy refresh.
+          const isSheetTransition = prev === 'msg-actions' || next.screen === 'msg-actions';
+          if (isSettingsTabSwitch || isSheetTransition) {
+            suppressSlideRef.current = true;
+            setSlideDir(null);
+          } else {
+            setSlideDir('back');
+          }
+          setNav(next);
+          navRef.current = next;
+          useChatStore.setState({
+            activeChannelId: next.screen === 'channel' ? next.groupId : null,
+            isNearBottom: false,
+          });
+          useDMStore.setState({ activeDMPubkey: dmOptInEnabled && next.screen === 'dm-thread' ? next.dmPeer : null });
+        };
+        if (requested && normalizeDeepLinkRelay(requested) !== normalizeDeepLinkRelay(relayRef.current ?? '')) {
+          initReadyRef.current = false;
+          navRef.current = initialNav;
+          setNav(initialNav);
+          useChatStore.setState({ activeChannelId: null });
+          void switchFromDeepLink(requested).then(
+            (outcome) => apply(outcome === 'switched' || outcome === 'unchanged'),
+            () => apply(false),
+          );
+        } else apply(true);
       }
     };
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
-  }, [t, router, dmOptInEnabled, navRef, relayRef, setNav, setSlideDir, suppressSlideRef]);
+  }, [t, router, dmOptInEnabled, navRef, relayRef, setNav, setSlideDir, suppressSlideRef, switchFromDeepLink]);
 }

@@ -47,6 +47,9 @@ export const KIND_GROUP_DELETE_EVENT = 9005;
 /** NIP-29: group create (admin event). */
 export const KIND_GROUP_CREATE = 9007;
 
+/** NIP-29: delete a group (admin event). */
+export const KIND_GROUP_DELETE = 9008;
+
 /** NIP-29: user asks to join a group. */
 export const KIND_GROUP_JOIN_REQUEST = 9021;
 

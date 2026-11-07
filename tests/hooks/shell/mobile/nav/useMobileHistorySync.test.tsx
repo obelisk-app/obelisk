@@ -100,3 +100,40 @@ describe('responsive history reentry', () => {
     pushState.mockRestore();
   });
 });
+
+it('clears a previous relay channel from mobile navigation before updating the URL', () => {
+  const fake = fakeBridge({ currentRelayUrl: 'wss://a.example' });
+  const navRef = { current: initialNav };
+  const setNav = vi.fn();
+  renderHook(() => useMobileHistorySync({
+    isLoggedIn: true, dmOptInEnabled: false, currentRelayUrl: 'wss://a.example', nav: initialNav, navRef,
+    relayRef: { current: 'wss://a.example' }, setNav, setSlideDir: vi.fn(), suppressSlideRef: { current: false },
+  }), { wrapper: bridgeWrapper(fake) });
+  navRef.current = { ...initialNav, screen: 'channel', groupId: 'private-room' };
+  act(() => fake.stores.currentRelayUrl.set('wss://b.example'));
+  expect(navRef.current).toEqual(initialNav);
+  expect(setNav).toHaveBeenLastCalledWith(initialNav);
+});
+
+it('waits for the historical relay before activating its channel', async () => {
+  let finish!: () => void;
+  const gate = new Promise<void>((resolve) => { finish = resolve; });
+  const fake = fakeBridge({ currentRelayUrl: 'wss://b.example', configuredRelays: ['wss://a.example', 'wss://b.example'] }, {
+    switchRelay: vi.fn(async (url: string) => { await gate; fake.stores.currentRelayUrl.set(url); }),
+  });
+  const navRef = { current: initialNav };
+  const setNav = vi.fn();
+  renderHook(() => useMobileHistorySync({
+    isLoggedIn: true, dmOptInEnabled: false, currentRelayUrl: 'wss://b.example', nav: initialNav, navRef,
+    relayRef: { current: 'wss://b.example' }, setNav, setSlideDir: vi.fn(), suppressSlideRef: { current: false },
+  }), { wrapper: bridgeWrapper(fake) });
+  const destination: NavState = { ...initialNav, screen: 'channel', groupId: 'a-room' };
+  act(() => {
+    window.history.replaceState({ nav: destination }, '', '/app?relay=a.example&c=a-room');
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { nav: destination } }));
+  });
+  expect(navRef.current).toEqual(initialNav);
+  expect(setNav).not.toHaveBeenCalledWith(destination);
+  await act(async () => { finish(); await gate; });
+  expect(navRef.current).toEqual(destination);
+});

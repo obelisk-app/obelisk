@@ -121,3 +121,28 @@ describe('responsive destination handoff', () => {
     expect(viewForNav({ ...initialNav, screen: 'profile-view', parentScreen: 'feed' })).toEqual({ kind: 'feed' });
   });
 });
+
+it('drops a channel selection and remembered group when the relay changes', () => {
+  const fake = fakeBridge({ currentRelayUrl: 'wss://a.example' }, { setActiveGroup: vi.fn() });
+  const { result } = renderHook(() => useDesktopNavigation(useCurrentRelayUrl()), { wrapper: bridgeWrapper(fake) });
+  act(() => result.current.setView({ kind: 'group', groupId: 'same-id' }));
+  act(() => fake.stores.currentRelayUrl.set('wss://b.example'));
+  expect(result.current.view).toEqual({ kind: 'empty' });
+  expect(window.location.search).not.toContain('c=same-id');
+});
+
+it('does not activate an initial deep-linked channel until its relay switch finishes', async () => {
+  let finish!: () => void;
+  const gate = new Promise<void>((resolve) => { finish = resolve; });
+  const setActiveGroup = vi.fn();
+  const fake = fakeBridge({ currentRelayUrl: 'wss://a.example', configuredRelays: ['wss://a.example', 'wss://b.example'] }, {
+    setActiveGroup,
+    switchRelay: vi.fn(async (url: string) => { await gate; fake.stores.currentRelayUrl.set(url); }),
+  });
+  window.history.replaceState(null, '', '/app?relay=b.example&c=private-room');
+  const { result } = renderHook(() => useDesktopNavigation(useCurrentRelayUrl()), { wrapper: bridgeWrapper(fake) });
+  expect(result.current.view).toEqual({ kind: 'empty' });
+  expect(setActiveGroup).not.toHaveBeenCalledWith('private-room');
+  await act(async () => { finish(); await gate; });
+  await waitFor(() => expect(result.current.view).toEqual({ kind: 'group', groupId: 'private-room' }));
+});

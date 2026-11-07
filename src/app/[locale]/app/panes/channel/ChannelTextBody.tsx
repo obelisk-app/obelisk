@@ -63,7 +63,7 @@ export function ChannelTextBody({ vm, scrollRef, composerRef }: {
         />
       )}
 
-      <ChatComposer
+      {vm.group && <ChatComposer
         ref={composerRef}
         groupId={vm.groupId}
         group={vm.group}
@@ -71,7 +71,7 @@ export function ChannelTextBody({ vm, scrollRef, composerRef }: {
         replyingTo={vm.replyingTo}
         setReplyingTo={vm.setReplyingTo}
         onOpenNewGame={vm.openNewGame}
-      />
+      />}
     </>
   );
 }

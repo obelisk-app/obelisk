@@ -17,6 +17,7 @@ import {
   KIND_GROUP_ADMINS,
   KIND_GROUP_CHAT_MESSAGE,
   KIND_GROUP_CREATE,
+  KIND_GROUP_DELETE,
   KIND_GROUP_MEMBERS,
   KIND_GROUP_METADATA,
   KIND_METADATA,
@@ -39,6 +40,7 @@ export interface SeedTargets {
 export function seedCacheForRelay(relay: string, targets: SeedTargets): boolean {
   const ids = cacheListIdsByKind(relay, [
     KIND_GROUP_METADATA,
+    KIND_GROUP_DELETE,
     KIND_GROUP_ADMINS,
     KIND_GROUP_MEMBERS,
     KIND_GROUP_CREATE,

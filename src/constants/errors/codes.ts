@@ -5,6 +5,7 @@
 
 /** One per message under `codes` in errors.json. */
 export const ERROR_CODES = [
+  'group-deleted',
   'not-logged-in', 'not-ready', 'offline', 'no-relays-connected',
   'extension-missing', 'extension-no-nip04', 'extension-no-nip44', 'signer-no-nip44',
   'signer-unsupported', 'pq-unavailable', 'signer-timeout', 'signer-reset',

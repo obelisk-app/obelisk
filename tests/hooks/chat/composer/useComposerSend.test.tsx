@@ -27,6 +27,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   });
 });
 
+import { CodedError } from '@/utils/errors/codes';
 import { useComposerSend, type ComposerDraftState } from '@/hooks/chat/composer/useComposerSend';
 
 function state(draft: string): ComposerDraftState {
@@ -60,6 +61,15 @@ function run(draft: string, group: JsGroup | null = groupFixture({ id: 'g', isOp
 
 describe('useComposerSend', () => {
   beforeEach(() => { vi.clearAllMocks(); members = []; });
+
+  it('preserves the draft and shows a deleted-channel error when enqueue is refused', async () => {
+    sendMessage.mockRejectedValueOnce(new CodedError('group-deleted', 'deleted'));
+    const { send, s, setReplyingTo } = run('keep this draft');
+    await act(async () => { await send(); });
+    expect(s.setSendError).toHaveBeenLastCalledWith('This channel was deleted. You can no longer send messages here.');
+    expect(s.setDraft).not.toHaveBeenCalled();
+    expect(setReplyingTo).not.toHaveBeenCalled();
+  });
 
   it('an empty draft sends nothing', async () => {
     const { send } = run('   ');

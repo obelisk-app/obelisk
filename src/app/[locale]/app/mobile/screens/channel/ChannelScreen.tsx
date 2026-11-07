@@ -84,7 +84,7 @@ export function ChannelScreen({
         <MentionNavigator scrollRef={messagesRef} eventIds={vm.mentionEventIds} />
       </div>
 
-      <ChannelComposer
+      {vm.group && <ChannelComposer
         ref={composerRef}
         groupId={groupId}
         group={vm.group}
@@ -92,7 +92,7 @@ export function ChannelScreen({
         replyingTo={vm.replyingTo}
         setReplyingTo={vm.setReplyingTo}
         onOpenNewGame={vm.openNewGame}
-      />
+      />}
       {vm.settingsOpen && vm.group && (
         <ChannelSettingsSheet
           group={vm.group}

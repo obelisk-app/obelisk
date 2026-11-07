@@ -50,7 +50,20 @@ export function useDesktopNavigation(relay: string) {
   // status flip to a microtask, after the first paint had already
   // landed. The bridge comes from the provider and is null until it has
   // started, so the effect also runs again when it arrives.
+  const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
   const bridge = useBridge();
+  useEffect(() => {
+    if (!bridge) return;
+    let previous = bridge.currentRelayUrl.get();
+    return bridge.currentRelayUrl.subscribe((next) => {
+      if (next === previous) return;
+      previous = next;
+      setViewState((current) => current.kind === 'group' ? { kind: 'empty' } : current);
+      setLastGroupId(null);
+      setPendingMessageId(null);
+      useChatStore.setState({ activeChannelId: null });
+    });
+  }, [bridge]);
   useLayoutEffect(() => {
     if (view.kind === 'group') {
       bridge?.setActiveGroup(view.groupId);
@@ -66,7 +79,6 @@ export function useDesktopNavigation(relay: string) {
     }
   }, [view, bridge]);
 
-  const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
   const messageGroup = useRef<string | null>(null);
   const switchFromDeepLink = useRelayDeepLink();
 
@@ -102,17 +114,23 @@ export function useDesktopNavigation(relay: string) {
     const r = params.get('relay');
     // A relay outside the user's list is confirmed first; see
     // `useRelayDeepLink` for why the order matters.
-    if (r) void switchFromDeepLink(r);
+
     // Keep a phone-only destination intact until a desktop navigation replaces it.
     const saved = window.history.state?.nav as NavState | undefined;
     const source = saved ? restoredNav(saved) : parseUrl(search).nav;
     const next = viewForNav(source);
     inherited.current = { nav: source, view: next };
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore browser navigation only after the relay deep-link confirmation has been requested.
-    setView(next);
-    setRestored(true);
-    messageGroup.current = next.kind === 'group' ? next.groupId : null;
-    if (m) setPendingMessageId(m);
+    const apply = (allowed: boolean) => {
+      setView(allowed ? next : { kind: 'empty' });
+      setRestored(true);
+      messageGroup.current = allowed && next.kind === 'group' ? next.groupId : null;
+      if (allowed && m) setPendingMessageId(m);
+    };
+    if (r) void switchFromDeepLink(r).then(
+      (outcome) => apply(outcome === 'switched' || outcome === 'unchanged'),
+      () => apply(false),
+    );
+    else apply(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

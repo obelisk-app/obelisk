@@ -24,12 +24,17 @@ export class MessageSend {
     private readonly deps: MessagesDeps,
   ) {}
 
+  private assertAvailable(groupId: string): void {
+    if (this.deps.isGroupDeleted?.(groupId)) throw new CodedError('group-deleted', 'This channel was deleted');
+  }
+
   async sendMessage(
     groupId: string,
     content: string,
     replyTo?: { id: string; pubkey: string } | null,
     emojiTags: ReadonlyArray<ReadonlyArray<string>> = [],
   ): Promise<void> {
+    this.assertAvailable(groupId);
     const session = this.ctx.session();
     if (!session) throw new CodedError('not-logged-in', 'Not logged in');
     const clientTag = generateClientTag();
@@ -78,6 +83,15 @@ export class MessageSend {
     clientTag: string,
     createdAt: number,
   ): Promise<void> {
+    const relay = this.ctx.currentRelayUrl.get();
+    const session = this.ctx.session();
+    const pending = this.s.pendingSends.get(clientTag);
+    const isCurrent = () => pending !== undefined && this.s.pendingSends.get(clientTag) === pending
+      && session === this.ctx.session() && relay === this.ctx.currentRelayUrl.get();
+    const assertCurrent = () => {
+      if (!isCurrent()) throw new DOMException('Channel send was superseded', 'AbortError');
+      this.assertAvailable(groupId);
+    };
     const tags: string[][] = [...emojiTags, ['h', groupId]];
     if (replyTo) {
       tags.push(['e', replyTo.id, '', 'reply']);
@@ -90,19 +104,22 @@ export class MessageSend {
       if (!tags.some((t) => t[0] === 'p' && t[1] === pk)) tags.push(['p', pk]);
     }
     try {
+      assertCurrent();
       const event = await this.ctx.signAndPublish({
         kind: KIND_GROUP_CHAT_MESSAGE,
         content,
         tags,
         created_at: createdAt,
-      });
+      }, { extraRelays: [relay], mode: 'replace' }, { assertCurrent });
+      assertCurrent();
       this.replacePending(groupId, clientTag, event);
     } catch {
-      this.markFailed(groupId, clientTag);
+      if (isCurrent()) this.markFailed(groupId, clientTag);
     }
   }
 
   async retry(groupId: string, clientTag: string): Promise<void> {
+    this.assertAvailable(groupId);
     const args = this.s.pendingSends.get(clientTag);
     if (!args) return;
     // Only retry from a failed state, prevents double-publishing if the
