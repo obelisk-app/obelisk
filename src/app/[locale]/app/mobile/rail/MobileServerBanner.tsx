@@ -1,11 +1,9 @@
 'use client';
 
 import RelayDeckPicker from '@/components/relay/RelayDeckPicker';
-import Link from '@/components/ui/navigation/Link';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
-import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
-import RelayStatusPill from '@/components/relay/RelayStatusPill';
+import MobileRelayStatus from '@/components/relay/MobileRelayStatus';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 import { useMobileServerBanner } from '@/hooks/shell/mobile/rail/useMobileServerBanner';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
@@ -14,8 +12,8 @@ import Heading from '@/components/ui/layout/Heading';
 
 /**
  * The active relay's banner above the phone's channel list: its banner
- * image, icon, name and host, with the relay status pill, the signing
- * indicator and the search, create-channel and space-menu buttons.
+ * image, icon and name, with the combined relay and signing
+ * status and the search, create-channel and space-menu buttons.
  */
 export function MobileServerBanner({
   label,
@@ -51,20 +49,7 @@ export function MobileServerBanner({
       )}
       <div className="server-banner-shade" aria-hidden="true" />
       <div className="server-banner-actions">
-        {/* Beside the signing indicator, because it answers the same kind of
-            question: is the thing underneath this app working right now. */}
-        {/* `active`: this banner only ever sits above the server/channel
-            surface, which reads the NIP-29 relay and never the social tier.
-            Reporting the social count here showed a red 0/4 over a working
-            chat. The popover still answers both. */}
-        <RelayStatusPill
-          relays={vm.socialRelays}
-          activeRelay={relayUrl}
-          onOpenSettings={vm.openRelaySettings}
-          indicate="active"
-          compact
-        />
-        <MobileSigningIndicator />
+        <MobileRelayStatus relays={vm.socialRelays} activeRelay={relayUrl} onOpenSettings={vm.openRelaySettings} />
         <Button variant="mobileIcon" className="action-search" aria-label={t('mobile.header.search')} onClick={onSearch}>
           <SearchIcon size={20} strokeWidth={1.5} />
         </Button>
@@ -95,14 +80,7 @@ export function MobileServerBanner({
               {label}
             </RelayDeckPicker>
           </Heading>
-          {/* The host is the relay's own page - its rules and operator. */}
-          {vm.host && (vm.website ? (
-            <Link href={vm.website} target="_blank" data-testid="mobile-relay-website">
-              {vm.host}
-            </Link>
-          ) : (
-            <span>{vm.host}</span>
-          ))}
+
         </div>
       </div>
     </header>

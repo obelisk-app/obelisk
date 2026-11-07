@@ -252,7 +252,7 @@ describe('Mobile server layout pieces', () => {
     const banner = screen.getByTestId('mobile-server-banner');
     expect(banner.querySelector('.server-banner-img')).toHaveAttribute('src', 'https://img.example/banner.png');
     expect(screen.getByRole('heading', { name: 'La Crypta relay' })).toBeTruthy();
-    expect(screen.getByText('lacrypta-relay.obelisk.ar')).toBeTruthy();
+    expect(screen.queryByText('lacrypta-relay.obelisk.ar')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('Search this server'));
     fireEvent.click(screen.getByLabelText('Create channel'));

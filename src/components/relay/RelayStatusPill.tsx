@@ -25,7 +25,7 @@
 
 import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import AnchoredMenu from '../common/AnchoredMenu';
 import { useRelayStatusPill } from '@/hooks/relay/status/useRelayStatusPill';
@@ -43,7 +43,11 @@ export default function RelayStatusPill({
   onOpenSettings,
   compact = false,
   indicate = 'social',
+  mobileSigning,
+  children,
 }: {
+  mobileSigning?: { label: string; dotClass: string; status: string };
+  children?: ReactNode;
   relays: readonly string[];
   /**
    * The NIP-29 relay this session is bound to. It's a different question
@@ -80,16 +84,18 @@ export default function RelayStatusPill({
         type="button"
         onClick={vm.toggle}
         className={`flex shrink-0 items-center gap-1.5 rounded-lg text-[11px] font-medium text-lc-white/70 transition-colors hover:bg-lc-border/40 hover:text-lc-white ${
-          compact ? 'h-7 w-7 justify-center' : 'px-2 py-1'
+          mobileSigning ? 'icon-btn action-sign justify-center' : compact ? 'h-7 w-7 justify-center' : 'px-2 py-1'
         }`}
         title={vm.label}
-        aria-label={vm.label}
+        aria-label={mobileSigning ? `${vm.label} · ${mobileSigning.label}` : vm.label}
         aria-expanded={vm.open}
         data-testid="relay-status-pill"
         data-tour="relay-status"
         data-state={vm.dotState}
+        data-signing-status={mobileSigning?.status}
         data-indicate={vm.reportsActive ? 'active' : 'social'}
       >
+        {mobileSigning && <span className={`h-3 w-3 rounded-full ${mobileSigning.dotClass}`} aria-hidden="true" />}
         <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${RELAY_STATE_DOT[vm.dotState]}`} aria-hidden="true" />
         {vm.showCount && <span className="tabular-nums">{vm.summary.connected}/{vm.summary.total}</span>}
       </Button>
@@ -102,6 +108,7 @@ export default function RelayStatusPill({
         testId="relay-status-popover"
       >
         <div className="p-1">
+          {children}
           {activeRelay && (
             <>
               <Text as="p" size="10" weight="semibold" variant="label" tone="muted" className="px-2.5 pb-1 pt-2">

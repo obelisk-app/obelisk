@@ -36,6 +36,7 @@ vi.mock('@/services/nostr-bridge', async () => {
   });
 });
 
+import MobileRelayStatus from '@/components/relay/MobileRelayStatus';
 import RelayStatusPill from '@/components/relay/RelayStatusPill';
 
 const A = 'wss://a.example';
@@ -232,4 +233,16 @@ describe('which tier the button reports', () => {
     expect(rows[0].textContent).not.toMatch(/ms|·/);
     expect(rows[1]).toHaveAttribute('data-state', 'unknown');
   });
+});
+
+it('opens relay and signing diagnostics from one mobile status square', () => {
+  render(<LocaleProvider><MobileRelayStatus relays={[A]} activeRelay={A} onOpenSettings={vi.fn()} /></LocaleProvider>);
+  const trigger = screen.getByTestId('relay-status-pill');
+  expect(trigger).toHaveClass('icon-btn', 'action-sign');
+  expect(trigger).toHaveAttribute('data-signing-status', 'idle');
+  expect(screen.queryByTestId('mobile-signing-indicator')).not.toBeInTheDocument();
+  fireEvent.click(trigger);
+  expect(screen.getByTestId('mobile-signing-details')).toBeInTheDocument();
+  expect(screen.getByTestId('relay-status-active')).toBeInTheDocument();
+  expect(screen.getByTestId('relay-status-manage')).toBeInTheDocument();
 });

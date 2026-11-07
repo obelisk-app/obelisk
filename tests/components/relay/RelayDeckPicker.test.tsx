@@ -33,12 +33,12 @@ it.each([2, 3])('browses a %i-relay banner deck, selects the settled front relay
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   const card = screen.getAllByTestId('relay-deck-card')[1];
   expect(card.querySelector('img')).toHaveAttribute('src', 'https://images.test/banner.jpg');
-  fireEvent.click(card);
+  fireEvent.click(card.querySelector('button')!);
   act(() => vi.advanceTimersByTime(160));
   expect(select).not.toHaveBeenCalled();
   act(() => vi.advanceTimersByTime(500));
   expect(card).toHaveAttribute('data-front', 'true');
-  fireEvent.click(card);
+  fireEvent.click(card.querySelector('button')!);
   expect(select).toHaveBeenCalledWith(relays[1]);
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
@@ -60,6 +60,7 @@ it('removes the displayed relay after confirmation without selecting it', async 
   fireEvent.click(screen.getByRole('button', { name: 'Next' }));
   act(() => vi.advanceTimersByTime(660));
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Remove relay two.test' })); });
+  expect(screen.queryByRole('button', { name: 'Remove relay two.test' })).not.toBeInTheDocument();
   expect(confirmLeave).toHaveBeenCalledWith(expect.any(Function), 'two.test');
   expect(removeRelay).toHaveBeenCalledExactlyOnceWith('wss://two.test');
   expect(select).not.toHaveBeenCalled();
@@ -78,7 +79,10 @@ it('keeps the picker and relay when removal is cancelled', async () => {
 it('disables removing the last configured relay', () => {
   renderWithBridge(<LocaleProvider><RelayDeckPicker relays={['wss://one.test']} activeRelay="wss://one.test" onSelect={vi.fn()} /></LocaleProvider>, fakeBridge({}, { removeRelay }));
   fireEvent.click(screen.getByTestId('relay-deck-picker'));
-  expect(screen.getByRole('button', { name: 'Remove relay one.test' })).toBeDisabled();
+  const remove = screen.getByRole('button', { name: 'Remove relay one.test' });
+  expect(remove).toBeDisabled();
+  expect(remove.closest('[data-testid=relay-deck-card]')).toHaveAttribute('data-front', 'true');
+  expect(remove.parentElement?.closest('button')).toBeNull();
   expect(confirmLeave).not.toHaveBeenCalled();
   expect(removeRelay).not.toHaveBeenCalled();
 });

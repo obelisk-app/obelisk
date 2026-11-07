@@ -207,19 +207,18 @@ describe('MobileServerBanner fallbacks', () => {
     expect(icon.style.background).toContain('linear-gradient');
   });
 
-  it('links the host to the relay website', () => {
+  it('shows the published name without a separate domain line', () => {
     renderLocalized(
       <MobileServerBanner label="Relay" relayUrl="wss://relay.example/" onSearch={noop} onCreateChannel={noop} onOpenMenu={noop} />,
     );
-    const link = screen.getByTestId('mobile-relay-website');
-    expect(link).toHaveAttribute('href', 'https://relay.example');
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link.textContent).toBe('relay.example');
+    expect(screen.getByRole('heading', { name: 'Relay' })).toBeInTheDocument();
+    expect(screen.queryByTestId('mobile-relay-website')).not.toBeInTheDocument();
+    expect(screen.queryByText('relay.example')).not.toBeInTheDocument();
   });
 
-  it('shows the host as text when it has no website', () => {
+  it('shows the domain as the picker label when no name was published', () => {
     renderLocalized(
-      <MobileServerBanner label="Relay" relayUrl="relay.example" onSearch={noop} onCreateChannel={noop} onOpenMenu={noop} />,
+      <MobileServerBanner label="relay.example" relayUrl="relay.example" onSearch={noop} onCreateChannel={noop} onOpenMenu={noop} />,
     );
     expect(screen.queryByTestId('mobile-relay-website')).toBeNull();
     expect(screen.getByText('relay.example').tagName).toBe('SPAN');

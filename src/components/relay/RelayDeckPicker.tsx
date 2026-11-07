@@ -13,10 +13,10 @@ export default function RelayDeckPicker({ relays, activeRelay, onSelect, onAdd, 
   const t = useTranslations();
   const vm = useRelayDeckPicker(onSelect, onAdd);
   return <>
-    <Button variant="bare" className="flex w-full min-w-0 items-center gap-2 text-left text-lc-white"
+    <Button variant="bare" className="flex min-h-12 w-full min-w-0 items-center justify-center gap-3 text-center text-lc-white"
       aria-label={t('mobile.nav.servers')} aria-haspopup="dialog" aria-expanded={vm.open}
       onClick={vm.show} data-testid="relay-deck-picker">
-      <span className="min-w-0 flex-1 truncate">{children || activeRelay}</span><ChevronDownIcon size={18} />
+      <span className="min-w-0 flex-1 truncate">{children || activeRelay}</span><ChevronDownIcon size={24} />
     </Button>
     {vm.open && <RelayDeck relays={relays} activeRelay={activeRelay} onClose={vm.close} onSelect={vm.select} onAdd={onAdd ? vm.add : undefined} />}
   </>;
