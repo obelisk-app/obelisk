@@ -13,6 +13,19 @@ Server media favorites use the same operator-author model, but they are stored a
 NIP-51 `kind:30030` emoji-set events instead of NIP-78. See
 [media-packs.md](media-packs.md).
 
+## Relay picker
+
+The server button in both relay rails opens a vertical rotating card deck,
+using the Nostr WoT wallet connection wheel geometry. Swipe vertically, use
+the mouse wheel, arrow keys, or the previous/next buttons to browse. Tapping
+a rear card brings it forward; tapping the front card switches relay and
+closes the picker. Existing rail tiles remain direct shortcuts.
+
+Cards display operator banners, names, descriptions and background mention
+counts. Only the active relay subscribes to branding; other cards use cached
+branding from previous visits, with a colored fallback until a banner is known.
+The picker does not open group subscriptions on other relays.
+
 ## Storage
 
 | What | Kind | d-tag |

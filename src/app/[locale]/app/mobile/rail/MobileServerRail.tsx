@@ -1,5 +1,6 @@
 'use client';
 
+import RelayDeckPicker from '@/components/relay/RelayDeckPicker';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
 import { isActiveRelay } from '@/utils/shell/mobile/rail';
@@ -24,6 +25,7 @@ export function MobileServerRail({
   return (
     <aside className="spaces-rail" data-testid="mobile-server-rail" aria-label={t('mobile.nav.servers')}>
       <div className="spaces-rail-scroll native-scroll-y" data-no-swipe>
+        <RelayDeckPicker relays={relays} activeRelay={activeRelay} onSelect={onSelectRelay} />
         {relays.map((url) => (
           <RelayTile
             key={url}

@@ -13,6 +13,8 @@
  * Tiles morph from rounded-square to circle on hover.
  */
 
+import RelayDeckPicker from '@/components/relay/RelayDeckPicker';
+import { useCurrentRelayUrl } from '@/services/nostr-bridge';
 import Stack from '@/components/ui/layout/Stack';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
@@ -36,6 +38,7 @@ export default function ServerRail({
 }) {
   const t = useTranslations();
   const vm = useServerRail(mode);
+  const currentRelay = useCurrentRelayUrl();
 
   return (
     <Stack gap="2" align="center" className="w-[72px] shrink-0 py-3">
@@ -70,6 +73,8 @@ export default function ServerRail({
       )}
 
       <div className="my-1 h-px w-8 bg-lc-border" />
+
+      <RelayDeckPicker relays={vm.relays} activeRelay={currentRelay} onSelect={onPickRelay} />
 
       {/* Only the first tile carries the hint: the others are the same
           control, and a dot on each would read as unread traffic. */}
