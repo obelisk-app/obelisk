@@ -101,7 +101,10 @@ Rules:
     `{kinds:[9], since: now}` REQ (`subscribeLivePings`). Only the active
     channel and ≤8 others get a per-channel stream, so without the live REQ
     a mention in any other channel never arrived. `ingestPing` skips
-    channels that have their own stream.
+    channels that have their own stream. Other active-relay mentions enter the
+    normal deduplicated message ingest, so notification cards and channel-menu
+    highlights agree. Missing channel metadata is fetched on the active relay;
+    a ping alone never invents a visible private-channel entry.
   - The **background relay watch** (`src/services/nostr-bridge/relay/background-watch.ts`)
     on the 3 most-recently-used *other* relays, on a separate pool: a
     `#p:[me]` REQ from the relay's mention cursor (catch-up while the app

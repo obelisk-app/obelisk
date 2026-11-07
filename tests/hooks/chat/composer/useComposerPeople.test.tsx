@@ -16,7 +16,7 @@ const bridge = fakeBridge({
   groups: [groupFixture({ id: 'g' })],
   membersByGroup: { g: [ALICE] },
   adminsByGroup: { g: [BOB] },
-});
+}, { ensureUserMetadata: async () => {} });
 const wrapper = bridgeWrapper(bridge);
 
 import { useComposerMetadata, useMentionCandidates } from '@/hooks/chat/composer/useComposerPeople';

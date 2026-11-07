@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { useChatStore } from '@/store/chat';
@@ -15,7 +15,7 @@ vi.mock('@/hooks/chat/members/useNostrPresence', async (orig) => ({
 const RELAY = 'wss://relay.test';
 const run = (seed: Parameters<typeof fakeBridge>[0]) =>
   renderHook(() => useMemberListScreen('g1'), {
-    wrapper: bridgeWrapper(fakeBridge({ currentRelayUrl: RELAY, groups: [group({ id: 'g1', name: 'general', parent: 'p' }), group({ id: 'p', name: 'Space' })], ...seed })),
+    wrapper: bridgeWrapper(fakeBridge({ currentRelayUrl: RELAY, groups: [group({ id: 'g1', name: 'general', parent: 'p' }), group({ id: 'p', name: 'Space' })], ...seed }, { ensureUserMetadata: async () => {} })),
   }).result.current;
 
 beforeEach(() => useChatStore.setState(useChatStore.getInitialState()));
@@ -35,4 +35,26 @@ describe('useMemberListScreen', () => {
     expect(run({})).toMatchObject({ loading: true, empty: false });
     expect(run({ membershipReadyByGroup: { g1: true } })).toMatchObject({ loading: false, empty: true });
   });
+  it('includes silent sister-channel users once without granting channel admin standing', () => {
+    const vm = run({ adminsByGroup: { g1: ['a'], p: ['b'] }, membersByGroup: { g1: ['a'], p: ['b', 'c'] }, membershipReadyByGroup: { g1: true } });
+    expect(vm.total).toBe(3);
+    expect(vm.admins).toEqual(['a']);
+    expect(vm.sections).toEqual([{ key: 'member', label: 'Members', pubkeys: ['b', 'c'] }]);
+  });
+
+  it('expires the online count when only the presence clock advances', () => {
+    const now = Date.now();
+    useChatStore.setState({ presenceTick: now, lastActivityAt: { [presenceActivityKey(RELAY, 'b')]: now } });
+    const { result } = renderHook(() => useMemberListScreen('g1'), {
+      wrapper: bridgeWrapper(fakeBridge({
+        currentRelayUrl: RELAY,
+        groups: [group({ id: 'g1' })],
+        membersByGroup: { g1: ['b'] },
+      }, { ensureUserMetadata: async () => {} })),
+    });
+    expect(result.current.onlineCount).toBe(1);
+    act(() => useChatStore.setState({ presenceTick: now + 60 * 60 * 1000 }));
+    expect(result.current.onlineCount).toBe(0);
+  });
+
 });

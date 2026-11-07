@@ -87,3 +87,9 @@ image, and the badge has to render from the catalog alone on any client.
 The catalog is edited as a draft and published with **Save roles**; grants and revokes publish
 immediately to that role's holder list. A newly added role can only be assigned
 once it has been saved to the relay.
+
+The desktop and phone member lists and mention picker share a deduplicated
+active-relay roster of members, admins and creators from accessible channels,
+including people who have not posted in the current channel. Online status
+uses recent signed activity, not an authoritative socket connection count.
+Admin standing in a channel member panel remains specific to that channel.

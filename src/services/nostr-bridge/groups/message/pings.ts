@@ -40,6 +40,8 @@ export interface PingsDeps {
   acquireWatchLease(relay: string): WatchHold;
   /** A channel with its own kind 9 stream runs the full ingest (and the same notification). */
   hasOwnMessageStream(groupId: string): boolean;
+  ingestMessage(groupId: string, ev: NostrEvent): void;
+  fetchGroupMetadata(groupId: string): Promise<boolean>;
   isMuted(pubkey: string): boolean;
   ensureUserMetadata(pubkey: string): void;
   /** Best-effort display name for OS popups; never blocks on a fetch. */
@@ -61,6 +63,7 @@ export class PingsModule {
    * browsing. See `background-watch.ts` for the scope and privacy argument.
    */
   private readonly backgroundWatcher: BackgroundRelayWatcher;
+  private readonly metadataPending = new Set<string>();
 
   constructor(
     private readonly ctx: PingsContext,
@@ -106,10 +109,11 @@ export class PingsModule {
   }
 
   subscribeLivePings(): void {
+    const relay = this.ctx.currentRelayUrl.get();
     const sub = this.ctx.subscribeWatched(
       this.ctx.relays(),
       { kinds: [KIND_GROUP_CHAT_MESSAGE], since: Math.floor(Date.now() / 1000) - 30 },
-      (ev) => this.ingestPing(this.ctx.currentRelayUrl.get(), ev, 'active'),
+      (ev) => this.ingestPing(relay, ev, 'active'),
       undefined,
       { affectsRelayAccess: false },
     );
@@ -145,6 +149,18 @@ export class PingsModule {
       parentAuthor = known?.find((m) => m.id === replyTo)?.pubkey ?? null;
     }
     const reason = classifyGroupPing({ pubkey: ev.pubkey, tags: ev.tags, mentions, parentAuthor }, me);
+    if (isActive && reason) {
+      // Use the normal deduplicated ingest so menu highlights and notifications
+      // observe the same event even when no per-channel stream is open.
+      this.deps.ingestMessage(channelId, ev);
+      if (!this.ctx.groups.get().some((group) => group.id === channelId)
+          && !this.metadataPending.has(channelId) && this.metadataPending.size < 8) {
+        this.metadataPending.add(channelId);
+        void this.deps.fetchGroupMetadata(channelId).catch(() => false)
+          .finally(() => this.metadataPending.delete(channelId));
+      }
+      return;
+    }
     const channelName = isActive
       ? (this.ctx.groups.get().find((g) => g.id === channelId)?.name ?? null)
       : (cacheGet<{ group: JsGroup }>(relayKey, KIND_GROUP_METADATA, channelId)?.value.group.name ?? null);

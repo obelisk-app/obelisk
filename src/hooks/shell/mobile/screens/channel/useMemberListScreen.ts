@@ -4,7 +4,7 @@ import {
   useAdmins,
   useCurrentRelayUrl,
   useGroups,
-  useMembers,
+  useRelayPeople,
   useMembershipReady,
 } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
@@ -26,7 +26,8 @@ export function useMemberListScreen(groupId: string) {
   const group = groups.find((g) => g.id === groupId) ?? null;
   const parentGroup = group?.parent ? groups.find((g) => g.id === group.parent) ?? null : null;
   const admins = useAdmins(groupId);
-  const members = useMembers(groupId);
+  const people = useRelayPeople(groupId);
+  const members = useMemo(() => people.map((person) => person.pubkey), [people]);
   const membershipReady = useMembershipReady(groupId);
   const memberRoles = useChatStore((s) => s.rolesByPubkey);
 
@@ -37,12 +38,12 @@ export function useMemberListScreen(groupId: string) {
   const allPubkeys = useMemo(() => everyoneIn(admins, members), [admins, members]);
   useNostrPresence(allPubkeys, relayUrl);
   // presenceTick re-renders the list on the offline-fade timer.
-  useChatStore((s) => s.presenceTick);
+  const presenceTick = useChatStore((s) => s.presenceTick);
   const lastActivityAt = useChatStore((s) => s.lastActivityAt);
 
   const isOnline = useCallback(
-    (pubkey: string) => isRecentlyActive(lastActivityAt[presenceActivityKey(relayUrl, pubkey)], Date.now(), PRESENCE_WINDOW_MS),
-    [lastActivityAt, relayUrl],
+    (pubkey: string) => isRecentlyActive(lastActivityAt[presenceActivityKey(relayUrl, pubkey)], presenceTick || Date.now(), PRESENCE_WINDOW_MS),
+    [lastActivityAt, relayUrl, presenceTick],
   );
   const onlineCount = useMemo(() => allPubkeys.filter(isOnline).length, [allPubkeys, isOnline]);
   const empty = members.length === 0 && admins.length === 0;

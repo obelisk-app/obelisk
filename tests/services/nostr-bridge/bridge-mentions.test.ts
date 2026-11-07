@@ -49,6 +49,25 @@ describe('nostr-bridge', () => {
       return { bridge, impl: getBridgeImpl()!, skHex, pkHex, useNotificationsStore };
     }
 
+    it('feeds a private-channel live ping into menu highlights without opening a channel stream', async () => {
+      const { impl, pkHex, useNotificationsStore } = await loginAndSubscribe('other-channel');
+      const channelId = 'private-not-opened';
+      const event = await fakeRelayMessageWithTags({ groupId: channelId, content: 'private ping', tags: [['p', pkHex]] });
+      const relay = impl.currentRelayUrl.get();
+      impl['ingestPing'](relay, event, 'active');
+      impl['ingestPing'](relay, event, 'active');
+      const messages = impl.messagesByGroup.get()[channelId] ?? [];
+      expect(messages).toHaveLength(1);
+      expect(messages[0].mentions).toContain(pkHex);
+      const { computeChannelHighlights, effectiveCursor } = await import('@/services/read-state/selectors');
+      expect(computeChannelHighlights(messages, effectiveCursor(undefined), pkHex).mentions).toBe(1);
+      expect(computeChannelHighlights(messages, event.created_at * 1000, pkHex).mentions).toBe(0);
+      expect(useNotificationsStore.getState().mentionsByRelay[relay]).toHaveLength(1);
+      const inactive = await fakeRelayMessageWithTags({ groupId: 'inactive-private', content: 'other relay', tags: [['p', pkHex]] });
+      impl['ingestPing']('wss://inactive.test', inactive, 'active');
+      expect(impl.messagesByGroup.get()['inactive-private']).toBeUndefined();
+    });
+
     it('pushes a card for an explicit @-mention, stamped with the active relay', async () => {
       const groupId = 'notif-mention';
       const { impl, pkHex, useNotificationsStore } = await loginAndSubscribe(groupId);
@@ -155,8 +174,8 @@ describe('nostr-bridge', () => {
       const relay = impl.currentRelayUrl.get();
       const cards = useNotificationsStore.getState().mentionsByRelay[relay] ?? [];
       expect(cards.map((c) => c.channelId)).toEqual(['unsubscribed-channel']);
-      // ...without being injected into that channel's message list.
-      expect(impl.messagesByGroup.get()['unsubscribed-channel']).toBeUndefined();
+      // The same event drives the channel menu badge without another REQ.
+      expect(impl.messagesByGroup.get()['unsubscribed-channel']?.map((message) => message.id)).toEqual([far.id]);
     });
 
     it('the live REQ leaves channels with their own stream to ingestMessage (one card)', async () => {

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Event as NostrEvent } from 'nostr-tools';
 import type { BridgeImpl } from '@/services/nostr-bridge/facade/client';
+import { groupFixture } from '@tests/support/mocks/nostr-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 
 const A = 'a'.repeat(64);
@@ -15,12 +16,12 @@ const B = 'b'.repeat(64);
 let contactList: NostrEvent | null = null;
 let calls: Record<string, unknown> = {};
 const admins: Record<string, string[]> = { g1: [A] };
-const members: Record<string, string[]> = { g1: [A, B], g2: [B] };
+const members: Record<string, string[]> = { g1: [A, B], g2: [B], inaccessible: ['d'.repeat(64)] };
 const ensured: string[] = [];
 
 // A hand-built instance under the real provider: no module mock.
 const bridge = {
-  ...fakeBridge(),
+  ...fakeBridge({ groups: [groupFixture({ id: 'g1' }), groupFixture({ id: 'g2' })], groupCreators: { g2: 'c'.repeat(64) } }),
   subscribeMyContactList: (cb: (e: NostrEvent | null) => void) => { cb(contactList); return () => {}; },
   subscribeActiveCallByChannel: (cb: (m: Record<string, unknown>) => void) => { cb(calls); return () => {}; },
   subscribeAdminsByGroup: (cb: (m: Record<string, string[]>) => void) => { cb(admins); return () => {}; },
@@ -92,8 +93,18 @@ describe('nostr-bridge hooks', () => {
 
   it('useRelayPeople unions every channel, marks admins, asks for profiles and sorts by name', async () => {
     const { result } = renderHook(() => stores.useRelayPeople(), { wrapper });
-    await waitFor(() => expect(result.current).toHaveLength(2));
-    expect(result.current.map((p) => [p.displayName, p.role])).toEqual([['Amy', 'member'], ['Zed', 'admin']]);
-    expect(new Set(ensured)).toEqual(new Set([A, B]));
+    await waitFor(() => expect(result.current).toHaveLength(3));
+    const names = result.current.map((person) => person.displayName);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+    expect(result.current.find((p) => p.pubkey === A)?.role).toBe('admin');
+    expect(result.current.find((p) => p.pubkey === B)?.displayName).toBe('Amy');
+    expect(result.current.some((p) => p.pubkey === 'c'.repeat(64))).toBe(true);
+    expect(new Set(ensured)).toEqual(new Set([A, B, 'c'.repeat(64)]));
   });
+  it('keeps channel admin standing local while including silent sister-channel members', async () => {
+    const { result } = renderHook(() => stores.useRelayPeople('g2'), { wrapper });
+    await waitFor(() => expect(result.current).toHaveLength(3));
+    expect(result.current.find((person) => person.pubkey === A)?.role).toBe('member');
+  });
+
 });

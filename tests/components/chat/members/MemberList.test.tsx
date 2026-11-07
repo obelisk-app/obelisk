@@ -3,7 +3,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import MemberList from '@/components/chat/members/MemberList';
 import { useChatStore } from '@/store/chat';
 import { fakeBridge } from '@tests/support/fake-bridge';
-import { userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
+import { groupFixture, userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
 
 /**
@@ -14,6 +14,7 @@ const renderLocalized = (ui: React.ReactElement) => {
   const pubkeysWith = (role: 'admin' | 'member') => bridge.members.filter((m) => m.role === role).map((m) => m.pubkey);
   return renderWithBridge(ui, fakeBridge({
     currentRelayUrl: 'wss://group.relay',
+    groups: [groupFixture({ id: 'group-1' })],
     adminsByGroup: { 'group-1': pubkeysWith('admin') },
     membersByGroup: { 'group-1': pubkeysWith('member') },
     userMetadata: Object.fromEntries(bridge.members.map((m) => [

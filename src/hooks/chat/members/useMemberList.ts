@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useChatStore } from '@/store/chat';
-import { useCurrentRelayUrl, useGroupMemberInfo } from '@/services/nostr-bridge';
+import { useCurrentRelayUrl, useRelayPeople } from '@/services/nostr-bridge';
 import { groupMembers } from '@/utils/chat/members/member-groups';
 import { useNostrPresence } from './useNostrPresence';
 import { PRESENCE_WINDOW_MS } from '@/constants/chat/members';
@@ -16,7 +16,7 @@ import { presenceActivityKey } from '@/utils/chat/members/presence';
  */
 export function useMemberList(groupId: string) {
   const t = useTranslations();
-  const memberList = useGroupMemberInfo(groupId);
+  const memberList = useRelayPeople(groupId);
   const relayUrl = useCurrentRelayUrl();
   const lastActivityAt = useChatStore((state) => state.lastActivityAt);
   const presenceTick = useChatStore((state) => state.presenceTick);

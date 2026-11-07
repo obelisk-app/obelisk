@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  useAdminsByGroup,
-  useGroupCreators,
-  useGroups,
+  useRelayPeople,
   useBridge,
-  useMembersByGroup,
   type JsUserMetadata,
 } from '@/services/nostr-bridge';
 import { displayNameFor } from '@/utils/identity/display-name';
-import { filterMembers, relayMentionCandidates, type MemberInfo } from '@/utils/message-text/mentions';
+import { filterMembers, type MemberInfo } from '@/utils/message-text/mentions';
 
 /** Every kind 0 the bridge holds, live. The mention picker and the bot rail both read names from it. */
 export function useComposerMetadata(enabled = true): Record<string, JsUserMetadata> {
@@ -35,29 +32,22 @@ export function useMentionCandidates(
   maxMentionResults: number,
 ): MemberInfo[] {
   const open = mentionQuery !== null;
-  const groups = useGroups(open);
-  const membersByGroup = useMembersByGroup(open);
-  const adminsByGroup = useAdminsByGroup(open);
-  const creatorsByGroup = useGroupCreators(open);
-  const visibleGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
-  const mentionCandidatePubkeys = useMemo(
-    () => relayMentionCandidates(visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup),
-    [visibleGroupIds, membersByGroup, adminsByGroup, creatorsByGroup],
-  );
+  const people = useRelayPeople(undefined, open);
   return useMemo<MemberInfo[]>(() => {
     if (mentionQuery === null) return [];
     // Materialize MemberInfo[] only when the picker is open. On a busy relay
     // the candidate set can be hundreds of pubkeys, and metaMap updates on
     // every kind 0 ingest; rebuilding eagerly would churn for nothing.
-    const candidates: MemberInfo[] = mentionCandidatePubkeys.map((pk) => {
+    const candidates: MemberInfo[] = people.map((person) => {
+      const pk = person.pubkey;
       const m = metaMap[pk];
       return {
         pubkey: pk,
-        displayName: displayNameFor(pk, m),
-        picture: m?.picture ?? undefined,
+        displayName: m ? displayNameFor(pk, m) : person.displayName,
+        picture: m?.picture ?? person.picture,
         lud16: m?.lud16 ?? undefined,
       };
     });
     return filterMembers(candidates, mentionQuery).slice(0, maxMentionResults);
-  }, [mentionCandidatePubkeys, metaMap, mentionQuery, maxMentionResults]);
+  }, [people, metaMap, mentionQuery, maxMentionResults]);
 }

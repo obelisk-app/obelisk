@@ -172,6 +172,8 @@ export class BridgeModules {
     this.pings = new PingsModule(this.ctx, {
       subscribeWatch: (relay, filter, cb) => this.reqs.subscribeWatch(relay, filter, cb),
       acquireWatchLease: (relay) => this.hub.acquireAuthLease(relay, 'watch'),
+      ingestMessage: (groupId, ev) => this.messages.ingest(groupId, ev),
+      fetchGroupMetadata: (groupId) => this.metadata.fetchGroupMetadata(groupId),
       hasOwnMessageStream: (groupId) => this.messageState.subscribedGroups.has(groupId),
       isMuted: (pubkey) => this.lists.isMuted(pubkey),
       ensureUserMetadata: (pubkey) => this.profiles.ensure(pubkey),
