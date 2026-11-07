@@ -15,6 +15,7 @@ import { extractMentionPubkeysFromMessage } from '@/utils/message-text/mentions'
 import { generateClientTag } from '../../common/hex';
 import { updatePending } from '../../common/state-store';
 import type { JsMessage } from '../../common/types';
+import { recordMemberActivity } from '@/services/chat/members/presence';
 import { type MessagesState } from './state';
 
 export class MessageSend {
@@ -112,6 +113,8 @@ export class MessageSend {
         created_at: createdAt,
       }, { extraRelays: [relay], mode: 'replace' }, { assertCurrent });
       assertCurrent();
+      // A relay ACK proves local activity even when no subscription echoes it.
+      recordMemberActivity(relay, event.pubkey, Date.now() / 1000);
       this.replacePending(groupId, clientTag, event);
     } catch {
       if (isCurrent()) this.markFailed(groupId, clientTag);

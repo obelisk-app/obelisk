@@ -4,7 +4,7 @@
  */
 import { useMemo } from 'react';
 import { displayNameFor } from '@/utils/identity/display-name';
-import type { JsUserMetadata } from '../common/types';
+import type { JsMessage, JsUserMetadata } from '../common/types';
 import { useSubscription } from './subscription';
 import { useGroups, useGroupCreators } from './groups';
 import { relayMentionCandidates } from '@/utils/message-text/mentions';
@@ -51,7 +51,7 @@ export interface JsMemberInfo {
 
 /**
  * Known people on accessible active-relay channels: members, admins and
- * creators, with profile metadata attached and sorted by display name.
+ * creators and confirmed message authors, with profile metadata attached and sorted by display name.
  *
  * Admin surfaces that hand something to a person (roles, moderation) need to
  * offer a search over names, demanding a pasted pubkey is not a UI. `role` is
@@ -63,13 +63,16 @@ export function useRelayPeople(groupId?: string, enabled = true): ReadonlyArray<
   const creators = useGroupCreators(enabled);
   const adminsByGroup = useAdminsByGroup(enabled);
   const membersByGroup = useMembersByGroup(enabled);
+  const messagesByGroup = useSubscription<Readonly<Record<string, ReadonlyArray<JsMessage>>>>(
+    (bridge, cb) => bridge.subscribeMessagesByGroup(cb), {}, [], enabled,
+  );
   const admins = useMemo(
     () => new Set(groups.flatMap((group) => groupId && group.id !== groupId ? [] : [...(adminsByGroup[group.id] ?? [])])),
     [groups, adminsByGroup, groupId],
   );
   const pubkeys = useMemo(
-    () => relayMentionCandidates(groups.map((group) => group.id), membersByGroup, adminsByGroup, creators),
-    [groups, membersByGroup, adminsByGroup, creators],
+    () => relayMentionCandidates(groups.map((group) => group.id), membersByGroup, adminsByGroup, creators, messagesByGroup),
+    [groups, membersByGroup, adminsByGroup, creators, messagesByGroup],
   );
   const key = pubkeys.join(',');
   const metadata = useSubscription<Readonly<Record<string, JsUserMetadata>>>(

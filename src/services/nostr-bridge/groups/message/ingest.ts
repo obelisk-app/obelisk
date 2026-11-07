@@ -19,6 +19,8 @@ import type { JsMessage, LoadMoreMessagesResult } from '../../common/types';
 import type { MessagesState } from './state';
 import { CACHE_FLUSH_DELAY_MS, LOAD_MORE_PAGE_SIZE, MESSAGE_CACHE_LIMIT } from '@/constants/nostr-bridge/groups';
 
+import { recordMemberActivity } from '@/services/chat/members/presence';
+
 import { OrderedMessageSnapshot } from './ordered-snapshot';
 
 export class MessageIngest {
@@ -31,9 +33,11 @@ export class MessageIngest {
   ) {}
 
   ingest(groupId: string, ev: NostrEvent): void {
+    if (ev.kind !== KIND_GROUP_CHAT_MESSAGE) return;
     if (this.deps.isGroupDeleted?.(groupId)) return;
     if (this.deps.moderation.isModerated(groupId, ev.id)) return;
     if (this.deps.moderation.isDeletedByAuthor(groupId, ev.id, ev.pubkey)) return;
+    recordMemberActivity(this.ctx.currentRelayUrl.get(), ev.pubkey, ev.created_at);
     const replyTo = ev.tags.find((t) => t[0] === 'e' && t[3] === 'reply')?.[1] ?? null;
     const mentions = extractMentionPubkeysFromMessage(ev.content, ev.tags);
     const msg: JsMessage = {

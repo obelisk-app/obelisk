@@ -379,6 +379,14 @@ describe('relayMentionCandidates', () => {
     expect(result).toEqual(['a']);
   });
 
+  it('includes confirmed authors before member lists arrive, excluding failed and hidden-channel messages', () => {
+    const result = relayMentionCandidates(['g1'], {}, {}, {}, {
+      g1: [{ pubkey: 'me' }, { pubkey: 'me' }, { pubkey: 'pending', pending: true }, { pubkey: 'failed', failed: true }],
+      hidden: [{ pubkey: 'private' }],
+    });
+    expect(result).toEqual(['me']);
+  });
+
   it('only includes pubkeys from the supplied groupIds', () => {
     // WoT-hidden groups are filtered out of useGroups() upstream; this
     // helper must not pull their member rolls back in via the maps.

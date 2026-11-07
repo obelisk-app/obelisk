@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import type { Event as NostrEvent } from 'nostr-tools/pure';
 import { isImportableRelayUrl, useBridge } from '@/services/nostr-bridge';
 import { useChatStore } from '@/store/chat';
-import { presenceActivityKey } from '@/utils/chat/members/presence';
+import { recordMemberActivity } from '@/services/chat/members/presence';
 import { PRESENCE_WINDOW_MS } from '@/constants/chat/members';
 
 /** How often the UI re-evaluates the window (so users fade to offline). */
@@ -24,7 +24,6 @@ const ACTIVITY_KINDS = [
 
 /** Subscribes to recent activity from group members on this group's relay. */
 export function useNostrPresence(pubkeys: string[], relayUrl: string): void {
-  const recordActivity = useChatStore((s) => s.recordActivity);
   const bumpPresenceTick = useChatStore((s) => s.bumpPresenceTick);
 
   const authors = pubkeys.filter((pk) => /^[0-9a-f]{64}$/i.test(pk)).sort();
@@ -38,8 +37,7 @@ export function useNostrPresence(pubkeys: string[], relayUrl: string): void {
     return bridge.subscribeFilterWatched(
       { kinds: ACTIVITY_KINDS, authors, since },
       (ev: NostrEvent) => {
-        const ts = (ev.created_at ?? 0) * 1000;
-        if (ts > 0 && ev.pubkey) recordActivity(presenceActivityKey(relayUrl, ev.pubkey), ts);
+        recordMemberActivity(relayUrl, ev.pubkey, ev.created_at);
       },
       { relays: [relayUrl], relayMode: 'replace', affectsRelayAccess: false },
     );

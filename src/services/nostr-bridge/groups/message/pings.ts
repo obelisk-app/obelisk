@@ -5,6 +5,7 @@
  * from `client.ts` (round 4 plan, step 9). The watcher's REQs and its
  * `'watch'` AUTH leases are the hub's (step 6), reached through `deps`.
  */
+import { recordMemberActivity } from '@/services/chat/members/presence';
 import { translate } from '@/i18n/runtime';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 import { KIND_GROUP_CHAT_MESSAGE, KIND_GROUP_METADATA } from '@/constants/nostr/nip-kinds';
@@ -132,6 +133,7 @@ export class PingsModule {
     const channelId = getTag(ev, 'h');
     if (!channelId) return;
     if (isActive) {
+      recordMemberActivity(relayKey, ev.pubkey, ev.created_at);
       // A live per-channel stream runs the full ingest (and the same
       // notification): don't race it.
       if (this.deps.hasOwnMessageStream(channelId)) return;

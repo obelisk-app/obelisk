@@ -106,3 +106,10 @@ Promotion publishes NIP-29 kind 9000 with the admin role after confirmation;
 the displayed role follows the relay's membership update. Promotion,
 demotion, and removal reject duplicate submissions while pending and show
 localized relay failures without changing the displayed role optimistically.
+
+Confirmed group message authors also enter this roster before membership lists
+catch up. Relay-accepted local sends, received group messages and the auxiliary
+activity subscription all update the same relay-scoped presence timestamps.
+Pending or failed sends never count as activity; historical messages retain
+their original activity time, and future event times are capped at the current
+clock. A successful local send updates presence even without a relay echo.

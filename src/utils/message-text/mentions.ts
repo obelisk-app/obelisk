@@ -228,11 +228,15 @@ export function relayMentionCandidates(
   membersByGroup: Readonly<Record<string, ReadonlyArray<string>>>,
   adminsByGroup: Readonly<Record<string, ReadonlyArray<string>>>,
   creatorsByGroup: Readonly<Record<string, string>>,
+  messagesByGroup: Readonly<Record<string, ReadonlyArray<{ pubkey: string; pending?: boolean; failed?: boolean }>>> = {},
 ): string[] {
   const set = new Set<string>();
   for (const id of groupIds) {
     for (const pk of membersByGroup[id] ?? []) set.add(pk);
     for (const pk of adminsByGroup[id] ?? []) set.add(pk);
+    for (const message of messagesByGroup[id] ?? []) {
+      if (!message.pending && !message.failed) set.add(message.pubkey);
+    }
     const creator = creatorsByGroup[id];
     if (creator) set.add(creator);
   }
