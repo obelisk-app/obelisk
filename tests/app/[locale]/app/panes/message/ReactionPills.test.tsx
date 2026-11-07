@@ -70,7 +70,7 @@ describe('ReactionPills', () => {
     const button = screen.getByTitle('React');
     expect(button.textContent).toBe('❤️2');
     fireEvent.click(button);
-    expect(a.onReactionClick).toHaveBeenCalledWith('❤️', {}, null, undefined);
+    expect(a.onReactionClick).toHaveBeenCalledWith('❤️', {}, null);
     const card = screen.getByRole('tooltip');
     expect(card.textContent).toContain('❤️ 2 reactions');
     expect(within(card).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ana', 'Bea']);
@@ -85,16 +85,28 @@ describe('ReactionPills', () => {
     const button = screen.getByTitle('Remove your reaction');
     expect(button.className).toContain('border-lc-green/60');
     fireEvent.click(button);
-    expect(a.onReactionClick).toHaveBeenCalledWith('❤️', {}, 'mine', undefined);
+    expect(a.onReactionClick).toHaveBeenCalledWith('❤️', {}, 'mine');
   });
 
-  it('for an admin a click removes every reaction of that emoji', () => {
+  it('an admin can add their own reaction without removing other reactions', () => {
     const a = actions({ counts: [pill({ emoji: '👍', reactionIds: ['r1', 'r2'] })] });
     mount(a, null, true);
-    const button = screen.getByTitle('Remove reactions for everyone');
+    const button = screen.getByTitle('React');
+    expect(button.className).not.toContain('border-lc-green/60');
+    fireEvent.click(button);
+    expect(a.onReactionClick).toHaveBeenCalledWith('👍', {}, null);
+  });
+
+  it('an admin retracts only their own reaction when others share its emoji', () => {
+    const a = actions({
+      counts: [pill({ emoji: '👍', reactionIds: ['mine', 'other'], myReactionId: 'mine', mine: true, count: 2 })],
+      myReactedEmojis: new Set(['👍']),
+    });
+    mount(a, null, true);
+    const button = screen.getByTitle('Remove your reaction');
     expect(button.className).toContain('border-lc-green/60');
     fireEvent.click(button);
-    expect(a.onReactionClick).toHaveBeenCalledWith('👍', {}, null, ['r1', 'r2']);
+    expect(a.onReactionClick).toHaveBeenCalledWith('👍', {}, 'mine');
   });
 
   it('renders a custom emoji as its image', () => {
