@@ -21,6 +21,7 @@ import CenteredPanel from './CenteredPanel';
 import Spinner from './RoomSpinner';
 import StageBackdrop from './StageBackdrop';
 import RoomHeader from './RoomHeader';
+import { PublicCallPreview } from './PublicCallPreview';
 import { JoinLanding } from './JoinLanding';
 import { StageArea } from './StageArea';
 import { useVoiceRoom } from '@/hooks/voice/room/useVoiceRoom';
@@ -41,6 +42,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   if (gate.phase === 'init' || gate.phase === 'loading-roles') {
     return (
       <CenteredPanel>
+        <PublicCallPreview groupId={channelId} />
         <Spinner />
         <div className="mt-3 text-sm text-neutral-300">{t('voice.loadingMembership')}</div>
         <div className="mt-1 font-mono text-xs text-neutral-500 break-all">{channelId}</div>
@@ -51,6 +53,7 @@ export default function VoiceRoom({ channelId, channelName, chatSlot, isChatOpen
   if (gate.phase === 'not-a-member') {
     return (
       <CenteredPanel>
+        <PublicCallPreview groupId={channelId} />
         <div className="text-lg font-semibold">{t('voice.notMember')}</div>
         <div className="mt-2 text-sm text-neutral-400">{t('voice.notMemberHelp')}</div>
         <div className="mt-4 font-mono text-xs text-neutral-500 break-all">{channelId}</div>

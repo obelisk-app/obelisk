@@ -1,5 +1,6 @@
 'use client';
 
+import { PublicCallPreview } from '@/components/voice/room/PublicCallPreview';
 import MentionNavigator from '@/components/chat/mentions/MentionNavigator';
 import HistoryPaginationStatus from '@/components/chat/timeline/HistoryPaginationStatus';
 import { FileDropZone } from '@/components/chat/composer/FileDropZone';
@@ -57,6 +58,7 @@ export function ChannelScreen({
         onOpenSettings={vm.openSettings}
         openMembers={openMembers}
       />
+      <PublicCallPreview groupId={groupId} />
       <div className="messages-wrap relative flex min-h-0 flex-1 flex-col">
         <div className="messages native-scroll-y" ref={messagesRef}>
           <ChannelTimeline

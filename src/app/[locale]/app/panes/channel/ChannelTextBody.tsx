@@ -2,6 +2,7 @@
 
 import type { RefObject } from 'react';
 import { useTranslations } from 'next-intl';
+import { PublicCallPreview } from '@/components/voice/room/PublicCallPreview';
 import MentionNavigator from '@/components/chat/mentions/MentionNavigator';
 import HistoryPaginationStatus from '@/components/chat/timeline/HistoryPaginationStatus';
 import type { ChatPanelView } from '@/hooks/shell/panes/channel/useChatPanel';
@@ -25,6 +26,7 @@ export function ChannelTextBody({ vm, scrollRef, composerRef }: {
   const t = useTranslations();
   return (
     <>
+      <PublicCallPreview groupId={vm.groupId} />
       <div className="relative flex min-h-0 flex-1 flex-col">
         {/*
           `pt-14`: the history pill below floats over the top of this list

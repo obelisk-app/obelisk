@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ProfilePopover from '@/components/chat/profile/ProfilePopover';
 import { useChatStore } from '@/store/chat';
+import { useMessageZapStore } from '@/store/chat/message-zap';
 import { LocaleProvider } from '@tests/support/intl';
 
 const bridge = vi.hoisted(() => ({
@@ -271,18 +272,17 @@ describe('ProfilePopover', () => {
     window.removeEventListener(OPEN_SETTINGS_EVENT, listener);
   });
 
-  it('zap prefills the open channel and closes; without a channel it does nothing', () => {
-    const onZap = vi.fn();
-    window.addEventListener('obelisk:zap-prefill', onZap);
+  it('zap opens the dialog and closes; without a channel it does nothing', () => {
+    useMessageZapStore.setState({ target: null });
     const onClose = vi.fn();
     renderProfile(onClose);
     fireEvent.click(screen.getByTestId('profile-zap-btn'));
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect((onZap.mock.calls[0][0] as CustomEvent).detail).toEqual({ pubkey: PUBKEY, displayName: 'AndyCreed' });
+    expect(useMessageZapStore.getState().target).toMatchObject({ recipientPubkey: PUBKEY, displayName: 'AndyCreed' });
     useChatStore.setState({ activeChannelId: null });
     fireEvent.click(screen.getByTestId('profile-zap-btn'));
     expect(onClose).toHaveBeenCalledTimes(1);
-    window.removeEventListener('obelisk:zap-prefill', onZap);
+    useMessageZapStore.getState().close();
   });
 
   it('message and explore close the card and hand the key over', () => {

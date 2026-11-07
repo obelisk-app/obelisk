@@ -105,7 +105,7 @@ describe('confirmed message presence', () => {
 
   it('records ordinary relay-wide message activity even when the channel stream owns rendering', () => {
     const { ctx } = setup();
-    const pings = new PingsModule(ctx as unknown as PingsContext, { hasOwnMessageStream: () => true } as PingsDeps);
+    const pings = new PingsModule(ctx as unknown as PingsContext, { hasOwnMessageStream: () => true } as unknown as PingsDeps);
     pings.ingestPing('wss://elsewhere.test', event(OTHER), 'active');
     expect(useChatStore.getState().lastActivityAt).toEqual({});
     pings.ingestPing(RELAY, event(OTHER), 'active');

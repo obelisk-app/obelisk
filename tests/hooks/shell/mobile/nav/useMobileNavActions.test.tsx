@@ -121,7 +121,8 @@ describe('useMobileNavActions: go and sheets', () => {
     h.actions.openZap({ id: 'mine', pubkey: ME, content: 'x' });
     expect(useMessageZapStore.getState().target).toBeNull();
     h.actions.openZap({ id: 'm2', pubkey: BOB, content: 'y' });
-    const target = quickZap.mock.calls[0]?.[0];
+    const target = useMessageZapStore.getState().target;
+    expect(quickZap).not.toHaveBeenCalled();
     expect(target).toMatchObject({ messageId: 'm2', recipientPubkey: BOB, groupId: 'g1' });
     expect(target?.displayName).toMatch(/^npub1/);
     expect(target?.displayName).not.toContain('bbbbbbbb');

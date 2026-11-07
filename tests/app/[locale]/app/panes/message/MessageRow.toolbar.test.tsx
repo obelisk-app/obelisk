@@ -97,7 +97,7 @@ describe('message hover toolbar', () => {
     const buttons = within(bar).getAllByRole('button');
     expect(buttons.length).toBeGreaterThan(7);
     const quick = within(bar).getAllByTestId('message-quick-reaction');
-    expect(quick.map((b) => b.textContent)).toEqual(expect.arrayContaining(['⚡', '🔥', '🚀', '💎']));
+    expect(quick.map((b) => b.textContent)).toEqual(expect.arrayContaining(['⚡', '🔥', '💎']));
     expect(within(bar).getByTitle('Send 21 sats now')).toBeTruthy();
     for (const id of ['message-add-reaction', 'message-reply', 'message-forward', 'message-more']) {
       expect(within(bar).getByTestId(id).querySelector('svg')).not.toBeNull();
@@ -141,7 +141,7 @@ describe('message hover toolbar', () => {
     fireEvent.click(screen.getByTestId('message-more'));
     const menu = screen.getByTestId('message-menu');
     expect(within(menu).getAllByTestId('message-menu-quick-reaction').length).toBeGreaterThanOrEqual(4);
-    expect(within(menu).getByTitle('Send 1000 sats now')).toBeTruthy();
+    expect(within(menu).getByTitle('Send 420 sats now')).toBeTruthy();
     for (const id of ['message-menu-add-reaction', 'message-menu-reply', 'message-menu-forward', 'message-menu-zap', 'message-menu-copy-text', 'message-menu-copy-link', 'message-menu-mute']) {
       expect(within(menu).getByTestId(id).querySelector('svg')).not.toBeNull();
     }
@@ -247,12 +247,13 @@ describe('message row menu and toolbar actions', () => {
     expect(screen.queryByTestId('message-menu')).toBeNull();
   });
 
-  it('menu Zap sends the default amount immediately and closes the menu', () => {
+  it('menu Zap opens the amount and comment dialog without paying and closes the menu', () => {
+    quickZap.mockClear();
     renderRow();
     openMenu();
     fireEvent.click(screen.getByTestId('message-menu-zap'));
-    expect(quickZap).toHaveBeenCalledWith(expect.objectContaining({ messageId: msg.id, recipientPubkey: msg.pubkey, groupId: 'here' }), 21);
-    expect(useMessageZapStore.getState().target).toBeNull();
+    expect(quickZap).not.toHaveBeenCalled();
+    expect(useMessageZapStore.getState().target).toMatchObject({ messageId: msg.id, recipientPubkey: msg.pubkey, groupId: 'here' });
     expect(screen.queryByTestId('message-menu')).toBeNull();
   });
 

@@ -4,6 +4,7 @@ import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { BRIDGE_MOCK_PUBKEY } from '@tests/support/mocks/nostr-bridge';
 import { useChatStore } from '@/store/chat';
+import { useMessageZapStore } from '@/store/chat/message-zap';
 import { useProfilePopover } from '@/hooks/chat/profile/useProfilePopover';
 
 const OTHER = 'c'.repeat(64);
@@ -34,5 +35,7 @@ describe('useProfilePopover', () => {
     useChatStore.setState({ activeChannelId: 'g1' });
     act(() => result.current.zap());
     expect(onClose).toHaveBeenCalledOnce();
+    expect(useMessageZapStore.getState().target).toMatchObject({ recipientPubkey: OTHER, groupId: 'g1' });
+    expect(useMessageZapStore.getState().target?.messageId).toBeUndefined();
   });
 });

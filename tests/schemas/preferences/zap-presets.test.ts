@@ -3,7 +3,7 @@ import { normalizeZapPresets, validZapPresets } from '@/schemas/preferences/zap-
 
 describe('zap presets', () => {
   it('migrates missing or invalid settings to the defaults', () => {
-    expect(normalizeZapPresets(null).map((p) => p.amountSats)).toEqual([21, 100, 1000, 10000]);
+    expect(normalizeZapPresets(null).map((p) => p.amountSats)).toEqual([21, 210, 420]);
     expect(normalizeZapPresets([])[0]).toEqual({ emoji: '⚡', amountSats: 21 });
   });
   it('accepts customized amounts and Unicode emoji sequences', () => {

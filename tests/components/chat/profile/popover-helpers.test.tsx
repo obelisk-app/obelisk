@@ -5,6 +5,7 @@ import { websiteHref } from '@/utils/chat/profile/profile-links';
 import { requestZapPrefill } from '@/services/chat/profile/zap-prefill';
 import { usePopoverPlacement } from '@/hooks/chat/profile/usePopoverPlacement';
 import { useChatStore } from '@/store/chat';
+import { useMessageZapStore } from '@/store/chat/message-zap';
 
 describe('EmojiText', () => {
   it('draws known custom emoji as images and keeps surrounding text', () => {
@@ -47,13 +48,15 @@ describe('requestZapPrefill', () => {
     expect(onZap).not.toHaveBeenCalled();
   });
 
-  it('dispatches the prefill event when a channel is open', () => {
+  it('opens the zap dialog when a channel is open', () => {
     const onZap = vi.fn();
     window.addEventListener('obelisk:zap-prefill', onZap);
     useChatStore.setState({ activeChannelId: 'g1' });
     expect(requestZapPrefill('a'.repeat(64), 'Alice')).toBe(true);
     window.removeEventListener('obelisk:zap-prefill', onZap);
-    expect((onZap.mock.calls[0][0] as CustomEvent).detail).toEqual({ pubkey: 'a'.repeat(64), displayName: 'Alice' });
+    expect(useMessageZapStore.getState().target).toMatchObject({ recipientPubkey: 'a'.repeat(64), displayName: 'Alice', groupId: 'g1' });
+    expect(onZap).not.toHaveBeenCalled();
+    useMessageZapStore.getState().close();
   });
 });
 

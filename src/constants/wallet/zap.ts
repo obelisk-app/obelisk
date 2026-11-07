@@ -11,7 +11,6 @@ export const MARKER_NO_BRIDGE = 'no-bridge';
 
 export const DEFAULT_ZAP_PRESETS = [
   { emoji: '⚡', amountSats: DEFAULT_ZAP_AMOUNT_SATS },
-  { emoji: '🔥', amountSats: 100 },
-  { emoji: '🚀', amountSats: 1000 },
-  { emoji: '💎', amountSats: 10000 },
+  { emoji: '🔥', amountSats: 210 },
+  { emoji: '💎', amountSats: 420 },
 ];

@@ -87,7 +87,7 @@ function setup({ groupId = 'g', showMembers = false, seed = {}, methods = {} } =
   const onSelectGroup = vi.fn();
   const bridge = fakeBridge(
     { groups: [text, other, forum, voice], messagesByGroup: messages, ...seed },
-    methods,
+    { ensureUserMetadata: async () => {}, ...methods },
   );
   const props = { showMembers, onToggleMembers: vi.fn(), pendingMessageId: null, onConsumePendingMessageId: vi.fn(), onSelectGroup };
   const view = renderWithBridge(<ChatLayout groupId={groupId} {...props} />, bridge);

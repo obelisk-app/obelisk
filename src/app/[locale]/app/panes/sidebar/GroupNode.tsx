@@ -7,6 +7,7 @@ import { ChannelContextMenu } from '@/components/chat/channel/ChannelContextMenu
 import { useTranslations } from 'next-intl';
 import type { View } from '@/utils/shell/desktop/view';
 import { useGroupNode } from '@/hooks/shell/panes/sidebar/useGroupNode';
+import { PublicCallPreview } from '@/components/voice/room/PublicCallPreview';
 import { ActiveCallBadge } from './ActiveCallBadge';
 import { ForumThreadRow } from './ForumThreadRow';
 import { ChevronRightIcon } from '@/assets/icons';
@@ -103,6 +104,7 @@ export function GroupNode({
           </Button>
         )}
       </div>
+      {(group.kind === 'voice' || group.kind === 'voice-sfu') && group.isPublic && !group.isHidden && <PublicCallPreview groupId={group.id} />}
       {!vm.collapsed && (group.kind === 'forum' ? (
         // Forum threads get the Discord-style L-rail treatment: wrap them in
         // .lc-forum-threads so each row's ::before/::after can paint a

@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
-import { LocaleProvider } from '@tests/support/intl';
+import { cleanup, screen } from '@testing-library/react';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
+import { userMetadataFixture } from '@tests/support/mocks/nostr-bridge';
 
-vi.mock('@/services/nostr-bridge', () => ({
-  useUserMetadata: (pk: string) => (pk === A ? { name: 'ada' } : null),
-}));
 vi.mock('@/components/ui/animations/ShootingStars', () => ({ default: () => null }));
 
 import CenteredPanel from '@/components/voice/room/CenteredPanel';
@@ -14,9 +13,9 @@ import Spinner from '@/components/voice/room/RoomSpinner';
 const A = 'a'.repeat(64);
 const B = 'b'.repeat(64);
 
-const renderLocalized = (ui: React.ReactElement) => render(
-  <LocaleProvider initialLocale="en">{ui}</LocaleProvider>,
-);
+const renderLocalized = (ui: React.ReactElement) => renderWithBridge(ui, fakeBridge({
+  userMetadata: { [A]: userMetadataFixture({ pubkey: A, name: 'ada' }) },
+}));
 
 afterEach(() => cleanup());
 

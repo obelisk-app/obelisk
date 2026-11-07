@@ -5,10 +5,11 @@ import { usePassiveCallRoster } from '@/hooks/voice/room/usePassiveCallRoster';
 import PassiveCallParticipant from './PassiveCallParticipant';
 
 /** Who is already in the call, shown before joining: a few faces, "+N more", and the topology. */
-export default function PassiveCallRoster({ pubkeys, count, mode }: {
+export default function PassiveCallRoster({ pubkeys, count, mode, cachedOnly }: {
   pubkeys: readonly string[];
   count: number;
   mode?: 'sfu' | 'mesh';
+  cachedOnly?: boolean;
 }) {
   const t = useTranslations();
   const { empty, visible, hidden } = usePassiveCallRoster(pubkeys, count);
@@ -25,7 +26,7 @@ export default function PassiveCallRoster({ pubkeys, count, mode }: {
       </div>
       {visible.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {visible.map((pk) => <PassiveCallParticipant key={pk} pubkey={pk} />)}
+          {visible.map((pk) => <PassiveCallParticipant key={pk} pubkey={pk} cachedOnly={cachedOnly} />)}
           {hidden > 0 && (
             <span className="inline-flex min-w-0 items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-lc-muted">
               {t('voice.roster.more', { count: hidden })}

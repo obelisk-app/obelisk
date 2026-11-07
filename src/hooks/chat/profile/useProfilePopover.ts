@@ -60,7 +60,7 @@ export function useProfilePopover(pubkey: string, onClose: () => void) {
     npub,
     npubShort,
     displayName,
-    /** Prefill a zap in the open channel; without one there is nowhere to send it and the card stays. */
+    /** Open the zap dialog in the current channel; without one there is nowhere to send it and the card stays. */
     zap: () => {
       if (requestZapPrefill(pubkey, displayName)) onClose();
     },

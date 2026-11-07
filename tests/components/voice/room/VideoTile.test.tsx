@@ -5,6 +5,7 @@ import { useVoiceStore } from '@/store/voice';
 import { FakeMediaStream, FakeMediaStreamTrack } from '@tests/support/mocks/webrtc';
 
 vi.mock('@/services/nostr-bridge', () => ({
+  useBridge: () => null,
   useUserMetadata: (pk: string) => (pk === A ? { displayName: 'Ada', picture: 'https://img.test/ada.png' } : null),
 }));
 

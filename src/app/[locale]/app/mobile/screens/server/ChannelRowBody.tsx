@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { useChannelRowBody } from '@/hooks/shell/mobile/screens/server/useChannelRow';
 import { channelRowClass, isVoiceKind } from '@/utils/shell/mobile/channel-row';
+import { PublicCallPreview } from '@/components/voice/room/PublicCallPreview';
 import { ChannelRowCounts } from './ChannelRowCounts';
 import { ChevronRightIcon, ListIcon, MicIcon } from '@/assets/icons';
 
@@ -40,18 +41,21 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
   const counts = <ChannelRowCounts muted={row.muted} unread={row.unread} mentionsOrReplies={row.mentionsOrReplies} />;
   if (isVoiceKind(group.kind)) {
     return (
-      <Button variant="bare" className={`ch-row voice ${active ? 'active' : ''}`} onClick={onClick}>
-        <span className="ch-icon" style={{ color: live ? 'var(--accent)' : 'var(--app-text-mute)' }}>
-          <MicIcon size={null} />
-        </span>
-        <div className="ch-body">
-          <div className="ch-row-top">
-            <span className="ch-name">{row.name}</span>
-            {live && <span className="voice-live-dot" />}
-            {live && <span className="ch-meta" style={{ marginLeft: 'auto', color: 'var(--accent)' }}>{t('mobile.channel.live')}</span>}
+      <>
+        <Button variant="bare" className={`ch-row voice ${active ? 'active' : ''}`} onClick={onClick}>
+          <span className="ch-icon" style={{ color: live ? 'var(--accent)' : 'var(--app-text-mute)' }}>
+            <MicIcon size={null} />
+          </span>
+          <div className="ch-body">
+            <div className="ch-row-top">
+              <span className="ch-name">{row.name}</span>
+              {live && <span className="voice-live-dot" />}
+              {live && <span className="ch-meta" style={{ marginLeft: 'auto', color: 'var(--accent)' }}>{t('mobile.channel.live')}</span>}
+            </div>
           </div>
-        </div>
-      </Button>
+        </Button>
+        {group.isPublic && !group.isHidden && <PublicCallPreview groupId={group.id} />}
+      </>
     );
   }
   if (group.kind === 'forum' && expandable && onToggleExpand) {

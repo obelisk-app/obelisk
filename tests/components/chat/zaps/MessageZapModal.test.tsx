@@ -38,8 +38,8 @@ describe('MessageZapModal', () => {
     const amount = screen.getByRole('spinbutton');
     expect(amount).toHaveValue(500);
     expect(amount).toHaveAttribute('min', '1');
-    fireEvent.click(screen.getByRole('button', { name: '10,000' }));
-    expect(amount).toHaveValue(10000);
+    fireEvent.click(screen.getByRole('button', { name: '420' }));
+    expect(amount).toHaveValue(420);
     const comment = screen.getByPlaceholderText('Nice post!');
     expect(comment).toHaveAttribute('maxlength', '200');
     fireEvent.change(comment, { target: { value: 'gm' } });
@@ -71,7 +71,7 @@ describe('MessageZapModal', () => {
     fireEvent.change(amount, { target: { value: '' } });
     expect(amount).toHaveValue(0);
     expect(screen.getByRole('button', { name: 'Zap 0 sats' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: '10,000' }));
-    expect(screen.getByRole('button', { name: '10,000' })).toHaveClass('bg-yellow-400');
+    fireEvent.click(screen.getByRole('button', { name: '420' }));
+    expect(screen.getByRole('button', { name: '420' })).toHaveClass('bg-yellow-400');
   });
 });

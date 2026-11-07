@@ -193,6 +193,11 @@ export class VoicePresenceModule {
   private pruneMeshPresence(): boolean {
     const now = Math.floor(Date.now() / 1000);
     let changed = false;
+    for (const [channelId, call] of this.sfuActiveCalls) {
+      if (call.expiresAt <= 0 || call.expiresAt > now) continue;
+      this.sfuActiveCalls.delete(channelId);
+      changed = true;
+    }
     for (const [channelId, byPubkey] of Array.from(this.meshPresenceByChannel.entries())) {
       for (const [pubkey, presence] of Array.from(byPubkey.entries())) {
         if (presence.expiresAt > now) continue;

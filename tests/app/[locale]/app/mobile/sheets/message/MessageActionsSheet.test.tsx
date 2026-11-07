@@ -72,8 +72,8 @@ describe('MessageActionsSheet', () => {
   });
   it('pays the preset immediately from a message with channel context', () => {
     mount({ msg: { ...MSG, groupId: 'g' } });
-    fireEvent.click(screen.getByTitle('Send 100 sats now'));
-    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ messageId: MSG.id, groupId: 'g' }), 100);
+    fireEvent.click(screen.getByTitle('Send 210 sats now'));
+    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ messageId: MSG.id, groupId: 'g' }), 210);
   });
 
   it('never emits an unpaid preset reaction when channel context is missing', () => {
@@ -81,7 +81,7 @@ describe('MessageActionsSheet', () => {
     window.addEventListener('obelisk-mobile:react', listener);
     try {
       mount();
-      fireEvent.click(screen.getByTitle('Send 100 sats now'));
+      fireEvent.click(screen.getByTitle('Send 210 sats now'));
       expect(listener).not.toHaveBeenCalled();
     } finally { window.removeEventListener('obelisk-mobile:react', listener); }
   });

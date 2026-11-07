@@ -20,7 +20,7 @@ describe('configured zap reactions', () => {
     ], 'me'), { wrapper: bridgeWrapper(bridge) });
     expect(result.current.grouped.map((r) => r.emoji)).toEqual(['🔥']);
     await act(async () => { await result.current.toggle('🔥', {}, 'plain'); });
-    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ messageId: 'message', recipientPubkey: message.pubkey }), 100);
+    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ messageId: 'message', recipientPubkey: message.pubkey }), 210);
   });
 
   it('uses updated settings for the next emoji payment', async () => {

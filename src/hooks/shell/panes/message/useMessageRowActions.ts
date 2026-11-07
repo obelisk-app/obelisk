@@ -15,7 +15,7 @@ import {
 } from '@/services/chat/picker/recent-emojis';
 import type { CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import { useToastStore } from '@/store/feedback/toast';
-import { useQuickZap } from '@/hooks/chat/zaps/useQuickZap';
+import { useMessageZapStore } from '@/store/chat/message-zap';
 import {
   useMessageModeration,
   useMessageReactions,
@@ -75,19 +75,18 @@ export function useMessageRowActions({
     onReactionClick(e.char, e.url ? { [name]: e.url } : undefined);
     pushRecentEmoji(e.char, e.url ? { url: e.url, packAddress: e.packAddress } : undefined);
   };
-  const quickZap = useQuickZap();
   const onZapClick = () => {
     if (isOwn) {
       useToastStore.getState().pushToast({ title: `⚠️ ${t('shell.desktop.message.cannotZapSelf')}`, body: '' });
       return;
     }
-    void quickZap({
+    useMessageZapStore.getState().open({
       messageId: msg.id,
       recipientPubkey: msg.pubkey,
       recipientLud16: meta?.lud16 ?? null,
       displayName: displayNameFor(msg.pubkey, meta),
       groupId,
-    }, zapPresets[0].amountSats);
+    });
   };
   const copyText = () => {
     void Promise.resolve(navigator.clipboard?.writeText(msg.content)).catch(() => {});

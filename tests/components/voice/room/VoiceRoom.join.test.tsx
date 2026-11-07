@@ -194,6 +194,36 @@ describe('VoiceRoom join page', () => {
     expect(voiceHarness.activeClient).toBeNull();
   });
 
+  it('previews a public closed room without authorizing a join or constructing a media client', async () => {
+    bridgeHarness.groups = [{ id: 'closed', name: 'Community', kind: 'voice-sfu', isOpen: false }];
+    bridgeHarness.activeCalls.closed = {
+      hostPubkey: 'host', status: 'active', mode: 'sfu', participantCount: 1,
+      participantPubkeys: ['a'.repeat(64)], expiresAt: Math.floor(Date.now() / 1000) + 60, createdAt: 1,
+    };
+    bridgeHarness.profiles['a'.repeat(64)] = { displayName: 'Ada' };
+    const media = { getUserMedia: vi.fn(), getDisplayMedia: vi.fn() };
+    const descriptor = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices');
+    const peerConnection = vi.fn();
+    vi.stubGlobal('RTCPeerConnection', peerConnection);
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: media });
+    try {
+      renderLocalized(<VoiceRoom channelId="closed" channelName="Community" />);
+      expect(await screen.findByTestId('passive-call-roster')).toBeInTheDocument();
+      expect(screen.getByText('Ada')).toBeInTheDocument();
+      expect(screen.queryByTestId('join-voice-btn')).toBeNull();
+      expect(voiceHarness.voiceClientCtor).not.toHaveBeenCalled();
+      expect(voiceHarness.activeClient).toBeNull();
+      expect(useVoiceStore.getState().currentVoiceChannelId).toBeNull();
+      expect(media.getUserMedia).not.toHaveBeenCalled();
+      expect(media.getDisplayMedia).not.toHaveBeenCalled();
+      expect(peerConnection).not.toHaveBeenCalled();
+    } finally {
+      if (descriptor) Object.defineProperty(navigator, 'mediaDevices', descriptor);
+      else Reflect.deleteProperty(navigator, 'mediaDevices');
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('renders passive SFU or mesh occupants on the join page without connecting', async () => {
     bridgeHarness.activeCalls['new-voice'] = {
       hostPubkey: 'sfu-pubkey',

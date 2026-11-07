@@ -12,6 +12,19 @@ which engine is active; they consume `VoiceClient` events.
 This directory documents the **mesh** engine in depth. SFU docs are at
 [`../sfu-system.md`](../sfu-system.md).
 
+## Public participant previews
+
+Public, non-hidden voice channel entries and their chat views show up to six
+advertised participants before joining, for SFU/community and mesh calls.
+The preview reads the shared active-relay `activeCallByChannel` store and
+cached profile labels only; missing profiles fall back to an npub label.
+No call, media request, SFU RPC, profile lookup, extra relay REQ or per-channel
+timer is started. Counts without advertised identities remain count-only.
+The existing shared presence sweep removes expired mesh/SFU participants
+and SFU advertisements. Private/hidden channel entries do not show these
+public previews. Closed public rooms can show the preview while their join
+membership gate remains unchanged.
+
 ## When to read what
 
 - **[mesh-protocol.md](mesh-protocol.md)** - the wire protocol: presence
