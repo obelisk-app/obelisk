@@ -13,8 +13,9 @@ import { BRIDGE_MOCK_PUBKEY, BRIDGE_MOCK_RELAY, groupFixture, messageFixture } f
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { useVoiceStore } from '@/store/voice';
 import type { JsMessage } from '@/services/nostr-bridge';
+import type { ComposerHandle } from '@/types/chat/composer';
 
-const stubs = vi.hoisted(() => ({ pickFiles: null as null | ((files: File[]) => void), zaps: new Map() }));
+const stubs = vi.hoisted(() => ({ pickFiles: null as null | ((files: File[]) => void), zaps: new Map(), focus: vi.fn() }));
 
 vi.mock('@/components/voice/room/LazyVoiceRoom', () => ({
   default: ({ channelName, isChatOpen, onToggleChat, chatSlot }: {
@@ -55,9 +56,9 @@ vi.mock('@/app/[locale]/app/panes/message/MessageRow', () => ({
   ),
 }));
 vi.mock('@/app/[locale]/app/panes/channel/ChatComposer', () => ({
-  ChatComposer: forwardRef<{ pickFiles: (f: File[]) => void }, { groupId: string; replyingTo: JsMessage | null; onOpenNewGame: () => void }>(
+  ChatComposer: forwardRef<ComposerHandle, { groupId: string; replyingTo: JsMessage | null; onOpenNewGame: () => void }>(
     function ComposerStub({ groupId, replyingTo, onOpenNewGame }, ref) {
-      useImperativeHandle(ref, () => ({ pickFiles: (files: File[]) => stubs.pickFiles?.(files) }), []);
+      useImperativeHandle(ref, () => ({ pickFiles: (files: File[]) => stubs.pickFiles?.(files), focus: stubs.focus }), []);
       return (
         <div data-testid="composer" data-group={groupId} data-replying={replyingTo?.id ?? ''}>
           <button type="button" onClick={onOpenNewGame}>new game</button>
@@ -131,6 +132,7 @@ describe('ChatLayout: a text channel', () => {
     const { rerenderWith } = setup();
     fireEvent.click(screen.getByText('reply m2'));
     expect(screen.getByTestId('composer').dataset.replying).toBe('m2');
+    expect(stubs.focus).toHaveBeenCalled();
     rerenderWith('g2');
     expect(screen.getByTestId('composer').dataset.replying).toBe('');
   });
