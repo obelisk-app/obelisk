@@ -8,7 +8,7 @@ Run `npm run build`, then start that completed build with `npm start` or the exi
 
 Public documents are immutable Next build artifacts, not indefinitely fresh browser documents. HTML revalidates so a later deployment can replace the shell; content-hashed assets remain immutable. Dynamic app, voice and viewer documents retain request-specific nonces and no-store response policy. Reverse proxies must preserve these distinctions, and must not rewrite inline script text after hashes are generated. See [rendering and CSP](../architecture/static-public-pages.md) for the route contract and verification procedure.
 
-Production deployment requires the user's explicit request. `npm run deploy` targets the production process in `/root/obelisk-dex`. Test deployment uses the existing `/root/obelisk-dex-test` directory and process on port 3002; preserve its environment and dependency link. Do not create disposable test-release directories or substitute a new deployment procedure for the established one.
+Production deployment requires the user's explicit request. `npm run deploy` targets the production process in `/root/obelisk-dex`. When explicitly deploying without tests, `npm run deploy:quick` pulls the current branch with `--ff-only`, skips tests, builds, restarts production and checks HTTP health. Test deployment uses the existing `/root/obelisk-dex-test` directory and process on port 3002; preserve its environment and dependency link. Do not create disposable test-release directories or substitute a new deployment procedure for the established one.
 
 ## Find the right reference
 

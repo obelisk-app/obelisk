@@ -17,6 +17,7 @@
     "dev:raise": "./scripts/dev-raise.sh",
     "raise": "./scripts/raise.sh",
     "deploy": "./scripts/deploy.sh",
+    "deploy:quick": "./scripts/deploy-quick.sh",
     "build": "next build --webpack && tsx scripts/security/generate-static-csp.ts",
     "start": "next start -H 127.0.0.1",
     "lint": "eslint",
