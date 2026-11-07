@@ -62,49 +62,49 @@ describe('useMessageReactions', () => {
       { id: 'r1', pubkey: ME, emoji: '👍' },
       { id: 'r2', pubkey: OTHER, emoji: '👍' },
       { id: 'r3', pubkey: OTHER, emoji: '👀' },
-    ], ME, false), { wrapper });
+    ], ME), { wrapper });
     expect(result.current.grouped.map((r) => [r.emoji, r.count, r.mine])).toEqual([['👍', 2, true], ['👀', 1, false]]);
     expect([...result.current.myReactedEmojis]).toEqual(['👍']);
   });
 
   it('publishes a new reaction with the custom-emoji tags it needs', async () => {
-    const { result } = renderHook(() => useMessageReactions(MSG, 'g', [], ME, false), { wrapper });
+    const { result } = renderHook(() => useMessageReactions(MSG, 'g', [], ME), { wrapper });
     await act(() => result.current.toggle(':party:'));
     expect(sendReaction).toHaveBeenCalledWith('msg-1', MSG.pubkey, ':party:', 'g', [['emoji', 'party', 'https://cdn/party.webp']]);
   });
 
   it('retracts my own reaction instead of sending a second one', async () => {
-    const { result } = renderHook(() => useMessageReactions(MSG, 'g', [{ id: 'r1', pubkey: ME, emoji: '👍' }], ME, false), { wrapper });
+    const { result } = renderHook(() => useMessageReactions(MSG, 'g', [{ id: 'r1', pubkey: ME, emoji: '👍' }, { id: 'r2', pubkey: OTHER, emoji: '👍' }], ME), { wrapper });
     const mine = result.current.grouped[0];
     await act(() => result.current.toggle(mine.emoji, mine.customEmojis, mine.myReactionId));
-    expect(removeReaction).toHaveBeenCalledWith('g', 'r1');
+    expect(removeReaction).toHaveBeenCalledExactlyOnceWith('g', 'r1');
+    expect(deleteGroupEvent).not.toHaveBeenCalled();
     expect(sendReaction).not.toHaveBeenCalled();
   });
 
   it('is a no-op when I already reacted with that emoji and no id was given', async () => {
-    const { result } = renderHook(() => useMessageReactions(MSG, 'g', [{ id: 'r1', pubkey: ME, emoji: '👍' }], ME, false), { wrapper });
+    const { result } = renderHook(() => useMessageReactions(MSG, 'g', [{ id: 'r1', pubkey: ME, emoji: '👍' }], ME), { wrapper });
     await act(() => result.current.toggle('👍'));
     expect(sendReaction).not.toHaveBeenCalled();
     expect(removeReaction).not.toHaveBeenCalled();
   });
 
-  it('as admin removes every reaction of that emoji for everyone', async () => {
+  it('adds my reaction when other members already reacted', async () => {
     const { result } = renderHook(() => useMessageReactions(MSG, 'g', [
       { id: 'r2', pubkey: OTHER, emoji: '👀' },
       { id: 'r3', pubkey: 'd'.repeat(64), emoji: '👀' },
-    ], ME, true), { wrapper });
+    ], ME), { wrapper });
     const pill = result.current.grouped[0];
-    await act(() => result.current.toggle(pill.emoji, pill.customEmojis, pill.myReactionId, pill.reactionIds));
-    expect(deleteGroupEvent).toHaveBeenCalledTimes(2);
-    expect(deleteGroupEvent).toHaveBeenCalledWith('g', 'r2');
-    expect(deleteGroupEvent).toHaveBeenCalledWith('g', 'r3');
-    expect(sendReaction).not.toHaveBeenCalled();
+    await act(() => result.current.toggle(pill.emoji, pill.customEmojis, pill.myReactionId));
+    expect(deleteGroupEvent).not.toHaveBeenCalled();
+    expect(removeReaction).not.toHaveBeenCalled();
+    expect(sendReaction).toHaveBeenCalledWith(MSG.id, MSG.pubkey, '👀', 'g', []);
   });
 
   it('swallows a relay failure instead of leaving an unhandled rejection', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     sendReaction.mockRejectedValueOnce(new Error('relay refused'));
-    const { result } = renderHook(() => useMessageReactions(MSG, 'g', [], ME, false), { wrapper });
+    const { result } = renderHook(() => useMessageReactions(MSG, 'g', [], ME), { wrapper });
     await expect(act(() => result.current.toggle('👍'))).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();

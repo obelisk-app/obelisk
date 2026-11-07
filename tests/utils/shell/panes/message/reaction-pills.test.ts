@@ -26,23 +26,23 @@ describe('zapPillTotal / hasReactionRow', () => {
 
 describe('reactionPills', () => {
   it('a stranger reaction: plain look, "react", no ids to remove', () => {
-    const [p] = reactionPills([group('🔥')], new Set(), false);
-    expect(p).toMatchObject({ emoji: '🔥', active: false, titleKey: 'shell.desktop.reactions.react', removeIds: undefined });
+    const [p] = reactionPills([group('🔥')], new Set());
+    expect(p).toMatchObject({ emoji: '🔥', active: false, titleKey: 'shell.desktop.reactions.react' });
     expect(p.resolved).toEqual({ kind: 'unicode', char: '🔥' });
   });
 
   it('your own reaction is lit and offers to remove it', () => {
-    const [p] = reactionPills([group('🔥')], new Set(['🔥']), false);
-    expect(p).toMatchObject({ active: true, titleKey: 'shell.desktop.reactions.removeOwn', removeIds: undefined });
+    const [p] = reactionPills([group('🔥')], new Set(['🔥']));
+    expect(p).toMatchObject({ active: true, titleKey: 'shell.desktop.reactions.removeOwn' });
   });
 
-  it('an admin removes every reaction of the emoji, whoever sent it', () => {
-    const [p] = reactionPills([group('🔥')], new Set(['🔥']), true);
-    expect(p).toMatchObject({ active: true, titleKey: 'shell.desktop.reactions.removeEveryone', removeIds: ['r1', 'r2'] });
+  it('a reaction from another member stays unlit', () => {
+    const [p] = reactionPills([group('🔥')], new Set());
+    expect(p).toMatchObject({ active: false, titleKey: 'shell.desktop.reactions.react' });
   });
 
   it('resolves a custom emoji to its image', () => {
-    const [p] = reactionPills([group(':cat:', { customEmojis: { cat: 'https://x.test/c.png' } })], new Set(), false);
+    const [p] = reactionPills([group(':cat:', { customEmojis: { cat: 'https://x.test/c.png' } })], new Set());
     expect(p.resolved).toEqual({ kind: 'custom', name: 'cat', url: 'https://x.test/c.png' });
   });
 });

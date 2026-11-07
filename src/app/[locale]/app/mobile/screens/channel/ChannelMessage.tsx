@@ -131,7 +131,7 @@ export const ChannelMessage = memo(function ChannelMessage({
         {vm.grouped.length > 0 && (
           <div className="reactions">
             {vm.grouped.map((r) => (
-              <MobileReactionChip key={r.emoji} reaction={r} isAdmin={isAdmin} onToggle={() => vm.toggleReaction(r)} />
+              <MobileReactionChip key={r.emoji} reaction={r} onToggle={() => vm.toggleReaction(r)} />
             ))}
           </div>
         )}

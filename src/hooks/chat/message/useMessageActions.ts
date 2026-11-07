@@ -29,8 +29,7 @@ export interface MessageReactions {
   /** Emojis the current user already sent on this message. */
   readonly myReactedEmojis: ReadonlySet<string>;
   /**
-   * Tap on a reaction pill or a picker emoji. Admin with `reactionIds`:
-   * delete every reaction of that emoji for everyone (kind 9005). Own
+   * Tap on a reaction pill or a picker emoji. Own
    * `reactionId`: retract it. Already reacted with this emoji: no-op.
    * Otherwise publish a kind 7 with the custom-emoji tags it needs.
    */
@@ -38,7 +37,6 @@ export interface MessageReactions {
     emoji: string,
     customEmojis?: CustomEmojiMap,
     reactionId?: string | null,
-    reactionIds?: ReadonlyArray<string>,
   ) => Promise<void>;
 }
 
@@ -54,7 +52,6 @@ export function useMessageReactions(
   groupId: string,
   reactions: ReadonlyArray<MessageReactionInput>,
   myPubkey: string | null,
-  isAdmin: boolean,
 ): MessageReactions {
   const quickZap = useQuickZap();
   const { zapPresets } = usePreferences();
@@ -73,17 +70,12 @@ export function useMessageReactions(
     emoji: string,
     customEmojis?: CustomEmojiMap,
     reactionId?: string | null,
-    reactionIds?: ReadonlyArray<string>,
   ) => {
     try {
       const preset = findZapPreset(zapPresets, emoji);
       if (preset) {
         await quickZap({ messageId: msg.id, recipientPubkey: msg.pubkey, groupId,
           recipientLud16: meta?.lud16, displayName: displayNameFor(msg.pubkey, meta) }, preset.amountSats);
-        return;
-      }
-      if (isAdmin && reactionIds && reactionIds.length > 0) {
-        await Promise.all(reactionIds.map((id) => nostrActions.deleteGroupEvent(groupId, id)));
         return;
       }
       if (reactionId) {
@@ -96,7 +88,7 @@ export function useMessageReactions(
     } catch (err) {
       console.warn('[reactions] toggle failed', err);
     }
-  }, [groupId, isAdmin, msg.id, msg.pubkey, myReactedEmojis, serverEmojis, quickZap, zapPresets, meta]);
+  }, [groupId, msg.id, msg.pubkey, myReactedEmojis, serverEmojis, quickZap, zapPresets, meta]);
 
   return { grouped, myReactedEmojis, toggle };
 }

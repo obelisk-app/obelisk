@@ -46,6 +46,7 @@
       "added": "Added",
       "noDescription": "No description"
     },
+    "removeLabel": "Remove relay {name}",
     "confirmRemoveBody": "You can add it back later."
   },
   "user": {

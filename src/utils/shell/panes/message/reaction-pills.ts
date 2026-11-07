@@ -20,35 +20,28 @@ export function hasReactionRow(counts: ReadonlyArray<unknown>, zapTotal: ZapTota
 }
 
 export type ReactionPillTitleKey =
-  | 'shell.desktop.reactions.removeEveryone'
   | 'shell.desktop.reactions.removeOwn'
   | 'shell.desktop.reactions.react';
 
 export interface ReactionPill extends GroupedReaction {
   readonly resolved: ReturnType<typeof resolveReactionEmoji>;
-  /** Highlighted: an admin can remove it for everyone, or it is the viewer's own. */
+  /** Highlighted when it is the viewer's own reaction. */
   readonly active: boolean;
   readonly titleKey: ReactionPillTitleKey;
-  /** For an admin, every reaction of this emoji, so a click removes them all. */
-  readonly removeIds: ReadonlyArray<string> | undefined;
 }
 
 /** One pill per emoji: what it shows, whether it is lit, and what a click does. */
 export function reactionPills(
   counts: ReadonlyArray<GroupedReaction>,
   myReactedEmojis: ReadonlySet<string>,
-  isAdmin: boolean,
 ): ReactionPill[] {
   return counts.map((c) => {
     const mine = myReactedEmojis.has(c.emoji);
     return {
       ...c,
       resolved: resolveReactionEmoji(c.emoji, c.customEmojis),
-      active: isAdmin || mine,
-      titleKey: isAdmin
-        ? 'shell.desktop.reactions.removeEveryone'
-        : mine ? 'shell.desktop.reactions.removeOwn' : 'shell.desktop.reactions.react',
-      removeIds: isAdmin ? c.reactionIds : undefined,
+      active: mine,
+      titleKey: mine ? 'shell.desktop.reactions.removeOwn' : 'shell.desktop.reactions.react',
     };
   });
 }

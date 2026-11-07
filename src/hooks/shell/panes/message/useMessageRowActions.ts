@@ -64,13 +64,12 @@ export function useMessageRowActions({
       });
     }
   };
-  const { grouped: counts, myReactedEmojis, toggle: toggleReaction } = useMessageReactions(msg, groupId, reactions, myPubkey, isAdmin);
+  const { grouped: counts, myReactedEmojis, toggle: toggleReaction } = useMessageReactions(msg, groupId, reactions, myPubkey);
   const onReactionClick = (
     emoji: string,
     customEmojis?: CustomEmojiMap,
     reactionId?: string | null,
-    reactionIds?: ReadonlyArray<string>,
-  ) => { void toggleReaction(emoji, customEmojis, reactionId, reactionIds); };
+  ) => { void toggleReaction(emoji, customEmojis, reactionId); };
   const reactWith = (e: RecentEmoji) => {
     const name = e.char.replace(/^:|:$/g, '');
     onReactionClick(e.char, e.url ? { [name]: e.url } : undefined);

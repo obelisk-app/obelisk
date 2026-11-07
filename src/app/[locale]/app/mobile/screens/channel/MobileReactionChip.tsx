@@ -8,14 +8,12 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 /** One reaction under a phone message: the emoji (or custom image) and its count. */
 export function MobileReactionChip({
   reaction,
-  isAdmin,
   onToggle,
 }: {
   reaction: GroupedReaction;
-  isAdmin?: boolean;
   onToggle: () => void;
 }) {
-  const { resolved, title } = useMobileReactionChip(reaction, isAdmin);
+  const { resolved, title } = useMobileReactionChip(reaction);
   return (
     <Button
       variant="bare"

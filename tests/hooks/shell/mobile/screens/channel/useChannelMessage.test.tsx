@@ -60,12 +60,14 @@ describe('useChannelMessage', () => {
     expect(el.classList.contains('msg-flash')).toBe(true);
   });
 
-  it('lets an admin remove a reaction for everyone', async () => {
-    const deleteGroupEvent = vi.fn().mockResolvedValue(undefined);
+  it('lets an admin add their own reaction', async () => {
+    const sendReaction = vi.fn().mockResolvedValue(undefined);
+    const deleteGroupEvent = vi.fn();
     const reactions = [{ id: 'r1', pubkey: 'c'.repeat(64), emoji: '👍' }];
-    const { result } = setup({ reactions, isAdmin: true }, { deleteGroupEvent });
+    const { result } = setup({ reactions, isAdmin: true }, { sendReaction, deleteGroupEvent });
     expect(result.current.grouped).toHaveLength(1);
     act(() => result.current.toggleReaction(result.current.grouped[0]));
-    await vi.waitFor(() => expect(deleteGroupEvent).toHaveBeenCalledWith('g', 'r1'));
+    await vi.waitFor(() => expect(sendReaction).toHaveBeenCalledWith(MSG.id, MSG.pubkey, '👍', 'g', []));
+    expect(deleteGroupEvent).not.toHaveBeenCalled();
   });
 });

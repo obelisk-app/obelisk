@@ -16,7 +16,7 @@ export function ReactionPills({ actions, zapTotal, isAdmin }: {
   isAdmin: boolean;
 }) {
   const t = useTranslations();
-  const vm = useReactionPills(actions, zapTotal, isAdmin);
+  const vm = useReactionPills(actions, zapTotal);
   if (!vm.visible) return null;
   return (
     <div className="mt-1 flex flex-wrap gap-1">

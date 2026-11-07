@@ -14,16 +14,16 @@ function actions(counts: GroupedReaction[]) {
 
 describe('useReactionPills', () => {
   it('hides the row with nothing to show', () => {
-    const { result } = renderHook(() => useReactionPills(actions([]), null, false));
+    const { result } = renderHook(() => useReactionPills(actions([]), null));
     expect(result.current.visible).toBe(false);
     expect(result.current.zap).toBeNull();
   });
 
   it('toggle passes the pill through to the row action', () => {
     const a = actions([group]);
-    const { result } = renderHook(() => useReactionPills(a, null, true));
+    const { result } = renderHook(() => useReactionPills(a, null));
     expect(result.current.visible).toBe(true);
     result.current.toggle(result.current.pills[0]);
-    expect(a.onReactionClick).toHaveBeenCalledWith('🔥', {}, 'm1', ['r1']);
+    expect(a.onReactionClick).toHaveBeenCalledWith('🔥', {}, 'm1');
   });
 });

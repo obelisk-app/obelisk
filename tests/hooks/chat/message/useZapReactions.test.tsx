@@ -17,7 +17,7 @@ describe('configured zap reactions', () => {
     const { result } = renderHook(() => useMessageReactions(message, 'g', [
       { id: 'plain', pubkey: 'me', emoji: '🔥' },
       { id: 'marker', pubkey: 'me', emoji: '⚡', zapMarker: true },
-    ], 'me', false), { wrapper: bridgeWrapper(bridge) });
+    ], 'me'), { wrapper: bridgeWrapper(bridge) });
     expect(result.current.grouped.map((r) => r.emoji)).toEqual(['🔥']);
     await act(async () => { await result.current.toggle('🔥', {}, 'plain'); });
     expect(pay).toHaveBeenCalledWith(expect.objectContaining({ messageId: 'message', recipientPubkey: message.pubkey }), 100);
@@ -25,14 +25,14 @@ describe('configured zap reactions', () => {
 
   it('uses updated settings for the next emoji payment', async () => {
     setPreference('zapPresets', [{ emoji: '⚡', amountSats: 42 }]);
-    const { result } = renderHook(() => useMessageReactions(message, 'g', [], 'me', false), { wrapper: bridgeWrapper(fakeBridge()) });
+    const { result } = renderHook(() => useMessageReactions(message, 'g', [], 'me'), { wrapper: bridgeWrapper(fakeBridge()) });
     await act(async () => { await result.current.toggle('⚡'); });
     expect(pay).toHaveBeenCalledWith(expect.anything(), 42);
     setPreference('zapPresets', DEFAULT_ZAP_PRESETS);
   });
   it('matches the same paid emoji with or without a presentation selector', async () => {
     setPreference('zapPresets', [{ emoji: '⚡', amountSats: 21 }, { emoji: '❤️', amountSats: 500 }]);
-    const { result } = renderHook(() => useMessageReactions(message, 'g', [], 'me', false), { wrapper: bridgeWrapper(fakeBridge()) });
+    const { result } = renderHook(() => useMessageReactions(message, 'g', [], 'me'), { wrapper: bridgeWrapper(fakeBridge()) });
     await act(async () => { await result.current.toggle('❤'); });
     expect(pay).toHaveBeenCalledWith(expect.anything(), 500);
     setPreference('zapPresets', DEFAULT_ZAP_PRESETS);

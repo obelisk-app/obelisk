@@ -147,17 +147,18 @@ describe('ChannelMessage kebab button', () => {
     expect(onLongPress).toHaveBeenCalledTimes(1);
   });
 
-  it('removes my reaction when tapping a reaction I already sent', async () => {
+  it.each([false, true])('removes only my reaction when admin is %s', async (isAdmin) => {
     renderLocalized(
       <ChannelMessage
         msg={sampleMsg}
+        isAdmin={isAdmin}
         myPubkey={'b'.repeat(64)}
         groupId="rly/group"
         reactions={[{
           id: 'reaction-1',
           pubkey: 'b'.repeat(64),
           emoji: '👍',
-        }]}
+        }, { id: 'other-reaction', pubkey: 'c'.repeat(64), emoji: '👍' }]}
         onLongPress={() => {}}
         onAvatar={() => {}}
       />,
@@ -167,10 +168,12 @@ describe('ChannelMessage kebab button', () => {
     await vi.waitFor(() => {
       expect(nostrActions.removeReaction).toHaveBeenCalledWith('rly/group', 'reaction-1');
     });
+    expect(nostrActions.removeReaction).toHaveBeenCalledTimes(1);
+    expect(nostrActions.deleteGroupEvent).not.toHaveBeenCalled();
     expect(nostrActions.sendReaction).not.toHaveBeenCalled();
   });
 
-  it('removes another user reaction for everyone when I am an admin', async () => {
+  it('adds my reaction alongside another user when I am an admin', async () => {
     renderLocalized(
       <ChannelMessage
         msg={sampleMsg}
@@ -189,10 +192,10 @@ describe('ChannelMessage kebab button', () => {
 
     fireEvent.click(screen.getByText(/👀/));
     await vi.waitFor(() => {
-      expect(nostrActions.deleteGroupEvent).toHaveBeenCalledWith('rly/group', 'reaction-2');
+      expect(nostrActions.sendReaction).toHaveBeenCalledWith(sampleMsg.id, sampleMsg.pubkey, '👀', 'rly/group', []);
     });
     expect(nostrActions.removeReaction).not.toHaveBeenCalled();
-    expect(nostrActions.sendReaction).not.toHaveBeenCalled();
+    expect(nostrActions.deleteGroupEvent).not.toHaveBeenCalled();
   });
 });
 

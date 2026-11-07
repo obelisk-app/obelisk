@@ -33,7 +33,7 @@ export function useChannelMessage({
 }) {
   const t = useTranslations();
   const meta = useMessageAuthor(msg.pubkey);
-  const { grouped, toggle } = useMessageReactions(msg, groupId, reactions, myPubkey, isAdmin);
+  const { grouped, toggle } = useMessageReactions(msg, groupId, reactions, myPubkey);
   const { retry, dismissFailed } = useMessageModeration(msg, groupId, isAdmin, msg.pubkey === myPubkey, moderationLabelsFrom(t));
 
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,9 +46,9 @@ export function useChannelMessage({
     meta,
     name: displayNameFor(msg.pubkey, meta),
     grouped: grouped.filter((r) => r.emoji.replace(/\uFE0F/g, '') !== '⚡'),
-    /** An admin's tap removes the reaction for everyone; anyone else's adds or takes back their own. */
+    /** A tap adds or takes back only the viewer's own reaction. */
     toggleReaction: (r: GroupedReaction) =>
-      void toggle(r.emoji, r.customEmojis, r.myReactionId, isAdmin ? r.reactionIds : undefined),
+      void toggle(r.emoji, r.customEmojis, r.myReactionId),
     startPress: () => {
       pressTimer.current = setTimeout(() => onLongPress(msg), LONG_PRESS_MS);
     },
