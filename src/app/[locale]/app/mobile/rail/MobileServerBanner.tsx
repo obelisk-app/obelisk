@@ -1,5 +1,6 @@
 'use client';
 
+import RelayDeckPicker from '@/components/relay/RelayDeckPicker';
 import Link from '@/components/ui/navigation/Link';
 import Button from '@/components/ui/buttons/Button';
 import { useTranslations } from 'next-intl';
@@ -18,6 +19,9 @@ import Heading from '@/components/ui/layout/Heading';
  */
 export function MobileServerBanner({
   label,
+  relays = [],
+  onSelectRelay,
+  onAddRelay,
   relayUrl,
   iconUrl,
   bannerUrl,
@@ -26,6 +30,9 @@ export function MobileServerBanner({
   onOpenMenu,
 }: {
   label: string;
+  relays?: readonly string[];
+  onSelectRelay?: (url: string) => void;
+  onAddRelay?: () => void;
   relayUrl: string | null;
   iconUrl?: string | null;
   bannerUrl?: string | null;
@@ -83,7 +90,11 @@ export function MobileServerBanner({
           )}
         </div>
         <div className="server-banner-copy">
-          <Heading as="h2">{label}</Heading>
+          <Heading as="h2">
+            <RelayDeckPicker relays={relays} activeRelay={relayUrl} onSelect={(url) => onSelectRelay?.(url)} onAdd={onAddRelay}>
+              {label}
+            </RelayDeckPicker>
+          </Heading>
           {/* The host is the relay's own page - its rules and operator. */}
           {vm.host && (vm.website ? (
             <Link href={vm.website} target="_blank" data-testid="mobile-relay-website">

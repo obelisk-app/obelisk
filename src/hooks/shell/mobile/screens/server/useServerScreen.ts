@@ -22,7 +22,7 @@ import { channelsFromIds, indexById, rootChannels, spaceLabel, toggleKey } from 
 export interface RelayMenuTarget { url: string; label: string; iconUrl: string | null }
 
 /**
- * The phone server screen: the relay rail, the active space's banner, the
+ * The phone server screen: the active relay picker and banner, the
  * channel list laid out by the operator's categories (each collapsible, a
  * forum expandable to its threads), and the add-relay, new-channel and
  * relay-menu sheets. The roots and layout match the desktop sidebar's.

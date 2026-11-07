@@ -1,16 +1,23 @@
+import type { ReactNode } from 'react';
 import { useRelayDeckPicker } from '@/hooks/relay/rail/useRelayDeckPicker';
 import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/buttons/Button';
-import { ServerIcon } from '@/assets/icons';
+import { ChevronDownIcon } from '@/assets/icons';
 import RelayDeck from './RelayDeck';
 
-export default function RelayDeckPicker({ relays, activeRelay, onSelect }: {
+/** The active relay is the phone's picker trigger; no separate relay rail. */
+export default function RelayDeckPicker({ relays, activeRelay, onSelect, onAdd, children }: {
   relays: readonly string[]; activeRelay: string | null; onSelect: (url: string) => void;
+  onAdd?: () => void; children?: ReactNode;
 }) {
   const t = useTranslations();
-  const vm = useRelayDeckPicker(onSelect);
+  const vm = useRelayDeckPicker(onSelect, onAdd);
   return <>
-    <Button variant="ghost" size="icon" className="mx-auto h-12 w-12 shrink-0" aria-label={t('mobile.nav.servers')} onClick={vm.show} data-testid="relay-deck-picker"><ServerIcon size={22} /></Button>
-    {vm.open && <RelayDeck relays={relays} activeRelay={activeRelay} onClose={vm.close} onSelect={vm.select} />}
+    <Button variant="bare" className="flex w-full min-w-0 items-center gap-2 text-left text-lc-white"
+      aria-label={t('mobile.nav.servers')} aria-haspopup="dialog" aria-expanded={vm.open}
+      onClick={vm.show} data-testid="relay-deck-picker">
+      <span className="min-w-0 flex-1 truncate">{children || activeRelay}</span><ChevronDownIcon size={18} />
+    </Button>
+    {vm.open && <RelayDeck relays={relays} activeRelay={activeRelay} onClose={vm.close} onSelect={vm.select} onAdd={onAdd ? vm.add : undefined} />}
   </>;
 }

@@ -15,11 +15,17 @@ NIP-51 `kind:30030` emoji-set events instead of NIP-78. See
 
 ## Relay picker
 
-The server button in both relay rails opens a vertical rotating card deck,
-using the Nostr WoT wallet connection wheel geometry. Swipe vertically, use
-the mouse wheel, arrow keys, or the previous/next buttons to browse. Tapping
-a rear card brings it forward; tapping the front card switches relay and
-closes the picker. Existing rail tiles remain direct shortcuts.
+On mobile, the active relay name above the channel titles opens a vertical
+rotating card deck. There is no lateral relay list. Desktop keeps its relay
+rail and does not show this picker.
+
+The deck follows the Nostr WoT wallet connection wheel: its continuous position
+is animated frame by frame through a circular path, with bounded dragging,
+velocity-aware snapping and cubic easing. Swipe vertically, use the mouse
+wheel, arrow keys, or the previous/next buttons to browse. Tapping a rear card
+brings it forward; tapping the settled front card switches relay and closes
+the picker. With two relays the rear card has an extra vertical offset so it
+remains visibly available at rest. Add relay is available inside the picker.
 
 Cards display operator banners, names, descriptions and background mention
 counts. Only the active relay subscribes to branding; other cards use cached

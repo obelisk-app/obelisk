@@ -3,7 +3,6 @@
 import { type JsGroup } from '@/services/nostr-bridge';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { useServerScreen } from '@/hooks/shell/mobile/screens/server/useServerScreen';
-import { MobileServerRail } from '../../rail/MobileServerRail';
 import { MobileServerBanner } from '../../rail/MobileServerBanner';
 import { AddRelaySheet } from '../../sheets/relay/AddRelaySheet';
 import { CreateChannelSheet } from '../../sheets/channel/CreateChannelSheet';
@@ -11,7 +10,7 @@ import { RelayMenuSheet } from '../../sheets/relay/RelayMenuSheet';
 import { ServerChannelList } from './ServerChannelList';
 
 /**
- * The phone server tab: the relay rail, the active space's banner over its
+ * The phone server tab: the active relay picker and banner over its
  * channel list, and the add-relay, new-channel and relay-menu sheets. State
  * and actions are `useServerScreen`.
  */
@@ -27,16 +26,11 @@ export function ServerScreen({
   return (
     <div className="screen active" data-screen="server">
       <div className="server-mobile-layout">
-        <MobileServerRail
-          relays={vm.relays}
-          activeRelay={vm.relay}
-          onSelectRelay={vm.selectRelay}
-          onAddRelay={vm.openAddRelay}
-          onLongPress={vm.openRelayMenu}
-        />
-
         <section className="server-channel-pane" data-testid="mobile-channel-menu">
           <MobileServerBanner
+            relays={vm.relays}
+            onSelectRelay={vm.selectRelay}
+            onAddRelay={vm.openAddRelay}
             label={vm.space.label}
             relayUrl={vm.relay}
             iconUrl={vm.space.icon}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRelayInfo } from '@/hooks/relay/info/useRelayInfo';
 import { useRelayBranding } from '@/hooks/relay/branding/useRelayBranding';
 import { cacheGet } from '@/services/nostr-bridge';
@@ -14,7 +14,7 @@ export function useRelayDeckCard(url: string, active: boolean) {
   const operator = operatorPubkeyFromRelayInfo(info);
   // Only the active relay gets a live subscription. Other banners use the local cache.
   const live = useRelayBranding(active ? url : null, operator ? [operator] : []);
-  const cached = cacheGet<RelayBranding>(url, KIND_NIP78_APP_DATA, `obelisk:branding:${url}`)?.value;
+  const cached = useMemo(() => cacheGet<RelayBranding>(url, KIND_NIP78_APP_DATA, `obelisk:branding:${url}`)?.value, [url]);
   const branding = active ? live : cached;
   const [failedBanner, setFailedBanner] = useState('');
   const unread = useUnreadMentionCount(active ? null : normalizeRelayUrl(url));

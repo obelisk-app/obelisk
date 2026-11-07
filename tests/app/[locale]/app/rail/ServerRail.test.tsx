@@ -44,6 +44,7 @@ const renderRail = (ui: React.ReactElement) =>
 describe('ServerRail', () => {
   it('leaves its background transparent for the animated app backdrop', () => {
     renderRail(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickRelay={() => {}} />);
+    expect(screen.queryByTestId('relay-deck-picker')).not.toBeInTheDocument();
 
     const rail = screen.getByTitle('Direct messages').parentElement;
     expect(rail).not.toHaveClass('bg-lc-black');

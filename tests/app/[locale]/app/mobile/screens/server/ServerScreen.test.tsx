@@ -19,19 +19,12 @@ const operator = vi.hoisted(() => ({
 }));
 vi.mock('@/hooks/relay/operator/useRelayOperatorData', () => ({ useRelayOperatorData: () => operator.value }));
 vi.mock('@/hooks/relay/info/useRelayHeaderInfo', () => ({ useRelayHeaderInfo: () => ({ name: 'Info Name', icon: null }) }));
-vi.mock('@/app/[locale]/app/mobile/rail/MobileServerRail', () => ({
-  MobileServerRail: (p: { onSelectRelay: (u: string) => void; onAddRelay: () => void; onLongPress: (i: { url: string; label: string; iconUrl: string | null }) => void }) => (
-    <div>
-      <button data-testid="rail-same" onClick={() => p.onSelectRelay(`${BRIDGE_MOCK_RELAY}/`)} />
-      <button data-testid="rail-other" onClick={() => p.onSelectRelay('wss://other.test')} />
-      <button data-testid="rail-add" onClick={p.onAddRelay} />
-      <button data-testid="rail-hold" onClick={() => p.onLongPress({ url: 'wss://other.test', label: 'Other', iconUrl: null })} />
-    </div>
-  ),
-}));
 vi.mock('@/app/[locale]/app/mobile/rail/MobileServerBanner', () => ({
-  MobileServerBanner: (p: { label: string; onSearch: () => void; onCreateChannel: () => void; onOpenMenu: () => void }) => (
+  MobileServerBanner: (p: { label: string; onSearch: () => void; onCreateChannel: () => void; onOpenMenu: () => void; onSelectRelay: (url: string) => void; onAddRelay: () => void }) => (
     <div data-testid="banner" data-label={p.label}>
+      <button data-testid="banner-same" onClick={() => p.onSelectRelay(`${BRIDGE_MOCK_RELAY}/`)} />
+      <button data-testid="banner-other" onClick={() => p.onSelectRelay('wss://other.test')} />
+      <button data-testid="banner-add" onClick={p.onAddRelay} />
       <button data-testid="banner-search" onClick={p.onSearch} />
       <button data-testid="banner-create" onClick={p.onCreateChannel} />
       <button data-testid="banner-menu" onClick={p.onOpenMenu} />
@@ -77,6 +70,7 @@ describe('ServerScreen (phone)', () => {
   it('lists the root channels, an orphan included, and a forum with its threads expanded', () => {
     mount();
     expect(names()).toEqual(['alpha', 'beta', 'forum', 'thread one', 'orphan']);
+    expect(screen.queryByTestId('mobile-server-rail')).not.toBeInTheDocument();
   });
 
   it('collapses a forum from its chevron', () => {
@@ -116,8 +110,8 @@ describe('ServerScreen (phone)', () => {
   it('switches relay only to a different one', async () => {
     const switchRelay = vi.fn().mockResolvedValue(undefined);
     mount({ switchRelay });
-    fireEvent.click(screen.getByTestId('rail-same'));
-    fireEvent.click(screen.getByTestId('rail-other'));
+    fireEvent.click(screen.getByTestId('banner-same'));
+    fireEvent.click(screen.getByTestId('banner-other'));
     await vi.waitFor(() => expect(switchRelay).toHaveBeenCalledWith('wss://other.test'));
     expect(switchRelay).toHaveBeenCalledTimes(1);
   });
@@ -129,7 +123,7 @@ describe('ServerScreen (phone)', () => {
 
   it('opens the add-relay, new-channel and relay-menu sheets', () => {
     const { selectGroup, go } = mount();
-    fireEvent.click(screen.getByTestId('rail-add'));
+    fireEvent.click(screen.getByTestId('banner-add'));
     fireEvent.click(screen.getByTestId('add-relay-sheet'));
     expect(screen.queryByTestId('add-relay-sheet')).toBeNull();
     fireEvent.click(screen.getByTestId('banner-create'));
@@ -140,8 +134,6 @@ describe('ServerScreen (phone)', () => {
     expect(screen.getByTestId('relay-menu')).toHaveAttribute('data-url', BRIDGE_MOCK_RELAY);
     expect(screen.getByTestId('relay-menu')).toHaveAttribute('data-label', 'Info Name');
     fireEvent.click(screen.getByTestId('relay-menu'));
-    fireEvent.click(screen.getByTestId('rail-hold'));
-    expect(screen.getByTestId('relay-menu')).toHaveAttribute('data-url', 'wss://other.test');
     fireEvent.click(screen.getByTestId('banner-search'));
     expect(go).toHaveBeenCalledWith('search');
   });
