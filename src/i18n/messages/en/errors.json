@@ -46,7 +46,11 @@
     "wallet-restricted": "Your wallet does not allow this connection to make that payment.",
     "wallet-unauthorized": "Your wallet no longer accepts this connection. Connect it again in Settings.",
     "wallet-payment-failed": "Your wallet tried the payment and it failed. Nothing was paid.",
-    "wallet-failed": "Your wallet reported an error."
+    "wallet-failed": "Your wallet reported an error.",
+    "media-stale": "This list changed while you were editing. Merge with the latest version to review your changes before saving.",
+    "media-permission": "Only the active relay operator can edit server media.",
+    "media-account-changed": "The account changed. Reopen the editor for this account.",
+    "media-pending": "Another save is in progress. Try again when it finishes."
   },
   "activity": {
     "signExtension": {

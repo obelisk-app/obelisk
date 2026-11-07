@@ -15,13 +15,14 @@ export default function LibraryPackViewer({ vm, pack, closeOnEscape }: {
       pack={pack}
       favorite={vm.isFavoritePack(pack)}
       itemFavorites={vm.favorites.items}
-      busy={vm.busy}
+      busy={vm.busy || (vm.isServer && (!vm.canEditServer || !vm.serverDraft))}
       server={vm.isServer}
       serverSelected={vm.isServerPack(pack)}
       closeOnEscape={closeOnEscape}
       onClose={vm.closeViewer}
       onOpenItem={(item) => vm.openItem(pack, item)}
       onFavorite={() => vm.togglePack(pack)}
+      onCopy={vm.copyItems}
       onServer={() => vm.toggleServer(pack)}
     />
   );

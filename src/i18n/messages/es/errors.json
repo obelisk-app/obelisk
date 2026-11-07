@@ -46,7 +46,11 @@
     "wallet-restricted": "Tu billetera no permite que esta conexión haga ese pago.",
     "wallet-unauthorized": "Tu billetera ya no acepta esta conexión. Volvé a conectarla en Ajustes.",
     "wallet-payment-failed": "Tu billetera intentó el pago y falló. No se pagó nada.",
-    "wallet-failed": "Tu billetera informó un error."
+    "wallet-failed": "Tu billetera informó un error.",
+    "media-stale": "Esta lista cambió mientras la editabas. Combina con la última versión para revisar tus cambios antes de guardar.",
+    "media-permission": "Solo el operador del relay activo puede editar la multimedia del servidor.",
+    "media-account-changed": "La cuenta cambió. Vuelve a abrir el editor para esta cuenta.",
+    "media-pending": "Hay otro guardado en curso. Espera a que termine."
   },
   "activity": {
     "signExtension": {

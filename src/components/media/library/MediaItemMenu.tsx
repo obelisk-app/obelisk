@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import type { SelectedMedia } from '@/types/media/library';
 
 /** What can be done with one item: view its pack, start a pack with it, favourite it. */
-export default function MediaItemMenu({ selection, favorite, busy, server, onClose, onViewPack, onFavorite, onCreatePack }: {
+export default function MediaItemMenu({ selection, favorite, busy, server, onClose, onViewPack, onFavorite, onCreatePack, onAddToPack }: {
   selection: SelectedMedia;
   favorite: boolean;
   busy: boolean;
@@ -16,12 +16,13 @@ export default function MediaItemMenu({ selection, favorite, busy, server, onClo
   onClose: () => void;
   onViewPack: () => void;
   onFavorite: () => void;
+  onAddToPack?: () => void;
   onCreatePack?: () => void;
 }) {
   const t = useTranslations();
   const { item, pack } = selection;
   return (
-    <Modal onClose={onClose} testId="media-item-menu" panelClassName="mx-3 flex w-full max-w-sm flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-xl">
+    <Modal layerClassName="z-[130]" onClose={onClose} testId="media-item-menu" panelClassName="mx-3 flex w-full max-w-sm flex-col overflow-hidden rounded-xl border border-lc-border bg-lc-dark shadow-xl">
       <ModalHeader
         title={<>:{item.name}:</>}
         subtitle={pack ? t('media.item.fromPack', { kind: t(`media.kind.${item.kind}`), title: pack.title }) : t('media.item.individual', { kind: t(`media.kind.${item.kind}`) })}
@@ -33,6 +34,7 @@ export default function MediaItemMenu({ selection, favorite, busy, server, onClo
       </div>
       <div className="grid gap-2 p-4">
         {pack && <Button variant="secondary" size="lg" onClick={onViewPack}>{t('media.item.viewPack', { title: pack.title })}</Button>}
+        {onAddToPack && <Button disabled={busy} onClick={onAddToPack}>{t(server ? 'media.manage.addToServer' : 'media.manage.addToPack')}</Button>}
         {!server && onCreatePack && <Button variant="outline" tone="accent" size="sm" onClick={onCreatePack}>{t('media.createPackWithItem')}</Button>}
         {!server && <Button size="lg" disabled={busy} onClick={onFavorite}>{t(favorite ? 'media.item.removeFromFavorites' : 'media.item.addToFavorites')}</Button>}
       </div>

@@ -1,16 +1,18 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { uploadToBlossom } from '@/services/media/blossom';
 import { normalizeCustomEmojiName } from '@/utils/media/tags/custom-emoji-tags';
-import { nostrActions, useMediaPacks, useMyMediaFavorites } from '@/services/nostr-bridge';
+import { nostrActions, useBridge, useMediaPacks, useMyMediaFavorites } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/hooks/session/useSession';
 import type { JsMediaItem, JsMediaPack } from '@/services/nostr-bridge';
-import { publishRelayEmojiSet, type RelayEmojiSet } from '@/services/relay/relay-emojis';
+import type { RelayEmojiSet } from '@/services/relay/relay-emojis';
 import { inferMediaKind } from '@/utils/media/tags/media-kind';
 import { useTranslations } from 'next-intl';
+import { errorText } from '@/utils/errors/error-text';
+import { CodedError } from '@/utils/errors/codes';
 import { confirmDialog } from '@/services/common/confirm-dialog';
-import { filterVisiblePacks, sortedPacks } from '@/utils/media/library/pack-utils';
+import { filterVisiblePacks, sortedPacks, mergePackItems } from '@/utils/media/library/pack-utils';
 import type { EditablePack, LibraryTab, MediaFilter, SelectedMedia } from '@/types/media/library';
 
 export type LibraryServer = { relayUrl: string; emojiSet: RelayEmojiSet };
@@ -33,6 +35,8 @@ export function useMediaLibrary({
 }) {
   const t = useTranslations();
   const myPubkey = useMyPubkey();
+  const bridge = useBridge();
+  const writePending = useRef(false);
   const packsByAddress = useMediaPacks();
   const favorites = useMyMediaFavorites();
   const [tab, setTab] = useState<LibraryTab>(initialTab);
@@ -52,21 +56,31 @@ export function useMediaLibrary({
     favoritePackAddresses: favorites.packAddresses,
   }), [favorites.packAddresses, kindFilter, myPubkey, packs, query, tab]);
 
+  const assertFavoritesCurrent = () => {
+    if (bridge && bridge.myPubkey.get() !== myPubkey) throw new CodedError('media-account-changed', 'media-account-changed');
+    if (bridge && bridge.myMediaFavorites.get().createdAt !== favorites.createdAt) throw new CodedError('media-stale', 'media-stale');
+  };
+
   const saveFavorites = async (next: { items: readonly JsMediaItem[]; packAddresses: readonly string[] }) => {
+    if (writePending.current) return;
+    writePending.current = true;
     setBusy(true);
     setMessage(null);
     try {
+      assertFavoritesCurrent();
       await nostrActions.saveMediaFavorites(next);
     } catch (error) {
       console.warn('[media] saving favorites failed', error);
-      setMessage(t('media.error.saveFavorites'));
+      setMessage(errorText(t, error, 'media.error.saveFavorites'));
     } finally {
+      writePending.current = false;
       setBusy(false);
     }
   };
 
   const uploadFavorite = async (file: File | undefined) => {
-    if (!file || server) return;
+    if (!file || server || writePending.current) return;
+    writePending.current = true;
     setBusy(true);
     setMessage(null);
     try {
@@ -77,19 +91,18 @@ export function useMediaLibrary({
       const url = await uploadToBlossom(file);
       const name = normalizeCustomEmojiName(file.name) || "media";
       const kind = kindFilter === "all" ? inferMediaKind(url) : kindFilter;
+      assertFavoritesCurrent();
       await nostrActions.saveMediaFavorites({
-        items: [
-          ...favorites.items.filter((item) => item.url !== url && item.name !== name),
-          { name, url, kind },
-        ],
+        items: mergePackItems(favorites.items, [{ name, url, kind }]),
         packAddresses: favorites.packAddresses,
       });
       setTab("favorites");
       setMessage(t('media.notice.uploaded', { name }));
     } catch (error) {
       console.warn('[media] upload failed', error);
-      setMessage(t('media.error.upload'));
+      setMessage(errorText(t, error, 'media.error.upload'));
     } finally {
+      writePending.current = false;
       setBusy(false);
     }
   };
@@ -110,7 +123,7 @@ export function useMediaLibrary({
       packAddresses: favorites.packAddresses,
       items: selected
         ? favorites.items.filter((favorite) => favorite.url !== item.url)
-        : [...favorites.items, item],
+        : mergePackItems(favorites.items, [item]),
     });
   };
 
@@ -130,34 +143,11 @@ export function useMediaLibrary({
       console.warn('[media] deleting the pack failed', error);
       setMessage(t('media.error.deletePack'));
     } finally {
+      writePending.current = false;
       setBusy(false);
     }
   };
 
-  const toggleServerPack = async (pack: JsMediaPack) => {
-    if (!server) return;
-    const selected = server.emojiSet.packAddresses?.includes(pack.address) ?? false;
-    const packAddresses = selected
-      ? (server.emojiSet.packAddresses ?? []).filter((address) => address !== pack.address)
-      : [...(server.emojiSet.packAddresses ?? []), pack.address];
-    setBusy(true);
-    setMessage(null);
-    try {
-      await publishRelayEmojiSet(server.relayUrl, {
-        ...server.emojiSet,
-        title: server.emojiSet.title || t('media.serverPacks'),
-        emojis: [],
-        packAddresses,
-      });
-      setMessage(t(selected ? 'media.notice.removedFromServer' : 'media.notice.addedToServer', { title: pack.title }));
-    } catch (error) {
-      console.warn('[media] updating the server packs failed', error);
-      setMessage(t('media.error.serverPacks'));
-      throw error;
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return {
     myPubkey,
@@ -175,8 +165,9 @@ export function useMediaLibrary({
     message,
     uploadFavorite,
     togglePack,
+    saveOwnedPack: (draft: EditablePack) => void saveFavorites({ items: favorites.items,
+      packAddresses: [...new Set([...favorites.packAddresses, `30030:${myPubkey}:${draft.identifier}`])] }),
     toggleItem,
     deletePack,
-    toggleServerPack,
   };
 }

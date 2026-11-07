@@ -174,6 +174,9 @@ export abstract class BridgeCommands extends BridgeReads {
   setMuted(pubkey: string, muted: boolean): Promise<void> {
     return this.m.lists.setMuted(pubkey, muted);
   }
+  loadMediaPacks(addresses: readonly string[]): () => void {
+    return this.m.media.loadMediaPacks(addresses);
+  }
   saveMediaPack(pack: Pick<JsMediaPack, 'identifier' | 'title' | 'description' | 'image' | 'items'>): Promise<void> {
     return this.m.media.saveMediaPack(pack);
   }

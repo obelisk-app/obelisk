@@ -35,4 +35,10 @@ describe('media entries', () => {
     const searched = visibleMediaSections({ ...base, category: 'Animals', query: 'party', brokenUrls: new Set<string>() });
     expect(searched.defaultVisible.map((e) => e.name)).toEqual(['party']);
   });
+  it('keeps different emoji assets sharing a shortcode across personal and server sources', () => {
+    const personal: MediaEntry[] = [{ name: 'cat', url: 'https://x/p.png', kind: 'emoji' }];
+    const server: MediaEntry[] = [{ name: 'cat', url: 'https://x/s.png', kind: 'emoji' }];
+    expect(emojiTabMaps(server, personal).customEmojis).toEqual({ cat: 'https://x/p.png', cat_2: 'https://x/s.png' });
+  });
+
 });

@@ -16,6 +16,7 @@ export default function LibraryItemMenu({ vm, selection }: { vm: MediaLibraryMod
       onViewPack={vm.viewSelectedPack}
       onFavorite={vm.favoriteSelected}
       onCreatePack={vm.createPackFromSelected}
+      onAddToPack={!vm.isServer || (vm.canEditServer && vm.serverDraft) ? vm.addSelected : undefined}
     />
   );
 }

@@ -60,6 +60,9 @@ vi.mock('@/services/relay/relay-emojis', () => ({
   publishRelayEmojiSet: (...args: unknown[]) => mocks.publishRelayEmojiSet(...args),
 }));
 
+vi.mock('@/hooks/relay/operator/useRelayOperatorPubkey', () => ({ useRelayOperatorPubkey: () => author }));
+vi.mock('@/services/media/save-library-pack', () => ({ saveLibraryPack: (draft: unknown) => mocks.saveMediaPack(draft) }));
+
 vi.mock('@/services/media/blossom', () => ({ uploadToBlossom: vi.fn().mockResolvedValue('https://cdn.example/uploaded.gif') }));
 
 describe('MediaLibraryModal', () => {
@@ -163,10 +166,10 @@ describe('MediaLibraryModal', () => {
     fireEvent.change(within(editor).getByRole('textbox', { name: 'Item 1 URL' }), { target: { value: 'https://cdn.example/wow.webp' } });
     fireEvent.click(within(editor).getByRole('button', { name: 'Save pack' }));
 
-    expect(mocks.saveMediaPack).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(mocks.saveMediaPack).toHaveBeenCalledWith(expect.objectContaining({
       title: 'My reactions',
       items: [{ name: 'wow', url: 'https://cdn.example/wow.webp', kind: 'emoji' }],
-    }));
+    })));
   });
 
   it("uploads individual media and switches to favorites", async () => {
@@ -201,48 +204,47 @@ describe('MediaLibraryModal', () => {
     await waitFor(() => expect(mocks.saveMediaFavorites).toHaveBeenCalledWith({ items: [], packAddresses: [] }));
   });
 
-  it("server settings only track existing whole packs", async () => {
-    renderLocalized(<MediaLibraryModal onClose={() => {}} server={{
-      relayUrl: "wss://relay.example",
-      emojiSet: {
-        title: "Legacy server favorites",
-        emojis: [{ name: "wave", url: "https://cdn.example/wave.webp", kind: "sticker" }],
-        updatedAt: 1,
-      },
+  it('previews a server snapshot while preserving individual items and leaving sources untouched', async () => {
+    renderLocalized(<MediaLibraryModal onClose={() => {}} server={{ relayUrl: 'wss://relay.example',
+      emojiSet: { title: 'Server', emojis: [{ name: 'legacy', url: 'https://cdn.example/legacy.png', kind: 'emoji' }], packAddresses: [], updatedAt: 1 },
     }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy pack to server' }));
+    const editor = screen.getByTestId('media-pack-editor');
+    expect(within(editor).getByDisplayValue('legacy')).toBeInTheDocument();
+    expect(within(editor).getByDisplayValue('party_cat')).toBeInTheDocument();
+    expect(mocks.publishRelayEmojiSet).not.toHaveBeenCalled();
+    fireEvent.click(within(editor).getByRole('button', { name: 'Save pack' }));
+    await waitFor(() => expect(mocks.saveMediaPack).toHaveBeenCalledWith(expect.objectContaining({
+      serverRelay: 'wss://relay.example', items: expect.arrayContaining([expect.objectContaining({ name: 'legacy' }), pack.items[0]]),
+    })));
+    expect(pack.items).toHaveLength(6);
+  });
 
-    expect(within(screen.getByTestId("server-pack-summary")).getByRole("heading", { name: "Server packs" })).toBeInTheDocument();
-    expect(screen.getByText("0 packs selected. Add or remove existing packs below.")).toBeInTheDocument();
-    expect(screen.getByText("Legacy individual items will be removed on the next pack change.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Create pack" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Save Cat pack" })).toBeNull();
-
-    fireEvent.click(screen.getAllByRole("button", { name: "Open :party_cat: actions" })[0]);
-    const menu = screen.getByTestId("media-item-menu");
-    expect(within(menu).getByRole("button", { name: "View Cat pack" })).toBeInTheDocument();
-    expect(within(menu).queryByRole("button", { name: "Add item to favorites" })).toBeNull();
-    expect(within(menu).queryByRole("button", { name: "Add item to server" })).toBeNull();
-    fireEvent.click(within(menu).getByRole("button", { name: "Close media actions" }));
-
-    fireEvent.click(screen.getByRole("button", { name: "Add pack to server" }));
-    await waitFor(() => expect(mocks.publishRelayEmojiSet).toHaveBeenCalledWith(
-      "wss://relay.example",
-      expect.objectContaining({ emojis: [], packAddresses: [pack.address] }),
-    ));
+  it('requires explicit save before converting live server references', () => {
+    renderLocalized(<MediaLibraryModal onClose={() => {}} server={{ relayUrl: 'wss://relay.example',
+      emojiSet: { title: 'Server', emojis: [], packAddresses: [pack.address], updatedAt: 1 },
+    }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit server media' }));
+    expect(screen.getByTestId('media-pack-editor')).toBeInTheDocument();
+    expect(mocks.publishRelayEmojiSet).not.toHaveBeenCalled();
     expect(mocks.saveMediaPack).not.toHaveBeenCalled();
   });
 
-  it("removes a selected live pack from the server", async () => {
-    renderLocalized(<MediaLibraryModal onClose={() => {}} server={{
-      relayUrl: "wss://relay.example",
-      emojiSet: { title: "Server packs", emojis: [], packAddresses: [pack.address], updatedAt: 1 },
-    }} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Remove pack from server" }));
-    await waitFor(() => expect(mocks.publishRelayEmojiSet).toHaveBeenCalledWith(
-      "wss://relay.example",
-      expect.objectContaining({ emojis: [], packAddresses: [] }),
-    ));
+  it('copies an existing item into an existing owned pack through a reviewable merge', async () => {
+    const item = { name: 'party_cat', url: 'https://cdn.example/different.png', kind: 'emoji' as const };
+    renderLocalized(<MediaLibraryModal onClose={() => {}} initialSelection={{ item }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to pack' }));
+    const transfer = screen.getByTestId('media-transfer');
+    fireEvent.change(within(transfer).getByRole('combobox', { name: 'Destination' }), { target: { value: pack.address } });
+    fireEvent.click(within(transfer).getByRole('button', { name: 'Preview merge' }));
+    const editor = screen.getByTestId('media-pack-editor');
+    expect(within(editor).getByDisplayValue('party_cat_2')).toBeInTheDocument();
+    expect(mocks.saveMediaPack).not.toHaveBeenCalled();
+    fireEvent.click(within(editor).getByRole('button', { name: 'Save pack' }));
+    await waitFor(() => expect(mocks.saveMediaPack).toHaveBeenCalledWith(expect.objectContaining({
+      identifier: pack.identifier, baseCreatedAt: 10,
+      items: expect.arrayContaining([{ ...item, name: 'party_cat_2' }]),
+    })));
   });
 
   it('launched from an item: favouriting it saves and closes the whole library', async () => {

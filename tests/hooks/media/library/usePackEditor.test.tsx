@@ -70,7 +70,7 @@ describe('usePackEditor', () => {
       ],
     }, 'gif', vi.fn()), { wrapper: LocaleProvider });
     await act(() => dup.result.current.save());
-    expect(dup.result.current.error).toBe('Duplicate shortcode: :cat:');
+    expect(dup.result.current.error).toBe('Shortcodes must be unique. Rename the conflicting items.');
     expect(mocks.saveMediaPack).not.toHaveBeenCalled();
   });
 
@@ -106,4 +106,30 @@ describe('usePackEditor', () => {
     expect(cleared).toHaveBeenCalledWith('');
     expect(result.current.draft.items.map((item) => item.url)).toEqual(['https://cdn/a.png']);
   });
+  it('retains completed uploads and retries only failures', async () => {
+    mocks.uploadToBlossom.mockResolvedValueOnce('https://cdn/a.png').mockRejectedValueOnce(new Error('offline'));
+    const { result } = renderHook(() => usePackEditor(PACK, 'sticker', vi.fn()), { wrapper: LocaleProvider });
+    const files = [new File(['a'], 'a.png', { type: 'image/png' }), new File(['b'], 'b.png', { type: 'image/png' })];
+    await act(() => result.current.addFiles(files));
+    expect(result.current.draft.items).toHaveLength(1);
+    expect(result.current.failedFiles).toEqual([files[1]]);
+    mocks.uploadToBlossom.mockResolvedValueOnce('https://cdn/b.png');
+    await act(async () => { result.current.retryFiles(); });
+    expect(result.current.draft.items).toHaveLength(2);
+    expect(mocks.uploadToBlossom).toHaveBeenCalledTimes(3);
+    expect(result.current.failedFiles).toEqual([]);
+  });
+
+  it('keeps the draft after a failed publish and blocks duplicate submissions', async () => {
+    let reject!: (error: Error) => void;
+    mocks.saveMediaPack.mockReturnValue(new Promise((_, fail) => { reject = fail; }));
+    const { result } = renderHook(() => usePackEditor(PACK, 'sticker', vi.fn()), { wrapper: LocaleProvider });
+    let first!: Promise<void>;
+    act(() => { first = result.current.save(); void result.current.save(); });
+    expect(mocks.saveMediaPack).toHaveBeenCalledOnce();
+    await act(async () => { reject(new Error('offline')); await first; });
+    expect(result.current.draft.title).toBe(PACK.title);
+    expect(result.current.error).toBe("Couldn't save the pack.");
+  });
+
 });

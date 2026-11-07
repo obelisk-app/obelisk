@@ -10,7 +10,9 @@ import {
   normalizeCustomEmojiName,
   type CustomEmojiMap,
 } from '@/utils/media/tags/custom-emoji-tags';
+import { mergePackItems } from '@/utils/media/library/pack-utils';
 import { mediaItemsFromPacks } from '@/utils/media/tags/media-packs';
+import { parseHttpUrl } from '@/utils/url/http-url';
 import { inferMediaKind } from '@/utils/media/tags/media-kind';
 import { EMPTY_RELAY_EMOJI_SET } from '@/constants/relay/relay-emojis';
 
@@ -18,6 +20,7 @@ export interface RelayEmoji {
   readonly name: string;
   readonly url: string;
   readonly kind?: JsMediaKind;
+  readonly packAddress?: string;
 }
 
 export interface RelayEmojiSet {
@@ -61,9 +64,10 @@ export function resolveRelayEmojiSet(
   set: RelayEmojiSet,
   packs: Readonly<Record<string, JsMediaPack>>,
 ): RelayEmojiSet {
-  const byName = new Map(set.emojis.map((item) => [item.name, item]));
-  for (const item of mediaItemsFromPacks(set.packAddresses ?? [], packs)) byName.set(item.name, item);
-  return { ...set, emojis: Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name)) };
+  const inline = set.emojis.map((item) => ({ ...item, kind: item.kind ?? inferMediaKind(item.url) }));
+  const emojis = mergePackItems(inline, mediaItemsFromPacks(set.packAddresses ?? [], packs));
+  return { ...set, emojis };
+
 }
 
 export function parseRelayEmojiSet(ev: NostrEvent): RelayEmojiSet {
@@ -77,7 +81,7 @@ export function parseRelayEmojiSet(ev: NostrEvent): RelayEmojiSet {
     if (tag[0] === 'media' && name && (kind === 'emoji' || kind === 'gif' || kind === 'sticker')) kinds.set(name, kind);
   }
   let title = '';
-  const byName = new Map<string, RelayEmoji>();
+  const emojis: RelayEmoji[] = [];
   for (const tag of ev.tags) {
     if (tag[0] === 'title' && tag[1]) {
       title = tag[1];
@@ -85,13 +89,13 @@ export function parseRelayEmojiSet(ev: NostrEvent): RelayEmojiSet {
     }
     if (tag[0] !== 'emoji') continue;
     const name = normalizeCustomEmojiName(tag[1] ?? '');
-    const url = tag[2]?.trim();
+    const url = parseHttpUrl(tag[2])?.href;
     if (!isValidCustomEmojiName(name) || !url) continue;
-    byName.set(name, { name, url, kind: kinds.get(name) ?? inferMediaKind(url) });
+    emojis.push({ name, url, kind: kinds.get(name) ?? inferMediaKind(url), ...(isPackAddress(tag[3] ?? '') ? { packAddress: tag[3] } : {}) });
   }
   return {
     title,
-    emojis: Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    emojis,
     packAddresses,
     updatedAt: ev.created_at,
     author: ev.pubkey,
@@ -107,13 +111,11 @@ export function toRelayEmojiSetTags(set: RelayEmojiSet, relayUrl: string): strin
       .filter((address) => isPackAddress(address))
       .map((address) => ['a', address]),
   ];
-  const seen = new Set<string>();
-  for (const emoji of set.emojis) {
+  for (const emoji of mergePackItems([], set.emojis.map((item) => ({ ...item, kind: item.kind ?? inferMediaKind(item.url) })))) {
     const name = normalizeCustomEmojiName(emoji.name);
     const url = emoji.url.trim();
-    if (!isValidCustomEmojiName(name) || !url || seen.has(name)) continue;
-    seen.add(name);
-    tags.push(['emoji', name, url]);
+    if (!isValidCustomEmojiName(name) || !url) continue;
+    tags.push(emoji.packAddress ? ['emoji', name, url, emoji.packAddress] : ['emoji', name, url]);
     if (emoji.kind) tags.push(['media', name, emoji.kind]);
   }
   return tags;
@@ -212,3 +214,8 @@ export async function publishRelayEmojiSet(
 }
 
 export { customEmojiMapFromTags };
+
+/** Latest locally observed server revision for optimistic editor checks. */
+export function relayEmojiRevision(relayUrl: string): number {
+  return relayEmojiLatestAt.get(relayUrl) ?? 0;
+}

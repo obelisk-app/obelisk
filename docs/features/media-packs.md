@@ -13,7 +13,10 @@ events fetched from relays and cached locally for fast first paint.
 - **Favorites** contains individually saved media and packs selected with the explicit **Save pack** control.
 - Use the Emoji/GIF/Sticker filters to browse or create packs of the intended
   media type.
-- Relay operators open a server-only selection view from server settings. It hides personal favorite controls; **Add pack to server** and **Remove pack from server** are explicit relay actions there. **Save & add to server** creates a named pack and selects its live reference for the active relay.
+- **Add to pack** copies a previewed item into an existing owned pack or a new pack. Pack viewers and individual favorites support selecting multiple items to copy.
+- **Merge / copy items** selects one or more source packs and an owned destination. The preview reports additions, duplicates and renamed shortcode conflicts; all resulting names and types remain editable before save. Source packs are unchanged.
+- Relay operators open an editable server list from server settings. **Copy pack to server** previews a snapshot, and **Edit server media** supports uploads, URLs, renaming and bulk removal. Changes require explicit save. Channel admins do not gain relay-wide authority.
+- New personal packs can be saved to favorites after publishing. Empty owned packs remain editable under **My packs**.
 
 The message-bar selector keeps its existing Emoji/GIF/Sticker interface. Its
 personal sections also include the user's item favorites and items from every
@@ -76,11 +79,11 @@ Each relay keeps an independent operator-authored kind `30030` list using:
 ["a", "30030:<author>:<pack-id>"]
 ```
 
-Adding a marketplace pack stores its `30030:<author>:<d>` address in the relay list. Obelisk resolves that address against the newest pack event, so edits and removals propagate to every server that selected the pack.
-Media type tags are preserved. Individually added media remains embedded in the relay list and can be removed without changing a selected pack; removing a selected pack only removes its address from that relay;
-it does not change the user's pack or any other relay. Relay-wide write
-controls remain operator-only: use the valid NIP-11 `contact` npub, falling
-back to the NIP-11 `pubkey`; the relay is the final authorization boundary.
+New server writes embed item snapshots using `emoji` and `media` tags, retaining source pack addresses in the optional fourth emoji-tag field. Editing or deleting a source pack does not change a saved server snapshot. Personal favorites still support live pack references.
+
+Existing server `a` references remain readable until the operator explicitly saves a conversion. The editor resolves their addresses, combines them with existing inline items, and previews the complete list. Missing packs block conversion until fetched or explicitly excluded. The successful replacement writes all reviewed items and clears live references together. Opening settings never publishes.
+
+Server writes verify the active relay and its operator: use the valid NIP-11 `contact` npub, falling back to `pubkey`. Personal edits also verify the original account. The editor checks the latest locally observed revision before signing; a stale draft can be merged with the current version for review. Nostr has no atomic compare-and-swap, so simultaneous writes from different devices can still race.
 
 ### Visibility and encryption
 
@@ -103,25 +106,21 @@ sent content renderable if a pack or server list changes later.
 Only normalized shortcode names and HTTP(S) media URLs are accepted at the
 event boundary.
 
-## One-time import of an existing server list
+## Deduplication and conflict review
 
-1. Log in with the relay operator identity.
-2. Open the relay's **Emoji, GIFs & stickers** settings.
-3. Select **Import existing list once**.
+Assets are compared by validated HTTP(S) URLs normalized with the URL parser. Paths, query strings and fragments are preserved; no image fetching or visual similarity detection is performed. A merge retains destination metadata for identical assets, lists combined aliases in the preview, and proposes unique suffixes for distinct assets sharing a shortcode. Users can edit the final names and types before saving. Repeating a merge is idempotent.
 
-Obelisk copies every existing server item into an editable pack named from the
-relay host. Migration never clears or rewrites the source list, so a failed or
-interrupted publish cannot lose the server's media. After import, the pack can be edited, saved, and reused on other relays. The import button disappears as soon as that deterministic pack exists, leaving only the new pack workflow.
+Legacy events with conflicting shortcodes retain their distinct items when parsed. Picker composition uses deterministic unique names, while publishing normalizes names without silently dropping distinct assets. Existing messages keep their original embedded tags.
 
 ## Uploads and discovery
 
 The pack editor accepts one or many files from the computer, uploads them through the existing Blossom BUD-01 uploader, and also supports direct HTTP(S) URLs. Events store the returned
 absolute HTTP(S) URL; Obelisk does not proxy media or write upload metadata to a
-database.
+database. Successful uploads remain in the draft when another file fails, and retry only resends failed files. Failed publishes retain the draft; submission is guarded against repeated clicks.
 
 At login, the bridge subscribes to kind `30030` packs on the active relay and
 profile relays, plus the current user's kind `10030` favorites. Parsed packs and
-favorites use the existing local `bridgeCache` as stale-while-revalidate data.
+favorites use the existing local `bridgeCache` as stale-while-revalidate data. Referenced packs are also subscribed by author and identifier, outside the discovery window. Successful writes immediately update bridge state and cache.
 
 ## Code map
 

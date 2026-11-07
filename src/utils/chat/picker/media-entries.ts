@@ -4,7 +4,9 @@
  * GIPHY results, the built-in starters and recents. All pure.
  */
 import { normalizeCustomEmojiName, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
+import { mergePackItems } from '@/utils/media/library/pack-utils';
 import { mediaItemsFromPacks } from '@/utils/media/tags/media-packs';
+import { parseHttpUrl } from '@/utils/url/http-url';
 import { inferMediaKind } from '@/utils/media/tags/media-kind';
 import type { JsMediaFavorites, JsMediaKind, JsMediaPack } from '@/services/nostr-bridge';
 import {
@@ -25,16 +27,14 @@ export function personalMediaEntries(
   packs: Readonly<Record<string, JsMediaPack>>,
   kindOverrides: KindOverrides,
 ): MediaEntry[] {
-  const byUrl = new Map<string, MediaEntry>();
-  for (const [name, url] of Object.entries(personal)) {
+  const local = Object.entries(personal).flatMap(([name, url]) => {
     const normalized = normalizeCustomEmojiName(name);
-    if (normalized && url) byUrl.set(url, { name: normalized, url, kind: 'sticker' });
-  }
-  for (const item of [
-    ...mediaItemsFromPacks(favorites.packAddresses, packs),
-    ...favorites.items,
-  ]) byUrl.set(item.url, { ...item, kind: kindOverrides[item.url] ?? item.kind });
-  return Array.from(byUrl.values()).sort((a, b) => a.name.localeCompare(b.name));
+    const validUrl = parseHttpUrl(url)?.href;
+    return normalized && validUrl ? [{ name: normalized, url: validUrl, kind: 'sticker' as const }] : [];
+  });
+  return mergePackItems(favorites.items, [...mediaItemsFromPacks(favorites.packAddresses, packs), ...local])
+    .map((item) => ({ ...item, kind: kindOverrides[item.url] ?? item.kind }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** The relay's custom set, minus anything already personal or built in. */
@@ -57,7 +57,9 @@ export function serverMediaEntries(
 
 /** The emoji-kind entries, as the map and kinds the nested EmojiPicker takes. */
 export function emojiTabMaps(serverEntries: ReadonlyArray<MediaEntry>, personalEntries: ReadonlyArray<MediaEntry>) {
-  const emojiEntries = [...serverEntries, ...personalEntries].filter((entry) => entry.kind === 'emoji');
+  const personal = personalEntries.filter((entry) => entry.kind === 'emoji').map((entry) => ({ ...entry, kind: 'emoji' as const }));
+  const server = serverEntries.filter((entry) => entry.kind === 'emoji').map((entry) => ({ ...entry, kind: 'emoji' as const }));
+  const emojiEntries = mergePackItems(personal, server);
   return {
     customEmojis: Object.fromEntries(emojiEntries.map((entry) => [entry.name, entry.url])) as CustomEmojiMap,
     customMediaKinds: Object.fromEntries(emojiEntries.map((entry) => [entry.name, 'emoji' as const])) as Record<string, JsMediaKind>,

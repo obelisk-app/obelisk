@@ -38,13 +38,13 @@ describe('newPack', () => {
 });
 
 describe('sortedPacks', () => {
-  it('drops empty packs and puts the newest first', () => {
+  it('retains editable empty packs and puts the newest first', () => {
     const result = sortedPacks({
       old: pack('old', { createdAt: 1 }),
       fresh: pack('fresh', { createdAt: 5 }),
       empty: pack('empty', { createdAt: 9, items: [] }),
     });
-    expect(result.map((p) => p.address)).toEqual(['fresh', 'old']);
+    expect(result.map((p) => p.address)).toEqual(['empty', 'fresh', 'old']);
   });
 });
 

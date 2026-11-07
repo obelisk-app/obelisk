@@ -1,3 +1,4 @@
+import { mergePackItems } from '@/utils/media/library/pack-utils';
 import { parseHttpUrl } from '@/utils/url/http-url';
 import type { Event as NostrEvent } from 'nostr-tools';
 import {
@@ -27,21 +28,21 @@ function mediaKinds(tags: ReadonlyArray<ReadonlyArray<string>>): Map<string, JsM
 
 function mediaItems(tags: ReadonlyArray<ReadonlyArray<string>>, fallbackAddress?: string): JsMediaItem[] {
   const kinds = mediaKinds(tags);
-  const byName = new Map<string, JsMediaItem>();
+  const items: JsMediaItem[] = [];
   for (const tag of tags) {
     if (tag[0] !== 'emoji') continue;
     const name = normalizeCustomEmojiName(tag[1] ?? '');
     const url = parseHttpUrl(tag[2])?.href ?? '';
     if (!isValidCustomEmojiName(name) || !url) continue;
     const packAddress = PACK_ADDRESS_RE.test(tag[3] ?? '') ? tag[3] : fallbackAddress;
-    byName.set(name, {
+    items.push({
       name,
       url,
       kind: kinds.get(name) ?? inferMediaKind(url),
       ...(packAddress ? { packAddress } : {}),
     });
   }
-  return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
+  return items.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function mediaPackAddress(author: string, identifier: string): string {
@@ -79,12 +80,10 @@ export function parseMediaFavorites(ev: NostrEvent): JsMediaFavorites {
 
 function itemTags(items: ReadonlyArray<JsMediaItem>): string[][] {
   const tags: string[][] = [];
-  const seen = new Set<string>();
-  for (const item of items) {
+  for (const item of mergePackItems([], items)) {
     const name = normalizeCustomEmojiName(item.name);
     const url = parseHttpUrl(item.url)?.href ?? '';
-    if (!isValidCustomEmojiName(name) || !url || seen.has(name)) continue;
-    seen.add(name);
+    if (!isValidCustomEmojiName(name) || !url) continue;
     tags.push(item.packAddress
       ? ['emoji', name, url, item.packAddress]
       : ['emoji', name, url]);
@@ -101,7 +100,7 @@ export function mediaPackTags(
   if (!identifier) throw new Error('Pack identifier is required.');
   const address = mediaPackAddress(author, identifier);
   const image = parseHttpUrl(pack.image)?.href;
-  const items = pack.items.map((item) => ({ ...item, packAddress: address }));
+  const items = pack.items.map((item) => ({ ...item, packAddress: item.packAddress ?? address }));
   return [
     ['d', identifier],
     ['title', pack.title.trim() || identifier],
@@ -124,9 +123,5 @@ export function mediaItemsFromPacks(
   packAddresses: ReadonlyArray<string>,
   packs: Readonly<Record<string, JsMediaPack>>,
 ): JsMediaItem[] {
-  const byUrl = new Map<string, JsMediaItem>();
-  for (const address of packAddresses) {
-    for (const item of packs[address]?.items ?? []) byUrl.set(item.url, item);
-  }
-  return Array.from(byUrl.values());
+  return mergePackItems([], packAddresses.flatMap((address) => packs[address]?.items ?? []));
 }

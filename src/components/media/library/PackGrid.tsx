@@ -18,12 +18,12 @@ export default function PackGrid({ vm }: { vm: MediaLibraryModel }) {
             mine={pack.author === vm.myPubkey}
             favorite={vm.isFavoritePack(pack)}
             itemFavorites={vm.favorites.items}
-            busy={vm.busy}
+            busy={vm.busy || (vm.isServer && (!vm.canEditServer || !vm.serverDraft))}
             server={vm.isServer}
             serverSelected={vm.isServerPack(pack)}
             onView={() => vm.setViewingPack(pack)}
             onOpenItem={(item) => vm.openItem(pack, item)}
-            onEdit={() => vm.setEditing(pack)}
+            onEdit={() => vm.editPack(pack)}
             onDelete={() => vm.removePack(pack)}
             onFavorite={() => vm.togglePack(pack)}
             onServer={() => vm.toggleServer(pack)}

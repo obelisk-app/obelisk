@@ -94,6 +94,12 @@ describe('nostr-bridge', () => {
     expect(cacheGet('wss://public.obelisk.ar', 10030, `media-favorites:${pkHex}`)?.value).toMatchObject({
       packAddresses: [address],
     });
+    deliver(finalizeEvent({ kind: 30030, created_at: 51, content: '', tags: [['d', 'cats'], ['title', 'Empty cats']] }, creatorSk));
+    await flush();
+    deliver(packEvent);
+    await flush();
+    expect(bridge.mediaPacks.get()[address].items).toEqual([]);
+    expect(cacheGet('wss://public.obelisk.ar', 30030, `media-pack:${address}`)?.value).toMatchObject({ items: [] });
   });
 
 

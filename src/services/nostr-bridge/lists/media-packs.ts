@@ -29,6 +29,7 @@ export class MediaPacksModule {
   readonly myMediaFavorites = new StateStore<JsMediaFavorites>(EMPTY_MEDIA_FAVORITES);
   private readonly mediaPackLatestAt = new Map<string, number>();
   private mediaLibrarySubscribed = false;
+  private favoritePacksClose: (() => void) | null = null;
 
   constructor(private readonly ctx: MediaPacksContext) {}
 
@@ -42,7 +43,7 @@ export class MediaPacksModule {
       this.mediaPacks.get()[address]?.createdAt ?? 0,
       this.mediaPackLatestAt.get(address) ?? 0,
     );
-    await this.ctx.publishEvent({
+    const event = await this.ctx.publishEvent({
       kind: KIND_EMOJI_SET,
       content: '',
       tags: mediaPackTags(pack, author),
@@ -51,6 +52,7 @@ export class MediaPacksModule {
         previousAt + 1,
       ),
     }, { extraRelays: PROFILE_RELAYS });
+    if (this.ctx.session()?.pubKeyHex === author) this.ingestMediaPack(event);
   }
 
   async deleteMediaPack(address: string): Promise<void> {
@@ -82,19 +84,22 @@ export class MediaPacksModule {
   async saveMediaFavorites(
     favorites: Pick<JsMediaFavorites, 'items' | 'packAddresses'>,
   ): Promise<void> {
+    const author = this.ctx.session()?.pubKeyHex;
+    if (!author) throw new CodedError('not-logged-in', 'Not logged in.');
     const previousAt = this.myMediaFavorites.get().createdAt;
-    await this.ctx.publishEvent({
+    const event = await this.ctx.publishEvent({
       kind: KIND_EMOJI_FAVORITES,
       content: '',
       tags: mediaFavoriteTags({ ...favorites, createdAt: 0 }),
       created_at: Math.max(Math.floor(Date.now() / 1000), previousAt + 1),
     }, { extraRelays: PROFILE_RELAYS });
+    if (this.ctx.session()?.pubKeyHex === author) this.ingestMediaFavorites(event);
   }
 
   ingestMediaPack(ev: NostrEvent): void {
     if (ev.kind !== KIND_EMOJI_SET || BLOCKED_MEDIA_PACK_AUTHORS.has(ev.pubkey)) return;
     const pack = parseMediaPack(ev);
-    if (!pack || pack.items.length === 0) return;
+    if (!pack || pack.identifier.startsWith('obelisk:emojis:')) return;
     if (ev.created_at <= (this.mediaPackLatestAt.get(pack.address) ?? 0)) return;
     this.mediaPackLatestAt.set(pack.address, ev.created_at);
     this.mediaPacks.update((prev) => ({ ...prev, [pack.address]: pack }));
@@ -116,12 +121,28 @@ export class MediaPacksModule {
     ) return;
     const favorites = parseMediaFavorites(ev);
     this.myMediaFavorites.set(favorites);
+    this.favoritePacksClose?.();
+    this.favoritePacksClose = this.loadMediaPacks(favorites.packAddresses);
     cacheSet(
       this.ctx.currentRelayUrl.get(),
       KIND_EMOJI_FAVORITES,
       `media-favorites:${ev.pubkey}`,
       favorites,
     );
+  }
+
+  /** Resolve selected packs by address, independent of the marketplace's discovery window. */
+  loadMediaPacks(addresses: readonly string[]): () => void {
+    const relays = Array.from(new Set([...this.ctx.relays(), ...PROFILE_RELAYS, ...getPreferences().socialRelays]));
+    const unsubscribes = [...new Set(addresses)].flatMap((address) => {
+      const match = /^30030:([0-9a-f]{64}):(.+)$/.exec(address);
+      if (!match) return [];
+      return [this.ctx.subscribeWatched(relays,
+        { kinds: [KIND_EMOJI_SET], authors: [match[1]], '#d': [match[2]] },
+        (event) => this.ingestMediaPack(event), undefined,
+        { affectsRelayAccess: false, bypassWot: true, maxAttempts: 2 })];
+    });
+    return () => unsubscribes.forEach((subscription) => subscription.close());
   }
 
   /** Open the library REQs once per session; idempotent. */
@@ -153,7 +174,9 @@ export class MediaPacksModule {
       undefined,
       options,
     );
-    this.ctx.track(packs, favorites);
+    this.favoritePacksClose?.();
+    this.favoritePacksClose = this.loadMediaPacks(this.myMediaFavorites.get().packAddresses);
+    this.ctx.track(packs, favorites, { close: () => this.favoritePacksClose?.() });
   }
 
   /**
@@ -195,6 +218,8 @@ export class MediaPacksModule {
 
   /** Session or relay change: drop every pack, favorite and stamp. */
   reset(): void {
+    this.favoritePacksClose?.();
+    this.favoritePacksClose = null;
     this.mediaPacks.set({});
     this.myMediaFavorites.set(EMPTY_MEDIA_FAVORITES);
     this.mediaPackLatestAt.clear();

@@ -27,7 +27,7 @@ export default function PackCard({ pack, mine, favorite, itemFavorites, busy, se
   onServer: () => void;
 }) {
   const t = useTranslations();
-  const serverLabel = t(serverSelected ? 'media.pack.removeFromServer' : 'media.pack.addToServer');
+  const serverLabel = t('media.manage.copyToServer');
   return (
     <Card as="article" surface="translucent" padding="none" className="overflow-hidden">
       <div className="flex min-h-24 items-center gap-2 bg-lc-black p-3">

@@ -9,7 +9,8 @@ import MediaLibraryShell from './MediaLibraryShell';
 import LibraryTabs from './LibraryTabs';
 import LibraryActions from './LibraryActions';
 import MediaKindFilter from './MediaKindFilter';
-import ServerPackSummary from './ServerPackSummary';
+import ServerMediaSection from './ServerMediaSection';
+import Button from '@/components/ui/buttons/Button';
 import FavoriteItemsSection from './FavoriteItemsSection';
 import PackGrid from './PackGrid';
 import MediaLibraryOverlays from './MediaLibraryOverlays';
@@ -76,7 +77,9 @@ export default function MediaLibraryModal({
         <MediaKindFilter value={vm.kindFilter} onChange={vm.setKindFilter} />
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {vm.tab === 'server' && vm.isServer && <ServerPackSummary count={vm.serverPackCount} legacyItems={vm.hasLegacyServerItems} />}
+          {vm.savedOffer && <Button onClick={vm.saveOffer}>{t('media.pack.saveNamed', { title: vm.savedOffer.title })}</Button>}
+          <Button onClick={vm.merge} disabled={vm.isServer && !vm.canEditServer}>{t('media.manage.merge')}</Button>
+          {vm.tab === 'server' && vm.isServer && <ServerMediaSection vm={vm} />}
           {vm.tab === 'favorites' && vm.favorites.items.length > 0 && <FavoriteItemsSection vm={vm} />}
           <PackGrid vm={vm} />
         </div>

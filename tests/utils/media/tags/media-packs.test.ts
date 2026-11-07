@@ -55,6 +55,18 @@ describe('media packs', () => {
     });
   });
 
+  it('preserves conflicting legacy assets and publishes unique names with source attribution', () => {
+    const source = mediaPackAddress(author, 'original');
+    const parsed = parseMediaPack(event(30030, [
+      ['d', 'legacy'], ['emoji', 'cat', 'https://example.com/a', source],
+      ['emoji', 'cat', 'https://example.com/b', source],
+    ]))!;
+    expect(parsed.items).toHaveLength(2);
+    const tags = mediaPackTags(parsed, author);
+    expect(tags).toContainEqual(['emoji', 'cat', 'https://example.com/a', source]);
+    expect(tags).toContainEqual(['emoji', 'cat_2', 'https://example.com/b', source]);
+  });
+
   it('stores individual favorites and whole-pack references in kind 10030 tags', () => {
     const address = mediaPackAddress(author, 'party');
     const tags = mediaFavoriteTags({

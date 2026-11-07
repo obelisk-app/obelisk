@@ -46,7 +46,11 @@
     "wallet-restricted": "Sua carteira não permite que esta conexão faça esse pagamento.",
     "wallet-unauthorized": "Sua carteira não aceita mais esta conexão. Conecte de novo nas Configurações.",
     "wallet-payment-failed": "Sua carteira tentou o pagamento e ele falhou. Nada foi pago.",
-    "wallet-failed": "Sua carteira informou um erro."
+    "wallet-failed": "Sua carteira informou um erro.",
+    "media-stale": "Esta lista mudou durante a edição. Mescle com a versão mais recente para revisar suas alterações antes de salvar.",
+    "media-permission": "Somente o operador do relay ativo pode editar a mídia do servidor.",
+    "media-account-changed": "A conta mudou. Reabra o editor para esta conta.",
+    "media-pending": "Outro salvamento está em andamento. Aguarde a conclusão."
   },
   "activity": {
     "signExtension": {

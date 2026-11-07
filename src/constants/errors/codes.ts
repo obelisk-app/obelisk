@@ -5,6 +5,7 @@
 
 /** One per message under `codes` in errors.json. */
 export const ERROR_CODES = [
+  'media-stale', 'media-permission', 'media-account-changed', 'media-pending',
   'group-deleted',
   'not-logged-in', 'not-ready', 'offline', 'no-relays-connected',
   'extension-missing', 'extension-no-nip04', 'extension-no-nip44', 'signer-no-nip44',
