@@ -92,7 +92,7 @@ it('drops a metadata fallback after reset even when the relay URL is unchanged',
     const ladder = new MetadataEoseLadder({
       session: () => ({ pubKeyHex: 'a', loginMethod: 'nsec', relayUrl: 'wss://r' }),
       relays: () => ['wss://r'], currentRelayUrl: new StateStore('wss://r'),
-      queryRelaysWithConfidence: vi.fn(() => new Promise((done) => { resolve = done; })),
+      queryRelaysWithConfidence: vi.fn(() => new Promise<{ events: NostrEvent[]; complete: boolean }>((done) => { resolve = done; })),
     }, { groups: new StateStore<JsGroup[]>([]), groupMetadataEose: new StateStore(false), ingest });
     ladder.handleEose();
     await vi.advanceTimersByTimeAsync(1500);
