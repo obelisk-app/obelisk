@@ -9,6 +9,7 @@ import TextArea from '@/components/ui/forms/TextArea';
 import Input from '@/components/ui/forms/Input';
 import Form from '@/components/ui/forms/Form';
 import FormError from '@/components/ui/forms/FormError';
+import NostrUserPicker from '@/components/common/NostrUserPicker';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import { useChannelSettingsForm } from '@/hooks/chat/channel/useChannelSettingsForm';
@@ -26,7 +27,7 @@ import Label from '@/components/ui/forms/Label';
 export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () => void }) {
   const t = useTranslations();
   const sfuUrlId = useId();
-  const { meta, member, sfu, members, adminSet } = useChannelSettingsForm(group, onClose);
+  const { meta, member, sfu, members, adminSet, allPubkeys } = useChannelSettingsForm(group, onClose);
   const { access, kind: channelKind } = meta.values;
 
   return (
@@ -216,13 +217,11 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
             </Text>
           </div>
           <Form form={member} layout="row">
-            <Input
-              size="sm"
-              {...member.field('key')}
-              placeholder={t('shell.desktop.members.addPlaceholder')}
-              spellCheck={false}
-              aria-label={t('shell.desktop.members.addLabel')}
-              className="flex-1 min-w-[12rem]"
+            <NostrUserPicker
+              value={member.values.key}
+              onChange={(value) => member.set('key', value)}
+              excludedPubkeys={allPubkeys}
+              disabled={member.submitting}
             />
             {/* A bare checkbox reads as a form field; as a toggle chip it
                   reads as the role the new member will get. */}

@@ -10,6 +10,7 @@ import { useManageMemberRow } from '@/hooks/chat/members/useManageMemberRow';
 import { useTranslations } from 'next-intl';
 import { Avatar } from '../../desktop/Avatar';
 import Button from '@/components/ui/buttons/Button';
+import FormError from '@/components/ui/forms/FormError';
 import { MemberRoleBadge } from './MemberRoleBadge';
 
 // Exported for tests only: mounted internally by ChannelSettingsModal.
@@ -19,20 +20,21 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
   // Which destructive action this row is currently asking about. An inline
   // confirm keeps the question attached to the row it's about; a
   // `window.confirm` dialog names a person out of context and blocks the tab.
-  const { confirming, ask, cancel, confirmPending } = useManageMemberRow(groupId, pubkey);
+  const { confirming, busy, error, ask, cancel, confirmPending } = useManageMemberRow(groupId, pubkey);
   const { copy, copied } = useCopyToClipboard();
   const name = meta?.displayName || meta?.name || shortNpubLabel(pubkey);
   const npub = hexToNpub(pubkey);
 
   if (confirming) {
     const demoting = confirming === 'demote';
+    const promoting = confirming === 'promote';
     return (
       <div
         className="flex items-center gap-2 rounded-lg border border-lc-border bg-lc-black px-2 py-1.5"
         data-testid={`member-confirm-${pubkey}`}
       >
         <Text size="xs" tone="default" className="min-w-0 flex-1 truncate">
-          {demoting ? t('shell.desktop.members.confirmDemote', { name }) : t('shell.desktop.members.confirmRemove', { name })}
+          {promoting ? t('chat.channelSettings.confirmPromote', { name }) : demoting ? t('shell.desktop.members.confirmDemote', { name }) : t('shell.desktop.members.confirmRemove', { name })}
         </Text>
         <Button
           variant="outlinePill"
@@ -44,13 +46,13 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           {t('common.cancel')}
         </Button>
         <Button
-          variant={demoting ? 'outlinePill' : 'danger'}
+          variant={demoting || promoting ? 'outlinePill' : 'danger'}
           size="xs"
           onClick={confirmPending}
           className="shrink-0"
           data-testid={`member-confirm-ok-${pubkey}`}
         >
-          {demoting ? t('common.confirm.demote') : t('common.confirm.remove')}
+          {promoting ? t('chat.channelSettings.promote') : demoting ? t('common.confirm.demote') : t('common.confirm.remove')}
         </Button>
       </div>
     );
@@ -78,11 +80,18 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
       {/* Dimmed until the row is hovered or something inside it has focus, so
           a long member list isn't a wall of red text. `focus-within` keeps it
           reachable by keyboard. */}
+      <FormError>{error}</FormError>
       <div className="flex shrink-0 items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        {!isAdmin && (
+          <Button type="button" variant="outlinePill" size="xs" disabled={busy} onClick={() => ask('promote')}>
+            {t('chat.channelSettings.promote')}
+          </Button>
+        )}
         {isAdmin && (
           <Button
             variant="outlinePill"
             size="xs"
+            disabled={busy}
             onClick={() => ask('demote')}
             title={t('shell.desktop.members.demoteHelp')}
             aria-label={t('shell.desktop.members.demoteLabel', { name })}
@@ -95,6 +104,7 @@ export function ManageMemberRow({ groupId, pubkey, isAdmin }: { groupId: string;
           variant="outlinePill"
           size="xs"
           tone="danger"
+          disabled={busy}
           onClick={() => ask('remove')}
           aria-label={t('shell.desktop.members.removeLabel', { name })}
           data-testid={`member-remove-${pubkey}`}

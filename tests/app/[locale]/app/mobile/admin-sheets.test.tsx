@@ -447,7 +447,7 @@ describe('mobile sheet field labels', () => {
     renderLocalized(<ChannelSettingsSheet close={() => {}} group={TEXT_GROUP} />);
     expect(screen.getByLabelText('Name')).toBe(screen.getByTestId('mobile-channel-settings-name'));
     expect(screen.getByLabelText('Description').tagName).toBe('TEXTAREA');
-    expect(screen.getByLabelText('Add member · NIP-29 kind 9000')).toHaveAttribute('placeholder', 'npub1… or 64-char hex');
+    expect(screen.getByLabelText('Add member · NIP-29 kind 9000')).toHaveAttribute('placeholder', 'Search by name or Nostr address');
     expect(screen.getByRole('checkbox', { name: 'Make admin' })).toBeInTheDocument();
   });
 

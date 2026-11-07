@@ -93,3 +93,16 @@ active-relay roster of members, admins and creators from accessible channels,
 including people who have not posted in the current channel. Online status
 uses recent signed activity, not an authoritative socket connection count.
 Admin standing in a channel member panel remains specific to that channel.
+## Channel member management
+
+Channel settings on desktop and phone share the same person-search picker.
+Admins can search by name or NIP-05 identifier, or paste a hex key, npub, or
+nprofile. Selecting a result fills the member form with its npub; existing
+members are excluded from the results. Search uses the same Nostr search hook
+as the DM composer and global people search.
+
+An existing channel member can be promoted to admin from their member row.
+Promotion publishes NIP-29 kind 9000 with the admin role after confirmation;
+the displayed role follows the relay's membership update. Promotion,
+demotion, and removal reject duplicate submissions while pending and show
+localized relay failures without changing the displayed role optimistically.

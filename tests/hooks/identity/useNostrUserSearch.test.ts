@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
+import { nip19 } from 'nostr-tools';
 import { useNostrUserSearch } from '@/hooks/identity/useNostrUserSearch';
 
 // Mock the underlying NIP-50 hook so tests don't open real WebSockets.
@@ -23,6 +24,14 @@ afterEach(() => {
 const SEARCH_DEBOUNCE_MS = 250;
 
 describe('useNostrUserSearch', () => {
+  it.each(['npub', 'nprofile'] as const)('decodes a %s identity without a name search', (format) => {
+    const hex = 'a'.repeat(64);
+    const identity = format === 'npub' ? nip19.npubEncode(hex) : nip19.nprofileEncode({ pubkey: hex, relays: [] });
+    const { result } = renderHook(() => useNostrUserSearch(identity));
+    expect(result.current.directHit?.pubkey).toBe(hex);
+    expect(mockUseNostrQuery.mock.calls.at(-1)?.[0]).toEqual([]);
+  });
+
   it('decodes a 64-hex pubkey as a directHit (no NIP-50 fired)', async () => {
     const hex = 'a'.repeat(64);
     const { result } = renderHook(() => useNostrUserSearch(hex));

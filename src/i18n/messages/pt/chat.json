@@ -339,7 +339,12 @@
     "notNpub": "Não é um npub",
     "badMember": "Informe um npub ou uma chave pública hex de 64 caracteres",
     "saveFailed": "Não foi possível salvar as configurações do canal.",
-    "memberFailed": "Não foi possível adicionar esse membro."
+    "memberFailed": "Não foi possível adicionar esse membro.",
+    "promote": "Promover a admin",
+    "confirmPromote": "Promover {name} a admin?",
+    "searchPeople": "Buscar por nome ou endereço Nostr",
+    "searchingPeople": "Buscando pessoas…",
+    "noPeople": "Nenhuma pessoa correspondente para adicionar."
   },
   "sticker": {
     "open": "Ver detalhes de :{name}:",

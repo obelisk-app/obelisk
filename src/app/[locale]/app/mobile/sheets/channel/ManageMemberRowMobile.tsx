@@ -1,6 +1,7 @@
 'use client';
 
 import Button from '@/components/ui/buttons/Button';
+import FormError from '@/components/ui/forms/FormError';
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
@@ -23,7 +24,7 @@ export function ManageMemberRowMobile({
   const name = displayNameFor(pubkey, meta);
   // Inline confirm rather than `window.confirm`: a native dialog on mobile
   // covers the sheet and names the person out of context.
-  const { confirming, ask, cancel, confirmPending } = useManageMemberRow(groupId, pubkey);
+  const { confirming, busy, error, ask, cancel, confirmPending } = useManageMemberRow(groupId, pubkey);
 
   const rowStyle: React.CSSProperties = {
     display: 'flex',
@@ -37,10 +38,11 @@ export function ManageMemberRowMobile({
 
   if (confirming) {
     const demoting = confirming === 'demote';
+    const promoting = confirming === 'promote';
     return (
       <div style={rowStyle} data-testid={`mobile-member-confirm-${pubkey}`}>
         <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--app-text)' }}>
-          {demoting
+          {promoting ? t('chat.channelSettings.confirmPromote', { name }) : demoting
             ? t('mobile.members.confirmDemote', { name })
             : t('mobile.members.confirmKick', { name })}
         </span>
@@ -61,14 +63,14 @@ export function ManageMemberRowMobile({
             border: '1px solid var(--app-line)',
             borderRadius: 8,
             padding: '4px 8px',
-            background: demoting ? 'var(--app-surface)' : 'var(--presence-dnd, #ef4444)',
-            color: demoting ? 'var(--app-text)' : '#fff',
+            background: demoting || promoting ? 'var(--app-surface)' : 'var(--presence-dnd, #ef4444)',
+            color: demoting || promoting ? 'var(--app-text)' : '#fff',
             fontSize: 11,
             fontWeight: 600,
           }}
           data-testid={`mobile-member-confirm-ok-${pubkey}`}
         >
-          {demoting ? t('mobile.members.demote') : t('mobile.members.kick')}
+          {promoting ? t('chat.channelSettings.promote') : demoting ? t('mobile.members.demote') : t('mobile.members.kick')}
         </Button>
       </div>
     );
@@ -101,11 +103,18 @@ export function ManageMemberRowMobile({
           {shortNpubLabel(pubkey)}
         </div>
       </div>
+      <FormError>{error}</FormError>
       <div style={{ display: 'flex', gap: 6 }}>
+        {!isAdmin && (
+          <Button type="button" variant="outlinePill" size="xs" disabled={busy} onClick={() => ask('promote')}>
+            {t('chat.channelSettings.promote')}
+          </Button>
+        )}
         {isAdmin && (
           <Button
             variant="bare"
             type="button"
+            disabled={busy}
             onClick={() => ask('demote')}
             style={{
               border: '1px solid var(--app-line)',
@@ -123,6 +132,7 @@ export function ManageMemberRowMobile({
         <Button
           variant="bare"
           type="button"
+          disabled={busy}
           onClick={() => ask('remove')}
           style={{
             border: '1px solid var(--app-line)',

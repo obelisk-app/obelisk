@@ -13,6 +13,7 @@ import Sheet from '@/components/ui/overlays/Sheet';
 import Input from '@/components/ui/forms/Input';
 import Form from '@/components/ui/forms/Form';
 import FormError from '@/components/ui/forms/FormError';
+import NostrUserPicker from '@/components/common/NostrUserPicker';
 import TextArea from '@/components/ui/forms/TextArea';
 import Checkbox from '@/components/ui/forms/Checkbox';
 import SheetActions from '@/components/ui/overlays/SheetActions';
@@ -200,13 +201,13 @@ export function ChannelSettingsSheet({
         </Label>
         <Form form={member} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="setup-input-wrap">
-            <Input
-              variant="mobile"
+            <NostrUserPicker
+              value={member.values.key}
+              onChange={(value) => member.set('key', value)}
+              excludedPubkeys={allPubkeys}
+              disabled={member.submitting}
+              mobile
               id={newMemberId}
-              {...member.field('key')}
-              placeholder={t('mobile.members.addPlaceholder')}
-              spellCheck={false}
-              style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}
             />
           </div>
           <Label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--app-text-dim)' }}>

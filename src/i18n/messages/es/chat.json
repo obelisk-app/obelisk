@@ -339,7 +339,12 @@
     "notNpub": "No es un npub",
     "badMember": "Ingresá un npub o una clave pública hex de 64 caracteres",
     "saveFailed": "No se pudo guardar la configuración del canal.",
-    "memberFailed": "No se pudo agregar a ese miembro."
+    "memberFailed": "No se pudo agregar a ese miembro.",
+    "promote": "Ascender a admin",
+    "confirmPromote": "¿Ascender a {name} a admin?",
+    "searchPeople": "Buscar por nombre o dirección Nostr",
+    "searchingPeople": "Buscando personas…",
+    "noPeople": "No hay personas coincidentes para agregar."
   },
   "sticker": {
     "open": "Ver detalles de :{name}:",

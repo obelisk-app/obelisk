@@ -339,7 +339,12 @@
     "notNpub": "Not an npub",
     "badMember": "Provide an npub or 64-char hex pubkey",
     "saveFailed": "Could not save the channel settings.",
-    "memberFailed": "Could not add that member."
+    "memberFailed": "Could not add that member.",
+    "promote": "Promote to admin",
+    "confirmPromote": "Promote {name} to admin?",
+    "searchPeople": "Search by name or Nostr address",
+    "searchingPeople": "Searching people…",
+    "noPeople": "No matching people available to add."
   },
   "sticker": {
     "open": "Open :{name}: details",
