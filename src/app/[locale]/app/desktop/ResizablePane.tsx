@@ -36,7 +36,7 @@ export function ResizablePane({
       className="group/handle relative z-20 w-0 cursor-col-resize max-md:hidden"
       title={t('shell.desktop.pane.resize')}
     >
-      <div className="absolute inset-y-0 -left-2 right-0 w-4" />
+      <div className={`absolute inset-y-0 w-2 ${side === 'right' ? 'left-0' : 'right-0'}`} />
       <div className="pointer-events-none absolute inset-y-0 -left-px w-px bg-lc-green opacity-0 transition-opacity group-hover/handle:opacity-100 group-active/handle:opacity-100" />
     </div>
   );

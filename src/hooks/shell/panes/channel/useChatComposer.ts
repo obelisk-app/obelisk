@@ -27,7 +27,10 @@ export function useChatComposer(props: ChatComposerProps, ref: ForwardedRef<Comp
   const emojiBtnRef = useRef<HTMLDivElement>(null);
   const composer = useChannelComposer({ ...props, inputRef });
   const { onPickFiles, emojiOpen, setEmojiOpen } = composer;
-  useImperativeHandle(ref, () => ({ pickFiles: (files) => { void onPickFiles(files); } }), [onPickFiles]);
+  useImperativeHandle(ref, () => ({
+    pickFiles: (files) => { void onPickFiles(files); },
+    focus: () => inputRef.current?.focus({ preventScroll: true }),
+  }), [onPickFiles]);
   // The picker closes on a press outside its button and panel; Escape is the picker's own.
   useDismiss({ refs: [emojiBtnRef], onDismiss: () => setEmojiOpen(false), enabled: emojiOpen, escape: 'ignore' });
 

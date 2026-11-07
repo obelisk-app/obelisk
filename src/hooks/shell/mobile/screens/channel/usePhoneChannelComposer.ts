@@ -17,7 +17,10 @@ export function usePhoneChannelComposer(options: PhoneComposerOptions, ref: Forw
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composer = useChannelComposer({ ...options, inputRef, maxMentionResults: 6 });
   const { onPickFiles } = composer;
-  useImperativeHandle(ref, () => ({ pickFiles: (files) => { void onPickFiles(files); } }), [onPickFiles]);
+  useImperativeHandle(ref, () => ({
+    pickFiles: (files) => { void onPickFiles(files); },
+    focus: () => inputRef.current?.focus({ preventScroll: true }),
+  }), [onPickFiles]);
   return {
     ...composer,
     inputRef,

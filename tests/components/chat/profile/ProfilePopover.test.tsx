@@ -6,7 +6,7 @@ vi.mock('@/hooks/session/useSession', async () => {
     useSessionProfile: () => readProfile((() => me.pubkey)()),
   });
 });
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -69,6 +69,25 @@ function renderProfile(onClose = vi.fn(), onExplore = vi.fn(), onMessage?: (pubk
 }
 
 describe('ProfilePopover', () => {
+  it('shows all relay roles without channel membership and updates live', () => {
+    bridge.members = [];
+    bridge.metadata = null;
+    const roles = [
+      { id: 'mod', name: 'Moderator', tier: 10, color: '#abcdef', emoji: '⭐' },
+      { id: 'og', name: 'Original', tier: 1, color: '#123456', emoji: '' },
+    ];
+    useChatStore.setState({ rolesByPubkey: { [PUBKEY]: roles } });
+    renderProfile();
+    const badges = screen.getByTestId('profile-roles').querySelectorAll('[data-role-id]');
+    expect(Array.from(badges, (badge) => badge.getAttribute('data-role-id'))).toEqual(['mod', 'og']);
+    expect(badges[0]).toHaveTextContent('⭐Moderator');
+    act(() => useChatStore.setState({ rolesByPubkey: { [PUBKEY]: [roles[1]] } }));
+    expect(screen.queryByText('Moderator')).not.toBeInTheDocument();
+    expect(screen.getByText('Original')).toBeInTheDocument();
+    act(() => useChatStore.setState({ rolesByPubkey: {} }));
+    expect(screen.queryByTestId('profile-roles')).not.toBeInTheDocument();
+  });
+
   beforeEach(() => {
     me.pubkey = null;
     nip05.state = 'unchecked';

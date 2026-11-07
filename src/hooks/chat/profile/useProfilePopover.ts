@@ -25,6 +25,7 @@ export function useProfilePopover(pubkey: string, onClose: () => void) {
   const serverEmojis = useChatStore((s) => s.serverEmojis);
   const anchor = useChatStore((s) => s.profilePopupAnchor);
   const member = usePopoverMember(pubkey);
+  const relayRoles = useChatStore((s) => s.rolesByPubkey[pubkey]);
   const panelRef = useRef<HTMLDivElement>(null);
   const isSelf = useMyPubkey() === pubkey;
   // `verify` mode: the reader opened this person, so one request to the
@@ -47,6 +48,7 @@ export function useProfilePopover(pubkey: string, onClose: () => void) {
     serverEmojis,
     anchor,
     member,
+    relayRoles,
     panelRef,
     isSelf,
     nip05State,

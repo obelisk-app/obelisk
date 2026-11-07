@@ -22,8 +22,9 @@ vi.mock('@/hooks/relay/branding/useRelayBranding', () => ({
   useRelayBranding: () => ({ icon: '', banner: '', name: '', description: '', updatedAt: 0 }),
 }));
 const ROLES = { roles: [{ id: 'mod', name: 'Mod', tier: 1 }], holders: { mod: ['alice'] }, updatedAt: 1 };
+const EMPTY_ROLES = { roles: [], holders: {}, updatedAt: 0 };
 const EMOJIS = { title: '', emojis: [{ name: 'wave', url: 'https://e/wave.png' }], updatedAt: 1 };
-vi.mock('@/hooks/relay/operator/useRelayRoles', () => ({ useRelayRoles: () => ROLES }));
+vi.mock('@/hooks/relay/operator/useRelayRoles', () => ({ useRelayRoles: (relay: string) => relay === 'wss://empty' ? EMPTY_ROLES : ROLES }));
 vi.mock('@/hooks/relay/operator/useRelayEmojiSet', () => ({ useRelayEmojiSet: () => EMOJIS }));
 
 import { useRelayOperatorData } from '@/hooks/relay/operator/useRelayOperatorData';
@@ -32,6 +33,15 @@ describe('useRelayOperatorData (shared by both shells)', () => {
   beforeEach(() => {
     authorsSeen.length = 0;
     useChatStore.setState({ rolesByPubkey: {}, serverEmojis: {} });
+  });
+
+  it('clears previous relay assignments when switching to a relay with no roles', () => {
+    const { rerender } = renderHook(({ relay }) => useRelayOperatorData(relay), {
+      initialProps: { relay: 'wss://r' },
+    });
+    expect(useChatStore.getState().rolesByPubkey.alice?.[0]?.id).toBe('mod');
+    rerender({ relay: 'wss://empty' });
+    expect(useChatStore.getState().rolesByPubkey).toEqual({});
   });
 
   it('reads operator data from the relay operator alone', () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useMemo } from 'react';
 import { useMediaPacks } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/hooks/session/useSession';
 import { useChatStore } from '@/store/chat';
@@ -33,7 +33,8 @@ export function useRelayOperatorData(relay: string) {
   const emojiSet = useRelayEmojiSet(relay || null, relayAuthors);
   const relayRoles = useRelayRoles(relay || null, relayAuthors);
   const setRolesByPubkey = useChatStore((s) => s.setRolesByPubkey);
-  useEffect(() => {
+  // Clear the previous relay's badges before the browser paints the new relay.
+  useLayoutEffect(() => {
     setRolesByPubkey(rolesByPubkey(relayRoles));
   }, [relayRoles, setRolesByPubkey]);
   const mediaPacks = useMediaPacks();

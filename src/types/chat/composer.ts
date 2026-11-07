@@ -14,6 +14,7 @@ import type { PickedCustomEmoji } from '@/types/chat/picker';
  * composer, so the skin exposes this through a ref.
  */
 export interface ComposerHandle {
+  readonly focus: () => void;
   readonly pickFiles: (files: File[]) => void;
 }
 

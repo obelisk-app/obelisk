@@ -28,6 +28,22 @@ function setup(groupId = 'g', { showMembers = false, seed = {} } = {}) {
 beforeEach(() => useVoiceStore.setState({ isVoiceChatOpen: false }));
 
 describe('useChatPanel', () => {
+  it('focuses on every explicit reply, but not cancel or draft restoration', () => {
+    const { result, rerender } = setup();
+    const focus = vi.fn();
+    result.current.composerRef.current = { pickFiles: vi.fn(), focus };
+    act(() => result.current.setReplyingTo(m1));
+    act(() => result.current.setReplyingTo(m1));
+    expect(focus).toHaveBeenCalledTimes(2);
+    act(() => result.current.setReplyingTo(null));
+    expect(focus).toHaveBeenCalledTimes(2);
+    act(() => result.current.setReplyingTo(m1));
+    rerender({ id: 'g2' });
+    rerender({ id: 'g' });
+    expect(result.current.replyingTo).toBe(m1);
+    expect(focus).toHaveBeenCalledTimes(3);
+  });
+
   it('a text channel: its messages by id, the list visible, members on request only', () => {
     const { result } = setup('g', { showMembers: true });
     expect(result.current.body).toBe('text');

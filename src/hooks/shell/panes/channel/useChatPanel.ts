@@ -2,7 +2,7 @@
 
 import { useChannelReplyDraft } from '@/hooks/chat/composer/useConversationDraft';
 
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useCurrentRelayUrl, useGroupById, useMessages, useMessagesStatus, useGroupMetadataEose, useReactions, useAdmins, useGroupCreator, useRelayAccess } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/hooks/session/useSession';
 import { useVoiceStore } from '@/store/voice';
@@ -59,9 +59,12 @@ export function useChatPanel({ groupId, showMembers, pendingMessageId, onConsume
   // renders unconditionally: a cached or partial history is more useful than
   // an empty pane, and RelayAccessBanner explains the situation in place.
   const relayAccess = useRelayAccess(relay || null);
-  const [replyingTo, setReplyingTo] = useChannelReplyDraft(groupId);
-  // Reset the reply target when the channel changes, in the same render.
+  const [replyingTo, setReplyDraft] = useChannelReplyDraft(groupId);
   const composerRef = useRef<ComposerHandle>(null);
+  const setReplyingTo = useCallback((message: typeof replyingTo) => {
+    setReplyDraft(message);
+    if (message) composerRef.current?.focus();
+  }, [setReplyDraft]);
   useCreatorAdminClaim({ groupId, myPubkey, groupCreator, admins, relay, relayAccess });
   const voiceMainRef = useRef<HTMLDivElement>(null);
   // Highlights drive the floating mention/reply navigator at the bottom-right
@@ -89,7 +92,7 @@ export function useChatPanel({ groupId, showMembers, pendingMessageId, onConsume
     emptyStage: channelEmptyStage({ group, messagesStatus, groupMetadataEose, channelMissingGrace, metadataFetchDone }),
     highlightIds: channelHighlights.eventIds,
     viewport,
-    /** A state setter, so stable: every memoized row receives it. */
+    /** Stable per conversation so memoized rows stay quiet. */
     setReplyingTo,
     replyingTo,
     composerRef,

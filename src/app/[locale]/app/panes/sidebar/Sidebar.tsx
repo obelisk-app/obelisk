@@ -52,7 +52,7 @@ export function Sidebar({
         // offset) as `--floating-user-panel-clearance`; the list pads by that
         // plus a gap, so its last channel scrolls fully clear of the panel.
         // 7rem is the fallback before the first measure.
-        className="flex-1 overflow-y-auto px-2 pb-2 md:pb-[calc(var(--floating-user-panel-clearance,7rem)+0.5rem)]"
+        className="channels-scroll min-h-0 flex-1 overflow-y-auto px-2 pb-2 md:pb-[calc(var(--floating-user-panel-clearance,7rem)+0.5rem)]"
         data-testid="channels-scroll"
         data-tour="channels-list"
       >

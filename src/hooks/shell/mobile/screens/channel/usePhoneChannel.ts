@@ -1,8 +1,9 @@
 'use client';
 
 import { useChannelReplyDraft } from '@/hooks/chat/composer/useConversationDraft';
+import type { ComposerHandle } from '@/types/chat/composer';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { nostrActions, useLoadEarlier, type JsMessage } from '@/services/nostr-bridge';
 import { useReadStateStore } from '@/store/read-state';
 import { useChatStore } from '@/store/chat';
@@ -32,8 +33,12 @@ export function useEnsureGroupMetadata(groupId: string, groupKnown: boolean) {
  * mounted at the PhoneShell level and so asks through a window event, the
  * same indirection the quick-react buttons use.
  */
-export function useReplyTarget(groupId: string, messages: ReadonlyArray<JsMessage>) {
-  const [replyingTo, setReplyingTo] = useChannelReplyDraft(groupId);
+export function useReplyTarget(groupId: string, messages: ReadonlyArray<JsMessage>, composerRef?: RefObject<ComposerHandle | null>) {
+  const [replyingTo, setReplyDraft] = useChannelReplyDraft(groupId);
+  const setReplyingTo = useCallback((message: JsMessage | null) => {
+    setReplyDraft(message);
+    if (message) composerRef?.current?.focus();
+  }, [setReplyDraft, composerRef]);
   useEffect(() => {
     const handler = (e: Event) => {
       const ev = e as CustomEvent<{ msgId: string }>;

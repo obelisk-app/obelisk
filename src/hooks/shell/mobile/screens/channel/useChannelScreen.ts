@@ -69,7 +69,7 @@ export function useChannelScreen({ groupId, openMsgActions, openProfile }: {
   }), [openMsgActions, groupId, isChannelAdmin, myPubkey]);
   const onAvatarTap = useCallback((pubkey: string) => openProfile(pubkey), [openProfile]);
   const composerRef = useRef<ComposerHandle>(null);
-  const { replyingTo, setReplyingTo } = useReplyTarget(groupId, messages);
+  const { replyingTo, setReplyingTo } = useReplyTarget(groupId, messages, composerRef);
   const channelHighlights = useChannelHighlights(groupId, myPubkey);
   const viewport = usePhoneChannelViewport({ groupId, relay, myPubkey, messages });
 

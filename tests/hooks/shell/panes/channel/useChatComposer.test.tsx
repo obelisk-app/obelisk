@@ -23,6 +23,20 @@ function setup(over: Partial<ChatComposerProps> = {}) {
 const change = (value: string) => ({ target: { value, selectionStart: value.length } }) as never;
 
 describe('useChatComposer', () => {
+  it('focuses the input without changing its value or selection', () => {
+    const { result, ref } = setup();
+    const input = document.createElement('textarea');
+    document.body.appendChild(input);
+    input.value = 'keep draft';
+    input.setSelectionRange(2, 4);
+    result.current.inputRef.current = input;
+    act(() => ref.current?.focus());
+    expect(document.activeElement).toBe(input);
+    expect(input.value).toBe('keep draft');
+    expect([input.selectionStart, input.selectionEnd]).toEqual([2, 4]);
+    input.remove();
+  });
+
   it('names the channel, or the start of its id', () => {
     expect(setup().result.current.channelName).toBe('general');
     expect(setup({ groupId: 'abcdefghijkl', group: null }).result.current.channelName).toBe('abcdefgh');

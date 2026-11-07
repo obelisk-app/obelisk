@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { JsMessage } from '@/services/nostr-bridge';
 import { buildTimeline } from '@/utils/chat/timeline/channel-timeline';
 import { useReplyTarget } from '@/hooks/shell/mobile/screens/channel/usePhoneChannel';
@@ -22,6 +22,19 @@ describe('buildTimeline', () => {
 });
 
 describe('useReplyTarget', () => {
+  it('focuses for repeated reply events but not cancellation or unknown targets', () => {
+    const focus = vi.fn();
+    const ref = { current: { focus, pickFiles: vi.fn() } };
+    const messages = [msg('focus', 1)];
+    const { result } = renderHook(() => useReplyTarget('focus-group', messages, ref));
+    for (const msgId of ['focus', 'focus', 'missing']) {
+      act(() => window.dispatchEvent(new CustomEvent('obelisk-mobile:reply', { detail: { msgId } })));
+    }
+    expect(focus).toHaveBeenCalledTimes(2);
+    act(() => result.current.setReplyingTo(null));
+    expect(focus).toHaveBeenCalledTimes(2);
+  });
+
   const messages = [msg('m1', 1), msg('m2', 2)];
 
   it('takes a reply request from the actions sheet for a message it has', () => {

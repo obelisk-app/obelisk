@@ -20,6 +20,20 @@ function setup() {
 }
 
 describe('usePhoneChannelComposer', () => {
+  it('focuses the input without changing its value or selection', () => {
+    const { result, ref } = setup();
+    const input = document.createElement('textarea');
+    document.body.appendChild(input);
+    input.value = 'keep draft';
+    input.setSelectionRange(2, 4);
+    result.current.inputRef.current = input;
+    act(() => ref.current?.focus());
+    expect(document.activeElement).toBe(input);
+    expect(input.value).toBe('keep draft');
+    expect([input.selectionStart, input.selectionEnd]).toEqual([2, 4]);
+    input.remove();
+  });
+
   it('reads the draft from a change event', () => {
     const { result } = setup();
     act(() => result.current.onInputChange({ target: input('hello', 5) } as ChangeEvent<HTMLTextAreaElement>));

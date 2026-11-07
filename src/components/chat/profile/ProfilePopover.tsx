@@ -26,7 +26,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
 }) {
   const t = useTranslations();
   const {
-    serverEmojis, anchor, member, panelRef, isSelf, nip05State, npub, npubShort, displayName, zap, copyNpub,
+    serverEmojis, anchor, member, relayRoles, panelRef, isSelf, nip05State, npub, npubShort, displayName, zap, copyNpub,
   } = useProfilePopover(pubkey, onClose);
   return (
     <div
@@ -108,7 +108,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
             </Text>
           )}
 
-          <PopoverDetails member={member} />
+          <PopoverDetails member={member} relayRoles={relayRoles} />
 
           <PopoverActions
             pubkey={pubkey}
