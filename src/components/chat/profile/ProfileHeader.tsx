@@ -29,6 +29,7 @@ export function ProfileHeader({
   onOpenSettings,
   onCreatePost,
   onCopyNpub,
+  onExpandMedia,
 }: {
   pubkey: string;
   meta: Meta;
@@ -42,6 +43,7 @@ export function ProfileHeader({
   onOpenSettings?: () => void;
   onCreatePost: () => void;
   onCopyNpub: () => void;
+  onExpandMedia: (url: string) => void;
 }) {
   const t = useTranslations();
   return (
@@ -66,7 +68,11 @@ export function ProfileHeader({
       >
         {/* An <img>, not a CSS background, so the banner gets the same
             no-referrer fetch as every other image someone else chose. */}
-        {meta?.banner && <RemoteImage src={meta.banner} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+        {meta?.banner && (
+          <Button variant="bare" type="button" className="absolute inset-0" aria-label={t('social.profileFeed.media')} onClick={() => onExpandMedia(meta.banner!)}>
+            <RemoteImage src={meta.banner} alt="" className="h-full w-full object-cover" />
+          </Button>
+        )}
         <div className={'profile-view-topbar absolute inset-x-3 top-3 z-10 flex ' + (settingsMode ? 'justify-end' : 'justify-between')}>
           {!settingsMode && (
             <IconButton tone="overlay" onClick={onClose} className="back-btn md:hidden" aria-label={t('common.back')}>
@@ -93,15 +99,17 @@ export function ProfileHeader({
         profile, and the button that opens the composer.
       */}
       <div className="relative z-10 -mt-14 flex shrink-0 items-end justify-between gap-3 px-5">
-        <UserAvatar
-          pubkey={pubkey}
-          picture={meta?.picture}
-          size={28}
-          name={displayName}
-          alt={displayName}
-          className="profile-view-avatar border-4 border-lc-black"
-          initialClassName="text-3xl"
-        />
+        <Button variant="bare" type="button" disabled={!meta?.picture} aria-label={t('social.profileFeed.media')} onClick={() => onExpandMedia(meta!.picture!)}>
+          <UserAvatar
+            pubkey={pubkey}
+            picture={meta?.picture}
+            size={28}
+            name={displayName}
+            alt={displayName}
+            className="profile-view-avatar border-4 border-lc-black"
+            initialClassName="text-3xl"
+          />
+        </Button>
         <div className="mb-2 flex items-center gap-2">
           {/*
             The ⋯ lives here on every profile. On your own it used to sit

@@ -15,7 +15,9 @@ import { EmojiText } from './EmojiText';
 import { PopoverIdentity } from './PopoverIdentity';
 import { PopoverDetails } from './PopoverDetails';
 import { PopoverActions } from './PopoverActions';
+import Button from '@/components/ui/buttons/Button';
 import IconButton from '@/components/ui/buttons/IconButton';
+import { ProfileMediaLightbox } from './ProfileMediaLightbox';
 import Text from '@/components/ui/layout/Text';
 
 export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }: {
@@ -26,12 +28,12 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
 }) {
   const t = useTranslations();
   const {
-    serverEmojis, anchor, member, relayRoles, panelRef, isSelf, nip05State, npub, npubShort, displayName, zap, copyNpub,
+    expandedMedia, setExpandedMedia, closeMedia, serverEmojis, anchor, member, relayRoles, panelRef, isSelf, nip05State, npub, npubShort, displayName, zap, copyNpub,
   } = useProfilePopover(pubkey, onClose);
   return (
     <div
       className={`fixed inset-0 z-[100] flex p-4 ${anchor ? 'items-start justify-start bg-transparent' : 'items-center justify-center bg-black/60'}`}
-      onClick={onClose}
+      onClick={expandedMedia ? undefined : onClose}
       data-testid="profile-popover-backdrop"
     >
       <div
@@ -49,22 +51,28 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
         >
           {/* An <img>, not a CSS background, so the banner gets the same
               no-referrer fetch as every other image someone else chose. */}
-          {member?.banner && <RemoteImage src={member.banner} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+          {member?.banner && (
+          <Button variant="bare" type="button" className="absolute inset-0" aria-label={t('social.profileFeed.media')} onClick={() => setExpandedMedia(member.banner!)}>
+            <RemoteImage src={member.banner} alt="" className="h-full w-full object-cover" />
+          </Button>
+        )}
         </div>
 
         {/* Avatar overlaps the banner; the action cluster sits on the banner's
             lower edge opposite it, so name and handle get the full width. */}
         <div className="relative px-4" data-testid="profile-name-row">
           <div className="absolute -top-10 left-4">
-            <UserAvatar
-              pubkey={pubkey}
-              picture={member?.picture ?? null}
-              size={20}
-              name={displayName || '?'}
-              alt={displayName}
-              className="border-4 border-lc-dark"
-              initialClassName="text-2xl"
-            />
+            <Button variant="bare" type="button" disabled={!member?.picture} aria-label={t('social.profileFeed.media')} onClick={() => setExpandedMedia(member!.picture!)}>
+              <UserAvatar
+                pubkey={pubkey}
+                picture={member?.picture ?? null}
+                size={20}
+                name={displayName || '?'}
+                alt={displayName}
+                className="border-4 border-lc-dark"
+                initialClassName="text-2xl"
+              />
+            </Button>
           </div>
           <div className="flex justify-end gap-1.5 pt-2.5">
             {!isSelf && (
@@ -119,6 +127,7 @@ export default function ProfilePopover({ pubkey, onClose, onExplore, onMessage }
           />
         </div>
       </div>
+      {expandedMedia && <ProfileMediaLightbox url={expandedMedia} onClose={closeMedia} />}
     </div>
   );
 }

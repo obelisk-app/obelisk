@@ -120,6 +120,7 @@ export default function NostrProfile({
         onOpenSettings={onOpenSettings}
         onCreatePost={vm.composeNote}
         onCopyNpub={vm.copyNpub}
+        onExpandMedia={vm.setExpandedMedia}
       />
 
       <ProfileLinks about={vm.meta?.about} website={vm.meta?.website} lud16={vm.meta?.lud16} />

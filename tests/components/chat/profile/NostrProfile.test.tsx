@@ -358,3 +358,18 @@ describe('NostrProfile', () => {
     expect(await screen.findByTestId('profile-thread-reader')).toBeInTheDocument();
   });
 });
+
+it('expands the banner and avatar without closing the profile', () => {
+  const onClose = vi.fn();
+  renderProfile({ onClose });
+  const banner = screen.getByTestId('nostr-profile-banner').querySelector('button')!;
+  fireEvent.click(banner);
+  const viewer = screen.getByTestId('profile-media-lightbox');
+  expect(viewer.parentElement).toBe(document.body);
+  expect(viewer.querySelector('img')).toHaveAttribute('src', 'https://example.com/banner.jpg');
+  fireEvent.keyDown(window, { key: 'Escape' });
+  expect(screen.queryByTestId('profile-media-lightbox')).not.toBeInTheDocument();
+  expect(onClose).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByAltText('Alice').closest('button')!);
+  expect(screen.getByTestId('profile-media-lightbox').querySelector('img')).toHaveAttribute('src', 'https://example.com/avatar.jpg');
+});

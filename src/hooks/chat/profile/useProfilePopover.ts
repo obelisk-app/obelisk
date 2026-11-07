@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef } from 'react';
+
+import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useChatStore } from '@/store/chat';
 import { useMyPubkey } from '@/hooks/session/useSession';
@@ -22,6 +23,7 @@ import { usePopoverPlacement } from './usePopoverPlacement';
  */
 export function useProfilePopover(pubkey: string, onClose: () => void) {
   const t = useTranslations();
+  const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
   const serverEmojis = useChatStore((s) => s.serverEmojis);
   const anchor = useChatStore((s) => s.profilePopupAnchor);
   const member = usePopoverMember(pubkey);
@@ -32,7 +34,7 @@ export function useProfilePopover(pubkey: string, onClose: () => void) {
   // domain they named is theirs to make. List rows elsewhere only peek.
   const nip05State = useNip05Status(pubkey, member?.nip05, 'verify');
 
-  useDismiss({ onDismiss: onClose, outside: 'none' });
+  useDismiss({ onDismiss: onClose, outside: 'none', enabled: !expandedMedia });
   usePopoverPlacement(panelRef, anchor);
 
   // `safeNpub` hands the hex back when bech32 encoding throws; the card
@@ -45,6 +47,7 @@ export function useProfilePopover(pubkey: string, onClose: () => void) {
   const npubShort = npub ? popoverShortNpub(pubkey) : pubkey;
 
   return {
+    expandedMedia, setExpandedMedia, closeMedia: () => setExpandedMedia(null),
     serverEmojis,
     anchor,
     member,

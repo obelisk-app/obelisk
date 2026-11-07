@@ -112,6 +112,18 @@ describe('ProfilePopover', () => {
     };
   });
 
+  it('closes expanded media on Escape while keeping the profile open', () => {
+    const onClose = vi.fn();
+    renderProfile(onClose);
+    fireEvent.click(screen.getByTestId('profile-banner').querySelector('button')!);
+    expect(screen.getByTestId('profile-media-lightbox').parentElement).toBe(document.body);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('profile-media-lightbox')).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('combines relay membership with kind:0 profile metadata', () => {
     renderProfile();
     expect(screen.getByTestId('profile-name')).toHaveTextContent('AndyCreed');
