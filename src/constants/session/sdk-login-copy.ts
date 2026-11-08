@@ -22,6 +22,8 @@ export const SDK_LOGIN_COPY: Readonly<Record<string, MessageKey>> = {
 
   'Browser extension': 'shell.login.sdk.methods.extension',
   'NIP-07: Nostr WoT, Alby, nos2x': 'shell.login.sdk.methods.extensionHint',
+  'Remote signer connection method': 'shell.login.signer.connectionMethod',
+  'NIP-46: Nostr WoT, Amber, or another NIP-46 signer': 'shell.login.sdk.methods.bunkerHint',
   'Remote signer (bunker)': 'shell.login.sdk.methods.bunker',
   'NIP-46 \u2014 Amber, Nsec.app, Keychat': 'shell.login.sdk.methods.bunkerHint',
   'NIP-46 \u2014 Amber, Nsec.app': 'shell.login.sdk.methods.bunkerHint',

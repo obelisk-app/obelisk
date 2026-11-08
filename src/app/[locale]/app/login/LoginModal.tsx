@@ -139,6 +139,9 @@ export default function LoginModal({
             copyOnOpen: true,
             labels: {
               openSigner: t('shell.login.signer.openApp'),
+              regenerate: t('shell.login.signer.regenerate'),
+              qrCopy: t('shell.login.signer.qrCopy'),
+              signerHint: t('shell.login.sdk.bunker.qrHint'),
               pasteUri: t('shell.login.signer.useBunkerUri'),
               copyUri: t('shell.login.signer.copyUri'),
               copied: t('shell.login.signer.copied'),

@@ -239,7 +239,7 @@ describe('LoginModal generated identity flow', () => {
   it('configures native SDK actions with translated labels and existing platform helpers', () => {
     renderLocalized(<LoginModal />);
     const options = sdkProps?.nip46Connection as {
-      labels: { openSigner: string; copyUri: string; pasteUri: string };
+      labels: { openSigner: string; copyUri: string; pasteUri: string; regenerate: string; qrCopy: string; signerHint: string };
       signerHref: (uri: string, userAgent: string) => string;
       copyOnOpen: boolean;
       copyUri: (uri: string) => Promise<boolean>;
@@ -247,6 +247,9 @@ describe('LoginModal generated identity flow', () => {
     expect(options.labels.openSigner).toBe('Open in signer app');
     expect(options.labels.copyUri).toBe('Copy connection URI');
     expect(options.labels.pasteUri).toBe('Use bunker URI');
+    expect(options.labels.regenerate).toBe('Regenerate connection code');
+    expect(options.labels.qrCopy).toBe('Copy connection URI from QR code');
+    expect(options.labels.signerHint).toBe('Scan with Nostr WoT, Amber, or another NIP-46 signer.');
     expect(options.copyOnOpen).toBe(true);
     expect(options.signerHref('nostrconnect://pairing', 'Android')).toContain('intent://pairing');
     expect(options.copyUri).toBeTypeOf('function');

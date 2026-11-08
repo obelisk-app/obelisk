@@ -1595,11 +1595,6 @@ button:not(:disabled),
   display: none;
 }
 
-.obelisk-login-modal .nui-qr svg {
-  width: min(300px, calc(100vw - 64px));
-  height: auto;
-}
-
 /*
  * Back is an arrow, at every width.
  *
@@ -1638,14 +1633,6 @@ button:not(:disabled),
   line-height: 1;
 }
 @media (max-width: 767px) {
-  .nui-modal-overlay:has(.obelisk-login-modal .nui-nip46),
-  .obelisk-login-modal:has(.nui-nip46) {
-    overflow: hidden;
-    overscroll-behavior: none;
-  }
-  .obelisk-login-modal:has(.nui-nip46) {
-    max-height: calc(100dvh - 16px);
-  }
   /* Phone: pinned to the corner, mirroring the close ✕, and a touch-sized
      40px rather than the 36px used with a pointer. */
   :is(
@@ -1676,9 +1663,6 @@ button:not(:disabled),
     background: color-mix(in oklab, var(--color-lc-dark) 88%, var(--color-lc-green) 12%);
     color: var(--color-lc-white);
   }
-  .obelisk-login-modal .nui-qr svg {
-    width: min(220px, calc(100vw - 64px));
-  }
   .obelisk-login-modal .nui-qr-actions {
     display: grid;
     width: 100%;
@@ -1692,6 +1676,38 @@ button:not(:disabled),
     text-align: center;
   }
 }
+/* The SDK owns remote-signing navigation; reserve its header on every screen. */
+.obelisk-login-modal:has(.nui-nip46) {
+  max-height: calc(100dvh - 16px);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+}
+.obelisk-login-modal:has(.nui-nip46) .nui-widget { position: static; padding-top: 44px; }
+.obelisk-login-modal:has(.nui-nip46) .nui-nip46 > .nui-back:first-child,
+.obelisk-login-modal:has(.nui-nip46) .nui-modal-close {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.obelisk-login-modal:has(.nui-nip46) .nui-nip46 > .nui-back:first-child { left: 12px; }
+.obelisk-login-modal:has(.nui-nip46) .nui-modal-close { right: 12px; }
+.obelisk-login-modal .nui-qr svg {
+  width: auto;
+  max-width: calc(100vw - 80px);
+  height: auto;
+}
+.obelisk-login-modal .nui-qr-wrap > a,
+.obelisk-login-modal .nui-qr-actions button { min-height: 44px; }
+
 /* Chain Reaction orb animations */
 @keyframes cr-orbit {
   from { transform: rotate(0deg); }

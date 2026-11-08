@@ -36,7 +36,7 @@ visibility warning, and is never automatically retried.
 
 SDK compatibility was checked against npm and upstream on 2026-11-07:
 `nostr-wot-sdk` 3.0.1 and the current `@nostr-wot/*` releases are installed.
-The UI remains pinned to `vendor/nostr-wot-ui-2.0.1-obelisk.2.tgz` to retain
+The UI remains pinned to `vendor/nostr-wot-ui-2.0.1-obelisk.3.tgz` to retain
 the fork's create-first layout, key-file flow, and extension copy. The fork's
 base matches upstream `6e8c75458dca1afeec8c4d88d547c2c0afd04510`; no dependency
 upgrade or replacement of that tarball was needed for this change.

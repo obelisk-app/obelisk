@@ -617,3 +617,13 @@ The DM message body shared by desktop and phone is memoized by message identity.
 Channel scroll restoration keeps one resize observer per active conversation. A child-list observer registers only inserted rows and unregisters removed rows; nested media changes still resize the observed row. The deterministic 100/1,000/5,000-row fixtures verify that one appended row needs one new resize registration, rather than registering the whole history again. These are operation counts, not production frame-time measurements. Explicit jumps suspend passive restoration, and scrolling away from the bottom prevents media resizing from pulling the reader back down.
 
 History pagination owns each outstanding request by identity. Switching conversations or unmounting retires that ownership: a late result or rejection cannot release the next conversation's loading guard or prepend anchor. The guard still waits for the inserted rows to commit before allowing another page, and a completed prepend does not leave a stale anchor-release timer.
+
+### Remote signer login controls
+
+The vendored SDK fork's `login-create-first` branch owns the QR and bunker-URI
+switcher. Both desktop and mobile use a green selected segment, aligned Back and
+Close controls, and a primary signer-app link. Selecting the QR copies its current
+connection URI; its central retry control cancels the previous attempt and creates
+a new code. Clipboard feedback and signer recommendations come from the host's
+localized `nip46Connection.labels`. The dialog scrolls within the dynamic viewport
+on short screens, including safe-area padding.
