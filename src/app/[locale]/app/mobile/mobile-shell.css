@@ -1161,7 +1161,7 @@
 }
 .obelisk-mobile .ch-row .ch-name {
   font-size: 19px;
-  color: var(--app-text);
+  color: var(--app-text-dim);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1190,9 +1190,6 @@
 }
 .obelisk-mobile .ch-row.voice {
   align-items: flex-start;
-}
-.obelisk-mobile .ch-row.voice .ch-name {
-  color: var(--app-text);
 }
 .obelisk-mobile .ch-row .ch-body { flex: 1; min-width: 0; }
 .obelisk-mobile .ch-row .ch-row-top {
