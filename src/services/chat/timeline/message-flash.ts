@@ -7,6 +7,7 @@
  * both go through `scrollToId` now.
  */
 
+import { rememberChannelScrollPosition } from '@/utils/chat/timeline/channel-scroll-position';
 import { FLASH_MS } from '@/constants/chat/timeline';
 
 /** A brief `ring-1 ring-lc-green` flash on the focused row. */
@@ -20,12 +21,19 @@ export function flashElement(el: Element, ms: number = FLASH_MS): void {
  * middle of the view and flash it for `ms`. False when the root or the
  * message is not there.
  */
-export function scrollToId(scrollRoot: ParentNode | null, id: string, ms: number = FLASH_MS): boolean {
+export function scrollToId(scrollRoot: ParentNode | null, id: string, ms: number = FLASH_MS, behavior: ScrollBehavior = 'smooth'): boolean {
   if (!scrollRoot) return false;
   const el = scrollRoot.querySelector(`[data-msg-id="${CSS.escape(id)}"]`);
   if (!el) return false;
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.scrollIntoView({ behavior, block: 'center' });
   flashElement(el, ms);
+  return true;
+}
+
+/** Save the landing before restoring observers resume, so they cannot pull it to the bottom. */
+export function landOnMessage(root: HTMLElement | null, id: string, scrollKey: string | null, nearBottomPx: number): boolean {
+  if (!root || !scrollKey || !scrollToId(root, id, FLASH_MS, 'instant')) return false;
+  rememberChannelScrollPosition(scrollKey, root, nearBottomPx);
   return true;
 }
 

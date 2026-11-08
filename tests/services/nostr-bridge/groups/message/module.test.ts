@@ -19,7 +19,7 @@ const ME = 'a'.repeat(64);
 
 interface Req { filter: Filter; onevent: (ev: NostrEvent) => void; oneose?: () => void; closed: boolean }
 
-function setup() {
+function setup({ moderated = false, deleted = false } = {}) {
   const reqs: Req[] = [];
   const queries: Filter[] = [];
   const published: Array<{ kind: number; tags: string[][]; content: string; created_at: number }> = [];
@@ -48,11 +48,11 @@ function setup() {
   const state = new MessagesState();
   const m = new MessagesModule(state, ctx, {
     waitForRelayAuth: async () => 'ok',
-    moderation: { isModerated: () => false, isDeletedByAuthor: () => false, ingestEventDeletion: vi.fn(), ingestGroupEventDeletion: vi.fn() },
+    moderation: { isModerated: () => moderated, isDeletedByAuthor: () => deleted, ingestEventDeletion: vi.fn(), ingestGroupEventDeletion: vi.fn() },
     pings: { recordRelayUse: vi.fn(), deliverGroupPing: vi.fn() },
     ensureUserMetadata: vi.fn(),
   });
-  return { m, state, reqs, queries, published, failPublish: (v: boolean) => { publishFails = v; } };
+  return { ctx, m, state, reqs, queries, published, failPublish: (v: boolean) => { publishFails = v; } };
 }
 
 const msg = (id: string, createdAt = 10, content = id): NostrEvent => ({ id, pubkey: 'b'.repeat(64), kind: 9, created_at: createdAt, content, tags: [['h', 'g']], sig: '' });
@@ -135,4 +135,47 @@ describe('groups/messages', () => {
     expect(state.priorityDeadline).toBe(0);
     expect(state.activeGroupId).toBeNull();
   });
+});
+
+describe('exact message loading', () => {
+  it('fetches old messages by id and channel from the active relay and ingests them', async () => {
+    const { ctx, m, state } = setup();
+    const query = vi.spyOn(ctx, 'queryRelaysWithConfidence').mockResolvedValue({ events: [msg('old', 1)], complete: true });
+    expect(await m.ingestor.ensureMessage('g', 'old')).toBe(true);
+    expect(query).toHaveBeenCalledWith([RELAY], { kinds: [9], ids: ['old'], '#h': ['g'], limit: 1 }, 5000, { cache: 'fresh' });
+    expect(state.messagesByGroup.get().g[0].id).toBe('old');
+    query.mockClear();
+    expect(await m.ingestor.ensureMessage('g', 'old')).toBe(true);
+    expect(query).not.toHaveBeenCalled();
+    m.lifecycle().clearFlushers();
+  });
+
+  it.each([
+    { ...msg('wrong'), id: 'other' },
+    { ...msg('wrong'), kind: 1 },
+    { ...msg('wrong'), tags: [['h', 'other-channel']] },
+  ])('does not ingest a mismatched relay response: %j', async event => {
+    const { ctx, m, state } = setup();
+    vi.spyOn(ctx, 'queryRelaysWithConfidence').mockResolvedValue({ events: [event], complete: true });
+    expect(await m.ingestor.ensureMessage('g', 'wrong')).toBe(false);
+    expect(state.messagesByGroup.get()).toEqual({});
+  });
+
+  it('drops query results after a relay or session reset', async () => {
+    const { ctx, m, state } = setup();
+    vi.spyOn(ctx, 'queryRelaysWithConfidence').mockImplementation(async () => {
+      state.epoch++;
+      ctx.currentRelayUrl.set('wss://other.test');
+      return { events: [msg('old')], complete: true };
+    });
+    expect(await m.ingestor.ensureMessage('g', 'old')).toBe(false);
+    expect(state.messagesByGroup.get()).toEqual({});
+  });
+});
+
+it.each([{ moderated: true }, { deleted: true }])('does not resurrect a removed notification target: %j', async options => {
+  const { ctx, m, state } = setup(options);
+  vi.spyOn(ctx, 'queryRelaysWithConfidence').mockResolvedValue({ events: [msg('removed')], complete: true });
+  expect(await m.ingestor.ensureMessage('g', 'removed')).toBe(false);
+  expect(state.messagesByGroup.get()).toEqual({});
 });

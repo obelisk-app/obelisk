@@ -1,5 +1,6 @@
 'use client';
 
+import { useChatStore } from '@/store/chat';
 import { useState } from 'react';
 import { relayWebsiteUrl } from '@/utils/relay-url/normalize';
 import { shortHost } from '@/utils/relay-url/url-host';
@@ -14,7 +15,7 @@ import { useDismissOnOutside, useInboxStreams } from '@/hooks/shell/panes/topbar
  * and help panels (mutually exclusive, closed on an outside click or
  * Escape), and where a click on a notification goes.
  */
-export function useRelayTopBar({ relay, onJumpToChannel, onJumpToDm }: {
+export function useRelayTopBar({ relay, onJumpToDm }: {
   relay: string;
   onJumpToChannel?: (channelId: string) => void;
   onJumpToDm?: (peer: string | null) => void;
@@ -44,7 +45,7 @@ export function useRelayTopBar({ relay, onJumpToChannel, onJumpToDm }: {
     toggleHelp: () => { setNotifOpen(false); setHelpOpen((v) => !v); },
     closeHelp: () => setHelpOpen(false),
     openRelaySettings: () => openSettings('relays'),
-    onMentionClick: (m: MentionNotification) => { onJumpToChannel?.(m.channelId); setNotifOpen(false); },
+    onMentionClick: (m: MentionNotification) => { useChatStore.getState().requestMentionJump(m); setNotifOpen(false); },
     onDmClick: (d: DmNotification) => { onJumpToDm?.(d.senderPubkey); setNotifOpen(false); },
     /** The locked DMs row: open the DM list, which unlocks them. */
     onOpenDms: () => { onJumpToDm?.(null); setNotifOpen(false); },

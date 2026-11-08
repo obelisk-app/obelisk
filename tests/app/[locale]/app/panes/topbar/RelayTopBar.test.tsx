@@ -1,3 +1,4 @@
+import { useChatStore } from '@/store/chat';
 /**
  * The desktop top bar's own behaviour: what a click on a notification does,
  * the badge, the help panel's actions and the relay name link. The panel
@@ -56,7 +57,8 @@ describe('RelayTopBar notifications', () => {
     const { onJumpToChannel } = mount();
     fireEvent.click(screen.getByLabelText('Notifications'));
     fireEvent.click(screen.getByText('ping m1'));
-    expect(onJumpToChannel).toHaveBeenCalledWith('ch1');
+    expect(onJumpToChannel).not.toHaveBeenCalled();
+    expect(useChatStore.getState().mentionJump).toEqual({ id: 'm1', relay: RELAY, channelId: 'ch1' });
     expect(screen.queryByTestId('notif-tabs')).toBeNull();
   });
 

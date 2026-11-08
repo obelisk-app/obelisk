@@ -1,4 +1,5 @@
 {
+  "notificationUnavailable": "Este canal o mensaje no está disponible. Revisá la conexión al relay e intentá de nuevo.",
   "soundBlocked": {
     "title": "🔔 Los sonidos de notificación están en pausa",
     "body": "Los navegadores solo permiten sonido después de que hagas clic o escribas en la página. Hacé clic acá para activar las notificaciones de escritorio: suenan aunque Obelisk esté en otra pestaña."

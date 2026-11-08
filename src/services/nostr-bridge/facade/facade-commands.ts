@@ -50,6 +50,9 @@ export abstract class BridgeCommands extends BridgeReads {
   loadMoreMessages(groupId: string): Promise<LoadMoreMessagesResult> {
     return this.m.messages.loadMore(groupId);
   }
+  ensureGroupMessage(groupId: string, messageId: string): Promise<boolean> {
+    return this.m.messages.ingestor.ensureMessage(groupId, messageId);
+  }
   setActiveGroup(groupId: string | null): void {
     this.m.messages.queue.setActiveGroup(groupId);
   }

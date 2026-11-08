@@ -11,6 +11,7 @@
  *   • **Once per event id**, across both the active-relay path and the
  *     background watcher: the same kind 9 can arrive on both.
  */
+import { useChatStore, type MentionJump } from '@/store/chat';
 import { getPreferences, setPreference } from '@/services/preferences/preferences';
 import { useToastStore } from '@/store/feedback/toast';
 import { translate } from '@/i18n/runtime';
@@ -21,6 +22,7 @@ const SEEN_CAP = 500;
 
 export interface IncomingAlert {
   readonly kind: NotificationSoundKind;
+  readonly target?: MentionJump;
   /** Event id, the dedupe key. */
   readonly id: string;
   /** Unix milliseconds. */
@@ -92,6 +94,7 @@ function showOsNotification(alert: IncomingAlert, withSound: boolean): void {
     n.onclick = () => {
       try { window.focus(); } catch { /* ignore */ }
       n.close();
+      if (alert.target) useChatStore.getState().requestMentionJump(alert.target);
     };
   } catch {
     // Some mobile browsers only allow notifications through a service

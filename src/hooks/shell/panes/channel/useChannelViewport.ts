@@ -1,5 +1,6 @@
 'use client';
 
+import { landOnMessage } from '@/services/chat/timeline/message-flash';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLoadEarlier, type JsMessage } from '@/services/nostr-bridge';
 import { useReadStateStore } from '@/store/read-state';
@@ -99,19 +100,16 @@ export function useChannelViewport({
     if (!pendingMessageId) return;
     const exists = messages.some((m) => m.id === pendingMessageId);
     if (!exists) return; // message not loaded yet, try again on next batch
-    const el = document.querySelector(`[data-msg-id="${pendingMessageId}"]`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.add('ring-1', 'ring-lc-green');
-    setTimeout(() => el.classList.remove('ring-1', 'ring-lc-green'), 1800);
+    stickToBottomRef.current = false;
+    if (!landOnMessage(scrollRef.current, pendingMessageId, scrollKey, 100)) return;
     // Strip ?m= so a refresh doesn't re-trigger.
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('m');
-      window.history.replaceState(null, '', url.pathname + url.search);
+      window.history.replaceState(window.history.state, '', url.pathname + url.search);
     }
     onConsumePendingMessageId();
-  }, [pendingMessageId, messages, onConsumePendingMessageId]);
+  }, [pendingMessageId, messages, onConsumePendingMessageId, scrollKey]);
 
   return { scrollRef, loadingEarlier, reachedStart, nearHistoryTop };
 }

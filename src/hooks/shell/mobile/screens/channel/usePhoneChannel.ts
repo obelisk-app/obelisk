@@ -1,5 +1,6 @@
 'use client';
 
+import { landOnMessage } from '@/services/chat/timeline/message-flash';
 import { useChannelReplyDraft } from '@/hooks/chat/composer/useConversationDraft';
 import type { ComposerHandle } from '@/types/chat/composer';
 
@@ -80,8 +81,10 @@ export function usePhoneChannelViewport({ groupId, relay, myPubkey, messages }: 
     return target;
   }, [initialAnchorMessageId]);
 
+  const pendingJump = useChatStore((s) => s.pendingJump);
   useChannelScrollPosition({
     scrollKey,
+    disabled: pendingJump?.groupId === groupId,
     scrollRef: messagesRef,
     itemCount: messages.length,
     initialAnchorKey: initialAnchorMessageId,
@@ -97,7 +100,6 @@ export function usePhoneChannelViewport({ groupId, relay, myPubkey, messages }: 
   // A search result asked to jump here. The message may not be loaded yet,
   // so this re-runs as batches arrive and only consumes the request once it
   // actually scrolled, same contract as the desktop `pendingMessageId`.
-  const pendingJump = useChatStore((s) => s.pendingJump);
   useEffect(() => {
     if (!pendingJump || pendingJump.groupId !== groupId) return;
     const target = pendingJump.messageId;
@@ -105,13 +107,9 @@ export function usePhoneChannelViewport({ groupId, relay, myPubkey, messages }: 
     // navigating here has already satisfied it.
     if (!target) { useChatStore.getState().consumeJump(); return; }
     if (!messages.some((m) => m.id === target)) return;
-    const el = messagesRef.current?.querySelector(`[data-msg-id="${CSS.escape(target)}"]`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.add('msg-flash');
-    setTimeout(() => el.classList.remove('msg-flash'), 1800);
+    if (!landOnMessage(messagesRef.current, target, scrollKey, 200)) return;
     useChatStore.getState().consumeJump();
-  }, [pendingJump, groupId, messages]);
+  }, [pendingJump, groupId, messages, scrollKey]);
 
   // Auto-scroll to bottom when new messages arrive (only if already near).
   useEffect(() => {

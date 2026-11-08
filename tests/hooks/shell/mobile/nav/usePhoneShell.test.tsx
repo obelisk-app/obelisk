@@ -1,5 +1,7 @@
+import { useChatStore } from '@/store/chat';
+import { groupFixture } from '@tests/support/mocks/nostr-bridge';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { usePhoneShell } from '@/hooks/shell/mobile/nav/usePhoneShell';
@@ -40,4 +42,19 @@ describe('usePhoneShell', () => {
     act(() => result.current.screenProps.openVoiceChat());
     expect(result.current.nav.screen).toBe('channel');
   });
+});
+
+it('opens the notification transcript and retains its exact message for the viewport', async () => {
+  useChatStore.getState().reset();
+  const relay = 'wss://target.test';
+  const fake = fakeBridge({ configuredRelays: [relay], groups: [groupFixture({ id: 'voice-room', kind: 'voice' })] }, {
+    setActiveGroup: vi.fn(), ensureGroupMessage: vi.fn().mockResolvedValue(true),
+    switchRelay: vi.fn(async (url: string) => { fake.stores.currentRelayUrl.set(url); }),
+  });
+  const { result } = renderHook(() => usePhoneShell(), { wrapper: bridgeWrapper(fake) });
+  act(() => useChatStore.getState().requestMentionJump({ relay, channelId: 'voice-room', id: 'old-message' }));
+  await waitFor(() => expect(result.current.nav.screen).toBe('channel'));
+  expect(result.current.nav.groupId).toBe('voice-room');
+  expect(useChatStore.getState().pendingJump).toEqual({ groupId: 'voice-room', messageId: 'old-message' });
+  useChatStore.getState().reset();
 });

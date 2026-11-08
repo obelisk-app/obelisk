@@ -1,4 +1,5 @@
 {
+  "notificationUnavailable": "Este canal ou mensagem está indisponível. Verifique a conexão com o relay e tente novamente.",
   "soundBlocked": {
     "title": "🔔 Os sons de notificação estão pausados",
     "body": "Os navegadores só permitem som depois que você clica ou digita na página. Clique aqui para ativar as notificações da área de trabalho: elas tocam mesmo com o Obelisk em outra aba."

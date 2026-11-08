@@ -1,3 +1,4 @@
+import { useChatStore } from '@/store/chat';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
@@ -37,15 +38,16 @@ function mount() {
 }
 
 describe('InboxScreen (phone)', () => {
-  it('lists the mentions and jumps to their channel with its kind, text when unknown', () => {
+  it('lists mentions and retains their exact message targets', () => {
     const { selectGroup } = mount();
     const cards = document.querySelectorAll('.mention-card');
     expect(cards).toHaveLength(2);
     expect(cards[0]).toHaveClass('urgent');
     fireEvent.click(cards[0]);
-    expect(selectGroup).toHaveBeenLastCalledWith('v1', 'voice');
+    expect(useChatStore.getState().mentionJump).toMatchObject({ channelId: 'v1' });
     fireEvent.click(cards[1]);
-    expect(selectGroup).toHaveBeenLastCalledWith('gone', 'text');
+    expect(useChatStore.getState().mentionJump).toMatchObject({ channelId: 'gone' });
+    expect(selectGroup).not.toHaveBeenCalled();
   });
 
   it('switches to DMs and opens the conversation', () => {

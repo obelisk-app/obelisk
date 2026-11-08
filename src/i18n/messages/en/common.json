@@ -1,4 +1,5 @@
 {
+  "notificationUnavailable": "This channel or message is unavailable. Check your relay connection and try again.",
   "soundBlocked": {
     "title": "🔔 Notification sounds are paused",
     "body": "Browsers only allow page sound after you click or type on the page. Click here to turn on desktop notifications: they ring even when Obelisk is in another tab."

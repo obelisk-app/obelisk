@@ -1,4 +1,5 @@
-import { useCallback, useRef, type CSSProperties } from 'react';
+import { useEffect, useCallback, useRef, type CSSProperties } from 'react';
+import { useMentionNotificationNavigation } from '@/hooks/notifications/useMentionNotificationNavigation';
 import { useTranslations } from 'next-intl';
 import { useCurrentRelayUrl, useMyFollows, type JsGroup } from '@/services/nostr-bridge';
 import { useIsLoggedIn, useIsRehydrating, useMyPubkey } from '@/hooks/session/useSession';
@@ -51,6 +52,7 @@ export interface MobileScreenProps {
  * history are `useMobileNavState` / `useMobileHistorySync`; this wires them.
  */
 export function usePhoneShell() {
+  useMentionNotificationNavigation();
   const t = useTranslations();
   const isLoggedIn = useIsLoggedIn();
   const isRehydrating = useIsRehydrating();
@@ -75,6 +77,12 @@ export function usePhoneShell() {
   });
 
   useExternalNavigation(actions.go, pushNav, currentRelayUrl);
+  const selectJumpGroup = actions.selectGroup;
+  const pendingJump = useChatStore(s => s.pendingJump);
+  useEffect(() => {
+    if (pendingJump) selectJumpGroup(pendingJump.groupId, 'text');
+  }, [pendingJump, selectJumpGroup]);
+
   useMobileHistorySync({
     isLoggedIn, dmOptInEnabled, currentRelayUrl, nav, navRef, relayRef, setNav, setSlideDir, suppressSlideRef,
   });

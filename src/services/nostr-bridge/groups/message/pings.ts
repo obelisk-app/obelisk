@@ -197,6 +197,7 @@ export class PingsModule {
       if (quiet) return;
       announceIncoming({
         kind: reason,
+        target: { relay, channelId, id: ev.id },
         id: ev.id,
         createdAt: ev.created_at * 1000,
         title: groupPingTitle(reason, this.deps.displayNameFor(ev.pubkey), where),
@@ -207,6 +208,7 @@ export class PingsModule {
     if (level !== 'all' || pref.unfollowed || quiet) return;
     announceIncoming({
       kind: 'mention',
+      target: { relay, channelId, id: ev.id },
       id: ev.id,
       createdAt: ev.created_at * 1000,
       title: where

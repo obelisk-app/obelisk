@@ -1,5 +1,6 @@
+import { useChatStore } from '@/store/chat';
 import { useState } from 'react';
-import { useBridge, useCurrentRelayUrl, useGroups, type JsGroup } from '@/services/nostr-bridge';
+import { useBridge, useCurrentRelayUrl, type JsGroup } from '@/services/nostr-bridge';
 import type { MentionNotification } from '@/store/notifications';
 import {
   useDmNotifications,
@@ -16,12 +17,11 @@ import { markInboxStreamRead, type InboxStream } from '@/services/shell/mobile/i
  * for the visible stream. Bridge stores are read at click time so the
  * screen does not re-render on every message arrival.
  */
-export function useInboxScreen(selectGroup: (groupId: string, kind: JsGroup['kind']) => void) {
+export function useInboxScreen(_selectGroup: (groupId: string, kind: JsGroup['kind']) => void) {
   const relay = useCurrentRelayUrl();
   const mentions = useMentionNotifications(relay);
   const dmNotifications = useDmNotifications();
   const lockedDms = useLockedDmCount();
-  const groups = useGroups();
   const bridge = useBridge();
   const [tab, setTab] = useState<InboxStream>('mentions');
   return {
@@ -38,10 +38,6 @@ export function useInboxScreen(selectGroup: (groupId: string, kind: JsGroup['kin
       groupIds: bridge ? Object.keys(bridge.messagesByGroup.get()) : [],
       peers: bridge ? Object.keys(bridge.dmsByPeer.get()) : [],
     }),
-    /** Open the mention's channel as the kind it is; a channel not loaded opens as text. */
-    jumpToMention: (m: MentionNotification) => {
-      const g = groups.find((x) => x.id === m.channelId);
-      selectGroup(m.channelId, g?.kind ?? 'text');
-    },
+    jumpToMention: (m: MentionNotification) => useChatStore.getState().requestMentionJump(m),
   };
 }

@@ -187,6 +187,27 @@ export class MessageIngest {
     cacheSet(this.ctx.currentRelayUrl.get(), KIND_GROUP_CHAT_MESSAGE, groupId, trimmed);
   }
 
+  /** Resolve an exact notification target on the active relay, including old history. */
+  async ensureMessage(groupId: string, messageId: string): Promise<boolean> {
+    if (this.s.messagesByGroup.get()[groupId]?.some(m => m.id === messageId)) return true;
+    const epoch = this.s.epoch;
+    const relay = this.ctx.currentRelayUrl.get();
+    const access = this.ctx.relayAccess.get()[normalizeRelayUrl(relay)];
+    if (access === 'authenticating') {
+      if (await this.deps.waitForRelayAuth(3500) !== 'ok') return false;
+    }
+    if (epoch !== this.s.epoch || relay !== this.ctx.currentRelayUrl.get()) return false;
+    const { events } = await this.ctx.queryRelaysWithConfidence([relay], {
+      kinds: [KIND_GROUP_CHAT_MESSAGE], ids: [messageId], '#h': [groupId], limit: 1,
+    }, 5000, { cache: 'fresh' });
+    if (epoch !== this.s.epoch || relay !== this.ctx.currentRelayUrl.get()) return false;
+    for (const event of events) {
+      if (event.id === messageId && event.kind === KIND_GROUP_CHAT_MESSAGE
+          && event.tags.some(tag => tag[0] === 'h' && tag[1] === groupId)) this.ingest(groupId, event);
+    }
+    return this.s.messagesByGroup.get()[groupId]?.some(m => m.id === messageId) ?? false;
+  }
+
   async loadMore(groupId: string): Promise<LoadMoreMessagesResult> {
     // Page older messages on demand. Live REQ stays capped at
     // BACKGROUND_MESSAGE_LIMIT; "Load earlier" calls this with the oldest

@@ -1,7 +1,15 @@
 import { create } from 'zustand';
 import type { RelayRole } from '@/services/relay/relay-roles';
 
+export interface MentionJump {
+  readonly relay: string;
+  readonly channelId: string;
+  readonly id: string;
+}
+
 export interface ChatState {
+  mentionJump: MentionJump | null;
+  requestMentionJump: (target: MentionJump) => void;
   activeChannelId: string | null;
   isNearBottom: boolean;
   serverEmojis: Record<string, string>;
@@ -40,6 +48,7 @@ export interface ChatState {
 }
 
 export const CHAT_INITIAL_STATE = {
+  mentionJump: null as MentionJump | null,
   activeChannelId: null as string | null,
   isNearBottom: true,
   serverEmojis: {} as Record<string, string>,
@@ -54,6 +63,7 @@ export const CHAT_INITIAL_STATE = {
 
 export const useChatStore = create<ChatState>()((set) => ({
   ...CHAT_INITIAL_STATE,
+  requestMentionJump: (target) => set({ mentionJump: { relay: target.relay, channelId: target.channelId, id: target.id } }),
   setServerEmojis: (serverEmojis, serverMediaKinds = {}) => set({ serverEmojis, serverMediaKinds }),
   setRolesByPubkey: (rolesByPubkey) => set({ rolesByPubkey }),
   openProfilePopup: (profilePopupPubkey, anchor) => set({ profilePopupPubkey, profilePopupAnchor: anchor ?? null }),

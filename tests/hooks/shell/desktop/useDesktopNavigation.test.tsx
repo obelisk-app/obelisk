@@ -1,3 +1,5 @@
+import { useChatStore } from '@/store/chat';
+import { groupFixture } from '@tests/support/mocks/nostr-bridge';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDesktopNavigation } from '@/hooks/shell/desktop/useDesktopNavigation';
@@ -145,4 +147,19 @@ it('does not activate an initial deep-linked channel until its relay switch fini
   expect(setActiveGroup).not.toHaveBeenCalledWith('private-room');
   await act(async () => { finish(); await gate; });
   await waitFor(() => expect(result.current.view).toEqual({ kind: 'group', groupId: 'private-room' }));
+});
+
+it('opens the precise notification message after switching relays', async () => {
+  useChatStore.getState().reset();
+  const relay = 'wss://target.test';
+  const fake = fakeBridge({ configuredRelays: [relay], groups: [groupFixture({ id: 'room' })] }, {
+    setActiveGroup: vi.fn(), ensureGroupMessage: vi.fn().mockResolvedValue(true),
+    switchRelay: vi.fn(async (url: string) => { fake.stores.currentRelayUrl.set(url); }),
+  });
+  const { result } = renderHook(() => useDesktopNavigation(useCurrentRelayUrl()), { wrapper: bridgeWrapper(fake) });
+  act(() => useChatStore.getState().requestMentionJump({ relay, channelId: 'room', id: 'old-message' }));
+  await waitFor(() => expect(result.current.view).toEqual({ kind: 'group', groupId: 'room' }));
+  expect(result.current.pendingMessageId).toBe('old-message');
+  expect(fake.ensureGroupMessage).toHaveBeenCalledWith('room', 'old-message');
+  useChatStore.getState().reset();
 });

@@ -1,3 +1,4 @@
+import { useChatStore } from '@/store/chat';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
@@ -12,11 +13,12 @@ const MENTION = { id: 'n1', relay: BRIDGE_MOCK_RELAY, channelId: 'f1', senderPub
 beforeEach(() => useNotificationsStore.setState({ mentionsByRelay: { [BRIDGE_MOCK_RELAY]: [MENTION] }, dmNotifications: [] } as never));
 
 describe('useInboxScreen', () => {
-  it('opens a mention in its channel as the kind it is', () => {
+  it('retains the complete mention target for the shell', () => {
     const selectGroup = vi.fn();
     const { result } = renderHook(() => useInboxScreen(selectGroup), { wrapper: bridgeWrapper(fakeBridge({ groups: [group({ id: 'f1', kind: 'forum' })] })) });
     act(() => result.current.jumpToMention(MENTION));
-    expect(selectGroup).toHaveBeenCalledWith('f1', 'forum');
+    expect(selectGroup).not.toHaveBeenCalled();
+    expect(useChatStore.getState().mentionJump).toEqual({ id: MENTION.id, relay: MENTION.relay, channelId: MENTION.channelId });
   });
 
   it('is empty per tab', () => {

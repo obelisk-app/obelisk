@@ -1,3 +1,4 @@
+import { useChatStore } from '@/store/chat';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const playNotificationSound = vi.fn<(...args: unknown[]) => string>(() => 'played');
@@ -68,6 +69,21 @@ describe('announceIncoming', () => {
     vi.spyOn(document, 'hasFocus').mockReturnValue(true);
     announceIncoming(alert({ id: 'c' }), NOW);
     expect(NotificationMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the exact navigation target on the OS notification click', () => {
+    setPreference('browserNotifications', true);
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+    vi.spyOn(window, 'focus').mockImplementation(() => {});
+    const close = vi.fn();
+    const notification = { close, onclick: null as null | (() => void) };
+    NotificationMock.mockImplementation(function () { return notification; });
+    const target = { relay: 'wss://relay.test', channelId: 'channel', id: 'message' };
+    announceIncoming(alert({ target }), NOW);
+    notification.onclick!();
+    expect(window.focus).toHaveBeenCalled();
+    expect(close).toHaveBeenCalled();
+    expect(useChatStore.getState().mentionJump).toEqual(target);
   });
 
   it('never shows an OS notification without permission', () => {

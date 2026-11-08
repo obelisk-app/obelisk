@@ -1,5 +1,6 @@
 'use client';
 
+import { useMentionNotificationNavigation } from '@/hooks/notifications/useMentionNotificationNavigation';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { nostrActions, useBridge } from '@/services/nostr-bridge';
 import { parseUrl, urlFor, restoredNav, type NavState } from '@/utils/shell/mobile/url-state';
@@ -21,6 +22,7 @@ import type { View } from '@/utils/shell/desktop/view';
  * read this file.
  */
 export function useDesktopNavigation(relay: string) {
+  useMentionNotificationNavigation();
   // Remembered so leaving the full-screen feed returns to the room you were
   // in rather than an empty pane. State adjusted during render (the
   // "previous value" pattern), so it is read in the same render it is set

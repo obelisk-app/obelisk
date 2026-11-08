@@ -1,3 +1,4 @@
+import { useChatStore } from '@/store/chat';
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
@@ -39,8 +40,9 @@ describe('useRelayTopBar', () => {
   it('a notification click jumps and closes the bell', () => {
     const { result, onJumpToChannel, onJumpToDm } = setup();
     act(() => result.current.toggleNotif());
-    act(() => result.current.onMentionClick({ channelId: 'ch1' } as MentionNotification));
-    expect(onJumpToChannel).toHaveBeenCalledWith('ch1');
+    act(() => result.current.onMentionClick({ id: 'm1', relay: 'wss://relay.test', channelId: 'ch1' } as MentionNotification));
+    expect(onJumpToChannel).not.toHaveBeenCalled();
+    expect(useChatStore.getState().mentionJump).toEqual({ id: 'm1', relay: 'wss://relay.test', channelId: 'ch1' });
     expect(result.current.notifOpen).toBe(false);
     act(() => result.current.toggleNotif());
     act(() => result.current.onDmClick({ senderPubkey: 'p' } as DmNotification));
