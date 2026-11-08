@@ -11,17 +11,7 @@ interface Props {
   href: string;
 }
 
-/**
- * Discord-style inline pill rendered in place of a same-origin
- * `/chat?c=<slug>[&m=|&p=]` link inside message content.
- *
- * The label is the slug (`useChannelLinkPill`). If the viewer has no read
- * access, renders greyed + locked (click suppressed) per the "name visible,
- * content locked" decision from FORUM_PLAN.md.
- *
- * Click navigates via `pushState` + `popstate` to keep the chat page mounted:
- * `src/app/chat/page.tsx` listens for `popstate` and re-applies URL state.
- */
+/** Inline channel link with a live name and in-app navigation. */
 export default function ChannelLinkPill({ slug, messageId, postId, href }: Props) {
   const vm = useChannelLinkPill(slug, href, messageId, postId);
 

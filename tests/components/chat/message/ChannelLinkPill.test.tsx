@@ -1,7 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { LocaleProvider } from '@tests/support/intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeBridge } from '@tests/support/fake-bridge';
+import { renderWithBridge } from '@tests/support/render-with-bridge';
+import type { JsGroup } from '@/services/nostr-bridge';
 import ChannelLinkPill from '@/components/chat/message/ChannelLinkPill';
 
 
@@ -22,6 +25,38 @@ describe('ChannelLinkPill', () => {
 
   it('uses the relay channel slug directly', () => {
     renderLocalized(<ChannelLinkPill slug="general" href="/app?c=general" />);
+    expect(screen.getByTestId('channel-link-pill')).toHaveTextContent('#general');
+  });
+
+  it('resolves channel names and updates when metadata arrives or changes', () => {
+    const bridge = fakeBridge({ currentRelayUrl: 'wss://relay.example' });
+    renderWithBridge(<ChannelLinkPill slug="channel-id" href="/app?c=channel-id&relay=RELAY.example%2F" />, bridge);
+    expect(screen.getByTestId('channel-link-pill')).toHaveTextContent('#channel-id');
+
+    act(() => bridge.stores.groups.set([{ id: 'channel-id', name: 'General chat' } as JsGroup]));
+    expect(screen.getByTestId('channel-link-pill')).toHaveTextContent('#General chat');
+    expect(screen.getByTestId('channel-link-pill').title).toContain('General chat');
+    expect(screen.getByTestId('channel-link-pill')).toHaveAttribute('href', '/app?c=channel-id&relay=RELAY.example%2F');
+
+    act(() => bridge.stores.groups.set([{ id: 'channel-id', name: 'Renamed' } as JsGroup]));
+    expect(screen.getByTestId('channel-link-pill')).toHaveTextContent('#Renamed');
+    act(() => bridge.stores.groups.set([{ id: 'channel-id', name: '  ' } as JsGroup]));
+    expect(screen.getByTestId('channel-link-pill')).toHaveTextContent('#channel-id');
+  });
+
+  it.each([
+    { messageId: undefined, postId: undefined, prefix: '#' },
+    { messageId: 'message', postId: undefined, prefix: '↩ ' },
+    { messageId: undefined, postId: 'post', prefix: '📋 ' },
+  ])('uses the name for links without a relay and prefix $prefix', ({ prefix, ...target }) => {
+    const bridge = fakeBridge({ groups: [{ id: 'channel-id', name: 'General chat' } as JsGroup] });
+    renderWithBridge(<ChannelLinkPill slug="channel-id" href="/app?c=channel-id" {...target} />, bridge);
+    expect(screen.getByTestId('channel-link-pill')).toHaveTextContent(`${prefix}General chat`);
+  });
+
+  it('does not use a name from another relay for the same channel ID', () => {
+    const bridge = fakeBridge({ currentRelayUrl: 'wss://relay.example', groups: [{ id: 'general', name: 'Local name' } as JsGroup] });
+    renderWithBridge(<ChannelLinkPill slug="general" href="/app?c=general&relay=other.example" />, bridge);
     expect(screen.getByTestId('channel-link-pill')).toHaveTextContent('#general');
   });
 
