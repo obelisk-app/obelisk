@@ -16,6 +16,8 @@ This directory documents the **mesh** engine in depth. SFU docs are at
 
 Public, non-hidden voice channel entries and their chat views show up to six
 advertised participants before joining, for SFU/community and mesh calls.
+Channel menus show indented avatar-and-name rows with an overflow count;
+chat and pre-join room previews keep their participant cards.
 The preview reads the shared active-relay `activeCallByChannel` store and
 cached profile labels only; missing profiles fall back to an npub label.
 No call, media request, SFU RPC, profile lookup, extra relay REQ or per-channel

@@ -1,19 +1,37 @@
 'use client';
 
+import List from '@/components/ui/layout/List';
 import { useTranslations } from 'next-intl';
 import { usePassiveCallRoster } from '@/hooks/voice/room/usePassiveCallRoster';
 import PassiveCallParticipant from './PassiveCallParticipant';
 
 /** Who is already in the call, shown before joining: a few faces, "+N more", and the topology. */
-export default function PassiveCallRoster({ pubkeys, count, mode, cachedOnly }: {
+export default function PassiveCallRoster({ pubkeys, count, mode, cachedOnly, menu = false }: {
   pubkeys: readonly string[];
   count: number;
   mode?: 'sfu' | 'mesh';
   cachedOnly?: boolean;
+  menu?: boolean;
 }) {
   const t = useTranslations();
   const { empty, visible, hidden } = usePassiveCallRoster(pubkeys, count);
   if (empty) return null;
+  if (menu) return (
+    <div className="min-w-0 pb-1 pl-8 pr-2 text-left" data-testid="passive-call-roster">
+      {visible.length > 0 ? (
+        <List marker="none" spacing="none" aria-label={t('voice.inCall')}>
+          {visible.map((pk) => (
+            <li key={pk}><PassiveCallParticipant pubkey={pk} cachedOnly={cachedOnly} menu /></li>
+          ))}
+          {hidden > 0 && <li className="py-1 pl-8 text-xs text-lc-muted">{t('voice.roster.more', { count: hidden })}</li>}
+        </List>
+      ) : (
+        <div className="py-1 text-xs text-lc-muted">
+          {count > 0 ? t('voice.roster.syncingCount', { count }) : t('voice.roster.syncing')}
+        </div>
+      )}
+    </div>
+  );
   const topology = mode === 'sfu' ? 'SFU' : mode === 'mesh' ? 'Mesh' : t('voice.roster.live'); // i18n-exempt: SFU and Mesh are topology names
   return (
     <div

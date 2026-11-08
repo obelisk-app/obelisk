@@ -104,7 +104,9 @@ export function GroupNode({
           </Button>
         )}
       </div>
-      {(group.kind === 'voice' || group.kind === 'voice-sfu') && group.isPublic && !group.isHidden && <PublicCallPreview groupId={group.id} />}
+      {(group.kind === 'voice' || group.kind === 'voice-sfu') && group.isPublic && !group.isHidden && (
+        <div style={{ paddingLeft: vm.indent }}><PublicCallPreview groupId={group.id} menu /></div>
+      )}
       {!vm.collapsed && (group.kind === 'forum' ? (
         // Forum threads get the Discord-style L-rail treatment: wrap them in
         // .lc-forum-threads so each row's ::before/::after can paint a

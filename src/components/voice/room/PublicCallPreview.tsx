@@ -5,8 +5,8 @@ import { passiveCallCount } from '@/utils/voice/room-view';
 import PassiveCallRoster from './PassiveCallRoster';
 
 /** Public channel/chat preview, using advertised identities and cached profile labels only. */
-export function PublicCallPreview({ groupId }: { groupId: string }) {
+export function PublicCallPreview({ groupId, menu = false }: { groupId: string; menu?: boolean }) {
   const call = usePublicCallPreview(groupId);
   if (!call) return null;
-  return <PassiveCallRoster pubkeys={call.participantPubkeys ?? []} count={passiveCallCount(call)} mode={call.mode} cachedOnly />;
+  return <PassiveCallRoster pubkeys={call.participantPubkeys ?? []} count={passiveCallCount(call)} mode={call.mode} cachedOnly menu={menu} />;
 }

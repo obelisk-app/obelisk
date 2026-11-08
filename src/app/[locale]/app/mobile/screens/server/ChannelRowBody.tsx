@@ -54,7 +54,7 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
             </div>
           </div>
         </Button>
-        {group.isPublic && !group.isHidden && <PublicCallPreview groupId={group.id} />}
+        {group.isPublic && !group.isHidden && <PublicCallPreview groupId={group.id} menu />}
       </>
     );
   }
