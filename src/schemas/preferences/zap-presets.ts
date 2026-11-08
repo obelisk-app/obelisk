@@ -1,6 +1,13 @@
 import type { ZapPreset } from '@/types/preferences/preferences';
 import { DEFAULT_ZAP_PRESETS } from '@/constants/wallet/zap';
 
+const legacyDefaults = [
+  { emoji: '⚡', amountSats: 21 },
+  { emoji: '🔥', amountSats: 100 },
+  { emoji: '🚀', amountSats: 1000 },
+  { emoji: '💎', amountSats: 10000 },
+];
+
 export function validZapPresets(value: unknown): value is ZapPreset[] {
   if (!Array.isArray(value) || !value.length || value.length > 20) return false;
   const seen = new Set<string>();
@@ -17,5 +24,9 @@ export function validZapPresets(value: unknown): value is ZapPreset[] {
 }
 
 export function normalizeZapPresets(value: unknown): ZapPreset[] {
-  return (validZapPresets(value) ? value : DEFAULT_ZAP_PRESETS).map((preset) => ({ ...preset }));
+  const valid = validZapPresets(value);
+  const legacy = valid && value.length === legacyDefaults.length
+    && value.every((preset, index) => preset.emoji === legacyDefaults[index].emoji
+      && preset.amountSats === legacyDefaults[index].amountSats);
+  return (valid && !legacy ? value : DEFAULT_ZAP_PRESETS).map((preset) => ({ ...preset }));
 }

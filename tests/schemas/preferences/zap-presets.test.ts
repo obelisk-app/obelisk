@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { normalizeZapPresets, validZapPresets } from '@/schemas/preferences/zap-presets';
 
 describe('zap presets', () => {
+  it('migrates the persisted old defaults while preserving customized lists', () => {
+    const legacy = [
+      { emoji: '⚡', amountSats: 21 }, { emoji: '🔥', amountSats: 100 },
+      { emoji: '🚀', amountSats: 1000 }, { emoji: '💎', amountSats: 10000 },
+    ];
+    expect(normalizeZapPresets(legacy).map((p) => p.amountSats)).toEqual([21, 210, 420]);
+    const customized = legacy.map((p, index) => index === 1 ? { ...p, amountSats: 123 } : p);
+    expect(normalizeZapPresets(customized)).toEqual(customized);
+  });
   it('migrates missing or invalid settings to the defaults', () => {
     expect(normalizeZapPresets(null).map((p) => p.amountSats)).toEqual([21, 210, 420]);
     expect(normalizeZapPresets([])[0]).toEqual({ emoji: '⚡', amountSats: 21 });
