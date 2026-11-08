@@ -12,6 +12,20 @@ const ruleBody = (selector: string) => {
 };
 
 describe('mobile shell CSS', () => {
+  it('aligns banner and header actions with the channel content inset', () => {
+    expect(ruleBody('.obelisk-mobile .server-banner-actions')).toContain('right: 18px');
+    const meta = ruleBody('.obelisk-mobile .server-banner-meta');
+    expect(meta).toContain('left: 18px');
+    expect(meta).toContain('right: 18px');
+    expect(ruleBody('.obelisk-mobile .chat-header')).toContain('padding: 10px 18px 12px');
+    expect(ruleBody('.obelisk-mobile .chat-actions')).toContain('flex-shrink: 0');
+    const picker = ruleBody('.obelisk-mobile .relay-deck-chevron');
+    expect(picker).toContain('width: 46px');
+    expect(picker).toContain('height: 46px');
+    expect(picker).toContain('flex: 0 0 46px');
+    expect(picker).toContain('border-radius: 14px');
+  });
+
   it('rounds the mobile server channel pane top-left corner like desktop', () => {
     const pane = ruleBody('.obelisk-mobile .server-channel-pane');
     expect(pane).toContain('border-top-left-radius: 0.75rem');

@@ -377,7 +377,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px 12px;
+  padding: 12px 18px 12px;
   flex-shrink: 0;
   padding-top: max(12px, env(safe-area-inset-top));
 }
@@ -824,7 +824,7 @@
 .obelisk-mobile .server-banner-actions {
   position: absolute;
   top: max(10px, env(safe-area-inset-top));
-  right: 10px;
+  right: 18px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -853,8 +853,8 @@
 
 .obelisk-mobile .server-banner-meta {
   position: absolute;
-  left: 14px;
-  right: 10px;
+  left: 18px;
+  right: 18px;
   bottom: 14px;
   display: flex;
   align-items: center;
@@ -901,6 +901,19 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
+}
+
+/* Match the relay avatar and keep the picker aligned with channel controls. */
+.obelisk-mobile .relay-deck-chevron {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid var(--app-line);
+  background: var(--app-surface);
 }
 
 /* Horizontal category pills - strip above the channel list. Tapping a pill
@@ -1247,7 +1260,7 @@
 
 /* ===== chat / channel ===== */
 .obelisk-mobile .chat-header {
-  padding: 10px 14px 12px;
+  padding: 10px 18px 12px;
   border-bottom: 1px solid var(--app-line-soft);
   flex-shrink: 0;
   padding-top: max(10px, env(safe-area-inset-top));
@@ -1301,6 +1314,7 @@
   font-weight: 500;
 }
 .obelisk-mobile .chat-actions {
+  flex-shrink: 0;
   display: flex;
   gap: 4px;
 }
@@ -1946,7 +1960,7 @@
   gap: 10px;
   /* Match `.chat-header` padding so the voice room aligns with normal channel
    * headers and doesn't read as a heavier app-bar. */
-  padding: 10px 14px 12px;
+  padding: 10px 18px 12px;
   padding-top: max(10px, env(safe-area-inset-top));
   flex-shrink: 0;
   position: relative;
@@ -2363,7 +2377,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px 12px;
+  padding: 10px 18px 12px;
   border-bottom: 1px solid var(--app-line-soft);
   flex-shrink: 0;
   padding-top: max(10px, env(safe-area-inset-top));
