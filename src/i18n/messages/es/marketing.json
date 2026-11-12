@@ -321,7 +321,7 @@
         "badge": "Celular",
         "title": "Servidores y canales pensados para el celular",
         "desc": "Recorré servidores, categorías, voz y publicaciones. Instalala como PWA, sin tienda de apps.",
-        "alt": "Captura de Obelisk en el celular: la charla de un canal entre dos miembros, con el cuadro de mensaje y la navegación de abajo.",
+        "alt": "Selector de relays de Obelisk en el celular: tarjetas giratorias con banners reales, descripciones y controles para recorrer o agregar un relay.",
         "cta": "Recorrer la versión para celular"
       }
     },

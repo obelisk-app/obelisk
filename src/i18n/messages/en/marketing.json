@@ -321,7 +321,7 @@
         "badge": "Mobile",
         "title": "Mobile-first server and channel list",
         "desc": "Tap your way through servers, categories, voice and publications. Install it as a PWA, no app store required.",
-        "alt": "Obelisk mobile screenshot: a channel conversation between two members, with the message box and the bottom navigation.",
+        "alt": "Obelisk mobile relay switcher: rotating cards with real relay banners, descriptions, and controls to browse or add a relay.",
         "cta": "Tour the mobile UI"
       }
     },
