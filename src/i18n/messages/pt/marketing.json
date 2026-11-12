@@ -304,7 +304,7 @@
       "title": "Vídeo de demonstração do Obelisk",
       "skyTitle": "Obelisk Sky: sua comunidade em uma ilha",
       "relayTitle": "Escolha seu relay",
-      "voiceTitle": "A conversa continua: voz e jogos",
+      "voiceTitle": "Mate e Alfajor em uma videochamada",
       "accessTitle": "Como funciona o acesso ao relay"
     },
     "preview": {
@@ -321,7 +321,7 @@
         "badge": "Celular",
         "title": "Lista de servidores e canais pensada para o celular",
         "desc": "Navegue por servidores, categorias, voz e publicações com o polegar. Instale como PWA, sem loja de aplicativos.",
-        "alt": "Seletor de relays do Obelisk no celular: cartões giratórios com banners reais, descrições e controles para navegar ou adicionar um relay.",
+        "alt": "Captura do Obelisk no celular: a conversa de um canal entre dois membros, com a caixa de mensagem e a navegação inferior.",
         "cta": "Fazer o tour no celular"
       }
     },
@@ -339,6 +339,10 @@
     "featured": {
       "heading": "Apresentado em",
       "cta": "Ver a palestra"
+    },
+    "hero": {
+      "desktopVideoAlt": "Videochamada real do Obelisk com Capitán Mate e Milo Alfajor, dois personagens animados e coloridos.",
+      "mobileVideoAlt": "Seletor de relays do Obelisk no celular: cartões giratórios com banners reais, descrições e controles para navegar ou adicionar um relay."
     }
   },
   "pqc": {

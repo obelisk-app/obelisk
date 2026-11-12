@@ -24,7 +24,7 @@ export default function ProductStage() {
             <span className="h-3 w-3 rounded-full bg-[#28c840]/80" />
             <span className="mx-auto truncate rounded-md bg-white/5 px-16 py-1 text-xs text-lc-muted">obelisk.ar/app</span>
           </div>
-          <HeroClip {...HERO_CLIPS.desktop} alt={t('marketing.landing.preview.desktop.alt')} sizes="(max-width: 1200px) 95vw, 1152px" />
+          <HeroClip {...HERO_CLIPS.desktop} alt={t('marketing.landing.hero.desktopVideoAlt')} sizes="(max-width: 1200px) 95vw, 1152px" />
         </figure>
       </Container>
     </section>

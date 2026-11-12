@@ -73,7 +73,7 @@ describe('landing route', async () => {
     expect(within(hero).getByText('No accounts. No backend. Your keys, your relays.')).toBeInTheDocument();
 
     const heroPreview = within(hero).getByTestId('hero-product-preview');
-    expect(within(heroPreview).getByAltText(/Obelisk mobile screenshot/i)).toHaveAttribute('src', '/landing/hero-mobile.webp');
+    expect(within(heroPreview).getByAltText(/Obelisk mobile relay switcher/i)).toHaveAttribute('src', '/landing/hero-mobile.webp');
     expect([...heroPreview.querySelectorAll('source')].map((s) => s.getAttribute('src'))).toEqual([
       '/landing/hero-mobile.webm', '/landing/hero-mobile.mp4',
     ]);
@@ -89,9 +89,9 @@ describe('landing route', async () => {
     const hero = screen.getByTestId('landing-hero');
     const stage = screen.getByTestId('landing-stage');
     expect(hero.nextElementSibling).toBe(stage);
-    expect(within(stage).getByAltText(/Obelisk desktop screenshot/i)).toHaveAttribute('src', '/landing/hero-desktop.webp');
+    expect(within(stage).getByAltText(/Real Obelisk video call/i)).toHaveAttribute('src', '/landing/character-call.webp');
     expect([...stage.querySelectorAll('source')].map((s) => s.getAttribute('src'))).toEqual([
-      '/landing/hero-desktop.webm', '/landing/hero-desktop.mp4',
+      '/landing/character-call.webm', '/landing/character-call.mp4',
     ]);
   });
 

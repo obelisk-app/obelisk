@@ -56,9 +56,9 @@ export const TECH_STACK: { name: string; descKey: MessageKey; color: string; ico
  */
 export const HERO_CLIPS = {
   desktop: {
-    webm: '/landing/hero-desktop.webm',
-    mp4: '/landing/hero-desktop.mp4',
-    poster: '/landing/hero-desktop.webp',
+    webm: '/landing/character-call.webm',
+    mp4: '/landing/character-call.mp4',
+    poster: '/landing/character-call.webp',
     width: 1280,
     height: 800,
   },

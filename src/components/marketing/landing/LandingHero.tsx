@@ -54,7 +54,7 @@ export default function LandingHero() {
         </div>
 
         <HeroProductPreview
-          mobileAlt={t('marketing.landing.preview.mobile.alt')}
+          mobileAlt={t('marketing.landing.hero.mobileVideoAlt')}
         />
       </Container>
     </section>
