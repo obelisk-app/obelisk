@@ -48,9 +48,6 @@ export const TECH_STACK: { name: string; descKey: MessageKey; color: string; ico
   { name: 'Tailwind v4', descKey: 'marketing.stack.item.tailwind', color: 'text-cyan-400', icon: '~', href: 'https://tailwindcss.com' }, // i18n-exempt: product and protocol names
 ];
 
-/** youtu.be/Z86oghQkUbk: the Obelisk walkthrough shown under the hero. */
-export const DEMO_VIDEO_ID = 'Z86oghQkUbk';
-
 /**
  * The hero's two looping product clips (muted, no captions), recorded from the
  * live app with the throwaway "Capitán Mate" account by obelisk-media's
@@ -70,7 +67,7 @@ export const HERO_CLIPS = {
     mp4: '/landing/hero-mobile.mp4',
     poster: '/landing/hero-mobile.webp',
     width: 412,
-    height: 914,
+    height: 915,
   },
 } as const;
 

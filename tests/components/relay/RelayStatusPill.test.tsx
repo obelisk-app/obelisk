@@ -246,3 +246,20 @@ it('opens relay and signing diagnostics from one mobile status square', () => {
   expect(screen.getByTestId('relay-status-active')).toBeInTheDocument();
   expect(screen.getByTestId('relay-status-manage')).toBeInTheDocument();
 });
+
+it('uses one dot and opens a dialog for mobile diagnostics', () => {
+  render(<LocaleProvider><MobileRelayStatus relays={[A]} activeRelay={A} onOpenSettings={vi.fn()} /></LocaleProvider>);
+  const trigger = screen.getByTestId('relay-status-pill');
+  expect(trigger.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(1);
+  expect(trigger.firstElementChild).toHaveClass('bg-lc-green');
+  fireEvent.click(trigger);
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+it('reports active relay rejection as red even when signing is idle', () => {
+  mocks.access = 'restricted';
+  render(<LocaleProvider><MobileRelayStatus relays={[A]} activeRelay={A} onOpenSettings={vi.fn()} /></LocaleProvider>);
+  expect(screen.getByTestId('relay-status-pill').firstElementChild).toHaveClass('bg-red-500');
+});

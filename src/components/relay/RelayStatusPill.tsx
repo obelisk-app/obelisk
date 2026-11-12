@@ -27,7 +27,7 @@ import Row from '@/components/ui/layout/Row';
 import Button from '@/components/ui/buttons/Button';
 import { useRef, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import AnchoredMenu from '../common/AnchoredMenu';
+import RelayStatusDetails from './RelayStatusDetails';
 import { useRelayStatusPill } from '@/hooks/relay/status/useRelayStatusPill';
 import { shortHost } from '@/utils/relay-url/url-host';
 import { relayLatencyLabel } from '@/utils/social/relay-status-rows';
@@ -95,17 +95,15 @@ export default function RelayStatusPill({
         data-signing-status={mobileSigning?.status}
         data-indicate={vm.reportsActive ? 'active' : 'social'}
       >
-        {mobileSigning && <span className={`h-3 w-3 rounded-full ${mobileSigning.dotClass}`} aria-hidden="true" />}
-        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${RELAY_STATE_DOT[vm.dotState]}`} aria-hidden="true" />
+        <span className={`shrink-0 rounded-full ${mobileSigning ? 'h-3 w-3' : 'h-1.5 w-1.5'} ${mobileSigning?.status === 'error' || vm.dotState === 'failed' || vm.dotState === 'offline' ? 'bg-red-500' : mobileSigning?.status === 'pending' || vm.dotState === 'connecting' ? 'bg-amber-400 animate-pulse' : RELAY_STATE_DOT[vm.dotState]}`} aria-hidden="true" />
         {vm.showCount && <span className="tabular-nums">{vm.summary.connected}/{vm.summary.total}</span>}
       </Button>
 
-      <AnchoredMenu
+      <RelayStatusDetails
+        mobile={!!mobileSigning}
         open={vm.open}
         onClose={vm.close}
         anchorRef={triggerRef}
-        width={272}
-        testId="relay-status-popover"
       >
         <div className="p-1">
           {children}
@@ -173,7 +171,7 @@ export default function RelayStatusPill({
             </TextButton>
           )}
         </div>
-      </AnchoredMenu>
+      </RelayStatusDetails>
     </>
   );
 }

@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { standardPageMetadata } from '@/utils/seo/standard';
 import { webApplicationNode } from '@/utils/seo/jsonld';
 import ShootingStars from '@/components/ui/animations/ShootingStars';
+import FeaturedSection from '@/components/marketing/landing/FeaturedSection';
 import CtaSection from '@/components/marketing/landing/CtaSection';
 import DemoVideoSection from '@/components/marketing/landing/DemoVideoSection';
 import FaqSection from '@/components/marketing/landing/FaqSection';
@@ -48,6 +49,7 @@ export default async function Page() {
           <LearnSection guides={guides} />
           <StackSection />
           <CtaSection />
+          <FeaturedSection />
           <FaqSection />
 
           <PostQuantumSection />

@@ -4758,3 +4758,7 @@
     border-radius: 12px;
   }
 }
+
+/* The main server banner has no back button: split its actions. */
+.obelisk-mobile .server-banner .server-banner-actions { left: 18px; }
+.obelisk-mobile .server-banner .action-search { margin-right: auto; }

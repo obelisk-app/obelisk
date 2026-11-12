@@ -1,10 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRelayInfo } from '@/hooks/relay/info/useRelayInfo';
 import { useRelayBranding } from '@/hooks/relay/branding/useRelayBranding';
-import { cacheGet } from '@/services/nostr-bridge';
 import { operatorPubkeyFromRelayInfo } from '@/services/relay/relay-info';
-import type { RelayBranding } from '@/services/relay/relay-branding';
-import { KIND_NIP78_APP_DATA } from '@/constants/nostr/nip-kinds';
 import { relayHostLabel } from '@/utils/relay-url/relay-host';
 import { useUnreadMentionCount } from '@/hooks/notifications/useNotificationSelectors';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
@@ -12,10 +9,8 @@ import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 export function useRelayDeckCard(url: string, active: boolean) {
   const { info, loaded } = useRelayInfo(url);
   const operator = operatorPubkeyFromRelayInfo(info);
-  // Only the active relay gets a live subscription. Other banners use the local cache.
-  const live = useRelayBranding(active ? url : null, operator ? [operator] : []);
-  const cached = useMemo(() => cacheGet<RelayBranding>(url, KIND_NIP78_APP_DATA, `obelisk:branding:${url}`)?.value, [url]);
-  const branding = active ? live : cached;
+  // Cards are mounted only while the picker is open; load operator branding for every visible relay.
+  const branding = useRelayBranding(url, operator ? [operator] : []);
   const [failedBanner, setFailedBanner] = useState('');
   const unread = useUnreadMentionCount(active ? null : normalizeRelayUrl(url));
   return {

@@ -300,8 +300,12 @@
   "landing": {
     "video": {
       "heading": "Watch the walkthrough",
-      "subtitle": "Two minutes through a real relay: log in with your keys, join a group, talk, zap.",
-      "title": "Obelisk walkthrough video"
+      "subtitle": "Explore Obelisk and its ecosystem: communities, voice, zaps, and a shared island.",
+      "title": "Obelisk walkthrough video",
+      "skyTitle": "Obelisk Sky: your community on an island",
+      "relayTitle": "Choose your relay",
+      "voiceTitle": "Keep hanging out: voice and games",
+      "accessTitle": "How relay access works"
     },
     "preview": {
       "heading": "See it in action",
@@ -331,7 +335,11 @@
         "alt": "Obelisk mobile screenshot: server list with categorised channels and a live voice room."
       }
     },
-    "voiceLive": "Voice live"
+    "voiceLive": "Voice live",
+    "featured": {
+      "heading": "Featured in",
+      "cta": "View the talk"
+    }
   },
   "pqc": {
     "heading": "Post-quantum messages",

@@ -1,8 +1,7 @@
 import Container from '@/components/ui/layout/Container';
 import { useTranslations } from 'next-intl';
-import YouTubeEmbed from '@/components/common/YouTubeEmbed';
+import VideoCarousel from './VideoCarousel';
 import Reveal from '@/components/ui/animations/Reveal';
-import { DEMO_VIDEO_ID } from '@/constants/marketing/landing';
 import Heading from '@/components/ui/layout/Heading';
 import Text from '@/components/ui/layout/Text';
 
@@ -25,12 +24,7 @@ export default function DemoVideoSection() {
             {t('marketing.landing.video.subtitle')}
           </Text>
         </div>
-        <YouTubeEmbed
-          videoId={DEMO_VIDEO_ID}
-          className="w-full shadow-2xl shadow-black/40"
-          title={t('marketing.landing.video.title')}
-          thumbnailRes="maxres"
-        />
+        <VideoCarousel />
       </Container>
     </Reveal>
   );

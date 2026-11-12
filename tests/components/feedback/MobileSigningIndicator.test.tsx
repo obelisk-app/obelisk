@@ -6,7 +6,7 @@ describe('MobileSigningIndicator', () => {
     vi.resetModules();
   });
 
-  it('shows green while idle because signing is healthy', async () => {
+  it('shows one amber dot while relay connectivity is unknown', async () => {
     const { default: MobileSigningIndicator } = await import('@/components/feedback/MobileSigningIndicator');
     const { LocaleProvider } = await import('@tests/support/intl');
 
@@ -16,8 +16,8 @@ describe('MobileSigningIndicator', () => {
       </LocaleProvider>,
     );
 
-    expect(screen.getByTestId('mobile-signing-indicator').firstElementChild)
-      .toHaveClass('bg-lc-green');
+    expect(screen.getByTestId('relay-status-pill').firstElementChild)
+      .toHaveClass('bg-amber-400');
   });
 
   it('changes color state and explains the event being signed', async () => {
@@ -35,14 +35,14 @@ describe('MobileSigningIndicator', () => {
         <MobileSigningIndicator />
       </LocaleProvider>,
     );
-    const indicator = screen.getByTestId('mobile-signing-indicator');
-    expect(indicator).toHaveAttribute('data-status', 'pending');
+    const indicator = screen.getByTestId('relay-status-pill');
+    expect(indicator).toHaveAttribute('data-signing-status', 'pending');
     fireEvent.click(indicator);
     expect(screen.getByText('Waiting for bunker signature')).toBeInTheDocument();
     expect(screen.getByText('Send message')).toBeInTheDocument();
 
     resolveActivity(id);
-    await waitFor(() => expect(indicator).toHaveAttribute('data-status', 'ok'));
+    await waitFor(() => expect(indicator).toHaveAttribute('data-signing-status', 'ok'));
   });
 });
 
@@ -59,23 +59,23 @@ describe('MobileSigningIndicator popup', () => {
         <MobileSigningIndicator />
       </LocaleProvider>,
     );
-    const open = () => fireEvent.click(screen.getByTestId('mobile-signing-indicator'));
+    const open = () => fireEvent.click(screen.getByTestId('relay-status-pill'));
 
     open();
     const close = screen.getByRole('button', { name: 'Close' });
     expect(close).toHaveAttribute('type', 'button');
     expect(close.textContent).not.toContain('×');
     fireEvent.click(close);
-    expect(screen.queryByTestId('mobile-signing-popup')).toBeNull();
+    expect(screen.queryByTestId('relay-status-popover')).toBeNull();
 
     open();
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(screen.queryByTestId('mobile-signing-popup')).toBeNull();
+    expect(screen.queryByTestId('relay-status-popover')).toBeNull();
 
     open();
-    fireEvent.click(screen.getByTestId('mobile-signing-popup'));
-    expect(screen.getByTestId('mobile-signing-popup')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('mobile-signing-popup-backdrop'));
-    expect(screen.queryByTestId('mobile-signing-popup')).toBeNull();
+    fireEvent.click(screen.getByTestId('relay-status-popover'));
+    expect(screen.getByTestId('relay-status-popover')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('dialog').previousElementSibling!);
+    expect(screen.queryByTestId('relay-status-popover')).toBeNull();
   });
 });

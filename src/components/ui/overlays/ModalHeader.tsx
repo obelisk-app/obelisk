@@ -35,6 +35,7 @@ export interface ModalHeaderProps {
   onClose?: () => void;
   /** Accessible name of the close button; defaults to "Close". */
   closeLabel?: string;
+  closeClassName?: string;
   variant?: ModalHeaderVariant;
   tone?: ModalHeaderTone;
   /** Ids for the modal's `aria-labelledby` / `aria-describedby`. */
@@ -59,7 +60,7 @@ const TONE_CLASS: Record<ModalHeaderTone, string> = {
  * `CloseButton` (the icon, not the glyph), with the focus ring and `type`.
  */
 export default function ModalHeader({
-  title, subtitle, icon, decorativeIcon = true, onBack, onClose, closeLabel, variant = 'bar', tone = 'danger',
+  title, subtitle, icon, decorativeIcon = true, onBack, onClose, closeLabel, closeClassName, variant = 'bar', tone = 'danger',
   titleId, subtitleId, titleTestId, children, className,
 }: ModalHeaderProps) {
   const t = useTranslations();
@@ -91,7 +92,7 @@ export default function ModalHeader({
         {subtitle !== undefined && <p id={subtitleId} className="break-words text-xs text-lc-muted">{subtitle}</p>}
       </div>
       {children}
-      {onClose && <CloseButton onClick={onClose} label={closeLabel} />}
+      {onClose && <CloseButton onClick={onClose} label={closeLabel} className={closeClassName} />}
     </header>
   );
 }

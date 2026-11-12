@@ -300,8 +300,12 @@
   "landing": {
     "video": {
       "heading": "Mirá el recorrido",
-      "subtitle": "Dos minutos en un relay real: entrá con tus claves, sumate a un grupo, hablá, mandá un zap.",
-      "title": "Video de recorrido por Obelisk"
+      "subtitle": "Recorré Obelisk y su ecosistema: comunidades, voz, zaps y una isla compartida.",
+      "title": "Video de recorrido por Obelisk",
+      "skyTitle": "Obelisk Sky: tu comunidad en una isla",
+      "relayTitle": "Elegí tu relay",
+      "voiceTitle": "La charla sigue: voz y juegos",
+      "accessTitle": "Cómo funciona el acceso al relay"
     },
     "preview": {
       "heading": "Miralo en acción",
@@ -331,7 +335,11 @@
         "alt": "Captura de Obelisk en el celular: lista de servidores con canales por categoría y una sala de voz en vivo."
       }
     },
-    "voiceLive": "Voz en vivo"
+    "voiceLive": "Voz en vivo",
+    "featured": {
+      "heading": "Presentado en",
+      "cta": "Ver la charla"
+    }
   },
   "pqc": {
     "heading": "Mensajes post-cuánticos",
