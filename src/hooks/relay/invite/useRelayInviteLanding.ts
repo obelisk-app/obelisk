@@ -16,12 +16,17 @@ import { relayHostLabel } from '@/utils/relay-url/relay-host';
 export function useRelayInviteLanding(rawCode: string, relay: string) {
   const router = useRouter();
   const code = useMemo(() => cleanInviteCode(rawCode), [rawCode]);
+  const concord = rawCode.startsWith('naddr1');
 
   useEffect(() => {
+    if (concord) {
+      router.replace(`/app#concord-invite=${encodeURIComponent(window.location.href)}`);
+      return;
+    }
     if (!code) return;
     storeInvite(code, relay);
     router.replace(`/app?relay=${encodeURIComponent(relayHostLabel(relay))}`);
-  }, [code, relay, router]);
+  }, [code, concord, relay, router]);
 
-  return { valid: code !== null, goToApp: () => router.replace('/app') };
+  return { valid: concord || code !== null, goToApp: () => router.replace('/app') };
 }

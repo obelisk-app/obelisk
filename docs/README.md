@@ -18,6 +18,7 @@ Start with [repository setup](../README.md#run-locally) and [AGENTS.md](../AGENT
 - [Internationalization](architecture/i18n.md): locale URLs, page-owned scopes, translation payloads and SEO.
 - [Data system](architecture/data-system.md): login, relay access, caches, loading priorities and local storage.
 - [Read state](architecture/read-state.md): read cursors, mentions and encrypted synchronization.
+- [Concord integration](features/concord.md): current implementation, encrypted storage, transport isolation and outstanding validation.
 - [Voice](features/voice/README.md), [DMs](features/direct-messages.md), [social feeds](features/social-feeds.md) and [payments](features/bitcoin-zaps-nwc.md).
 - [Client issues](operations/known-bugs.md) and [SFU issues](operations/sfu-known-bugs.md).
 

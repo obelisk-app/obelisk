@@ -1,4 +1,5 @@
 export { getBridge, getBridgeImpl, logoutPageSession, type BridgeImpl } from './facade/client';
+export { getConcordForBridge } from './concord/session';
 export { isImportableRelayUrl } from './relay/relay-list';
 // The page's relay hub, for a service that rides it under its own identity (a wallet connection).
 export { pageRelayHub } from './facade/page-hub';

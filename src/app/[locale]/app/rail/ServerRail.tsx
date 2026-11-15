@@ -1,5 +1,7 @@
 'use client';
 
+import ConcordLaunch from '@/components/chat/concord/ConcordLaunch';
+
 /**
  * Discord-style server rail. Mirrors obelisk's identity bar:
  *   ┌──┐
@@ -69,6 +71,7 @@ export default function ServerRail({
         />
       )}
 
+      <ConcordLaunch />
       <div className="my-1 h-px w-8 bg-lc-border" />
 
       {/* Only the first tile carries the hint: the others are the same

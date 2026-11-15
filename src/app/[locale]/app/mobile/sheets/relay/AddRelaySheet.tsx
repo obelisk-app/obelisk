@@ -1,5 +1,7 @@
 'use client';
 
+import ConcordLaunch from '@/components/chat/concord/ConcordLaunch';
+
 import Button from '@/components/ui/buttons/Button';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
 import { useTranslations } from 'next-intl';
@@ -43,6 +45,7 @@ export function AddRelaySheet({ close }: { close: () => void }) {
           <CustomRelayForm presentation="sheet" onAdded={close} />
         )}
       </div>
+      <ConcordLaunch />
       <SheetActions onCancel={close} dismiss="close" />
     </Sheet>
   );

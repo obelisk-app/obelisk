@@ -1,5 +1,7 @@
 'use client';
 
+import ConcordLaunch from '@/components/chat/concord/ConcordLaunch';
+
 import { type JsGroup } from '@/services/nostr-bridge';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
 import { useServerScreen } from '@/hooks/shell/mobile/screens/server/useServerScreen';
@@ -40,6 +42,7 @@ export function ServerScreen({
             onOpenMenu={vm.openActiveRelayMenu}
           />
 
+      <ConcordLaunch />
           <div className="channel-list native-scroll-y" ref={channelListRef}>
             <ServerChannelList vm={vm} />
           </div>

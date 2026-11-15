@@ -73,7 +73,7 @@ describe('landing route', async () => {
     expect(within(hero).getByText('No accounts. No backend. Your keys, your relays.')).toBeInTheDocument();
 
     const heroPreview = within(hero).getByTestId('hero-product-preview');
-    expect(within(heroPreview).getByAltText(/Obelisk mobile screenshot/i)).toHaveAttribute('src', '/landing/hero-mobile.webp');
+    expect(within(heroPreview).getByAltText(/Obelisk mobile relay switcher/i)).toHaveAttribute('src', '/landing/hero-mobile.webp');
     expect([...heroPreview.querySelectorAll('source')].map((s) => s.getAttribute('src'))).toEqual([
       '/landing/hero-mobile.webm', '/landing/hero-mobile.mp4',
     ]);
@@ -125,7 +125,7 @@ describe('landing route', async () => {
       'src',
       '/pictures-for-posts/desktop-channel-chat.png',
     );
-    expect(within(mobilePreview).getByAltText(/Obelisk mobile screenshot/i)).toHaveAttribute(
+    expect(within(mobilePreview).getByAltText(/Obelisk mobile relay switcher/i)).toHaveAttribute(
       'src',
       '/pictures-for-posts/mobile-channel-chat.png',
     );

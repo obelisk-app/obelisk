@@ -142,7 +142,7 @@ describe('local-data inventory guard', () => {
       .filter((p) => /\bindexedDB\b/.test(stripComments(readFileSync(p, 'utf8'))))
       .map((p) => relative(SRC, p))
       .sort();
-    expect(idb).toEqual(['lib/crypto/session-vault.ts', 'services/nostr-bridge/dm/store-db.ts']);
+    expect(idb).toEqual(['lib/crypto/session-vault.ts', 'services/nostr-bridge/concord/storage.ts', 'services/nostr-bridge/dm/store-db.ts']);
     // Each of them names its database in the inventory.
     for (const file of idb) {
       expect(LOCAL_DATA.some((e) => e.area === 'indexedDB' && e.source === `src/${file}`), file).toBe(true);

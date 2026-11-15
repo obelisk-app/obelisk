@@ -89,6 +89,8 @@ The owner's folder rules, enforced by the guard tests listed under Testing (deta
 
 ## The relay layer
 
+Concord integration is in progress alongside NIP-29. Its session runtime and virtual SDK sockets live in `src/services/nostr-bridge/concord/`; the workspace lives in `src/components/chat/concord/`. Read [the implementation status and storage contract](docs/features/concord.md) before extending it. Concord alone uses its community-defined relay set through an isolated never-auth hub identity. Do not apply that exception to NIP-29 or put Concord secrets/decrypted state in `bridgeCache`. The dedicated branch is `feat/concord-dual-protocol`; test deployments use the persistent test directory described above.
+
 ### RelayHub (`@nostr-wot/relay/hub`)
 
 The SDK's shared connection owner for the page. Its implementation and protocol tests live in the SDK relay package (`packages/relay/src/hub`, `packages/relay/test/hub`); Obelisk keeps its integration tests here. The bridge, the social pool, the background watch and DM calls make every REQ, query and publish through `hub.subscribe` / `hub.query` / `hub.publish`. App callers import the published `@nostr-wot/relay/hub` subpath directly and share the instance configured by the bridge.

@@ -1,5 +1,7 @@
 'use client';
 
+import ConcordLaunch from '@/components/chat/concord/ConcordLaunch';
+
 import List from '@/components/ui/layout/List';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
 import { useAddRelay } from '@/hooks/relay/rail/useAddRelay';
@@ -31,6 +33,7 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
         </AddRelayTabButton>
       </div>
 
+      <ConcordLaunch />
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         {vm.tab === 'suggested' ? (
           <List marker="none" spacing="none" className="flex flex-col gap-2">

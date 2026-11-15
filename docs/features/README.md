@@ -5,6 +5,7 @@ These documents describe feature contracts and code maps. Cross-cutting ownershi
 | Area | References |
 |---|---|
 | Direct messages | [DM implementation](direct-messages.md), [metadata privacy](dm-metadata-privacy.md) |
+| Concord communities | [Implementation status, storage and testing](concord.md) |
 | Voice and calls | [Voice index](voice/README.md), [SFU](sfu-system.md) |
 | Social surfaces | [Feeds and profiles](social-feeds.md), [search](search.md) |
 | Relay administration | [Layout and branding](relay-layout-and-branding.md), [roles](relay-roles.md), [server banner](server-banner.md), [invite links](relay-invites.md) |

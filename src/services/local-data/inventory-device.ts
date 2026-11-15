@@ -4,6 +4,7 @@
  * Unlike the caches, some of it exists nowhere else.
  */
 import { VAULT_DB } from '@/lib/crypto/session-vault';
+import { CONCORD_DB } from '@/constants/nostr-bridge/concord';
 import { GA_COOKIE, GA_COOKIE_PREFIX } from '@/constants/analytics/gtag';
 import type { LocalDataEntry } from '@/types/local-data/inventory';
 
@@ -20,6 +21,12 @@ function pref(id: string, key: string, match: 'exact' | 'prefix', holds: string,
 }
 
 export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
+  {
+    id: 'concord', area: 'indexedDB', key: CONCORD_DB, match: 'exact', category: 'login',
+    holds: 'Encrypted Concord memberships, keys and synchronization state, scoped per account.',
+    why: 'Restores encrypted communities after reload without plaintext secrets on disk.',
+    perAccount: true, sensitive: true, source: 'src/services/nostr-bridge/concord/storage.ts',
+  },
   // ---- preferences and layout ---------------------------------------------
   pref('preferences', 'obelisk:preferences', 'exact', 'App settings: sounds, notifications, feed, call and social relays, DM opt-in, post-quantum.', 'src/services/preferences/preferences.ts'),
   pref('appearance', 'obelisk:appearance', 'exact', 'Device colors and bubble motion.', 'src/services/preferences/appearance.ts'),
