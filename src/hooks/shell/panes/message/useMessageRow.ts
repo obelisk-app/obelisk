@@ -1,5 +1,6 @@
 'use client';
 
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import type { MouseEvent } from 'react';
 import type { JsMessage } from '@/services/nostr-bridge';
 import { useMessageAuthor } from '@/hooks/chat/message/useMessageAuthor';
@@ -21,10 +22,12 @@ export function useMessageRow({ msg, groupId, isAdmin, reactions }: {
   isAdmin: boolean;
   reactions: ReadonlyArray<MessageReactionInput>;
 }) {
+  const protocol = useChannelProtocol();
   const meta = useMessageAuthor(msg.pubkey);
   const menus = useMessageRowMenus();
   const actions = useMessageRowActions({ msg, groupId, isAdmin, reactions, meta });
   return {
+    privateChannel: !!protocol,
     meta,
     menus,
     actions,

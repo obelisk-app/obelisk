@@ -1,5 +1,6 @@
 'use client';
 
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
 import { useMemo, useSyncExternalStore } from 'react';
 import { nostrActions, useCurrentRelayUrl, useMyMutes, type JsMessage, type JsUserMetadata } from '@/services/nostr-bridge';
@@ -42,14 +43,15 @@ export function useMessageRowActions({
   meta: JsUserMetadata | null | undefined;
 }) {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
   const relay = useCurrentRelayUrl();
   // Quick reactions = your most recent picks (shared snapshot across rows).
   const recentEmojis = useSyncExternalStore(subscribeRecentEmojis, getRecentEmojisSnapshot, getServerRecentEmojisSnapshot);
   const { zapPresets } = usePreferences();
   const quick4 = useMemo(() => [
-    ...zapPresets.map((p) => ({ char: p.emoji, amountSats: p.amountSats })),
+    ...(protocol ? [] : zapPresets).map((p) => ({ char: p.emoji, amountSats: p.amountSats })),
     ...quickReactions(recentEmojis, 4).filter((e) => !zapPresets.some((p) => p.emoji === e.char)),
-  ], [recentEmojis, zapPresets]);
+  ], [recentEmojis, zapPresets, protocol]);
   const myPubkey = useMyPubkey();
   const isOwn = msg.pubkey === myPubkey;
   const myMutes = useMyMutes();
@@ -101,6 +103,7 @@ export function useMessageRowActions({
 
   return {
     msg, groupId, reactions,
+    privateChannel: !!protocol,
     isOwn,
     isMuted,
     quick4,

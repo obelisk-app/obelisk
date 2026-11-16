@@ -389,6 +389,10 @@
     "category": "Categoría",
     "confirmRemoval": "Eliminar este miembro y rotar las claves de acceso futuro. Las copias existentes no se pueden borrar.",
     "banRotate": "Bloquear y rotar claves",
-    "removalFailed": "La eliminación no terminó. El bloqueo puede estar publicado; reintentá para completar la rotación."
+    "removalFailed": "La eliminación no terminó. El bloqueo puede estar publicado; reintentá para completar la rotación.",
+    "reviewReaders": "Elegí quién conserva acceso a {channel}",
+    "encryptedCommunity": "Comunidad cifrada (Concord)",
+    "relays": "Relays (3)",
+    "settings": "Configuración de la comunidad"
   }
 }

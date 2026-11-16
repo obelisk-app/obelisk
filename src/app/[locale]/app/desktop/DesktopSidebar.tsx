@@ -1,4 +1,6 @@
 'use client';
+import { useConcordClient } from '@/hooks/chat/concord/useConcordClient';
+import ConcordSurface from '@/app/[locale]/app/concord/ConcordSurface';
 
 import Text from '@/components/ui/layout/Text';
 import { useTranslations } from 'next-intl';
@@ -28,6 +30,7 @@ export function DesktopSidebar({
   relay, conn, view, setView, railMode, leaveDms, onToggleFeed, onSidebarWidth,
 }: Props) {
   const t = useTranslations();
+  const concord = useConcordClient();
   const vm = useDesktopSidebar({ relay, setView });
   return (
     <div className="flex">
@@ -37,8 +40,8 @@ export function DesktopSidebar({
         onPickFeed={onToggleFeed}
         onPickRelay={vm.pickRelay}
       />
-      {view.kind !== 'feed' && <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={onSidebarWidth}>
-        {view.kind === 'dm' ? (
+      {(concord.open || view.kind !== 'feed') && <ResizablePane storageKey={SIDEBAR_KEY} defaultWidth={264} min={200} max={500} onWidthChange={onSidebarWidth}>
+        {concord.open && concord.community ? <ConcordSurface pane="sidebar" /> : view.kind === 'dm' ? (
           <DMOptInBoundary surface="sidebar" secondaryLabel={t('dm.optIn.notNow')} onSecondary={leaveDms}
             fallback={<Text as="div" tone="muted" size="sm" className="p-4">{t('dm.optIn.title')}</Text>}>
             <DmList

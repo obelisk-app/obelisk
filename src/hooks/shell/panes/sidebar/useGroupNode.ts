@@ -1,5 +1,6 @@
 'use client';
 
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useState, type MouseEvent } from 'react';
 import { useCurrentRelayUrl, type JsGroup } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/hooks/session/useSession';
@@ -25,6 +26,7 @@ export function useGroupNode({ group, view, depth, childrenByParent, groupsById,
   groupsById: Readonly<Record<string, JsGroup>>;
   distanceById?: Readonly<Record<string, number | null>>;
 }) {
+  const protocol = useChannelProtocol();
   const childIds = childrenByParent[group.id] ?? [];
   const active = view.kind === 'group' && view.groupId === group.id;
   const myPubkey = useMyPubkey();
@@ -74,7 +76,7 @@ export function useGroupNode({ group, view, depth, childrenByParent, groupsById,
       hasUnread: highlights.unread > 0 || mentionCards > 0,
     } : null,
     openMenu: (e: MouseEvent) => {
-      if (!relay) return;
+      if (!relay || protocol) return;
       e.preventDefault();
       setMenuAt({ x: e.clientX, y: e.clientY });
     },

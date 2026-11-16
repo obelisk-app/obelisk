@@ -1,6 +1,7 @@
 'use client';
 
-import ConcordLaunch from '@/components/chat/concord/ConcordLaunch';
+import ConcordAddCommunity from '@/app/[locale]/app/concord/ConcordAddCommunity';
+import Toggle from '@/components/ui/forms/Toggle';
 
 import List from '@/components/ui/layout/List';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
@@ -13,9 +14,9 @@ import { CustomRelayForm } from '@/components/relay/CustomRelayForm';
 import { SuggestedRelayItem } from './SuggestedRelayItem';
 
 /** Add a relay to the rail: pick a suggested one, or type a URL. */
-export function AddRelayModal({ onClose }: { onClose: () => void }) {
+export function AddRelayModal({ onClose, initialConcord = false }: { onClose: () => void; initialConcord?: boolean }) {
   const t = useTranslations();
-  const vm = useAddRelay();
+  const vm = useAddRelay(initialConcord);
 
   return (
     <Modal
@@ -24,18 +25,17 @@ export function AddRelayModal({ onClose }: { onClose: () => void }) {
     >
       <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} />
 
-      <div className="flex shrink-0 border-b border-lc-border px-5">
+      <div className="flex items-center justify-between px-5 py-4"><span>{t('chat.concord.encryptedCommunity')}</span><Toggle aria-label={t('chat.concord.encryptedCommunity')} checked={vm.concord} onChange={vm.setConcord} /></div>
+      {!vm.concord && <div className="flex shrink-0 border-b border-lc-border px-5">
         <AddRelayTabButton active={vm.tab === 'suggested'} onClick={() => vm.setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}
         </AddRelayTabButton>
         <AddRelayTabButton active={vm.tab === 'custom'} onClick={() => vm.setTab('custom')}>
           {t('shell.rail.addModal.custom')}
         </AddRelayTabButton>
-      </div>
-
-      <ConcordLaunch />
+      </div>}
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-        {vm.tab === 'suggested' ? (
+        {vm.concord ? <ConcordAddCommunity onClose={onClose} /> : vm.tab === 'suggested' ? (
           <List marker="none" spacing="none" className="flex flex-col gap-2">
             {SUGGESTED_RELAYS.map((r) => (
               <SuggestedRelayItem

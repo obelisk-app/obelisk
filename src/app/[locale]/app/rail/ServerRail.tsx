@@ -1,6 +1,6 @@
 'use client';
 
-import ConcordLaunch from '@/components/chat/concord/ConcordLaunch';
+import ConcordRail from '@/app/[locale]/app/concord/ConcordRail';
 
 /**
  * Discord-style server rail. Mirrors obelisk's identity bar:
@@ -45,7 +45,7 @@ export default function ServerRail({
         active={mode.kind === 'dm'}
         title={t('shell.rail.directMessages')}
         hint="rail-dm"
-        onClick={onPickDM}
+        onClick={() => vm.leaveConcord(onPickDM)}
         icon={
           <SendIcon size={22} strokeWidth={2} />
         }
@@ -63,7 +63,7 @@ export default function ServerRail({
           active={mode.kind === 'feed'}
           title={t('shell.rail.nostrFeed')}
           hint="rail-feed"
-          onClick={onPickFeed}
+          onClick={() => vm.leaveConcord(onPickFeed)}
           icon={
             <GlobeIcon size={22} strokeWidth={2} />
           }
@@ -71,7 +71,7 @@ export default function ServerRail({
         />
       )}
 
-      <ConcordLaunch />
+      <ConcordRail />
       <div className="my-1 h-px w-8 bg-lc-border" />
 
       {/* Only the first tile carries the hint: the others are the same
@@ -82,7 +82,7 @@ export default function ServerRail({
           url={url}
           active={vm.isActive(url)}
           hint={index === 0 ? 'rail-relay' : undefined}
-          onClick={() => onPickRelay(url)}
+          onClick={() => vm.leaveConcord(() => onPickRelay(url))}
           onRemove={() => vm.remove(url)}
         />
       ))}

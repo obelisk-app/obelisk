@@ -1,3 +1,4 @@
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
 import type { MessageSticker } from '@/utils/media/tags/sticker-tags';
@@ -22,6 +23,7 @@ export interface ComposerUploadTargets {
  */
 export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNote, setSendError, isCurrent = () => true }: ComposerUploadTargets) {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
   const [uploading, setUploading] = useState(false);
 
   async function onPickFiles(files: File[]) {
@@ -33,7 +35,7 @@ export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNot
     setSendError(null);
     try {
       const { uploadToBlossom } = await import('@/services/media/blossom');
-      const urls = await Promise.all(batch.map((f) => uploadToBlossom(f)));
+      const urls = await Promise.all(batch.map((f) => protocol ? protocol.upload(f) : uploadToBlossom(f)));
       if (!isCurrent()) return;
       setDraft((d) => appendMediaUrls(d, urls));
     } catch (err) {
@@ -49,11 +51,11 @@ export function useComposerUploads({ setDraft, setDraftSticker, setDraftVoiceNot
     setSendError(null);
     try {
       const { uploadToBlossom } = await import('@/services/media/blossom');
-      const url = await uploadToBlossom(file);
+      const url = await (protocol ? protocol.upload(file) : uploadToBlossom(file));
       if (!isCurrent()) return;
       setDraft(url);
       setDraftSticker(null);
-      setDraftVoiceNote({ url, durationSeconds });
+      setDraftVoiceNote(protocol ? null : { url, durationSeconds });
     } catch (err) {
       setSendError(errorText(t, err, 'chat.composer.uploadFailed'));
     } finally {

@@ -1,5 +1,6 @@
 'use client';
 
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { findZapPreset } from '@/utils/wallet/zap-presets';
 import { useQuickZap } from '@/hooks/chat/zaps/useQuickZap';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
@@ -53,6 +54,7 @@ export function useMessageReactions(
   reactions: ReadonlyArray<MessageReactionInput>,
   myPubkey: string | null,
 ): MessageReactions {
+  const protocol = useChannelProtocol();
   const quickZap = useQuickZap();
   const { zapPresets } = usePreferences();
   const meta = useMessageAuthor(msg.pubkey);
@@ -72,6 +74,7 @@ export function useMessageReactions(
     reactionId?: string | null,
   ) => {
     try {
+      if (protocol) { await protocol.react(msg.id, emoji, reactionId); return; }
       const preset = findZapPreset(zapPresets, emoji);
       if (preset) {
         await quickZap({ messageId: msg.id, recipientPubkey: msg.pubkey, groupId,
@@ -88,7 +91,7 @@ export function useMessageReactions(
     } catch (err) {
       console.warn('[reactions] toggle failed', err);
     }
-  }, [groupId, msg.id, msg.pubkey, myReactedEmojis, serverEmojis, quickZap, zapPresets, meta]);
+  }, [protocol, groupId, msg.id, msg.pubkey, myReactedEmojis, serverEmojis, quickZap, zapPresets, meta]);
 
   return { grouped, myReactedEmojis, toggle };
 }
@@ -116,7 +119,8 @@ export function useMessageModeration(
   canDeleteOwn: boolean,
   labels: ModerationLabels,
 ): MessageModeration {
-  const canDelete = !!groupId && (canModerate || canDeleteOwn);
+  const protocol = useChannelProtocol();
+  const canDelete = protocol ? protocol.canDelete(msg.id) : !!groupId && (canModerate || canDeleteOwn);
 
   const deleteMessage = useCallback(async () => {
     if (!groupId || !canDelete) return false;
@@ -126,10 +130,11 @@ export function useMessageModeration(
       confirmLabel: labels.confirmLabel,
     });
     if (!ok) return false;
-    if (canModerate) await nostrActions.deleteGroupEvent(groupId, msg.id);
+    if (protocol) await protocol.remove(msg.id);
+    else if (canModerate) await nostrActions.deleteGroupEvent(groupId, msg.id);
     else await nostrActions.removeMessage(groupId, msg.id);
     return true;
-  }, [canDelete, canModerate, groupId, labels, msg.id]);
+  }, [protocol, canDelete, canModerate, groupId, labels, msg.id]);
 
   const retry = useCallback(() => {
     if (!groupId || !msg.clientTag) return;

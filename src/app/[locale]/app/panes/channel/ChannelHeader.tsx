@@ -1,5 +1,6 @@
 'use client';
 
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import Text from '@/components/ui/layout/Text';
 import Row from '@/components/ui/layout/Row';
 import type { JsGroup } from '@/services/nostr-bridge';
@@ -21,6 +22,7 @@ type Props = {
 /** The channel's title bar: name, admin badge, settings, members toggle, invite link, search. */
 export function ChannelHeader({ groupId, group, isAdmin, showMembers, onToggleMembers, onOpenSettings }: Props) {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-lc-border bg-lc-dark px-5 shadow-sm">
       <div className="flex min-w-0 items-center gap-3">
@@ -61,11 +63,11 @@ export function ChannelHeader({ groupId, group, isAdmin, showMembers, onToggleMe
         >
           <UsersIcon size={20} strokeWidth={2} />
         </IconButton>
-        <CopyInviteLinkButton groupId={groupId} />
-        <SearchBar
+        {!protocol && <CopyInviteLinkButton groupId={groupId} />}
+        {!protocol && <SearchBar
           serverName={group?.name ?? t('common.channel')}
           activeGroupId={groupId}
-        />
+        />}
       </Row>
     </header>
   );

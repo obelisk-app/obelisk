@@ -82,7 +82,7 @@ export function MessageToolbar({
       >
         <ReplyIcon size={18} />
       </IconButton>
-      <IconButton
+      {!actions.privateChannel && <IconButton
         tone="ghost"
         size="8"
         shape="square"
@@ -92,7 +92,7 @@ export function MessageToolbar({
         data-testid="message-forward"
       >
         <ForwardIcon size={18} />
-      </IconButton>
+      </IconButton>}
       <IconButton
         ref={moreBtnRef}
         tone="ghost"

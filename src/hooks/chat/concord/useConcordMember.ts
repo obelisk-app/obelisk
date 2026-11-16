@@ -5,7 +5,7 @@ import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import { concordMemberForm } from '@/services/chat/concord/member-form';
 import { PERM } from '@/constants/chat/concord';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
-import { banConcordMember } from '@/services/chat/concord/removal';
+import { concordRemovalForm } from '@/services/chat/concord/removal';
 
 export function useConcordMember(community: ConcordCommunity, pubkey: string) {
   const author = useAuthor(pubkey);
@@ -23,10 +23,16 @@ export function useConcordMember(community: ConcordCommunity, pubkey: string) {
     });
     return () => { permissions.unsubscribe(); bans.unsubscribe(); subscription.unsubscribe(); };
   }, [community, pubkey, adopt]);
-  const removal = useForm({ initial: { confirmed: false }, ready: values => values.confirmed,
-    submit: () => banConcordMember(community, pubkey), failure: 'chat.concord.removalFailed', resetOnSuccess: true });
+  const removal = useForm(concordRemovalForm(community, pubkey));
+  const privateChannels = state.channels.filter(channel => channel.private);
   return {
-    removal, canBan: canBan && !state.channels.some(channel => channel.private),
+    removal, privateChannels,
+    readers: [...state.members].filter(member => member !== pubkey && !state.banlist.has(member)).map(member => ({ pubkey: member, label: shortNpubLabel(member) })),
+    keepReader: (channelId: string, member: string, checked: boolean) => {
+      const previous = removal.values.readers[channelId] ?? [];
+      removal.set('readers', { ...removal.values.readers, [channelId]: checked ? [...new Set([...previous, member])] : previous.filter(value => value !== member) });
+    },
+    canBan: canBan && (!privateChannels.length || community.canDo(PERM.MANAGE_CHANNELS) && privateChannels.every(channel => community.material.channels.some(key => key.id === channel.channel_id))),
     form, canManage, name: author.displayName || author.name || shortNpubLabel(pubkey),
     roles: [...state.roles.values()].filter(role => !role.deleted && role.scope.kind === 'server'),
     toggle: (id: string, checked: boolean) => form.set('roles', checked ? [...new Set([...form.values.roles, id])] : form.values.roles.filter(role => role !== id)),

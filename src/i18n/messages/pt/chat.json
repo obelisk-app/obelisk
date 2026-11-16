@@ -389,6 +389,10 @@
     "category": "Categoria",
     "confirmRemoval": "Remover este membro e trocar as chaves de acesso futuro. Cópias existentes não podem ser apagadas.",
     "banRotate": "Banir e trocar chaves",
-    "removalFailed": "A remoção não terminou. O banimento pode estar publicado; tente novamente para concluir a troca das chaves."
+    "removalFailed": "A remoção não terminou. O banimento pode estar publicado; tente novamente para concluir a troca das chaves.",
+    "reviewReaders": "Escolha quem mantém acesso a {channel}",
+    "encryptedCommunity": "Comunidade criptografada (Concord)",
+    "relays": "Relays (3)",
+    "settings": "Configurações da comunidade"
   }
 }

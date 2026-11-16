@@ -9,6 +9,8 @@
  * history are `usePhoneShell`; this file renders the frame.
  */
 
+import { useConcordClient } from '@/hooks/chat/concord/useConcordClient';
+import ConcordMobile from '@/app/[locale]/app/concord/ConcordMobile';
 import ProfilePopover from '@/components/chat/profile/ProfilePopover';
 import HintHost from '@/components/hints/HintHost';
 import MessageZapModal from '@/components/chat/zaps/MessageZapModal';
@@ -23,6 +25,7 @@ import { RehydratingScreen } from './screens/status/RehydratingScreen';
 // stylesheet, not in this dynamic chunk's late-arriving sidecar.
 
 export default function MobileShell() {
+  const concord = useConcordClient();
   const { dragLayerRef, screensHostRef, ...vm } = usePhoneShell();
 
   // Guests: full-screen login
@@ -48,7 +51,7 @@ export default function MobileShell() {
     >
       <MessageZapModal />
       <LazyGameModalHost />
-      <MobileScreensHost
+      {concord.open && concord.community ? <ConcordMobile /> : <MobileScreensHost
         hostRef={screensHostRef}
         dragLayerRef={dragLayerRef}
         isDragging={vm.carousel.isDragging}
@@ -58,7 +61,7 @@ export default function MobileShell() {
         slideClass={vm.slideClass}
         closeSheet={vm.closeSheet}
         openZap={vm.screenProps.openZap}
-      />
+      />}
       <MobileVoiceStatusSlot screen={vm.nav.screen} kbInset={vm.kbInset} />
       {!vm.hideNav && <BottomNav nav={vm.nav} onTabPress={vm.carousel.onTabPress} dmBadge={vm.dmBadge} inboxBadge={vm.inboxBadge} />}
       <HintHost surface={vm.hintSurface} shell="mobile" />

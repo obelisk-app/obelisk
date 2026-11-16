@@ -19,7 +19,7 @@
 import type { ReactNode } from 'react';
 import { BridgeProvider } from '@/services/nostr-bridge';
 import RuntimeTranslator from '@/components/i18n/RuntimeTranslator';
-import ConcordRoot from '@/components/chat/concord/ConcordRoot';
+import ConcordRoot from '@/app/[locale]/app/concord/ConcordRoot';
 import RelayInviteRoot from '@/components/relay/RelayInviteRoot';
 
 export default function AppProviders({ children }: { children: ReactNode }) {
@@ -27,8 +27,7 @@ export default function AppProviders({ children }: { children: ReactNode }) {
     <BridgeProvider>
       <RuntimeTranslator />
       <RelayInviteRoot />
-      <ConcordRoot />
-      {children}
+      <ConcordRoot>{children}</ConcordRoot>
     </BridgeProvider>
   );
 }

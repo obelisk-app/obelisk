@@ -63,11 +63,11 @@ export function MessageMenu({ msg, actions, menus, isAdmin, onReply }: {
         />
         <MenuDivider />
         <MenuItem icon={<ReplyIcon />} label={t('shell.desktop.message.reply')} onClick={vm.reply} testId="message-menu-reply" />
-        <MenuItem icon={<ForwardIcon />} label={t('chat.message.forward')} onClick={vm.forward} testId="message-menu-forward" />
+        {!actions.privateChannel && <MenuItem icon={<ForwardIcon />} label={t('chat.message.forward')} onClick={vm.forward} testId="message-menu-forward" />}
         <MenuItem
           icon={<ZapIcon />}
           label={t('shell.desktop.message.zap')}
-          disabled={actions.isOwn}
+          disabled={actions.isOwn || actions.privateChannel}
           onClick={vm.zap}
           testId="message-menu-zap"
         />
@@ -81,6 +81,7 @@ export function MessageMenu({ msg, actions, menus, isAdmin, onReply }: {
         <MenuItem
           icon={<LinkIcon />}
           label={t('shell.desktop.message.copyLink')}
+          disabled={actions.privateChannel}
           onClick={vm.copyLink}
           testId="message-menu-copy-link"
         />
@@ -88,7 +89,7 @@ export function MessageMenu({ msg, actions, menus, isAdmin, onReply }: {
         <MenuItem
           icon={<BellOffIcon />}
           label={actions.isMuted ? t('shell.desktop.message.unmuteUser') : t('shell.desktop.message.muteUser')}
-          disabled={actions.isOwn}
+          disabled={actions.isOwn || actions.privateChannel}
           onClick={vm.toggleMute}
           testId="message-menu-mute"
         />

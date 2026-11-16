@@ -9,6 +9,7 @@ import {
   type ClipboardEvent,
   type KeyboardEvent,
 } from 'react';
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useCurrentRelayUrl } from '@/services/nostr-bridge';
 import {
   applyMentionToDraft,
@@ -78,7 +79,9 @@ export function useChannelComposer({
   onOpenNewGame,
   maxMentionResults = 8,
 }: ChannelComposerOptions): ChannelComposer {
-  const relay = useCurrentRelayUrl();
+  const currentRelay = useCurrentRelayUrl();
+  const protocol = useChannelProtocol();
+  const relay = protocol?.scope ?? currentRelay;
   const serverEmojis = useChatStore((s) => s.serverEmojis);
 
   const entry = useConversationDraft('channel', groupId, relay);
@@ -113,7 +116,7 @@ export function useChannelComposer({
   const [slashIndex, setSlashIndex] = useState(0);
   const {
     slashSections, slashRail, slashResults, slashFilter, setSlashFilterState, setRecentSlash, botProfiles,
-  } = useSlashCatalog(relay, slashQuery, metaMap);
+  } = useSlashCatalog(protocol ? '' : relay, protocol ? null : slashQuery, metaMap);
   const activeSlashCommand = useMemo<SlashCommand | null>(() => builtinCommandOf(draft), [draft]);
 
   // Stale @-state or slash state from a previous channel must not bleed into

@@ -1,5 +1,6 @@
 'use client';
 
+import ConcordMessageBody from '@/components/chat/concord/ConcordMessageBody';
 import TextButton from '@/components/ui/buttons/TextButton';
 
 import Text from '@/components/ui/layout/Text';
@@ -73,7 +74,7 @@ export const MessageRow = memo(function MessageRow({
         {!grouped && (
           <div className="flex items-baseline gap-2">
             <TextButton tone="plain" onClick={vm.openProfile} className="text-sm font-bold text-lc-white">{vm.displayName}</TextButton>
-            <RoleBadge pubkey={msg.pubkey} />
+            {!vm.privateChannel && <RoleBadge pubkey={msg.pubkey} />}
             <Text size="10" tone="muted">
               {formatDateTime(msg.createdAt, {
                 hour: '2-digit',
@@ -99,7 +100,7 @@ export const MessageRow = memo(function MessageRow({
           className="break-words text-sm text-lc-white cursor-pointer"
           onClick={vm.onBodyClick}
         >
-          <MessageContent
+          {vm.privateChannel ? <ConcordMessageBody id={msg.id} content={msg.content} /> : <MessageContent
             content={msg.content}
             messageId={msg.id}
             channelId={groupId}
@@ -108,7 +109,7 @@ export const MessageRow = memo(function MessageRow({
             voiceNote={msg.voiceNote}
             voiceAuthorPicture={meta?.picture}
             voiceTimestamp={msg.createdAt}
-          />
+          />}
         </div>
         {msg.failed && (
           <div className="mt-1 flex items-center gap-2 text-[11px] text-red-400" data-testid="message-failed">

@@ -38,7 +38,7 @@ export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, gen
     await client.start();
     assertCurrent();
     client.schedulePurge();
-    return { client, dispose };
+    return { client, dispose, readNavigation: () => storage.getItem('obelisk/navigation'), saveNavigation: (value: string) => storage.setItem('obelisk/navigation', value) };
   } catch (error) {
     dispose();
     throw error;

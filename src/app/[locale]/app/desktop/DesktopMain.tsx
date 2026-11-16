@@ -1,4 +1,6 @@
 'use client';
+import { useConcordClient } from '@/hooks/chat/concord/useConcordClient';
+import ConcordSurface from '@/app/[locale]/app/concord/ConcordSurface';
 
 import type { Event as NostrEvent } from 'nostr-tools';
 import FeedScreen from '@/components/social/FeedScreen';
@@ -32,6 +34,7 @@ export function DesktopMain({
   leaveDms, feed, onOpenProfile, openThread, openArticle,
 }: Props) {
   const t = useTranslations();
+  const concord = useConcordClient();
   return (
     /*
       The rounded top-left corner normally comes from the sidebar pane
@@ -44,7 +47,7 @@ export function DesktopMain({
         view.kind === 'feed' ? 'rounded-tl-xl border-l' : ''
       }`}
     >
-      {view.kind === 'group' ? (
+      {concord.open && concord.community ? <ConcordSurface pane="chat" /> : view.kind === 'group' ? (
         /*
           Keyed by channel so a switch mounts a fresh pane. Without it the
           pane's per-channel state (the message list above all) survived the

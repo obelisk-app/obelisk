@@ -28,6 +28,7 @@ export function projectConcordTimeline(rumors: readonly Rumor[], state: Communit
         authors.add(reaction.pubkey);
         reactions.set(reaction.content, authors);
       }
-      return { rumor, subject: rumor.tags.find(tag => tag[0] === 'subject')?.[1], attachments: [...parseImeta(rumor.tags).values()], content: edit?.content ?? rumor.content, reactions: [...reactions].map(([emoji, authors]) => ({ emoji, count: authors.size })) };
+      const reactionEvents = rumors.filter(reaction => reaction.kind === KIND_REACTION && !deleted.has(reaction.id) && reaction.tags.some(tag => tag[0] === 'e' && tag[1] === rumor.id));
+      return { rumor, reactionEvents, subject: rumor.tags.find(tag => tag[0] === 'subject')?.[1], attachments: [...parseImeta(rumor.tags).values()], content: edit?.content ?? rumor.content, reactions: [...reactions].map(([emoji, authors]) => ({ emoji, count: authors.size })) };
     });
 }

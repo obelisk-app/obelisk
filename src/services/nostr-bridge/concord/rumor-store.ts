@@ -28,6 +28,7 @@ export function concordRumorStore(storage: ConcordStorage, communityId: string, 
       return value;
     });
     pending = result.then(() => {});
+    void pending.catch(() => {});
     return result;
   };
   return new AsyncRumorStore({

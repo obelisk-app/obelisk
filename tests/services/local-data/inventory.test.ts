@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { VAULT_DB } from '@/lib/crypto/session-vault';
+import { CONCORD_DB } from '@/constants/nostr-bridge/concord';
 import { DM_STORE_DB } from '@/constants/nostr-bridge/dm';
 import { LOCALE_COOKIE } from '@/i18n';
 import { D_TAG_DMS, D_TAG_GROUPS } from '@/constants/read-state/sync-options';
@@ -56,7 +57,7 @@ describe('local-data inventory', () => {
   });
 
   it('names the vault database, the DM store, the offline caches and the language cookie the code uses', () => {
-    expect(LOCAL_DATA.filter((e) => e.area === 'indexedDB').map((e) => e.key)).toEqual([VAULT_DB, DM_STORE_DB]);
+    expect(LOCAL_DATA.filter((e) => e.area === 'indexedDB').map((e) => e.key)).toEqual([CONCORD_DB, VAULT_DB, DM_STORE_DB]);
     expect(entryForKey('indexedDB', DM_STORE_DB)?.category).toBe('dmMessages');
     expect(LOCAL_DATA.filter((e) => e.area === 'cookie').map((e) => e.key)).toEqual([LOCALE_COOKIE, '_ga', '_ga_']);
     expect(entryForKey('cacheStorage', 'obelisk-v9-localized-shell-cache:static')?.category).toBe('offline');

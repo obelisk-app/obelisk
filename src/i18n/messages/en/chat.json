@@ -389,6 +389,10 @@
     "category": "Category",
     "confirmRemoval": "Remove this member and rotate future access keys. Existing copies cannot be erased.",
     "banRotate": "Ban and rotate keys",
-    "removalFailed": "Removal did not finish. The ban may already be published; retry to complete key rotation."
+    "removalFailed": "Removal did not finish. The ban may already be published; retry to complete key rotation.",
+    "reviewReaders": "Choose who keeps access to {channel}",
+    "encryptedCommunity": "Encrypted community (Concord)",
+    "relays": "Relays (3)",
+    "settings": "Community settings"
   }
 }

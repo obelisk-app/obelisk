@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import type { ConcordCommunity } from '@applesauce/concord/client';
 import type { Rumor, ChannelMetadata } from '@applesauce/concord';
@@ -11,6 +11,9 @@ import { PERM } from '@/constants/chat/concord';
 import { refoundAuthority } from '@applesauce/concord/helpers';
 import type { MediaAttachment } from '@applesauce/concord/helpers';
 import { downloadConcordAttachment } from '@/services/chat/concord/media';
+import { concordGroup, concordMessage } from '@/utils/chat/concord/presentation';
+import { concordChannelProtocol } from '@/services/chat/concord/channel-protocol';
+import type { JsMessage } from '@/services/nostr-bridge';
 import { groupConcordChannels } from '@/utils/chat/concord/channels';
 
 export function useConcordRoom(community: ConcordCommunity) {
@@ -22,6 +25,10 @@ export function useConcordRoom(community: ConcordCommunity) {
   const [timeline, setTimeline] = useState<{ channelId: string; rumors: Rumor[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [invite, setInvite] = useState('');
+  const [settings, setSettings] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const channelId = channels.some(channel => channel.accessible && channel.channel_id === selected) ? selected! : channels.find(channel => channel.accessible)?.channel_id;
   useEffect(() => {
     const sub = community.state$.subscribe(setState);
@@ -30,17 +37,28 @@ export function useConcordRoom(community: ConcordCommunity) {
   }, [community]);
   useEffect(() => {
     if (!channelId) return;
-    const sub = community.channelTimeline(channelId).subscribe(rumors => setTimeline({ channelId, rumors }));
+    const sub = community.channelTimeline(channelId).subscribe(next => setTimeline({ channelId, rumors: next }));
     return () => sub.unsubscribe();
   }, [community, channelId]);
   const rows = useMemo(() => channelId && timeline?.channelId === channelId ? projectConcordTimeline(timeline.rumors, state, channelId) : [], [timeline, state, channelId]);
+  const files = useMemo(() => new Map<string, File>(), []);
+  const protocol = useMemo(() => channelId ? concordChannelProtocol(community, channelId, timeline?.channelId === channelId ? timeline.rumors : [], files) : null, [community, channelId, timeline, files]);
+  const messages = useMemo(() => rows.map(concordMessage), [rows]);
+  const reactions = useMemo(() => Object.fromEntries(rows.map(row => [row.rumor.id, row.reactionEvents.map(event => ({ id: event.id, pubkey: event.pubkey, emoji: event.content, targetEventId: row.rumor.id, createdAt: event.created_at }))])), [rows]);
+  const messagesById = useMemo(() => new Map(messages.map(message => [message.id, message])), [messages]);
+  const groups = useMemo(() => channels.filter(channel => channel.accessible).map(channel => concordGroup(community.communityId, channel)), [community, channels]);
+  const group = groups.find(group => group.id.endsWith(`:${channelId}`));
+  useEffect(() => { if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }, [messages.length, channelId]);
   const run = async (operation: () => Promise<unknown>) => {
     setError(null);
     try { await operation(); } catch (err) { setError(errorText(t, err, 'chat.concord.failed')); }
   };
   return {
-    state, channels, rows, channelId, selectChannel, error, invite,
-    categories: groupConcordChannels(channels),
+    state, channels, rows, channelId, selectChannel, error, invite, protocol, groups, group, messages, messagesById, reactions, scroller,
+    settings, openSettings: () => setSettings(true), closeSettings: () => setSettings(false),
+    showMembers, toggleMembers: () => setShowMembers(value => !value), replyingTo, setReplyingTo,
+    selectGroup: (id: string) => selectChannel(id.split(':').at(-1)!),
+    categories: groupConcordChannels(channels).map(category => ({ name: category.name, groups: category.channels.filter(channel => channel.accessible).map(channel => concordGroup(community.communityId, channel)) })),
     publication: channels.find(channel => channel.channel_id === channelId)?.view === 'forum',
     download: (attachment: MediaAttachment) => run(() => downloadConcordAttachment(attachment)),
     members: [...state.members],

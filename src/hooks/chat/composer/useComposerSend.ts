@@ -1,3 +1,4 @@
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useQuickZap } from '@/hooks/chat/zaps/useQuickZap';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
@@ -59,6 +60,7 @@ export function useComposerSend({
   state,
 }: ComposerSendOptions): (event?: FormEvent) => Promise<void> {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
   const myPubkey = useMyPubkey();
   const quickZap = useQuickZap();
   const relayAccess = useRelayAccess(relay || null);
@@ -74,7 +76,7 @@ export function useComposerSend({
     //   /zap                -> reply target (or last channel msg from someone else)
     //   /zap 100            -> same target, with amount preset
     //   /zap <npub|hex|@name> [amount] -> that channel member
-    if (/^\/zap(\s|$)/i.test(content)) {
+    if (!protocol && /^\/zap(\s|$)/i.test(content)) {
       const parsed = parseZapCommand(resolveDraftMentions(content, state.draftMentions), groupId, messages, myPubkey, replyingTo);
       if (!parsed.ok) {
         state.setSendError(t(zapCommandErrorKey(parsed.error), { name: parsed.token ?? '' }));
@@ -98,7 +100,7 @@ export function useComposerSend({
     // /play opens the table picker. Frontend-only like /zap: the table is
     // created by NewGameModal (kind 2390), and the chat message it posts is
     // just the `[[game:<id>]]` card pointing at it.
-    if (/^\/play(\s|$)/.test(content)) {
+    if (!protocol && /^\/play(\s|$)/.test(content)) {
       onOpenNewGame();
       state.setDraft('');
       setReplyingTo(null);
@@ -111,7 +113,7 @@ export function useComposerSend({
     // Await it so browser extensions never receive two signature requests
     // at once.
     if (
-      myPubkey
+      !protocol && myPubkey
       && relayAccess === 'ok'
       && group?.isOpen
       && !memberPubkeys.includes(myPubkey)
@@ -131,7 +133,8 @@ export function useComposerSend({
     const wire = resolveDraftMentions(content, state.draftMentions);
     const tags = outgoingTags(wire, state);
     try {
-      await nostrActions.sendMessage(groupId, wire, replyToCopy, tags);
+      if (protocol) await protocol.send(wire, replyToCopy, tags);
+      else await nostrActions.sendMessage(groupId, wire, replyToCopy, tags);
     } catch (err) {
       if (state.isCurrent?.() !== false) state.setSendError(errorText(t, err, 'errors.codes.publish-rejected'));
       return;

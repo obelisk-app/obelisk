@@ -1,6 +1,7 @@
 'use client';
 
-import ConcordLaunch from '@/components/chat/concord/ConcordLaunch';
+import ConcordAddCommunity from '@/app/[locale]/app/concord/ConcordAddCommunity';
+import Toggle from '@/components/ui/forms/Toggle';
 
 import Button from '@/components/ui/buttons/Button';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
@@ -15,7 +16,7 @@ import { PlusIcon } from '@/assets/icons';
 
 export function AddRelaySheet({ close }: { close: () => void }) {
   const t = useTranslations();
-  const { tab, setTab, isConfigured } = useAddRelay();
+  const { tab, setTab, isConfigured, concord, setConcord } = useAddRelay();
 
   return (
     <Sheet onClose={close} screen="add-relay" label={t('mobile.rail.addTitle')} maxHeight="88%">
@@ -23,16 +24,17 @@ export function AddRelaySheet({ close }: { close: () => void }) {
         icon={<PlusIcon size={null} />}
         title={t('mobile.rail.addTitle')}
       />
-      <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
+      <div className="flex items-center justify-between py-4"><span>{t('chat.concord.encryptedCommunity')}</span><Toggle aria-label={t('chat.concord.encryptedCommunity')} checked={concord} onChange={setConcord} /></div>
+      {!concord && <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
         <Button variant="bare" className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}
         </Button>
         <Button variant="bare" className={`filter-tab ${tab === 'custom' ? 'active' : ''}`} onClick={() => setTab('custom')}>
           {t('shell.rail.addModal.custom')}
         </Button>
-      </div>
+      </div>}
       <div style={{ overflowY: 'auto', maxHeight: '54vh', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
-        {tab === 'suggested' ? (
+        {concord ? <ConcordAddCommunity onClose={close} /> : tab === 'suggested' ? (
           SUGGESTED_RELAYS.map((r) => (
             <SuggestedRelayItem
               key={r.url}
@@ -45,7 +47,6 @@ export function AddRelaySheet({ close }: { close: () => void }) {
           <CustomRelayForm presentation="sheet" onAdded={close} />
         )}
       </div>
-      <ConcordLaunch />
       <SheetActions onCancel={close} dismiss="close" />
     </Sheet>
   );
