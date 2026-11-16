@@ -1,0 +1,10 @@
+--- a/src/client/admin.ts
++++ b/src/client/admin.ts
+@@ -482,7 +482,8 @@
+     check();
+     if (!controlWrap) throw new Error("split staff Grant control root delivery is unavailable");
+     grant.control_wrap = controlWrap;
+-    await this.publishGuardedEdition(VSK.GRANT, eid, JSON.stringify(grant), false, { check });
++    // Publish before local echo: keep every authority snapshot check intact.
++    await this.publishGuardedEdition(VSK.GRANT, eid, JSON.stringify(grant), "staff grant", { check });
+   }

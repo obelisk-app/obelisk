@@ -414,6 +414,9 @@
     "leaveBody": "A comunidade será removida dos seus dispositivos. Você precisará de um convite para entrar novamente. A comunidade não será excluída.",
     "parentChannel": "Canal principal",
     "noParent": "Canal de nível superior",
-    "layoutHelp": "Organize categorias e canais para toda a comunidade."
+    "layoutHelp": "Organize categorias e canais para toda a comunidade.",
+    "memberChannels": "Membros podem criar e gerenciar canais",
+    "memberChannelsHelp": "O Concord também permite editar e excluir canais. Novos membros recebem acesso enquanto o proprietário está com o Obelisk aberto. Desativar esta opção remove esta permissão compartilhada; funções atribuídas separadamente continuam válidas.",
+    "memberChannelsRole": "Canais dos membros"
   }
 }

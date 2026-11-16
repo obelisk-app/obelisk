@@ -25,7 +25,7 @@ export const useConcordNavigation = create<ConcordNavigation>(set => ({
   show: () => set({ open: true }),
   close: () => set({ open: false, membersOpen: false, mobileChannelsOpen: false }),
   selectCommunity: (communityId, showChannels = false) => set({ mobileChannelsOpen: showChannels, membersOpen: false, communityId, channelId: null, threadId: null, open: true }),
-  selectChannel: channelId => set({ channelId, threadId: null }),
-  selectThread: (channelId, threadId) => set({ channelId, threadId }),
+  selectChannel: channelId => set({ channelId, threadId: null, mobileChannelsOpen: false }),
+  selectThread: (channelId, threadId) => set({ channelId, threadId, mobileChannelsOpen: false }),
   reset: () => set({ mobileChannelsOpen: false, membersOpen: false, open: false, communityId: null, channelId: null, threadId: null }),
 }));

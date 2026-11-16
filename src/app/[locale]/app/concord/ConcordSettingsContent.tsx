@@ -10,6 +10,7 @@ import ConcordBrandingForm from './ConcordBrandingForm';
 import ConcordChannelEditForm from './ConcordChannelEditForm';
 import ConcordChannelForm from './ConcordChannelForm';
 import ConcordRoleForm from './ConcordRoleForm';
+import ConcordMemberChannelPolicy from './ConcordMemberChannelPolicy';
 
 export interface ConcordSettingsProps { community: ConcordCommunity; vm: Omit<ReturnType<typeof useConcordRoom>, 'scroller'> }
 export default function ConcordSettingsContent({ community, vm }: ConcordSettingsProps) {
@@ -23,6 +24,9 @@ export default function ConcordSettingsContent({ community, vm }: ConcordSetting
         {vm.settings === 'branding' && vm.canEditBranding && <ConcordBrandingForm community={community} branding={vm.branding} onSaved={vm.closeSettings} />}
         {vm.settings === 'edit-channel' && vm.canManageChannels && vm.channelId && <ConcordChannelEditForm key={vm.channelId} community={community} channelId={vm.channelId} name={vm.group?.name ?? ''} onSaved={vm.closeSettings} />}
         {vm.settings === 'channels' && vm.canManageChannels && <ConcordChannelForm community={community} />}
-        {vm.settings === 'roles' && vm.canManageRoles && <ConcordRoleForm community={community} />}
+        {vm.settings === 'roles' && vm.canManageRoles && <>
+          {community.pubkey === community.material.owner && <ConcordMemberChannelPolicy community={community} />}
+          <ConcordRoleForm community={community} />
+        </>}
       </div>;
 }

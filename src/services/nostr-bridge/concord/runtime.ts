@@ -9,6 +9,7 @@ import { CONCORD_DEFAULT_RELAYS } from '@/constants/nostr-bridge/concord';
 import { concordUploader } from '@/services/chat/concord/media';
 import { disposeConcordOutbox } from '@/services/chat/concord/outbox';
 import { startConcordWithCache } from './startup';
+import { startClientMemberChannelGrants } from '@/services/chat/concord/member-channels';
 
 /** SDK gets Obelisk's signer, encrypted storage, and virtual sockets over the shared hub. */
 export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, generation: number, assertCurrent: () => void, personalRelays: string[] = []) {
@@ -29,9 +30,11 @@ export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, gen
     uploader: concordUploader(assertCurrent),
   });
   let disposed = false;
+  const stopMemberGrants = startClientMemberChannelGrants(client);
   const dispose = () => {
     if (disposed) return;
     disposed = true;
+    stopMemberGrants();
     for (const community of client.communities$.value) { const instance = client.getCommunity(community.material.community_id); if (instance) disposeConcordOutbox(instance); }
     client.dispose();
     pool.close();

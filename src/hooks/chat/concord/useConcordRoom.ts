@@ -48,7 +48,8 @@ export function useConcordRoom(community: ConcordCommunity) {
     const channelSub = community.channels$.subscribe(setChannels);
     return () => { sub.unsubscribe(); channelSub.unsubscribe(); };
   }, [community]);
-  useEffect(() => { if (channelId && selected !== channelId) selectChannel(channelId); }, [channelId, selected, selectChannel]);
+  // Loading a default channel must not turn a community-list visit into a chat visit.
+  useEffect(() => { if (channelId && selected !== channelId) useConcordNavigation.setState({ channelId, threadId: null }); }, [channelId, selected]);
   useEffect(() => {
     if (!channelId) return;
     const sub = community.channelTimeline(channelId).subscribe(next => setTimeline({ channelId, rumors: next }));

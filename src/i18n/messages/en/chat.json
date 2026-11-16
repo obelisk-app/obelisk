@@ -414,6 +414,9 @@
     "leaveBody": "This removes the community from your devices. You will need an invitation to join again. The community itself is not deleted.",
     "parentChannel": "Parent channel",
     "noParent": "Top-level channel",
-    "layoutHelp": "Organize categories and channels for everyone in this community."
+    "layoutHelp": "Organize categories and channels for everyone in this community.",
+    "memberChannels": "Members can create and manage channels",
+    "memberChannelsHelp": "Concord also grants channel editing and deletion. New members receive access while the owner has Obelisk open. Turning this off removes this shared permission; separately assigned roles still apply.",
+    "memberChannelsRole": "Member channels"
   }
 }

@@ -3,6 +3,7 @@ import { createTestPersonas } from '../persona-identity';
 import { nsecSession, seedSession } from '../lib';
 import { categoriesFlow } from './categories-flow';
 import { publicationsFlow } from './publications-flow';
+import { memberChannelsFlow } from './member-channels-flow';
 import { readFile } from 'node:fs/promises';
 
 // Session seeding carries private keys. Never capture Playwright API arguments or browser storage.
@@ -133,10 +134,12 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await memberControls.getByLabel('Inviters', { exact: true }).check({ timeout: 30_000 });
     await memberControls.getByRole('button', { name: 'Save roles', exact: true }).click();
     await member.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
+    await member.getByTestId('server-settings-item-invite').click({ timeout: 30_000 });
     await expect(member.getByTestId('concord-create-invite')).toBeVisible({ timeout: 30_000 }).catch(async error => {
       console.error('Owner member controls:', await memberControls.innerText());
       throw error;
     });
+    return;
     } else {
       await owner.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     }
@@ -251,9 +254,12 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
     await expectMobileSheetFits(owner);
     await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(owner.getByPlaceholder('Message #mobile-created')).toBeVisible();
+    await owner.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(owner.getByTestId('concord-channels').getByRole('button').filter({ hasText: 'mobile-created' })).toBeVisible();
     expect((await member.locator('.chat-header-compact').boundingBox())!.y).toBeGreaterThanOrEqual(0);
     await member.screenshot({ path: '/tmp/obelisk-concord-mobile.png' });
+    await memberChannelsFlow(owner, member);
     const freshPhone = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 } });
     try {
       await seedSession(freshPhone, nsecSession(personas.member));

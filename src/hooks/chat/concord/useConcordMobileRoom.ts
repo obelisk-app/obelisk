@@ -26,7 +26,7 @@ export function useConcordMobileRoom(community: ConcordCommunity) {
     openSearch: () => setSearching(true), closeSearch: () => setSearching(false),
     header: { category: room.branding.name, channel: room.group?.name ?? '' },
     showChannels: () => { if (room.threadId && room.channelId) room.selectChannel(room.channelId); else setChannelsOpen(true); },
-    pickChannel: (id: string) => { room.selectGroup(id); setChannelsOpen(false); setSearching(false); },
+    pickChannel: (id: string) => { room.selectGroup(id); setSearching(false); },
     selectRelay: (url: string) => { useConcordNavigation.getState().close(); void nostrActions.switchRelay(url); },
     openAdd: () => setAdding(true), closeAdd: () => setAdding(false),
     actionMessage: actionMessage ? { ...actionMessage, groupId: room.group?.id, canDeleteOwn: actionMessage.pubkey === myPubkey } : null,

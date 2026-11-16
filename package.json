@@ -41,7 +41,7 @@
     "prebuild": "npm run appearance:generate"
   },
   "dependencies": {
-    "@applesauce/concord": "file:vendor/applesauce-concord-00ceaa38355d.tgz",
+    "@applesauce/concord": "file:vendor/applesauce-concord-00ceaa38355d-obelisk.1.tgz",
     "@noble/hashes": "^2.0.1",
     "@nostr-wot/blossom": "^1.0.2",
     "@nostr-wot/data": "^1.0.2",
