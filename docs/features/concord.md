@@ -44,6 +44,8 @@ On 2026-11-15, application revision `c95d6fb9` was built and deployed to `https:
 
 Release checks passed all 239 structural guards and 23 focused Concord tests. All 29 desktop-shell component tests passed after preloading the lazy settings module in the test harness, keeping cold Vite compilation outside the settings-destination assertion. The deployment build also completed its TypeScript and static CSP checks.
 
+The follow-up test deployment at application revision `7ced311b` passed the expanded public-site scenario: community profile images update in the rail and survive reload, the channel gear renames the selected channel for both accounts, and community/channel URL fragments survive reload, browser Back and mobile resizing. Navigation away clears the Concord URL. This revision also passed 48 navigation/rail regressions, 239 structural guards, four focused rename/history tests, lint and the deployment build. The mixed rail orders both protocols together by name.
+
 ## Shared component protocol boundary
 
 `ChannelProtocolContext` routes composer send/upload, reactions and deletions to Concord. Absence of that context preserves the existing NIP-29 path. Encrypted uploads are bounded in memory and passed to the SDK uploader at send time; plaintext never enters the public Blossom uploader. Private message bodies do not auto-unfurl URLs or load public game/media previews. Public event links, forwarding and zaps are unavailable for private message IDs. Local search, rich private media rendering and full Publications parity remain follow-up work.
