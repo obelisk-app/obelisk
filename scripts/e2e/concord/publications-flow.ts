@@ -31,4 +31,13 @@ export async function publicationsFlow(owner: Page, member: Page, parentName: st
   console.log('Nested publication and encrypted comment delivered.');
   await member.reload();
   await expect(member.getByTestId('concord-messages')).toContainText('A native encrypted publication reply');
+  await member.setViewportSize({ width: 390, height: 844 });
+  await member.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(member.getByTestId('mobile-forum-card')).toContainText('Encrypted announcement');
+  await member.getByTestId('mobile-forum-card').click();
+  await member.getByPlaceholder(/^Message #/).fill('Publication reply from the phone');
+  await member.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(owner.getByTestId('concord-messages')).toContainText('Publication reply from the phone');
+  await expect(member.getByTestId('concord-send-status')).toHaveCount(0, { timeout: 60_000 });
+  await member.setViewportSize({ width: 1440, height: 900 });
 }
