@@ -24,7 +24,7 @@ export function useConcordWorkspace() {
     let unsubscribe = () => {};
     let stopNavigation = () => {};
     const initialNavigation = useConcordNavigation.getState();
-    const login = bridge.subscribeIsLoggedIn(value => { if (!value) useConcordNavigation.getState().reset(); });
+    const login = bridge.subscribeIsLoggedIn(value => { if (!value) { useConcordNavigation.getState().reset(); setClient(null); setCommunities([]); setError(null); } });
     void getConcordForBridge(bridge).then(async runtime => {
       if (!active) return;
       setClient(runtime.client);

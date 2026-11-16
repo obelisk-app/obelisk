@@ -1,3 +1,4 @@
+import { useConcordNavigation } from '@/store/chat/concord';
 import { useEffect, useCallback, useRef, type CSSProperties } from 'react';
 import { useMentionNotificationNavigation } from '@/hooks/notifications/useMentionNotificationNavigation';
 import { useTranslations } from 'next-intl';
@@ -118,7 +119,7 @@ export function usePhoneShell() {
     screenProps,
     dragLayerRef,
     screensHostRef,
-    carousel,
+    carousel: { ...carousel, onTabPress: (tab: Parameters<typeof carousel.onTabPress>[0]) => { useConcordNavigation.getState().close(); carousel.onTabPress(tab); } },
     closeSheet: actions.closeSheet,
     exploreProfile: actions.exploreProfile,
     selectPeer: actions.selectPeer,

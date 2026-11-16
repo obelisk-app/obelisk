@@ -61,12 +61,12 @@ export function RelayTopBar({
           answers both halves of "is anything wrong": this relay's connection
           and NIP-42 state, and whether the feed relays are up.
         */}
-        <RelayStatusPill
+        {!vm.concord && <RelayStatusPill
           relays={vm.socialRelays}
           activeRelay={relay}
           onOpenSettings={vm.openRelaySettings}
           indicate={onSocialSurface ? 'social' : 'active'}
-        />
+        />}
         <Button
           variant="ghost"
           size="icon-touch"

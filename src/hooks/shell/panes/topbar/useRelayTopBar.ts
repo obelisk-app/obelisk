@@ -1,5 +1,7 @@
 'use client';
 
+import { useConcordClient } from '@/hooks/chat/concord/useConcordClient';
+import { useConcordNavigation } from '@/store/chat/concord';
 import { useChatStore } from '@/store/chat';
 import { useState } from 'react';
 import { relayWebsiteUrl } from '@/utils/relay-url/normalize';
@@ -20,6 +22,8 @@ export function useRelayTopBar({ relay, onJumpToDm }: {
   onJumpToChannel?: (channelId: string) => void;
   onJumpToDm?: (peer: string | null) => void;
 }) {
+  const concord = useConcordClient();
+  const selectedCommunity = concord.open ? concord.communities.find(value => value.material.community_id === concord.communityId) : undefined;
   const socialRelays = usePreferences().socialRelays;
   const header = useRelayHeaderInfo(relay);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -29,15 +33,16 @@ export function useRelayTopBar({ relay, onJumpToDm }: {
   useDismissOnOutside(notifOpen, setNotifOpen, 'data-notif-popover', 'data-notif-trigger');
   useDismissOnOutside(helpOpen, setHelpOpen, 'data-help-popover', 'data-help-trigger');
 
-  const displayName = header.name || shortHost(relay);
+  const displayName = selectedCommunity ? selectedCommunity.metadata?.name ?? selectedCommunity.material.name : header.name || shortHost(relay);
   return {
     socialRelays,
-    header,
+    concord: !!selectedCommunity,
+    header: selectedCommunity ? { ...header, icon: null } : header,
     inbox,
     notifOpen,
     helpOpen,
     displayName,
-    website: relayWebsiteUrl(relay),
+    website: selectedCommunity ? null : relayWebsiteUrl(relay),
     // The two panels are mutually exclusive: opening one closes the other so
     // they can't overlap in the same top-right corner. Done in the two
     // toggles (the only places either opens) rather than in effects.
@@ -45,9 +50,9 @@ export function useRelayTopBar({ relay, onJumpToDm }: {
     toggleHelp: () => { setNotifOpen(false); setHelpOpen((v) => !v); },
     closeHelp: () => setHelpOpen(false),
     openRelaySettings: () => openSettings('relays'),
-    onMentionClick: (m: MentionNotification) => { useChatStore.getState().requestMentionJump(m); setNotifOpen(false); },
-    onDmClick: (d: DmNotification) => { onJumpToDm?.(d.senderPubkey); setNotifOpen(false); },
+    onMentionClick: (m: MentionNotification) => { useConcordNavigation.getState().close(); useChatStore.getState().requestMentionJump(m); setNotifOpen(false); },
+    onDmClick: (d: DmNotification) => { useConcordNavigation.getState().close(); onJumpToDm?.(d.senderPubkey); setNotifOpen(false); },
     /** The locked DMs row: open the DM list, which unlocks them. */
-    onOpenDms: () => { onJumpToDm?.(null); setNotifOpen(false); },
+    onOpenDms: () => { useConcordNavigation.getState().close(); onJumpToDm?.(null); setNotifOpen(false); },
   };
 }
