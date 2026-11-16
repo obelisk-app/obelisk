@@ -128,7 +128,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('concord-channels')).toContainText(`${quickChannel}-renamed`);
     await expect(owner).toHaveURL(/#concord=[^&]+&channel=/);
     expect(new URL(owner.url()).searchParams.has('relay')).toBe(false);
-    if (!administration) await readSearchFlow(owner, member, `${quickChannel}-renamed`, personas.member.pkHex);
+    const readProbe = !administration ? await readSearchFlow(owner, member, `${quickChannel}-renamed`, personas.member.pkHex) : null;
     const channelName = `channel-${Date.now()}`;
     await owner.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
     await owner.getByTestId('server-settings-item-createChannel').click();
@@ -303,6 +303,15 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
       await expect(phone.getByPlaceholder(/^Message #/)).toHaveCount(0);
       if (!administration) await expect(phone.getByTestId('concord-channels').getByRole('button', { name: /Daily discussion/ })).toBeVisible();
       if (!administration) await expect(phone.getByTestId('concord-channels').getByRole('button', { name: /Empty category/ })).toBeVisible();
+      if (readProbe) {
+        await phone.getByRole('button', { name: 'Search', exact: true }).click();
+        await phone.getByRole('searchbox').fill(readProbe.text);
+        await expect(phone.getByTestId('concord-search-hit')).toContainText(readProbe.text, { timeout: 30_000 });
+        await phone.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
+        // History is loaded, but this device has never opened the channel: only
+        // the self-encrypted remote cursor can clear its unread marker here.
+        await expect(phone.getByTestId(readProbe.rowId).locator(':scope > button').getByLabel('1 unread message', { exact: true })).toHaveCount(0, { timeout: 30_000 });
+      }
       await phone.getByTestId('concord-channels').getByRole('button').filter({ hasText: 'member-created' }).click();
       await expect(phone.getByTestId('concord-messages')).toContainText('Created by a member on mobile', { timeout: 60_000 });
       await phone.getByRole('button', { name: 'Back', exact: true }).click();

@@ -20,4 +20,5 @@ export async function readSearchFlow(owner: Page, member: Page, channelName: str
   await member.reload();
   await expect(member.getByTestId('concord-channels')).toContainText(channelName);
   await expect(row.getByLabel('1 unread message', { exact: true })).toHaveCount(0);
+  return { text, rowId: (await row.getAttribute('data-testid'))! };
 }

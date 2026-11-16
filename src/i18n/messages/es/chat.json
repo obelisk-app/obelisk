@@ -407,7 +407,7 @@
       "failed": "No se pudo enviar. Reintentá este mensaje."
     },
     "channelPosition": "Orden del canal",
-    "searchLocal": "Buscar canales y mensajes cargados en este canal",
+    "searchLocal": "Buscar canales y mensajes cargados de la comunidad",
     "copyId": "Copiar ID de la comunidad",
     "leave": "Salir de la comunidad",
     "leaveTitle": "¿Salir de {name}?",
