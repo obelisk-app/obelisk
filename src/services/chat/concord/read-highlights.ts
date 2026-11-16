@@ -8,7 +8,7 @@ import { concordGroup, concordMessage } from '@/utils/chat/concord/presentation'
 import { CONCORD_READ_LIMIT } from '@/constants/chat/concord-read';
 
 /** Observe SDK local stores only; this does not open channel relay subscriptions. */
-export function startConcordReadHighlights(client: ConcordClient) {
+export function startConcordReadHighlights(client: ConcordClient, sessionId = useConcordReadStore.getState().sessionId) {
   const communities = new Map<string, () => void>();
   let observed = 0;
   const watch = (community: ConcordCommunity) => {
@@ -28,6 +28,7 @@ export function startConcordReadHighlights(client: ConcordClient) {
           const publications = concordPublicationData(channel ? concordGroup(community.communityId, channel) : undefined, rows);
           update = () => {
             const store = useConcordReadStore.getState();
+            if (store.sessionId !== sessionId) return;
             const readAt = new Map<string, number>();
             for (const [thread, entries] of Object.entries(publications.messagesByGroup)) for (const message of entries) readAt.set(message.id, Math.max(readAt.get(message.id) ?? 0, store.cursors[thread] ?? 0));
             const cursor = effectiveCursor(store.cursors[key]);
@@ -37,7 +38,7 @@ export function startConcordReadHighlights(client: ConcordClient) {
           update();
         });
         const stopCursor = useConcordReadStore.subscribe((next, previous) => { if (next.cursors !== previous.cursors) update(); });
-        channels.set(id, { sub, stop: () => { observed--; sub.unsubscribe(); stopCursor(); useConcordReadStore.getState().setHighlights(community.pubkey, key, null); } });
+        channels.set(id, { sub, stop: () => { observed--; sub.unsubscribe(); stopCursor(); if (useConcordReadStore.getState().sessionId === sessionId) useConcordReadStore.getState().setHighlights(community.pubkey, key, null); } });
       }
     });
     return () => { channelSub.unsubscribe(); for (const entry of channels.values()) entry.stop(); };

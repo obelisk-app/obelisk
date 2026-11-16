@@ -4,17 +4,18 @@ import { CONCORD_READ_BYTES, CONCORD_READ_LIMIT } from '@/constants/chat/concord
 
 interface ConcordReadState {
   account: string | null;
+  sessionId: string | null;
   cursors: Record<string, number>;
   highlights: Record<string, ChannelHighlights>;
-  reset(account: string | null): void;
+  reset(account: string | null, sessionId?: string): void;
   merge(account: string, incoming: Record<string, number>): void;
   setHighlights(account: string, key: string, value: ChannelHighlights | null): void;
 }
 
 /** Memory projection only. Persistence belongs to the sealed runtime and NIP-44 sync. */
 export const useConcordReadStore = create<ConcordReadState>(set => ({
-  account: null, cursors: {}, highlights: {},
-  reset: account => set({ account, cursors: {}, highlights: {} }),
+  account: null, sessionId: null, cursors: {}, highlights: {},
+  reset: (account, sessionId) => set({ account, sessionId: sessionId ?? account, cursors: {}, highlights: {} }),
   merge: (account, incoming) => set(state => {
     if (account !== state.account) return state;
     const cursors = { ...state.cursors };

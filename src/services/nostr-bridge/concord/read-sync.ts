@@ -17,8 +17,8 @@ export function startConcordReadSync(hub: RelayHub, signer: NipSigner, storage: 
   let tail = Promise.resolve();
   let cacheTail = Promise.resolve();
   const store = useConcordReadStore;
-  store.getState().reset(signer.pubkey);
-  const assertCurrent = () => { guard(); if (!alive) throw new Error('Read sync ended'); };
+  store.getState().reset(signer.pubkey, identityId);
+  const assertCurrent = () => { guard(); if (!alive || store.getState().sessionId !== identityId) throw new Error('Read sync ended'); };
   const snapshot = () => JSON.stringify(store.getState().cursors);
   const save = () => {
     const value = snapshot();
@@ -61,7 +61,7 @@ export function startConcordReadSync(hub: RelayHub, signer: NipSigner, storage: 
   };
   void (async () => {
     stop = store.subscribe((next, previous) => {
-      if (next.cursors === previous.cursors || next.account !== signer.pubkey) return;
+      if (next.cursors === previous.cursors || next.account !== signer.pubkey || next.sessionId !== identityId) return;
       save();
       if (!applying) { dirty = true; schedule(); }
     });
@@ -84,5 +84,5 @@ export function startConcordReadSync(hub: RelayHub, signer: NipSigner, storage: 
     release = () => live.release();
     if (dirty) schedule();
   })().catch(() => {});
-  return () => { alive = false; clearTimeout(timer); release(); stop(); if (store.getState().account === signer.pubkey) store.getState().reset(null); };
+  return () => { alive = false; clearTimeout(timer); release(); stop(); if (store.getState().sessionId === identityId) store.getState().reset(null); };
 }

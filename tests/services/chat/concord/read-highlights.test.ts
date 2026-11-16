@@ -14,8 +14,8 @@ it('updates background badges from local SDK history and removes them when acces
   const community = { pubkey: me, communityId: 'community', channels$, state$, channelTimeline: () => timeline } as unknown as ConcordCommunity;
   const communities$ = new BehaviorSubject([{ material: { community_id: 'community' } }]);
   const client = { communities$, getCommunity: () => community } as unknown as ConcordClient;
-  useConcordReadStore.getState().reset(me);
-  const stop = startConcordReadHighlights(client);
+  useConcordReadStore.getState().reset(me, 'current-generation');
+  const stop = startConcordReadHighlights(client, 'current-generation');
   const time = Math.floor(Date.now() / 1000);
   const key = 'concord:community:general';
   timeline.next([{ id: 'c'.repeat(64), pubkey: author, kind: 9, content: 'Hello', tags: [['p', me]], created_at: time }]);

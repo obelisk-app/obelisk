@@ -32,7 +32,7 @@ export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, gen
     uploader: concordUploader(assertCurrent),
   });
   const stopReadSync = startConcordReadSync(hub, signer, storage, identityId, personalRelays.length ? personalRelays : [...CONCORD_DEFAULT_RELAYS], assertCurrent);
-  const stopHighlights = startConcordReadHighlights(client);
+  const stopHighlights = startConcordReadHighlights(client, identityId);
   let disposed = false;
   const stopMemberGrants = startClientMemberChannelGrants(client);
   const dispose = () => {

@@ -73,3 +73,13 @@ it('clears private memory and stops relay observation on disposal', async () => 
   useConcordReadStore.getState().merge(pubkey, { [a]: 300 });
   expect(useConcordReadStore.getState().cursors).toEqual({});
 });
+it('does not clear a newer login of the same account when an old runtime disposes late', async () => {
+  await setup();
+  const oldStop = stop;
+  stop = startConcordReadSync(hub as unknown as RelayHub, signer, storage, 'new-generation', ['wss://inbox.example'], () => {});
+  await vi.waitFor(() => expect(hub.subscribe).toHaveBeenCalledTimes(2));
+  useConcordReadStore.getState().merge(pubkey, { [a]: 500 });
+  oldStop();
+  expect(useConcordReadStore.getState().sessionId).toBe('new-generation');
+  expect(useConcordReadStore.getState().cursors[a]).toBe(500);
+});
