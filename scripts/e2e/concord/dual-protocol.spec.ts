@@ -286,6 +286,9 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
       await expect(phone.getByPlaceholder(/^Message #/)).toHaveCount(0);
       if (!administration) await expect(phone.getByTestId('concord-channels').getByRole('button', { name: /Daily discussion/ })).toBeVisible();
       if (!administration) await expect(phone.getByTestId('concord-channels').getByRole('button', { name: /Empty category/ })).toBeVisible();
+      await phone.getByTestId('concord-channels').getByRole('button').filter({ hasText: 'member-created' }).click();
+      await expect(phone.getByTestId('concord-messages')).toContainText('Created by a member on mobile', { timeout: 60_000 });
+      await phone.getByRole('button', { name: 'Back', exact: true }).click();
       await phone.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName }).click();
       await expect(phone.getByTestId('concord-messages')).toContainText('Mobile reply', { timeout: 60_000 });
     } finally { await freshPhone.close(); }
