@@ -4,11 +4,11 @@ import type { ConcordCommunity } from '@applesauce/concord/client';
 import { openConcordImage } from '@/services/chat/concord/branding';
 import { PERM } from '@/constants/chat/concord';
 
-export function useConcordBranding(community: ConcordCommunity) {
+export function useConcordBranding(community: ConcordCommunity, includeBanner = true) {
   const [state, setState] = useState(community.state$.value);
   const [images, setImages] = useState<{ key: string; icon: string; banner: string } | null>(null);
   const metadata = state.metadata;
-  const imageKey = JSON.stringify([community.communityId, metadata?.icon, metadata?.banner]);
+  const imageKey = JSON.stringify([community.communityId, metadata?.icon, includeBanner ? metadata?.banner : null]);
   useEffect(() => { const sub = community.state$.subscribe(setState); return () => sub.unsubscribe(); }, [community]);
   useEffect(() => {
     let active = true;

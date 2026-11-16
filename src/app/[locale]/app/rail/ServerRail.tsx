@@ -1,6 +1,6 @@
 'use client';
 
-import ConcordRail from '@/app/[locale]/app/concord/ConcordRail';
+import CommunityRail from './CommunityRail';
 
 /**
  * Discord-style server rail. Mirrors obelisk's identity bar:
@@ -22,7 +22,6 @@ import { useServerRail } from '@/hooks/shell/rail/useServerRail';
 import type { RailMode } from '@/utils/shell/desktop/desktop-layout';
 import { AddRelayModal } from './AddRelayModal';
 import { RailTile } from './RailTile';
-import { RelayTile } from './RelayTile';
 import { GlobeIcon, SendIcon, PlusIcon } from '@/assets/icons';
 
 export default function ServerRail({
@@ -71,21 +70,9 @@ export default function ServerRail({
         />
       )}
 
-      <ConcordRail />
       <div className="my-1 h-px w-8 bg-lc-border" />
 
-      {/* Only the first tile carries the hint: the others are the same
-          control, and a dot on each would read as unread traffic. */}
-      {vm.relays.map((url, index) => (
-        <RelayTile
-          key={url}
-          url={url}
-          active={vm.isActive(url)}
-          hint={index === 0 ? 'rail-relay' : undefined}
-          onClick={() => vm.leaveConcord(() => onPickRelay(url))}
-          onRemove={() => vm.remove(url)}
-        />
-      ))}
+      <CommunityRail mode={mode} onPickRelay={onPickRelay} />
 
       <Button
 

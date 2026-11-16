@@ -13,3 +13,15 @@ export async function setConcordChannelCategory(community: ConcordCommunity, cha
     ...content, custom: { ...custom, obelisk: { ...obelisk, category: category.trim() } },
   }), 'channel-metadata', { expectedHead: head.hash });
 }
+
+/** Rename the selected channel without replacing its privacy or custom metadata. */
+export async function setConcordChannelName(community: ConcordCommunity, channelId: string, name: string) {
+  if (!name.trim()) throw new Error('Channel name is required');
+  const head = await community.admin.latestEdition(channelId);
+  if (!head) throw new Error('Channel metadata is not available');
+  const content = JSON.parse(head.content);
+  if (!content || typeof content !== 'object' || Array.isArray(content)) throw new Error('Invalid channel metadata');
+  await community.admin.publishEdition(VSK.CHANNEL, channelId, JSON.stringify({
+    ...content, name: name.trim(),
+  }), 'channel-metadata', { expectedHead: head.hash });
+}

@@ -6,6 +6,8 @@ import { nostrActions, useBridge } from '@/services/nostr-bridge';
 import { parseUrl, urlFor, restoredNav, type NavState } from '@/utils/shell/mobile/url-state';
 import { viewForNav, navForView } from '@/utils/shell/desktop/navigation';
 import { subscribeVoiceJump } from '@/services/voice/jump-to-voice';
+import { useConcordNavigation } from '@/store/chat/concord';
+import { parseConcordLocation } from '@/schemas/chat/concord-location';
 import { useChatStore } from '@/store/chat';
 import { useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink';
 import { shortHost } from '@/utils/relay-url/url-host';
@@ -23,6 +25,7 @@ import type { View } from '@/utils/shell/desktop/view';
  */
 export function useDesktopNavigation(relay: string) {
   useMentionNotificationNavigation();
+  const concordOpen = useConcordNavigation(state => state.open);
   // Remembered so leaving the full-screen feed returns to the room you were
   // in rather than an empty pane. State adjusted during render (the
   // "previous value" pattern), so it is read in the same render it is set
@@ -67,7 +70,7 @@ export function useDesktopNavigation(relay: string) {
     });
   }, [bridge]);
   useLayoutEffect(() => {
-    if (view.kind === 'group') {
+    if (view.kind === 'group' && !concordOpen) {
       bridge?.setActiveGroup(view.groupId);
       // Mirror into the chat store so `isUserWatchingChannel` returns true
       // here too. Without this, desktop's read-state machinery is silently
@@ -79,7 +82,7 @@ export function useDesktopNavigation(relay: string) {
       bridge?.setActiveGroup(null);
       useChatStore.setState({ activeChannelId: null });
     }
-  }, [view, bridge]);
+  }, [view, bridge, concordOpen]);
 
   const messageGroup = useRef<string | null>(null);
   const switchFromDeepLink = useRelayDeepLink();
@@ -139,7 +142,7 @@ export function useDesktopNavigation(relay: string) {
   // One URL codec for both shells. Preserve framework/custom history fields and
   // an inherited phone-only destination until the user chooses a desktop view.
   useEffect(() => {
-    if (!restored || typeof window === 'undefined') return;
+    if (!restored || typeof window === 'undefined' || useConcordNavigation.getState().open) return;
     const source = inherited.current;
     const nav = source?.view === view ? source.nav : navForView(view);
     if (source?.view !== view) inherited.current = null;
@@ -152,11 +155,12 @@ export function useDesktopNavigation(relay: string) {
     if (navigated) window.history.pushState(state, '', url.pathname + url.search);
     else window.history.replaceState(state, '', url.pathname + url.search);
     lastDestination.current = destination;
-  }, [view, relay, restored, pendingMessageId]);
+  }, [view, relay, restored, pendingMessageId, concordOpen]);
 
   // A history entry created on a phone remains navigable after resizing.
   useEffect(() => {
     const onPop = (event: PopStateEvent) => {
+      if (parseConcordLocation(window.location.hash)) return;
       // The exit sentinel belongs to phone navigation. Desktop Back skips it.
       if (event.state?.guard) { window.history.back(); return; }
       const params = new URLSearchParams(window.location.search);

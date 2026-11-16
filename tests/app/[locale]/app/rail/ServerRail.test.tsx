@@ -148,14 +148,14 @@ describe('speaks the reader\'s language', () => {
 
     expect(screen.getByTitle('Mensagens diretas')).toBeInTheDocument();
     expect(screen.getByTitle('Feed do Nostr')).toBeInTheDocument();
-    expect(screen.getByTitle('Adicionar relay')).toBeInTheDocument();
+    expect(screen.getByTitle('Adicionar uma comunidade')).toBeInTheDocument();
   });
 });
 
 describe('add-relay form accessibility', () => {
   it('the URL field is named by its visible label', () => {
     renderRail(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickRelay={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add relay' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a community' }));
     fireEvent.click(screen.getByText('Custom URL'));
     const field = screen.getByLabelText('Relay URL');
     expect(field.tagName).toBe('INPUT');

@@ -7,12 +7,15 @@ import type { ConcordClient } from '@applesauce/concord/client';
 import type { CommunityState } from '@applesauce/concord';
 import { getConcordForBridge, useBridge } from '@/services/nostr-bridge';
 import { useConcordNavigation } from '@/store/chat/concord';
+import { useConcordLocation } from './useConcordLocation';
+import { parseConcordLocation } from '@/schemas/chat/concord-location';
 import { errorText } from '@/utils/errors/error-text';
 
 export function useConcordWorkspace() {
   const bridge = useBridge();
   const loggedIn = useIsLoggedIn();
   const pubkey = useMyPubkey();
+  useConcordLocation(loggedIn);
   const t = useTranslations();
   const nav = useConcordNavigation();
   const [client, setClient] = useState<ConcordClient | null>(null);
@@ -32,7 +35,7 @@ export function useConcordWorkspace() {
       unsubscribe = () => subscription.unsubscribe();
       const saved = await runtime.readNavigation();
       if (!active) return;
-      if (saved && useConcordNavigation.getState() === initialNavigation) {
+      if (saved && !parseConcordLocation(window.location.hash) && useConcordNavigation.getState() === initialNavigation) {
         try {
           const parsed: unknown = JSON.parse(saved);
           if (parsed && typeof parsed === 'object' && 'communityId' in parsed && typeof parsed.communityId === 'string' && 'channelId' in parsed && (parsed.channelId === null || typeof parsed.channelId === 'string') && 'open' in parsed && typeof parsed.open === 'boolean') {

@@ -27,7 +27,7 @@ export function useConcordRoom(community: ConcordCommunity) {
   const [timeline, setTimeline] = useState<{ channelId: string; rumors: Rumor[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [invite, setInvite] = useState('');
-  const [settings, setSettings] = useState<'community' | 'channels' | 'roles' | null>(null);
+  const [settings, setSettings] = useState<'community' | 'channels' | 'roles' | 'edit-channel' | null>(null);
   const [showMembers, setShowMembers] = useState(false);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -37,6 +37,7 @@ export function useConcordRoom(community: ConcordCommunity) {
     const channelSub = community.channels$.subscribe(setChannels);
     return () => { sub.unsubscribe(); channelSub.unsubscribe(); };
   }, [community]);
+  useEffect(() => { if (channelId && selected !== channelId) selectChannel(channelId); }, [channelId, selected, selectChannel]);
   useEffect(() => {
     if (!channelId) return;
     const sub = community.channelTimeline(channelId).subscribe(next => setTimeline({ channelId, rumors: next }));
@@ -59,6 +60,7 @@ export function useConcordRoom(community: ConcordCommunity) {
     branding: appearance.branding, canEditBranding: appearance.canEdit,
     state, channels, rows, channelId, selectChannel, error, invite, protocol, groups, group, messages, messagesById, reactions, scroller,
     settings, openSettings: () => setSettings('community'), closeSettings: () => setSettings(null),
+    editChannel: () => setSettings('edit-channel'),
     openChannelSettings: () => setSettings('channels'), openRoleSettings: () => setSettings('roles'),
     showMembers, toggleMembers: () => setShowMembers(value => !value), replyingTo, setReplyingTo,
     selectGroup: (id: string) => selectChannel(id.split(':').at(-1)!),

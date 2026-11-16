@@ -1,6 +1,6 @@
 'use client';
 
-import ConcordRail from '@/app/[locale]/app/concord/ConcordRail';
+import CommunityRail from '@/app/[locale]/app/rail/CommunityRail';
 
 import { type JsGroup } from '@/services/nostr-bridge';
 import { type ScreenName } from '@/utils/shell/mobile/url-state';
@@ -42,7 +42,7 @@ export function ServerScreen({
             onOpenMenu={vm.openActiveRelayMenu}
           />
 
-      <div className="flex gap-2 px-3"><ConcordRail /></div>
+      <div className="flex gap-2 overflow-x-auto px-3 py-2"><CommunityRail mode={{ kind: 'relay', url: vm.relay ?? '' }} onPickRelay={vm.selectRelay} /></div>
           <div className="channel-list native-scroll-y" ref={channelListRef}>
             <ServerChannelList vm={vm} />
           </div>

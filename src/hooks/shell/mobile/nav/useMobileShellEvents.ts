@@ -5,6 +5,7 @@ import { nostrActions, useBridge } from '@/services/nostr-bridge';
 import { subscribeVoiceJump } from '@/services/voice/jump-to-voice';
 import { emojiTagsForContent, mergeCustomEmojiMaps, type CustomEmojiMap } from '@/utils/media/tags/custom-emoji-tags';
 import { onOpenSettings, revealSettingsSection } from '@/services/settings/open-settings';
+import { useConcordNavigation } from '@/store/chat/concord';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/chat/dm';
 import type { NavState, ScreenName } from '@/utils/shell/mobile/url-state';
@@ -61,6 +62,7 @@ export function useExternalNavigation(
 
 /** Mirror the watched channel and DM thread into the bridge and the stores. */
 export function useActiveConversationMirror(nav: NavState, dmOptInEnabled: boolean) {
+  const concordOpen = useConcordNavigation(state => state.open);
   // Mirror the watched channel into the bridge. Without this:
   //   1) the active-channel priority gate (background message-queue drain
   //      pauses while the active channel is in 'loading') never engages
@@ -81,12 +83,13 @@ export function useActiveConversationMirror(nav: NavState, dmOptInEnabled: boole
   const bridge = useBridge();
   useLayoutEffect(() => {
     if (!bridge) return;
-    if (nav.screen === 'channel' && nav.groupId) {
+    if (nav.screen === 'channel' && nav.groupId && !concordOpen) {
       bridge.setActiveGroup(nav.groupId);
     } else {
       bridge.setActiveGroup(null);
+      if (concordOpen) useChatStore.setState({ activeChannelId: null });
     }
-  }, [nav.screen, nav.groupId, bridge]);
+  }, [nav.screen, nav.groupId, bridge, concordOpen]);
 
   useEffect(() => {
     useDMStore.setState({

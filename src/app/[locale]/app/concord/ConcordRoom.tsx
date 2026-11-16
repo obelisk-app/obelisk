@@ -17,6 +17,7 @@ import Input from '@/components/ui/forms/Input';
 import FormError from '@/components/ui/forms/FormError';
 import Modal from '@/components/ui/overlays/Modal';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
+import ConcordChannelEditForm from './ConcordChannelEditForm';
 import ConcordChannelForm from './ConcordChannelForm';
 import ConcordRoleForm from './ConcordRoleForm';
 import ConcordMember from './ConcordMember';
@@ -32,7 +33,7 @@ export default function ConcordRoom({ community, pane }: { community: ConcordCom
         {vm.categories.map(category => <div key={category.name}>{category.name && <Heading as="h3" variant="panel" className="px-2 pt-4 pb-1">{category.name}</Heading>}{category.groups.map(group => <GroupNode key={group.id} group={group} depth={0} childrenByParent={{}} groupsById={{}} view={vm.group ? { kind: 'group', groupId: vm.group.id } : { kind: 'empty' }} onSelect={vm.selectGroup} />)}</div>)}
       </div>
     </aside> : <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-lc-dark" data-testid="concord-room">
-      <ChannelHeader groupId={vm.group?.id ?? ''} group={vm.group} isAdmin={vm.canManageChannels} showMembers={vm.showMembers} onToggleMembers={vm.toggleMembers} onOpenSettings={vm.openSettings} />
+      <ChannelHeader groupId={vm.group?.id ?? ''} group={vm.group} isAdmin={vm.canManageChannels} showMembers={vm.showMembers} onToggleMembers={vm.toggleMembers} onOpenSettings={vm.editChannel} />
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">
           <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-4 pb-4" data-testid="concord-messages">
@@ -44,7 +45,7 @@ export default function ConcordRoom({ community, pane }: { community: ConcordCom
       </div>
     </section>}
     {vm.settings && <Modal onClose={vm.closeSettings} surface="card" panelClassName="flex max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark">
-      <ModalHeader title={vm.settings === 'channels' ? t('chat.concord.createChannel') : vm.settings === 'roles' ? t('chat.concord.createRole') : t('chat.concord.settings')} onBack={vm.settings === 'community' ? undefined : vm.openSettings} onClose={vm.closeSettings} />
+      <ModalHeader title={vm.settings === 'edit-channel' ? t('shell.desktop.channel.settings') : vm.settings === 'channels' ? t('chat.concord.createChannel') : vm.settings === 'roles' ? t('chat.concord.createRole') : t('chat.concord.settings')} onBack={vm.settings === 'community' ? undefined : vm.openSettings} onClose={vm.closeSettings} />
       <div className="space-y-6 overflow-y-auto p-5">
         {vm.settings === 'community' && <>
         {vm.canInvite && <Button variant="outline" data-testid="concord-create-invite" onClick={vm.createInvite}>{t('chat.concord.invite')}</Button>}
@@ -56,6 +57,7 @@ export default function ConcordRoom({ community, pane }: { community: ConcordCom
           {vm.canManageRoles && <Button variant="outline" data-testid="concord-role-settings" onClick={vm.openRoleSettings}>{t('chat.concord.createRole')}</Button>}
         </div>
         </>}
+        {vm.settings === 'edit-channel' && vm.canManageChannels && vm.channelId && <ConcordChannelEditForm key={vm.channelId} community={community} channelId={vm.channelId} name={vm.group?.name ?? ''} onSaved={vm.closeSettings} />}
         {vm.settings === 'channels' && vm.canManageChannels && <ConcordChannelForm community={community} />}
         {vm.settings === 'roles' && vm.canManageRoles && <ConcordRoleForm community={community} />}
       </div>

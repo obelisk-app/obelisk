@@ -89,7 +89,7 @@ The owner's folder rules, enforced by the guard tests listed under Testing (deta
 
 ## The relay layer
 
-Concord integration is in progress alongside NIP-29. Its session runtime and virtual SDK sockets live in `src/services/nostr-bridge/concord/`; the shell integration lives in `src/app/[locale]/app/concord/` and reuses the existing channel rows, header, message list and composer. Read [the implementation status and storage contract](docs/features/concord.md) before extending it. Concord alone uses its community-defined relay set through an isolated never-auth hub identity. Do not apply that exception to NIP-29 or put Concord secrets/decrypted state in `bridgeCache`. The dedicated branch is `feat/concord-dual-protocol`; test deployments use the persistent test directory described above.
+Concord integration is in progress alongside NIP-29. Its session runtime and virtual SDK sockets live in `src/services/nostr-bridge/concord/`; the shell integration lives in `src/app/[locale]/app/concord/` and reuses the existing channel rows, header, message list and composer. The community rail mixes both protocols; Concord owns its community/channel URL fragment while open. Read [the implementation status and storage contract](docs/features/concord.md) before extending it. Concord alone uses its community-defined relay set through an isolated never-auth hub identity. Do not apply that exception to NIP-29 or put Concord secrets/decrypted state in `bridgeCache`. The dedicated branch is `feat/concord-dual-protocol`; test deployments use the persistent test directory described above.
 
 ### RelayHub (`@nostr-wot/relay/hub`)
 

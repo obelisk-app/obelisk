@@ -8,6 +8,8 @@ import { useBridge } from '@/services/nostr-bridge';
 import { useRelayDeepLink } from '@/hooks/relay/deep-link/useRelayDeepLink';
 import { initialNav } from '@/constants/shell/mobile';
 import { normalizeDeepLinkRelay } from '@/utils/relay/deep-link';
+import { useConcordNavigation } from '@/store/chat/concord';
+import { parseConcordLocation } from '@/schemas/chat/concord-location';
 import { useChatStore } from '@/store/chat';
 import { useDMStore } from '@/store/chat/dm';
 import { type NavState, urlFor, parseUrl, restoredNav } from '@/utils/shell/mobile/url-state';
@@ -38,6 +40,7 @@ export function useMobileHistorySync({
   isLoggedIn, dmOptInEnabled, currentRelayUrl, nav, navRef, relayRef, setNav, setSlideDir, suppressSlideRef,
 }: MobileHistorySyncInputs) {
   const bridge = useBridge();
+  const concordOpen = useConcordNavigation(state => state.open);
   const initReadyRef = useRef(false);
   const switchFromDeepLink = useRelayDeepLink();
   const didInitRef = useRef(false);
@@ -96,6 +99,7 @@ export function useMobileHistorySync({
       // also seeds the parent tab between the guard and the sub-screen, so
       // the channel header's back arrow climbs up to the channel list rather
       // than dropping straight onto the guard and showing the exit toast.
+      if (useConcordNavigation.getState().open) return;
       if (saved && window.history.state?.phoneHistory) return; // The current app entry already has a stack; resizing must not grow it.
       const entries = buildSeedHistory(target, seedRelay);
       try {
@@ -116,17 +120,18 @@ export function useMobileHistorySync({
   useEffect(() => {
     relayRef.current = currentRelayUrl ?? null;
     if (typeof window === 'undefined') return;
-    if (!initReadyRef.current) return;
+    if (!initReadyRef.current || useConcordNavigation.getState().open) return;
     const url = urlFor(navRef.current, currentRelayUrl ?? null);
     try {
       window.history.replaceState(window.history.state, '', url);
     } catch { /* ignore */ }
-  }, [currentRelayUrl, navRef, relayRef]);
+  }, [currentRelayUrl, navRef, relayRef, concordOpen]);
 
   // ── popstate: drives all "back" navigation ──────────────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const handler = (e: PopStateEvent) => {
+      if (parseConcordLocation(window.location.hash)) return;
       const s = (e.state ?? null) as { nav?: NavState; guard?: boolean } | null;
       if (s?.guard) {
         const now = Date.now();
