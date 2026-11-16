@@ -27,7 +27,7 @@ export function useConcordRoom(community: ConcordCommunity) {
   const [timeline, setTimeline] = useState<{ channelId: string; rumors: Rumor[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [invite, setInvite] = useState('');
-  const [settings, setSettings] = useState(false);
+  const [settings, setSettings] = useState<'community' | 'channels' | 'roles' | null>(null);
   const [showMembers, setShowMembers] = useState(false);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -58,7 +58,8 @@ export function useConcordRoom(community: ConcordCommunity) {
   return {
     branding: appearance.branding, canEditBranding: appearance.canEdit,
     state, channels, rows, channelId, selectChannel, error, invite, protocol, groups, group, messages, messagesById, reactions, scroller,
-    settings, openSettings: () => setSettings(true), closeSettings: () => setSettings(false),
+    settings, openSettings: () => setSettings('community'), closeSettings: () => setSettings(null),
+    openChannelSettings: () => setSettings('channels'), openRoleSettings: () => setSettings('roles'),
     showMembers, toggleMembers: () => setShowMembers(value => !value), replyingTo, setReplyingTo,
     selectGroup: (id: string) => selectChannel(id.split(':').at(-1)!),
     categories: groupConcordChannels(channels).map(category => ({ name: category.name, groups: category.channels.filter(channel => channel.accessible).map(channel => concordGroup(community.communityId, channel)) })),

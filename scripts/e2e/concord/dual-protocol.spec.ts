@@ -34,6 +34,12 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(owner.getByTestId('concord-room')).toBeVisible({ timeout: 90_000 });
     await expect(owner.getByRole('dialog')).toHaveCount(0);
     await owner.getByRole('button', { name: 'Channel settings', exact: true }).click();
+    await expect(owner.getByTestId('concord-channel-name')).toHaveCount(0);
+    await expect(owner.getByTestId('concord-role-name')).toHaveCount(0);
+    await owner.getByTestId('concord-role-settings').click();
+    await expect(owner.getByTestId('concord-role-name')).toBeVisible();
+    await expect(owner.getByTestId('concord-community-title')).toHaveCount(0);
+    await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
     await owner.getByTestId('concord-community-title').fill(`${communityName} renamed`);
     await owner.getByLabel('Upload banner', { exact: true }).setInputFiles('public/icon-192.png');
     await owner.getByTestId('concord-branding-save').click();
@@ -77,6 +83,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('concord-channels')).toContainText(quickChannel);
     const channelName = `channel-${Date.now()}`;
     await owner.getByRole('button', { name: 'Channel settings', exact: true }).click();
+    await owner.getByTestId('concord-channel-settings').click();
     await owner.getByTestId('concord-channel-name').fill(channelName);
     await owner.getByLabel('Category', { exact: true }).fill('Integration tests');
     await owner.getByTestId('concord-channel-create').click();
@@ -84,6 +91,8 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('concord-channels')).toContainText('Integration tests');
     if (administration) {
     await expect(member.getByTestId('concord-create-invite')).toBeHidden();
+    await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
+    await owner.getByTestId('concord-role-settings').click();
     await owner.getByTestId('concord-role-name').fill('Inviters');
     await owner.getByLabel('Invite people', { exact: true }).check();
     await owner.getByTestId('concord-role-create').click();

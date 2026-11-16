@@ -44,14 +44,20 @@ export default function ConcordRoom({ community, pane }: { community: ConcordCom
       </div>
     </section>}
     {vm.settings && <Modal onClose={vm.closeSettings} surface="card" panelClassName="flex max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark">
-      <ModalHeader title={t('chat.concord.settings')} onClose={vm.closeSettings} />
+      <ModalHeader title={vm.settings === 'channels' ? t('chat.concord.createChannel') : vm.settings === 'roles' ? t('chat.concord.createRole') : t('chat.concord.settings')} onBack={vm.settings === 'community' ? undefined : vm.openSettings} onClose={vm.closeSettings} />
       <div className="space-y-6 overflow-y-auto p-5">
+        {vm.settings === 'community' && <>
         {vm.canInvite && <Button variant="outline" data-testid="concord-create-invite" onClick={vm.createInvite}>{t('chat.concord.invite')}</Button>}
         {vm.invite && <div className="flex items-end gap-2"><Input readOnly label={t('chat.concord.invite')} value={vm.invite} data-testid="concord-invite-link" /><CopyButton size="md" text={vm.invite} label={t('shell.desktop.invite.copy')} copiedLabel={t('common.copied')} /></div>}
         <FormError>{vm.error}</FormError>
         {vm.canEditBranding && <ConcordBrandingForm community={community} branding={vm.branding} onSaved={vm.closeSettings} />}
-        {vm.canManageChannels && <ConcordChannelForm community={community} />}
-        {vm.canManageRoles && <ConcordRoleForm community={community} />}
+        <div className="flex flex-wrap gap-2 border-t border-lc-border pt-4">
+          {vm.canManageChannels && <Button variant="outline" data-testid="concord-channel-settings" onClick={vm.openChannelSettings}>{t('chat.concord.createChannel')}</Button>}
+          {vm.canManageRoles && <Button variant="outline" data-testid="concord-role-settings" onClick={vm.openRoleSettings}>{t('chat.concord.createRole')}</Button>}
+        </div>
+        </>}
+        {vm.settings === 'channels' && vm.canManageChannels && <ConcordChannelForm community={community} />}
+        {vm.settings === 'roles' && vm.canManageRoles && <ConcordRoleForm community={community} />}
       </div>
     </Modal>}
   </ChannelProtocolContext.Provider>;
