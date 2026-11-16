@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import type { ConcordCommunity } from '@applesauce/concord/client';
 import { useForm } from '@/hooks/common/useForm';
-import { memberChannelPolicyForm } from '@/services/chat/concord/member-channels';
+import { memberChannelPolicyForm } from '@/services/chat/concord/member-channel-form';
 import Form from '@/components/ui/forms/Form';
 import FormActions from '@/components/ui/forms/FormActions';
 import FormError from '@/components/ui/forms/FormError';
