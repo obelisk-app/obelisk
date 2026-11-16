@@ -13,8 +13,7 @@ export default function ConcordMemberChannelPolicy({ community }: { community: C
   const t = useTranslations();
   const form = useForm(memberChannelPolicyForm(community, t('chat.concord.memberChannelsRole')));
   return <Form form={form} layout="stack">
-    <Checkbox label={t('chat.concord.memberChannels')} checked={form.values.enabled} onChange={event => form.set('enabled', event.target.checked)} data-testid="concord-member-channels" />
-    <p className="text-sm text-lc-muted">{t('chat.concord.memberChannelsHelp')}</p>
+    <Checkbox label={t('chat.concord.memberChannels')} hint={t('chat.concord.memberChannelsHelp')} checked={form.values.enabled} onChange={event => form.set('enabled', event.target.checked)} data-testid="concord-member-channels" />
     <FormError>{form.error}</FormError>
     <FormActions submitLabel={t('common.save')} submitTestId="concord-member-channels-save" busy={form.submitting} disabled={!form.canSubmit} />
   </Form>;
