@@ -319,7 +319,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
       await phone.getByRole('button', { name: 'Back', exact: true }).click();
       await phone.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName }).click();
       await expect(phone.getByTestId('concord-messages')).toContainText('Mobile reply', { timeout: 60_000 });
-    } finally { await freshPhone.close(); }
+    } finally { await freshPhone.close().catch(() => {}); }
     await member.setViewportSize({ width: 1440, height: 900 });
     await member.screenshot({ path: '/tmp/obelisk-concord-desktop.png' });
     await member.getByRole('button', { name: 'Direct messages', exact: true }).click();
@@ -341,6 +341,6 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     const plaintextLeak = await member.evaluate(text => Object.values(localStorage).some(value => String(value).includes(text)), message);
     expect(plaintextLeak).toBe(false);
   } finally {
-    await Promise.all([ownerContext.close(), memberContext.close()]);
+    await Promise.allSettled([ownerContext.close(), memberContext.close()]);
   }
 });
