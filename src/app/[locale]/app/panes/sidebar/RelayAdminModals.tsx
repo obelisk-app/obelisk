@@ -26,7 +26,7 @@ type Props = {
   relayRoles: RelayRoles;
 };
 
-/** The server-settings menu and the five operator editors it opens. */
+/** The server-settings menu, community invitation entry and operator editors. */
 export function RelayAdminModals({
   relay, isRelayOperator, settingsOpen, onCloseSettings, layout, channels, branding, emojiSet, relayRoles,
 }: Props) {
@@ -41,6 +41,7 @@ export function RelayAdminModals({
           onLayout={() => vm.open('layout')}
           onMembers={() => vm.open('members')}
           onRoles={() => vm.open('roles')}
+          onInvite={relay ? () => vm.invite(relay) : undefined}
         />
       )}
       {vm.opened.layout && relay && isRelayOperator && (

@@ -26,7 +26,7 @@ const editor = vi.hoisted(() => (testId: string) => function EditorStub(
 vi.mock('@/app/[locale]/app/modals/relay/RelaySettingsModal', () => ({
   RelaySettingsModal: (p: Record<string, () => void>) => (
     <div data-testid="settings">
-      {['onClose', 'onBranding', 'onEmojis', 'onLayout', 'onMembers', 'onRoles'].map((k) => (
+      {['onClose', 'onBranding', 'onEmojis', 'onLayout', 'onMembers', 'onRoles', 'onInvite'].map((k) => (
         <button key={k} type="button" onClick={p[k]}>{k}</button>
       ))}
     </div>
@@ -38,6 +38,8 @@ vi.mock('@/components/admin/relay-emoji/RelayEmojiAdminModal', () => ({ default:
 vi.mock('@/components/admin/relay-admin/RelayAdminPanel', () => ({ default: editor('members') }));
 vi.mock('@/components/admin/relay-roles/RelayRolesAdminModal', () => ({ default: editor('roles') }));
 
+vi.mock('@/services/settings/open-settings', () => ({ openSettings: vi.fn() }));
+import { openSettings } from '@/services/settings/open-settings';
 import { RelayAdminModals } from '@/app/[locale]/app/panes/sidebar/RelayAdminModals';
 
 function mount({ relay = 'wss://relay.test', isRelayOperator = true, settingsOpen = true } = {}) {
@@ -60,6 +62,11 @@ function mount({ relay = 'wss://relay.test', isRelayOperator = true, settingsOpe
 }
 
 describe('RelayAdminModals', () => {
+  it('opens the invitation panel on this community relay', () => {
+    mount({ relay: 'wss://chosen.test' });
+    fireEvent.click(screen.getByText('onInvite'));
+    expect(openSettings).toHaveBeenCalledWith('invites', { relay: 'wss://chosen.test' });
+  });
   it('renders nothing for someone who is not the operator', () => {
     mount({ isRelayOperator: false });
     expect(screen.queryByTestId('settings')).toBeNull();

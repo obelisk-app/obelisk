@@ -3,6 +3,7 @@ import { createTestPersonas } from '../persona-identity';
 import { nsecSession, seedSession } from '../lib';
 import { categoriesFlow } from './categories-flow';
 import { publicationsFlow } from './publications-flow';
+import { mobileSettingsFlow } from './settings-menu-flow';
 import { memberChannelsFlow } from './member-channels-flow';
 import { readFile } from 'node:fs/promises';
 
@@ -76,6 +77,11 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('concord-invite-input')).not.toHaveValue('', { timeout: 60_000 });
     await member.getByTestId('concord-join').click();
     await expect(member.getByTestId('concord-room')).toBeVisible({ timeout: 60_000 });
+    await member.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
+    await expect(member.getByTestId('server-settings-item-profile')).toHaveCount(0);
+    await member.getByTestId('server-settings-item-members').click();
+    await expect(member.getByTestId('concord-member-list')).toBeVisible();
+    await member.getByRole('button', { name: 'Hide member list', exact: true }).click();
     const message = `Encrypted E2E ${Date.now()}`;
     await owner.getByPlaceholder(/^Message #/).fill(message);
     await owner.getByPlaceholder(/^Message #/).press('Enter');
@@ -259,6 +265,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(owner.getByPlaceholder('Message #mobile-created')).toBeVisible();
     await owner.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(owner.getByTestId('concord-channels').getByRole('button').filter({ hasText: 'mobile-created' })).toBeVisible();
+    await mobileSettingsFlow(owner);
     expect((await member.locator('.chat-header-compact').boundingBox())!.y).toBeGreaterThanOrEqual(0);
     await member.screenshot({ path: '/tmp/obelisk-concord-mobile.png' });
     await memberChannelsFlow(owner, member);

@@ -34,6 +34,13 @@ test('NIP-29 still delivers messages between two accounts beside the Concord ent
     await expect(member.getByText(content, { exact: true })).toBeVisible();
     await sendMessageInActiveChannel(member, `${content} reply`);
     await expect(owner.getByText(`${content} reply`, { exact: true })).toBeVisible();
+    await owner.getByTestId('sidebar-header').getByRole('button', { name: 'Server settings', exact: true }).click();
+    await owner.getByTestId('server-settings-item-invite').click();
+    await expect(owner.getByTestId('relay-invite-settings')).toBeVisible();
+    await expect(owner.getByTestId('relay-invite-relay-picker')).toHaveValue(relay.url);
+    await owner.getByTestId('relay-invite-label').fill('Community settings test');
+    await owner.getByTestId('relay-invite-create').click();
+    await expect(owner.getByTestId('relay-invite-new-link')).toBeVisible();
     await member.reload();
     await expect(member.getByText(content, { exact: true })).toBeVisible();
   } finally {

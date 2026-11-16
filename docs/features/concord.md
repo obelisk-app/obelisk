@@ -50,7 +50,7 @@ Cross-client category/publication interoperability, broader private-channel reke
 
 Unit tests cover scoped identifiers, key derivation against the SDK, encrypted envelope interoperability, relay isolation, asynchronous socket replies, encrypted account storage and disposable test identities. Attachment tests reject modified ciphertext, wrong keys, incorrect hashes and unsupported algorithms. `scripts/e2e/concord/dual-protocol.spec.ts` has passed creation, clicked invitation, two-account message exchange, encrypted file upload/download and reload using fresh keys. Traces, screenshots and video are disabled because session setup contains private keys. Never commit test credentials or log invitation secrets.
 
-The shared-shell scenario separately checks create/join through +, two-account messaging, encrypted attachments, categories, automatic selected-channel restoration, desktop/mobile layout and return to the ordinary shell. The role-delegation scenario remains a known failing regression. Run typecheck, lint, structural guards, unit tests and the browser scenarios before deployment. A visible NIP-29 shell alone does not establish NIP-29 messaging regression coverage. Live relay tests depend on relay availability and admission policy; record failures honestly.
+The shared-shell scenario separately checks create/join through +, two-account messaging, encrypted attachments, categories, automatic selected-channel restoration, desktop/mobile layout and return to the ordinary shell. The role-delegation scenario now passes, including invitation creation by the recipient, after the acknowledged staff-Grant patch described below. Run typecheck, lint, structural guards, unit tests and the browser scenarios before deployment. A visible NIP-29 shell alone does not establish NIP-29 messaging regression coverage. Live relay tests depend on relay availability and admission policy; record failures honestly.
 
 Only deploy to the persistent `/root/obelisk-dex-test` checkout, preserving its environment files and dependency symlink. Build there and restart only PM2 `obelisk-dex-test` on port 3002. Verify `https://test.obelisk.ar` after restart. Do not use the production deploy script or create timestamped test release directories. See [operations](../operations/README.md).
 
@@ -111,3 +111,22 @@ The public browser scenario passed on `https://test.obelisk.ar`: a roleless memb
 The separate two-account role-delegation scenario passed, including the recipient actually creating an invitation. The NIP-29 two-account messaging regression passed. These use generated test identities and never record keys or invitation secrets in traces.
 
 Validation: TypeScript and the production build passed; full lint had zero errors (existing warnings remain); all 239 repository guard checks passed. The Concord regression selection passed 52 tests, followed by 11 focused authority/preservation/worker tests covering relay refusal, changed role/epoch support, concurrent channel creation, terminal deletions, exact permission masks, opt-out and runtime disposal.
+
+## Community settings and parity audit
+
+The desktop community menu is available to Concord members independently of relay-operator status. Individual actions remain permission-gated. Its Members action works while viewing both chat and Publications. Invite generation uses the common form submission guard, shows a spinner while keys synchronize and the invite is created, and displays failures with a retryable button. The ordinary NIP-29 desktop community settings menu includes Invite people, opening the existing invitation panel with that relay selected; the phone relay menu already offers its capability-aware invitation/share action.
+
+Remaining parity work, distinct from already-tested text/media/categories/Publications:
+
+- Notifications, unread/mention badges and read-cursor synchronization need Concord integration.
+- Search covers loaded messages in the selected channel and channel names, not a complete encrypted history index.
+- Roles can be created and assigned, but the UI does not yet offer full existing-role editing/deletion, all permission bits or channel-scoped grants.
+- Channel administration still needs full description/image, privacy/access-management and deletion workflows.
+- Publications have titles, comments and nesting; the projection currently supplies empty tag/topic lists.
+- Staff-readable reports, the moderation queue and wider ban/private-channel rekey recovery coverage remain unfinished.
+- Games, message zaps/forwarding and external previews are not integrated for private Concord content. Existing wallet and DM features remain separate.
+- Pending uploads are memory-only and do not survive reload; decrypted attachments are not persistently cached.
+- Other-client interoperability for Obelisk category/parent extensions, and broader signer/relay/rekey scenarios, still require testing. AUTH-required relays are unsupported by the isolated never-auth transport.
+- Voice remains deliberately unsupported until the planned protocol integration.
+
+The member-channel opt-in also has a protocol difference: creation comes with editing/deletion authority, and new automatic Grants require the owner's Obelisk session online. Existing grants work without the owner online.

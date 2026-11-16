@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
-import { Relay, finalizeEvent, generateSecretKey } from 'nostr-tools';
+import { Relay, finalizeEvent } from 'nostr-tools';
 import type { FreshIdentity } from '../lib';
 import type { BrowserContext } from '@playwright/test';
 
@@ -20,7 +20,7 @@ export async function startNip29Fixture(owner: FreshIdentity, member: FreshIdent
   const config = join(directory, 'config');
   await mkdir(config);
   await writeFile(join(config, 'settings.yml'), JSON.stringify({ relay: {
-    relay_secret_key: Buffer.from(generateSecretKey()).toString('hex'),
+    relay_secret_key: owner.skHex,
     local_addr: '0.0.0.0:8080', relay_url: advertised, db_path: '/app/db',
     whitelisted_pubkeys: [owner.pkHex, member.pkHex], admin_pubkeys: [owner.pkHex],
     max_subscriptions: 100, max_limit: 500,

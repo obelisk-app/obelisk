@@ -16,6 +16,11 @@ export async function publicationsFlow(owner: Page, member: Page, parentName: st
     if (!await channel.isVisible()) await page.getByTestId('concord-channels').getByRole('button').filter({ hasText: parentName }).click();
     await channel.click();
   }
+  await owner.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
+  await owner.getByTestId('server-settings-item-members').click();
+  await expect(owner.getByTestId('concord-member-list')).toBeVisible();
+  await expect(owner.getByTestId('concord-member-list').getByTestId('concord-member')).toHaveCount(2);
+  await owner.getByRole('button', { name: 'Hide member list', exact: true }).click();
   await owner.getByRole('button', { name: 'New publication', exact: true }).first().click();
   await owner.getByTestId('new-thread-title').fill('Encrypted announcement');
   await owner.getByTestId('new-thread-body').fill('Publication body shared between devices');

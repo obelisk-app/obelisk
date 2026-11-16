@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
+import { useForm } from '@/hooks/common/useForm';
+import { concordInviteForm } from '@/services/chat/concord/invite-form';
 import type { ConcordCommunity } from '@applesauce/concord/client';
 import type { Rumor, ChannelMetadata } from '@applesauce/concord';
 import { useConcordBranding } from './useConcordBranding';
@@ -36,6 +38,7 @@ export function useConcordRoom(community: ConcordCommunity) {
   const [timeline, setTimeline] = useState<{ channelId: string; rumors: Rumor[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [invite, setInvite] = useState('');
+  const inviteForm = useForm(concordInviteForm(community, setInvite));
   const [settings, setSettings] = useState<'community' | 'branding' | 'invite' | 'layout' | 'channels' | 'roles' | 'edit-channel' | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const showMembers = useConcordNavigation(nav => nav.membersOpen);
@@ -115,10 +118,7 @@ export function useConcordRoom(community: ConcordCommunity) {
     canManageChannels: !state.dissolved && community.canDo(PERM.MANAGE_CHANNELS),
     canManageRoles: !state.dissolved && community.canDo(PERM.MANAGE_ROLES),
     canDelete: (rumor: Rumor) => !state.dissolved && (rumor.pubkey === community.pubkey || refoundAuthority(state, PERM.MANAGE_MESSAGES, rumor.pubkey)(community.pubkey)),
-    createInvite: () => run(async () => {
-      const result = await community.createInvite({ base: window.location.origin, label: 'Obelisk' });
-      setInvite(result.url);
-    }),
+    createInvite: () => inviteForm.submit(), inviting: inviteForm.submitting, inviteError: inviteForm.error,
     react: (rumor: Rumor) => run(() => community.react(channelId!, rumor, '+')),
     remove: (rumor: Rumor) => run(() => community.deleteMessage(channelId!, rumor)),
   };

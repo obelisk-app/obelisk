@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useConfiguredRelays } from '@/services/nostr-bridge';
+import { openSettings } from '@/services/settings/open-settings';
 
 /** The operator editors the server-settings menu opens. */
 export type RelayAdminEditor = 'layout' | 'branding' | 'emojis' | 'members' | 'roles';
@@ -20,6 +21,7 @@ export function useRelayAdminModals() {
   return {
     opened,
     configuredRelays,
+    invite: (relay: string) => openSettings('invites', { relay }),
     open: (editor: RelayAdminEditor) => setOpened((o) => ({ ...o, [editor]: true })),
     close: (editor: RelayAdminEditor) => setOpened((o) => ({ ...o, [editor]: false })),
   };
