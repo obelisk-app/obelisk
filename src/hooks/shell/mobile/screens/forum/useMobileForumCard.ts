@@ -1,8 +1,7 @@
+import { useForumMessages } from '@/hooks/chat/forum/useForumMessages';
 import { useMemo } from 'react';
 import { displayNameFor } from '@/utils/identity/display-name';
 import {
-  useMessages,
-  useMessagesStatus,
   useUserMetadata,
   type JsForumTag,
   type JsGroup,
@@ -16,8 +15,7 @@ import { resolveTopics } from '@/utils/chat/forum/forum-threads';
  * bridge owns the retry ladder behind `messagesStatus`.
  */
 export function useMobileForumCard(group: JsGroup, forumTags: ReadonlyArray<JsForumTag>) {
-  const messages = useMessages(group.id);
-  const messagesStatus = useMessagesStatus(group.id);
+  const { messages, messagesStatus } = useForumMessages(group.id);
   const op = messages[0] ?? null;
   const lastMsg = messages[messages.length - 1] ?? null;
   const opMeta = useUserMetadata(op?.pubkey ?? null);

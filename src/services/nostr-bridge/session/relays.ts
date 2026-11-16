@@ -127,6 +127,14 @@ export class RelayRail {
     }
   }
 
+  /** Account-data recovery updates the rail without connecting or authenticating to another relay. */
+  restoreConnections(relays: string[]): void {
+    const list = uniqueRelayUrls(relays.filter(isImportableRelayUrl));
+    if (!list.length) return;
+    this.t.state.configuredRelays.set(list);
+    this.persistRelays();
+  }
+
   async addRelay(url: string): Promise<void> {
     const trimmed = normalizeConfiguredRelayUrl(url);
     if (!trimmed) return;

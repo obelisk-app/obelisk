@@ -1,9 +1,8 @@
 'use client';
+import { useForumMessages } from '@/hooks/chat/forum/useForumMessages';
 
 import { useMemo } from 'react';
 import {
-  useMessages,
-  useMessagesStatus,
   useUserMetadata,
   type JsForumTag,
   type JsGroup,
@@ -17,8 +16,7 @@ import { resolveTopics } from '@/utils/chat/forum/forum-threads';
  * the first message lands.
  */
 export function useThreadCardData(thread: JsGroup, forumTags: ReadonlyArray<JsForumTag>) {
-  const messages = useMessages(thread.id);
-  const messagesStatus = useMessagesStatus(thread.id);
+  const { messages, messagesStatus } = useForumMessages(thread.id);
   const op = messages[0] ?? null;
   const lastMsg = messages[messages.length - 1] ?? null;
   const opMeta = useUserMetadata(op?.pubkey ?? null);

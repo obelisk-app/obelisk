@@ -1,3 +1,4 @@
+export { startCommunityConnectionsSync } from './account-data/sync';
 export { getBridge, getBridgeImpl, logoutPageSession, type BridgeImpl } from './facade/client';
 export { getConcordForBridge } from './concord/session';
 export { isImportableRelayUrl } from './relay/relay-list';

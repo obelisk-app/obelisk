@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useMessages } from '@/services/nostr-bridge';
+import { useForumMessages } from '@/hooks/chat/forum/useForumMessages';
 
 /**
  * One thread under a publication in the sidebar, on the publication's
@@ -9,7 +9,7 @@ import { useMessages } from '@/services/nostr-bridge';
  * empty or aborted threads don't pile up in the sidebar.
  */
 export function ForumThreadRow({ groupId, children }: { groupId: string; children: ReactNode }) {
-  const messages = useMessages(groupId);
+  const { messages } = useForumMessages(groupId);
   if (messages.length === 0) return null;
   return <div className="lc-thread-row">{children}</div>;
 }

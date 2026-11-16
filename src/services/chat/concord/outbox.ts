@@ -1,8 +1,10 @@
 import { BehaviorSubject } from 'rxjs';
 import type { ConcordCommunity } from '@applesauce/concord/client';
-import { ChatMessageFactory } from 'applesauce-common/factories';
+import { ChatMessageFactory, CommentFactory } from 'applesauce-common/factories';
+import { addMediaAttachments } from 'applesauce-common/operations/media-attachment';
+import type { Rumor } from '@applesauce/concord';
 import { bindToChannel, includeMediaEncryption } from '@applesauce/concord/operations';
-import type { EventTemplate } from 'nostr-tools';
+import { getEventHash, type EventTemplate } from 'nostr-tools';
 import type { JsMessage } from '@/services/nostr-bridge';
 import type { MediaAttachment } from '@applesauce/concord/helpers';
 import { CONCORD_ATTACHMENT_BYTE_LIMIT } from '@/constants/nostr-bridge/concord';
@@ -11,6 +13,8 @@ import { concordUploader } from './media';
 export interface ConcordPendingMessage {
   message: JsMessage;
   channelId: string;
+  thread?: Rumor;
+  replyParent?: Rumor;
   files: File[];
   reply: { id: string; pubkey: string } | null;
   previews: string[];
@@ -18,6 +22,7 @@ export interface ConcordPendingMessage {
   attachments: MediaAttachment[];
   prepared?: EventTemplate;
   epoch?: number;
+  rumorId?: string;
 }
 const boxes = new WeakMap<ConcordCommunity, ConcordOutbox>();
 
@@ -33,17 +38,17 @@ export class ConcordOutbox {
     row.message = { ...row.message, pending: phase !== 'failed', failed: phase === 'failed' };
     this.rows$.next([...this.rows$.value]);
   }
-  enqueue(channelId: string, content: string, reply: { id: string; pubkey: string } | null, files: File[]) {
+  enqueue(channelId: string, content: string, reply: { id: string; pubkey: string } | null, files: File[], thread?: Rumor, replyParent?: Rumor) {
     this.assertCurrent();
     if (this.rows$.value.length >= 10) throw new Error('Pending attachment limit exceeded');
     const retainedBytes = this.rows$.value.flatMap(row => row.files).reduce((sum, file) => sum + file.size, 0);
     if (retainedBytes + files.reduce((sum, file) => sum + file.size, 0) > CONCORD_ATTACHMENT_BYTE_LIMIT * 2) throw new Error('Pending attachment limit exceeded');
     const id = `pending:${crypto.randomUUID()}`;
     const row: ConcordPendingMessage = {
-      channelId, files, reply, attachments: [], phase: files.length ? 'encrypting' : 'sending',
+      channelId, files, reply, thread, replyParent, attachments: [], phase: files.length ? 'encrypting' : 'sending',
       previews: files.map(file => URL.createObjectURL(file)),
       message: { id, clientTag: id, pubkey: this.community.pubkey, content, createdAt: Math.floor(Date.now() / 1000),
-        kind: 9, replyToId: reply?.id ?? null, mentions: [], pending: true },
+        kind: thread ? 1111 : 9, replyToId: reply?.id ?? thread?.id ?? null, mentions: [], pending: true },
     };
     this.rows$.next([...this.rows$.value, row]);
     void this.deliver(row, reply);
@@ -60,12 +65,20 @@ export class ConcordOutbox {
       this.update(row, 'sending');
       const epoch = this.community.material.channels.find(channel => channel.id === row.channelId)?.epoch ?? this.community.material.root_epoch;
       if (!row.prepared) {
-        let factory = ChatMessageFactory.create([row.message.content, ...row.attachments.map(file => file.url)].filter(Boolean).join('\n'));
-        if (reply) factory = factory.replyTo({ id: reply.id, author: reply.pubkey });
-        if (row.attachments.length) factory = factory.attachments(row.attachments);
+        const text = [row.message.content, ...row.attachments.map(file => file.url)].filter(Boolean).join('\n');
+        let draft;
+        if (row.thread) draft = await CommentFactory.create(row.replyParent ?? row.thread, text);
+        else {
+          let factory = ChatMessageFactory.create(text);
+          if (reply) factory = factory.replyTo({ id: reply.id, author: reply.pubkey });
+          draft = await factory;
+        }
+        if (row.attachments.length) draft = await addMediaAttachments(row.attachments)(draft);
         row.prepared = await includeMediaEncryption(row.attachments.filter(file => file.url && file.encryption).map(file => ({ url: file.url!, ...file.encryption! })))(
-          await bindToChannel(row.channelId, epoch)(await factory));
+          await bindToChannel(row.channelId, epoch)(draft));
         row.epoch = epoch;
+        row.rumorId = getEventHash({ ...row.prepared, pubkey: this.community.pubkey });
+        this.update(row, 'sending');
       }
       // Keep the exact rumor on retry, including its timestamp: partial relay success cannot duplicate it.
       if (row.epoch !== epoch) throw new Error('Channel keys changed; resend this message');

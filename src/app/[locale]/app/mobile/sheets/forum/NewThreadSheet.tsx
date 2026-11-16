@@ -1,4 +1,5 @@
 'use client';
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 
 import { useId } from 'react';
 import { type JsForumTag } from '@/services/nostr-bridge';
@@ -40,12 +41,13 @@ export function NewThreadSheet({
   onCreated: (childId: string) => void;
 }) {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
   const titleId = useId();
   const bodyId = useId();
   const signerReady = useSignerReady();
   const myPubkey = useMyPubkey();
   const form = useForm(newThreadForm({
-    forumGroupId, access: { isPublic, isHidden, isRestricted, isOpen }, initialTitle, signerReady, myPubkey, onCreated,
+    forumGroupId, access: { isPublic, isHidden, isRestricted, isOpen }, initialTitle, signerReady, myPubkey, onCreated, createPublication: protocol?.createPublication,
   }));
   const { tagIds } = form.values;
 

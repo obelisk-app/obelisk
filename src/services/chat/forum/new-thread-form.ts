@@ -16,6 +16,7 @@ export interface NewThreadAccess {
 
 export interface NewThreadTarget {
   forumGroupId: string;
+  createPublication?: (title: string, body: string) => Promise<string>;
   access: NewThreadAccess;
   /** The title to start with (the search the person typed, when they created from it). */
   initialTitle: string;
@@ -38,6 +39,7 @@ export function newThreadForm(target: NewThreadTarget): FormSpec<NewThreadValues
     initial: () => ({ title: target.initialTitle, body: '', tagIds: [] }),
     ready: (values) => target.signerReady && target.myPubkey !== null && allFilled(values.title, values.body),
     submit: async (values) => {
+      if (target.createPublication) return target.createPublication(values.title.trim(), values.body.trim());
       const childId = await nostrActions.createGroup({
         name: values.title.trim(),
         about: undefined,

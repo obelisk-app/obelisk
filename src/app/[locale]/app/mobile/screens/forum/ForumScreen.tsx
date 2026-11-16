@@ -1,4 +1,5 @@
 'use client';
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 
 import Button from '@/components/ui/buttons/Button';
 import { shortHost } from '@/utils/relay-url/url-host';
@@ -32,6 +33,7 @@ export function ForumScreen({
 }) {
   const t = useTranslations();
   const relay = useCurrentRelayUrl();
+  const protocol = useChannelProtocol();
   const forum = useForumScreen(groupId, selectChild);
   const { group, forumTags, children, visibleThreads, threadsLoading, query } = forum;
 
@@ -40,7 +42,7 @@ export function ForumScreen({
       <div className="chat-header">
         <div className="chat-breadcrumb">
           <BackButton onClick={back} style={{ marginLeft: -6 }} />
-          <span className="space-name-bc">{shortHost(relay)}</span>
+          <span className="space-name-bc">{protocol?.communityName ?? shortHost(relay)}</span>
           <span className="sep">/</span>
           <span>{group?.name ?? t('mobile.forum.label')}</span>
         </div>

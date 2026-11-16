@@ -1,3 +1,4 @@
+import { accountDataRelays } from '../account-data/relays';
 import type { BridgeImpl } from '../facade/client';
 import { pageRelayHub } from '../facade/page-hub';
 import type { createConcordRuntime } from './runtime';
@@ -25,10 +26,10 @@ export function getConcordForBridge(bridge: BridgeImpl): Promise<Runtime> {
     runtime?.dispose();
     if (sessions.get(bridge)?.generation === generation) sessions.delete(bridge);
   };
-  const promise = import('./runtime').then(module => module.createConcordRuntime(pageRelayHub(), signer, generation, () => {
+  const promise = Promise.all([import('./runtime'), accountDataRelays(bridge)]).then(([module, personalRelays]) => module.createConcordRuntime(pageRelayHub(), signer, generation, () => {
     guard();
     if (closed) throw new DOMException('Concord session ended', 'AbortError');
-  })).then(value => {
+  }, personalRelays)).then(value => {
     if (closed) { value.dispose(); throw new DOMException('Concord session ended', 'AbortError'); }
     runtime = value;
     return value;

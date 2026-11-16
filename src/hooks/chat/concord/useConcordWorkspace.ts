@@ -40,14 +40,14 @@ export function useConcordWorkspace() {
         try {
           const parsed: unknown = JSON.parse(saved);
           if (parsed && typeof parsed === 'object' && 'communityId' in parsed && typeof parsed.communityId === 'string' && 'channelId' in parsed && (parsed.channelId === null || typeof parsed.channelId === 'string') && 'open' in parsed && typeof parsed.open === 'boolean') {
-            useConcordNavigation.setState({ communityId: parsed.communityId, channelId: parsed.channelId, open: parsed.open });
+            useConcordNavigation.setState({ communityId: parsed.communityId, channelId: parsed.channelId, threadId: 'threadId' in parsed && typeof parsed.threadId === 'string' && /^[0-9a-f]{64}$/.test(parsed.threadId) ? parsed.threadId : null, open: parsed.open });
           }
         } catch { /* Invalid navigation never changes membership state. */ }
       }
       let saving = Promise.resolve();
       stopNavigation = useConcordNavigation.subscribe(next => {
         if (!next.communityId) return;
-        const value = JSON.stringify({ communityId: next.communityId, channelId: next.channelId, open: next.open });
+        const value = JSON.stringify({ communityId: next.communityId, channelId: next.channelId, threadId: next.threadId, open: next.open });
         saving = saving.then(() => runtime.saveNavigation(value)).catch(err => { if (active) setError(errorText(t, err, 'chat.concord.failed')); });
       });
     }).catch(err => {

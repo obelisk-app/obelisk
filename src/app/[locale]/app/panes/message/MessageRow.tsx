@@ -135,7 +135,7 @@ export const MessageRow = memo(function MessageRow({
         )}
         <ReactionPills actions={actions} zapTotal={zapTotal} isAdmin={isAdmin} />
       </div>
-      <div ref={menus.menuRef} className="absolute right-3 -top-3 flex items-start gap-1" data-no-msg-menu>
+      {(!vm.privateChannel || !msg.pending && !msg.failed) && <div ref={menus.menuRef} className="absolute right-3 -top-3 flex items-start gap-1" data-no-msg-menu>
         <MessageToolbar
           msg={msg}
           actions={actions}
@@ -169,7 +169,7 @@ export const MessageRow = memo(function MessageRow({
             onClose={() => menus.setForwarding(false)}
           />
         )}
-      </div>
+      </div>}
     </div>
   );
 });

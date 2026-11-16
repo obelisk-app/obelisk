@@ -13,7 +13,7 @@ export type TextFieldOf<V> = { [K in keyof V]: V[K] extends string ? K : never }
 export interface FieldBinding {
   name: string;
   value: string;
-  onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
 }
 
 /**

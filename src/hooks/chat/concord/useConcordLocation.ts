@@ -6,7 +6,7 @@ import { parseConcordLocation } from '@/schemas/chat/concord-location';
 
 /** Both shells yield URL ownership while a Concord community is displayed. */
 export function useConcordLocation(loggedIn: boolean) {
-  const { open, communityId, channelId } = useConcordNavigation();
+  const { open, communityId, channelId, threadId } = useConcordNavigation();
   useLayoutEffect(() => {
     const location = parseConcordLocation(window.location.hash);
     if (location) useConcordNavigation.setState({ ...location, open: true });
@@ -25,8 +25,9 @@ export function useConcordLocation(loggedIn: boolean) {
     if (!loggedIn || !open || !communityId) return;
     const params = new URLSearchParams({ concord: communityId });
     if (channelId) params.set('channel', channelId);
+    if (threadId) params.set('thread', threadId);
     const next = `${window.location.pathname}#${params}`;
     if (window.location.pathname + window.location.search + window.location.hash === next) return;
     window.history.pushState({ ...window.history.state, guard: false }, '', next);
-  }, [loggedIn, open, communityId, channelId]);
+  }, [loggedIn, open, communityId, channelId, threadId]);
 }

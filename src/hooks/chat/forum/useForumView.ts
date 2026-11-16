@@ -1,11 +1,8 @@
 'use client';
+import { useCommunityForumData } from '@/hooks/chat/forum/useCommunityForumData';
 
 import { useMemo, useState } from 'react';
 import {
-  useChildrenByParent,
-  useGroupMetadataEose,
-  useGroups,
-  useMessagesByGroup,
   type JsForumTag,
 } from '@/services/nostr-bridge';
 import { useForumPrefs } from '@/hooks/chat/forum/useForumPrefs';
@@ -28,10 +25,7 @@ const NO_CHILDREN: ReadonlyArray<string> = [];
  * what this returns (docs/ui/conventions.md#component-files).
  */
 export function useForumView(groupId: string, onSelectThread: (childGroupId: string) => void) {
-  const childrenByParent = useChildrenByParent();
-  const groups = useGroups();
-  const groupMetadataEose = useGroupMetadataEose();
-  const messagesByGroup = useMessagesByGroup();
+  const { groups, childrenByParent, groupMetadataEose, messagesByGroup } = useCommunityForumData();
   const childIds = childrenByParent[groupId] ?? NO_CHILDREN;
   const forum = useMemo(() => groups.find((g) => g.id === groupId) ?? null, [groups, groupId]);
   const forumTags: ReadonlyArray<JsForumTag> = forum?.forumTags ?? [];

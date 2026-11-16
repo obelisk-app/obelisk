@@ -1,11 +1,8 @@
 'use client';
+import { useCommunityForumData } from '@/hooks/chat/forum/useCommunityForumData';
 
 import { useMemo, useState, type FormEvent } from 'react';
 import {
-  useChildrenByParent,
-  useGroupMetadataEose,
-  useGroups,
-  useMessagesByGroup,
   type JsForumTag,
 } from '@/services/nostr-bridge';
 import { resolveChildGroups } from '@/utils/chat/forum/forum-view';
@@ -21,10 +18,7 @@ const NO_CHILDREN: ReadonlyArray<string> = [];
  * included.
  */
 export function useForumScreen(groupId: string, selectChild: (childId: string) => void = () => {}) {
-  const groups = useGroups();
-  const childrenByParent = useChildrenByParent();
-  const groupMetadataEose = useGroupMetadataEose();
-  const messagesByGroup = useMessagesByGroup();
+  const { groups, childrenByParent, groupMetadataEose, messagesByGroup } = useCommunityForumData();
   const group = groups.find((g) => g.id === groupId);
   const forumTags: ReadonlyArray<JsForumTag> = group?.forumTags ?? [];
   const childIds = childrenByParent[groupId] ?? NO_CHILDREN;

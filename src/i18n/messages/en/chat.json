@@ -407,6 +407,12 @@
       "failed": "Could not send. Retry this message."
     },
     "channelPosition": "Channel order",
-    "searchLocal": "Search channels and loaded messages in this channel"
+    "searchLocal": "Search channels and loaded messages in this channel",
+    "copyId": "Copy community ID",
+    "leave": "Leave community",
+    "leaveTitle": "Leave {name}?",
+    "leaveBody": "This removes the community from your devices. You will need an invitation to join again. The community itself is not deleted.",
+    "parentChannel": "Parent channel",
+    "noParent": "Top-level channel"
   }
 }

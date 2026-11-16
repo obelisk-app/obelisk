@@ -14,7 +14,7 @@ describe('shared encrypted channel commands', () => {
     const token = await adapter.upload(file);
     expect(enqueue).not.toHaveBeenCalled();
     await adapter.send(`hello\n${token}`, { id: 'parent', pubkey: 'author' }, []);
-    expect(enqueue).toHaveBeenCalledWith('channel', 'hello', { id: 'parent', pubkey: 'author' }, [file]);
+    expect(enqueue).toHaveBeenCalledWith('channel', 'hello', { id: 'parent', pubkey: 'author' }, [file], undefined, undefined);
     expect(files.size).toBe(0);
   });
 

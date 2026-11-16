@@ -5,20 +5,22 @@ import { refoundAuthority, parseImeta } from '@applesauce/concord/helpers';
 import { CONCORD_ATTACHMENT_BYTE_LIMIT } from '@/constants/nostr-bridge/concord';
 import { PERM } from '@/constants/chat/concord';
 import { downloadConcordAttachment } from './media';
+import { createConcordPublication } from './publications';
 import { concordOutbox } from './outbox';
 
-export function concordChannelProtocol(community: ConcordCommunity, channelId: string, rumors: readonly Rumor[], files: Map<string, File>): ChannelProtocol {
+export function concordChannelProtocol(community: ConcordCommunity, channelId: string, rumors: readonly Rumor[], files: Map<string, File>, thread?: Rumor): ChannelProtocol {
   const box = concordOutbox(community);
   const find = (id: string) => { const rumor = rumors.find(row => row.id === id); if (!rumor) throw new Error('Message unavailable'); return rumor; };
   return {
     createChannel: name => community.createChannel(name),
-    scope: `concord:${community.communityId}:${channelId}`,
+    scope: `concord:${community.communityId}:${channelId}${thread ? `:thread:${thread.id}` : ''}`,
+    createPublication: (title, body) => createConcordPublication(community, channelId, title, body),
     async upload(file) { if (file.size > CONCORD_ATTACHMENT_BYTE_LIMIT || files.size >= 10) throw new Error('Attachment limit exceeded'); const token = `attachment:${crypto.randomUUID()}`; files.set(token, file); return token; },
     async send(content, reply) {
       const selected = [...files].filter(([token]) => content.includes(token));
       let text = content;
       for (const [token] of selected) text = text.replaceAll(token, '');
-      box.enqueue(channelId, text.trim(), reply, selected.map(([, file]) => file));
+      box.enqueue(channelId, text.trim(), reply, selected.map(([, file]) => file), thread, reply ? rumors.find(rumor => rumor.id === reply.id) : undefined);
       for (const [token] of selected) files.delete(token);
 
     },

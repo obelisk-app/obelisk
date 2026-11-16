@@ -26,6 +26,14 @@ import { searchMessages } from '../groups/message/search';
 import { exportAccountData, type AccountExport } from './export';
 
 export abstract class BridgeCommands extends BridgeReads {
+  async resolveAccountDataRelays(): Promise<string[]> {
+    const pubkey = this.myPubkey.get();
+    if (!pubkey) return [];
+    const result = await this.m.dm.dmRelays.resolveGiftWrapRelays(pubkey);
+    return result.source === 'active-relay' ? [] : result.relays;
+  }
+  restoreCommunityConnections(relays: string[]): void { this.m.rail.restoreConnections(relays); }
+
   // -- Group operations --------------------------------------------------
 
   // -- Group messages: `groups/messages/`.

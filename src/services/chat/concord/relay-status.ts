@@ -1,3 +1,4 @@
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { pageRelayHub } from '@/services/nostr-bridge';
 import type { RelayStatus } from '@/services/social/relay-status';
 
@@ -6,7 +7,7 @@ export function watchConcordRelayStatus(pubkey: string, listener: (rows: Record<
   const hub = pageRelayHub();
   const refresh = () => listener(Object.fromEntries(hub.statuses()
     .filter(row => row.identityId.startsWith(`concord:${pubkey}:`))
-    .map(row => [row.url, { url: row.url, state: row.connection === 'idle' ? 'unknown' : row.connection === 'reconnecting' ? 'connecting' : row.connection,
+    .map(row => [normalizeRelayUrl(row.url), { url: row.url, state: row.connection === 'idle' ? 'unknown' : row.connection === 'reconnecting' ? 'connecting' : row.connection,
       latencyMs: null, notes: 0, lastChange: 0 } satisfies RelayStatus])));
   refresh();
   return hub.onStatus(refresh);

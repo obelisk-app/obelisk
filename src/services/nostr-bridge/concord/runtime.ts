@@ -11,7 +11,7 @@ import { disposeConcordOutbox } from '@/services/chat/concord/outbox';
 import { startConcordWithCache } from './startup';
 
 /** SDK gets Obelisk's signer, encrypted storage, and virtual sockets over the shared hub. */
-export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, generation: number, assertCurrent: () => void) {
+export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, generation: number, assertCurrent: () => void, personalRelays: string[] = []) {
   const identityId = `concord:${signer.pubkey}:${generation}`;
   const storage = await openConcordStorage(signer.pubkey, assertCurrent);
   assertCurrent();
@@ -23,7 +23,7 @@ export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, gen
       signEvent: template => signer.signEvent(template),
       nip44: { encrypt: signer.nip44Encrypt, decrypt: signer.nip44Decrypt },
     },
-    pool, storage, relays: [...CONCORD_DEFAULT_RELAYS],
+    pool, storage, relays: [...new Set([...personalRelays, ...CONCORD_DEFAULT_RELAYS])],
     storeFactory: (communityId, plane) => concordRumorStore(storage, communityId, plane),
     autoUnlock: true, autoSaveCommunityList: true,
     uploader: concordUploader(assertCurrent),

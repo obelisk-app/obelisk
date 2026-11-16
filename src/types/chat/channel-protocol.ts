@@ -1,8 +1,12 @@
+import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
 import type { MediaAttachment } from '@applesauce/concord/helpers';
 
 /** Commands for the shared chat surface. An encrypted channel never falls back to relay commands. */
 export interface ChannelProtocol {
   scope: string;
+  communityName?: string;
+  forum?: { groups: JsGroup[]; childrenByParent: Record<string, string[]>; messagesByGroup: Record<string, JsMessage[]> };
+  createPublication?(title: string, body: string): Promise<string>;
   retry?(id: string): void;
   dismiss?(id: string): void;
   pending?(id: string): { phase: 'encrypting' | 'uploading' | 'sending' | 'failed'; files: File[]; previews: string[] } | undefined;

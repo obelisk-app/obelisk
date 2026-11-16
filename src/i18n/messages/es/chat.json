@@ -407,6 +407,12 @@
       "failed": "No se pudo enviar. Reintentá este mensaje."
     },
     "channelPosition": "Orden del canal",
-    "searchLocal": "Buscar canales y mensajes cargados en este canal"
+    "searchLocal": "Buscar canales y mensajes cargados en este canal",
+    "copyId": "Copiar ID de la comunidad",
+    "leave": "Salir de la comunidad",
+    "leaveTitle": "¿Salir de {name}?",
+    "leaveBody": "La comunidad se quitará de tus dispositivos. Necesitarás una invitación para volver a entrar. La comunidad no se elimina.",
+    "parentChannel": "Canal principal",
+    "noParent": "Canal de nivel superior"
   }
 }

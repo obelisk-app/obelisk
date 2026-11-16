@@ -160,6 +160,7 @@ const hookDefaults = {
   pageRelayHub: () => {
     throw new Error('pageRelayHub: the bridge is mocked in this suite');
   },
+  startCommunityConnectionsSync: () => () => {},
   getConcordForBridge: async () => {
     throw new Error('Concord runtime is unavailable in a module mock');
   },

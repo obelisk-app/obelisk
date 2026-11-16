@@ -13,6 +13,7 @@ import { GroupNode } from '../panes/sidebar/GroupNode';
 import Heading from '@/components/ui/layout/Heading';
 import Sheet from '@/components/ui/overlays/Sheet';
 import SheetHeader from '@/components/ui/overlays/SheetHeader';
+import { ForumScreen } from '../mobile/screens/forum/ForumScreen';
 import ConcordSearch from './ConcordSearch';
 import ConcordSettings from './ConcordSettings';
 import ConcordMember from './ConcordMember';
@@ -30,12 +31,12 @@ export default function ConcordMobileRoom({ community }: { community: ConcordCom
         <div className="channel-list native-scroll-y">
           {vm.categories.map(category => <div key={category.name}>
             {category.name && <Heading as="h3" variant="panel" className="px-4 pt-4 pb-1">{category.name}</Heading>}
-            {category.groups.map(group => <GroupNode key={group.id} group={group} depth={0} childrenByParent={{}} groupsById={{}} view={vm.group ? { kind: 'group', groupId: vm.group.id } : { kind: 'empty' }} onSelect={vm.pickChannel} />)}
+            {category.groups.map(group => <GroupNode key={group.id} group={group} depth={0} childrenByParent={vm.childrenByParent} groupsById={vm.groupsById} view={vm.group ? { kind: 'group', groupId: vm.group.id } : { kind: 'empty' }} onSelect={vm.pickChannel} />)}
           </div>)}
         </div>
         </section></div>
-      </div> : <div className="screen active" data-screen="channel" data-testid="concord-room">
-        <ChannelHeaderBar onSearch={vm.openSearch} header={vm.header} back={vm.showChannels} isChannelAdmin={vm.canManageChannels} onOpenSettings={vm.editChannel} openMembers={vm.toggleMembers} />
+      </div> : vm.publication && vm.group ? <ForumScreen groupId={vm.group.id} back={vm.showChannels} selectChild={vm.pickChannel} /> : <div className="screen active" data-screen="channel" data-testid="concord-room">
+        <ChannelHeaderBar onSearch={vm.openSearch} header={vm.header} back={vm.showChannels} isChannelAdmin={vm.canManageChannels && !vm.threadId} onOpenSettings={vm.editChannel} openMembers={vm.toggleMembers} />
         <div className="messages-wrap relative flex min-h-0 flex-1 flex-col">
           <div className="messages native-scroll-y" ref={scroller} data-testid="concord-messages">
             <ChannelTimeline items={vm.items} messagesStatus="empty-confirmed" messagesById={vm.messagesById} reactions={vm.reactions} myPubkey={vm.myPubkey} isAdmin={false} groupId={vm.group?.id ?? ''} onLongPress={vm.openActions} onAvatar={vm.openProfile} />

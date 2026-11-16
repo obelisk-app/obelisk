@@ -7,6 +7,7 @@ import Form from '@/components/ui/forms/Form';
 import FormActions from '@/components/ui/forms/FormActions';
 import FormError from '@/components/ui/forms/FormError';
 import Input from '@/components/ui/forms/Input';
+import Select from '@/components/ui/forms/Select';
 import Checkbox from '@/components/ui/forms/Checkbox';
 
 export default function ConcordChannelForm({ community }: { community: ConcordCommunity }) {
@@ -15,6 +16,11 @@ export default function ConcordChannelForm({ community }: { community: ConcordCo
   return <Form form={vm.form} layout="stack">
     <Input label={t('chat.concord.channelName')} data-testid="concord-channel-name" {...vm.form.field('name')} />
     <Input label={t('chat.concord.category')} {...vm.form.field('category')} />
+    <Select label={t('chat.concord.parentChannel')} {...vm.form.field('parent')}>
+      <option value="">{t('chat.concord.noParent')}</option>
+      {vm.parents.map(channel => <option key={channel.channel_id} value={channel.channel_id}>{channel.name}</option>)}
+    </Select>
+    <Input type="number" min="0" step="1" label={t('chat.concord.channelPosition')} {...vm.form.field('position')} />
     <Checkbox label={t('chat.concord.privateChannel')} checked={vm.form.values.private} onChange={event => vm.setPrivate(event.target.checked)} />
     <Checkbox label={t('chat.concord.publication')} checked={vm.form.values.publication} onChange={event => vm.setPublication(event.target.checked)} />
     <FormError>{vm.form.error}</FormError>

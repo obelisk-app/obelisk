@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { ConcordOutbox } from '@/services/chat/concord/outbox';
+import { mergeConcordPending } from '@/utils/chat/concord/presentation';
 import type { ConcordCommunity } from '@applesauce/concord/client';
 
 const { upload } = vi.hoisted(() => ({ upload: vi.fn() }));
@@ -60,4 +61,19 @@ it('does not publish a pending upload after account disposal', async () => {
   expect(publishToPlane).not.toHaveBeenCalled();
   expect(box.rows$.value).toHaveLength(0);
   expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:local');
+});
+
+it('shows one photo row when its echo arrives before the publish promise settles', async () => {
+  let acknowledge!: () => void;
+  const { box, publishToPlane } = setup();
+  publishToPlane.mockImplementationOnce(() => new Promise<void>(resolve => { acknowledge = resolve; }));
+  box.enqueue('channel', 'photo', null, [new File(['photo'], 'photo.png')]);
+  await vi.waitFor(() => expect(publishToPlane).toHaveBeenCalledOnce());
+  const pending = box.rows$.value[0];
+  expect(pending.rumorId).toMatch(/^[0-9a-f]{64}$/);
+  const delivered = { ...pending.message, id: pending.rumorId!, pending: false };
+  expect(mergeConcordPending([delivered], box.rows$.value, 'channel')).toEqual([pending.message]);
+  acknowledge();
+  await vi.waitFor(() => expect(box.rows$.value).toHaveLength(0));
+  expect(mergeConcordPending([delivered], box.rows$.value, 'channel')).toEqual([delivered]);
 });

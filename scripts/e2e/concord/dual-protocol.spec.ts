@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createTestPersonas } from '../persona-identity';
 import { nsecSession, seedSession } from '../lib';
+import { publicationsFlow } from './publications-flow';
 import { readFile } from 'node:fs/promises';
 
 // Session seeding carries private keys. Never capture Playwright API arguments or browser storage.
@@ -141,6 +142,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     } else {
       await owner.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     }
+    if (!administration) await publicationsFlow(owner, member, `${quickChannel}-renamed`);
     await member.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName }).click();
     await member.getByPlaceholder(/^Message #/).fill('Remember this channel');
     await member.getByPlaceholder(/^Message #/).press('Enter');
@@ -230,6 +232,9 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await owner.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName }).click();
     await expect(owner.getByTestId('concord-image')).toHaveCount(1, { timeout: 60_000 });
     await expect.poll(() => owner.getByTestId('concord-image').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(192);
+    await expect(member.getByTestId('concord-local-preview')).toHaveCount(0, { timeout: 60_000 });
+    await expect(member.getByTestId('concord-send-status')).toHaveCount(0, { timeout: 60_000 });
+    await expect(member.getByTestId('concord-messages').locator('img[data-testid="concord-image"], img[data-testid="concord-local-preview"]')).toHaveCount(1);
     console.log('Four mobile Send actions: one decrypted image on sender and recipient.');
     await owner.setViewportSize({ width: 390, height: 844 });
     await owner.getByRole('button', { name: 'Back', exact: true }).click();
@@ -270,6 +275,18 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('concord-room')).toBeHidden();
     await expect(member).not.toHaveURL(/#concord=/);
     await expect(member.locator('[data-tour=rail-add-relay]')).toBeVisible();
+    const tile = member.getByRole('button', { name: `${communityName} renamed`, exact: true });
+    await tile.click({ button: 'right' });
+    await member.getByTestId('concord-rail-menu').getByText('Leave community', { exact: true }).click();
+    await member.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(tile).toBeVisible();
+    await tile.click({ button: 'right' });
+    await member.getByTestId('concord-rail-menu').getByText('Leave community', { exact: true }).click();
+    await member.getByRole('button', { name: 'Leave community', exact: true }).click();
+    await expect(tile).toHaveCount(0, { timeout: 60_000 });
+    await member.reload();
+    await expect(member.locator('[data-tour=rail-add-relay]')).toBeVisible();
+    await expect(tile).toHaveCount(0);
     const plaintextLeak = await member.evaluate(text => Object.values(localStorage).some(value => String(value).includes(text)), message);
     expect(plaintextLeak).toBe(false);
   } finally {
