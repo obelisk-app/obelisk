@@ -163,6 +163,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByRole('button', { name: `${communityName} renamed`, exact: true })).toBeVisible({ timeout: 10_000 });
     await expect(member.getByPlaceholder(`Message #${channelName}`)).toBeVisible({ timeout: 10_000 });
     await expect(member.getByTestId('concord-messages')).toContainText('Remember this channel', { timeout: 10_000 });
+    if (!administration) await expect(member.getByTestId('concord-channels').getByRole('button', { name: /Empty category/ })).toBeVisible();
     expect(heldSockets).toBeGreaterThan(0);
     holdConcordRelays = false;
     await member.reload();
@@ -268,6 +269,8 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
       await card.getByRole('button', { name: `${communityName} renamed`, exact: true }).click();
       await expect(phone.getByTestId('concord-room')).toBeVisible({ timeout: 60_000 });
       await phone.getByRole('button', { name: 'Back', exact: true }).click();
+      if (!administration) await expect(phone.getByTestId('concord-channels').getByRole('button', { name: /Daily discussion/ })).toBeVisible();
+      if (!administration) await expect(phone.getByTestId('concord-channels').getByRole('button', { name: /Empty category/ })).toBeVisible();
       await phone.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName }).click();
       await expect(phone.getByTestId('concord-messages')).toContainText('Mobile reply', { timeout: 60_000 });
     } finally { await freshPhone.close(); }
