@@ -1,10 +1,20 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { createTestPersonas } from '../persona-identity';
 import { nsecSession, seedSession } from '../lib';
 import { readFile } from 'node:fs/promises';
 
 // Session seeding carries private keys. Never capture Playwright API arguments or browser storage.
 test.use({ trace: 'off', video: 'off', screenshot: 'off' });
+
+async function expectMobileSheetFits(page: Page) {
+  // Shared native sheets slide in over 280 ms; check their settled position.
+  await expect.poll(async () => {
+    const bounds = await page.getByRole('dialog').boundingBox();
+    return bounds ? bounds.y + bounds.height : Infinity;
+  }).toBeLessThanOrEqual(844);
+  expect((await page.getByRole('dialog').boundingBox())!.y).toBeGreaterThanOrEqual(0);
+}
+
 
 for (const administration of [false, true]) test(administration ? 'Concord role delegation' : 'Concord shared shell, encrypted messages, files and cache restoration', async ({ browser, baseURL }) => {
   test.setTimeout(360_000);
@@ -135,6 +145,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await member.getByPlaceholder(/^Message #/).fill('Remember this channel');
     await member.getByPlaceholder(/^Message #/).press('Enter');
     await expect(member.getByTestId('concord-messages')).toContainText('Remember this channel');
+    await expect(member.getByTestId('concord-send-status')).toHaveCount(0, { timeout: 60_000 });
     await expect(member).toHaveURL(/#concord=[^&]+&channel=/);
     const selectedUrl = member.url();
     let holdConcordRelays = true;
@@ -155,6 +166,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('sidebar-header')).toContainText(`${communityName} renamed`);
     await expect(member.getByTestId('sidebar-header').locator('img')).toHaveCount(2);
     await expect(member.getByTestId('concord-messages')).toContainText('Remember this channel');
+    await expect(member.getByTestId('concord-send-status')).toHaveCount(0, { timeout: 60_000 });
     await expect(member).toHaveURL(selectedUrl);
     await expect(member.getByTestId('concord-rail-icon')).toBeVisible();
     await member.getByTestId('concord-channels').getByRole('button').filter({ hasText: `${quickChannel}-renamed` }).click();
@@ -174,9 +186,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('relay-status-row')).toHaveCount(3);
     await member.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     await member.locator('.action-menu').click();
-    const settingsBounds = await member.getByRole('dialog').boundingBox();
-    expect(settingsBounds!.y).toBeGreaterThanOrEqual(0);
-    expect(settingsBounds!.y + settingsBounds!.height).toBeLessThanOrEqual(844);
+    await expectMobileSheetFits(member);
     await member.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
     await member.locator('.action-search').click();
     await member.getByRole('searchbox').fill(channelName);
@@ -187,9 +197,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await member.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     await member.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName }).click();
     await member.locator('.action-members').click();
-    const memberBounds = await member.getByRole('dialog').boundingBox();
-    expect(memberBounds!.y).toBeGreaterThanOrEqual(0);
-    expect(memberBounds!.y + memberBounds!.height).toBeLessThanOrEqual(844);
+    await expectMobileSheetFits(member);
     await member.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
     await member.getByTestId('mobile-msg-more').first().click();
     await member.getByTestId('mobile-msg-actions-reply').click();
@@ -197,6 +205,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await member.getByPlaceholder(`Message #${channelName}`).fill('Mobile reply');
     await member.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(member.getByTestId('concord-messages')).toContainText('Mobile reply');
+    await expect(member.getByTestId('concord-send-status')).toHaveCount(0, { timeout: 60_000 });
     let releaseUploads!: () => void;
     const uploadGate = new Promise<void>(resolve => { releaseUploads = resolve; });
     await member.route(/https:\/\/(nostr\.download|blossom\.yakihonne\.com)\/upload/, async route => {
@@ -227,10 +236,9 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(owner.locator('.server-banner-actions button')).toHaveCount(4);
     await owner.getByTestId('mobile-create-channel-btn').click();
     await expect(owner.getByTestId('concord-channel-name')).toBeVisible();
-    const createBounds = await owner.getByRole('dialog').boundingBox();
-    expect(createBounds!.y).toBeGreaterThanOrEqual(0);
-    expect(createBounds!.y + createBounds!.height).toBeLessThanOrEqual(844);
+    await expectMobileSheetFits(owner);
     await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
+    await expectMobileSheetFits(owner);
     await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
     expect((await member.locator('.chat-header-compact').boundingBox())!.y).toBeGreaterThanOrEqual(0);
     await member.screenshot({ path: '/tmp/obelisk-concord-mobile.png' });

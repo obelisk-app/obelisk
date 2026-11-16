@@ -66,7 +66,9 @@
   -webkit-font-smoothing: antialiased;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* The fixed frame must not scroll on focus. The oversized ambient layers
+   * create scrollable overflow with hidden; only the inner screens may scroll. */
+  overflow: clip;
   overscroll-behavior: none;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
