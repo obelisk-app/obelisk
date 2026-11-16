@@ -13,7 +13,7 @@ export async function mobileSettingsFlow(owner: Page) {
     await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
   }
   await owner.locator('.action-menu').click();
-  await owner.getByRole('dialog').getByRole('button', { name: 'Invite people', exact: true }).click();
+  await owner.getByRole('dialog').getByRole('button', { name: 'Invitation link', exact: true }).click();
   await owner.getByTestId('concord-create-invite').click();
   await expect(owner.getByTestId('concord-invite-link')).not.toHaveValue('');
   await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();

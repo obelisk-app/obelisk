@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
-import { Relay, finalizeEvent } from 'nostr-tools';
+import { Relay, finalizeEvent, generateSecretKey, nip19 } from 'nostr-tools';
 import type { FreshIdentity } from '../lib';
 import type { BrowserContext } from '@playwright/test';
 
@@ -20,7 +20,7 @@ export async function startNip29Fixture(owner: FreshIdentity, member: FreshIdent
   const config = join(directory, 'config');
   await mkdir(config);
   await writeFile(join(config, 'settings.yml'), JSON.stringify({ relay: {
-    relay_secret_key: owner.skHex,
+    relay_secret_key: Buffer.from(generateSecretKey()).toString('hex'),
     local_addr: '0.0.0.0:8080', relay_url: advertised, db_path: '/app/db',
     whitelisted_pubkeys: [owner.pkHex, member.pkHex], admin_pubkeys: [owner.pkHex],
     max_subscriptions: 100, max_limit: 500,
@@ -60,7 +60,11 @@ export async function startNip29Fixture(owner: FreshIdentity, member: FreshIdent
       await context.route('https://nip29-regression.obelisk.ar/**', async request => {
         const path = new URL(request.request().url());
         const response = await request.fetch({ url: `http://127.0.0.1:${port}${path.pathname}${path.search}` });
-        await request.fulfill({ response });
+        if (path.pathname === '/' && request.request().headers().accept === 'application/nostr+json') {
+          // The image hardcodes its upstream operator contact. Advertise this
+          // disposable relay's configured admin; invitation APIs remain real.
+          await request.fulfill({ response, json: { ...await response.json(), contact: nip19.npubEncode(owner.pkHex) } });
+        } else await request.fulfill({ response });
       });
       await context.routeWebSocket(/^wss:\/\/nip29-regression\.obelisk\.ar(?:\/|$)/, socket => {
         const upstream = new WebSocket(url);

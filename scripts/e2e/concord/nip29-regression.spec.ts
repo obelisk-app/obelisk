@@ -10,6 +10,8 @@ test('NIP-29 still delivers messages between two accounts beside the Concord ent
   const relay = await startNip29Fixture(personas.owner, personas.member);
   const ownerContext = await browser.newContext({ baseURL, serviceWorkers: 'block' });
   const memberContext = await browser.newContext({ baseURL, serviceWorkers: 'block' });
+  ownerContext.setDefaultTimeout(30_000);
+  memberContext.setDefaultTimeout(30_000);
   try {
     await relay.route(ownerContext);
     await relay.route(memberContext);
@@ -18,9 +20,9 @@ test('NIP-29 still delivers messages between two accounts beside the Concord ent
     const owner = await ownerContext.newPage();
     const member = await memberContext.newPage();
     for (const page of [owner, member]) {
-      await page.addLocatorHandler(page.getByTestId('hint-callout'), () => page.getByTestId('hint-mute').click());
       await page.goto('/app');
       await page.getByTestId('analytics-consent').getByRole('button', { name: "Don't allow", exact: true }).click({ noWaitAfter: true });
+      await page.addLocatorHandler(page.getByTestId('hint-callout'), () => page.getByTestId('hint-mute').click());
       await page.getByRole('button').filter({ hasText: /^#/ }).first().waitFor({ state: 'visible', timeout: 45_000 }).catch(async error => {
         console.error('NIP-29 main state:', await page.locator('main').innerText());
         throw error;

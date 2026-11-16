@@ -116,17 +116,23 @@ Validation: TypeScript and the production build passed; full lint had zero error
 
 The desktop community menu is available to Concord members independently of relay-operator status. Individual actions remain permission-gated. Its Members action works while viewing both chat and Publications. Invite generation uses the common form submission guard, shows a spinner while keys synchronize and the invite is created, and displays failures with a retryable button. The ordinary NIP-29 desktop community settings menu includes Invite people, opening the existing invitation panel with that relay selected; the phone relay menu already offers its capability-aware invitation/share action.
 
-Remaining parity work, distinct from already-tested text/media/categories/Publications:
+Remaining parity work and implementation limits, distinct from already-tested text/media/categories/Publications:
 
 - Notifications, unread/mention badges and read-cursor synchronization need Concord integration.
-- Search covers loaded messages in the selected channel and channel names, not a complete encrypted history index.
+- Phone search covers loaded messages in the selected channel and channel names; the desktop header has no Concord search entry, and there is no complete encrypted history index.
 - Roles can be created and assigned, but the UI does not yet offer full existing-role editing/deletion, all permission bits or channel-scoped grants.
-- Channel administration still needs full description/image, privacy/access-management and deletion workflows.
+- Channel administration still needs full description/image, privacy/access-management and deletion workflows. Existing invite listing/revocation controls also need a Concord UI.
 - Publications have titles, comments and nesting; the projection currently supplies empty tag/topic lists.
-- Staff-readable reports, the moderation queue and wider ban/private-channel rekey recovery coverage remain unfinished.
-- Games, message zaps/forwarding and external previews are not integrated for private Concord content. Existing wallet and DM features remain separate.
+- Staff-readable reports, the moderation queue, separate kick/unban workflows and wider ban/private-channel rekey recovery coverage remain unfinished.
+- Community emoji/sticker-pack management, games, message zaps/forwarding and external previews are not integrated for private Concord content. Existing wallet and DM features remain separate.
 - Pending uploads are memory-only and do not survive reload; decrypted attachments are not persistently cached.
 - Other-client interoperability for Obelisk category/parent extensions, and broader signer/relay/rekey scenarios, still require testing. AUTH-required relays are unsupported by the isolated never-auth transport.
 - Voice remains deliberately unsupported until the planned protocol integration.
 
 The member-channel opt-in also has a protocol difference: creation comes with editing/deletion authority, and new automatic Grants require the owner's Obelisk session online. Existing grants work without the owner online.
+
+### Settings validation (2026-11-16)
+
+Application revision `86220b8a`, build `dR79CmWoLpO1ll4tps1dT`, is deployed to `test.obelisk.ar`. TypeScript/build, targeted lint, 55 focused tests and all 239 repository guard checks passed. Public browser tests passed ordinary-member menu access without admin entries, the Members destination while viewing Publications, mobile branding/roles/invitation/member destinations, invitation generation by a delegated Concord member, and the existing channel/media/cache/recovery scenario.
+
+The NIP-29 regression also opened Invite people from the community settings, verified the selected relay and generated an invitation through the real disposable Rust relay's authenticated API, alongside its two-account messaging checks. The fixture replaces the container image's hardcoded upstream NIP-11 contact with its configured test admin; the invitation API and authority checks are not mocked. The final shared-shell and NIP-29 scenarios passed together in 3.4 minutes; delegated Concord invite creation passed separately on the same application build.
