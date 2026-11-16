@@ -1,3 +1,4 @@
+import { awaitConcordSendReady } from './send-readiness';
 import { BehaviorSubject } from 'rxjs';
 import type { ConcordCommunity } from '@applesauce/concord/client';
 import { ChatMessageFactory, CommentFactory } from 'applesauce-common/factories';
@@ -63,6 +64,8 @@ export class ConcordOutbox {
       }
       this.assertCurrent();
       this.update(row, 'sending');
+      await awaitConcordSendReady(this.community);
+      this.assertCurrent();
       const epoch = this.community.material.channels.find(channel => channel.id === row.channelId)?.epoch ?? this.community.material.root_epoch;
       if (!row.prepared) {
         const text = [row.message.content, ...row.attachments.map(file => file.url)].filter(Boolean).join('\n');

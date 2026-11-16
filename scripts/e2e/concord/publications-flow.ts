@@ -28,6 +28,7 @@ export async function publicationsFlow(owner: Page, member: Page, parentName: st
   await member.getByPlaceholder(/^Message #/).press('Enter');
   await expect(owner.getByTestId('concord-messages')).toContainText('A native encrypted publication reply');
   await expect(member.getByTestId('concord-send-status')).toHaveCount(0, { timeout: 60_000 });
+  console.log('Nested publication and encrypted comment delivered.');
   await member.reload();
   await expect(member.getByTestId('concord-messages')).toContainText('A native encrypted publication reply');
 }

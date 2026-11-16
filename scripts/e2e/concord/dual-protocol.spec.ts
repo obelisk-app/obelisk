@@ -147,7 +147,10 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await member.getByPlaceholder(/^Message #/).fill('Remember this channel');
     await member.getByPlaceholder(/^Message #/).press('Enter');
     await expect(member.getByTestId('concord-messages')).toContainText('Remember this channel');
-    await expect(member.getByTestId('concord-send-status')).toHaveCount(0, { timeout: 60_000 });
+    await expect(member.getByTestId('concord-send-status')).toHaveCount(0, { timeout: 60_000 }).catch(async error => {
+      console.log('After-reload send phase:', await member.getByTestId('concord-send-status').allTextContents());
+      throw error;
+    });
     await expect(member).toHaveURL(/#concord=[^&]+&channel=/);
     const selectedUrl = member.url();
     let holdConcordRelays = true;

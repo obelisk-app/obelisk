@@ -1,3 +1,4 @@
+import { awaitConcordSendReady } from './send-readiness';
 import type { ConcordCommunity } from '@applesauce/concord/client';
 import { ChatMessageFactory } from 'applesauce-common/factories';
 import { bindToChannel, includeSubject } from '@applesauce/concord/operations';
@@ -10,6 +11,7 @@ const pending = new WeakMap<ConcordCommunity, Map<string, Pending>>();
 /** Native Concord titled kind 9. A failed acknowledgement retries the same rumor. */
 export async function createConcordPublication(community: ConcordCommunity, channelId: string, title: string, body: string) {
   assertSubject(title.trim());
+  await awaitConcordSendReady(community);
   const epoch = () => community.material.channels.find(channel => channel.id === channelId)?.epoch ?? community.material.root_epoch;
   let drafts = pending.get(community);
   if (!drafts) { drafts = new Map(); pending.set(community, drafts); }

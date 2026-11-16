@@ -1,3 +1,4 @@
+import { BehaviorSubject } from 'rxjs';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { ConcordOutbox } from '@/services/chat/concord/outbox';
 import { mergeConcordPending } from '@/utils/chat/concord/presentation';
@@ -8,7 +9,7 @@ vi.mock('@/services/chat/concord/media', () => ({ concordUploader: () => ({ uplo
 
 function setup() {
   const publishToPlane = vi.fn().mockResolvedValue('id');
-  const community = { pubkey: 'a'.repeat(64), communityId: 'community', material: { root_epoch: 0, channels: [] }, publishToPlane } as unknown as ConcordCommunity;
+  const community = { phase$: new BehaviorSubject('live'), pubkey: 'a'.repeat(64), communityId: 'community', material: { root_epoch: 0, channels: [] }, publishToPlane } as unknown as ConcordCommunity;
   return { box: new ConcordOutbox(community), publishToPlane, community };
 }
 beforeEach(() => {
@@ -76,4 +77,16 @@ it('shows one photo row when its echo arrives before the publish promise settles
   acknowledge();
   await vi.waitFor(() => expect(box.rows$.value).toHaveLength(0));
   expect(mergeConcordPending([delivered], box.rows$.value, 'channel')).toEqual([delivered]);
+});
+
+it('keeps an immediate pending row but waits for restored community keys before publishing', async () => {
+  const { box, publishToPlane, community } = setup();
+  community.phase$.next('syncing');
+  box.enqueue('channel', 'after reload', null, []);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(box.rows$.value[0].message.pending).toBe(true);
+  expect(publishToPlane).not.toHaveBeenCalled();
+  community.phase$.next('live');
+  await vi.waitFor(() => expect(box.rows$.value).toHaveLength(0));
+  expect(publishToPlane).toHaveBeenCalledTimes(1);
 });
