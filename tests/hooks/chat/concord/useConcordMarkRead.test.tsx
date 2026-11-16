@@ -37,3 +37,12 @@ it('does not acknowledge messages from the phone channel list or an unfocused pa
   rerender();
   expect(useConcordReadStore.getState().cursors).toEqual({});
 });
+it('does not acknowledge the chat behind an open search or settings overlay', () => {
+  useConcordReadStore.getState().reset('me');
+  useConcordNavigation.getState().selectCommunity('community');
+  vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+  const element = document.createElement('div');
+  element.scrollTo = vi.fn();
+  renderHook(() => useConcordMarkRead('me', 'concord:community:channel', [{ pubkey: 'other', createdAt: 1 } as JsMessage], { current: element }, true));
+  expect(useConcordReadStore.getState().cursors).toEqual({});
+});

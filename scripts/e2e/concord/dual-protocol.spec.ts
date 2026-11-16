@@ -280,6 +280,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await member.screenshot({ path: '/tmp/obelisk-concord-mobile.png' });
     await memberChannelsFlow(owner, member);
     const freshPhone = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 } });
+    freshPhone.setDefaultTimeout(30_000);
     try {
       await seedSession(freshPhone, nsecSession(personas.member));
       const phone = await freshPhone.newPage();
@@ -304,7 +305,8 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
       if (!administration) await expect(phone.getByTestId('concord-channels').getByRole('button', { name: /Daily discussion/ })).toBeVisible();
       if (!administration) await expect(phone.getByTestId('concord-channels').getByRole('button', { name: /Empty category/ })).toBeVisible();
       if (readProbe) {
-        await phone.getByRole('button', { name: 'Search', exact: true }).click();
+        await phone.getByRole('button', { name: 'Search this server', exact: true }).click();
+        await expectMobileSheetFits(phone);
         await phone.getByRole('searchbox').fill(readProbe.text);
         await expect(phone.getByTestId('concord-search-hit')).toContainText(readProbe.text, { timeout: 30_000 });
         await phone.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();

@@ -92,13 +92,13 @@ export function useConcordRoom(community: ConcordCommunity) {
   const messages = useMemo(() => mergeConcordPending(thread ? concordThreadMessages(rows, thread) : rows.map(concordMessage), pending, channelId, thread?.id), [rows, pending, channelId, thread]);
   const reactions = useMemo(() => Object.fromEntries(rows.map(row => [row.rumor.id, row.reactionEvents.map(event => ({ id: event.id, pubkey: event.pubkey, emoji: event.content, targetEventId: row.rumor.id, createdAt: event.created_at }))])), [rows]);
   const messagesById = useMemo(() => new Map(messages.map(message => [message.id, message])), [messages]);
-  useConcordMarkRead(community.pubkey, group?.id, messages, scroller);
+  useConcordMarkRead(community.pubkey, group?.id, messages, scroller, !!settings || searching || showMembers);
   const run = async (operation: () => Promise<unknown>) => {
     setError(null);
     try { await operation(); } catch (err) { setError(errorText(t, err, 'chat.concord.failed')); }
   };
   return {
-    searching, closeSearch: () => setSearching(false),
+    searching, openSearch: () => setSearching(true), closeSearch: () => setSearching(false),
     layout, rootChannels, collapsedCategories, toggleCategory: (id: string) => setCollapsedCategories(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; }),
     openBranding: () => setSettings('branding'), openInvite: () => setSettings('invite'),
     openMemberSettings: () => { setSettings(null); setShowMembers(true); },

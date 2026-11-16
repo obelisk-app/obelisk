@@ -17,16 +17,14 @@ export function useConcordMobileRoom(community: ConcordCommunity) {
   const relays = useConfiguredRelays();
   const channelsOpen = useConcordNavigation(state => state.mobileChannelsOpen);
   const setChannelsOpen = useConcordNavigation(state => state.setMobileChannelsOpen);
-  const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(false);
   const [actionMessage, setActionMessage] = useState<JsMessage | null>(null);
   const items = useMemo(() => buildTimeline(room.messages, t, locale), [room.messages, t, locale]);
   return {
-    ...room, items, myPubkey, relays, channelsOpen, adding, searching, communityRelays: room.state.material.relays,
-    openSearch: () => setSearching(true), closeSearch: () => setSearching(false),
+    ...room, items, myPubkey, relays, channelsOpen, adding, communityRelays: room.state.material.relays,
     header: { category: room.branding.name, channel: room.group?.name ?? '' },
     showChannels: () => { if (room.threadId && room.channelId) room.selectChannel(room.channelId); else setChannelsOpen(true); },
-    pickChannel: (id: string) => { room.selectGroup(id); setSearching(false); },
+    pickChannel: (id: string) => { room.selectGroup(id); room.closeSearch(); },
     selectRelay: (url: string) => { useConcordNavigation.getState().close(); void nostrActions.switchRelay(url); },
     openAdd: () => setAdding(true), closeAdd: () => setAdding(false),
     actionMessage: actionMessage ? { ...actionMessage, groupId: room.group?.id, canDeleteOwn: actionMessage.pubkey === myPubkey } : null,

@@ -4,12 +4,12 @@ import { useConcordNavigation } from '@/store/chat/concord';
 import { useConcordReadStore } from '@/store/chat/concord-read';
 
 /** Only the mounted chat scroller can acknowledge messages, never the sidebar/list. */
-export function useConcordMarkRead(account: string, scope: string | undefined, messages: JsMessage[], scroller: RefObject<HTMLDivElement | null>) {
+export function useConcordMarkRead(account: string, scope: string | undefined, messages: JsMessage[], scroller: RefObject<HTMLDivElement | null>, covered = false) {
   const position = useRef({ scope: '', nearBottom: true });
   const listOpen = useConcordNavigation(state => state.mobileChannelsOpen);
   useEffect(() => {
     const element = scroller.current;
-    if (!element || !scope || listOpen) return;
+    if (!element || !scope || listOpen || covered) return;
     if (position.current.scope !== scope) position.current = { scope, nearBottom: true };
     if (position.current.nearBottom) element.scrollTo({ top: element.scrollHeight });
     const advance = () => {
@@ -27,5 +27,5 @@ export function useConcordMarkRead(account: string, scope: string | undefined, m
     document.addEventListener('visibilitychange', advance);
     window.addEventListener('focus', advance);
     return () => { element.removeEventListener('scroll', onScroll); document.removeEventListener('visibilitychange', advance); window.removeEventListener('focus', advance); };
-  }, [account, scope, messages, scroller, listOpen]);
+  }, [account, scope, messages, scroller, listOpen, covered]);
 }
