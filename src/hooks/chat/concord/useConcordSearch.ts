@@ -3,7 +3,8 @@ import { combineLatest } from 'rxjs';
 import type { ConcordCommunity } from '@applesauce/concord/client';
 import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
 import { projectConcordTimeline } from '@/utils/chat/concord/timeline';
-import { concordMessage } from '@/utils/chat/concord/presentation';
+import { concordPublicationData } from '@/utils/chat/concord/publications';
+import { concordGroup, concordMessage } from '@/utils/chat/concord/presentation';
 
 /** Search authenticated, locally loaded history; never send plaintext search to a relay. */
 export function useConcordSearch(community: ConcordCommunity, groups: JsGroup[]) {
@@ -16,7 +17,14 @@ export function useConcordSearch(community: ConcordCommunity, groups: JsGroup[])
       const accessible = channels.filter(channel => channel.accessible);
       if (!accessible.length) { setMessages([]); return; }
       const timelines = combineLatest([community.state$, ...accessible.map(channel => community.channelTimeline(channel.channel_id))]).subscribe(([state, ...rows]) => {
-        setMessages(rows.flatMap((rumors, index) => projectConcordTimeline(rumors, state, accessible[index].channel_id).map(row => ({ ...concordMessage(row), groupId: `concord:${community.communityId}:${accessible[index].channel_id}` }))));
+        setMessages(rows.flatMap((rumors, index) => {
+          const channel = accessible[index];
+          const group = concordGroup(community.communityId, channel);
+          const timeline = projectConcordTimeline(rumors, state, channel.channel_id);
+          const publications = concordPublicationData(group, timeline);
+          const threads = new Map(Object.entries(publications.messagesByGroup).flatMap(([id, messages]) => messages.map(message => [message.id, id] as const)));
+          return timeline.map(row => ({ ...concordMessage(row), groupId: threads.get(row.rumor.id) ?? group.id }));
+        }));
       });
       stop = () => timelines.unsubscribe();
     });

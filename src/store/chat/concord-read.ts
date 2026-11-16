@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { ChannelHighlights } from '@/services/read-state/selectors';
-import { CONCORD_READ_LIMIT } from '@/constants/chat/concord-read';
+import { CONCORD_READ_BYTES, CONCORD_READ_LIMIT } from '@/constants/chat/concord-read';
 
 interface ConcordReadState {
   account: string | null;
@@ -22,7 +22,13 @@ export const useConcordReadStore = create<ConcordReadState>(set => ({
     for (const [key, value] of Object.entries(incoming)) {
       if (value <= (cursors[key] ?? 0)) continue;
       if (!(key in cursors) && Object.keys(cursors).length >= CONCORD_READ_LIMIT) continue;
-      cursors[key] = value; changed = true;
+      const prior = cursors[key];
+      cursors[key] = value;
+      if (JSON.stringify(cursors).length > CONCORD_READ_BYTES) {
+        if (prior === undefined) delete cursors[key]; else cursors[key] = prior;
+        continue;
+      }
+      changed = true;
     }
     return changed ? { cursors } : state;
   }),

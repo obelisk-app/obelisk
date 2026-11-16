@@ -15,7 +15,7 @@ export async function readSearchFlow(owner: Page, member: Page, channelName: str
   await member.getByTestId('concord-search-hit').click();
   await member.bringToFront();
   await expect(member.getByTestId('concord-messages')).toContainText(text);
-  await member.getByTestId('concord-channels').getByRole('button').filter({ hasText: /^#general/ }).click();
+  await member.getByTestId('concord-channels').getByRole('button').filter({ hasText: /general/ }).first().click();
   await expect(row.getByLabel('1 unread message', { exact: true })).toHaveCount(0);
   await member.reload();
   await expect(member.getByTestId('concord-channels')).toContainText(channelName);

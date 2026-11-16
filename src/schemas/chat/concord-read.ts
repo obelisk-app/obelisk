@@ -1,8 +1,8 @@
-import { CONCORD_READ_LIMIT } from '@/constants/chat/concord-read';
+import { CONCORD_READ_BYTES, CONCORD_READ_LIMIT } from '@/constants/chat/concord-read';
 
 /** Reject oversized, malformed and implausibly future-dated account documents. */
 export function parseConcordRead(value: string): Record<string, number> {
-  if (value.length > 120_000) throw new Error('Read state too large');
+  if (value.length > CONCORD_READ_BYTES) throw new Error('Read state too large');
   const data: unknown = JSON.parse(value);
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid read state');
   const entries = Object.entries(data);
