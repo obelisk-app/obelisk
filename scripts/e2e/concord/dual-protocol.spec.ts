@@ -25,6 +25,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await owner.getByTestId('analytics-consent').getByRole('button', { name: "Don't allow", exact: true }).click({ noWaitAfter: true });
     await owner.locator('[data-tour=rail-add-relay]').click({ timeout: 60_000 });
     await owner.getByRole('tab', { name: 'Encrypted', exact: true }).click();
+    await expect(owner.getByRole('button', { name: 'Create Concord community', exact: true })).toBeVisible();
     await owner.getByRole('dialog').screenshot({ path: '/tmp/obelisk-community-picker.png' });
     await owner.getByRole('button', { name: 'Create Concord community', exact: true }).click();
     const communityName = `Obelisk E2E ${Date.now()}`;

@@ -36,6 +36,8 @@ The shared-shell scenario separately checks create/join through +, two-account m
 
 Only deploy to the persistent `/root/obelisk-dex-test` checkout, preserving its environment files and dependency symlink. Build there and restart only PM2 `obelisk-dex-test` on port 3002. Verify `https://test.obelisk.ar` after restart. Do not use the production deploy script or create timestamped test release directories. See [operations](../operations/README.md).
 
+On 2026-11-15, application revision `c95d6fb9` was built and deployed to `https://test.obelisk.ar`. The public-site shared-shell Playwright scenario passed with two fresh identities: creation through the Standard/Encrypted picker, encrypted banner and title updates, copying the complete invitation, opening that link and joining, bidirectional messages, authenticated attachment download, ordinary sidebar channel creation, categories, selected-channel restoration after reload, and desktop/mobile navigation. The separate NIP-29 regression passed against a disposable real Rust relay with two fresh identities. These results do not cover the known role-delegation failure or the remaining features above.
+
 ## Shared component protocol boundary
 
 `ChannelProtocolContext` routes composer send/upload, reactions and deletions to Concord. Absence of that context preserves the existing NIP-29 path. Encrypted uploads are bounded in memory and passed to the SDK uploader at send time; plaintext never enters the public Blossom uploader. Private message bodies do not auto-unfurl URLs or load public game/media previews. Public event links, forwarding and zaps are unavailable for private message IDs. Local search, rich private media rendering and full Publications parity remain follow-up work.
