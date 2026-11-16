@@ -17,7 +17,11 @@ import { concordChannelProtocol } from '@/services/chat/concord/channel-protocol
 import type { JsMessage } from '@/services/nostr-bridge';
 import { concordOutbox, type ConcordPendingMessage } from '@/services/chat/concord/outbox';
 import { concordPublicationData, concordThreadMessages } from '@/utils/chat/concord/publications';
-import { groupConcordChannels, concordChannelParents, concordChannelLayout } from '@/utils/chat/concord/channels';
+import { concordCommunityLayout } from '@/utils/chat/concord/layout';
+import { publishConcordLayout } from '@/services/chat/concord/layout';
+import { applyLayout } from '@/services/relay/channel-layout';
+import { categoryLabel } from '@/utils/relay/category-label';
+import { concordChannelParents, concordChannelLayout } from '@/utils/chat/concord/channels';
 
 export function useConcordRoom(community: ConcordCommunity) {
   const t = useTranslations();
@@ -32,8 +36,10 @@ export function useConcordRoom(community: ConcordCommunity) {
   const [timeline, setTimeline] = useState<{ channelId: string; rumors: Rumor[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [invite, setInvite] = useState('');
-  const [settings, setSettings] = useState<'community' | 'channels' | 'roles' | 'edit-channel' | null>(null);
-  const [showMembers, setShowMembers] = useState(false);
+  const [settings, setSettings] = useState<'community' | 'branding' | 'invite' | 'layout' | 'channels' | 'roles' | 'edit-channel' | null>(null);
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const showMembers = useConcordNavigation(nav => nav.membersOpen);
+  const setShowMembers = useConcordNavigation(nav => nav.setMembersOpen);
   const [replyingTo, setReplyingTo] = useState<JsMessage | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const channelId = channels.some(channel => channel.accessible && channel.view !== 'voice' && channel.channel_id === selected) ? selected! : channels.find(channel => channel.accessible && channel.view !== 'voice')?.channel_id;
@@ -55,6 +61,9 @@ export function useConcordRoom(community: ConcordCommunity) {
     const parents = concordChannelParents(accessible);
     return accessible.map(channel => ({ ...concordGroup(community.communityId, channel), parent: parents.has(channel.channel_id) ? `concord:${community.communityId}:${parents.get(channel.channel_id)}` : null }));
   }, [community, channels]);
+  const layout = useMemo(() => concordCommunityLayout(state), [state]);
+  const rootChannels = useMemo(() => baseGroups.filter(group => !group.parent), [baseGroups]);
+  const laidOut = useMemo(() => applyLayout(layout, rootChannels.map(group => group.id)), [layout, rootChannels]);
   const channelGroup = baseGroups.find(group => group.id === `concord:${community.communityId}:${channelId}`);
   const publications = useMemo(() => concordPublicationData(channelGroup, rows), [channelGroup, rows]);
   const groups = useMemo(() => [...baseGroups, ...publications.groups], [baseGroups, publications]);
@@ -70,6 +79,7 @@ export function useConcordRoom(community: ConcordCommunity) {
     ...concordChannelProtocol(community, channelId ?? '', timeline && timeline.channelId === channelId ? timeline.rumors : [], files, thread),
     pending: (id: string) => pending.find(row => row.message.id === id),
     communityName: appearance.branding.name,
+    publishLayout: (next: typeof layout, expected: typeof layout) => publishConcordLayout(community, next, expected),
     forum: { groups, childrenByParent, messagesByGroup: publications.messagesByGroup },
   }), [community, channelId, timeline, files, pending, thread, appearance.branding.name, groups, childrenByParent, publications.messagesByGroup]);
   const messages = useMemo(() => mergeConcordPending(thread ? concordThreadMessages(rows, thread) : rows.map(concordMessage), pending, channelId, thread?.id), [rows, pending, channelId, thread]);
@@ -81,18 +91,22 @@ export function useConcordRoom(community: ConcordCommunity) {
     try { await operation(); } catch (err) { setError(errorText(t, err, 'chat.concord.failed')); }
   };
   return {
+    layout, rootChannels, collapsedCategories, toggleCategory: (id: string) => setCollapsedCategories(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; }),
+    openBranding: () => setSettings('branding'), openInvite: () => setSettings('invite'),
+    openMemberSettings: () => { setSettings(null); setShowMembers(true); },
+    openLayout: () => setSettings('layout'), canManageLayout: !state.dissolved && community.canDo(PERM.MANAGE_METADATA),
     branding: appearance.branding, canEditBranding: appearance.canEdit,
     state, channels, rows, channelId, threadId: thread?.id ?? null, groupsById, childrenByParent, selectChannel, error, invite, protocol, groups, group, messages, messagesById, reactions, scroller,
     settings, openSettings: () => setSettings('community'), closeSettings: () => setSettings(null),
     editChannel: () => setSettings('edit-channel'),
     openChannelSettings: () => setSettings('channels'), openRoleSettings: () => setSettings('roles'),
-    showMembers, toggleMembers: () => setShowMembers(value => !value), replyingTo, setReplyingTo,
+    showMembers, toggleMembers: () => setShowMembers(!useConcordNavigation.getState().membersOpen), replyingTo, setReplyingTo,
     selectGroup: (id: string) => {
       const [channel, selectedThread] = id.slice(`concord:${community.communityId}:`.length).split(':thread:');
       if (selectedThread) useConcordNavigation.getState().selectThread(channel, selectedThread);
       else selectChannel(channel);
     },
-    categories: groupConcordChannels(channels).map(category => ({ name: category.name, groups: category.channels.flatMap(channel => { const item = groupsById[`concord:${community.communityId}:${channel.channel_id}`]; return item && !item.parent ? [item] : []; }) })).filter(category => category.groups.length),
+    categories: [...laidOut.categories, { id: '', name: t('mobile.layout.uncategorized'), channelIds: laidOut.uncategorized }].map(category => ({ id: category.id, name: categoryLabel(category.name, t), groups: category.channelIds.flatMap(id => groupsById[id] ? [groupsById[id]] : []) })).filter(category => category.id || category.groups.length),
     publication: channels.find(channel => channel.channel_id === channelId)?.view === 'forum' && !thread,
     download: (attachment: MediaAttachment) => run(() => downloadConcordAttachment(attachment)),
     members: [...state.members],

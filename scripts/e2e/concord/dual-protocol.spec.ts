@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createTestPersonas } from '../persona-identity';
 import { nsecSession, seedSession } from '../lib';
+import { categoriesFlow } from './categories-flow';
 import { publicationsFlow } from './publications-flow';
 import { readFile } from 'node:fs/promises';
 
@@ -48,10 +49,11 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(owner.getByTestId('concord-channel-name')).toHaveCount(0);
     await expect(owner.getByTestId('concord-role-name')).toHaveCount(0);
     await owner.getByRole('dialog').screenshot({ path: '/tmp/obelisk-concord-community-settings.png' });
-    await owner.getByTestId('concord-role-settings').click();
+    await owner.getByTestId('server-settings-item-roles').click();
     await expect(owner.getByTestId('concord-role-name')).toBeVisible();
     await expect(owner.getByTestId('concord-community-title')).toHaveCount(0);
     await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
+    await owner.getByTestId('server-settings-item-profile').click();
     await owner.getByTestId('concord-community-title').fill(`${communityName} renamed`);
     await owner.getByLabel('Upload banner', { exact: true }).setInputFiles('public/icon-192.png');
     await owner.getByLabel('Upload profile picture', { exact: true }).setInputFiles('public/icon-192.png');
@@ -59,6 +61,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(owner.getByTestId('sidebar-header')).toContainText(`${communityName} renamed`);
     await expect(owner.getByTestId('sidebar-header').locator('img')).toHaveCount(2);
     await owner.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
+    await owner.getByTestId('server-settings-item-invite').click();
     await owner.getByTestId('concord-create-invite').click();
     await expect(owner.getByTestId('concord-invite-link')).toBeVisible({ timeout: 60_000 });
     await expect(owner.getByTestId('concord-rail-icon')).toBeVisible();
@@ -104,26 +107,21 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('concord-channels')).toContainText(quickChannel);
     await owner.getByRole('button', { name: 'Channel settings', exact: true }).click();
     await owner.getByTestId('concord-channel-edit-name').fill(`${quickChannel}-renamed`);
-    await owner.getByTestId('concord-channel-edit-category').fill('Moved channels');
-    await owner.getByLabel('Channel order', { exact: true }).fill('2');
     await owner.getByTestId('concord-channel-edit-save').click();
     await expect(owner.getByPlaceholder(`Message #${quickChannel}-renamed`)).toBeVisible();
     await expect(member.getByTestId('concord-channels')).toContainText(`${quickChannel}-renamed`);
-    await expect(member.getByTestId('concord-channels')).toContainText('Moved channels');
     await expect(owner).toHaveURL(/#concord=[^&]+&channel=/);
     expect(new URL(owner.url()).searchParams.has('relay')).toBe(false);
     const channelName = `channel-${Date.now()}`;
     await owner.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
-    await owner.getByTestId('concord-channel-settings').click();
+    await owner.getByTestId('server-settings-item-createChannel').click();
     await owner.getByTestId('concord-channel-name').fill(channelName);
-    await owner.getByLabel('Category', { exact: true }).fill('Integration tests');
     await owner.getByTestId('concord-channel-create').click();
     await expect(member.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName })).toBeVisible({ timeout: 30_000 });
-    await expect(member.getByTestId('concord-channels')).toContainText('Integration tests');
     if (administration) {
     await expect(member.getByTestId('concord-create-invite')).toBeHidden();
     await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
-    await owner.getByTestId('concord-role-settings').click();
+    await owner.getByTestId('server-settings-item-roles').click();
     await owner.getByTestId('concord-role-name').fill('Inviters');
     await owner.getByLabel('Invite people', { exact: true }).check();
     await owner.getByTestId('concord-role-create').click();
@@ -142,6 +140,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     } else {
       await owner.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     }
+    if (!administration) await categoriesFlow(owner, member, `${quickChannel}-renamed`, channelName);
     if (!administration) await publicationsFlow(owner, member, `${quickChannel}-renamed`);
     await member.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName }).click();
     await member.getByPlaceholder(/^Message #/).fill('Remember this channel');

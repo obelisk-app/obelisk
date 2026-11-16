@@ -3,7 +3,7 @@ import { expect, type Page } from '@playwright/test';
 /** Exercises the existing Publications UI through Concord's encrypted protocol adapter. */
 export async function publicationsFlow(owner: Page, member: Page, parentName: string) {
   await owner.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
-  await owner.getByTestId('concord-channel-settings').click();
+  await owner.getByTestId('server-settings-item-createChannel').click();
   await owner.getByTestId('concord-channel-name').fill('Announcements');
   await owner.getByLabel('Parent channel', { exact: true }).selectOption({ label: parentName });
   await owner.getByLabel('Publications', { exact: true }).check();

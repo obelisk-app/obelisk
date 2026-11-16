@@ -5,6 +5,7 @@ import { useId } from 'react';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { type ChannelLayout } from '@/services/relay/channel-layout';
 import { useManageCategoriesSheet } from '@/hooks/shell/mobile/sheets/layout/useManageCategoriesSheet';
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useTranslations } from 'next-intl';
 import { categoryLabel } from '@/utils/relay/category-label';
 import Sheet from '@/components/ui/overlays/Sheet';
@@ -33,6 +34,7 @@ export function ManageCategoriesSheet({
   close: () => void;
 }) {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
   const newCatId = useId();
   const {
     error: err,
@@ -58,7 +60,7 @@ export function ManageCategoriesSheet({
       <SheetHeader
         icon={<HashIcon size={null} />}
         title={t('mobile.layout.title')}
-        subtitle={t('mobile.layout.help')}
+        subtitle={protocol ? t('chat.concord.layoutHelp') : t('mobile.layout.help')}
       />
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import {
   applyLayout,
   newCategoryId,
   publishLayout,
   type ChannelLayout,
 } from '@/services/relay/channel-layout';
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useTranslations } from 'next-intl';
 import { errorText } from '@/utils/errors/error-text';
 
@@ -17,6 +18,9 @@ export function useChannelLayoutEditor(
   onSaved: () => void,
 ) {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
+  const original = useRef(layout);
+  const savingRef = useRef(false);
   const [draft, setDraft] = useState(layout);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -135,18 +139,25 @@ export function useChannelLayoutEditor(
   }
 
   async function save() {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     try {
-      await publishLayout(relayUrl, {
+      const next = {
         categories: draft.categories.map((category, position) => ({ ...category, position })),
         channels: draft.channels.map((channel, position) => ({ ...channel, position })),
         updatedAt: Math.floor(Date.now() / 1000),
-      });
+      };
+      if (protocol) {
+        if (!protocol.publishLayout) throw new Error("Layout editing unavailable");
+        await protocol.publishLayout(next, original.current);
+      } else await publishLayout(relayUrl, next);
       onSaved();
     } catch (cause) {
       setError(errorText(t, cause, 'shell.desktop.layout.publishFailed'));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }

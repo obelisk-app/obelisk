@@ -413,6 +413,7 @@
     "leaveTitle": "¿Salir de {name}?",
     "leaveBody": "La comunidad se quitará de tus dispositivos. Necesitarás una invitación para volver a entrar. La comunidad no se elimina.",
     "parentChannel": "Canal principal",
-    "noParent": "Canal de nivel superior"
+    "noParent": "Canal de nivel superior",
+    "layoutHelp": "Organizá categorías y canales para toda la comunidad."
   }
 }

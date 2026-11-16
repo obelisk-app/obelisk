@@ -18,8 +18,6 @@ export default function ConcordChannelEditForm({ community, channelId, name, onS
   const { form } = vm;
   return <Form form={form} layout="stack">
     <Input label={t('chat.concord.channelName')} data-testid="concord-channel-edit-name" {...form.field('name')} />
-    <Input label={t('chat.concord.category')} data-testid="concord-channel-edit-category" {...form.field('category')} />
-    <Input type="number" min="0" step="1" label={t('chat.concord.channelPosition')} {...form.field('position')} />
     <Select label={t('chat.concord.parentChannel')} {...form.field('parent')}>
       <option value="">{t('chat.concord.noParent')}</option>
       {vm.parents.map(channel => <option key={channel.channel_id} value={channel.channel_id}>{channel.name}</option>)}

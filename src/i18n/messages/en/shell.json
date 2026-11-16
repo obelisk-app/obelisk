@@ -216,6 +216,14 @@
         "members": {
           "title": "Members & moderation",
           "description": "Review, demote, and kick across channels."
+        },
+        "invite": {
+          "title": "Invite people",
+          "description": "Create an invitation to this community."
+        },
+        "createChannel": {
+          "title": "Create channel",
+          "description": "Add a text or Publications channel."
         }
       }
     },

@@ -216,6 +216,14 @@
         "members": {
           "title": "Miembros y moderación",
           "description": "Revisá, degradá y expulsá en todos los canales."
+        },
+        "invite": {
+          "title": "Invitar personas",
+          "description": "Creá una invitación a esta comunidad."
+        },
+        "createChannel": {
+          "title": "Crear canal",
+          "description": "Agregá un canal de texto o Publicaciones."
         }
       }
     },

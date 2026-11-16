@@ -40,6 +40,7 @@ export function CategoryListEditor({ categories, moveCategory, renameCategory, d
         categories.map((c, i) => (
           <div
             key={c.id}
+            data-testid={`mobile-layout-category-${c.id}`}
             style={{
               display: 'flex',
               alignItems: 'center',

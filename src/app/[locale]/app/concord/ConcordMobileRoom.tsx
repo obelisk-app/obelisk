@@ -10,7 +10,7 @@ import { MobileServerBanner } from '../mobile/rail/MobileServerBanner';
 import { MessageActionsSheet } from '../mobile/sheets/message/MessageActionsSheet';
 import { AddRelaySheet } from '../mobile/sheets/relay/AddRelaySheet';
 import { GroupNode } from '../panes/sidebar/GroupNode';
-import Heading from '@/components/ui/layout/Heading';
+import { ChannelCategorySection } from '../mobile/screens/server/ChannelCategorySection';
 import Sheet from '@/components/ui/overlays/Sheet';
 import SheetHeader from '@/components/ui/overlays/SheetHeader';
 import { ForumScreen } from '../mobile/screens/forum/ForumScreen';
@@ -29,10 +29,9 @@ export default function ConcordMobileRoom({ community }: { community: ConcordCom
         <MobileServerBanner privateCommunity concordPubkey={community.pubkey} communityRelays={vm.communityRelays} onSearch={vm.openSearch} label={vm.branding.name} relays={vm.relays} relayUrl={null} iconUrl={vm.branding.icon} bannerUrl={vm.branding.banner}
           onSelectRelay={vm.selectRelay} onAddRelay={vm.openAdd} onCreateChannel={vm.canManageChannels ? vm.openChannelSettings : undefined} onOpenMenu={vm.openSettings} />
         <div className="channel-list native-scroll-y">
-          {vm.categories.map(category => <div key={category.name}>
-            {category.name && <Heading as="h3" variant="panel" className="px-4 pt-4 pb-1">{category.name}</Heading>}
+          {vm.categories.map(category => <ChannelCategorySection key={category.id} catId={category.id} label={category.name} collapsed={vm.collapsedCategories.has(category.id)} onToggle={() => vm.toggleCategory(category.id)}>
             {category.groups.map(group => <GroupNode key={group.id} group={group} depth={0} childrenByParent={vm.childrenByParent} groupsById={vm.groupsById} view={vm.group ? { kind: 'group', groupId: vm.group.id } : { kind: 'empty' }} onSelect={vm.pickChannel} />)}
-          </div>)}
+          </ChannelCategorySection>)}
         </div>
         </section></div>
       </div> : vm.publication && vm.group ? <ForumScreen groupId={vm.group.id} back={vm.showChannels} selectChild={vm.pickChannel} /> : <div className="screen active" data-screen="channel" data-testid="concord-room">

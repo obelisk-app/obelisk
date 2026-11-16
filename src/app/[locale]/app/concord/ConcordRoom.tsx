@@ -8,7 +8,7 @@ import { ChatComposer } from '@/app/[locale]/app/panes/channel/ChatComposer';
 import { SidebarHeader } from '@/app/[locale]/app/panes/sidebar/SidebarHeader';
 import { CreateGroupSection } from '@/app/[locale]/app/panes/sidebar/CreateGroupSection';
 import { GroupNode } from '@/app/[locale]/app/panes/sidebar/GroupNode';
-import Heading from '@/components/ui/layout/Heading';
+import { CategorySection } from '../panes/sidebar/CategorySection';
 import ForumView from '@/components/chat/forum/ForumView';
 import ConcordSettings from './ConcordSettings';
 import ConcordMember from './ConcordMember';
@@ -20,7 +20,9 @@ export default function ConcordRoom({ community, pane }: { community: ConcordCom
       <SidebarHeader privateCommunity relay="" conn="" branding={vm.branding} brandingLoaded showTitleSkeleton={false} isRelayOperator={vm.canEditBranding || vm.canInvite} onOpenSettings={vm.openSettings} />
       {vm.canManageChannels && <CreateGroupSection count={vm.groups.length} onCreated={vm.selectChannel} />}
       <div className="flex-1 overflow-y-auto p-2">
-        {vm.categories.map(category => <div key={category.name}>{category.name && <Heading as="h3" variant="panel" className="px-2 pt-4 pb-1">{category.name}</Heading>}{category.groups.map(group => <GroupNode key={group.id} group={group} depth={0} childrenByParent={vm.childrenByParent} groupsById={vm.groupsById} view={vm.group ? { kind: 'group', groupId: vm.group.id } : { kind: 'empty' }} onSelect={vm.selectGroup} />)}</div>)}
+        {vm.categories.map(category => <CategorySection key={category.id} name={category.name} collapsed={vm.collapsedCategories.has(category.id)} onToggle={() => vm.toggleCategory(category.id)} channelCount={category.groups.length}>
+          {category.groups.map(group => <GroupNode key={group.id} group={group} depth={0} childrenByParent={vm.childrenByParent} groupsById={vm.groupsById} view={vm.group ? { kind: 'group', groupId: vm.group.id } : { kind: 'empty' }} onSelect={vm.selectGroup} />)}
+        </CategorySection>)}
       </div>
     </aside> : <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-lc-dark" data-testid="concord-room">
       <ChannelHeader groupId={vm.group?.id ?? ''} group={vm.group} isAdmin={vm.canManageChannels && !vm.threadId} showMembers={vm.showMembers} onToggleMembers={vm.toggleMembers} onOpenSettings={vm.editChannel} />

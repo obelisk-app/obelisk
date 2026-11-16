@@ -1,3 +1,4 @@
+import type { ChannelLayout } from '@/services/relay/channel-layout';
 import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
 import type { MediaAttachment } from '@applesauce/concord/helpers';
 
@@ -5,6 +6,7 @@ import type { MediaAttachment } from '@applesauce/concord/helpers';
 export interface ChannelProtocol {
   scope: string;
   communityName?: string;
+  publishLayout?(layout: ChannelLayout, expected: ChannelLayout): Promise<void>;
   forum?: { groups: JsGroup[]; childrenByParent: Record<string, string[]>; messagesByGroup: Record<string, JsMessage[]> };
   createPublication?(title: string, body: string): Promise<string>;
   retry?(id: string): void;

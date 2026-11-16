@@ -11,6 +11,7 @@ import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import ModalFooter from '@/components/ui/overlays/ModalFooter';
 import { type ChannelLayout } from '@/services/relay/channel-layout';
 import { useManageLayoutModal } from '@/hooks/shell/modals/layout/useManageLayoutModal';
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useTranslations } from 'next-intl';
 import { ChannelOrderRow } from './ChannelOrderRow';
 import { LayoutCategoryCard } from './LayoutCategoryCard';
@@ -27,6 +28,7 @@ export function ManageLayoutModal({
   onClose: () => void;
 }) {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
   const vm = useManageLayoutModal(relayUrl, layout, channels, onClose);
   const { laidOut, channelsById, drag } = vm;
 
@@ -37,7 +39,7 @@ export function ManageLayoutModal({
     >
       <ModalHeader
         title={t('mobile.layout.title')}
-        subtitle={t('shell.desktop.layout.subtitle', { host: shortHost(relayUrl) })}
+        subtitle={protocol ? t('chat.concord.layoutHelp') : t('shell.desktop.layout.subtitle', { host: shortHost(relayUrl) })}
         onClose={onClose}
       />
       <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-6">
@@ -125,7 +127,7 @@ export function ManageLayoutModal({
         {vm.error && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{vm.error}</div>}
       </div>
       <ModalFooter
-        meta={t('shell.desktop.layout.saveHelp')}
+        meta={protocol ? undefined : t('shell.desktop.layout.saveHelp')}
         cancel={{ onClick: onClose }}
         actions={[{
           label: vm.saving ? t('shell.desktop.layout.publishing') : t('shell.desktop.layout.publish'),
