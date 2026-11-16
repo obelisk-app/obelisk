@@ -42,6 +42,9 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await owner.getByTestId('concord-create-invite').click();
     await expect(owner.getByTestId('concord-invite-link')).toBeVisible({ timeout: 60_000 });
     const invitation = await owner.getByTestId('concord-invite-link').inputValue();
+    await ownerContext.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await owner.getByRole('button', { name: 'Copy invite link', exact: true }).click();
+    expect(await owner.evaluate(async value => (await navigator.clipboard.readText()) === value, invitation)).toBe(true);
     await owner.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     await member.goto(invitation);
     await member.getByTestId('analytics-consent').getByRole('button', { name: "Don't allow", exact: true }).click({ noWaitAfter: true });

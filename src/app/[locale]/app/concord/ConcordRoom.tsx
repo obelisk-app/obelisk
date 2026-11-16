@@ -10,6 +10,7 @@ import { SidebarHeader } from '@/app/[locale]/app/panes/sidebar/SidebarHeader';
 import { CreateGroupSection } from '@/app/[locale]/app/panes/sidebar/CreateGroupSection';
 import ConcordBrandingForm from './ConcordBrandingForm';
 import { GroupNode } from '@/app/[locale]/app/panes/sidebar/GroupNode';
+import CopyButton from '@/components/ui/buttons/CopyButton';
 import Button from '@/components/ui/buttons/Button';
 import Heading from '@/components/ui/layout/Heading';
 import Input from '@/components/ui/forms/Input';
@@ -46,7 +47,7 @@ export default function ConcordRoom({ community, pane }: { community: ConcordCom
       <ModalHeader title={t('chat.concord.settings')} onClose={vm.closeSettings} />
       <div className="space-y-6 overflow-y-auto p-5">
         {vm.canInvite && <Button variant="outline" data-testid="concord-create-invite" onClick={vm.createInvite}>{t('chat.concord.invite')}</Button>}
-        {vm.invite && <Input readOnly label={t('chat.concord.invite')} value={vm.invite} data-testid="concord-invite-link" />}
+        {vm.invite && <div className="flex items-end gap-2"><Input readOnly label={t('chat.concord.invite')} value={vm.invite} data-testid="concord-invite-link" /><CopyButton size="md" text={vm.invite} label={t('shell.desktop.invite.copy')} copiedLabel={t('common.copied')} /></div>}
         <FormError>{vm.error}</FormError>
         {vm.canEditBranding && <ConcordBrandingForm community={community} branding={vm.branding} onSaved={vm.closeSettings} />}
         {vm.canManageChannels && <ConcordChannelForm community={community} />}
