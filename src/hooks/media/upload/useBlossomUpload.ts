@@ -10,7 +10,7 @@ import { useTranslations } from 'next-intl';
  * The Blossom client is imported on first use so the forms that carry an
  * image field do not pay for it until someone actually picks a file.
  */
-export function useBlossomUpload<Slot extends string>() {
+export function useBlossomUpload<Slot extends string>(uploadFile?: (file: File, slot: Slot) => Promise<string>) {
   const t = useTranslations();
   const [uploading, setUploading] = useState<Slot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export function useBlossomUpload<Slot extends string>() {
     setError(null);
     try {
       const { uploadToBlossom } = await import('@/services/media/blossom');
-      const url = await uploadToBlossom(file);
+      const url = await (uploadFile ? uploadFile(file, slot) : uploadToBlossom(file));
       onUploaded(url);
     } catch (err) {
       console.warn('[media] Blossom upload failed', err);

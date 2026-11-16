@@ -11,11 +11,11 @@ export type CreateChannelValues = { name: string };
  * Publishes a public, open channel under the trimmed name, clears the field,
  * then hands the new id to `onCreated`.
  */
-export function createChannelForm(onCreated: (groupId: string) => void): FormSpec<CreateChannelValues, string> {
+export function createChannelForm(onCreated: (groupId: string) => void, create?: (name: string) => Promise<string>): FormSpec<CreateChannelValues, string> {
   return {
     initial: { name: '' },
     ready: (values) => filled(values.name),
-    submit: (values) => nostrActions.createGroup({ name: values.name.trim(), isPublic: true, isOpen: true }),
+    submit: (values) => create ? create(values.name.trim()) : nostrActions.createGroup({ name: values.name.trim(), isPublic: true, isOpen: true }),
     failure: 'shell.channel.createFailed',
     resetOnSuccess: true,
     onSuccess: (groupId) => onCreated(groupId),

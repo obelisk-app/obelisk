@@ -47,7 +47,10 @@ export async function startNip29Fixture(owner: FreshIdentity, member: FreshIdent
     relay.onauth = async template => { challenged(); return signAuth(template); };
     await relay.connect();
     try {
-      await challenge;
+      const probe = relay.subscribe([{ kinds: [39000], limit: 1 }], {});
+      try {
+        await Promise.race([challenge, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Test relay AUTH challenge timed out')), 10_000))]);
+      } finally { probe.close(); }
       await relay.auth(signAuth);
       const publish = (kind: number, tags: string[][]) => relay.publish(finalizeEvent({ kind, tags, content: '', created_at: Math.floor(Date.now() / 1000) }, secret));
       await publish(9007, [['h', 'concord-regression'], ['name', 'concord-regression'], ['public'], ['open']]);
@@ -59,12 +62,13 @@ export async function startNip29Fixture(owner: FreshIdentity, member: FreshIdent
         const response = await request.fetch({ url: `http://127.0.0.1:${port}${path.pathname}${path.search}` });
         await request.fulfill({ response });
       });
-      await context.routeWebSocket('wss://nip29-regression.obelisk.ar/**', socket => {
+      await context.routeWebSocket(/^wss:\/\/nip29-regression\.obelisk\.ar(?:\/|$)/, socket => {
         const upstream = new WebSocket(url);
         const queued: Array<string | Buffer> = [];
         socket.onMessage(data => { if (upstream.readyState === WebSocket.OPEN) upstream.send(data); else queued.push(data); });
         upstream.onopen = () => { for (const data of queued) upstream.send(data); queued.length = 0; };
         upstream.onmessage = event => socket.send(event.data);
+        upstream.onerror = () => socket.close();
         upstream.onclose = () => socket.close();
         socket.onClose(() => upstream.close());
       });

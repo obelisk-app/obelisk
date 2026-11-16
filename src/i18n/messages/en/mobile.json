@@ -162,7 +162,7 @@
   },
   "rail": {
     "addRelay": "Add relay",
-    "addTitle": "Add a relay",
+    "addTitle": "Add a community",
     "addHelp": "Paste a NIP-29 group relay URL. Each relay is a separate “server” in the rail.",
     "adding": "Adding…",
     "add": "Add",

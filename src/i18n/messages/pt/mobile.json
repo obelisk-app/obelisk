@@ -162,7 +162,7 @@
   },
   "rail": {
     "addRelay": "Adicionar relay",
-    "addTitle": "Adicionar um relay",
+    "addTitle": "Adicionar uma comunidade",
     "addHelp": "Cole a URL de um relay de grupos NIP-29. Cada relay é um “servidor” separado na barra.",
     "adding": "Adicionando…",
     "add": "Adicionar",

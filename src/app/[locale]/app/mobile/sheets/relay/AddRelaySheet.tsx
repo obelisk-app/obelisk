@@ -1,7 +1,7 @@
 'use client';
 
 import ConcordAddCommunity from '@/app/[locale]/app/concord/ConcordAddCommunity';
-import Toggle from '@/components/ui/forms/Toggle';
+import CommunityTypePicker from '@/app/[locale]/app/concord/CommunityTypePicker';
 
 import Button from '@/components/ui/buttons/Button';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
@@ -24,7 +24,7 @@ export function AddRelaySheet({ close }: { close: () => void }) {
         icon={<PlusIcon size={null} />}
         title={t('mobile.rail.addTitle')}
       />
-      <div className="flex items-center justify-between py-4"><span>{t('chat.concord.encryptedCommunity')}</span><Toggle aria-label={t('chat.concord.encryptedCommunity')} checked={concord} onChange={setConcord} /></div>
+      <CommunityTypePicker encrypted={concord} onChange={setConcord} />
       {!concord && <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
         <Button variant="bare" className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}

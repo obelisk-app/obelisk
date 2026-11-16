@@ -1,7 +1,7 @@
 'use client';
 
 import ConcordAddCommunity from '@/app/[locale]/app/concord/ConcordAddCommunity';
-import Toggle from '@/components/ui/forms/Toggle';
+import CommunityTypePicker from '@/app/[locale]/app/concord/CommunityTypePicker';
 
 import List from '@/components/ui/layout/List';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
@@ -25,7 +25,7 @@ export function AddRelayModal({ onClose, initialConcord = false }: { onClose: ()
     >
       <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} />
 
-      <div className="flex items-center justify-between px-5 py-4"><span>{t('chat.concord.encryptedCommunity')}</span><Toggle aria-label={t('chat.concord.encryptedCommunity')} checked={vm.concord} onChange={vm.setConcord} /></div>
+      <CommunityTypePicker encrypted={vm.concord} onChange={vm.setConcord} />
       {!vm.concord && <div className="flex shrink-0 border-b border-lc-border px-5">
         <AddRelayTabButton active={vm.tab === 'suggested'} onClick={() => vm.setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}

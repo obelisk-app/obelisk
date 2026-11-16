@@ -6,6 +6,9 @@ import { ChannelProtocolContext } from '@/contexts/chat/channel-protocol';
 import { ChannelHeader } from '@/app/[locale]/app/panes/channel/ChannelHeader';
 import { ChannelMessageList } from '@/app/[locale]/app/panes/channel/ChannelMessageList';
 import { ChatComposer } from '@/app/[locale]/app/panes/channel/ChatComposer';
+import { SidebarHeader } from '@/app/[locale]/app/panes/sidebar/SidebarHeader';
+import { CreateGroupSection } from '@/app/[locale]/app/panes/sidebar/CreateGroupSection';
+import ConcordBrandingForm from './ConcordBrandingForm';
 import { GroupNode } from '@/app/[locale]/app/panes/sidebar/GroupNode';
 import Button from '@/components/ui/buttons/Button';
 import Heading from '@/components/ui/layout/Heading';
@@ -22,7 +25,8 @@ export default function ConcordRoom({ community, pane }: { community: ConcordCom
   const { scroller, ...vm } = useConcordRoom(community);
   return <ChannelProtocolContext.Provider value={vm.protocol}>
     {pane === 'sidebar' ? <aside className="flex h-full min-h-0 flex-col bg-lc-dark" data-testid="concord-channels">
-      <Button variant="bare" onClick={vm.openSettings} className="flex h-14 shrink-0 items-center justify-between border-b border-lc-border px-4 text-left font-bold text-lc-white">{vm.state.metadata?.name}<span aria-hidden="true">⌄</span></Button>
+      <SidebarHeader privateCommunity relay="" conn="" branding={vm.branding} brandingLoaded showTitleSkeleton={false} isRelayOperator={vm.canEditBranding || vm.canInvite} onOpenSettings={vm.openSettings} />
+      {vm.canManageChannels && <CreateGroupSection count={vm.groups.length} onCreated={vm.selectChannel} />}
       <div className="flex-1 overflow-y-auto p-2">
         {vm.categories.map(category => <div key={category.name}>{category.name && <Heading as="h3" variant="panel" className="px-2 pt-4 pb-1">{category.name}</Heading>}{category.groups.map(group => <GroupNode key={group.id} group={group} depth={0} childrenByParent={{}} groupsById={{}} view={vm.group ? { kind: 'group', groupId: vm.group.id } : { kind: 'empty' }} onSelect={vm.selectGroup} />)}</div>)}
       </div>
@@ -44,6 +48,7 @@ export default function ConcordRoom({ community, pane }: { community: ConcordCom
         {vm.canInvite && <Button variant="outline" data-testid="concord-create-invite" onClick={vm.createInvite}>{t('chat.concord.invite')}</Button>}
         {vm.invite && <Input readOnly label={t('chat.concord.invite')} value={vm.invite} data-testid="concord-invite-link" />}
         <FormError>{vm.error}</FormError>
+        {vm.canEditBranding && <ConcordBrandingForm community={community} branding={vm.branding} onSaved={vm.closeSettings} />}
         {vm.canManageChannels && <ConcordChannelForm community={community} />}
         {vm.canManageRoles && <ConcordRoleForm community={community} />}
       </div>

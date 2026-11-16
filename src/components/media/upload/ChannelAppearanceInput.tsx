@@ -9,18 +9,20 @@ import Label from '@/components/ui/forms/Label';
 
 /** A channel's banner with its picture overlapping it, as the header shows them, and an upload button for each. */
 export default function ChannelAppearanceInput({
+  uploadFile,
   picture,
   banner,
   onPictureChange,
   onBannerChange,
 }: {
+  uploadFile?: (file: File, slot: 'picture' | 'banner') => Promise<string>;
   picture: string;
   banner: string;
   onPictureChange: (url: string) => void;
   onBannerChange: (url: string) => void;
 }) {
   const t = useTranslations();
-  const { uploading, error, picked } = useChannelAppearanceInput(onPictureChange, onBannerChange);
+  const { uploading, error, picked } = useChannelAppearanceInput(onPictureChange, onBannerChange, uploadFile);
 
   return (
     <div>

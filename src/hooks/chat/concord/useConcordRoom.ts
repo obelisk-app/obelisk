@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import type { ConcordCommunity } from '@applesauce/concord/client';
 import type { Rumor, ChannelMetadata } from '@applesauce/concord';
+import { useConcordBranding } from './useConcordBranding';
 import { useConcordNavigation } from '@/store/chat/concord';
 import { projectConcordTimeline } from '@/utils/chat/concord/timeline';
 import { errorText } from '@/utils/errors/error-text';
@@ -18,6 +19,7 @@ import { groupConcordChannels } from '@/utils/chat/concord/channels';
 
 export function useConcordRoom(community: ConcordCommunity) {
   const t = useTranslations();
+  const appearance = useConcordBranding(community);
   const selected = useConcordNavigation(state => state.channelId);
   const selectChannel = useConcordNavigation(state => state.selectChannel);
   const [state, setState] = useState(community.state$.value);
@@ -42,7 +44,7 @@ export function useConcordRoom(community: ConcordCommunity) {
   }, [community, channelId]);
   const rows = useMemo(() => channelId && timeline?.channelId === channelId ? projectConcordTimeline(timeline.rumors, state, channelId) : [], [timeline, state, channelId]);
   const files = useMemo(() => new Map<string, File>(), []);
-  const protocol = useMemo(() => channelId ? concordChannelProtocol(community, channelId, timeline?.channelId === channelId ? timeline.rumors : [], files) : null, [community, channelId, timeline, files]);
+  const protocol = useMemo(() => concordChannelProtocol(community, channelId ?? '', timeline && timeline.channelId === channelId ? timeline.rumors : [], files), [community, channelId, timeline, files]);
   const messages = useMemo(() => rows.map(concordMessage), [rows]);
   const reactions = useMemo(() => Object.fromEntries(rows.map(row => [row.rumor.id, row.reactionEvents.map(event => ({ id: event.id, pubkey: event.pubkey, emoji: event.content, targetEventId: row.rumor.id, createdAt: event.created_at }))])), [rows]);
   const messagesById = useMemo(() => new Map(messages.map(message => [message.id, message])), [messages]);
@@ -54,6 +56,7 @@ export function useConcordRoom(community: ConcordCommunity) {
     try { await operation(); } catch (err) { setError(errorText(t, err, 'chat.concord.failed')); }
   };
   return {
+    branding: appearance.branding, canEditBranding: appearance.canEdit,
     state, channels, rows, channelId, selectChannel, error, invite, protocol, groups, group, messages, messagesById, reactions, scroller,
     settings, openSettings: () => setSettings(true), closeSettings: () => setSettings(false),
     showMembers, toggleMembers: () => setShowMembers(value => !value), replyingTo, setReplyingTo,

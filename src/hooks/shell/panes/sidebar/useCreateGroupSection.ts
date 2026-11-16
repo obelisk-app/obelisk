@@ -1,5 +1,6 @@
 'use client';
 
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useState } from 'react';
 import { useForm } from '@/hooks/common/useForm';
 import { createChannelForm } from '@/services/chat/channel/create-channel-form';
@@ -10,11 +11,12 @@ import { createChannelForm } from '@/services/chat/channel/create-channel-form';
  * hands the new id on; folding it by hand clears what was typed.
  */
 export function useCreateGroupSection(onCreated: (groupId: string) => void) {
+  const protocol = useChannelProtocol();
   const [open, setOpen] = useState(false);
   const form = useForm(createChannelForm((id) => {
     setOpen(false);
     onCreated(id);
-  }));
+  }, protocol?.createChannel));
   return {
     open,
     form,

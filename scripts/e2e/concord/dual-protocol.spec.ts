@@ -18,18 +18,26 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await seedSession(memberContext, nsecSession(personas.member));
     const owner = await ownerContext.newPage();
     const member = await memberContext.newPage();
+    member.on('pageerror', error => console.error(error.message.replace(/nsec1[a-z0-9]+|\b[0-9a-f]{64}\b/g, '[redacted]')));
     owner.on('pageerror', error => console.error(error.message.replace(/nsec1[a-z0-9]+|\b[0-9a-f]{64}\b/g, '[redacted]')));
     owner.on('console', message => { if (message.type() === 'error' && /^Concord (startup|grant):/.test(message.text())) console.error(message.text()); });
     await owner.goto('/app');
     await owner.getByTestId('analytics-consent').getByRole('button', { name: "Don't allow", exact: true }).click({ noWaitAfter: true });
     await owner.locator('[data-tour=rail-add-relay]').click({ timeout: 60_000 });
-    await owner.getByRole('switch', { name: 'Encrypted community (Concord)' }).click();
+    await owner.getByRole('tab', { name: 'Encrypted', exact: true }).click();
+    await owner.getByRole('dialog').screenshot({ path: '/tmp/obelisk-community-picker.png' });
     await owner.getByRole('button', { name: 'Create Concord community', exact: true }).click();
     const communityName = `Obelisk E2E ${Date.now()}`;
     await owner.getByTestId('concord-name').fill(communityName, { timeout: 60_000 });
     await owner.getByTestId('concord-create').click();
     await expect(owner.getByTestId('concord-room')).toBeVisible({ timeout: 90_000 });
     await expect(owner.getByRole('dialog')).toHaveCount(0);
+    await owner.getByRole('button', { name: 'Channel settings', exact: true }).click();
+    await owner.getByTestId('concord-community-title').fill(`${communityName} renamed`);
+    await owner.getByLabel('Upload banner', { exact: true }).setInputFiles('public/icon-192.png');
+    await owner.getByTestId('concord-branding-save').click();
+    await expect(owner.getByTestId('sidebar-header')).toContainText(`${communityName} renamed`);
+    await expect(owner.getByTestId('sidebar-header').locator('img')).toHaveCount(1);
     await owner.getByRole('button', { name: 'Channel settings', exact: true }).click();
     await owner.getByTestId('concord-create-invite').click();
     await expect(owner.getByTestId('concord-invite-link')).toBeVisible({ timeout: 60_000 });
@@ -57,6 +65,12 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     const file = await download.path();
     expect(file).not.toBeNull();
     expect(await readFile(file!, 'utf8')).toBe(attachment);
+    const quickChannel = `quick-${Date.now()}`;
+    await owner.getByTestId('concord-channels').getByRole('button', { name: 'Create channel', exact: true }).click();
+    await owner.getByTestId('create-channel-input').fill(quickChannel);
+    await owner.getByTestId('create-channel-submit').click();
+    await expect(owner.getByPlaceholder(`Message #${quickChannel}`)).toBeVisible();
+    await expect(member.getByTestId('concord-channels')).toContainText(quickChannel);
     const channelName = `channel-${Date.now()}`;
     await owner.getByRole('button', { name: 'Channel settings', exact: true }).click();
     await owner.getByTestId('concord-channel-name').fill(channelName);
@@ -76,7 +90,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await memberControls.locator('summary').click();
     await memberControls.getByLabel('Inviters', { exact: true }).check({ timeout: 30_000 });
     await memberControls.getByRole('button', { name: 'Save roles', exact: true }).click();
-    await member.getByTestId('concord-channels').getByRole('button').first().click();
+    await member.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
     await expect(member.getByTestId('concord-create-invite')).toBeVisible({ timeout: 30_000 }).catch(async error => {
       console.error('Owner member controls:', await memberControls.innerText());
       throw error;
@@ -91,6 +105,8 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await member.reload();
     await expect(member.getByTestId('concord-room')).toBeVisible({ timeout: 60_000 });
     await expect(member.getByPlaceholder(`Message #${channelName}`)).toBeVisible();
+    await expect(member.getByTestId('sidebar-header')).toContainText(`${communityName} renamed`);
+    await expect(member.getByTestId('sidebar-header').locator('img')).toHaveCount(1);
     await expect(member.getByTestId('concord-messages')).toContainText('Remember this channel');
     await member.setViewportSize({ width: 390, height: 844 });
     await expect(member.getByTestId('concord-room')).toBeVisible();

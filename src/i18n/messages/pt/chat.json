@@ -393,6 +393,11 @@
     "reviewReaders": "Escolha quem mantém acesso a {channel}",
     "encryptedCommunity": "Comunidade criptografada (Concord)",
     "relays": "Relays (3)",
-    "settings": "Configurações da comunidade"
+    "settings": "Configurações da comunidade",
+    "communityType": "Tipo de comunidade",
+    "standard": "Padrão",
+    "encrypted": "Criptografada",
+    "standardHelp": "Canais hospedados no relay de uma comunidade.",
+    "encryptedHelp": "Comunidades privadas com criptografia de ponta a ponta, com Concord."
   }
 }

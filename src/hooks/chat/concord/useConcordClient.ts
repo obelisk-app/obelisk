@@ -4,5 +4,6 @@ import { useConcordNavigation } from '@/store/chat/concord';
 export function useConcordClient() {
   const runtime = useContext(ConcordContext);
   const nav = useConcordNavigation();
-  return { ...runtime, ...nav, community: runtime.client && nav.communityId ? runtime.client.getCommunity(nav.communityId) : undefined };
+  const selected = runtime.communities.find(community => community.material.community_id === nav.communityId);
+  return { ...runtime, ...nav, communityName: selected?.metadata?.name ?? selected?.material.name ?? '', community: runtime.client && nav.communityId ? runtime.client.getCommunity(nav.communityId) : undefined };
 }

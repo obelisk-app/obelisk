@@ -13,6 +13,7 @@ import { GearIcon } from '@/assets/icons';
 import Skeleton from '@/components/ui/animations/Skeleton';
 
 type Props = {
+  privateCommunity?: boolean;
   relay: string;
   conn: string;
   branding: RelayBranding;
@@ -24,7 +25,7 @@ type Props = {
 
 /** The relay's banner, icon and name over the channel list, with the connection dot and the operator's gear. */
 export function SidebarHeader({
-  relay, conn, branding, brandingLoaded, showTitleSkeleton, isRelayOperator, onOpenSettings,
+  privateCommunity = false, relay, conn, branding, brandingLoaded, showTitleSkeleton, isRelayOperator, onOpenSettings,
 }: Props) {
   const t = useTranslations();
   const access = useRelayAccess(relay);
@@ -89,14 +90,14 @@ export function SidebarHeader({
             branding.name || shortHost(relay)
           )}
         </div>
-        <span
+        {!privateCommunity && <span
           title={label}
           aria-label={label}
           className={
             'inline-block h-2.5 w-2.5 shrink-0 rounded-full ' +
             (conn === 'Connected' ? accessDotClass(access) : conn === 'Connecting' ? 'bg-yellow-500' : 'bg-red-500')
           }
-        />
+        />}
         {isRelayOperator && (
           <Button
             variant="ghost"

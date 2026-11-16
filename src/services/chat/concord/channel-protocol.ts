@@ -9,6 +9,7 @@ import { downloadConcordAttachment } from './media';
 export function concordChannelProtocol(community: ConcordCommunity, channelId: string, rumors: readonly Rumor[], files: Map<string, File>): ChannelProtocol {
   const find = (id: string) => { const rumor = rumors.find(row => row.id === id); if (!rumor) throw new Error('Message unavailable'); return rumor; };
   return {
+    createChannel: name => community.createChannel(name),
     scope: `concord:${community.communityId}:${channelId}`,
     async upload(file) { if (file.size > CONCORD_ATTACHMENT_BYTE_LIMIT || files.size >= 10) throw new Error('Attachment limit exceeded'); const token = `attachment:${crypto.randomUUID()}`; files.set(token, file); return token; },
     async send(content, reply) {

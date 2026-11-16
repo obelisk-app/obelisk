@@ -393,6 +393,11 @@
     "reviewReaders": "Choose who keeps access to {channel}",
     "encryptedCommunity": "Encrypted community (Concord)",
     "relays": "Relays (3)",
-    "settings": "Community settings"
+    "settings": "Community settings",
+    "communityType": "Community type",
+    "standard": "Standard",
+    "encrypted": "Encrypted",
+    "standardHelp": "Channels hosted by a community relay.",
+    "encryptedHelp": "Private communities with end-to-end encryption, powered by Concord."
   }
 }

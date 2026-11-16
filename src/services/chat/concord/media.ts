@@ -22,7 +22,7 @@ export function concordUploader(assertCurrent: () => void): ConcordUploader {
 }
 
 /** User-triggered only. Ciphertext is bounded before decrypting; plaintext is never cached. */
-export async function downloadConcordAttachment(attachment: MediaAttachment) {
+export async function readConcordAttachment(attachment: MediaAttachment) {
   if (!attachment.url || new URL(attachment.url).protocol !== 'https:' || attachment.encryptionError || !attachment.encryption) throw new Error('Invalid encrypted attachment');
   const response = await fetch(attachment.url, { credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(30_000) });
   if (!response.ok || !response.body) throw new Error('Attachment unavailable');
@@ -41,7 +41,11 @@ export async function downloadConcordAttachment(attachment: MediaAttachment) {
   const ciphertext = new Uint8Array(size);
   let offset = 0;
   for (const chunk of chunks) { ciphertext.set(chunk, offset); offset += chunk.length; }
-  const plaintext = await openConcordAttachment(ciphertext, attachment);
+  return openConcordAttachment(ciphertext, attachment);
+}
+
+export async function downloadConcordAttachment(attachment: MediaAttachment) {
+  const plaintext = await readConcordAttachment(attachment);
   const url = URL.createObjectURL(new Blob([plaintext], { type: 'application/octet-stream' }));
   const link = document.createElement('a');
   link.href = url;
