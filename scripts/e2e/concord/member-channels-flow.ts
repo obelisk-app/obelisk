@@ -25,7 +25,8 @@ export async function memberChannelsFlow(owner: Page, member: Page) {
   await owner.getByTestId('concord-member-channels').uncheck();
   await owner.getByTestId('concord-member-channels-save').click();
   await expect(member.getByTestId('mobile-create-channel-btn')).toHaveCount(0, { timeout: 30_000 });
-  await expect(member.getByTestId('concord-channels').getByRole('button').filter({ hasText: 'member-created' })).toBeVisible();
+  await member.getByTestId('concord-channels').getByRole('button').filter({ hasText: 'member-created' }).click();
+  await expect(member.getByTestId('concord-messages')).toContainText('Created by a member on mobile');
   await owner.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
   console.log('Member mobile channel creation and permission revocation passed.');
 }

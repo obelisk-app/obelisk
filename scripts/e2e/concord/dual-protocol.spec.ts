@@ -139,6 +139,8 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
       console.error('Owner member controls:', await memberControls.innerText());
       throw error;
     });
+    await member.getByTestId('concord-create-invite').click();
+    await expect(member.getByTestId('concord-invite-link')).not.toHaveValue('', { timeout: 30_000 });
     return;
     } else {
       await owner.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();

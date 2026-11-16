@@ -2,6 +2,7 @@ import type { ConcordClient, ConcordCommunity } from '@applesauce/concord/client
 import { PERM, VSK } from '@/constants/chat/concord';
 import { memberChannelPolicy } from '@/schemas/chat/concord-member-channels';
 import { awaitConcordSendReady } from './send-readiness';
+import { disableMemberChannelRole } from './member-channel-preservation';
 
 /** Only the owner opts a community into automatic, protocol-valid member grants. */
 export async function setMemberChannelPolicy(community: ConcordCommunity, enabled: boolean, roleName: string) {
@@ -13,7 +14,8 @@ export async function setMemberChannelPolicy(community: ConcordCommunity, enable
   if (!roleId) return;
   const role = community.state$.value.roles.find(item => item.role_id === roleId);
   if (!role || role.scope.kind !== 'server' || role.position !== 0xfffffffe) throw new Error('Invalid member role');
-  await community.editRole(roleId, { permissions: String(enabled ? PERM.MANAGE_CHANNELS : BigInt(0)), deleted: false });
+  if (enabled) await community.editRole(roleId, { permissions: String(PERM.MANAGE_CHANNELS), deleted: false });
+  else await disableMemberChannelRole(community, roleId);
   const head = await community.admin.latestEdition(community.communityId);
   if (!head) throw new Error('Community metadata unavailable');
   const content = JSON.parse(head.content);
