@@ -244,10 +244,14 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(owner.locator('.server-banner-actions button')).toHaveCount(4);
     await owner.getByTestId('mobile-create-channel-btn').click();
     await expect(owner.getByTestId('concord-channel-name')).toBeVisible();
+    await owner.getByTestId('concord-channel-name').fill('mobile-created');
+    await owner.getByTestId('concord-channel-create').click();
+    await expect(owner.getByTestId('concord-channel-name')).toHaveValue('');
     await expectMobileSheetFits(owner);
     await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
     await expectMobileSheetFits(owner);
     await owner.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(owner.getByTestId('concord-channels').getByRole('button').filter({ hasText: 'mobile-created' })).toBeVisible();
     expect((await member.locator('.chat-header-compact').boundingBox())!.y).toBeGreaterThanOrEqual(0);
     await member.screenshot({ path: '/tmp/obelisk-concord-mobile.png' });
     const freshPhone = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 } });
@@ -260,6 +264,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
       const card = phone.getByTestId('concord-deck-card');
       await expect(card).toHaveCount(1, { timeout: 90_000 });
       await expect(card).toContainText(`${communityName} renamed`);
+      await expect(card).toContainText('Switch to this community');
       for (let step = 0; step < 6 && await card.getAttribute('data-front') !== 'true'; step++) {
         await phone.getByRole('button', { name: 'Next', exact: true }).click();
         await expect.poll(() => phone.locator('[data-front=true]').count()).toBe(1);
@@ -267,8 +272,10 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
       }
       await expect(card).toHaveAttribute('data-front', 'true');
       await card.getByRole('button', { name: `${communityName} renamed`, exact: true }).click();
-      await expect(phone.getByTestId('concord-room')).toBeVisible({ timeout: 60_000 });
-      await phone.getByRole('button', { name: 'Back', exact: true }).click();
+      await expect(phone.getByTestId('concord-channels')).toBeVisible({ timeout: 60_000 });
+      await expect(phone.getByTestId('mobile-server-banner')).toBeVisible();
+      await expect(phone.getByTestId('concord-room')).toHaveCount(0);
+      await expect(phone.getByPlaceholder(/^Message #/)).toHaveCount(0);
       if (!administration) await expect(phone.getByTestId('concord-channels').getByRole('button', { name: /Daily discussion/ })).toBeVisible();
       if (!administration) await expect(phone.getByTestId('concord-channels').getByRole('button', { name: /Empty category/ })).toBeVisible();
       await phone.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName }).click();

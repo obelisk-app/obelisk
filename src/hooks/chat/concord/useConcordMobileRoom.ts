@@ -15,7 +15,8 @@ export function useConcordMobileRoom(community: ConcordCommunity) {
   const locale = useLocale();
   const myPubkey = useMyPubkey();
   const relays = useConfiguredRelays();
-  const [channelsOpen, setChannelsOpen] = useState(false);
+  const channelsOpen = useConcordNavigation(state => state.mobileChannelsOpen);
+  const setChannelsOpen = useConcordNavigation(state => state.setMobileChannelsOpen);
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(false);
   const [actionMessage, setActionMessage] = useState<JsMessage | null>(null);

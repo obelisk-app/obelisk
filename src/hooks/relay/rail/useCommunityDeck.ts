@@ -13,6 +13,6 @@ export function useCommunityDeck(relays: readonly string[], activeRelay: string 
     ...deck, entries, active,
     relayIndex: front?.kind === 'relay' ? relays.indexOf(front.url) : -1,
     selectRelay: (url: string) => { useConcordNavigation.getState().close(); onSelect(url); },
-    selectConcord: (id: string) => { concord.selectCommunity(id); onClose(); },
+    selectConcord: (id: string) => { concord.selectCommunity(id, true); onClose(); },
   };
 }

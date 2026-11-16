@@ -49,7 +49,7 @@ describe('desktop RelayTile menu', () => {
     mount();
     expect(screen.getByRole('menu', { name: URL_ })).toBeInTheDocument();
     expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual([
-      'Switch to relay',
+      'Switch to this community',
       'Copy share link',
       'Remove',
     ]);
@@ -57,7 +57,7 @@ describe('desktop RelayTile menu', () => {
 
   it('switch closes the menu and calls through', () => {
     const { onClick } = mount();
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Switch to relay' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Switch to this community' }));
     expect(onClick).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).toBeNull();
   });
