@@ -18,13 +18,13 @@ test('NIP-29 still delivers messages between two accounts beside the Concord ent
     const owner = await ownerContext.newPage();
     const member = await memberContext.newPage();
     for (const page of [owner, member]) {
+      await page.addLocatorHandler(page.getByTestId('hint-callout'), () => page.getByTestId('hint-mute').click());
       await page.goto('/app');
       await page.getByTestId('analytics-consent').getByRole('button', { name: "Don't allow", exact: true }).click({ noWaitAfter: true });
       await page.getByRole('button').filter({ hasText: /^#/ }).first().waitFor({ state: 'visible', timeout: 45_000 }).catch(async error => {
         console.error('NIP-29 main state:', await page.locator('main').innerText());
         throw error;
       });
-      if (await page.getByTestId('hint-mute').isVisible()) await page.getByTestId('hint-mute').click();
       const channel = await findChannelByName(page, 'concord-regression');
       await channel.click();
       await expect(page.locator('[data-tour=rail-add-relay]')).toBeVisible();

@@ -25,7 +25,7 @@ export function AddRelayModal({ onClose, initialConcord = false }: { onClose: ()
     >
       <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} />
 
-      <CommunityTypePicker encrypted={vm.concord} onChange={vm.setConcord} />
+      <CommunityTypePicker value={vm.communityType} onChange={vm.setCommunityType} />
       {!vm.concord && <div className="flex shrink-0 border-b border-lc-border px-5">
         <AddRelayTabButton active={vm.tab === 'suggested'} onClick={() => vm.setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}

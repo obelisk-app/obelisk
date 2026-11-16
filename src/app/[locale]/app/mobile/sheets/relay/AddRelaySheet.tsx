@@ -16,7 +16,7 @@ import { PlusIcon } from '@/assets/icons';
 
 export function AddRelaySheet({ close }: { close: () => void }) {
   const t = useTranslations();
-  const { tab, setTab, isConfigured, concord, setConcord } = useAddRelay();
+  const { tab, setTab, isConfigured, concord, communityType, setCommunityType } = useAddRelay();
 
   return (
     <Sheet onClose={close} screen="add-relay" label={t('mobile.rail.addTitle')} maxHeight="88%">
@@ -24,7 +24,7 @@ export function AddRelaySheet({ close }: { close: () => void }) {
         icon={<PlusIcon size={null} />}
         title={t('mobile.rail.addTitle')}
       />
-      <CommunityTypePicker encrypted={concord} onChange={setConcord} />
+      <CommunityTypePicker value={communityType} onChange={setCommunityType} />
       {!concord && <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
         <Button variant="bare" className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}

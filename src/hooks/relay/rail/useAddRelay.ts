@@ -8,7 +8,8 @@ export function useAddRelay(initialConcord = false) {
   const configured = useConfiguredRelays();
   const configuredSet = useMemo(() => new Set(configured), [configured]);
   return {
-    concord, setConcord,
+    concord, setConcord, communityType: concord ? 'encrypted' as const : 'standard' as const,
+    setCommunityType: (value: 'standard' | 'encrypted') => setConcord(value === 'encrypted'),
     tab,
     setTab,
     isConfigured: (url: string) => configuredSet.has(url),
