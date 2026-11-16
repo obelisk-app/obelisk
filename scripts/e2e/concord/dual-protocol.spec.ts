@@ -36,6 +36,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await owner.getByRole('button', { name: 'Channel settings', exact: true }).click();
     await expect(owner.getByTestId('concord-channel-name')).toHaveCount(0);
     await expect(owner.getByTestId('concord-role-name')).toHaveCount(0);
+    await owner.getByRole('dialog').screenshot({ path: '/tmp/obelisk-concord-community-settings.png' });
     await owner.getByTestId('concord-role-settings').click();
     await expect(owner.getByTestId('concord-role-name')).toBeVisible();
     await expect(owner.getByTestId('concord-community-title')).toHaveCount(0);
