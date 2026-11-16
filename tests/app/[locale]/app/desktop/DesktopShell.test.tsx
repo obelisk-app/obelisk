@@ -23,6 +23,8 @@ import { RelayBrandingModal } from '@/app/[locale]/app/modals/relay/RelayBrandin
 import { RelaySettingsModal } from '@/app/[locale]/app/modals/relay/RelaySettingsModal';
 import { RelayTopBar } from '@/app/[locale]/app/panes/topbar/RelayTopBar';
 import { SidebarMe } from '@/app/[locale]/app/panes/sidebar/SidebarMe';
+// Test the settings destination, independently of cold Vite compilation of the lazy bundle.
+import '@/app/[locale]/app/user-panel/UserSettingsModal';
 import ForumTagsEditor from '@/components/chat/forum/ForumTagsEditor';
 import type { JsForumTag } from '@/services/nostr-bridge';
 
