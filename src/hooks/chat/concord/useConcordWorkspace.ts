@@ -31,6 +31,7 @@ export function useConcordWorkspace() {
     void getConcordForBridge(bridge).then(async runtime => {
       if (!active) return;
       setClient(runtime.client);
+      void runtime.ready.catch(err => { if (active) setError(errorText(t, err, 'chat.concord.failed')); });
       const subscription = runtime.client.communities$.subscribe(setCommunities);
       unsubscribe = () => subscription.unsubscribe();
       const saved = await runtime.readNavigation();

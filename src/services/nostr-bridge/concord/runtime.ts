@@ -7,6 +7,7 @@ import { openConcordStorage } from './storage';
 import { concordRumorStore } from './rumor-store';
 import { CONCORD_DEFAULT_RELAYS } from '@/constants/nostr-bridge/concord';
 import { concordUploader } from '@/services/chat/concord/media';
+import { startConcordWithCache } from './startup';
 
 /** SDK gets Obelisk's signer, encrypted storage, and virtual sockets over the shared hub. */
 export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, generation: number, assertCurrent: () => void) {
@@ -35,10 +36,10 @@ export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, gen
     hub.removeIdentity(identityId);
   };
   try {
-    await client.start();
+    const { ready } = await startConcordWithCache(client);
     assertCurrent();
-    client.schedulePurge();
-    return { client, dispose, readNavigation: () => storage.getItem('obelisk/navigation'), saveNavigation: (value: string) => storage.setItem('obelisk/navigation', value) };
+    void ready.then(() => { assertCurrent(); if (!disposed) client.schedulePurge(); }).catch(() => {});
+    return { client, ready, dispose, readNavigation: () => storage.getItem('obelisk/navigation'), saveNavigation: (value: string) => storage.setItem('obelisk/navigation', value) };
   } catch (error) {
     dispose();
     throw error;

@@ -134,9 +134,21 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('concord-messages')).toContainText('Remember this channel');
     await expect(member).toHaveURL(/#concord=[^&]+&channel=/);
     const selectedUrl = member.url();
+    let holdConcordRelays = true;
+    let heldSockets = 0;
+    await memberContext.routeWebSocket(/wss:\/\/(relay\.dreamith\.to|relay\.ditto\.pub|asia\.vectorapp\.io)/, socket => {
+      if (holdConcordRelays) { heldSockets++; return; }
+      socket.connectToServer();
+    });
+    await member.reload();
+    await expect(member.getByTestId('concord-room')).toBeVisible({ timeout: 10_000 });
+    await expect(member.getByRole('button', { name: `${communityName} renamed`, exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(member.getByPlaceholder(`Message #${channelName}`)).toBeVisible({ timeout: 10_000 });
+    await expect(member.getByTestId('concord-messages')).toContainText('Remember this channel', { timeout: 10_000 });
+    expect(heldSockets).toBeGreaterThan(0);
+    holdConcordRelays = false;
     await member.reload();
     await expect(member.getByTestId('concord-room')).toBeVisible({ timeout: 60_000 });
-    await expect(member.getByPlaceholder(`Message #${channelName}`)).toBeVisible();
     await expect(member.getByTestId('sidebar-header')).toContainText(`${communityName} renamed`);
     await expect(member.getByTestId('sidebar-header').locator('img')).toHaveCount(2);
     await expect(member.getByTestId('concord-messages')).toContainText('Remember this channel');
