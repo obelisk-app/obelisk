@@ -1,5 +1,7 @@
 'use client';
 
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
+import ConcordMessageBody from '@/components/chat/concord/ConcordMessageBody';
 import UnifiedZapPill from '@/components/chat/zaps/UnifiedZapPill';
 import type { MessageZapTotal } from '@/hooks/chat/zaps/useMessageZaps';
 import Button from '@/components/ui/buttons/Button';
@@ -53,6 +55,7 @@ export const ChannelMessage = memo(function ChannelMessage({
   onAvatar: (pubkey: string) => void;
 }) {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
   const locale = useLocale();
   const vm = useChannelMessage({ msg, parent, groupId, reactions, myPubkey, isAdmin: !!isAdmin, onLongPress });
 
@@ -71,7 +74,7 @@ export const ChannelMessage = memo(function ChannelMessage({
         )}
         <div className="msg-head">
           <span className="msg-name" onClick={() => onAvatar(msg.pubkey)} role="button">{vm.name}</span>
-          <RoleBadge pubkey={msg.pubkey} />
+          {!protocol && <RoleBadge pubkey={msg.pubkey} />}
           <span className="msg-time">{timeOfDay(msg.createdAt, locale)}</span>
           {msg.pending && <span className="msg-spinner" aria-label={t('common.sending')} role="status" />}
           <Button
@@ -93,7 +96,7 @@ export const ChannelMessage = memo(function ChannelMessage({
           onTouchCancel={vm.cancelPress}
           onContextMenu={vm.onContextMenu}
         >
-          <MessageContent
+          {protocol ? <ConcordMessageBody id={msg.id} content={msg.content} /> : <MessageContent
             content={msg.content}
             messageId={msg.id}
             channelId={groupId}
@@ -102,7 +105,7 @@ export const ChannelMessage = memo(function ChannelMessage({
             voiceNote={msg.voiceNote}
             voiceAuthorPicture={vm.meta?.picture}
             voiceTimestamp={msg.createdAt}
-          />
+          />}
         </div>
         {msg.failed && (
           <div className="msg-failed" data-testid="mobile-msg-failed">
@@ -127,7 +130,7 @@ export const ChannelMessage = memo(function ChannelMessage({
             </Button>
           </div>
         )}
-        <UnifiedZapPill message={msg} groupId={groupId} reactions={reactions} total={zapTotal} isAdmin={isAdmin} />
+        {!protocol && <UnifiedZapPill message={msg} groupId={groupId} reactions={reactions} total={zapTotal} isAdmin={isAdmin} />}
         {vm.grouped.length > 0 && (
           <div className="reactions">
             {vm.grouped.map((r) => (

@@ -4,8 +4,9 @@ import { PERM } from '@/constants/chat/concord';
 import { KIND_COMMENT, KIND_EVENT_DELETION, KIND_GROUP_CHAT_MESSAGE, KIND_REACTION } from '@/constants/nostr/nip-kinds';
 
 /** Inputs have passed the SDK's envelope, binding, expiry and current-ban checks. */
-export function projectConcordTimeline(rumors: readonly Rumor[], state: CommunityState, channelId: string) {
-  const byId = new Map(rumors.map(rumor => [rumor.id, rumor]));
+export function projectConcordTimeline(input: readonly Rumor[], state: CommunityState, channelId: string) {
+  const byId = new Map(input.map(rumor => [rumor.id, rumor]));
+  const rumors = [...byId.values()];
   const deleted = new Set<string>();
   for (const rumor of rumors) {
     if (rumor.kind !== KIND_EVENT_DELETION) continue;

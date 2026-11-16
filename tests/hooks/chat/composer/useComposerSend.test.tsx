@@ -115,3 +115,25 @@ describe('useComposerSend', () => {
     expect(sendMessage).toHaveBeenCalled();
   });
 });
+
+describe('encrypted upload send guard', () => {
+  it('does not publish the same pending upload twice', async () => {
+    const { ChannelProtocolContext } = await import('@/contexts/chat/channel-protocol');
+    let finish!: () => void;
+    const pending = new Promise<void>(resolve => { finish = resolve; });
+    const publish = vi.fn(() => pending);
+    const protocol = { scope: 'concord:test', send: publish } as unknown as import('@/types/chat/channel-protocol').ChannelProtocol;
+    const draft = state('attachment:upload');
+    const { result } = renderHook(() => useComposerSend({ groupId: 'c', group: null, relay: '', messages: [], replyingTo: null, setReplyingTo: vi.fn(), onOpenNewGame: vi.fn(), state: draft }), {
+      wrapper: ({ children }) => <LocaleProvider initialLocale="en"><ChannelProtocolContext.Provider value={protocol}>{children}</ChannelProtocolContext.Provider></LocaleProvider>,
+    });
+    await act(async () => {
+      const first = result.current();
+      await result.current();
+      expect(publish).toHaveBeenCalledTimes(1);
+      finish();
+      await first;
+    });
+    expect(draft.setSendError).toHaveBeenCalledWith(null);
+  });
+});

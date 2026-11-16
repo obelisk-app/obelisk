@@ -1,6 +1,6 @@
 import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useQuickZap } from '@/hooks/chat/zaps/useQuickZap';
-import type { Dispatch, FormEvent, SetStateAction } from 'react';
+import { useRef, type Dispatch, type FormEvent, type SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
 import { nostrActions, useAdmins, useMembers, useRelayAccess, type JsGroup, type JsMessage } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/hooks/session/useSession';
@@ -60,6 +60,7 @@ export function useComposerSend({
   state,
 }: ComposerSendOptions): (event?: FormEvent) => Promise<void> {
   const t = useTranslations();
+  const protocolSending = useRef(false);
   const protocol = useChannelProtocol();
   const myPubkey = useMyPubkey();
   const quickZap = useQuickZap();
@@ -70,7 +71,7 @@ export function useComposerSend({
   return async function send(e?: FormEvent) {
     e?.preventDefault();
     const content = state.draft.trim();
-    if (!content || state.isCurrent?.() === false) return;
+    if (!content || state.isCurrent?.() === false || protocolSending.current) return;
 
     // /zap [user] [amount], frontend-only:
     //   /zap                -> reply target (or last channel msg from someone else)
@@ -133,7 +134,10 @@ export function useComposerSend({
     const wire = resolveDraftMentions(content, state.draftMentions);
     const tags = outgoingTags(wire, state);
     try {
-      if (protocol) await protocol.send(wire, replyToCopy, tags);
+      if (protocol) {
+        protocolSending.current = true;
+        try { await protocol.send(wire, replyToCopy, tags); } finally { protocolSending.current = false; }
+      }
       else await nostrActions.sendMessage(groupId, wire, replyToCopy, tags);
     } catch (err) {
       if (state.isCurrent?.() !== false) state.setSendError(errorText(t, err, 'errors.codes.publish-rejected'));

@@ -16,7 +16,7 @@ import Heading from '@/components/ui/layout/Heading';
  * status and the search, create-channel and space-menu buttons.
  */
 export function MobileServerBanner({
-  label,
+  label, privateCommunity = false,
   relays = [],
   onSelectRelay,
   onAddRelay,
@@ -27,15 +27,15 @@ export function MobileServerBanner({
   onCreateChannel,
   onOpenMenu,
 }: {
-  label: string;
+  label: string; privateCommunity?: boolean;
   relays?: readonly string[];
   onSelectRelay?: (url: string) => void;
   onAddRelay?: () => void;
   relayUrl: string | null;
   iconUrl?: string | null;
   bannerUrl?: string | null;
-  onSearch: () => void;
-  onCreateChannel: () => void;
+  onSearch?: () => void;
+  onCreateChannel?: () => void;
   onOpenMenu: () => void;
 }) {
   const t = useTranslations();
@@ -49,11 +49,11 @@ export function MobileServerBanner({
       )}
       <div className="server-banner-shade" aria-hidden="true" />
       <div className="server-banner-actions">
-        <MobileRelayStatus relays={vm.socialRelays} activeRelay={relayUrl} onOpenSettings={vm.openRelaySettings} />
-        <Button variant="mobileIcon" className="action-search" aria-label={t('mobile.header.search')} onClick={onSearch}>
+        {!privateCommunity && <MobileRelayStatus relays={vm.socialRelays} activeRelay={relayUrl} onOpenSettings={vm.openRelaySettings} />}
+        {onSearch && <Button variant="mobileIcon" className="action-search" aria-label={t('mobile.header.search')} onClick={onSearch}>
           <SearchIcon size={20} strokeWidth={1.5} />
-        </Button>
-        <Button
+        </Button>}
+        {onCreateChannel && <Button
           variant="mobileIcon"
           className="action-create"
           aria-label={t('mobile.header.createChannel')}
@@ -61,7 +61,7 @@ export function MobileServerBanner({
           onClick={onCreateChannel}
         >
           <PlusIcon size={20} />
-        </Button>
+        </Button>}
         <Button variant="mobileIcon" className="action-menu" aria-label={t('mobile.header.spaceMenu')} onClick={onOpenMenu}>
           <MoreIcon size={20} strokeWidth={1.5} />
         </Button>

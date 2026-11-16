@@ -1,5 +1,4 @@
 'use client';
-import { useTranslations } from 'next-intl';
 import type { ConcordCommunity } from '@applesauce/concord/client';
 import { useConcordRoom } from '@/hooks/chat/concord/useConcordRoom';
 import { ChannelProtocolContext } from '@/contexts/chat/channel-protocol';
@@ -8,22 +7,12 @@ import { ChannelMessageList } from '@/app/[locale]/app/panes/channel/ChannelMess
 import { ChatComposer } from '@/app/[locale]/app/panes/channel/ChatComposer';
 import { SidebarHeader } from '@/app/[locale]/app/panes/sidebar/SidebarHeader';
 import { CreateGroupSection } from '@/app/[locale]/app/panes/sidebar/CreateGroupSection';
-import ConcordBrandingForm from './ConcordBrandingForm';
 import { GroupNode } from '@/app/[locale]/app/panes/sidebar/GroupNode';
-import CopyButton from '@/components/ui/buttons/CopyButton';
-import Button from '@/components/ui/buttons/Button';
 import Heading from '@/components/ui/layout/Heading';
-import Input from '@/components/ui/forms/Input';
-import FormError from '@/components/ui/forms/FormError';
-import Modal from '@/components/ui/overlays/Modal';
-import ModalHeader from '@/components/ui/overlays/ModalHeader';
-import ConcordChannelEditForm from './ConcordChannelEditForm';
-import ConcordChannelForm from './ConcordChannelForm';
-import ConcordRoleForm from './ConcordRoleForm';
+import ConcordSettings from './ConcordSettings';
 import ConcordMember from './ConcordMember';
 
 export default function ConcordRoom({ community, pane }: { community: ConcordCommunity; pane: 'sidebar' | 'chat' }) {
-  const t = useTranslations();
   const { scroller, ...vm } = useConcordRoom(community);
   return <ChannelProtocolContext.Provider value={vm.protocol}>
     {pane === 'sidebar' ? <aside className="flex h-full min-h-0 flex-col bg-lc-dark" data-testid="concord-channels">
@@ -44,23 +33,6 @@ export default function ConcordRoom({ community, pane }: { community: ConcordCom
         {vm.showMembers && <aside className="w-60 shrink-0 overflow-y-auto border-l border-lc-border p-3">{vm.members.map(pubkey => <ConcordMember key={pubkey} community={community} pubkey={pubkey} />)}</aside>}
       </div>
     </section>}
-    {vm.settings && <Modal onClose={vm.closeSettings} surface="card" panelClassName="flex max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark">
-      <ModalHeader title={vm.settings === 'edit-channel' ? t('shell.desktop.channel.settings') : vm.settings === 'channels' ? t('chat.concord.createChannel') : vm.settings === 'roles' ? t('chat.concord.createRole') : t('chat.concord.settings')} onBack={vm.settings === 'community' ? undefined : vm.openSettings} onClose={vm.closeSettings} />
-      <div className="space-y-6 overflow-y-auto p-5">
-        {vm.settings === 'community' && <>
-        {vm.canInvite && <Button variant="outline" data-testid="concord-create-invite" onClick={vm.createInvite}>{t('chat.concord.invite')}</Button>}
-        {vm.invite && <div className="flex items-end gap-2"><Input readOnly label={t('chat.concord.invite')} value={vm.invite} data-testid="concord-invite-link" /><CopyButton size="md" text={vm.invite} label={t('shell.desktop.invite.copy')} copiedLabel={t('common.copied')} /></div>}
-        <FormError>{vm.error}</FormError>
-        {vm.canEditBranding && <ConcordBrandingForm community={community} branding={vm.branding} onSaved={vm.closeSettings} />}
-        <div className="flex flex-wrap gap-2 border-t border-lc-border pt-4">
-          {vm.canManageChannels && <Button variant="outline" data-testid="concord-channel-settings" onClick={vm.openChannelSettings}>{t('chat.concord.createChannel')}</Button>}
-          {vm.canManageRoles && <Button variant="outline" data-testid="concord-role-settings" onClick={vm.openRoleSettings}>{t('chat.concord.createRole')}</Button>}
-        </div>
-        </>}
-        {vm.settings === 'edit-channel' && vm.canManageChannels && vm.channelId && <ConcordChannelEditForm key={vm.channelId} community={community} channelId={vm.channelId} name={vm.group?.name ?? ''} onSaved={vm.closeSettings} />}
-        {vm.settings === 'channels' && vm.canManageChannels && <ConcordChannelForm community={community} />}
-        {vm.settings === 'roles' && vm.canManageRoles && <ConcordRoleForm community={community} />}
-      </div>
-    </Modal>}
+    {vm.settings && <ConcordSettings community={community} vm={vm} />}
   </ChannelProtocolContext.Provider>;
 }

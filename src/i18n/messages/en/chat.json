@@ -398,6 +398,7 @@
     "standard": "Standard",
     "encrypted": "Encrypted",
     "standardHelp": "Channels hosted by a community relay.",
-    "encryptedHelp": "Private communities with end-to-end encryption, powered by Concord."
+    "encryptedHelp": "Private communities with end-to-end encryption, powered by Concord.",
+    "addCommunity": "Add a Concord community"
   }
 }

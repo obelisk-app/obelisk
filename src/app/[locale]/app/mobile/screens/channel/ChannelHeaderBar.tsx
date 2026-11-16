@@ -1,5 +1,6 @@
 'use client';
 
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import Button from '@/components/ui/buttons/Button';
 import MobileSigningIndicator from '@/components/feedback/MobileSigningIndicator';
 import { useTranslations } from 'next-intl';
@@ -10,12 +11,13 @@ import { GearIcon, SearchIcon, UsersIcon } from '@/assets/icons';
 export function ChannelHeaderBar({ header, back, onSearch, isChannelAdmin, onOpenSettings, openMembers }: {
   header: { category: string | null; channel: string };
   back: () => void;
-  onSearch: () => void;
+  onSearch?: () => void;
   isChannelAdmin: boolean;
   onOpenSettings: () => void;
   openMembers: () => void;
 }) {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
   return (
     <div className="chat-header chat-header-compact">
       {/* The category rides its own line, so the ellipsis lands here
@@ -31,10 +33,10 @@ export function ChannelHeaderBar({ header, back, onSearch, isChannelAdmin, onOpe
           <div className="chat-channel" data-testid="channel-name"><span className="hash">#</span>{header.channel}</div>
         </div>
         <div className="chat-actions">
-          <MobileSigningIndicator />
-          <Button variant="mobileIcon" className="action-search" onClick={onSearch} aria-label={t('common.search')}>
+          {!protocol && <MobileSigningIndicator />}
+          {onSearch && <Button variant="mobileIcon" className="action-search" onClick={onSearch} aria-label={t('common.search')}>
             <SearchIcon size={null} />
-          </Button>
+          </Button>}
           {isChannelAdmin && (
             <Button
               variant="mobileIcon"

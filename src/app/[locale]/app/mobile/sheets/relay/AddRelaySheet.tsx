@@ -1,7 +1,6 @@
 'use client';
 
 import ConcordAddCommunity from '@/app/[locale]/app/concord/ConcordAddCommunity';
-import CommunityTypePicker from '@/app/[locale]/app/concord/CommunityTypePicker';
 
 import Button from '@/components/ui/buttons/Button';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
@@ -16,15 +15,16 @@ import { PlusIcon } from '@/assets/icons';
 
 export function AddRelaySheet({ close }: { close: () => void }) {
   const t = useTranslations();
-  const { tab, setTab, isConfigured, concord, communityType, setCommunityType } = useAddRelay();
+  const { tab, setTab, isConfigured, concord, openConcord, backToRelays } = useAddRelay();
 
   return (
     <Sheet onClose={close} screen="add-relay" label={t('mobile.rail.addTitle')} maxHeight="88%">
       <SheetHeader
         icon={<PlusIcon size={null} />}
         title={t('mobile.rail.addTitle')}
+        onBack={concord ? backToRelays : undefined}
       />
-      <CommunityTypePicker value={communityType} onChange={setCommunityType} />
+
       {!concord && <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
         <Button variant="bare" className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}
@@ -47,6 +47,7 @@ export function AddRelaySheet({ close }: { close: () => void }) {
           <CustomRelayForm presentation="sheet" onAdded={close} />
         )}
       </div>
+      {!concord && <Button variant="outline" data-testid="add-concord-community" onClick={openConcord}>{t('chat.concord.addCommunity')}</Button>}
       <SheetActions onCancel={close} dismiss="close" />
     </Sheet>
   );

@@ -27,7 +27,7 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 it.each([2, 3])('browses a %i-relay banner deck, selects the settled front relay, and closes', count => {
   const select = vi.fn();
-  const relays = ['wss://one.test', 'wss://two.test', 'wss://three.test'].slice(0, count);
+  const relays = ['wss://one.test', 'wss://two.test', 'wss://three.test'].slice(0, count).sort();
   renderWithBridge(<LocaleProvider><RelayDeckPicker relays={relays} activeRelay={relays[0]} onSelect={select}>Active relay</RelayDeckPicker></LocaleProvider>, fakeBridge({}, { removeRelay }));
   fireEvent.click(screen.getByTestId('relay-deck-picker'));
   expect(screen.getByRole('dialog')).toBeInTheDocument();

@@ -398,6 +398,7 @@
     "standard": "Padrão",
     "encrypted": "Criptografada",
     "standardHelp": "Canais hospedados no relay de uma comunidade.",
-    "encryptedHelp": "Comunidades privadas com criptografia de ponta a ponta, com Concord."
+    "encryptedHelp": "Comunidades privadas com criptografia de ponta a ponta, com Concord.",
+    "addCommunity": "Adicionar uma comunidade Concord"
   }
 }

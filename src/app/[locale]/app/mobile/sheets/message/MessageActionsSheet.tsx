@@ -10,14 +10,14 @@ import { ZapIcon, CopyIcon, ReplyIcon, TrashIcon } from '@/assets/icons';
 export function MessageActionsSheet({
   msg,
   close,
-  onZap,
+  onZap, onReply,
 }: {
   msg: MobileActionMessage;
   close: () => void;
-  onZap: () => void;
+  onZap?: () => void; onReply?: () => void;
 }) {
   const t = useTranslations();
-  const vm = useMessageActionsSheet(msg, close);
+  const vm = useMessageActionsSheet(msg, close, onReply);
 
   return (
     <div className="sheet-host" data-screen="msg-actions">
@@ -58,10 +58,10 @@ export function MessageActionsSheet({
             <CopyIcon size={null} />
             {t('social.copyText')}
           </Button>
-          <Button variant="bare" className="ma-action zap" onClick={onZap}>
+          {!vm.privateChannel && onZap && <Button variant="bare" className="ma-action zap" onClick={onZap}>
             <ZapIcon size={null} />
             {t('mobile.message.zap')}
-          </Button>
+          </Button>}
           <Button variant="bare" className="ma-action" onClick={vm.copyId}>
             <CopyIcon size={null} />
             {t('social.copyEventId')}

@@ -398,6 +398,7 @@
     "standard": "Estándar",
     "encrypted": "Cifrada",
     "standardHelp": "Canales alojados en el relay de una comunidad.",
-    "encryptedHelp": "Comunidades privadas con cifrado de extremo a extremo, mediante Concord."
+    "encryptedHelp": "Comunidades privadas con cifrado de extremo a extremo, mediante Concord.",
+    "addCommunity": "Agregar una comunidad Concord"
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import ConcordAddCommunity from '@/app/[locale]/app/concord/ConcordAddCommunity';
-import CommunityTypePicker from '@/app/[locale]/app/concord/CommunityTypePicker';
+import Button from '@/components/ui/buttons/Button';
 
 import List from '@/components/ui/layout/List';
 import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
@@ -23,9 +23,9 @@ export function AddRelayModal({ onClose, initialConcord = false }: { onClose: ()
       onClose={onClose}
       surface="card" panelClassName="flex max-h-[85vh] w-full max-w-lg mx-4 flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark shadow-2xl"
     >
-      <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} />
+      <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} onBack={vm.concord ? vm.backToRelays : undefined} />
 
-      <CommunityTypePicker value={vm.communityType} onChange={vm.setCommunityType} />
+
       {!vm.concord && <div className="flex shrink-0 border-b border-lc-border px-5">
         <AddRelayTabButton active={vm.tab === 'suggested'} onClick={() => vm.setTab('suggested')}>
           {t('shell.rail.addModal.suggested')}
@@ -50,6 +50,7 @@ export function AddRelayModal({ onClose, initialConcord = false }: { onClose: ()
           <CustomRelayForm onAdded={onClose} />
         )}
       </div>
+      {!vm.concord && <div className="border-t border-lc-border px-5 py-4"><Button variant="outline" data-testid="add-concord-community" onClick={vm.openConcord}>{t('chat.concord.addCommunity')}</Button></div>}
     </Modal>
   );
 }

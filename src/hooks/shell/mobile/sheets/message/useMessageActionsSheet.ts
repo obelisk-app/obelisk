@@ -1,3 +1,4 @@
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useToastStore } from '@/store/feedback/toast';
 import { findZapPreset } from '@/utils/wallet/zap-presets';
 import { useQuickZap } from '@/hooks/chat/zaps/useQuickZap';
@@ -31,8 +32,9 @@ export interface MobileActionMessage {
  * and the actions. Each one that is done closes the sheet; deleting closes
  * it only once the confirmation went through.
  */
-export function useMessageActionsSheet(msg: MobileActionMessage, close: () => void) {
+export function useMessageActionsSheet(msg: MobileActionMessage, close: () => void, onReply?: () => void) {
   const t = useTranslations();
+  const protocol = useChannelProtocol();
   const quickZap = useQuickZap();
   const { zapPresets } = usePreferences();
   const meta = useUserMetadata(msg.pubkey);
@@ -41,7 +43,7 @@ export function useMessageActionsSheet(msg: MobileActionMessage, close: () => vo
     msg, msg.groupId, !!msg.canModerate, !!msg.canDeleteOwn, moderationLabelsFrom(t),
   );
   const react = (emoji: string, custom?: PickedCustomEmoji) => {
-    const preset = findZapPreset(zapPresets, emoji);
+    const preset = protocol ? undefined : findZapPreset(zapPresets, emoji);
     if (preset) {
       if (!msg.groupId) {
         useToastStore.getState().pushToast({ title: t('chat.zapCommand.noTarget'), body: '' });
@@ -50,14 +52,16 @@ export function useMessageActionsSheet(msg: MobileActionMessage, close: () => vo
       }
       void quickZap({ messageId: msg.id, recipientPubkey: msg.pubkey, groupId: msg.groupId,
         recipientLud16: meta?.lud16, displayName: displayNameFor(msg.pubkey, meta) }, preset.amountSats);
-    } else emitMobileReaction(msg, emoji, custom);
+    } else if (protocol) void protocol.react(msg.id, emoji);
+    else emitMobileReaction(msg, emoji, custom);
     close();
   };
   return {
-    quickReactions: [...new Set([...zapPresets.map((p) => p.emoji), ...QUICK_REACTIONS])],
-    reactionAmount: (emoji: string) => findZapPreset(zapPresets, emoji)?.amountSats,
+    privateChannel: !!protocol,
+    quickReactions: [...new Set([...(protocol ? [] : zapPresets.map((p) => p.emoji)), ...QUICK_REACTIONS])],
+    reactionAmount: (emoji: string) => protocol ? undefined : findZapPreset(zapPresets, emoji)?.amountSats,
     reactionTitle: (emoji: string) => {
-      const preset = findZapPreset(zapPresets, emoji);
+      const preset = protocol ? undefined : findZapPreset(zapPresets, emoji);
       return preset ? t('chat.zap.sendNow', { amount: String(preset.amountSats) }) : emoji;
     },
     name: displayNameFor(msg.pubkey, meta),
@@ -71,7 +75,8 @@ export function useMessageActionsSheet(msg: MobileActionMessage, close: () => vo
     },
     pickReaction: react,
     reply: () => {
-      requestMobileReply(msg.id);
+      if (onReply) onReply();
+      else requestMobileReply(msg.id);
       close();
     },
     copyText: () => {

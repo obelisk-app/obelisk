@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 test.use({ trace: 'off', video: 'off', screenshot: 'off' });
 
 for (const administration of [false, true]) test(administration ? 'Concord role delegation' : 'Concord shared shell, encrypted messages, files and cache restoration', async ({ browser, baseURL }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(360_000);
   const personas = createTestPersonas();
   const ownerContext = await browser.newContext({ baseURL });
   const memberContext = await browser.newContext({ baseURL });
@@ -24,7 +24,7 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await owner.goto('/app');
     await owner.getByTestId('analytics-consent').getByRole('button', { name: "Don't allow", exact: true }).click({ noWaitAfter: true });
     await owner.locator('[data-tour=rail-add-relay]').click({ timeout: 60_000 });
-    await owner.getByRole('tab', { name: 'Encrypted', exact: true }).click();
+    await owner.getByTestId('add-concord-community').click();
     await expect(owner.getByRole('button', { name: 'Create Concord community', exact: true })).toBeVisible();
     await owner.getByRole('dialog').screenshot({ path: '/tmp/obelisk-community-picker.png' });
     await owner.getByRole('button', { name: 'Create Concord community', exact: true }).click();
@@ -78,6 +78,13 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     const file = await download.path();
     expect(file).not.toBeNull();
     expect(await readFile(file!, 'utf8')).toBe(attachment);
+    await owner.locator('input[type=file]').nth(1).setInputFiles('public/icon-192.png');
+    await expect(owner.getByPlaceholder(/^Message #/)).toHaveValue(/attachment:/);
+    await owner.getByPlaceholder(/^Message #/).press('Enter');
+    await owner.getByPlaceholder(/^Message #/).press('Enter');
+    await expect(member.getByTestId('concord-image')).toHaveCount(1, { timeout: 60_000 });
+    await expect(member.getByTestId('concord-image')).toBeVisible();
+    await expect.poll(() => member.getByTestId('concord-image').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(192);
     const quickChannel = `quick-${Date.now()}`;
     await owner.getByTestId('concord-channels').getByRole('button', { name: 'Create channel', exact: true }).click();
     await owner.getByTestId('create-channel-input').fill(quickChannel);
@@ -144,7 +151,44 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('concord-room')).toBeVisible();
     await expect(member.getByPlaceholder(`Message #${channelName}`)).toBeVisible();
     await expect(member).toHaveURL(selectedUrl);
+    await expect(member.locator('.chat-header-compact')).toHaveCount(1);
+    await expect(member.getByText('ADMIN', { exact: true })).toHaveCount(0);
+    await member.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(member.getByTestId('mobile-server-banner')).toBeVisible();
+    await member.getByTestId('relay-deck-picker').click();
+    await expect(member.getByTestId('concord-deck-card')).toHaveCount(1);
+    await member.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+    await member.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName }).click();
+    await member.getByTestId('mobile-msg-more').first().click();
+    await member.getByTestId('mobile-msg-actions-reply').click();
+    await expect(member.getByTestId('mobile-reply-preview')).toBeVisible();
+    await member.getByPlaceholder(`Message #${channelName}`).fill('Mobile reply');
+    await member.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(member.getByTestId('concord-messages')).toContainText('Mobile reply');
+    expect((await member.locator('.chat-header-compact').boundingBox())!.y).toBeGreaterThanOrEqual(0);
     await member.screenshot({ path: '/tmp/obelisk-concord-mobile.png' });
+    const freshPhone = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 } });
+    try {
+      await seedSession(freshPhone, nsecSession(personas.member));
+      const phone = await freshPhone.newPage();
+      await phone.goto('/app');
+      await phone.getByTestId('analytics-consent').getByRole('button', { name: "Don't allow", exact: true }).click({ noWaitAfter: true });
+      await phone.getByTestId('relay-deck-picker').click({ timeout: 60_000 });
+      const card = phone.getByTestId('concord-deck-card');
+      await expect(card).toHaveCount(1, { timeout: 90_000 });
+      await expect(card).toContainText(`${communityName} renamed`);
+      for (let step = 0; step < 6 && await card.getAttribute('data-front') !== 'true'; step++) {
+        await phone.getByRole('button', { name: 'Next', exact: true }).click();
+        await expect.poll(() => phone.locator('[data-front=true]').count()).toBe(1);
+        await phone.waitForTimeout(450);
+      }
+      await expect(card).toHaveAttribute('data-front', 'true');
+      await card.getByRole('button', { name: `${communityName} renamed`, exact: true }).click();
+      await expect(phone.getByTestId('concord-room')).toBeVisible({ timeout: 60_000 });
+      await phone.getByRole('button', { name: 'Back', exact: true }).click();
+      await phone.getByTestId('concord-channels').getByRole('button').filter({ hasText: channelName }).click();
+      await expect(phone.getByTestId('concord-messages')).toContainText('Mobile reply', { timeout: 60_000 });
+    } finally { await freshPhone.close(); }
     await member.setViewportSize({ width: 1440, height: 900 });
     await member.screenshot({ path: '/tmp/obelisk-concord-desktop.png' });
     await member.getByRole('button', { name: 'Direct messages', exact: true }).click();

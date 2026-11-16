@@ -1,14 +1,12 @@
 'use client';
-import { useTranslations } from 'next-intl';
-import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
-import Button from '@/components/ui/buttons/Button';
+import { useConcordMessageBody } from '@/hooks/chat/concord/useConcordMessageBody';
+import ConcordAttachment from './ConcordAttachment';
 
-/** Private text never enters remote unfurl, media-preview or public game loaders. */
+/** Only authenticated, locally decrypted media is displayed. */
 export default function ConcordMessageBody({ id, content }: { id: string; content: string }) {
-  const t = useTranslations();
-  const protocol = useChannelProtocol();
+  const vm = useConcordMessageBody(id, content);
   return <div data-testid="message-content" className="whitespace-pre-wrap break-words">
-    {content}
-    {protocol?.attachments(id).map((attachment, index) => <Button key={index} variant="outline" size="sm" onClick={() => void protocol.download(attachment)}>{t('chat.concord.downloadAttachment')}</Button>)}
+    {vm.text}
+    {vm.attachments.map(attachment => <ConcordAttachment key={attachment.url} attachment={attachment} />)}
   </div>;
 }
