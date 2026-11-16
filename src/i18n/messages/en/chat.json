@@ -399,6 +399,14 @@
     "encrypted": "Encrypted",
     "standardHelp": "Channels hosted by a community relay.",
     "encryptedHelp": "Private communities with end-to-end encryption, powered by Concord.",
-    "addCommunity": "Add a Concord community"
+    "addCommunity": "Add a Concord community",
+    "sendStatus": {
+      "encrypting": "Preparing encrypted attachment…",
+      "uploading": "Uploading attachment…",
+      "sending": "Sending…",
+      "failed": "Could not send. Retry this message."
+    },
+    "channelPosition": "Channel order",
+    "searchLocal": "Search channels and loaded messages in this channel"
   }
 }

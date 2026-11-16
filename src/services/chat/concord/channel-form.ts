@@ -1,6 +1,7 @@
+import { concordChannelLayout } from '@/utils/chat/concord/channels';
 import type { ConcordCommunity } from '@applesauce/concord/client';
 import type { FormSpec } from '@/types/common/form';
-import { setConcordChannelCategory, setConcordChannelName } from './channel-metadata';
+import { setConcordChannelCategory, editConcordChannel } from './channel-metadata';
 
 export function concordChannelForm(community: ConcordCommunity, onCreated: (id: string) => void): FormSpec<{
   name: string; private: boolean; publication: boolean; category: string;
@@ -19,10 +20,12 @@ export function concordChannelForm(community: ConcordCommunity, onCreated: (id: 
   };
 }
 
-export function concordChannelEditForm(community: ConcordCommunity, channelId: string, name: string, onSaved: () => void): FormSpec<{ name: string }> {
+export function concordChannelEditForm(community: ConcordCommunity, channelId: string, name: string, onSaved: () => void): FormSpec<{ name: string; category: string; position: string }> {
+  const layout = concordChannelLayout(community.state$.value.channels.find(channel => channel.channel_id === channelId));
   return {
-    initial: { name }, ready: values => !!values.name.trim(),
-    submit: values => setConcordChannelName(community, channelId, values.name),
+    initial: { name, category: layout.category, position: String(layout.position) },
+    ready: values => !!values.name.trim() && /^\d+$/.test(values.position),
+    submit: values => editConcordChannel(community, channelId, values),
     onSuccess: onSaved, failure: 'chat.concord.failed',
   };
 }

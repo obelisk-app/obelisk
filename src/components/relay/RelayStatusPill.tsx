@@ -43,9 +43,10 @@ export default function RelayStatusPill({
   onOpenSettings,
   compact = false,
   indicate = 'social',
-  mobileSigning,
+  mobileSigning, concordPubkey,
   children,
 }: {
+  concordPubkey?: string;
   mobileSigning?: { label: string; dotClass: string; status: string };
   children?: ReactNode;
   relays: readonly string[];
@@ -74,7 +75,7 @@ export default function RelayStatusPill({
 }) {
   const t = useTranslations();
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const vm = useRelayStatusPill({ relays, activeRelay, onOpenSettings, compact, indicate });
+  const vm = useRelayStatusPill({ relays, activeRelay, onOpenSettings, compact, indicate, concordPubkey });
 
   return (
     <>

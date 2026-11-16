@@ -25,3 +25,19 @@ export async function setConcordChannelName(community: ConcordCommunity, channel
     ...content, name: name.trim(),
   }), 'channel-metadata', { expectedHead: head.hash });
 }
+
+/** Change presentation fields together under one edition guard. Other clients may ignore the extension. */
+export async function editConcordChannel(community: ConcordCommunity, channelId: string, values: { name: string; category: string; position: string }) {
+  if (!values.name.trim()) throw new Error('Channel name is required');
+  const position = Number(values.position);
+  if (!Number.isSafeInteger(position) || position < 0) throw new Error('Invalid channel position');
+  const head = await community.admin.latestEdition(channelId);
+  if (!head) throw new Error('Channel metadata is not available');
+  const content = JSON.parse(head.content);
+  if (!content || typeof content !== 'object' || Array.isArray(content)) throw new Error('Invalid channel metadata');
+  const custom = content.custom && typeof content.custom === 'object' && !Array.isArray(content.custom) ? content.custom : {};
+  const obelisk = custom.obelisk && typeof custom.obelisk === 'object' && !Array.isArray(custom.obelisk) ? custom.obelisk : {};
+  await community.admin.publishEdition(VSK.CHANNEL, channelId, JSON.stringify({
+    ...content, name: values.name.trim(), custom: { ...custom, obelisk: { ...obelisk, category: values.category.trim(), position } },
+  }), 'channel-metadata', { expectedHead: head.hash });
+}

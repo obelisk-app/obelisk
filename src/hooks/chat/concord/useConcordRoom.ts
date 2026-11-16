@@ -15,10 +15,13 @@ import { downloadConcordAttachment } from '@/services/chat/concord/media';
 import { concordGroup, concordMessage } from '@/utils/chat/concord/presentation';
 import { concordChannelProtocol } from '@/services/chat/concord/channel-protocol';
 import type { JsMessage } from '@/services/nostr-bridge';
+import { concordOutbox, type ConcordPendingMessage } from '@/services/chat/concord/outbox';
 import { groupConcordChannels } from '@/utils/chat/concord/channels';
 
 export function useConcordRoom(community: ConcordCommunity) {
   const t = useTranslations();
+  const [pending, setPending] = useState<ConcordPendingMessage[]>([]);
+  useEffect(() => { const sub = concordOutbox(community).rows$.subscribe(setPending); return () => sub.unsubscribe(); }, [community]);
   const appearance = useConcordBranding(community);
   const selected = useConcordNavigation(state => state.channelId);
   const selectChannel = useConcordNavigation(state => state.selectChannel);
@@ -45,8 +48,8 @@ export function useConcordRoom(community: ConcordCommunity) {
   }, [community, channelId]);
   const rows = useMemo(() => channelId && timeline?.channelId === channelId ? projectConcordTimeline(timeline.rumors, state, channelId) : [], [timeline, state, channelId]);
   const files = useMemo(() => new Map<string, File>(), []);
-  const protocol = useMemo(() => concordChannelProtocol(community, channelId ?? '', timeline && timeline.channelId === channelId ? timeline.rumors : [], files), [community, channelId, timeline, files]);
-  const messages = useMemo(() => rows.map(concordMessage), [rows]);
+  const protocol = useMemo(() => ({ ...concordChannelProtocol(community, channelId ?? '', timeline && timeline.channelId === channelId ? timeline.rumors : [], files), pending: (id: string) => pending.find(row => row.message.id === id) }), [community, channelId, timeline, files, pending]);
+  const messages = useMemo(() => [...rows.map(concordMessage), ...pending.filter(row => row.channelId === channelId).map(row => row.message)], [rows, pending, channelId]);
   const reactions = useMemo(() => Object.fromEntries(rows.map(row => [row.rumor.id, row.reactionEvents.map(event => ({ id: event.id, pubkey: event.pubkey, emoji: event.content, targetEventId: row.rumor.id, createdAt: event.created_at }))])), [rows]);
   const messagesById = useMemo(() => new Map(messages.map(message => [message.id, message])), [messages]);
   const groups = useMemo(() => channels.filter(channel => channel.accessible).map(channel => concordGroup(community.communityId, channel)), [community, channels]);

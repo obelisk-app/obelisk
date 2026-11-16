@@ -1,3 +1,5 @@
+import { watchConcordRelayStatus, retryConcordRelay } from '@/services/chat/concord/relay-status';
+import type { RelayStatus } from '@/services/social/relay-status';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { useConnectionState, useRelayAccess } from '@/services/nostr-bridge';
@@ -23,23 +25,26 @@ export function useRelayStatusPill({
   activeRelay,
   onOpenSettings,
   compact,
-  indicate,
+  indicate, concordPubkey,
 }: {
   relays: readonly string[];
   activeRelay?: string | null;
   onOpenSettings?: () => void;
   compact: boolean;
-  indicate: 'social' | 'active';
+  indicate: 'social' | 'active'; concordPubkey?: string;
 }) {
   const t = useTranslations();
-  const statuses = useSyncExternalStore(subscribeRelayStatus, getRelayStatuses, getRelayStatuses);
+  const socialStatuses = useSyncExternalStore(subscribeRelayStatus, getRelayStatuses, getRelayStatuses);
+  const [concordStatuses, setConcordStatuses] = useState<Record<string, RelayStatus>>({});
+  useEffect(() => concordPubkey ? watchConcordRelayStatus(concordPubkey, setConcordStatuses) : undefined, [concordPubkey]);
+  const statuses = concordPubkey ? concordStatuses : socialStatuses;
   const [open, setOpen] = useState(false);
   const connection = useConnectionState();
   const access = useRelayAccess(activeRelay ?? null);
 
   // The header is the surface that's always mounted, so it owns the watcher.
   // `watchRelays` is idempotent; settings calls it too.
-  useEffect(() => { watchRelays(relays); }, [relays]);
+  useEffect(() => { if (!concordPubkey) watchRelays(relays); }, [relays, concordPubkey]);
 
   const summary = useMemo(() => relayStatusSummary(relays, statuses), [relays, statuses]);
   const rows = useMemo(() => relayStatusRows(relays, statuses), [relays, statuses]);
@@ -57,7 +62,7 @@ export function useRelayStatusPill({
         onOpenSettings();
       }
       : undefined,
-    retry: (relay: string) => void probeRelay(relay),
+    retry: (relay: string) => concordPubkey ? retryConcordRelay(concordPubkey, relay) : void probeRelay(relay),
     access,
     connectionLabel: connectionLabel(connection, t),
     summary,

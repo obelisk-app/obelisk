@@ -5,8 +5,10 @@ import { refoundAuthority, parseImeta } from '@applesauce/concord/helpers';
 import { CONCORD_ATTACHMENT_BYTE_LIMIT } from '@/constants/nostr-bridge/concord';
 import { PERM } from '@/constants/chat/concord';
 import { downloadConcordAttachment } from './media';
+import { concordOutbox } from './outbox';
 
 export function concordChannelProtocol(community: ConcordCommunity, channelId: string, rumors: readonly Rumor[], files: Map<string, File>): ChannelProtocol {
+  const box = concordOutbox(community);
   const find = (id: string) => { const rumor = rumors.find(row => row.id === id); if (!rumor) throw new Error('Message unavailable'); return rumor; };
   return {
     createChannel: name => community.createChannel(name),
@@ -16,14 +18,17 @@ export function concordChannelProtocol(community: ConcordCommunity, channelId: s
       const selected = [...files].filter(([token]) => content.includes(token));
       let text = content;
       for (const [token] of selected) text = text.replaceAll(token, '');
-      const result = await community.sendMessage(channelId, text.trim(), reply ? { id: reply.id, author: reply.pubkey } : undefined, selected.map(([, file]) => file));
+      box.enqueue(channelId, text.trim(), reply, selected.map(([, file]) => file));
       for (const [token] of selected) files.delete(token);
-      return result;
+
     },
     react: (id, emoji, reactionId) => reactionId ? community.deleteMessage(channelId, find(reactionId)) : community.react(channelId, find(id), emoji),
     remove: id => community.deleteMessage(channelId, find(id)),
-    canDelete: id => !community.state$.value.dissolved && (find(id).pubkey === community.pubkey || refoundAuthority(community.state$.value, PERM.MANAGE_MESSAGES, find(id).pubkey)(community.pubkey)),
-    attachments: id => [...parseImeta(find(id).tags).values()],
+    retry: id => box.retry(id),
+    dismiss: id => box.dismiss(id),
+    pending: id => box.rows$.value.find(row => row.message.id === id),
+    canDelete: id => !id.startsWith('pending:') && !community.state$.value.dissolved && (find(id).pubkey === community.pubkey || refoundAuthority(community.state$.value, PERM.MANAGE_MESSAGES, find(id).pubkey)(community.pubkey)),
+    attachments: id => id.startsWith('pending:') ? [] : [...parseImeta(find(id).tags).values()],
     download: downloadConcordAttachment,
   };
 }

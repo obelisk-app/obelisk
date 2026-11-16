@@ -399,6 +399,14 @@
     "encrypted": "Cifrada",
     "standardHelp": "Canales alojados en el relay de una comunidad.",
     "encryptedHelp": "Comunidades privadas con cifrado de extremo a extremo, mediante Concord.",
-    "addCommunity": "Agregar una comunidad Concord"
+    "addCommunity": "Agregar una comunidad Concord",
+    "sendStatus": {
+      "encrypting": "Preparando archivo cifrado…",
+      "uploading": "Subiendo archivo…",
+      "sending": "Enviando…",
+      "failed": "No se pudo enviar. Reintentá este mensaje."
+    },
+    "channelPosition": "Orden del canal",
+    "searchLocal": "Buscar canales y mensajes cargados en este canal"
   }
 }

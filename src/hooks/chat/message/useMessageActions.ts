@@ -137,14 +137,16 @@ export function useMessageModeration(
   }, [protocol, canDelete, canModerate, groupId, labels, msg.id]);
 
   const retry = useCallback(() => {
+    if (protocol) { protocol.retry?.(msg.id); return; }
     if (!groupId || !msg.clientTag) return;
     void nostrActions.retryMessage(groupId, msg.clientTag);
-  }, [groupId, msg.clientTag]);
+  }, [groupId, msg.clientTag, msg.id, protocol]);
 
   const dismissFailed = useCallback(() => {
+    if (protocol) { protocol.dismiss?.(msg.id); return; }
     if (!groupId || !msg.clientTag) return;
     void nostrActions.cancelPendingMessage(groupId, msg.clientTag);
-  }, [groupId, msg.clientTag]);
+  }, [groupId, msg.clientTag, msg.id, protocol]);
 
   return { canDelete, deleteMessage, retry, dismissFailed };
 }

@@ -7,6 +7,7 @@ import { openConcordStorage } from './storage';
 import { concordRumorStore } from './rumor-store';
 import { CONCORD_DEFAULT_RELAYS } from '@/constants/nostr-bridge/concord';
 import { concordUploader } from '@/services/chat/concord/media';
+import { disposeConcordOutbox } from '@/services/chat/concord/outbox';
 import { startConcordWithCache } from './startup';
 
 /** SDK gets Obelisk's signer, encrypted storage, and virtual sockets over the shared hub. */
@@ -31,6 +32,7 @@ export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, gen
   const dispose = () => {
     if (disposed) return;
     disposed = true;
+    for (const community of client.communities$.value) { const instance = client.getCommunity(community.material.community_id); if (instance) disposeConcordOutbox(instance); }
     client.dispose();
     pool.close();
     hub.removeIdentity(identityId);

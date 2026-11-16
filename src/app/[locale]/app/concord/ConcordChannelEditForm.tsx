@@ -16,6 +16,8 @@ export default function ConcordChannelEditForm({ community, channelId, name, onS
   const form = useForm(concordChannelEditForm(community, channelId, name, onSaved));
   return <Form form={form} layout="stack">
     <Input label={t('chat.concord.channelName')} data-testid="concord-channel-edit-name" {...form.field('name')} />
+    <Input label={t('chat.concord.category')} data-testid="concord-channel-edit-category" {...form.field('category')} />
+    <Input type="number" min="0" step="1" label={t('chat.concord.channelPosition')} {...form.field('position')} />
     <FormError>{form.error}</FormError>
     <FormActions submitLabel={t('common.save')} submitTestId="concord-channel-edit-save" busy={form.submitting} disabled={!form.canSubmit} />
   </Form>;

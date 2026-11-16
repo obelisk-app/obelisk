@@ -16,7 +16,7 @@ import Heading from '@/components/ui/layout/Heading';
  * status and the search, create-channel and space-menu buttons.
  */
 export function MobileServerBanner({
-  label, privateCommunity = false,
+  label, privateCommunity = false, concordPubkey, communityRelays,
   relays = [],
   onSelectRelay,
   onAddRelay,
@@ -27,7 +27,7 @@ export function MobileServerBanner({
   onCreateChannel,
   onOpenMenu,
 }: {
-  label: string; privateCommunity?: boolean;
+  label: string; privateCommunity?: boolean; concordPubkey?: string; communityRelays?: readonly string[];
   relays?: readonly string[];
   onSelectRelay?: (url: string) => void;
   onAddRelay?: () => void;
@@ -49,7 +49,7 @@ export function MobileServerBanner({
       )}
       <div className="server-banner-shade" aria-hidden="true" />
       <div className="server-banner-actions">
-        {!privateCommunity && <MobileRelayStatus relays={vm.socialRelays} activeRelay={relayUrl} onOpenSettings={vm.openRelaySettings} />}
+        <MobileRelayStatus relays={privateCommunity ? communityRelays ?? [] : vm.socialRelays} concordPubkey={concordPubkey} activeRelay={relayUrl} onOpenSettings={privateCommunity ? onOpenMenu : vm.openRelaySettings} />
         {onSearch && <Button variant="mobileIcon" className="action-search" aria-label={t('mobile.header.search')} onClick={onSearch}>
           <SearchIcon size={20} strokeWidth={1.5} />
         </Button>}
