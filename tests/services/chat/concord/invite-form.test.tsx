@@ -38,3 +38,23 @@ it('shows an invite failure and permits retry', async () => {
   expect(created).toHaveBeenCalledOnce();
   expect(result.current.error).toBeNull();
 });
+
+it('revokes the selected invitation only after synchronization and exposes rejection', async () => {
+  const { concordRevokeInviteForm } = await import('@/services/chat/concord/invite-form');
+  const phase$ = new BehaviorSubject('syncing');
+  const revokeInvite = vi.fn().mockRejectedValueOnce(new Error('Offline')).mockResolvedValue(undefined);
+  const community = { phase$, revokeInvite } as unknown as ConcordCommunity;
+  const invite = { token: 'test-only' } as import('@applesauce/concord/client').ConcordInviteLink;
+  const { result } = renderHook(() => useForm(concordRevokeInviteForm(community, invite)), {
+    wrapper: ({ children }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>,
+  });
+  let pending!: Promise<void>;
+  act(() => { pending = result.current.submit(); void result.current.submit(); });
+  expect(revokeInvite).not.toHaveBeenCalled();
+  await act(async () => { phase$.next('live'); await pending; });
+  expect(result.current.error).toBeTruthy();
+  await act(async () => { await result.current.submit(); });
+  expect(revokeInvite).toHaveBeenCalledTimes(2);
+  expect(revokeInvite).toHaveBeenLastCalledWith(invite);
+  expect(result.current.error).toBeNull();
+});

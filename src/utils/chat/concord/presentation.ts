@@ -1,3 +1,4 @@
+import { extractMentionPubkeysFromMessage } from '@/utils/message-text/mentions';
 import type { ChannelMetadata, Rumor } from '@applesauce/concord';
 import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
 
@@ -10,7 +11,7 @@ export function concordMessage(row: { rumor: Rumor; content: string; subject?: s
   return { id: row.rumor.id, pubkey: row.rumor.pubkey, content: row.subject ? `${row.subject}\n\n${row.content}` : row.content,
     createdAt: row.rumor.created_at, kind: row.rumor.kind,
     replyToId: row.rumor.tags.find(tag => tag[0] === 'q')?.[1] ?? row.rumor.tags.find(tag => tag[0] === 'e' && (tag[3] === 'reply' || row.rumor.kind === 1111))?.[1] ?? null,
-    mentions: row.rumor.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]) };
+    mentions: extractMentionPubkeysFromMessage(row.content, row.rumor.tags) };
 }
 
 /** Hide a relay echo while its matching optimistic row is still awaiting acknowledgements. */

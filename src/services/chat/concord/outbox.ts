@@ -1,3 +1,4 @@
+import { extractMentionPubkeysFromMessage } from '@/utils/message-text/mentions';
 import { awaitConcordSendReady } from './send-readiness';
 import { BehaviorSubject } from 'rxjs';
 import type { ConcordCommunity } from '@applesauce/concord/client';
@@ -76,6 +77,8 @@ export class ConcordOutbox {
           if (reply) factory = factory.replyTo({ id: reply.id, author: reply.pubkey });
           draft = await factory;
         }
+        const mentioned = extractMentionPubkeysFromMessage(row.message.content, draft.tags);
+        for (const pubkey of mentioned) if (!draft.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)) draft.tags.push(['p', pubkey]);
         if (row.attachments.length) draft = await addMediaAttachments(row.attachments)(draft);
         row.prepared = await includeMediaEncryption(row.attachments.filter(file => file.url && file.encryption).map(file => ({ url: file.url!, ...file.encryption! })))(
           await bindToChannel(row.channelId, epoch)(draft));

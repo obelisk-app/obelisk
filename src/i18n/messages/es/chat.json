@@ -417,6 +417,8 @@
     "layoutHelp": "Organizá categorías y canales para toda la comunidad.",
     "memberChannels": "Los miembros pueden crear y administrar canales",
     "memberChannelsHelp": "Concord también permite editar y eliminar canales. Los nuevos miembros reciben acceso mientras el propietario tiene Obelisk abierto. Al desactivar esta opción se retira este permiso compartido; los roles asignados por separado siguen vigentes.",
-    "memberChannelsRole": "Canales de miembros"
+    "memberChannelsRole": "Canales de miembros",
+    "revokeInvite": "Revocar invitación",
+    "inviteListHint": "Tus invitaciones activas. Revocar un enlace impide nuevos ingresos por ese enlace; los miembros actuales conservan su acceso."
   }
 }

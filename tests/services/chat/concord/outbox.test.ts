@@ -90,3 +90,12 @@ it('keeps an immediate pending row but waits for restored community keys before 
   await vi.waitFor(() => expect(box.rows$.value).toHaveLength(0));
   expect(publishToPlane).toHaveBeenCalledTimes(1);
 });
+
+it('carries typed Nostr mentions inside the encrypted rumor tags', async () => {
+  const { nip19 } = await import('nostr-tools');
+  const mentioned = 'b'.repeat(64);
+  const { box, publishToPlane } = setup();
+  box.enqueue('channel', `hello nostr:${nip19.npubEncode(mentioned)}`, null, []);
+  await vi.waitFor(() => expect(publishToPlane).toHaveBeenCalledOnce());
+  expect(publishToPlane.mock.calls[0][1].tags).toContainEqual(['p', mentioned]);
+});

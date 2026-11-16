@@ -1,5 +1,6 @@
 'use client';
 
+import { useConcordMarkRead } from './useConcordMarkRead';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from '@/hooks/common/useForm';
@@ -37,6 +38,7 @@ export function useConcordRoom(community: ConcordCommunity) {
   const [channels, setChannels] = useState<Array<ChannelMetadata & { accessible: boolean }>>([]);
   const [timeline, setTimeline] = useState<{ channelId: string; rumors: Rumor[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
   const [invite, setInvite] = useState('');
   const inviteForm = useForm(concordInviteForm(community, setInvite));
   const [settings, setSettings] = useState<'community' | 'branding' | 'invite' | 'layout' | 'channels' | 'roles' | 'edit-channel' | null>(null);
@@ -83,18 +85,20 @@ export function useConcordRoom(community: ConcordCommunity) {
     ...concordChannelProtocol(community, channelId ?? '', timeline && timeline.channelId === channelId ? timeline.rumors : [], files, thread),
     pending: (id: string) => pending.find(row => row.message.id === id),
     communityName: appearance.branding.name,
+    openSearch: () => setSearching(true),
     publishLayout: (next: typeof layout, expected: typeof layout) => publishConcordLayout(community, next, expected),
     forum: { groups, childrenByParent, messagesByGroup: publications.messagesByGroup },
   }), [community, channelId, timeline, files, pending, thread, appearance.branding.name, groups, childrenByParent, publications.messagesByGroup]);
   const messages = useMemo(() => mergeConcordPending(thread ? concordThreadMessages(rows, thread) : rows.map(concordMessage), pending, channelId, thread?.id), [rows, pending, channelId, thread]);
   const reactions = useMemo(() => Object.fromEntries(rows.map(row => [row.rumor.id, row.reactionEvents.map(event => ({ id: event.id, pubkey: event.pubkey, emoji: event.content, targetEventId: row.rumor.id, createdAt: event.created_at }))])), [rows]);
   const messagesById = useMemo(() => new Map(messages.map(message => [message.id, message])), [messages]);
-  useEffect(() => { if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }, [messages.length, channelId]);
+  useConcordMarkRead(community.pubkey, group?.id, messages, scroller);
   const run = async (operation: () => Promise<unknown>) => {
     setError(null);
     try { await operation(); } catch (err) { setError(errorText(t, err, 'chat.concord.failed')); }
   };
   return {
+    searching, closeSearch: () => setSearching(false),
     layout, rootChannels, collapsedCategories, toggleCategory: (id: string) => setCollapsedCategories(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; }),
     openBranding: () => setSettings('branding'), openInvite: () => setSettings('invite'),
     openMemberSettings: () => { setSettings(null); setShowMembers(true); },
@@ -106,6 +110,7 @@ export function useConcordRoom(community: ConcordCommunity) {
     openChannelSettings: () => setSettings('channels'), openRoleSettings: () => setSettings('roles'),
     showMembers, toggleMembers: () => setShowMembers(!useConcordNavigation.getState().membersOpen), replyingTo, setReplyingTo,
     selectGroup: (id: string) => {
+      setSearching(false);
       const [channel, selectedThread] = id.slice(`concord:${community.communityId}:`.length).split(':thread:');
       if (selectedThread) useConcordNavigation.getState().selectThread(channel, selectedThread);
       else selectChannel(channel);

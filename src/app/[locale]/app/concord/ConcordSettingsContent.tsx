@@ -6,6 +6,7 @@ import CopyButton from '@/components/ui/buttons/CopyButton';
 import Button from '@/components/ui/buttons/Button';
 import Input from '@/components/ui/forms/Input';
 import FormError from '@/components/ui/forms/FormError';
+import ConcordInviteList from './ConcordInviteList';
 import ConcordBrandingForm from './ConcordBrandingForm';
 import ConcordChannelEditForm from './ConcordChannelEditForm';
 import ConcordChannelForm from './ConcordChannelForm';
@@ -20,6 +21,7 @@ export default function ConcordSettingsContent({ community, vm }: ConcordSetting
         {vm.canInvite && <Button variant="outline" data-testid="concord-create-invite" loading={vm.inviting} onClick={vm.createInvite}>{t('chat.concord.invite')}</Button>}
         {vm.invite && <div className="flex items-end gap-2"><Input readOnly label={t('chat.concord.invite')} value={vm.invite} data-testid="concord-invite-link" /><CopyButton size="md" text={vm.invite} label={t('shell.desktop.invite.copy')} copiedLabel={t('common.copied')} /></div>}
         <FormError>{vm.inviteError}</FormError>
+        {vm.canInvite && <ConcordInviteList community={community} />}
         </>}
         {vm.settings === 'branding' && vm.canEditBranding && <ConcordBrandingForm community={community} branding={vm.branding} onSaved={vm.closeSettings} />}
         {vm.settings === 'edit-channel' && vm.canManageChannels && vm.channelId && <ConcordChannelEditForm key={vm.channelId} community={community} channelId={vm.channelId} name={vm.group?.name ?? ''} onSaved={vm.closeSettings} />}

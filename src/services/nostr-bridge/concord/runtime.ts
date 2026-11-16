@@ -1,3 +1,5 @@
+import { startConcordReadSync } from './read-sync';
+import { startConcordReadHighlights } from '@/services/chat/concord/read-highlights';
 import { ConcordClient } from '@applesauce/concord/client';
 import { RelayPool } from 'applesauce-relay';
 import type { RelayHub } from '@nostr-wot/relay/hub';
@@ -29,12 +31,16 @@ export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, gen
     autoUnlock: true, autoSaveCommunityList: true,
     uploader: concordUploader(assertCurrent),
   });
+  const stopReadSync = startConcordReadSync(hub, signer, storage, identityId, personalRelays.length ? personalRelays : [...CONCORD_DEFAULT_RELAYS], assertCurrent);
+  const stopHighlights = startConcordReadHighlights(client);
   let disposed = false;
   const stopMemberGrants = startClientMemberChannelGrants(client);
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     stopMemberGrants();
+    stopHighlights();
+    stopReadSync();
     for (const community of client.communities$.value) { const instance = client.getCommunity(community.material.community_id); if (instance) disposeConcordOutbox(instance); }
     client.dispose();
     pool.close();

@@ -10,6 +10,7 @@ import { CreateGroupSection } from '@/app/[locale]/app/panes/sidebar/CreateGroup
 import { GroupNode } from '@/app/[locale]/app/panes/sidebar/GroupNode';
 import { CategorySection } from '../panes/sidebar/CategorySection';
 import ForumView from '@/components/chat/forum/ForumView';
+import ConcordSearch from './ConcordSearch';
 import ConcordSettings from './ConcordSettings';
 import ConcordMember from './ConcordMember';
 
@@ -38,6 +39,7 @@ export default function ConcordRoom({ community, pane }: { community: ConcordCom
         {vm.showMembers && <aside data-testid="concord-member-list" className="w-60 shrink-0 overflow-y-auto border-l border-lc-border p-3">{vm.members.map(pubkey => <ConcordMember key={pubkey} community={community} pubkey={pubkey} />)}</aside>}
       </div>
     </section>}
+    {vm.searching && <ConcordSearch community={community} groups={vm.groups} onClose={vm.closeSearch} onSelect={vm.selectGroup} />}
     {vm.settings && <ConcordSettings community={community} vm={vm} />}
   </ChannelProtocolContext.Provider>;
 }

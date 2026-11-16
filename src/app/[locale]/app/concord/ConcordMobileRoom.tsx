@@ -44,7 +44,7 @@ export default function ConcordMobileRoom({ community }: { community: ConcordCom
         {vm.group && !vm.state.dissolved && <ChannelComposer key={vm.group.id} groupId={vm.group.id} group={vm.group} messages={vm.messages} replyingTo={vm.replyingTo} setReplyingTo={vm.setReplyingTo} onOpenNewGame={vm.openSettings} />}
       </div>}
       </div>
-    {vm.searching && <ConcordSearch groups={vm.groups} messages={vm.messages} onClose={vm.closeSearch} onSelect={vm.pickChannel} />}
+    {vm.searching && <ConcordSearch mobile community={community} groups={vm.groups} onClose={vm.closeSearch} onSelect={vm.pickChannel} />}
     {vm.settings && <ConcordSettings community={community} vm={vm} mobile />}
     {vm.adding && <AddRelaySheet close={vm.closeAdd} />}
     {vm.showMembers && <Sheet screen="members" label={t('mobile.members.members')} onClose={vm.toggleMembers}>

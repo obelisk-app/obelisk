@@ -1,0 +1,39 @@
+import { create } from 'zustand';
+import type { ChannelHighlights } from '@/services/read-state/selectors';
+import { CONCORD_READ_LIMIT } from '@/constants/chat/concord-read';
+
+interface ConcordReadState {
+  account: string | null;
+  cursors: Record<string, number>;
+  highlights: Record<string, ChannelHighlights>;
+  reset(account: string | null): void;
+  merge(account: string, incoming: Record<string, number>): void;
+  setHighlights(account: string, key: string, value: ChannelHighlights | null): void;
+}
+
+/** Memory projection only. Persistence belongs to the sealed runtime and NIP-44 sync. */
+export const useConcordReadStore = create<ConcordReadState>(set => ({
+  account: null, cursors: {}, highlights: {},
+  reset: account => set({ account, cursors: {}, highlights: {} }),
+  merge: (account, incoming) => set(state => {
+    if (account !== state.account) return state;
+    const cursors = { ...state.cursors };
+    let changed = false;
+    for (const [key, value] of Object.entries(incoming)) {
+      if (value <= (cursors[key] ?? 0)) continue;
+      if (!(key in cursors) && Object.keys(cursors).length >= CONCORD_READ_LIMIT) continue;
+      cursors[key] = value; changed = true;
+    }
+    return changed ? { cursors } : state;
+  }),
+  setHighlights: (account, key, value) => set(state => {
+    if (account !== state.account) return state;
+    const highlights = { ...state.highlights };
+    if (value) {
+      if (!(key in highlights) && Object.keys(highlights).length >= CONCORD_READ_LIMIT) return state;
+      if (JSON.stringify(highlights[key]) === JSON.stringify(value)) return state;
+      highlights[key] = value;
+    } else delete highlights[key];
+    return { highlights };
+  }),
+}));

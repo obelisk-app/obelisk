@@ -6,6 +6,7 @@ import type { MediaAttachment } from '@applesauce/concord/helpers';
 export interface ChannelProtocol {
   scope: string;
   communityName?: string;
+  openSearch?(): void;
   publishLayout?(layout: ChannelLayout, expected: ChannelLayout): Promise<void>;
   forum?: { groups: JsGroup[]; childrenByParent: Record<string, string[]>; messagesByGroup: Record<string, JsMessage[]> };
   createPublication?(title: string, body: string): Promise<string>;

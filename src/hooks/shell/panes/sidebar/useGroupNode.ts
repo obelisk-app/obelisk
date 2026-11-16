@@ -1,5 +1,8 @@
 'use client';
 
+import { useConcordReadStore } from '@/store/chat/concord-read';
+import { EMPTY_HIGHLIGHTS } from '@/constants/read-state/selectors';
+import { useConcordNavigation } from '@/store/chat/concord';
 import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
 import { useState, type MouseEvent } from 'react';
 import { useCurrentRelayUrl, type JsGroup } from '@/services/nostr-bridge';
@@ -28,15 +31,19 @@ export function useGroupNode({ group, view, depth, childrenByParent, groupsById,
 }) {
   const protocol = useChannelProtocol();
   const childIds = childrenByParent[group.id] ?? [];
-  const active = view.kind === 'group' && view.groupId === group.id;
+  const channelsOpen = useConcordNavigation(state => state.mobileChannelsOpen);
+  const active = view.kind === 'group' && view.groupId === group.id && !(protocol && channelsOpen);
   const myPubkey = useMyPubkey();
-  const highlights = useCachedChannelHighlights(group.id, myPubkey);
+  const relayHighlights = useCachedChannelHighlights(group.id, myPubkey);
+  const concordHighlights = useConcordReadStore(state => state.highlights[group.id]);
+  const highlights = protocol ? concordHighlights ?? EMPTY_HIGHLIGHTS : relayHighlights;
   const relay = useCurrentRelayUrl();
   const pref = useChannelPref(relay, group.id);
   const muted = isChannelMuted(pref);
   // Mention cards stay until the message has actually been on screen
   // (`useMentionSeen`), so they show even on the active row.
-  const mentionCards = useUnreadMentionCardsForChannel(relay, group.id);
+  const relayMentionCards = useUnreadMentionCardsForChannel(relay, group.id);
+  const mentionCards = protocol ? 0 : relayMentionCards;
   // When the user is actively viewing the channel, the auto-mark hook is
   // about to advance the cursor: suppress the badges to avoid a brief count
   // flash (the favicon badge subtracts the same way, useFaviconBadge.ts).

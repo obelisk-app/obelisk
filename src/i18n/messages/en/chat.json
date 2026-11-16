@@ -417,6 +417,8 @@
     "layoutHelp": "Organize categories and channels for everyone in this community.",
     "memberChannels": "Members can create and manage channels",
     "memberChannelsHelp": "Concord also grants channel editing and deletion. New members receive access while the owner has Obelisk open. Turning this off removes this shared permission; separately assigned roles still apply.",
-    "memberChannelsRole": "Member channels"
+    "memberChannelsRole": "Member channels",
+    "revokeInvite": "Revoke invitation",
+    "inviteListHint": "Your active invitations. Revoking a link stops new joins through it; existing members keep their access."
   }
 }

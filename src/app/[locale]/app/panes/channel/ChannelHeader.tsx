@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import SearchBar from '../../search/SearchBar';
 import { CopyInviteLinkButton } from './CopyInviteLinkButton';
 import IconButton from '@/components/ui/buttons/IconButton';
-import { GearIcon, UsersIcon } from '@/assets/icons';
+import { GearIcon, UsersIcon, SearchIcon } from '@/assets/icons';
 
 type Props = {
   groupId: string;
@@ -63,6 +63,7 @@ export function ChannelHeader({ groupId, group, isAdmin, showMembers, onToggleMe
         >
           <UsersIcon size={20} strokeWidth={2} />
         </IconButton>
+        {protocol?.openSearch && <IconButton size="9" shape="square" onClick={protocol.openSearch} aria-label={t('common.search')} title={t('common.search')}><SearchIcon size={20} /></IconButton>}
         {!protocol && <CopyInviteLinkButton groupId={groupId} />}
         {!protocol && <SearchBar
           serverName={group?.name ?? t('common.channel')}

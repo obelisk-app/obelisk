@@ -1,22 +1,22 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
-import { useConcordSearch } from '@/hooks/chat/concord/useConcordSearch';
+import type { ConcordCommunity } from '@applesauce/concord/client';
+import type { JsGroup } from '@/services/nostr-bridge';
 import Sheet from '@/components/ui/overlays/Sheet';
 import SheetHeader from '@/components/ui/overlays/SheetHeader';
-import Input from '@/components/ui/forms/Input';
-import Button from '@/components/ui/buttons/Button';
-import Text from '@/components/ui/layout/Text';
+import Modal from '@/components/ui/overlays/Modal';
+import ModalHeader from '@/components/ui/overlays/ModalHeader';
+import ConcordSearchResults from './ConcordSearchResults';
 
-export default function ConcordSearch({ groups, messages, onClose, onSelect }: {
-  groups: JsGroup[]; messages: JsMessage[]; onClose: () => void; onSelect: (id: string) => void;
+export default function ConcordSearch({ community, groups, onClose, onSelect, mobile = false }: {
+  community: ConcordCommunity; groups: JsGroup[]; onClose: () => void; onSelect: (id: string) => void; mobile?: boolean;
 }) {
   const t = useTranslations();
-  const vm = useConcordSearch(groups, messages);
-  return <Sheet screen="search" label={t('common.search')} onClose={onClose}>
+  return mobile ? <Sheet screen="search" label={t('common.search')} onClose={onClose}>
     <SheetHeader title={t('common.search')} onBack={onClose} />
-    <Input type="search" label={t('chat.concord.searchLocal')} value={vm.query} onChange={event => vm.setQuery(event.target.value)} autoFocus />
-    {vm.channels.map(group => <Button key={group.id} variant="ghost" onClick={() => onSelect(group.id)}>#{group.name}</Button>)}
-    {vm.hits.map(message => <Text key={message.id} as="p" size="sm">{message.content}</Text>)}
-  </Sheet>;
+    <ConcordSearchResults community={community} groups={groups} onSelect={onSelect} />
+  </Sheet> : <Modal onClose={onClose} aria-label={t('common.search')} panelClassName="flex max-h-[85dvh] w-full max-w-lg flex-col rounded-2xl border border-lc-border bg-lc-dark">
+    <ModalHeader title={t('common.search')} onClose={onClose} />
+    <ConcordSearchResults community={community} groups={groups} onSelect={onSelect} />
+  </Modal>;
 }
