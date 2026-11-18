@@ -6,7 +6,7 @@ import type { JsGroup } from '@/services/nostr-bridge';
 
 /** Left padding of a row: nested rows step in by 0.85rem past the first level. */
 export function groupNodeIndent(depth: number): string {
-  return `${0.5 + Math.max(0, depth - 1) * 0.85}rem`;
+  return `${0.5 + Math.min(4, Math.max(0, depth - 1)) * 0.85}rem`;
 }
 
 /** A channel's name, or the start of its id while it has none. */

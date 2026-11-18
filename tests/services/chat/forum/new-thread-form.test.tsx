@@ -61,6 +61,7 @@ describe('newThreadForm', () => {
       isHidden: false,
       isRestricted: true,
       isOpen: true,
+      kind: 'text',
       parent: 'rly/forum',
       topics: ['t1'],
     });

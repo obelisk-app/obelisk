@@ -27,7 +27,7 @@ import Label from '@/components/ui/forms/Label';
 export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClose: () => void }) {
   const t = useTranslations();
   const sfuUrlId = useId();
-  const { meta, member, sfu, members, adminSet, allPubkeys } = useChannelSettingsForm(group, onClose);
+  const { meta, publicationsDisabled, member, sfu, members, adminSet, allPubkeys } = useChannelSettingsForm(group, onClose);
   const { access, kind: channelKind } = meta.values;
 
   return (
@@ -97,7 +97,7 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
           {/* Channel type --------------------------------------------- */}
           <section className="space-y-3">
             <SectionHeader title={t('mobile.channel.type')} />
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2">
               <ToggleCard
                 active={channelKind === 'text'}
                 onClick={() => meta.set('kind', 'text')}
@@ -120,11 +120,12 @@ export function ChannelSettingsModal({ group, onClose }: { group: JsGroup; onClo
                 subtitle={t('shell.desktop.channel.sfuHint')}
               />
               <ToggleCard
+                disabled={publicationsDisabled}
                 active={channelKind === 'forum'}
                 onClick={() => meta.set('kind', 'forum')}
                 icon="📋"
                 title={t('shell.desktop.channel.kindForum')}
-                subtitle={t('shell.desktop.channel.forumHint')}
+                subtitle={t(publicationsDisabled ? 'errors.codes.nested-publications' : 'shell.desktop.channel.forumHint')}
               />
             </div>
             {channelKind === 'voice' && (

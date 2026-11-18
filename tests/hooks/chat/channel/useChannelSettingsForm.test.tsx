@@ -96,6 +96,16 @@ describe('useChannelSettingsForm: metadata', () => {
     expect(publishSfuPin).not.toHaveBeenCalled();
   });
 
+  it('keeps the parent and topics when saving a publication discussion', async () => {
+    const { result } = await mount({ ...GROUP, parent: 'publications', topics: ['t1'] });
+    expect(result.current.publicationsDisabled).toBe(true);
+    await act(() => result.current.meta.submit());
+    expect(editGroupMetadata).toHaveBeenCalledWith(expect.objectContaining({
+      parent: 'publications',
+      topics: ['t1'],
+    }));
+  });
+
   it('keeps the form open with the error when the relay rejects the metadata', async () => {
     editGroupMetadata.mockRejectedValueOnce(new Error('restricted: not an admin'));
     const { result, onSaved } = await mount();

@@ -1,8 +1,8 @@
+import { channelHierarchy } from '@/utils/chat/channel/channel-hierarchy';
 import { useMemo, useRef, useState } from 'react';
 import {
   nostrActions,
   useActiveCallByChannel,
-  useChildrenByParent,
   useConfiguredRelays,
   useConnectionState,
   useCurrentRelayUrl,
@@ -17,7 +17,7 @@ import { useRelayOperatorData } from '@/hooks/relay/operator/useRelayOperatorDat
 import { useRelayHeaderInfo } from '@/hooks/relay/info/useRelayHeaderInfo';
 import { useForumCollapsed } from './useForumCollapsed';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
-import { channelsFromIds, indexById, rootChannels, spaceLabel, toggleKey } from '@/utils/shell/mobile/channel-list';
+import { channelsFromIds, indexById, spaceLabel, toggleKey } from '@/utils/shell/mobile/channel-list';
 
 export interface RelayMenuTarget { url: string; label: string; iconUrl: string | null }
 
@@ -31,7 +31,6 @@ export function useServerScreen(selectGroup: (groupId: string, kind: JsGroup['ki
   const groups = useGroups();
   const relay = useCurrentRelayUrl();
   const calls = useActiveCallByChannel();
-  const childrenByParent = useChildrenByParent();
   const [addRelayOpen, setAddRelayOpen] = useState(false);
   const [relayMenuFor, setRelayMenuFor] = useState<RelayMenuTarget | null>(null);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
@@ -42,7 +41,7 @@ export function useServerScreen(selectGroup: (groupId: string, kind: JsGroup['ki
 
   const activeRelayInfo = useRelayHeaderInfo(relay);
   const groupsById = useMemo(() => indexById(groups), [groups]);
-  const roots = useMemo(() => rootChannels(groups, groupsById), [groups, groupsById]);
+  const { mobileRoots: roots, childrenByParent } = useMemo(() => channelHierarchy(groups), [groups]);
   // Relay-wide settings trust the validated human operator identity only;
   // roles and emojis are fanned into the chat store by the shared hook.
   const operator = useRelayOperatorData(relay);

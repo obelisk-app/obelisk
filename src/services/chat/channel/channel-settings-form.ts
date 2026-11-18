@@ -58,6 +58,8 @@ export function channelMetaForm(group: JsGroup, sfu: ChannelSfuCheck, onSaved: (
         banner: values.banner || undefined,
         ...accessFlags(values.access),
         kind: values.kind,
+        parent: group.parent ?? undefined,
+        topics: group.topics,
         // Only meaningful for publications; harmless on other kinds.
         forumTags: values.forumTags,
       });

@@ -8,7 +8,7 @@ import { useUnreadMentionCardsForChannel } from '@/hooks/notifications/useNotifi
 import { useCachedChannelHighlights } from '@/hooks/read-state/useChannelHighlights';
 import { isChannelMuted, useChannelPref } from '@/store/chat/channel-prefs';
 import type { View } from '@/utils/shell/desktop/view';
-import { knownGroups } from '@/utils/shell/panes/sidebar/channel-tree';
+import { descendantRows, knownGroups } from '@/utils/shell/panes/sidebar/channel-tree';
 import { groupBadges, groupLabel, groupNodeIndent, wotDistanceTitle } from '@/utils/shell/panes/sidebar/group-node';
 import { readForumCollapsed, writeForumCollapsed } from '@/services/shell/panes/sidebar/forum-collapsed';
 
@@ -59,13 +59,16 @@ export function useGroupNode({ group, view, depth, childrenByParent, groupsById,
     wotClass: distanceById ? wotColorClass(distanceById[group.id] ?? null) : '',
     wotTitle: wotDistanceTitle(distanceById?.[group.id]),
     isCollapsible,
-    collapsed,
+    collapsed: isCollapsible && collapsed,
     toggleCollapsed: () => {
       setCollapsed(!collapsed);
       writeForumCollapsed(group.id, !collapsed);
     },
     /** The child channels this client knows (a publication's threads). */
-    children: knownGroups(childIds, groupsById),
+    children: group.kind === 'forum' ? knownGroups(childIds, groupsById) : [],
+    descendants: depth === 0 && group.kind !== 'forum'
+      ? descendantRows(childIds, childrenByParent, groupsById)
+      : [],
     menuAt,
     menuTarget: relay ? {
       relay,

@@ -122,6 +122,8 @@ useEffect(() => {
 await nostrActions.sendMessage(groupId, 'hello');
 ```
 
+Publications are top-level channels with one level of discussions. Desktop and mobile derive navigation from the same group metadata projection (`src/utils/chat/channel/channel-hierarchy.ts`), which recovers legacy nested Publications without rewriting relay metadata.
+
 ### Single-relay rule for groups
 
 **Groups bind to the active relay. Only DMs run cross-relay.** This keeps the user's pubkey from reaching, through NIP-42 AUTH, relays they are not browsing.

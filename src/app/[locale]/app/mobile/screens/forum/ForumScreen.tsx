@@ -28,11 +28,11 @@ export function ForumScreen({
 }: {
   groupId: string;
   back: () => void;
-  selectChild: (childId: string) => void;
+  selectChild: (childId: string, kind: 'text' | 'voice' | 'voice-sfu' | 'forum') => void;
 }) {
   const t = useTranslations();
   const relay = useCurrentRelayUrl();
-  const forum = useForumScreen(groupId, selectChild);
+  const forum = useForumScreen(groupId, (id) => selectChild(id, 'text'));
   const { group, forumTags, children, visibleThreads, threadsLoading, query } = forum;
 
   return (
@@ -89,7 +89,7 @@ export function ForumScreen({
               key={c.id}
               group={c}
               forumTags={forumTags}
-              onClick={() => selectChild(c.id)}
+              onClick={() => selectChild(c.id, c.kind)}
             />
           ))
         )}

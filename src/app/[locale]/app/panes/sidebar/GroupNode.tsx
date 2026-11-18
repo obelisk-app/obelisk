@@ -119,7 +119,7 @@ export function GroupNode({
           ))}
         </div>
       ) : (
-        vm.children.map((child) => <GroupNode key={child.id} group={child} {...childProps} />)
+        vm.descendants.map((row) => <GroupNode key={row.group.id} group={row.group} {...childProps} depth={row.depth} />)
       ))}
     </>
   );

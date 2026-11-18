@@ -65,7 +65,7 @@ describe('ForumScreen', () => {
   it('opens a thread on tap', () => {
     const { selectChild } = mount();
     fireEvent.click(screen.getAllByTestId('mobile-forum-card')[1]);
-    expect(selectChild).toHaveBeenCalledWith('t2');
+    expect(selectChild).toHaveBeenCalledWith('t2', 'text');
   });
 
   it('filters by a tag chip and clears with All', () => {

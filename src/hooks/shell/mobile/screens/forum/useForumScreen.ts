@@ -1,8 +1,8 @@
 'use client';
 
+import { channelHierarchy } from '@/utils/chat/channel/channel-hierarchy';
 import { useMemo, useState, type FormEvent } from 'react';
 import {
-  useChildrenByParent,
   useGroupMetadataEose,
   useGroups,
   useMessagesByGroup,
@@ -22,11 +22,12 @@ const NO_CHILDREN: ReadonlyArray<string> = [];
  */
 export function useForumScreen(groupId: string, selectChild: (childId: string) => void = () => {}) {
   const groups = useGroups();
-  const childrenByParent = useChildrenByParent();
+
   const groupMetadataEose = useGroupMetadataEose();
   const messagesByGroup = useMessagesByGroup();
   const group = groups.find((g) => g.id === groupId);
   const forumTags: ReadonlyArray<JsForumTag> = group?.forumTags ?? [];
+  const { childrenByParent } = useMemo(() => channelHierarchy(groups), [groups]);
   const childIds = childrenByParent[groupId] ?? NO_CHILDREN;
   const children = useMemo(() => resolveChildGroups(childIds, groups), [childIds, groups]);
 

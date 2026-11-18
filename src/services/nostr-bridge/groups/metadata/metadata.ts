@@ -17,6 +17,7 @@ import type { JsGroup } from '../../common/types';
 import { GROUP_SUB_WATCHDOG_MS } from '@/constants/nostr-bridge/groups';
 import { MetadataEoseLadder } from './metadata-eose';
 import { GroupNesting } from './nesting';
+import { CodedError } from '@/utils/errors/codes';
 import { createGroup, editGroupMetadata } from './metadata-commands';
 import type { CreateGroupOptions, EditGroupMetadataOptions } from './metadata-tags';
 import { GroupDeletions } from './deletions';
@@ -96,6 +97,10 @@ export class GroupMetadataModule {
 
   /** Edit a channel's metadata (kind 9002). */
   editGroupMetadata(opts: EditGroupMetadataOptions): Promise<void> {
+    const current = this.groups.get().find((group) => group.id === opts.groupId);
+    if (opts.kind === 'forum' && opts.parent && (current?.kind !== 'forum' || current.parent !== opts.parent)) {
+      return Promise.reject(new CodedError('nested-publications', 'Publications must be top-level channels'));
+    }
     return editGroupMetadata(this.commandContext(), opts);
   }
 
