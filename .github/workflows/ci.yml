@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
 
 # The default GITHUB_TOKEN can write to the repo. Nothing here needs more than
