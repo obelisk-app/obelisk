@@ -9,6 +9,8 @@ import { traceLogin } from '@/services/session/login-trace';
 import { CodedError } from '@/utils/errors/codes';
 import { resetAllClientState } from '@/services/common/reset';
 import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/store/notifications';
+import { hydrateLocalCursors } from '@/services/read-state/local-cursors';
+import { ensureReadStateStoreForAccount } from '@/store/read-state';
 import { ensureChannelPrefsStoreForAccount } from '@/store/chat/channel-prefs';
 import { cacheClearAll } from '../cache/cache';
 import { clearDecryptCache } from '../cache/decrypt-cache';
@@ -154,6 +156,9 @@ export class LoginModule {
     if (state.session) {
       ensureNotificationsStoreForAccount(state.session.pubKeyHex);
       ensureChannelPrefsStoreForAccount(state.session.pubKeyHex);
+      ensureReadStateStoreForAccount(state.session.pubKeyHex);
+      await hydrateLocalCursors(state.session.pubKeyHex, () => state.assertSessionOperation(generation));
+      state.assertSessionOperation(generation);
     }
     useNotificationsStore.getState().registerRelay(sessionRelay);
     try {

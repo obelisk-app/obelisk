@@ -17,12 +17,13 @@ import { readForumCollapsed, writeForumCollapsed } from '@/services/shell/panes/
  * badges and markers, its right-click menu, and for a publication the fold
  * of its thread list.
  */
-export function useGroupNode({ group, view, depth, childrenByParent, groupsById, distanceById }: {
+export function useGroupNode({ group, view, depth, childrenByParent, groupsById, distanceById, recentSubchannelIds }: {
   group: JsGroup;
   view: View;
   depth: number;
   childrenByParent: Readonly<Record<string, ReadonlyArray<string>>>;
   groupsById: Readonly<Record<string, JsGroup>>;
+  recentSubchannelIds?: ReadonlySet<string>;
   distanceById?: Readonly<Record<string, number | null>>;
 }) {
   const childIds = childrenByParent[group.id] ?? [];
@@ -41,11 +42,10 @@ export function useGroupNode({ group, view, depth, childrenByParent, groupsById,
   const badges = groupBadges({ active, unfollowed: !!pref.unfollowed, mentionCards, ...highlights });
   // Right-click: the channel menu (mark read, follow, mute, notify, copy link).
   const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
-  // Publications default to expanded so new threads are visible at once; the
-  // fold is saved per publication. Other channels never fold: collapsing
-  // arbitrary nesting isn't part of this UX.
-  const isCollapsible = group.kind === 'forum' && childIds.length > 0;
-  const [collapsed, setCollapsed] = useState(() => readForumCollapsed(group.id));
+  // The sidebar starts with recent subchannels. Standalone trees keep their publication fold.
+  const isCollapsible = childIds.length > 0 && (group.kind === 'forum' || (depth === 0 && !!recentSubchannelIds));
+  const [collapsed, setCollapsed] = useState(() => recentSubchannelIds ? true : readForumCollapsed(group.id));
+  const isVisible = (id: string) => !collapsed || !recentSubchannelIds || recentSubchannelIds.has(id);
 
   return {
     active,
@@ -62,18 +62,19 @@ export function useGroupNode({ group, view, depth, childrenByParent, groupsById,
     collapsed: isCollapsible && collapsed,
     toggleCollapsed: () => {
       setCollapsed(!collapsed);
-      writeForumCollapsed(group.id, !collapsed);
+      if (!recentSubchannelIds) writeForumCollapsed(group.id, !collapsed);
     },
     /** The child channels this client knows (a publication's threads). */
-    children: group.kind === 'forum' ? knownGroups(childIds, groupsById) : [],
+    children: group.kind === 'forum' ? knownGroups(childIds.filter(isVisible), groupsById) : [],
     descendants: depth === 0 && group.kind !== 'forum'
-      ? descendantRows(childIds, childrenByParent, groupsById)
+      ? descendantRows(childIds, childrenByParent, groupsById).filter(({ group }) => isVisible(group.id))
       : [],
     menuAt,
     menuTarget: relay ? {
       relay,
       channelId: group.id,
       name: groupLabel(group),
+      canFollow: !recentSubchannelIds || depth > 0 || !!pref.unfollowed,
       hasUnread: highlights.unread > 0 || mentionCards > 0,
     } : null,
     openMenu: (e: MouseEvent) => {

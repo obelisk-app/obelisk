@@ -1,3 +1,4 @@
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 vi.mock('@/hooks/session/useSession', async () => {
   const { sessionMock } = await import('@tests/support/mocks/session');
   return sessionMock({ useMyPubkey: () => 'me' });
@@ -152,7 +153,7 @@ describe('useAutoMarkRead', () => {
 
     renderHook(() => useAutoMarkRead());
 
-    expect(useReadStateStore.getState().groupCursors['g1']).toBe(150_000);
+    expect(useReadStateStore.getState().groupCursors[relayChannelKey('wss://relay.test', 'g1')]).toBe(150_000);
   });
 
   it('does not advance the channel cursor when scrolled up', () => {
@@ -165,6 +166,6 @@ describe('useAutoMarkRead', () => {
 
     renderHook(() => useAutoMarkRead());
 
-    expect(useReadStateStore.getState().groupCursors['g1']).toBeUndefined();
+    expect(useReadStateStore.getState().groupCursors[relayChannelKey('wss://relay.test', 'g1')]).toBeUndefined();
   });
 });

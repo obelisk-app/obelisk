@@ -1,3 +1,4 @@
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChannelActions } from '@/hooks/chat/channel/useChannelActions';
@@ -18,9 +19,9 @@ describe('useChannelActions', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('reads the defaults: following, not muted, mentions only, nothing copied', () => {
+  it('reads the defaults for an unfollowed channel', () => {
     const { result } = renderHook(() => useChannelActions(target));
-    expect(result.current.following).toBe(true);
+    expect(result.current.following).toBe(false);
     expect(result.current.muted).toBe(false);
     expect(result.current.level).toBe('mentions');
     expect(result.current.copied).toBe(false);
@@ -32,10 +33,11 @@ describe('useChannelActions', () => {
     const { result } = renderHook(() => useChannelActions(target));
     act(() => result.current.markRead());
     expect(getUnreadMentionCount(R)).toBe(0);
-    expect(useReadStateStore.getState().groupCursors[target.channelId]).toBeGreaterThan(5_000);
+    expect(useReadStateStore.getState().groupCursors[relayChannelKey(R, target.channelId)]).toBeGreaterThan(5_000);
   });
 
   it('toggleFollow flips the pref both ways and the hook re-reads it', () => {
+    useChannelPrefsStore.getState().setFollowing(R, target.channelId, true);
     const { result } = renderHook(() => useChannelActions(target));
     act(() => result.current.toggleFollow());
     expect(getChannelPref(R, target.channelId).unfollowed).toBe(true);

@@ -61,12 +61,12 @@ export function ChannelContextMenu({
         testId="channel-menu-mark-read"
       />
       <MenuDivider />
-      <MenuItem
+      {target.canFollow !== false && <MenuItem
         icon={<StarIcon filled={following} />}
         label={following ? t('chat.channelMenu.unfollow') : t('chat.channelMenu.follow')}
         onClick={toggleFollow}
         testId="channel-menu-follow"
-      />
+      />}
       <MenuItem
         icon={<LinkIcon />}
         label={t('chat.channelMenu.copyLink')}

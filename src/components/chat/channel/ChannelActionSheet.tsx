@@ -24,12 +24,12 @@ export function ChannelActionSheet({ target, onClose }: { target: ChannelMenuTar
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {vm.view === 'main' && <>
           <ChannelSheetRow label={t('chat.channelMenu.markRead')} onClick={vm.markRead} testId="channel-menu-mark-read" disabled={!target.hasUnread} />
-          <ChannelSheetRow
+          {target.canFollow !== false && <ChannelSheetRow
             label={vm.following ? t('chat.channelMenu.unfollow') : t('chat.channelMenu.follow')}
             onClick={vm.toggleFollow}
             testId="channel-menu-follow"
             hint={vm.following ? t('chat.channelMenu.unfollowHint') : null}
-          />
+          />}
           {vm.muted
             ? <ChannelSheetRow label={t('chat.channelMenu.unmute')} onClick={vm.unmute} testId="channel-menu-unmute" hint={vm.mutedLabel} />
             : <ChannelSheetRow label={t('chat.channelMenu.mute.label')} onClick={() => vm.showView('mute')} testId="channel-menu-mute" chevron />}

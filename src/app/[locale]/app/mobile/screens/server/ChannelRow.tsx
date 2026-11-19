@@ -10,7 +10,7 @@ import { ChannelRowBody, type ChannelRowProps } from './ChannelRowBody';
  * of the list's layout; voice channels have no menu.
  */
 export function ChannelRow(props: ChannelRowProps) {
-  const row = useChannelRow(props.group);
+  const row = useChannelRow(props.group, props.indent);
   if (!row.hasMenu) return <ChannelRowBody {...props} />;
   return (
     <div

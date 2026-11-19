@@ -6,6 +6,8 @@
  * `client.ts` (`initialize`).
  */
 import { ensureNotificationsStoreForAccount, useNotificationsStore } from '@/store/notifications';
+import { hydrateLocalCursors } from '@/services/read-state/local-cursors';
+import { ensureReadStateStoreForAccount } from '@/store/read-state';
 import { ensureChannelPrefsStoreForAccount } from '@/store/chat/channel-prefs';
 import { isImportableRelayUrl, normalizeConfiguredRelayUrl } from '../relay/relay-list';
 import { DEFAULT_RELAY } from '@/constants/nostr-bridge/relay';
@@ -92,6 +94,9 @@ export async function restoreSession(t: LifecycleTargets, deps: RestoreDeps): Pr
     // message is far up in history and can never be "seen".
     ensureNotificationsStoreForAccount(parsed.pubKeyHex);
     ensureChannelPrefsStoreForAccount(parsed.pubKeyHex);
+    ensureReadStateStoreForAccount(parsed.pubKeyHex);
+    await hydrateLocalCursors(parsed.pubKeyHex, () => state.assertSessionOperation(generation));
+    state.assertSessionOperation(generation);
     useNotificationsStore.getState().registerRelay(parsed.relayUrl);
     // The other two steps finalizeLogin takes before connect(): the seen-wrap
     // ledger and the encrypted DM store, pointed at this account. The reload

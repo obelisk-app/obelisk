@@ -8,7 +8,7 @@
  * shared lifecycle and helpers are `./support/bridge-harness.ts`.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { finalizeEvent, type Event as NostrEvent, type Filter } from 'nostr-tools';
+import { finalizeEvent, nip19, type Event as NostrEvent, type Filter } from 'nostr-tools';
 import {
   deliver,
   fakeRelayMessage,
@@ -66,6 +66,21 @@ describe('nostr-bridge', () => {
       const inactive = await fakeRelayMessageWithTags({ groupId: 'inactive-private', content: 'other relay', tags: [['p', pkHex]] });
       impl['ingestPing']('wss://inactive.test', inactive, 'active');
       expect(impl.messagesByGroup.get()['inactive-private']).toBeUndefined();
+    });
+
+    it('follows a channel when a live mention appears in message text', async () => {
+      const { impl, pkHex } = await loginAndSubscribe('other-channel');
+      const { getChannelPref, useChannelPrefsStore } = await import('@/store/chat/channel-prefs');
+      const relay = impl.currentRelayUrl.get();
+      const channelId = 'mention-in-text';
+      const ping = () => fakeRelayMessageWithTags({
+        groupId: channelId, content: `hello nostr:${nip19.npubEncode(pkHex)}`, tags: [],
+      });
+      impl['ingestPing'](relay, await ping(), 'active');
+      expect(getChannelPref(relay, channelId).followed).toBe(true);
+      useChannelPrefsStore.getState().setFollowing(relay, channelId, false);
+      impl['ingestPing'](relay, await ping(), 'active');
+      expect(getChannelPref(relay, channelId).unfollowed).toBe(true);
     });
 
     it('pushes a card for an explicit @-mention, stamped with the active relay', async () => {

@@ -136,13 +136,13 @@ describe('local-data inventory guard', () => {
     expect(listed, 'gtag.js sets _ga and _ga_<id>: list them, or drop them with the script').toBe(gtag);
   });
 
-  it('uses IndexedDB only for the session vault and the encrypted DM store, and Cache Storage only from the service worker', () => {
+  it('uses IndexedDB for the session vault, encrypted DMs and read cursors, and Cache Storage from the service worker', () => {
     const idb = walk(SRC)
       .filter((p) => !SKIP.test(relative(SRC, p)))
       .filter((p) => /\bindexedDB\b/.test(stripComments(readFileSync(p, 'utf8'))))
       .map((p) => relative(SRC, p))
       .sort();
-    expect(idb).toEqual(['lib/crypto/session-vault.ts', 'services/nostr-bridge/dm/store-db.ts']);
+    expect(idb).toEqual(['lib/crypto/session-vault.ts', 'services/nostr-bridge/dm/store-db.ts', 'services/read-state/local-cursors.ts']);
     // Each of them names its database in the inventory.
     for (const file of idb) {
       expect(LOCAL_DATA.some((e) => e.area === 'indexedDB' && e.source === `src/${file}`), file).toBe(true);

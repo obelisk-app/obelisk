@@ -2,6 +2,7 @@
  * "Mark all read" on the phone inbox acts on the visible stream only:
  * clearing mentions must not silence unread DMs, and the reverse.
  */
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { useNotificationsStore } from '@/store/notifications';
 import { useReadStateStore } from '@/store/read-state';
 
@@ -13,7 +14,7 @@ export function markInboxStreamRead(
 ): void {
   if (stream === 'mentions') {
     if (relay) useNotificationsStore.getState().markMentionsRead(relay);
-    useReadStateStore.getState().markAllAsRead([], groupIds);
+    useReadStateStore.getState().markAllAsRead([], relay ? groupIds.map((id) => relayChannelKey(relay, id)) : [], false);
   } else {
     useReadStateStore.getState().markAllAsRead(peers, []);
   }

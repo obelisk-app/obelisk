@@ -1,3 +1,4 @@
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { LocaleProvider } from '@tests/support/intl';
@@ -32,7 +33,7 @@ describe('channel menu', () => {
     wrap(<ChannelContextMenu target={target} x={10} y={10} onClose={onClose} />);
     fireEvent.click(screen.getByTestId('channel-menu-mark-read'));
     expect(getUnreadMentionCount(R)).toBe(0);
-    expect(useReadStateStore.getState().groupCursors[target.channelId]).toBeGreaterThan(5_000);
+    expect(useReadStateStore.getState().groupCursors[relayChannelKey(R, target.channelId)]).toBeGreaterThan(5_000);
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -42,6 +43,7 @@ describe('channel menu', () => {
   });
 
   it('Stop following toggles, and the label flips to Follow', () => {
+    useChannelPrefsStore.getState().setFollowing(R, target.channelId, true);
     const { unmount } = wrap(<ChannelContextMenu target={target} x={10} y={10} onClose={() => {}} />);
     expect(screen.getByTestId('channel-menu-follow').textContent).toMatch(/Stop following/);
     fireEvent.click(screen.getByTestId('channel-menu-follow'));

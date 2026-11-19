@@ -1,3 +1,4 @@
+import { useRecentChannels } from '@/hooks/chat/channel/useRecentChannels';
 import { channelHierarchy } from '@/utils/chat/channel/channel-hierarchy';
 import { useMemo, useRef, useState } from 'react';
 import {
@@ -15,7 +16,7 @@ import { applyLayout } from '@/services/relay/channel-layout';
 import { useScreenScrollMemo } from '@/hooks/shell/mobile/carousel/useScreenScrollMemo';
 import { useRelayOperatorData } from '@/hooks/relay/operator/useRelayOperatorData';
 import { useRelayHeaderInfo } from '@/hooks/relay/info/useRelayHeaderInfo';
-import { useForumCollapsed } from './useForumCollapsed';
+import { descendantRows } from '@/utils/shell/panes/sidebar/channel-tree';
 import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { channelsFromIds, indexById, spaceLabel, toggleKey } from '@/utils/shell/mobile/channel-list';
 
@@ -35,16 +36,17 @@ export function useServerScreen(selectGroup: (groupId: string, kind: JsGroup['ki
   const [relayMenuFor, setRelayMenuFor] = useState<RelayMenuTarget | null>(null);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
-  const { forumCollapsed, toggleForumCollapsed } = useForumCollapsed();
+  const [expandedChannels, setExpandedChannels] = useState<Record<string, boolean>>({});
   const channelListRef = useRef<HTMLDivElement>(null);
   useScreenScrollMemo(`server:${relay ?? ''}`, channelListRef);
 
   const activeRelayInfo = useRelayHeaderInfo(relay);
   const groupsById = useMemo(() => indexById(groups), [groups]);
-  const { mobileRoots: roots, childrenByParent } = useMemo(() => channelHierarchy(groups), [groups]);
+  const { roots, childrenByParent } = useMemo(() => channelHierarchy(groups), [groups]);
   // Relay-wide settings trust the validated human operator identity only;
   // roles and emojis are fanned into the chat store by the shared hook.
   const operator = useRelayOperatorData(relay);
+  const recentSubchannelIds = useRecentChannels(relay, groups, childrenByParent);
   const laidOut = useMemo(() => applyLayout(operator.layout, roots.map((g) => g.id)), [operator.layout, roots]);
 
   // Prefer the operator-published kind-30078 branding (matches the desktop
@@ -68,14 +70,18 @@ export function useServerScreen(selectGroup: (groupId: string, kind: JsGroup['ki
     toggleCategory: (catId: string) => setCollapsedCats((c) => toggleKey(c, catId)),
     /** A row's call marker and, for a forum with threads, its expansion. */
     entryFor: (g: JsGroup) => {
-      const childIds = g.kind === 'forum' ? childrenByParent[g.id] ?? [] : [];
+      const childIds = childrenByParent[g.id] ?? [];
+      const key = JSON.stringify([relay, g.id]);
+      const expanded = !!expandedChannels[key];
+      const descendants = descendantRows(childIds, childrenByParent, groupsById);
       const expandable = childIds.length > 0;
       return {
         live: !!calls[g.id],
         expandable,
-        expanded: expandable && !forumCollapsed[g.id],
-        threads: channelsFromIds(childIds, groupsById),
-        onToggleExpand: expandable ? () => toggleForumCollapsed(g.id) : undefined,
+        expanded,
+        recentSubchannelIds,
+        threads: descendants.filter(({ group }) => expanded || recentSubchannelIds.has(group.id)).map(({ group }) => group),
+        onToggleExpand: expandable ? () => setExpandedChannels((current) => toggleKey(current, key)) : undefined,
       };
     },
     openChannel: (g: JsGroup) => selectGroup(g.id, g.kind),

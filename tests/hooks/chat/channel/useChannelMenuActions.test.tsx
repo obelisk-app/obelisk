@@ -18,7 +18,7 @@ describe('useChannelMenuActions', () => {
     const onClose = vi.fn();
     const { result } = renderHook(() => useChannelMenuActions(target, onClose), { wrapper });
     act(() => result.current.toggleFollow());
-    expect(getChannelPref(R, target.channelId).unfollowed).toBe(true);
+    expect(getChannelPref(R, target.channelId).followed).toBe(true);
     expect(onClose).toHaveBeenCalledTimes(1);
     act(() => result.current.setLevel('all'));
     expect(notifyLevel(getChannelPref(R, target.channelId))).toBe('all');

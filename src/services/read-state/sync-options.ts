@@ -19,6 +19,7 @@ export interface GroupsPayload {
    * group cursors around it.
    */
   mentionsReadAt?: number;
+  follows?: Record<string, number>;
 }
 
 export interface DmsPayload {
@@ -91,4 +92,9 @@ export function parsePayload<T>(rumor: Rumor): T | null {
 /** Include identity even though the owning store is account scoped. */
 export function syncScopeKey(opts: SyncOptions, pubkey: string): string {
   return JSON.stringify([pubkey, opts.cacheNamespace, opts.dTag]);
+}
+
+/** Local cache IDs include the author so snapshots cannot seed another login. */
+export function syncCacheId(opts: SyncOptions, pubkey: string): string {
+  return `${opts.dTag}:${pubkey}`;
 }

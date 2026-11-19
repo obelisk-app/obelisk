@@ -3,6 +3,7 @@ export interface ChannelMenuTarget {
   readonly relay: string;
   readonly channelId: string;
   readonly name: string;
+  readonly canFollow?: boolean;
   /** Unread messages or unseen mention cards: "Mark as read" is greyed without. */
   readonly hasUnread: boolean;
 }

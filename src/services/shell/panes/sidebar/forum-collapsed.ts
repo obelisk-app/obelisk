@@ -1,9 +1,7 @@
 /**
  * Whether a publication's thread list is folded in the desktop sidebar, kept
  * per publication in localStorage (`obelisk-dex/forum-collapsed/<id>` = '1'
- * means folded; missing means open). The phone's server screen reads and
- * writes the same keys (`useForumCollapsed`), so a fold follows the person
- * across both shells.
+ * means folded; missing means open).
  */
 
 const FORUM_COLLAPSED_PREFIX = 'obelisk-dex/forum-collapsed/';

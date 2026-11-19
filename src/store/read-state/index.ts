@@ -51,6 +51,7 @@ export interface RemoteReadState {
 
 interface ReadStateActions {
   acknowledgeSync: (scope: string, cursors: Record<string, number>) => void;
+  replaceSyncAcknowledgement: (scope: string, cursors: Record<string, number>) => void;
   scheduleSync: (scope: string, retryAt: number, failures: number) => void;
   /** Advance the DM cursor for `peer` to `tsMs`. No-op if `tsMs` <= existing. */
   setDmCursor: (peer: string, tsMs: number) => void;
@@ -66,7 +67,7 @@ interface ReadStateActions {
    * in the inbox / bell drawer; users expect it to clear the tab-title
    * `(N)` badge, which sums DM+channel unreads.
    */
-  markAllAsRead: (peers: ReadonlyArray<string>, groupIds: ReadonlyArray<string>) => void;
+  markAllAsRead: (peers: ReadonlyArray<string>, groupIds: ReadonlyArray<string>, includeInbox?: boolean) => void;
   /**
    * Merge a remote state snapshot (from a NIP-59 state event) into the
    * local store. Each cursor advances to `max(local, remote)`; smaller
@@ -121,6 +122,13 @@ export const useReadStateStore = create<ReadStateStore>()(
         }
         return changed ? { syncProgress: { ...state.syncProgress, [scope]: { ...prev, acknowledged } } } : state;
       }),
+      replaceSyncAcknowledgement: (scope, acknowledged) => set((state) => ({
+        syncProgress: { ...state.syncProgress, [scope]: {
+          retryAt: state.syncProgress[scope]?.retryAt ?? 0,
+          failures: state.syncProgress[scope]?.failures ?? 0,
+          acknowledged,
+        } },
+      })),
       scheduleSync: (scope, retryAt, failures) => set((state) => ({
         syncProgress: { ...state.syncProgress, [scope]: {
           acknowledged: state.syncProgress[scope]?.acknowledged ?? {}, retryAt, failures,
@@ -139,9 +147,9 @@ export const useReadStateStore = create<ReadStateStore>()(
         return { groupCursors: { ...state.groupCursors, [groupId]: tsMs } };
       }),
 
-      advanceInboxRead: () => set({ inboxLastReadAt: Date.now() }),
+      advanceInboxRead: () => set((s) => ({ inboxLastReadAt: Math.max(s.inboxLastReadAt, Date.now()) })),
 
-      markAllAsRead: (peers, groupIds) => set((state) => {
+      markAllAsRead: (peers, groupIds, includeInbox = true) => set((state) => {
         const now = Date.now();
         const dmCursors = { ...state.dmCursors };
         let dmTouched = false;
@@ -162,7 +170,7 @@ export const useReadStateStore = create<ReadStateStore>()(
         return {
           ...(dmTouched ? { dmCursors } : {}),
           ...(gTouched ? { groupCursors } : {}),
-          inboxLastReadAt: now,
+          ...(includeInbox && { inboxLastReadAt: Math.max(state.inboxLastReadAt, now) }),
         };
       }),
 

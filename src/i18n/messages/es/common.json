@@ -1,4 +1,8 @@
 {
+  "subchannels": {
+    "showAll": "Mostrar todos los subcanales",
+    "showRecent": "Mostrar subcanales recientes"
+  },
   "notificationUnavailable": "Este canal o mensaje no está disponible. Revisá la conexión al relay e intentá de nuevo.",
   "soundBlocked": {
     "title": "🔔 Los sonidos de notificación están en pausa",

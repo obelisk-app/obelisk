@@ -67,15 +67,17 @@ beforeEach(() => {
 });
 
 describe('ServerScreen (phone)', () => {
-  it('lists the root channels, an orphan included, and a forum with its threads expanded', () => {
+  it('lists the root channels, an orphan included, and a Publication with its older threads tucked away', () => {
     mount();
-    expect(names()).toEqual(['alpha', 'beta', 'forum', 'thread one', 'orphan']);
+    expect(names()).toEqual(['alpha', 'beta', 'forum', 'orphan']);
     expect(screen.queryByTestId('mobile-server-rail')).not.toBeInTheDocument();
   });
 
   it('collapses a forum from its chevron', () => {
     mount();
-    fireEvent.click(document.querySelector('.ch-chevron-btn')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Show all subchannels' }));
+    expect(names()).toContain('thread one');
+    fireEvent.click(screen.getByRole('button', { name: 'Show recent subchannels' }));
     expect(names()).toEqual(['alpha', 'beta', 'forum', 'orphan']);
   });
 
@@ -103,6 +105,7 @@ describe('ServerScreen (phone)', () => {
     const { selectGroup } = mount();
     fireEvent.click(screen.getByText('alpha'));
     expect(selectGroup).toHaveBeenCalledWith('a', 'text');
+    fireEvent.click(screen.getByRole('button', { name: 'Show all subchannels' }));
     fireEvent.click(screen.getByText('thread one'));
     expect(selectGroup).toHaveBeenCalledWith('t1', 'text');
   });

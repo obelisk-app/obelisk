@@ -40,6 +40,8 @@ describe('useServerScreen', () => {
   it('expands a forum with threads until it is toggled, and marks a live call', () => {
     const { result } = setup();
     const forum = result.current.roots[0];
+    expect(result.current.entryFor(forum).threads).toEqual([]);
+    act(() => result.current.entryFor(forum).onToggleExpand!());
     expect(result.current.entryFor(forum)).toMatchObject({ expandable: true, expanded: true, live: false });
     expect(result.current.entryFor(forum).threads.map((g) => g.id)).toEqual(['t']);
     act(() => result.current.entryFor(forum).onToggleExpand!());

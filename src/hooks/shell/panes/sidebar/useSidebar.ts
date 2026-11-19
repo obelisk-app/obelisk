@@ -1,5 +1,7 @@
 'use client';
 
+import { useRecentChannels } from '@/hooks/chat/channel/useRecentChannels';
+
 import { channelHierarchy } from '@/utils/chat/channel/channel-hierarchy';
 import { useMemo, useState } from 'react';
 import {
@@ -35,6 +37,7 @@ export function useSidebar(relay: string, setView: (v: View) => void) {
   // the situation when access != 'ok'. Write-side actions (the create form)
   // and the list's own empty states still gate on `channelsVisible`.
   const relayAccess = useRelayAccess(relay || null);
+  const recentSubchannelIds = useRecentChannels(relay, groups, childrenByParent);
   const laidOut = useMemo(
     () => applyLayout(operator.layout, roots.map((g) => g.id)),
     [operator.layout, roots],
@@ -48,6 +51,7 @@ export function useSidebar(relay: string, setView: (v: View) => void) {
     groupsById,
     roots,
     laidOut,
+    recentSubchannelIds,
     operator,
     groupDistanceById,
     channelsVisible: relayAccess === 'ok',

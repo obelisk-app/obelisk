@@ -5,8 +5,9 @@
  * message stores and the persisted cursors. The counting itself is pure and
  * lives in `src/services/read-state/selectors.ts`.
  */
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { useMemo } from 'react';
-import { useDirectMessages, useMessages, useMessagesByGroup } from '@/services/nostr-bridge';
+import { useDirectMessages, useCurrentRelayUrl, useMessages, useMessagesByGroup } from '@/services/nostr-bridge';
 import { useReadStateStore } from '@/store/read-state';
 import { countChannelUnread, countDMUnread, effectiveCursor } from '@/services/read-state/selectors';
 
@@ -39,9 +40,10 @@ export function useChannelUnreadCount(
   groupId: string | null | undefined,
   ownPubkey: string | null,
 ): number {
+  const relay = useCurrentRelayUrl();
   const messages = useMessages(groupId ?? null);
   const stored = useReadStateStore((s) =>
-    groupId ? s.groupCursors[groupId] : undefined,
+    relay && groupId ? s.groupCursors[relayChannelKey(relay, groupId)] : undefined,
   );
   return useMemo(() => {
     if (!groupId || !messages || messages.length === 0) return 0;
@@ -55,6 +57,7 @@ export function useChannelUnreadCount(
  * any channel's message list changes.
  */
 export function useTotalChannelUnread(ownPubkey: string | null): number {
+  const relay = useCurrentRelayUrl();
   const byGroup = useMessagesByGroup();
   const cursors = useReadStateStore((s) => s.groupCursors);
   return useMemo(() => {
@@ -62,8 +65,8 @@ export function useTotalChannelUnread(ownPubkey: string | null): number {
     for (const groupId of Object.keys(byGroup)) {
       const list = byGroup[groupId];
       if (!list || list.length === 0) continue;
-      total += countChannelUnread(list, effectiveCursor(cursors[groupId]), ownPubkey);
+      total += countChannelUnread(list, effectiveCursor(relay ? cursors[relayChannelKey(relay, groupId)] : undefined), ownPubkey);
     }
     return total;
-  }, [byGroup, cursors, ownPubkey]);
+  }, [byGroup, cursors, ownPubkey, relay]);
 }

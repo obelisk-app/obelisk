@@ -1,9 +1,10 @@
+import { useChannelPrefsStore } from '@/store/chat/channel-prefs';
 /**
  * The desktop sidebar: which channels sit at the root of the tree, the
  * loading and empty states, and the create form gated on relay access. The
  * operator data is stubbed (its own hooks are tested in `useSidebarData`).
  */
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { renderWithBridge } from '@tests/support/render-with-bridge';
@@ -55,13 +56,23 @@ function mount(seed: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
+  useChannelPrefsStore.getState().reset();
   operator.layout = EMPTY_LAYOUT;
   useVoiceStore.setState({ currentVoiceChannelId: null });
 });
 
 describe('Sidebar', () => {
+  it('keeps the main channels visible and reveals recent activity under its parent', () => {
+    mount();
+    expect(screen.getAllByTestId(/^channel-row-/).map((row) => row.dataset.testid))
+      .toEqual(['channel-row-g1', 'channel-row-f1', 'channel-row-o1']);
+    act(() => useChannelPrefsStore.getState().recordActivity(BRIDGE_MOCK_RELAY, 't1', Math.floor(Date.now() / 1000), true));
+    expect(screen.getByTestId('channel-row-t1').closest('.lc-forum-threads')).not.toBeNull();
+  });
+
   it('roots the tree at channels with no parent or a parent it does not know', () => {
     mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Show all subchannels' }));
     const rows = screen.getAllByTestId(/^channel-row-/).map((r) => r.dataset.testid);
     expect(rows).toEqual(['channel-row-g1', 'channel-row-f1', 'channel-row-t1', 'channel-row-o1']);
     expect(screen.getByTestId('channel-row-t1').closest('.lc-forum-threads')).not.toBeNull();

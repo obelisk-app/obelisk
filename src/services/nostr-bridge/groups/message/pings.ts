@@ -1,3 +1,4 @@
+import { catchUpChannelActivity } from './recent-activity';
 /**
  * Group pings: the relay-wide live kind 9 REQ on the active relay, the
  * background watch of recently used relays, and the one place a kind 9
@@ -14,7 +15,7 @@ import { extractMentionPubkeysFromMessage } from '@/utils/message-text/mentions'
 import { announceIncoming } from '@/services/notifications/alert';
 import { classifyGroupPing, groupPingTitle, previewText, replyTargetId } from '@/services/notifications/classify';
 import { useNotificationsStore, type MentionReason } from '@/store/notifications';
-import { getChannelPref, isChannelMuted, notifyLevel } from '@/store/chat/channel-prefs';
+import { getChannelPref, isChannelMuted, notifyLevel, useChannelPrefsStore } from '@/store/chat/channel-prefs';
 import {
   BackgroundRelayWatcher,
   backgroundTargets,
@@ -31,7 +32,7 @@ import type { JsGroup, JsMessage } from '../../common/types';
 
 export type PingsContext = Pick<
   BridgeContext,
-  'session' | 'relays' | 'currentRelayUrl' | 'configuredRelays' | 'isLoggedIn' | 'groups' | 'messagesByGroup' | 'subscribeWatched' | 'track'
+  'session' | 'relays' | 'currentRelayUrl' | 'configuredRelays' | 'isLoggedIn' | 'groups' | 'messagesByGroup' | 'subscribeWatched' | 'track' | 'queryRelaysWithConfidence'
 >;
 
 export interface PingsDeps {
@@ -64,6 +65,7 @@ export class PingsModule {
    * browsing. See `background-watch.ts` for the scope and privacy argument.
    */
   private readonly backgroundWatcher: BackgroundRelayWatcher;
+  private stopActivity: (() => void) | undefined;
   private readonly metadataPending = new Set<string>();
 
   constructor(
@@ -107,18 +109,59 @@ export class PingsModule {
 
   stop(): void {
     this.backgroundWatcher.stop();
+    this.stopActivity?.();
+    this.stopActivity = undefined;
   }
 
   subscribeLivePings(): void {
     const relay = this.ctx.currentRelayUrl.get();
+    this.stopActivity?.();
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let running = false;
+    let rerun = false;
+    const refresh = () => {
+      if (!active) return;
+      if (running) { rerun = true; return; }
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = undefined;
+        running = true;
+        void catchUpChannelActivity(this.ctx, relay, () => active).finally(() => {
+          running = false;
+          if (rerun) { rerun = false; refresh(); }
+        });
+      }, 250);
+    };
+    const prefix = `${normalizeRelayUrl(relay)}|`;
+    const unsubscribe = useChannelPrefsStore.subscribe((next, previous) => {
+      if (Object.entries(next.prefs).some(([key, pref]) => {
+        if (!key.startsWith(prefix) || !pref.followed || pref.unfollowed) return false;
+        const before = previous.prefs[key];
+        return (!before?.followed && !pref.latestMessageAt) || before?.unfollowed;
+      })) refresh();
+    });
+    let previousGroups = this.ctx.groups.get();
+    const unsubscribeGroups = this.ctx.groups.subscribe((groups) => {
+      if (groups === previousGroups || groups.length === 0) return;
+      previousGroups = groups;
+      refresh();
+    });
+    this.stopActivity = () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+      unsubscribe();
+      unsubscribeGroups();
+    };
     const sub = this.ctx.subscribeWatched(
       this.ctx.relays(),
       { kinds: [KIND_GROUP_CHAT_MESSAGE], since: Math.floor(Date.now() / 1000) - 30 },
       (ev) => this.ingestPing(relay, ev, 'active'),
-      undefined,
+      refresh,
       { affectsRelayAccess: false },
     );
     this.ctx.track(sub);
+    refresh();
   }
 
   /** A kind 9 from the live REQ (`active`) or the watcher (`background`). */
@@ -132,6 +175,13 @@ export class PingsModule {
     if (source === 'active' && !isActive) return;
     const channelId = getTag(ev, 'h');
     if (!channelId) return;
+    const owner = this.ctx.session()?.pubKeyHex;
+    if (owner && !this.deps.isMuted(ev.pubkey)) {
+      const participated = ev.pubkey === owner || ev.tags.some(([name, value]) => name === 'p' && value === owner);
+      if (isActive || participated) {
+        useChannelPrefsStore.getState().recordActivity(relayKey, channelId, ev.created_at, participated);
+      }
+    }
     if (isActive) {
       recordMemberActivity(relayKey, ev.pubkey, ev.created_at);
       // A live per-channel stream runs the full ingest (and the same
@@ -178,6 +228,7 @@ export class PingsModule {
     const { relay, channelId, ev, reason, watching, where } = opts;
     const me = this.ctx.session()?.pubKeyHex ?? null;
     if (!me || ev.pubkey === me) return;
+    if (reason) useChannelPrefsStore.getState().recordActivity(relay, channelId, ev.created_at, true);
     const pref = getChannelPref(relay, channelId);
     const level = notifyLevel(pref);
     if (level === 'nothing') return;

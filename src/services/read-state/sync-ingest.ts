@@ -10,6 +10,7 @@ import { KIND_GIFT_WRAP, KIND_NIP78_APP_DATA as KIND_INNER } from '@/constants/n
 import {
   cacheKindFor,
   syncScopeKey,
+  syncCacheId,
   findInnerDTag,
   parsePayload,
   type SyncOptions,
@@ -27,6 +28,7 @@ import { READ_STATE_WATCHDOG_MS } from '@/constants/read-state/sync-options';
 export function subscribeAndIngest<T>(
   opts: SyncOptions,
   apply: (payload: T, rumorCreatedAt: number) => void,
+  onGroupSnapshotReady?: () => void,
 ): () => void {
   const impl = getBridgeImpl();
   if (!impl) return () => {};
@@ -37,21 +39,32 @@ export function subscribeAndIngest<T>(
   if (!signer) return () => {};
 
   const scope = syncScopeKey(opts, signer.pubkey);
+  const cacheId = syncCacheId(opts, signer.pubkey);
   const accept = (payload: T, createdAt: number) => {
     // Acknowledge before store subscribers observe the remote merge.
     useReadStateStore.getState().acknowledgeSync(scope, parseSyncCursors(payload));
     apply(payload, createdAt);
   };
-  const isCurrent = () => impl.getNipSigner('background')?.pubkey === signer.pubkey;
+  const assertSession = impl.captureSessionGuard?.();
+  const isCurrent = () => {
+    if (getBridgeImpl() !== impl || impl.getNipSigner('background')?.pubkey !== signer.pubkey) return false;
+    try {
+      assertSession?.();
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   // Track newest seen so we don't re-apply older wraps that arrive late
   // from a different relay (DM scope subscribes to multiple relays).
   let newestApplied = 0;
+  let relayHead: NostrEvent | undefined;
   const cacheKind = cacheKindFor(opts.transport);
 
   // Stale-while-revalidate: paint cached snapshot first.
   for (const relay of opts.relays) {
-    const cached = cacheGet<{ payload: T; createdAt: number }>(relay, cacheKind, opts.dTag);
+    const cached = cacheGet<{ payload: T; createdAt: number }>(relay, cacheKind, cacheId);
     if (cached && cached.value.createdAt > newestApplied) {
       accept(cached.value.payload, cached.value.createdAt);
       newestApplied = cached.value.createdAt;
@@ -69,8 +82,9 @@ export function subscribeAndIngest<T>(
   if (opts.transport === 'replaceable') {
     const filter: Filter = { kinds: [KIND_INNER], authors: [signer.pubkey], '#d': [opts.dTag] };
     for (const relay of opts.relays) {
-      const unsub = impl.subscribeFilterWatched(filter, async (ev) => {
-        if (stopped || !isCurrent() || ev.created_at <= newestApplied) return;
+      const opening = new Set<Promise<void>>();
+      const ingest = async (ev: NostrEvent) => {
+        if (stopped || !isCurrent()) return;
         let payload: T | null = null;
         try {
           payload = JSON.parse(await memoizeDecrypt('nip44', signer.pubkey, ev.content, () => signer.nip44Decrypt(signer.pubkey, ev.content))) as T;
@@ -79,12 +93,31 @@ export function subscribeAndIngest<T>(
           // cannot read. Ignore rather than throw: this is background sync.
           return;
         }
-        if (stopped || !isCurrent() || ev.created_at <= newestApplied) return;
+        if (stopped || !isCurrent()) return;
         if (!payload || (payload as { v?: number }).v !== 1) return;
-        accept(payload, ev.created_at);
-        newestApplied = ev.created_at;
-        cacheSet(relay, KIND_INNER, opts.dTag, { payload, createdAt: ev.created_at });
-      }, { relays: [relay], watchdogMs: READ_STATE_WATCHDOG_MS });
+        const isHead = !relayHead || ev.created_at > relayHead.created_at
+          || (ev.created_at === relayHead.created_at && ev.id < relayHead.id);
+        if (isHead) {
+          relayHead = ev;
+          useReadStateStore.getState().replaceSyncAcknowledgement(scope, parseSyncCursors(payload));
+          newestApplied = Math.max(newestApplied, ev.created_at);
+          cacheSet(relay, KIND_INNER, cacheId, { payload, createdAt: ev.created_at });
+        }
+        apply(payload, ev.created_at);
+      };
+      const unsub = impl.subscribeFilterWatched(filter, (ev) => {
+        const pending = ingest(ev);
+        opening.add(pending);
+        void pending.then(() => opening.delete(pending), () => opening.delete(pending));
+        return pending;
+      }, {
+        relays: [relay], relayMode: 'replace', watchdogMs: READ_STATE_WATCHDOG_MS,
+        onEose: () => {
+          void Promise.allSettled(opening).then(() => {
+            if (!stopped && isCurrent()) onGroupSnapshotReady?.();
+          });
+        },
+      });
       unsubFns.push(unsub);
     }
 
@@ -108,12 +141,14 @@ export function subscribeAndIngest<T>(
       markWrapSeen(opts.ledgerScope, ev.id);
       if (rumor.kind !== KIND_INNER) return;
       if (findInnerDTag(rumor) !== opts.dTag) return;
-      if (rumor.created_at <= newestApplied) return;
       const payload = parsePayload<T>(rumor);
       if (!payload) return;
-      accept(payload, rumor.created_at);
-      newestApplied = rumor.created_at;
-      cacheSet(relay, cacheKind, opts.dTag, { payload, createdAt: rumor.created_at });
+      if (opts.transport === 'replaceable' && relayHead) apply(payload, rumor.created_at);
+      else accept(payload, rumor.created_at);
+      if (rumor.created_at > newestApplied && !relayHead) {
+        newestApplied = rumor.created_at;
+        cacheSet(relay, cacheKind, cacheId, { payload, createdAt: rumor.created_at });
+      }
     };
     const unsub = impl.subscribeFilterWatched(filter, (ev) => {
       // The `#p`-only filter delivers every gift wrap addressed to us,
@@ -128,7 +163,7 @@ export function subscribeAndIngest<T>(
       // sent DMs (self-copies are self-authored too). Wait for the unlock.
       if (impl.deferUntilDmsUnlocked(() => { if (!stopped) void open(ev); })) return;
       void open(ev);
-    }, { relays: [relay], watchdogMs: READ_STATE_WATCHDOG_MS });
+    }, { relays: [relay], relayMode: 'replace', watchdogMs: READ_STATE_WATCHDOG_MS });
     unsubFns.push(unsub);
   }
   return () => {

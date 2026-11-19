@@ -1,3 +1,4 @@
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { useChatStore } from '@/store/chat';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
@@ -69,7 +70,7 @@ describe('InboxScreen (phone)', () => {
     mount();
     fireEvent.click(document.querySelector('.mark-all-read')!);
     expect(markMentionsRead).toHaveBeenCalledWith(BRIDGE_MOCK_RELAY);
-    expect(markAllAsRead).toHaveBeenLastCalledWith([], ['v1', 't1']);
+    expect(markAllAsRead).toHaveBeenLastCalledWith([], ['v1', 't1'].map((id) => relayChannelKey(BRIDGE_MOCK_RELAY, id)), false);
     fireEvent.click(screen.getByTestId('inbox-tab-dms'));
     fireEvent.click(document.querySelector('.mark-all-read')!);
     expect(markAllAsRead).toHaveBeenLastCalledWith([PEER], []);

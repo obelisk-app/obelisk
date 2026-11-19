@@ -1,5 +1,6 @@
 'use client';
 
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { landOnMessage } from '@/services/chat/timeline/message-flash';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLoadEarlier, type JsMessage } from '@/services/nostr-bridge';
@@ -26,7 +27,7 @@ export function useChannelViewport({
   pendingMessageId: string | null;
   onConsumePendingMessageId: () => void;
 }) {
-  const readCursorMs = useReadStateStore((s) => s.groupCursors[groupId]);
+  const readCursorMs = useReadStateStore((s) => s.groupCursors[relayChannelKey(relay, groupId)]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollKey = useMemo(() => channelScrollPositionKey(relay, groupId), [relay, groupId]);
   const initialAnchor = useMemo(

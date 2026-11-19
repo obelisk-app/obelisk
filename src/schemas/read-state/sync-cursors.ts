@@ -14,6 +14,11 @@ export function parseSyncCursors(payload: unknown): Record<string, number> {
       if (entry && typeof entry === 'object') add(`${field}:${id}`, (entry as { lastReadAt?: unknown }).lastReadAt);
     }
   }
+  if (obj.follows && typeof obj.follows === 'object' && !Array.isArray(obj.follows)) {
+    for (const [id, revision] of Object.entries(obj.follows)) {
+      if (Number.isSafeInteger(revision)) add(`follow:${id}`, revision);
+    }
+  }
   add('mentionsReadAt', obj.mentionsReadAt);
   add('inboxLastReadAt', obj.inboxLastReadAt);
   return result;
