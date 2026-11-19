@@ -1,5 +1,6 @@
 'use client';
 
+import { Fragment } from 'react';
 import { type JsGroup } from '@/services/nostr-bridge';
 import { ForumThreadChildRow } from './ForumThreadChildRow';
 import { ChannelRow } from './ChannelRow';
@@ -11,7 +12,6 @@ export function ServerChannelEntry({
   expandable,
   expanded,
   threads,
-  recentSubchannelIds,
   onToggleExpand,
   onOpen,
 }: {
@@ -19,8 +19,7 @@ export function ServerChannelEntry({
   live: boolean;
   expandable: boolean;
   expanded: boolean;
-  threads: ReadonlyArray<JsGroup>;
-  recentSubchannelIds: ReadonlySet<string>;
+  threads: ReadonlyArray<{ group: JsGroup; showAsChannel: boolean }>;
   onToggleExpand?: () => void;
   onOpen: (g: JsGroup) => void;
 }) {
@@ -36,10 +35,14 @@ export function ServerChannelEntry({
       />
       {threads.length > 0 && (
         <div className="forum-threads">
-          {threads.map((child) => group.kind !== 'forum' || recentSubchannelIds.has(child.id) ? (
-            <ChannelRow key={child.id} group={child} live={false} onClick={() => onOpen(child)} indent />
-          ) : (
-            <ForumThreadChildRow key={child.id} group={child} active={false} onClick={() => onOpen(child)} />
+          {threads.map(({ group: child, showAsChannel }) => (
+            <Fragment key={child.id}>
+              {showAsChannel ? (
+                <ChannelRow group={child} live={false} onClick={() => onOpen(child)} indent />
+              ) : (
+                <ForumThreadChildRow group={child} active={false} onClick={() => onOpen(child)} />
+              )}
+            </Fragment>
           ))}
         </div>
       )}

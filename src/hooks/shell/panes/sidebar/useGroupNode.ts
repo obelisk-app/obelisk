@@ -65,7 +65,11 @@ export function useGroupNode({ group, view, depth, childrenByParent, groupsById,
       if (!recentSubchannelIds) writeForumCollapsed(group.id, !collapsed);
     },
     /** The child channels this client knows (a publication's threads). */
-    children: group.kind === 'forum' ? knownGroups(childIds.filter(isVisible), groupsById) : [],
+    children: group.kind === 'forum'
+      ? knownGroups(childIds.filter(isVisible), groupsById).map((child) => ({
+          child, showAsChannel: recentSubchannelIds?.has(child.id) ?? false,
+        }))
+      : [],
     descendants: depth === 0 && group.kind !== 'forum'
       ? descendantRows(childIds, childrenByParent, groupsById).filter(({ group }) => isVisible(group.id))
       : [],

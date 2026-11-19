@@ -1,5 +1,6 @@
 'use client';
 
+import { Fragment } from 'react';
 import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import type { JsGroup } from '@/services/nostr-bridge';
@@ -118,12 +119,16 @@ export function GroupNode({
         // .lc-forum-threads so each row's ::before/::after can paint a
         // continuous vertical rail terminating in an L-corner at the last row.
         <div className="lc-forum-threads">
-          {vm.children.map((child) => recentSubchannelIds?.has(child.id) ? (
-            <GroupNode key={child.id} group={child} {...childProps} />
-          ) : (
-            <ForumThreadRow key={child.id} groupId={child.id}>
-              <GroupNode group={child} {...childProps} />
-            </ForumThreadRow>
+          {vm.children.map(({ child, showAsChannel }) => (
+            <Fragment key={child.id}>
+              {showAsChannel ? (
+                <GroupNode group={child} {...childProps} />
+              ) : (
+                <ForumThreadRow groupId={child.id}>
+                  <GroupNode group={child} {...childProps} />
+                </ForumThreadRow>
+              )}
+            </Fragment>
           ))}
         </div>
       ) : (

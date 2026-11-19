@@ -82,14 +82,16 @@ describe('CSP', () => {
 
   it('next.config.ts sends the static floor on every path for the requests the proxy never sees', async () => {
     const rules = await nextConfig.headers!();
-    const everyPath = rules.find((r) => r.source === '/:path*')!;
-    const floor = everyPath.headers.find((h) => h.key === 'Content-Security-Policy');
-    expect(floor?.value).toBe(buildCsp({ nonce: null, isDev: process.env.NODE_ENV !== 'production' }));
     // Only one rule carries a CSP: two sources matching the same path would
     // put two static policies on a response, and the intersection trap the
     // floor is designed around would then apply between them.
     const cspRules = rules.filter((r) => r.headers.some((h) => h.key.toLowerCase() === 'content-security-policy'));
     expect(cspRules).toHaveLength(1);
+    expect(cspRules[0]).toMatchObject({ source: '/:path*' });
+    expect(cspRules[0].has).toBeUndefined();
+    expect(cspRules[0].missing).toBeUndefined();
+    const floor = cspRules[0].headers.find((h) => h.key === 'Content-Security-Policy');
+    expect(floor?.value).toBe(buildCsp({ nonce: null, isDev: process.env.NODE_ENV !== 'production' }));
   });
 });
 

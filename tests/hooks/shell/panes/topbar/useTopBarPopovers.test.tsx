@@ -52,7 +52,9 @@ describe('useInboxStreams, mark read', () => {
     const { result } = renderHook(() => useInboxStreams('wss://relay.test'), { wrapper: bridgeWrapper(bridge) });
 
     act(() => result.current.handleMarkRead());
-    expect(markAllAsRead).toHaveBeenLastCalledWith([], ['g1', 'g2']);
+    expect(markAllAsRead).toHaveBeenLastCalledWith(
+      [], ['["wss://relay.test","g1"]', '["wss://relay.test","g2"]'], false,
+    );
 
     act(() => result.current.setNotifTab('dms'));
     act(() => result.current.handleMarkRead());
