@@ -11,7 +11,7 @@ function mount(presentation: 'dialog' | 'sheet', methods: { addRelay?: ReturnTyp
   const onAdded = vi.fn();
   renderWithBridge(<CustomRelayForm presentation={presentation} onAdded={onAdded} />, fakeBridge({}, { addRelay, switchRelay } as never));
   const input = screen.getByRole('textbox', { name: 'Relay URL' });
-  const submit = screen.getByRole('button', { name: 'Add relay' });
+  const submit = screen.getByRole('button', { name: presentation === 'dialog' ? 'Add a community' : 'Add relay' });
   return { addRelay, switchRelay, onAdded, input, submit };
 }
 

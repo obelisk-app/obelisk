@@ -125,7 +125,7 @@ describe('landing route', async () => {
       'src',
       '/pictures-for-posts/desktop-channel-chat.png',
     );
-    expect(within(mobilePreview).getByAltText(/Obelisk mobile relay switcher/i)).toHaveAttribute(
+    expect(within(mobilePreview).getByAltText(/Obelisk mobile screenshot: a channel conversation/i)).toHaveAttribute(
       'src',
       '/pictures-for-posts/mobile-channel-chat.png',
     );

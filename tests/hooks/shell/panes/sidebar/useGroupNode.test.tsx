@@ -28,7 +28,7 @@ describe('useGroupNode', () => {
   it('knows when it is the open channel and lists its known children', () => {
     const { result } = setup(forum, { view: { kind: 'group', groupId: 'f1' } });
     expect(result.current.active).toBe(true);
-    expect(result.current.children).toEqual([{ child: thread, showAsChannel: false }]);
+    expect(result.current.children).toEqual([thread]);
     expect(result.current.isCollapsible).toBe(true);
     expect(result.current.label).toBe('pubs');
     expect(result.current.indent).toBe('0.5rem');

@@ -5,6 +5,7 @@ import type { useConcordRoom } from '@/hooks/chat/concord/useConcordRoom';
 import CopyButton from '@/components/ui/buttons/CopyButton';
 import Button from '@/components/ui/buttons/Button';
 import Input from '@/components/ui/forms/Input';
+import Text from '@/components/ui/layout/Text';
 import FormError from '@/components/ui/forms/FormError';
 import ConcordInviteList from './ConcordInviteList';
 import ConcordBrandingForm from './ConcordBrandingForm';
@@ -28,7 +29,7 @@ export default function ConcordSettingsContent({ community, vm }: ConcordSetting
         {vm.settings === 'edit-channel' && vm.canManageChannels && vm.channelId && <ConcordChannelEditForm key={vm.channelId} community={community} channelId={vm.channelId} name={vm.group?.name ?? ''} onSaved={vm.closeSettings} />}
         {vm.settings === 'channels' && vm.canManageChannels && <ConcordChannelForm community={community} />}
         {vm.settings === 'members' && <div data-testid="concord-member-list">
-          {vm.members.length ? vm.members.map(pubkey => <ConcordMember key={pubkey} community={community} pubkey={pubkey} />) : <p>{t('mobile.members.empty')}</p>}
+          {vm.members.length ? vm.members.map(pubkey => <ConcordMember key={pubkey} community={community} pubkey={pubkey} />) : <Text as="p">{t('mobile.members.empty')}</Text>}
         </div>}
         {vm.settings === 'roles' && vm.canManageRoles && <>
           {community.pubkey === community.material.owner && <ConcordMemberChannelPolicy community={community} />}

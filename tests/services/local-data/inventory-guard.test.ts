@@ -34,7 +34,10 @@ const LITERAL = /(['"])((?:\\.|(?!\1)[^\\\n])*)\1|`([^`]*)`/g;
 const KEY_LIKE = /^(?:obelisk|@nostr-wot\/[\w-]+:|nostr-wot-sdk|chat:lastSeen)/;
 
 /** Literals that look like keys in storage files but are not stored. */
-const NOT_STORAGE = new Set<string>();
+const NOT_STORAGE = new Set<string>([
+  // Logical slot sealed and hashed inside the obelisk-concord IndexedDB inventory entry.
+  'obelisk/branding-ciphertext',
+]);
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
