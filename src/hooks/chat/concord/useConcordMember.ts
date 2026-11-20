@@ -33,7 +33,7 @@ export function useConcordMember(community: ConcordCommunity, pubkey: string) {
       removal.set('readers', { ...removal.values.readers, [channelId]: checked ? [...new Set([...previous, member])] : previous.filter(value => value !== member) });
     },
     canBan: canBan && (!privateChannels.length || community.canDo(PERM.MANAGE_CHANNELS) && privateChannels.every(channel => community.material.channels.some(key => key.id === channel.channel_id))),
-    form, canManage, name: author.displayName || author.name || shortNpubLabel(pubkey),
+    form, canManage, picture: author.picture, name: author.displayName || author.name || shortNpubLabel(pubkey),
     roles: [...state.roles.values()].filter(role => !role.deleted && role.scope.kind === 'server'),
     toggle: (id: string, checked: boolean) => form.set('roles', checked ? [...new Set([...form.values.roles, id])] : form.values.roles.filter(role => role !== id)),
   };

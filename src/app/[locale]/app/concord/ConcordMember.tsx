@@ -7,15 +7,15 @@ import Form from '@/components/ui/forms/Form';
 import FormError from '@/components/ui/forms/FormError';
 import FormActions from '@/components/ui/forms/FormActions';
 import Checkbox from '@/components/ui/forms/Checkbox';
-import { Avatar } from '@/app/[locale]/app/desktop/Avatar';
+import UserRow from '@/components/ui/data/UserRow';
 
 export default function ConcordMember({ community, pubkey }: { community: ConcordCommunity; pubkey: string }) {
   const t = useTranslations();
   const vm = useConcordMember(community, pubkey);
-  if (!vm.canManage && !vm.canBan) return <div className="mb-2 flex items-center gap-2 p-2 text-sm font-medium" data-testid="concord-member" data-pubkey={pubkey}>
-    <Avatar pubkey={pubkey} size={8} picture={null} />{vm.name}
+  if (!vm.canManage && !vm.canBan) return <div className="rounded-lg py-1" data-testid="concord-member" data-pubkey={pubkey}>
+    <UserRow pubkey={pubkey} picture={vm.picture} name={vm.name} />
   </div>;
-  return <details className="mb-2 rounded-lg p-2 hover:bg-lc-card" data-testid="concord-member" data-pubkey={pubkey}><summary className="flex cursor-pointer items-center gap-2 text-sm font-medium"><Avatar pubkey={pubkey} size={8} picture={null} />{vm.name}</summary><Form form={vm.form} layout="stack">
+  return <details className="rounded-lg py-1 hover:bg-lc-card" data-testid="concord-member" data-pubkey={pubkey}><summary className="flex cursor-pointer items-center rounded-lg outline-offset-2"><UserRow pubkey={pubkey} picture={vm.picture} name={vm.name} /></summary><Form form={vm.form} layout="stack">
     {vm.roles.map(role => <Checkbox key={role.role_id} disabled={!vm.canManage} label={role.name} checked={vm.form.values.roles.includes(role.role_id)} onChange={event => vm.toggle(role.role_id, event.target.checked)} />)}
     <FormError>{vm.form.error}</FormError>
     {vm.canManage && <FormActions submitLabel={t('chat.concord.saveRoles')} busy={vm.form.submitting} disabled={!vm.form.dirty || !vm.form.canSubmit} />}

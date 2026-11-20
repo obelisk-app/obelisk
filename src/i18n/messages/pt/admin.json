@@ -1,5 +1,5 @@
 {
-  "filterPlaceholder": "Filtrar por pubkey ou nome de canal…",
+  "filterPlaceholder": "Buscar por nome, chave pública ou canal…",
   "demoteHelp": "Remove o cargo de admin das linhas selecionadas. Os membros são ignorados.",
   "title": "Admins e membros do relay",
   "allRoles": "Todos os cargos",
@@ -67,7 +67,7 @@
     "confirmDemote": "Rebaixar {count} entradas?",
     "more": "e mais {count}"
   },
-  "subtitle": "Limpeza em massa em todos os canais deste relay. Expulsar remove o usuário (kind 9001); remover admin só tira o papel de admin (kind 9003).",
+  "subtitle": "Selecione as linhas para remover membros ou revogar o cargo de administrador nesses canais.",
   "emptyRelay": "Ainda não há admins nem membros neste relay.",
   "emptyFiltered": "Nenhuma entrada corresponde aos filtros atuais.",
   "counts": "{selected} selecionadas · {shown} visíveis · {total} no total"

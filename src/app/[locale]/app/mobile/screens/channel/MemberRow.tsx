@@ -4,7 +4,7 @@ import Button from '@/components/ui/buttons/Button';
 import { avatarInitials, displayNameFor } from '@/utils/identity/display-name';
 import { avatarStyle } from '@/utils/shell/mobile/avatar-style';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
-import { useUserMetadata } from '@/services/nostr-bridge';
+import { useAuthor } from '@/hooks/social/profile/useAuthor';
 import RoleBadge from '@/components/chat/members/RoleBadge';
 import { useTranslations } from 'next-intl';
 import RemoteImage from '@/components/ui/media/RemoteImage';
@@ -12,7 +12,7 @@ import RemoteImage from '@/components/ui/media/RemoteImage';
 /** One person in the phone member list: avatar (faded when offline), name, NIP-05 or npub, badges, presence dot. */
 export function MemberRow({ pubkey, role, online, onClick }: { pubkey: string; role?: 'admin'; online: boolean; onClick: () => void }) {
   const t = useTranslations();
-  const meta = useUserMetadata(pubkey);
+  const meta = useAuthor(pubkey);
   const name = displayNameFor(pubkey, meta);
   return (
     <Button variant="bare" className="member-row" onClick={onClick}>

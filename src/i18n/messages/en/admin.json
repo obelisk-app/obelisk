@@ -1,5 +1,5 @@
 {
-  "filterPlaceholder": "Filter by pubkey or channel name…",
+  "filterPlaceholder": "Search by name, public key, or channel…",
   "demoteHelp": "Strip admin role from selected admin rows. Members are skipped.",
   "title": "Relay admins & members",
   "allRoles": "All roles",
@@ -67,7 +67,7 @@
     "confirmDemote": "Demote {count} entries?",
     "more": "and {count} more"
   },
-  "subtitle": "Bulk cleanup across every channel on this relay. Kick removes the user (kind 9001); demote strips the admin role only (kind 9003).",
+  "subtitle": "Select channel memberships to remove members or revoke admin access.",
   "emptyRelay": "No admin or member entries on this relay yet.",
   "emptyFiltered": "No entries match the current filters.",
   "counts": "{selected} selected · {shown} shown · {total} total"

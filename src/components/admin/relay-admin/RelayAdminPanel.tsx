@@ -21,15 +21,17 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
   const t = useTranslations();
   const vm = useRelayAdminPanel();
   return (
-    <Modal onClose={onClose} panelClassName="w-full max-w-3xl mx-4 rounded-xl bg-lc-dark border border-lc-border shadow-xl flex flex-col max-h-[85vh]">
+    <Modal onClose={onClose} panelClassName="w-full max-w-3xl mx-4 rounded-xl bg-lc-dark border border-lc-border shadow-xl flex flex-col max-h-[85dvh]">
       <ModalHeader title={t('admin.title')} subtitle={t('admin.subtitle')} onClose={onClose} />
       <RelayAdminToolbar filters={vm.filters} groupOptions={vm.groupOptions} />
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <Table
           aria-label={t('admin.title')}
           columns={relayAdminColumns(t, vm.selection)}
           rows={vm.rows}
           rowKey={relayAdminRowKey}
+          className="table-fixed"
+          rowClassName={vm.rowClassName}
           header="sticky"
           emptyPlacement="replace"
           emptyPadding="none"

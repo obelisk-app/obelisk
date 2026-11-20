@@ -3,6 +3,7 @@
  * the filters over it. Pure, so the panel's hook only wires state to these.
  */
 
+import { safeNpub } from '@/utils/identity/short-npub';
 import type { JsGroup } from '@/services/nostr-bridge';
 
 export interface RelayAdminRow {
@@ -15,7 +16,7 @@ export interface RelayAdminRow {
 export type RelayAdminRoleFilter = 'all' | 'admin' | 'member';
 
 export interface RelayAdminFilters {
-  /** Matched against the pubkey and the channel name, case-insensitively. */
+  /** Matched against member names, keys and channel names, case-insensitively. */
   text: string;
   role: RelayAdminRoleFilter;
   /** A group id, or `'all'`. */
@@ -52,13 +53,14 @@ export function buildRelayAdminRows(
 }
 
 /** The rows that pass the role, channel and text filters. */
-export function filterRelayAdminRows(rows: ReadonlyArray<RelayAdminRow>, filters: RelayAdminFilters): RelayAdminRow[] {
+export function filterRelayAdminRows(rows: ReadonlyArray<RelayAdminRow>, filters: RelayAdminFilters, names?: ReadonlyMap<string, string>): RelayAdminRow[] {
   const q = filters.text.trim().toLowerCase();
   return rows.filter((r) => {
     if (filters.role === 'admin' && !r.isAdmin) return false;
     if (filters.role === 'member' && r.isAdmin) return false;
     if (filters.group !== 'all' && r.groupId !== filters.group) return false;
-    if (q && !(r.pubkey.toLowerCase().includes(q) || r.groupName.toLowerCase().includes(q))) return false;
+    if (q && !(r.pubkey.toLowerCase().includes(q) || (q.startsWith('npub') && safeNpub(r.pubkey).includes(q)) ||
+      names?.get(r.pubkey)?.toLowerCase().includes(q) || r.groupName.toLowerCase().includes(q))) return false;
     return true;
   });
 }

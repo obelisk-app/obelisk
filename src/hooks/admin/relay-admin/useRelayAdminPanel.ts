@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useAdminsByGroup, useGroups } from '@/services/nostr-bridge';
+import { useAdminsByGroup, useGroups, useRelayPeople } from '@/services/nostr-bridge';
 import { useMembersByGroupBulk } from '@/hooks/chat/members/useMembersByGroupBulk';
 import {
   buildRelayAdminRows, filterRelayAdminRows, relayAdminGroupName, relayAdminRowKey, selectedRelayAdminRows, toggleKey,
@@ -21,6 +21,8 @@ export function useRelayAdminPanel() {
   const membersByGroup = useMembersByGroupBulk();
 
   const [text, setText] = useState('');
+  const people = useRelayPeople(undefined, !!text.trim());
+  const names = useMemo(() => new Map(people.map(person => [person.pubkey, person.displayName])), [people]);
   const [role, setRole] = useState<RelayAdminRoleFilter>('all');
   const [group, setGroup] = useState('all');
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -30,7 +32,7 @@ export function useRelayAdminPanel() {
     () => buildRelayAdminRows(groups, adminsByGroup, membersByGroup),
     [groups, adminsByGroup, membersByGroup],
   );
-  const shown = useMemo(() => filterRelayAdminRows(rows, { text, role, group }), [rows, text, role, group]);
+  const shown = useMemo(() => filterRelayAdminRows(rows, { text, role, group }, names), [rows, text, role, group, names]);
   const selectedRows = useMemo(() => selectedRelayAdminRows(shown, selected), [shown, selected]);
 
   const bulk = async (action: RelayAdminBulkAction) => {
@@ -43,6 +45,7 @@ export function useRelayAdminPanel() {
     groupOptions: groups.map((g) => ({ value: g.id, label: relayAdminGroupName(g, 12) })),
     filters: { text, role, group, setText, setRole, setGroup },
     rows: shown,
+    rowClassName: (row: RelayAdminRow) => selected.has(relayAdminRowKey(row)) ? 'bg-lc-green/10' : undefined,
     totalCount: rows.length,
     selectedCount: selectedRows.length,
     emptyKey: rows.length === 0 ? 'admin.emptyRelay' as const : 'admin.emptyFiltered' as const,

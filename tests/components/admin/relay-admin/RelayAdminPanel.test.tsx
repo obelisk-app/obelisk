@@ -5,6 +5,7 @@ import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { groupFixture } from '@tests/support/mocks/nostr-bridge';
 import { ConfirmDialogHost } from '@/components/ui/overlays/ConfirmDialog';
 import RelayAdminPanel from '@/components/admin/relay-admin/RelayAdminPanel';
+import { shortNpubLabel } from '@/utils/identity/short-npub';
 
 const ADMIN = 'a'.repeat(64);
 const MEMBER = 'b'.repeat(64);
@@ -18,21 +19,25 @@ function mount(onClose = vi.fn()) {
       groups: [groupFixture({ id: 'g1', name: 'general' }), groupFixture({ id: 'g2', name: 'random' })],
       adminsByGroup: { g1: [ADMIN] },
       membersByGroup: { g1: [ADMIN, MEMBER], g2: [OTHER] },
+      userMetadata: { [ADMIN]: {
+        pubkey: ADMIN, name: 'Fabricio', displayName: null, picture: 'https://images.example/avatar.png',
+        about: null, banner: null, nip05: null, lud16: null, website: null,
+      } },
     },
-    { removeUser, removePermission },
+    { removeUser, removePermission, ensureUserMetadata: async () => {} },
   );
   renderWithBridge(<><RelayAdminPanel onClose={onClose} /><ConfirmDialogHost /></>, bridge);
   return { onClose, removeUser, removePermission };
 }
 
 const bodyRows = () => within(screen.getByRole('table')).getAllByRole('row').slice(1);
-const filterInput = () => screen.getByPlaceholderText('Filter by pubkey or channel name…');
+const filterInput = () => screen.getByPlaceholderText('Search by name, public key, or channel…');
 
 describe('RelayAdminPanel', () => {
   it('shows the admin title and its explanatory subtitle', () => {
     mount();
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Relay admins & members');
-    expect(screen.getByText(/Bulk cleanup across every channel/)).toBeInTheDocument();
+    expect(screen.getByText(/Select channel memberships/)).toBeInTheDocument();
   });
 
   it('closes from the header close button', () => {
@@ -45,7 +50,10 @@ describe('RelayAdminPanel', () => {
     mount();
     const rows = bodyRows();
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveTextContent(ADMIN);
+    expect(rows[0]).toHaveTextContent('Fabricio');
+    expect(rows[0]).toHaveTextContent(shortNpubLabel(ADMIN));
+    expect(rows[0].querySelector('img')).toHaveAttribute('src', 'https://images.example/avatar.png');
+    expect(rows[0]).not.toHaveTextContent(ADMIN);
     expect(rows[0]).toHaveTextContent('general');
     expect(within(rows[0]).getByText('admin')).toBeInTheDocument();
     expect(within(rows[1]).getByText('Member')).toBeInTheDocument();
@@ -55,6 +63,9 @@ describe('RelayAdminPanel', () => {
 
   it('filters by text, by role and by channel', () => {
     mount();
+    fireEvent.change(filterInput(), { target: { value: 'fabricio' } });
+    expect(bodyRows()).toHaveLength(1);
+    expect(bodyRows()[0]).toHaveTextContent('Fabricio');
     fireEvent.change(filterInput(), { target: { value: 'rand' } });
     expect(bodyRows()).toHaveLength(1);
     fireEvent.change(filterInput(), { target: { value: '' } });
@@ -63,7 +74,7 @@ describe('RelayAdminPanel', () => {
     fireEvent.change(screen.getByDisplayValue('Admins only'), { target: { value: 'all' } });
     fireEvent.change(screen.getByDisplayValue('All channels'), { target: { value: 'g2' } });
     expect(bodyRows()).toHaveLength(1);
-    expect(bodyRows()[0]).toHaveTextContent(OTHER);
+    expect(bodyRows()[0]).toHaveTextContent(shortNpubLabel(OTHER));
   });
 
   it('lists every channel in the channel filter', () => {
@@ -125,7 +136,7 @@ describe('RelayAdminPanel', () => {
 describe('RelayAdminPanel accessibility', () => {
   it('names the filter input, both selects and the table', () => {
     mount();
-    expect(screen.getByLabelText('Filter by pubkey or channel name…').tagName).toBe('INPUT');
+    expect(screen.getByLabelText('Search by name, public key, or channel…').tagName).toBe('INPUT');
     expect(screen.getByLabelText('Role').tagName).toBe('SELECT');
     expect(screen.getByLabelText('Channel').tagName).toBe('SELECT');
     expect(screen.getByRole('table', { name: 'Relay admins & members' })).toBeInTheDocument();

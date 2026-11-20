@@ -13,11 +13,11 @@ export function relayAdminColumns(t: Translate, selection: RelayAdminSelection):
       key: 'select',
       header: '',
       inset: 'md',
-      className: 'w-8',
+      className: 'w-10 sm:w-12',
       cell: (r) => <SelectCell pubkey={r.pubkey} selected={selection.isSelected(r)} onToggle={() => selection.toggle(r)} />,
     },
     { key: 'user', header: t('admin.colUser'), cell: (r) => <UserCell pubkey={r.pubkey} /> },
-    { key: 'channel', header: t('admin.colChannel'), cell: (r) => <span className="text-lc-muted">{r.groupName}</span> },
-    { key: 'role', header: t('admin.colRole'), cell: (r) => <RoleCell isAdmin={r.isAdmin} /> },
+    { key: 'channel', header: t('admin.colChannel'), className: 'w-[28%] sm:w-[30%]', cell: (r) => <span className="block truncate text-xs text-lc-muted sm:text-sm" title={r.groupName}>{r.groupName}</span> },
+    { key: 'role', header: t('admin.colRole'), className: 'w-16 sm:w-24', cell: (r) => <RoleCell isAdmin={r.isAdmin} /> },
   ];
 }

@@ -1,15 +1,14 @@
 'use client';
 
-import { useUserMetadata } from '@/services/nostr-bridge';
-import { profileNameOr } from '@/utils/identity/profile-labels';
+import UserRow from '@/components/ui/data/UserRow';
+import { useAuthor } from '@/hooks/social/profile/useAuthor';
+import { displayNameFor } from '@/utils/identity/display-name';
+import { safeNpub, shortNpubLabel } from '@/utils/identity/short-npub';
 
-/** The person: their profile name over the full key. */
 export default function UserCell({ pubkey }: { pubkey: string }) {
-  const meta = useUserMetadata(pubkey);
-  return (
-    <>
-      <div className="truncate text-lc-white">{profileNameOr(meta, pubkey.slice(0, 12))}</div>
-      <div className="truncate font-mono text-[10px] text-lc-muted">{pubkey}</div>
-    </>
-  );
+  const author = useAuthor(pubkey);
+  const name = displayNameFor(pubkey, author);
+  const keyLabel = shortNpubLabel(pubkey);
+  return <UserRow pubkey={pubkey} picture={author.picture} name={name} size="md" className="px-0"
+    meta={name !== keyLabel && keyLabel ? <span title={safeNpub(pubkey)}>{keyLabel}</span> : undefined} />;
 }
