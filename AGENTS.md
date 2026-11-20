@@ -124,6 +124,8 @@ useEffect(() => {
 await nostrActions.sendMessage(groupId, 'hello');
 ```
 
+Publications are top-level channels with one level of discussions. Desktop and mobile derive navigation from the same group metadata projection (`src/utils/chat/channel/channel-hierarchy.ts`), which recovers legacy nested Publications without rewriting relay metadata.
+
 ### Single-relay rule for groups
 
 **Groups bind to the active relay. Only DMs run cross-relay.** This keeps the user's pubkey from reaching, through NIP-42 AUTH, relays they are not browsing.
@@ -144,7 +146,7 @@ The one sanctioned exception for groups is the **background relay watch** (`back
 
 Default relays: groups `wss://public.obelisk.ar` (`DEFAULT_RELAY`) and `wss://lacrypta-relay.obelisk.ar` (`src/constants/nostr-bridge/relay.ts`); profile lookups `DEFAULT_PROFILE_LOOKUP_RELAYS` (`src/constants/nostr-bridge/profile.ts`); social `DEFAULT_SOCIAL_RELAYS` (`src/constants/social/relays.ts`); calls `DEFAULT_CALL_RELAYS` (`src/constants/preferences/defaults.ts`). Anywhere a stranger's name or picture is shown, read `useAuthor` (`src/hooks/social/profile/useAuthor.ts`), which merges the bridge's profiles with the social tier's.
 
-Notifications (DMs and group pings as two streams, mention/reply detection, read cursors, sync over NIP-59): [docs/architecture/read-state.md](docs/architecture/read-state.md).
+Notifications (DMs and group pings as two streams, mention/reply detection, relay-scoped read cursors, transactional cross-tab sync, encrypted relay sync and recent followed subchannels): [docs/architecture/read-state.md](docs/architecture/read-state.md).
 
 ## Auth and the session vault
 

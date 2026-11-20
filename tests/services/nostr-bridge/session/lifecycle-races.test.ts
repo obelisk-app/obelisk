@@ -42,6 +42,7 @@ describe('session operation ownership', () => {
     connect.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
     const older = bridge.loginWithNip07('a'.repeat(64));
     const result = older.then(() => 'logged-in', (error: Error) => error.name);
+    await vi.waitFor(() => expect(connect).toHaveBeenCalledOnce());
     const newer = bridge.loginWithNip07('b'.repeat(64));
     first.resolve();
     expect(await result).toBe('AbortError');

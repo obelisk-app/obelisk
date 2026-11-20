@@ -44,3 +44,24 @@ export function channelTreeSections(
     uncategorizedHeaded: laidOut.categories.length > 0,
   };
 }
+
+/** Expand ordinary channel descendants in display order without a recursive render chain. */
+export function descendantRows(
+  childIds: ReadonlyArray<string>,
+  childrenByParent: Readonly<Record<string, ReadonlyArray<string>>>,
+  groupsById: Readonly<Record<string, JsGroup>>,
+) {
+  const pending = childIds.map((id) => ({ id, depth: 1 })).reverse();
+  const rows: Array<{ group: JsGroup; depth: number }> = [];
+  while (pending.length > 0) {
+    const item = pending.pop()!;
+    const group = groupsById[item.id];
+    if (!group) continue;
+    rows.push({ group, depth: item.depth });
+    const children = childrenByParent[item.id] ?? [];
+    for (let i = children.length - 1; i >= 0; i--) {
+      pending.push({ id: children[i], depth: item.depth + 1 });
+    }
+  }
+  return rows;
+}

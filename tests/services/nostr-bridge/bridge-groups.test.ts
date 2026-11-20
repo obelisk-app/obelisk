@@ -729,6 +729,32 @@ describe('nostr-bridge', () => {
   });
 
 
+  it('rejects nested Publications commands before publishing anything', async () => {
+    const { getBridge } = await import('@/services/nostr-bridge/facade/client');
+    const { skHex, pkHex } = makeKeypair();
+    const bridge = await getBridge();
+    await bridge.loginWithNsec(skHex, pkHex);
+    const before = fake.state.published.length;
+
+    await expect(bridge.createGroup({ kind: 'forum', parent: 'outer' }))
+      .rejects.toMatchObject({ code: 'nested-publications' });
+    await expect(bridge.editGroupMetadata({ groupId: 'inner', kind: 'forum', parent: 'outer' }))
+      .rejects.toMatchObject({ code: 'nested-publications' });
+    expect(fake.state.published).toHaveLength(before);
+
+    deliver(await fakeRelayMetadataWithExtraTags({
+      groupId: 'inner',
+      name: 'Legacy publications',
+      parent: 'outer',
+      extraTags: [['t', 'forum']],
+    }));
+    await flush();
+    await expect(bridge.editGroupMetadata({ groupId: 'inner', kind: 'forum', parent: 'other' }))
+      .rejects.toMatchObject({ code: 'nested-publications' });
+    await bridge.editGroupMetadata({ groupId: 'inner', kind: 'forum', parent: 'outer', name: 'Renamed' });
+    expect(fake.state.published.at(-1)?.tags).toContainEqual(['parent', 'outer']);
+  });
+
   it('createGroup with topics emits one [topic,id] tag per entry on kind 9002', async () => {
     const { getBridge } = await import('@/services/nostr-bridge/facade/client');
     const { skHex, pkHex } = makeKeypair();

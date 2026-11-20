@@ -1,3 +1,4 @@
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useNotificationsStore } from '@/store/notifications';
 import { useReadStateStore } from '@/store/read-state';
@@ -14,7 +15,7 @@ describe('markInboxStreamRead', () => {
     useReadStateStore.setState({ markAllAsRead } as never);
     markInboxStreamRead('mentions', { relay: 'wss://r', groupIds: ['g'], peers: ['p'] });
     expect(markMentionsRead).toHaveBeenCalledWith('wss://r');
-    expect(markAllAsRead).toHaveBeenCalledWith([], ['g']);
+    expect(markAllAsRead).toHaveBeenCalledWith([], [relayChannelKey('wss://r', 'g')], false);
   });
 
   it('skips the mention cursor with no relay', () => {

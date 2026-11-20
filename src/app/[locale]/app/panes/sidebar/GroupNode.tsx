@@ -1,5 +1,6 @@
 'use client';
 
+import { Fragment } from 'react';
 import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import type { JsGroup } from '@/services/nostr-bridge';
@@ -25,6 +26,7 @@ export function GroupNode({
   view,
   onSelect,
   distanceById,
+  recentSubchannelIds,
 }: {
   group: JsGroup;
   depth: number;
@@ -32,11 +34,15 @@ export function GroupNode({
   groupsById: Readonly<Record<string, JsGroup>>;
   view: View;
   onSelect: (id: string) => void;
+  recentSubchannelIds?: ReadonlySet<string>;
   distanceById?: Readonly<Record<string, number | null>>;
 }) {
   const t = useTranslations();
-  const vm = useGroupNode({ group, view, depth, childrenByParent, groupsById, distanceById });
-  const childProps = { depth: depth + 1, childrenByParent, groupsById, view, onSelect, distanceById };
+  const vm = useGroupNode({ group, view, depth, childrenByParent, groupsById, distanceById, recentSubchannelIds });
+  const expandLabel = recentSubchannelIds
+    ? t(vm.collapsed ? 'common.subchannels.showAll' : 'common.subchannels.showRecent')
+    : t(vm.collapsed ? 'shell.desktop.channels.expandPublications' : 'shell.desktop.channels.collapsePublications');
+  const childProps = { depth: depth + 1, childrenByParent, groupsById, view, onSelect, distanceById, recentSubchannelIds };
   return (
     <>
       <div
@@ -97,8 +103,9 @@ export function GroupNode({
             variant="bare"
             onClick={vm.toggleCollapsed}
             className="flex shrink-0 items-center justify-center px-2 py-1.5 text-lc-white/70 hover:text-lc-green"
-            aria-label={vm.collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
-            title={vm.collapsed ? t('shell.desktop.channels.expandPublications') : t('shell.desktop.channels.collapsePublications')}
+            aria-label={expandLabel}
+            aria-expanded={!vm.collapsed}
+            title={expandLabel}
           >
             <ChevronRightIcon size={null} strokeWidth={2.5} className={`h-3.5 w-3.5 transition-transform duration-150 ${vm.collapsed ? '' : 'rotate-90'}`} />
           </Button>
@@ -107,19 +114,25 @@ export function GroupNode({
       {(group.kind === 'voice' || group.kind === 'voice-sfu') && group.isPublic && !group.isHidden && (
         <div style={{ paddingLeft: vm.indent }}><PublicCallPreview groupId={group.id} menu /></div>
       )}
-      {!vm.collapsed && (group.kind === 'forum' ? (
+      {(!vm.collapsed || recentSubchannelIds) && (group.kind === 'forum' && vm.children.length > 0 ? (
         // Forum threads get the Discord-style L-rail treatment: wrap them in
         // .lc-forum-threads so each row's ::before/::after can paint a
         // continuous vertical rail terminating in an L-corner at the last row.
         <div className="lc-forum-threads">
-          {vm.children.map((child) => (
-            <ForumThreadRow key={child.id} groupId={child.id}>
-              <GroupNode group={child} {...childProps} />
-            </ForumThreadRow>
+          {vm.children.map(({ child, showAsChannel }) => (
+            <Fragment key={child.id}>
+              {showAsChannel ? (
+                <GroupNode group={child} {...childProps} />
+              ) : (
+                <ForumThreadRow groupId={child.id}>
+                  <GroupNode group={child} {...childProps} />
+                </ForumThreadRow>
+              )}
+            </Fragment>
           ))}
         </div>
       ) : (
-        vm.children.map((child) => <GroupNode key={child.id} group={child} {...childProps} />)
+        vm.descendants.map((row) => <GroupNode key={row.group.id} group={row.group} {...childProps} depth={row.depth} />)
       ))}
     </>
   );

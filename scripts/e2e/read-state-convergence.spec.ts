@@ -6,7 +6,7 @@
  *
  * Method:
  *   1. Open context A, log in, click into a channel; `useAutoMarkRead`
- *      advances `groupCursors[groupId]` to the latest message's ts.
+ *      advances the relay-scoped group cursor to the latest message timestamp.
  *   2. After ~65s (one-minute batch + relay grace), context B (same nsec, fresh
  *      browser context) reads its persisted store and observes the
  *      advanced cursor.

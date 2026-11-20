@@ -1,3 +1,5 @@
+import { useChannelPrefsStore } from '@/store/chat/channel-prefs';
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { BridgeImpl } from '@/services/nostr-bridge/facade/client';
 import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
@@ -30,7 +32,11 @@ const getNipSignerMock = vi.fn();
 
 // The page bridge is a registered fake: the real client module, no mock of it.
 const bridgeFake = {
-    subscribeFilterWatched: subscribeMock,
+    subscribeFilterWatched: (...args: Parameters<typeof subscribeMock>) => {
+      const stop = subscribeMock(...args);
+      (args[2] as { onEose?: () => void } | undefined)?.onEose?.();
+      return stop;
+    },
     publishEvent: publishMock,
     publishSignedEvent: publishSignedMock,
     getNipSigner: getNipSignerMock,
@@ -155,7 +161,7 @@ describe('startGroupsRelaySync ingest', () => {
       authors: [signer.pubkey],
       '#d': [D_TAG_GROUPS],
     });
-    expect(newOpts).toEqual({ relays: ['wss://relay.test'], watchdogMs: READ_STATE_WATCHDOG_MS });
+    expect(newOpts).toEqual({ relays: ['wss://relay.test'], relayMode: 'replace', watchdogMs: READ_STATE_WATCHDOG_MS, onEose: expect.any(Function) });
 
     const [legacyFilter] = subscribeMock.mock.calls[1];
     expect(legacyFilter).toEqual({ kinds: [1059], '#p': [signer.pubkey] });
@@ -203,9 +209,9 @@ describe('startGroupsRelaySync ingest', () => {
     await Promise.resolve();
 
     const cursors = useReadStateStore.getState().groupCursors;
-    expect(cursors['g1']).toBe(5000);
-    expect(cursors['g2']).toBe(10_000);
-    expect(cursors['g3']).toBeUndefined();
+    expect(cursors[relayChannelKey('wss://relay.test', 'g1')]).toBe(5000);
+    expect(cursors[relayChannelKey('wss://relay.test', 'g2')]).toBe(10_000);
+    expect(cursors[relayChannelKey('wss://relay.test', 'g3')]).toBeUndefined();
   });
 
   it('leaves a wrap unopened while DMs are locked, and opens it once they are', async () => {
@@ -228,13 +234,13 @@ describe('startGroupsRelaySync ingest', () => {
       onEvent!(wrap);
       await vi.runOnlyPendingTimersAsync();
       expect(decrypt).not.toHaveBeenCalled();
-      expect(useReadStateStore.getState().groupCursors.g1).toBeUndefined();
+      expect(useReadStateStore.getState().groupCursors[relayChannelKey('wss://relay.test', 'g1')]).toBeUndefined();
 
       waiting.forEach((fn) => fn());
       await vi.runOnlyPendingTimersAsync();
       await Promise.resolve();
       expect(decrypt).toHaveBeenCalled();
-      expect(useReadStateStore.getState().groupCursors.g1).toBe(7000);
+      expect(useReadStateStore.getState().groupCursors[relayChannelKey('wss://relay.test', 'g1')]).toBe(7000);
     } finally {
       fake.deferUntilDmsUnlocked = real;
     }
@@ -299,8 +305,8 @@ describe('startGroupsRelaySync ingest', () => {
     await settle();
 
     const cursors = useReadStateStore.getState().groupCursors;
-    expect(cursors['g1']).toBe(7000);
-    expect(cursors['g3']).toBeUndefined();
+    expect(cursors[relayChannelKey('wss://relay.test', 'g1')]).toBe(7000);
+    expect(cursors[relayChannelKey('wss://relay.test', 'g3')]).toBeUndefined();
   });
 
   it('a 30078 written after a legacy wrap wins, and vice versa', async () => {
@@ -316,7 +322,7 @@ describe('startGroupsRelaySync ingest', () => {
       created_at: base - 60,
     }, signer));
     await settle();
-    expect(useReadStateStore.getState().groupCursors['g1']).toBe(100);
+    expect(useReadStateStore.getState().groupCursors[relayChannelKey('wss://relay.test', 'g1')]).toBe(100);
 
     // Newer 30078 supersedes it.
     handlers[30078]!(finalizeEvent({
@@ -329,7 +335,7 @@ describe('startGroupsRelaySync ingest', () => {
       created_at: base,
     }, generateSecretKey()) as NostrEvent);
     await settle();
-    expect(useReadStateStore.getState().groupCursors['g1']).toBe(900);
+    expect(useReadStateStore.getState().groupCursors[relayChannelKey('wss://relay.test', 'g1')]).toBe(900);
 
     // A legacy wrap that is OLDER than what we already applied must not
     // resurrect a stale cursor. Cursors are monotonic, so the store keeps the
@@ -341,7 +347,7 @@ describe('startGroupsRelaySync ingest', () => {
       created_at: base - 120,
     }, signer));
     await settle();
-    expect(useReadStateStore.getState().groupCursors['g1']).toBe(900);
+    expect(useReadStateStore.getState().groupCursors[relayChannelKey('wss://relay.test', 'g1')]).toBe(900);
   });
 
   it('drops wraps whose inner d-tag does not match (e.g. DM-scope wraps)', async () => {
@@ -393,7 +399,7 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     let approve!: (value: string) => void;
     const encrypt = vi.spyOn(signer, 'nip44Encrypt').mockImplementationOnce(() => new Promise((resolve) => { approve = resolve; }));
     const stop = startGroupsRelaySync('wss://relay.test', ['g1']);
-    useReadStateStore.getState().setGroupCursor('g1', 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
     await vi.advanceTimersByTimeAsync(60_000);
     window.dispatchEvent(new Event('pagehide'));
     stop();
@@ -408,9 +414,9 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     const encrypt = vi.spyOn(signer, 'nip44Encrypt').mockImplementationOnce(() => new Promise((resolve) => { approve = resolve; }));
     const stop = startGroupsRelaySync('wss://relay.test', ['g1']);
     activeCleanups.push(stop);
-    useReadStateStore.getState().setGroupCursor('g1', 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
     await vi.advanceTimersByTimeAsync(60_000);
-    useReadStateStore.getState().setGroupCursor('g1', 200);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 200);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(encrypt).toHaveBeenCalledTimes(1);
     approve('encrypted');
@@ -425,7 +431,7 @@ describe('startGroupsRelaySync publish (debounced)', () => {
   it('does not postpone a batch when messages keep arriving', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
     for (let i = 1; i <= 6; i++) {
-      useReadStateStore.getState().setGroupCursor('g1', i * 100);
+      useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), i * 100);
       await vi.advanceTimersByTimeAsync(10_000);
     }
     expect(publishMock).toHaveBeenCalledTimes(1);
@@ -435,7 +441,7 @@ describe('startGroupsRelaySync publish (debounced)', () => {
 
   it('resumes unsynced cursors after remount without a new incoming message', async () => {
     const stop = startGroupsRelaySync('wss://relay.test', ['g1']);
-    useReadStateStore.getState().setGroupCursor('g1', 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
     stop();
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
     await vi.advanceTimersByTimeAsync(60_000);
@@ -451,7 +457,7 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     await vi.advanceTimersByTimeAsync(60_000);
     expect(publishMock).not.toHaveBeenCalled();
     const decrypt = vi.spyOn(signer, 'nip44Decrypt');
-    useReadStateStore.getState().setGroupCursor('g1', 200);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 200);
     // Deliver an echo before the publisher's promise finishes.
     publishMock.mockImplementationOnce(async (event) => { await onEvent({ ...event, id: 'own-echo', pubkey: signer.pubkey }); });
     await vi.advanceTimersByTimeAsync(60_000);
@@ -461,16 +467,40 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     expect(publishMock).toHaveBeenCalledTimes(1);
   });
 
+  it('repairs a newer replaceable snapshot that omits an acknowledged channel', async () => {
+    activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1', 'g2']));
+    const onEvent = subscribeMock.mock.calls[0][1];
+    const now = Math.floor(Date.now() / 1000);
+    for (const [createdAt, groups, follows] of [
+      [now - 2, { g1: { lastReadAt: 100 } }, { g1: 101 }],
+      [now - 1, { g2: { lastReadAt: 200 } }, { g2: 1 }],
+    ] as const) {
+      await onEvent(finalizeEvent({
+        kind: 30078,
+        tags: [['d', D_TAG_GROUPS]],
+        content: await signer.nip44Encrypt(signer.pubkey, JSON.stringify({ v: 1, groups, follows })),
+        created_at: createdAt,
+      }, generateSecretKey()));
+    }
+    expect(useReadStateStore.getState().groupCursors[relayChannelKey('wss://relay.test', 'g1')]).toBe(100);
+    await vi.advanceTimersByTimeAsync(60_000);
+    const [event] = publishMock.mock.calls[0];
+    const payload = JSON.parse(await signer.nip44Decrypt(signer.pubkey, event.content));
+    expect(payload.groups).toEqual({ g1: { lastReadAt: 100 }, g2: { lastReadAt: 200 } });
+    expect(payload.follows).toEqual({ g1: 101, g2: 1 });
+    useChannelPrefsStore.getState().reset();
+  });
+
   it('persists rejection backoff across remounts and new messages', async () => {
     const encrypt = vi.spyOn(signer, 'nip44Encrypt').mockRejectedValueOnce(new Error('denied'));
     const stop = startGroupsRelaySync('wss://relay.test', ['g1']);
-    useReadStateStore.getState().setGroupCursor('g1', 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(encrypt).toHaveBeenCalledTimes(1);
     stop();
     await useReadStateStore.persist.rehydrate();
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
-    useReadStateStore.getState().setGroupCursor('g1', 200);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 200);
     await vi.advanceTimersByTimeAsync(299_999);
     expect(encrypt).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1);
@@ -481,7 +511,7 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     let approve!: (value: string) => void;
     const encrypt = vi.spyOn(signer, 'nip44Encrypt').mockImplementationOnce(() => new Promise((resolve) => { approve = resolve; }));
     const stop = startGroupsRelaySync('wss://relay.test', ['g1']);
-    useReadStateStore.getState().setGroupCursor('g1', 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
     await vi.advanceTimersByTimeAsync(60_000);
     stop();
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
@@ -494,17 +524,17 @@ describe('startGroupsRelaySync publish (debounced)', () => {
 
   it('does not publish before the 60s window elapses', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
-    useReadStateStore.getState().setGroupCursor('g1', 100);
-    useReadStateStore.getState().setGroupCursor('g1', 200);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 200);
     await vi.advanceTimersByTimeAsync(4_000);
     expect(publishMock).not.toHaveBeenCalled();
   });
 
   it('publishes once after 60s as a replaceable 30078, not a gift wrap', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1', 'g2']));
-    useReadStateStore.getState().setGroupCursor('g1', 100);
-    useReadStateStore.getState().setGroupCursor('g2', 200);
-    useReadStateStore.getState().setGroupCursor('g1', 150);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g2'), 200);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 150);
     await vi.advanceTimersByTimeAsync(60_000);
     await Promise.resolve();
     await Promise.resolve();
@@ -531,7 +561,7 @@ describe('startGroupsRelaySync publish (debounced)', () => {
 
   it('the published 30078 decrypts back to the cursors', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
-    useReadStateStore.getState().setGroupCursor('g1', 4242);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 4242);
     await vi.advanceTimersByTimeAsync(60_000);
     await Promise.resolve();
     await Promise.resolve();
@@ -545,14 +575,14 @@ describe('startGroupsRelaySync publish (debounced)', () => {
   it('skips publish when no in-scope cursor has advanced', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
     // Out-of-scope group, should not trigger
-    useReadStateStore.getState().setGroupCursor('g999', 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g999'), 100);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(publishMock).not.toHaveBeenCalled();
   });
 
   it('cleanup preserves pending cursors without starting signer work', async () => {
     const cleanup = startGroupsRelaySync('wss://relay.test', ['g1']);
-    useReadStateStore.getState().setGroupCursor('g1', 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
     // Half a debounce window: flush would normally still be pending.
     await vi.advanceTimersByTimeAsync(4_000);
     expect(publishMock).not.toHaveBeenCalled();
@@ -560,12 +590,12 @@ describe('startGroupsRelaySync publish (debounced)', () => {
     // Teardown must not initiate encryption or publication.
     for (let i = 0; i < 8; i++) await Promise.resolve();
     expect(publishMock).not.toHaveBeenCalled();
-    expect(useReadStateStore.getState().groupCursors.g1).toBe(100);
+    expect(useReadStateStore.getState().groupCursors[relayChannelKey('wss://relay.test', 'g1')]).toBe(100);
   });
 
   it('cleanup is a no-op when nothing has changed since the last publish', async () => {
     const cleanup = startGroupsRelaySync('wss://relay.test', ['g1']);
-    useReadStateStore.getState().setGroupCursor('g1', 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
     await vi.advanceTimersByTimeAsync(60_000);
     for (let i = 0; i < 8; i++) await Promise.resolve();
     expect(publishMock).toHaveBeenCalledTimes(1);
@@ -578,7 +608,7 @@ describe('startGroupsRelaySync publish (debounced)', () => {
 
   it('visibilitychange to hidden does not request a signature', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
-    useReadStateStore.getState().setGroupCursor('g1', 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
     await vi.advanceTimersByTimeAsync(2_000);
     expect(publishMock).not.toHaveBeenCalled();
 
@@ -598,7 +628,7 @@ describe('startGroupsRelaySync publish (debounced)', () => {
 
   it('pagehide does not request a signature', async () => {
     activeCleanups.push(startGroupsRelaySync('wss://relay.test', ['g1']));
-    useReadStateStore.getState().setGroupCursor('g1', 100);
+    useReadStateStore.getState().setGroupCursor(relayChannelKey('wss://relay.test', 'g1'), 100);
     await vi.advanceTimersByTimeAsync(2_000);
     expect(publishMock).not.toHaveBeenCalled();
 
@@ -638,8 +668,8 @@ describe('startDMRelaySync', () => {
   it('subscribes on each NIP-65 relay', () => {
     activeCleanups.push(startDMRelaySync(['wss://a.test', 'wss://b.test']));
     expect(subscribeMock).toHaveBeenCalledTimes(2);
-    expect(subscribeMock.mock.calls[0][2]).toEqual({ relays: ['wss://a.test'], watchdogMs: READ_STATE_WATCHDOG_MS });
-    expect(subscribeMock.mock.calls[1][2]).toEqual({ relays: ['wss://b.test'], watchdogMs: READ_STATE_WATCHDOG_MS });
+    expect(subscribeMock.mock.calls[0][2]).toEqual({ relays: ['wss://a.test'], relayMode: 'replace', watchdogMs: READ_STATE_WATCHDOG_MS });
+    expect(subscribeMock.mock.calls[1][2]).toEqual({ relays: ['wss://b.test'], relayMode: 'replace', watchdogMs: READ_STATE_WATCHDOG_MS });
   });
 
   it('publishes a DM-scope wrap pre-signed, preserving the ephemeral author', async () => {

@@ -14,16 +14,17 @@ type Props = {
   laidOut: LaidOutSidebar;
   groupsById: Readonly<Record<string, JsGroup>>;
   childrenByParent: Readonly<Record<string, ReadonlyArray<string>>>;
+  recentSubchannelIds?: ReadonlySet<string>;
   view: View;
   onSelect: (groupId: string) => void;
   distanceById: Readonly<Record<string, number | null>>;
 };
 
 /** The operator's categories with their channels, then whatever no category claims. */
-export function ChannelTree({ laidOut, groupsById, childrenByParent, view, onSelect, distanceById }: Props) {
+export function ChannelTree({ laidOut, groupsById, childrenByParent, recentSubchannelIds, view, onSelect, distanceById }: Props) {
   const t = useTranslations();
   const vm = useChannelTree(laidOut, groupsById);
-  const nodeProps = { depth: 0, childrenByParent, groupsById, view, onSelect, distanceById };
+  const nodeProps = { depth: 0, childrenByParent, groupsById, recentSubchannelIds, view, onSelect, distanceById };
   return (
     <>
       {vm.categories.map((cat) => (

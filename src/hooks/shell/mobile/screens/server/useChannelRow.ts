@@ -15,8 +15,9 @@ const LONG_PRESS_MS = 500;
  * press does not also open the channel. Voice channels, and rows with no
  * relay yet, have no menu.
  */
-export function useChannelRow(group: JsGroup) {
+export function useChannelRow(group: JsGroup, subchannel?: boolean) {
   const relay = useCurrentRelayUrl();
+  const pref = useChannelPref(relay, group.id);
   const myPubkey = useMyPubkey();
   const highlights = useCachedChannelHighlights(group.id, myPubkey);
   const mentionCards = useUnreadMentionCardsForChannel(relay, group.id);
@@ -33,6 +34,7 @@ export function useChannelRow(group: JsGroup) {
       relay,
       channelId: group.id,
       name: group.name ?? group.id.slice(0, 8),
+      canFollow: !!subchannel || !!pref.unfollowed,
       hasUnread: highlights.unread > 0 || mentionCards > 0,
     },
     menuOpen,

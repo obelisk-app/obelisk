@@ -1,3 +1,4 @@
+import { useChannelPrefsStore } from '@/store/chat/channel-prefs';
 /**
  * Sending to a channel (round 4 plan, step 14): the optimistic placeholder,
  * the kind 9 publish with its NIP-27 `p` tags, the retry that replays the
@@ -115,6 +116,7 @@ export class MessageSend {
       assertCurrent();
       // A relay ACK proves local activity even when no subscription echoes it.
       recordMemberActivity(relay, event.pubkey, Date.now() / 1000);
+      useChannelPrefsStore.getState().recordActivity(relay, groupId, event.created_at, true);
       this.replacePending(groupId, clientTag, event);
     } catch {
       if (isCurrent()) this.markFailed(groupId, clientTag);

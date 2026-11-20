@@ -13,15 +13,17 @@
  * separation lets one hook serve both mobile and desktop without coupling.
  */
 
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { useEffect } from 'react';
 import { useMyPubkey } from '@/hooks/session/useSession';
-import { useDirectMessages, useMessages } from '@/services/nostr-bridge';
+import { useCurrentRelayUrl, useDirectMessages, useMessages } from '@/services/nostr-bridge';
 import { useDMStore } from '@/store/chat/dm';
 import { useChatStore } from '@/store/chat';
 import { useReadStateStore } from '@/store/read-state';
 import { isUserWatchingChannel, isUserWatchingDM } from '@/services/read-state/read-gates';
 
 export function useAutoMarkRead(): void {
+  const relay = useCurrentRelayUrl();
   const ownPubkey = useMyPubkey();
   const activeDm = useDMStore((s) => s.activeDMPubkey);
   const activeChannel = useChatStore((s) => s.activeChannelId);
@@ -62,7 +64,7 @@ export function useAutoMarkRead(): void {
 
   // ── Channel cursor advance ─────────────────────────────────────────
   useEffect(() => {
-    if (!activeChannel) return;
+    if (!activeChannel || !relay) return;
 
     const advance = () => {
       if (!isUserWatchingChannel(activeChannel)) return;
@@ -72,7 +74,7 @@ export function useAutoMarkRead(): void {
       if (!latest) return;
       const latestSec = latest.createdAt;
       const tsMs = latestSec * 1000;
-      useReadStateStore.getState().setGroupCursor(activeChannel, tsMs);
+      useReadStateStore.getState().setGroupCursor(relayChannelKey(relay, activeChannel), tsMs);
     };
 
     advance();
@@ -87,5 +89,5 @@ export function useAutoMarkRead(): void {
       window.removeEventListener('focus', advance);
       window.removeEventListener('blur', advance);
     };
-  }, [activeChannel, channelMessages, isNearBottom, ownPubkey]);
+  }, [activeChannel, channelMessages, isNearBottom, ownPubkey, relay]);
 }

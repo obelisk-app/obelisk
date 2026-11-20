@@ -9,6 +9,7 @@ import { useMentionSeen } from './useMentionSeen';
 import { useReadyToSync } from './useReadyToSync';
 import { useFaviconBadge } from '@/hooks/notifications/useFaviconBadge';
 import { armNotificationPermissionPrompt } from '@/services/notifications/permission-prompt';
+import { startLocalCursorSync } from '@/services/read-state/local-cursors';
 import { ensureReadStateAccount } from '@/services/read-state/account-stores';
 import { startGroupsRelaySync } from '@/services/read-state/relay-sync';
 import { startAccountDmSync } from '@/services/read-state/account-dm-sync';
@@ -25,7 +26,9 @@ export function useReadStateRuntime(): void {
   const groupIds = useKeyedValue(ids, JSON.stringify(ids));
 
   useEffect(() => {
-    if (myPubkey) ensureReadStateAccount(myPubkey);
+    if (!myPubkey) return;
+    ensureReadStateAccount(myPubkey);
+    return startLocalCursorSync(myPubkey);
   }, [myPubkey]);
 
   useEffect(() => {

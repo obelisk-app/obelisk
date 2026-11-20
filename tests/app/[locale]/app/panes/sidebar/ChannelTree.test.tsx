@@ -1,3 +1,4 @@
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 /**
  * The desktop channel tree: categories that fold, the rows and their
  * markers, publications with their thread rail, and the right-click menu.
@@ -116,7 +117,7 @@ describe('ChannelTree rows', () => {
 
   it('counts unread messages and mentions on a channel that is not open, but not on the open one', async () => {
     // Cursor 1 ms: every message counts as unread, with no clock involved.
-    useReadStateStore.setState({ groupCursors: { g1: 1, g2: 1 } });
+    useReadStateStore.setState({ groupCursors: { [relayChannelKey(BRIDGE_MOCK_RELAY, 'g1')]: 1, [relayChannelKey(BRIDGE_MOCK_RELAY, 'g2')]: 1 } });
     const messages = Array.from({ length: 3 }, (_, i) => messageFixture({ id: `u${i}`, pubkey: OTHER, createdAt: 100 + i, mentions: i === 0 ? [BRIDGE_MOCK_PUBKEY] : [] }));
     mount({ seed: { messagesByGroup: { g1: messages, g2: messages } } });
     await act(async () => {});

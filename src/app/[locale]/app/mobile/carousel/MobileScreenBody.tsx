@@ -85,7 +85,7 @@ export function MobileScreenBody({ nav, p }: { nav: NavState; p: MobileScreenPro
       return <SearchScreen back={() => p.go('server', 'back')} selectGroup={p.selectGroup} />;
     case 'forum':
       return nav.groupId ? (
-        <ForumScreen groupId={nav.groupId} back={() => p.go('server', 'back')} selectChild={(childId) => p.selectGroup(childId, 'text')} />
+        <ForumScreen groupId={nav.groupId} back={() => p.go('server', 'back')} selectChild={p.selectGroup} />
       ) : <EmptyScreen go={p.go} title={p.t('mobile.empty.noForum')} />;
     case 'settings-profile':
       return <SettingsProfileScreen go={p.go} />;

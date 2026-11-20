@@ -19,13 +19,13 @@ export default function ToggleCard({ active, icon, title, subtitle, className, .
       type="button"
       aria-pressed={active}
       className={cn(
-        'flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
+        'flex min-w-0 items-start gap-3 whitespace-normal rounded-xl border px-3 py-2.5 text-left transition-colors',
         active ? 'border-lc-green bg-lc-green/10 text-lc-white' : 'border-lc-border bg-lc-black hover:border-lc-muted text-lc-white/80',
         className,
       )}
     >
-      {icon && <div aria-hidden="true" className="text-xl leading-none">{icon}</div>}
-      <div className="min-w-0 flex-1">
+      {icon && <div aria-hidden="true" className="shrink-0 text-xl leading-none">{icon}</div>}
+      <div className="min-w-0 flex-1 wrap-anywhere">
         <Text as="div" size="sm" weight="semibold">{title}</Text>
         {subtitle && <Text as="div" size="11" tone="muted">{subtitle}</Text>}
       </div>

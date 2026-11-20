@@ -1,14 +1,15 @@
+import { useChannelPrefsStore } from '@/store/chat/channel-prefs';
 /**
  * The write half of the read-state sync: watch the stores for changes that
  * affect one scope and batch durable snapshots while the page is visible. See `relay-sync.ts` for why the two scopes
  * use different transports and the two traps the gift-wrap branch avoids.
  */
-import { getBridgeImpl, cacheSet, markWrapSeen } from '@/services/nostr-bridge';
+import { getBridgeImpl, cacheGet, cacheSet, markWrapSeen } from '@/services/nostr-bridge';
 import { wrapForSelf } from '@/services/read-state/gift-wrap';
 import { useReadStateStore } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
 import { KIND_NIP78_APP_DATA as KIND_INNER } from '@/constants/nostr/nip-kinds';
-import { cacheKindFor, syncScopeKey, type SyncOptions } from './sync-options';
+import { cacheKindFor, syncCacheId, syncScopeKey, type SyncOptions } from './sync-options';
 import { DEBOUNCE_MS, SYNC_RETRY_BASE_MS, SYNC_RETRY_MAX_MS } from '@/constants/read-state/sync-options';
 
 import { parseSyncCursors } from '@/schemas/read-state/sync-cursors';
@@ -24,11 +25,11 @@ type Signer = NonNullable<ReturnType<BridgeImpl['getNipSigner']>>;
  * Publish this scope's current state once. Throws on publish failure; the
  * caller treats that as best-effort.
  */
-async function publishState(impl: BridgeImpl, signer: Signer, opts: SyncOptions, payload: unknown, createdAt: number): Promise<void> {
+async function publishState(impl: BridgeImpl, signer: Signer, opts: SyncOptions, payload: unknown, createdAt: number, assertCurrent: () => void): Promise<void> {
   if (opts.transport === 'replaceable') {
     const plaintext = JSON.stringify(payload);
     const content = await signer.nip44Encrypt(signer.pubkey, plaintext);
-    if (impl.getNipSigner('background')?.pubkey !== signer.pubkey) return;
+    assertCurrent();
     // The echo contains exactly the plaintext we just encrypted. Reuse the
     // existing account-cleared decrypt memo before any relay can echo it.
     await memoizeDecrypt('nip44', signer.pubkey, content, async () => plaintext);
@@ -50,7 +51,7 @@ async function publishState(impl: BridgeImpl, signer: Signer, opts: SyncOptions,
     { kind: KIND_INNER, tags: [['d', opts.dTag]], content: JSON.stringify(payload), created_at: createdAt },
     signer,
   );
-  if (impl.getNipSigner('background')?.pubkey !== signer.pubkey) return;
+  assertCurrent();
   markWrapSeen('readstate:groups', wrap.id);
   markWrapSeen('readstate:dms', wrap.id);
   markWrapSeen('dm:inert', wrap.id);
@@ -76,7 +77,21 @@ export function watchAndPublish(
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let fingerprint = selectFingerprint();
-  const isCurrent = () => impl.getNipSigner('background')?.pubkey === owner;
+  const assertSession = impl.captureSessionGuard?.();
+  const relayAtStart = impl.currentRelayUrl?.get();
+  const isCurrent = () => {
+    if (getBridgeImpl() !== impl || impl.getNipSigner('background')?.pubkey !== owner) return false;
+    if (opts.transport === 'replaceable' && relayAtStart !== impl.currentRelayUrl?.get()) return false;
+    try {
+      assertSession?.();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const assertCurrent = () => {
+    if (!isCurrent()) throw new DOMException('Read-state scope changed', 'AbortError');
+  };
   const isVisible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
   const dirtyPayload = () => {
     const payload = buildPayload();
@@ -99,15 +114,24 @@ export function watchAndPublish(
     const payload = dirtyPayload();
     const signer = impl.getNipSigner('background');
     if (!payload || !signer) return;
-    const createdAt = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / 1000);
+    const cacheId = syncCacheId(opts, owner);
+    const cacheKind = cacheKindFor(opts.transport);
+    const knownGroupHead = () => opts.transport === 'replaceable'
+      ? cacheGet<{ createdAt: number }>(opts.cacheNamespace, cacheKind, cacheId)?.value.createdAt ?? 0
+      : 0;
+    const createdAt = Math.max(now, knownGroupHead() + 1);
     pending.add(scope);
     state.scheduleSync(scope, Date.now() + DEBOUNCE_MS, state.syncProgress[scope]?.failures ?? 0);
     try {
-      await publishState(impl, signer, opts, payload, createdAt);
+      await publishState(impl, signer, opts, payload, createdAt, assertCurrent);
       if (!isCurrent()) return;
-      useReadStateStore.getState().acknowledgeSync(scope, parseSyncCursors(payload));
+      // A competing snapshot may have arrived during signer approval.
+      if (knownGroupHead() <= createdAt) {
+        useReadStateStore.getState().acknowledgeSync(scope, parseSyncCursors(payload));
+        for (const relay of opts.relays) cacheSet(relay, cacheKind, cacheId, { payload, createdAt });
+      }
       useReadStateStore.getState().scheduleSync(scope, Date.now() + DEBOUNCE_MS, 0);
-      for (const relay of opts.relays) cacheSet(relay, cacheKindFor(opts.transport), opts.dTag, { payload, createdAt });
     } catch {
       if (!isCurrent()) return;
       const failures = Math.min(10, (useReadStateStore.getState().syncProgress[scope]?.failures ?? 0) + 1);
@@ -124,7 +148,10 @@ export function watchAndPublish(
     fingerprint = next;
     schedule();
   };
-  const unsubs = [useReadStateStore.subscribe(onChange), useNotificationsStore.subscribe(onChange)];
+  const unsubs = [useReadStateStore.subscribe((next, previous) => {
+    if (next.syncProgress[scope]?.acknowledged !== previous.syncProgress[scope]?.acknowledged) schedule();
+    onChange();
+  }), useNotificationsStore.subscribe(onChange), useChannelPrefsStore.subscribe(onChange)];
   const onVisibility = () => {
     if (!isVisible() && timer) { clearTimeout(timer); timer = null; }
     if (isVisible()) schedule();

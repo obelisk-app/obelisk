@@ -1,3 +1,4 @@
+import { LOCAL_READ_CURSOR_DB } from '@/constants/read-state/sync-options';
 import { describe, expect, it } from 'vitest';
 import { VAULT_DB } from '@/lib/crypto/session-vault';
 import { CONCORD_DB } from '@/constants/nostr-bridge/concord';
@@ -56,8 +57,9 @@ describe('local-data inventory', () => {
     expect(isReadStateCacheKey(`${relay}/30078/obelisk:readstate:v2`)).toBe(false);
   });
 
-  it('names the vault database, the DM store, the offline caches and the language cookie the code uses', () => {
-    expect(LOCAL_DATA.filter((e) => e.area === 'indexedDB').map((e) => e.key)).toEqual([CONCORD_DB, VAULT_DB, DM_STORE_DB]);
+  it('names the vault, DM and read cursor databases with the offline cache and language cookie', () => {
+    expect(LOCAL_DATA.filter((e) => e.area === 'indexedDB').map((e) => e.key)).toEqual(expect.arrayContaining([CONCORD_DB, VAULT_DB, DM_STORE_DB, LOCAL_READ_CURSOR_DB]));
+    expect(entryForKey('indexedDB', LOCAL_READ_CURSOR_DB)?.category).toBe('readState');
     expect(entryForKey('indexedDB', DM_STORE_DB)?.category).toBe('dmMessages');
     expect(LOCAL_DATA.filter((e) => e.area === 'cookie').map((e) => e.key)).toEqual([LOCALE_COOKIE, '_ga', '_ga_']);
     expect(entryForKey('cacheStorage', 'obelisk-v9-localized-shell-cache:static')?.category).toBe('offline');

@@ -54,7 +54,7 @@ subscribes on each device so cursors converge via monotonic `max()` merge.
 ```ts
 interface ReadStateStore {
   dmCursors: Record<peerHex, tsMs>;      // unix ms; only advances
-  groupCursors: Record<groupId, tsMs>;   // unix ms; only advances
+  groupCursors: Record<relayAndGroupId, tsMs>;   // unix ms; only advances
   inboxLastReadAt: number;               // DM-notification cursor, unix ms
   // ...
   applyRemoteState(remote: RemoteReadState): void;
@@ -410,16 +410,40 @@ src/app/[locale]/app/AppGate.tsx
 |---|---|---|
 | Per-user cursors | `obelisk-read-state:{myPubkey}` | Zustand `persist` + `ensureReadStateStoreForAccount` |
 | Notification cards + mention cursors | `obelisk-notifications:{myPubkey}` | Zustand `persist` + `ensureNotificationsStoreForAccount` |
-| Relay-derived metadata + state-event cache | `obelisk-cache-v4/{relay}/1059/{dTag}` | `bridgeCache` |
+| Relay-derived metadata + state-event cache | `obelisk-cache-v4/{relay}/{kind}/{dTag}:{pubkey}` | `bridgeCache` |
 | UI-only flags | `obelisk-dex/{namespace}/{id}` | direct `localStorage` |
 
 ## 11. Cross-tab sync
 
-Two tabs on the same account converge automatically:
+The previous implementation persisted whole Zustand snapshots. It had no
+storage listener and used bare group IDs, so another tab could keep a stale
+cursor or overwrite a newer snapshot, and matching IDs on different relays
+shared a cursor.
 
-- Zustand `persist` writes to localStorage on every state change; other
-  tabs receive a `storage` event and rehydrate.
-- Cursors are monotonic, so the `max()` merge is conflict-free.
+The account-scoped IndexedDB mirror transactionally merges cursor advances,
+mention dismissals and recent per-card seen markers. A BroadcastChannel
+notification tells other tabs to re-read the committed values. Login and
+restore hydrate the local cursors before opening the chat shell, and tabs
+reconcile with disk when foregrounded. The localStorage snapshot remains
+available for account hydration and existing sync checkpoints. Legacy group
+cursor keys have no relay identity, so relay-scoped snapshots restore known
+values without applying ambiguous cursor values to other relays.
+
+Groups wait for the initial replaceable snapshot to finish loading before
+publishing. If a newer replaceable event omits a known value, the local
+cursor stays advanced and the merged snapshot is queued for another batch.
+
+### Recent followed channels
+
+Main channels stay in the operator's categories. Up to five followed
+subchannels with activity in the last 72 hours appear under their parents.
+When none qualify, the list shows the latest older followed subchannels. A
+parent's chevron reveals its other subchannels. Posting, receiving a mention
+or reply, or choosing Follow starts a follow. Unfollow takes precedence over participation until manually reversed.
+Follow decisions ride in the encrypted group snapshot. Activity stays local
+and is populated from the active relay's existing live message feed and
+bounded history queries on relay entry and reconnect. The app checks each
+known subchannel for older posts and direct tags to recover existing follows.
 
 ## 12. Limitations
 
@@ -461,7 +485,7 @@ End-to-end (Playwright):
 
 | Spec | What it asserts |
 |---|---|
-| `scripts/e2e/read-state-convergence.spec.ts` | Two contexts seeded with the same nsec on `public.obelisk.ar`. Context A advances a cursor; after a one-minute batch plus relay grace context B's `obelisk-read-state:<pubkey>.groupCursors[gid]` reflects the advance. |
+| `scripts/e2e/read-state-convergence.spec.ts` | Two contexts seeded with the same nsec on `public.obelisk.ar`. Context A advances a cursor; after a one-minute batch plus relay grace context B's `obelisk-read-state:<pubkey>.groupCursors[relayAndGroupId]` reflects the advance. |
 
 ### Decryption consent
 

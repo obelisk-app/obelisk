@@ -304,7 +304,7 @@
       "title": "Obelisk walkthrough video",
       "skyTitle": "Obelisk Sky: your community on an island",
       "relayTitle": "Choose your relay",
-      "voiceTitle": "Keep hanging out: voice and games",
+      "voiceTitle": "Mate and Alfajor on a video call",
       "accessTitle": "How relay access works"
     },
     "preview": {
@@ -321,7 +321,7 @@
         "badge": "Mobile",
         "title": "Mobile-first server and channel list",
         "desc": "Tap your way through servers, categories, voice and publications. Install it as a PWA, no app store required.",
-        "alt": "Obelisk mobile relay switcher: rotating cards with real relay banners, descriptions, and controls to browse or add a relay.",
+        "alt": "Obelisk mobile screenshot: a channel conversation between two members, with the message box and the bottom navigation.",
         "cta": "Tour the mobile UI"
       }
     },
@@ -339,6 +339,10 @@
     "featured": {
       "heading": "Featured in",
       "cta": "View the talk"
+    },
+    "hero": {
+      "desktopVideoAlt": "Real Obelisk video call with Capitán Mate and Milo Alfajor, two colorful animated characters.",
+      "mobileVideoAlt": "Obelisk mobile relay switcher: rotating cards with real relay banners, descriptions, and controls to browse or add a relay."
     }
   },
   "pqc": {

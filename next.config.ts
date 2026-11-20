@@ -124,6 +124,12 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/:path*',
+        // Let crawlers fetch previews so they can read the noindex directive.
+        missing: [{ type: 'host', value: 'obelisk\\.ar' }],
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      {
+        source: '/:path*',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

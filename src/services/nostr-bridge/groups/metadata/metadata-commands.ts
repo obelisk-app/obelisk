@@ -4,6 +4,7 @@
  * so that file holds the store and its ingest.
  */
 import { KIND_GROUP_CREATE, KIND_GROUP_EDIT_METADATA } from '@/constants/nostr/nip-kinds';
+import { CodedError } from '@/utils/errors/codes';
 import { generateGroupId } from '../../common/hex';
 import type { BridgeContext } from '../../facade/context';
 import { editMetadataTags, type CreateGroupOptions, type EditGroupMetadataOptions } from './metadata-tags';
@@ -25,6 +26,7 @@ export async function createGroup(
   recordCreator: (groupId: string, pubkey: string) => void,
   opts: CreateGroupOptions,
 ): Promise<string> {
+  if (opts.kind === 'forum' && opts.parent) throw new CodedError('nested-publications', 'Publications must be top-level channels');
   const groupId = opts.groupId ?? generateGroupId();
   await ctx.signAndPublish({
     kind: KIND_GROUP_CREATE,

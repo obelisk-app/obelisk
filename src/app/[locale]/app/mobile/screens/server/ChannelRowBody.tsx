@@ -39,7 +39,8 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
   const t = useTranslations();
   const row = useChannelRowBody(group);
   const counts = <ChannelRowCounts muted={row.muted} unread={row.unread} mentionsOrReplies={row.mentionsOrReplies} />;
-  if (isVoiceKind(group.kind)) {
+  const voice = isVoiceKind(group.kind);
+  if (voice && !expandable) {
     return (
       <>
         <Button variant="bare" className={`ch-row voice ${active ? 'active' : ''}`} onClick={onClick}>
@@ -58,24 +59,30 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
       </>
     );
   }
-  if (group.kind === 'forum' && expandable && onToggleExpand) {
+  if (expandable && onToggleExpand) {
     return (
-      <div className={channelRowClass({ active, unread: row.unread, indent, split: true })} style={row.quietStyle}>
-        <Button variant="bare" className="ch-row-body" onClick={onClick}>
-          {FORUM_ICON}
-          <span className="ch-name">{row.name}</span>
-          {counts}
-        </Button>
-        <Button
-          variant="bare"
-          className="ch-chevron-btn"
-          onClick={onToggleExpand}
-          aria-label={t(expanded ? 'mobile.channel.collapsePublications' : 'mobile.channel.expandPublications')}
-          aria-expanded={!!expanded}
-        >
-          <span className={`ch-chevron ${expanded ? 'expanded' : ''}`} aria-hidden="true">{CHEVRON}</span>
-        </Button>
-      </div>
+      <>
+        <div className={channelRowClass({ active, unread: row.unread, indent, split: true })} style={row.quietStyle}>
+          <Button variant="bare" className="ch-row-body" onClick={onClick}>
+            {group.kind === 'forum' ? FORUM_ICON : (
+              <span className="ch-icon">{voice ? <MicIcon size={null} /> : '#'}</span>
+            )}
+            <span className="ch-name">{row.name}</span>
+            {voice && live && <span className="voice-live-dot" />}
+            {counts}
+          </Button>
+          <Button
+            variant="bare"
+            className="ch-chevron-btn"
+            onClick={onToggleExpand}
+            aria-label={t(expanded ? 'common.subchannels.showRecent' : 'common.subchannels.showAll')}
+            aria-expanded={!!expanded}
+          >
+            <span className={`ch-chevron ${expanded ? 'expanded' : ''}`} aria-hidden="true">{CHEVRON}</span>
+          </Button>
+        </div>
+        {voice && group.isPublic && !group.isHidden && <PublicCallPreview groupId={group.id} menu />}
+      </>
     );
   }
   if (group.kind === 'forum') {

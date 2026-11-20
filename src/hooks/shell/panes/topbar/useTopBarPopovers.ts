@@ -1,5 +1,6 @@
 'use client';
 
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { useEffect, useState } from 'react';
 import { useBridge } from '@/services/nostr-bridge';
 import { useReadStateStore } from '@/store/read-state';
@@ -76,7 +77,7 @@ export function useInboxStreams(relay: string) {
   const handleMarkRead = () => {
     if (notifTab === 'mentions') {
       markMentionsRead(relay);
-      markAllAsRead([], bridge ? Object.keys(bridge.messagesByGroup.get()) : []);
+      markAllAsRead([], bridge ? Object.keys(bridge.messagesByGroup.get()).map((id) => relayChannelKey(relay, id)) : [], false);
     } else {
       markAllAsRead(bridge ? Object.keys(bridge.dmsByPeer.get()) : [], []);
     }

@@ -1,3 +1,4 @@
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 /**
  * The sidebar fan-out: every channel row calls `useCachedChannelHighlights`.
  * A new message in one channel must re-render that channel's row and no
@@ -8,22 +9,22 @@
  * `subscribeMessagesByGroup` is backed by the bridge's own `StateStore`, so
  * subscribe-with-replay and same-value suppression behave as in the app.
  */
-import { afterEach, describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { StateStore } from '@/services/nostr-bridge/common/state-store';
-import type { BridgeImpl, JsMessage } from '@/services/nostr-bridge';
-import { registerBridge, unregisterBridge } from '@/services/nostr-bridge/facade/bridge-slot';
+import { BridgeProvider, type JsMessage } from '@/services/nostr-bridge';
+import { fakeBridge } from '@tests/support/fake-bridge';
 
 const byGroup = new StateStore<Record<string, JsMessage[]>>({});
 const bridgeSubs = { opened: 0, closed: 0 };
 
-const bridge = {
+const bridge = fakeBridge({}, {
   subscribeMessagesByGroup: (cb: (v: Record<string, JsMessage[]>) => void) => {
     bridgeSubs.opened++;
     const off = byGroup.subscribe(cb);
     return () => { bridgeSubs.closed++; off(); };
   },
-} as unknown as BridgeImpl;
+});
 
 const { useCachedChannelHighlights } = await import('@/hooks/read-state/useChannelHighlights');
 const { useReadStateStore } = await import('@/store/read-state');
@@ -48,22 +49,17 @@ function Sidebar() {
 }
 
 async function mountSidebar() {
-  const view = render(<Sidebar />);
+  const view = render(<BridgeProvider bridge={bridge}><Sidebar /></BridgeProvider>);
   await act(async () => {}); // the bridge promise resolves and every row subscribes
   return view;
 }
 
-afterEach(() => {
-  unregisterBridge();
-});
-
 beforeEach(() => {
-  registerBridge(bridge);
   renders.clear();
   bridgeSubs.opened = 0;
   bridgeSubs.closed = 0;
   // Cursor 1 ms: every message below counts as unread, with no clock involved.
-  useReadStateStore.setState({ groupCursors: Object.fromEntries(ids.map((id) => [id, 1])) });
+  useReadStateStore.setState({ groupCursors: Object.fromEntries(ids.map((id) => [relayChannelKey('wss://relay.test', id), 1])) });
   byGroup.set(Object.fromEntries(ids.map((id) => [id, [msg(`${id}-first`, 100)]])));
 });
 
@@ -108,7 +104,7 @@ describe('useCachedChannelHighlights render fan-out', () => {
   });
 
   it('a sidebar that unmounts before the bridge is ready never subscribes', async () => {
-    const view = render(<Sidebar />);
+    const view = render(<BridgeProvider bridge={bridge}><Sidebar /></BridgeProvider>);
     view.unmount();
     await act(async () => {});
     expect(bridgeSubs).toEqual({ opened: 0, closed: 0 });

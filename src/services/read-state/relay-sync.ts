@@ -1,3 +1,5 @@
+import { getBridgeImpl } from '@/services/nostr-bridge';
+import { channelPrefKey, useChannelPrefsStore } from '@/store/chat/channel-prefs';
 /**
  * Encrypted multi-device read-state sync. Two scopes, two transports.
  *
@@ -37,6 +39,7 @@
  * parsers live in `sync-options.ts`, the read half in `sync-ingest.ts` and
  * the batched write half in `sync-publish.ts`.
  */
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { useReadStateStore, type RemoteReadState } from '@/store/read-state';
 import { useNotificationsStore } from '@/store/notifications';
 import {
@@ -45,6 +48,7 @@ import {
   type DmsPayload,
   type GroupsPayload,
   type SyncOptions,
+  syncScopeKey,
 } from './sync-options';
 import { D_TAG_DMS, D_TAG_GROUPS, DEBOUNCE_MS, SCHEMA_VERSION } from '@/constants/read-state/sync-options';
 import { subscribeAndIngest } from './sync-ingest';
@@ -76,12 +80,28 @@ export function startGroupsRelaySync(
     alsoReadLegacyWraps: true,
   };
 
+  // A previous relay acknowledgement carries the relay identity that
+  // bare legacy cursor keys lack. Recover the proven value for this relay.
+  const owner = getBridgeImpl()?.getNipSigner('background')?.pubkey;
+  if (owner) {
+    const state = useReadStateStore.getState();
+    const acknowledged = state.syncProgress[syncScopeKey(opts, owner)]?.acknowledged ?? {};
+    const recovered = Object.fromEntries([...ids].flatMap((id) => {
+      const cursor = acknowledged[`groups:${id}`];
+      return cursor > 0 ? [[relayChannelKey(relayUrl, id), cursor]] : [];
+    }));
+    if (Object.keys(recovered).length) state.applyRemoteState({ groupCursors: recovered });
+  }
+
   const apply = (payload: GroupsPayload) => {
+    for (const [id, revision] of Object.entries(payload.follows ?? {})) {
+      if (ids.has(id)) useChannelPrefsStore.getState().mergeFollow(relayUrl, id, revision);
+    }
     const groupCursors: Record<string, number> = {};
-    for (const [gid, entry] of Object.entries(payload.groups)) {
+    for (const [gid, entry] of Object.entries(payload.groups ?? {})) {
       if (!ids.has(gid)) continue;
-      if (typeof entry?.lastReadAt === 'number') {
-        groupCursors[gid] = entry.lastReadAt;
+      if (typeof entry?.lastReadAt === 'number' && Number.isFinite(entry.lastReadAt)) {
+        groupCursors[relayChannelKey(relayUrl, gid)] = entry.lastReadAt;
       }
     }
     if (Object.keys(groupCursors).length > 0) {
@@ -90,19 +110,17 @@ export function startGroupsRelaySync(
     // Mention cursor converges across devices under the same max() rule as
     // the group cursors: dismiss the bell on desktop, it's dismissed on
     // the phone. Absent on wraps written by older clients.
-    if (typeof payload.mentionsReadAt === 'number') {
+    if (typeof payload.mentionsReadAt === 'number' && Number.isFinite(payload.mentionsReadAt)) {
       useNotificationsStore
         .getState()
         .applyRemoteMentionCursor(relayUrl, payload.mentionsReadAt);
     }
   };
 
-  const unsubIngest = subscribeAndIngest(opts, apply);
-
   const fingerprintCursors = (cursors: Record<string, number>): string => {
     const parts: string[] = [];
     for (const gid of ids) {
-      const v = cursors[gid];
+      const v = cursors[relayChannelKey(relayUrl, gid)];
       if (typeof v === 'number') parts.push(`${gid}:${v}`);
     }
     parts.sort();
@@ -112,31 +130,49 @@ export function startGroupsRelaySync(
   const mentionCursor = (): number =>
     useNotificationsStore.getState().mentionCursorByRelay[relayUrl] ?? 0;
 
-  const unsubPublish = watchAndPublish(
+  const followSnapshot = () => {
+    const prefs = useChannelPrefsStore.getState().prefs;
+    const follows: Record<string, number> = {};
+    for (const id of ids) {
+      const pref = prefs[channelPrefKey(relayUrl, id)];
+      if (pref?.followRevision) follows[id] = pref.followRevision;
+      else if (pref?.followed) follows[id] = 1;
+    }
+    return follows;
+  };
+
+  const startPublish = () => watchAndPublish(
     opts,
     () =>
       `m:${mentionCursor()}|`
-      + fingerprintCursors(useReadStateStore.getState().groupCursors),
+      + fingerprintCursors(useReadStateStore.getState().groupCursors)
+      + JSON.stringify(followSnapshot()),
     (): GroupsPayload | null => {
       const cursors = useReadStateStore.getState().groupCursors;
       const groups: Record<string, { lastReadAt: number }> = {};
       let any = false;
       for (const gid of ids) {
-        const v = cursors[gid];
+        const v = cursors[relayChannelKey(relayUrl, gid)];
         if (typeof v === 'number' && v > 0) {
           groups[gid] = { lastReadAt: v };
           any = true;
         }
       }
       const mentionsReadAt = mentionCursor();
-      if (!any && mentionsReadAt <= 0) return null;
-      return mentionsReadAt > 0 ? { v: 1, groups, mentionsReadAt } : { v: 1, groups };
+      const follows = followSnapshot();
+      const hasFollows = Object.keys(follows).length > 0;
+      if (!any && mentionsReadAt <= 0 && !hasFollows) return null;
+      return { v: 1, groups, ...(mentionsReadAt > 0 && { mentionsReadAt }), ...(hasFollows && { follows }) };
     },
   );
 
+  let unsubPublish: (() => void) | undefined;
+  const unsubIngest = subscribeAndIngest(opts, apply, () => {
+    unsubPublish ??= startPublish();
+  });
   return () => {
     unsubIngest();
-    unsubPublish();
+    unsubPublish?.();
   };
 }
 
@@ -158,14 +194,14 @@ export function startDMRelaySync(relays: ReadonlyArray<string>): () => void {
 
   const apply = (payload: DmsPayload) => {
     const dmCursors: Record<string, number> = {};
-    for (const [peer, entry] of Object.entries(payload.dms)) {
-      if (typeof entry?.lastReadAt === 'number') {
+    for (const [peer, entry] of Object.entries(payload.dms ?? {})) {
+      if (typeof entry?.lastReadAt === 'number' && Number.isFinite(entry.lastReadAt)) {
         dmCursors[peer] = entry.lastReadAt;
       }
     }
     useReadStateStore.getState().applyRemoteState({
       dmCursors,
-      inboxLastReadAt: payload.inboxLastReadAt,
+      inboxLastReadAt: Number.isFinite(payload.inboxLastReadAt) ? payload.inboxLastReadAt : undefined,
     });
   };
 

@@ -6,10 +6,10 @@ import { MobileScreenBody } from '@/app/[locale]/app/mobile/carousel/MobileScree
 import { TopLevelScreen } from '@/app/[locale]/app/mobile/carousel/TopLevelScreen';
 import type { MobileScreenProps } from '@/hooks/shell/mobile/nav/usePhoneShell';
 
-const { stub, counts } = vi.hoisted(() => ({ counts: { feed: 0 }, stub: (name: string) => (p: Record<string, unknown>) => (
+const { stub, counts } = vi.hoisted(() => ({ counts: { feed: 0 }, stub: (name: string, argsFor = (_key: string): unknown[] => ['arg']) => (p: Record<string, unknown>) => (
   <div data-testid={name} data-props={JSON.stringify(Object.fromEntries(Object.entries(p).filter(([, v]) => typeof v !== 'function')))}>
     {Object.entries(p).filter(([, v]) => typeof v === 'function').map(([k, v]) => (
-      <button key={k} data-testid={`${name}:${k}`} onClick={() => (v as (...a: unknown[]) => void)('arg')} />
+      <button key={k} data-testid={`${name}:${k}`} onClick={() => (v as (...a: unknown[]) => void)(...argsFor(k))} />
     ))}
   </div>
 ) }));
@@ -26,7 +26,7 @@ vi.mock('@/app/[locale]/app/mobile/screens/dm/DmsListScreen', () => ({ DmsListSc
 vi.mock('@/app/[locale]/app/mobile/screens/dm/MobileDmOptInScreen', () => ({ MobileDmOptInScreen: stub('optin') }));
 vi.mock('@/app/[locale]/app/mobile/screens/profile/EditProfileScreen', () => ({ EditProfileScreen: stub('edit') }));
 vi.mock('@/components/chat/profile/NostrProfile', () => ({ default: stub('profile') }));
-vi.mock('@/app/[locale]/app/mobile/screens/forum/ForumScreen', () => ({ ForumScreen: stub('forum') }));
+vi.mock('@/app/[locale]/app/mobile/screens/forum/ForumScreen', () => ({ ForumScreen: stub('forum', (key) => key === 'selectChild' ? ['arg', 'text'] : ['arg']) }));
 vi.mock('@/app/[locale]/app/mobile/screens/inbox/InboxScreen', () => ({ InboxScreen: stub('inbox') }));
 vi.mock('@/app/[locale]/app/mobile/screens/search/SearchScreen', () => ({ SearchScreen: stub('search') }));
 vi.mock('@/app/[locale]/app/mobile/screens/server/ServerScreen', () => ({ ServerScreen: stub('server') }));

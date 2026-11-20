@@ -6,6 +6,7 @@
  * `src/store/chat/channel-prefs.ts`; the bridge's `deliverGroupPing` honours it.
  */
 
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import {
   isChannelMuted,
   notifyLevel,
@@ -31,17 +32,18 @@ export function useChannelActions(target: ChannelActionsTarget) {
   // The shared clipboard hook: a refused write leaves `copied` false, and a
   // success clears itself after the hook's default 2000 ms.
   const { copied, copy } = useCopyToClipboard();
+  const following = !!pref.followed && !pref.unfollowed;
   return {
     pref,
     muted: isChannelMuted(pref),
     level: notifyLevel(pref),
-    following: !pref.unfollowed,
+    following,
     copied: copied !== null,
     markRead: () => {
-      useReadStateStore.getState().setGroupCursor(channelId, Date.now());
+      useReadStateStore.getState().setGroupCursor(relayChannelKey(relay, channelId), Date.now());
       useNotificationsStore.getState().markChannelMentionsSeen(relay, channelId);
     },
-    toggleFollow: () => store().setFollowing(relay, channelId, !!pref.unfollowed),
+    toggleFollow: () => store().setFollowing(relay, channelId, !following),
     mute: (ms: number) => store().setMutedUntil(relay, channelId, ms === MUTED_FOREVER ? MUTED_FOREVER : Date.now() + ms),
     unmute: () => store().setMutedUntil(relay, channelId, null),
     setLevel: (level: ChannelNotifyLevel) => store().setNotify(relay, channelId, level),

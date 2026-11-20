@@ -1,5 +1,6 @@
 'use client';
 
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { landOnMessage } from '@/services/chat/timeline/message-flash';
 import { useChannelReplyDraft } from '@/hooks/chat/composer/useConversationDraft';
 import type { ComposerHandle } from '@/types/chat/composer';
@@ -64,7 +65,7 @@ export function usePhoneChannelViewport({ groupId, relay, myPubkey, messages }: 
   myPubkey: string | null;
   messages: ReadonlyArray<JsMessage>;
 }) {
-  const readCursorMs = useReadStateStore((s) => s.groupCursors[groupId]);
+  const readCursorMs = useReadStateStore((s) => s.groupCursors[relayChannelKey(relay, groupId)]);
   const messagesRef = useRef<HTMLDivElement>(null);
   const scrollKey = useMemo(() => channelScrollPositionKey(relay, groupId), [relay, groupId]);
   const initialAnchor = useMemo(

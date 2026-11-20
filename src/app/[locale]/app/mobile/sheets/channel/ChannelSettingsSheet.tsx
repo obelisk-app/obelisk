@@ -49,7 +49,7 @@ export function ChannelSettingsSheet({
   const aboutId = useId();
   const sfuUrlId = useId();
   const newMemberId = useId();
-  const { meta, member, sfu, adminSet, allPubkeys } = useChannelSettingsForm(group, close);
+  const { meta, publicationsDisabled, member, sfu, adminSet, allPubkeys } = useChannelSettingsForm(group, close);
   const { access, kind: channelKind } = meta.values;
 
   return (
@@ -123,6 +123,7 @@ export function ChannelSettingsSheet({
             <Button
               variant="bare"
               key={k}
+              disabled={k === 'forum' && publicationsDisabled}
               type="button"
               onClick={() => meta.set('kind', k)}
               style={kindPillStyle(channelKind === k)}
@@ -131,6 +132,7 @@ export function ChannelSettingsSheet({
             </Button>
           ))}
         </div>
+        {publicationsDisabled && <Text as="p" size="sm" tone="muted">{t('errors.codes.nested-publications')}</Text>}
         {channelKind === 'voice-sfu' && (
           <div
             style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, border: '1px solid var(--app-line)', borderRadius: 12, background: 'var(--app-surface)' }}

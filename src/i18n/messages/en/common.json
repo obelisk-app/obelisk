@@ -1,4 +1,8 @@
 {
+  "subchannels": {
+    "showAll": "Show all subchannels",
+    "showRecent": "Show recent subchannels"
+  },
   "notificationUnavailable": "This channel or message is unavailable. Check your relay connection and try again.",
   "soundBlocked": {
     "title": "🔔 Notification sounds are paused",

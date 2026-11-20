@@ -1,15 +1,17 @@
 'use client';
 
+import { useRecentChannels } from '@/hooks/chat/channel/useRecentChannels';
+
+import { channelHierarchy } from '@/utils/chat/channel/channel-hierarchy';
 import { useMemo, useState } from 'react';
 import {
   useGroups,
   useGroupMetadataEose,
-  useChildrenByParent,
   useRelayAccess,
 } from '@/services/nostr-bridge';
 import { applyLayout } from '@/services/relay/channel-layout';
 import type { View } from '@/utils/shell/desktop/view';
-import { indexGroupsById, rootGroups } from '@/utils/shell/panes/sidebar/sidebar-groups';
+import { indexGroupsById } from '@/utils/shell/panes/sidebar/sidebar-groups';
 import { useGroupWotDistances, useSidebarOperatorData } from '@/hooks/shell/panes/sidebar/useSidebarData';
 
 /**
@@ -25,9 +27,8 @@ import { useGroupWotDistances, useSidebarOperatorData } from '@/hooks/shell/pane
  */
 export function useSidebar(relay: string, setView: (v: View) => void) {
   const groups = useGroups();
-  const childrenByParent = useChildrenByParent();
   const groupsById = useMemo(() => indexGroupsById(groups), [groups]);
-  const roots = useMemo(() => rootGroups(groups, groupsById), [groups, groupsById]);
+  const { roots, childrenByParent } = useMemo(() => channelHierarchy(groups), [groups]);
   const operator = useSidebarOperatorData(relay);
   const groupDistanceById = useGroupWotDistances(groups);
   // Read-side surface (cached channels from seedCacheForRelay) renders
@@ -36,6 +37,7 @@ export function useSidebar(relay: string, setView: (v: View) => void) {
   // the situation when access != 'ok'. Write-side actions (the create form)
   // and the list's own empty states still gate on `channelsVisible`.
   const relayAccess = useRelayAccess(relay || null);
+  const recentSubchannelIds = useRecentChannels(relay, groups, childrenByParent);
   const laidOut = useMemo(
     () => applyLayout(operator.layout, roots.map((g) => g.id)),
     [operator.layout, roots],
@@ -49,6 +51,7 @@ export function useSidebar(relay: string, setView: (v: View) => void) {
     groupsById,
     roots,
     laidOut,
+    recentSubchannelIds,
     operator,
     groupDistanceById,
     channelsVisible: relayAccess === 'ok',

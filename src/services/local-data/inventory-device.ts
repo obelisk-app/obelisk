@@ -41,7 +41,7 @@ export const DEVICE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
   pref('feed-pane-width', 'obelisk-dex/feed-pane-width', 'exact', 'Desktop feed pane width.', 'src/utils/shell/desktop/desktop-layout.ts'),
   pref('show-members', 'obelisk-dex/show-members', 'exact', 'Whether the desktop member list is open.', 'src/utils/shell/desktop/desktop-layout.ts'),
   pref('voice-chat-width', 'obelisk:voice-chat-width', 'exact', 'Width of the chat rail beside a voice room.', 'src/hooks/shell/panes/channel/useVoiceChatPane.ts'),
-  pref('forum-collapsed', 'obelisk-dex/forum-collapsed/', 'prefix', 'Collapsed publication groups in the sidebar, per group.', 'src/hooks/shell/mobile/screens/server/useForumCollapsed.ts'),
+  pref('forum-collapsed', 'obelisk-dex/forum-collapsed/', 'prefix', 'Collapsed publication groups in the sidebar, per group.', 'src/services/shell/panes/sidebar/forum-collapsed.ts'),
   pref('forum-prefs', 'obelisk-dex/forum-prefs/', 'prefix', 'Sort and view choice per publication.', 'src/services/chat/forum/forum-prefs.ts'),
   pref('forum-prefs-mobile', 'obelisk-dex/forum-prefs-mobile/', 'prefix', 'Sort and view choice per publication on the phone.', 'src/services/chat/forum/forum-prefs.ts'),
   pref('recent-emojis', 'obelisk:recent-emojis', 'exact', 'Recently used emoji.', 'src/services/chat/picker/recent-emojis.ts'),

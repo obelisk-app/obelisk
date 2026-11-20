@@ -78,6 +78,7 @@ export function useChannelSettingsForm(group: JsGroup, onSaved: () => void) {
 
   return {
     meta,
+    publicationsDisabled: !!group.parent && group.kind !== 'forum',
     member,
     /** Only meaningful while the kind is `voice-sfu`. */
     sfu: { url: sfuUrl, setUrl: setSfuUrl, checking, verified, verify: verifySfu },

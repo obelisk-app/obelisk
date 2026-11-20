@@ -28,7 +28,7 @@ describe('useGroupNode', () => {
   it('knows when it is the open channel and lists its known children', () => {
     const { result } = setup(forum, { view: { kind: 'group', groupId: 'f1' } });
     expect(result.current.active).toBe(true);
-    expect(result.current.children).toEqual([thread]);
+    expect(result.current.children).toEqual([{ child: thread, showAsChannel: false }]);
     expect(result.current.isCollapsible).toBe(true);
     expect(result.current.label).toBe('pubs');
     expect(result.current.indent).toBe('0.5rem');
@@ -64,7 +64,7 @@ describe('useGroupNode', () => {
     act(() => result.current.openMenu({ clientX: 5, clientY: 6, preventDefault: () => { prevented = true; } } as never));
     expect(prevented).toBe(true);
     expect(result.current.menuAt).toEqual({ x: 5, y: 6 });
-    expect(result.current.menuTarget).toEqual({ relay: BRIDGE_MOCK_RELAY, channelId: 'f1', name: 'pubs', hasUnread: false });
+    expect(result.current.menuTarget).toEqual({ relay: BRIDGE_MOCK_RELAY, channelId: 'f1', name: 'pubs', canFollow: true, hasUnread: false });
     act(() => result.current.closeMenu());
     expect(result.current.menuAt).toBeNull();
   });

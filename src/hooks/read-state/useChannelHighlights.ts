@@ -5,8 +5,9 @@
  * the already-loaded map, or "any channel at all". The computation is pure
  * and lives in `src/services/read-state/selectors.ts`.
  */
+import { relayChannelKey } from '@/utils/chat/channel/relay-channel-key';
 import { useMemo } from 'react';
-import { useMessages, useMessagesByGroup } from '@/services/nostr-bridge';
+import { useCurrentRelayUrl, useMessages, useMessagesByGroup } from '@/services/nostr-bridge';
 import { useReadStateStore } from '@/store/read-state';
 import {
   channelHasMention,
@@ -21,9 +22,10 @@ export function useChannelHasMention(
   groupId: string | null | undefined,
   ownPubkey: string | null,
 ): boolean {
+  const relay = useCurrentRelayUrl();
   const messages = useMessages(groupId ?? null);
   const stored = useReadStateStore((s) =>
-    groupId ? s.groupCursors[groupId] : undefined,
+    relay && groupId ? s.groupCursors[relayChannelKey(relay, groupId)] : undefined,
   );
   return useMemo(() => {
     if (!groupId || !messages || messages.length === 0) return false;
@@ -35,9 +37,10 @@ export function useChannelHighlights(
   groupId: string | null | undefined,
   ownPubkey: string | null,
 ): ChannelHighlights {
+  const relay = useCurrentRelayUrl();
   const messages = useMessages(groupId ?? null);
   const stored = useReadStateStore((s) =>
-    groupId ? s.groupCursors[groupId] : undefined,
+    relay && groupId ? s.groupCursors[relayChannelKey(relay, groupId)] : undefined,
   );
   return useMemo(() => {
     if (!groupId || !messages || messages.length === 0) return EMPTY_HIGHLIGHTS;
@@ -58,9 +61,10 @@ export function useCachedChannelHighlights(
   groupId: string | null | undefined,
   ownPubkey: string | null,
 ): ChannelHighlights {
+  const relay = useCurrentRelayUrl();
   const messages = useCachedGroupMessages(groupId);
   const stored = useReadStateStore((s) =>
-    groupId ? s.groupCursors[groupId] : undefined,
+    relay && groupId ? s.groupCursors[relayChannelKey(relay, groupId)] : undefined,
   );
   return useMemo(() => {
     if (!groupId || !messages || messages.length === 0) return EMPTY_HIGHLIGHTS;
@@ -77,15 +81,16 @@ export function useCachedChannelHighlights(
  * mention-watch ships in a follow-up PR.
  */
 export function useHasAnyHighlights(ownPubkey: string | null): boolean {
+  const relay = useCurrentRelayUrl();
   const byGroup = useMessagesByGroup();
   const cursors = useReadStateStore((s) => s.groupCursors);
   return useMemo(() => {
     for (const groupId of Object.keys(byGroup)) {
       const list = byGroup[groupId];
       if (!list || list.length === 0) continue;
-      const h = computeChannelHighlights(list, effectiveCursor(cursors[groupId]), ownPubkey);
+      const h = computeChannelHighlights(list, effectiveCursor(relay ? cursors[relayChannelKey(relay, groupId)] : undefined), ownPubkey);
       if (h.mentions > 0 || h.replies > 0) return true;
     }
     return false;
-  }, [byGroup, cursors, ownPubkey]);
+  }, [byGroup, cursors, ownPubkey, relay]);
 }

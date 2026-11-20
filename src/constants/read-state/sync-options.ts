@@ -40,3 +40,5 @@ export const SCHEMA_VERSION = 1;
  * better than retrying.
  */
 export const READ_STATE_WATCHDOG_MS = 60_000;
+
+export const LOCAL_READ_CURSOR_DB = 'obelisk-read-cursors';

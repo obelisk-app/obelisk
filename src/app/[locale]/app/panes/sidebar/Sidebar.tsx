@@ -76,6 +76,7 @@ export function Sidebar({
           laidOut={vm.laidOut}
           groupsById={vm.groupsById}
           childrenByParent={vm.childrenByParent}
+          recentSubchannelIds={vm.recentSubchannelIds}
           view={view}
           onSelect={vm.selectGroup}
           distanceById={vm.groupDistanceById}

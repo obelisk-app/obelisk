@@ -47,6 +47,7 @@ export function newThreadForm(target: NewThreadTarget): FormSpec<NewThreadValues
         isHidden: access.isHidden,
         isRestricted: access.isRestricted,
         isOpen: access.isOpen,
+        kind: 'text',
         parent: forumGroupId,
         topics: values.tagIds,
       });

@@ -89,9 +89,9 @@ describe('landing route', async () => {
     const hero = screen.getByTestId('landing-hero');
     const stage = screen.getByTestId('landing-stage');
     expect(hero.nextElementSibling).toBe(stage);
-    expect(within(stage).getByAltText(/Obelisk desktop screenshot/i)).toHaveAttribute('src', '/landing/hero-desktop.webp');
+    expect(within(stage).getByAltText(/Real Obelisk video call/i)).toHaveAttribute('src', '/landing/character-call.webp');
     expect([...stage.querySelectorAll('source')].map((s) => s.getAttribute('src'))).toEqual([
-      '/landing/hero-desktop.webm', '/landing/hero-desktop.mp4',
+      '/landing/character-call.webm', '/landing/character-call.mp4',
     ]);
   });
 

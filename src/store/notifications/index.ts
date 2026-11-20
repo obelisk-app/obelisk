@@ -220,7 +220,7 @@ export const useNotificationsStore = create<NotificationsStore>()(
       }),
 
       markMentionsRead: (relay) => set((state) => ({
-        mentionCursorByRelay: { ...state.mentionCursorByRelay, [relay]: Date.now() },
+        mentionCursorByRelay: { ...state.mentionCursorByRelay, [relay]: Math.max(state.mentionCursorByRelay[relay] ?? 0, Date.now()) },
       })),
 
       clearMentions: (relay) => set((state) => {
@@ -228,7 +228,7 @@ export const useNotificationsStore = create<NotificationsStore>()(
         delete mentionsByRelay[relay];
         return {
           mentionsByRelay,
-          mentionCursorByRelay: { ...state.mentionCursorByRelay, [relay]: Date.now() },
+          mentionCursorByRelay: { ...state.mentionCursorByRelay, [relay]: Math.max(state.mentionCursorByRelay[relay] ?? 0, Date.now()) },
         };
       }),
 

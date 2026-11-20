@@ -189,6 +189,7 @@ export class RequestsModule {
       relays?: readonly string[];
       relayMode?: 'merge' | 'replace';
       affectsRelayAccess?: boolean;
+      onEose?: () => void;
     },
   ): () => void {
     if (options?.relays && options.relayMode === "replace") {

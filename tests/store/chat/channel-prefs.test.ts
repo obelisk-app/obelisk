@@ -39,13 +39,13 @@ describe('channel prefs', () => {
     expect(isChannelMuted(getChannelPref(R, 'b'))).toBe(false);
   });
 
-  it('back to defaults removes the entry entirely', () => {
+  it('retains explicit follow when notification settings return to defaults', () => {
     const s = useChannelPrefsStore.getState();
     s.setNotify(R, 'c', 'all');
     s.setFollowing(R, 'c', false);
     s.setNotify(R, 'c', 'mentions');
     s.setFollowing(R, 'c', true);
-    expect(useChannelPrefsStore.getState().prefs).toEqual({});
+    expect(getChannelPref(R, 'c')).toEqual({ followed: true, followRevision: expect.any(Number) });
   });
 });
 
@@ -64,8 +64,9 @@ describe('channel prefs saved-data migrations', () => {
     };
     seedBlob(key(pk), saved, 0);
     ensureChannelPrefsStoreForAccount(pk);
-    expect(prefs()).toEqual(saved.prefs);
-    expect(readBlob(key(pk))).toEqual({ state: saved, version: CHANNEL_PREFS_STORE_VERSION });
+    const migrated = { prefs: { ...saved.prefs, [`${R}|a`]: { unfollowed: true, followRevision: 3 } } };
+    expect(prefs()).toEqual(migrated.prefs);
+    expect(readBlob(key(pk))).toEqual({ state: migrated, version: CHANNEL_PREFS_STORE_VERSION });
   });
 
   it('drops fields of the wrong type, and a pref left empty', () => {

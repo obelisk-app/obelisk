@@ -1,3 +1,4 @@
+import { useChannelPrefsStore } from '@/store/chat/channel-prefs';
 /**
  * Kind 9 into a channel's store (round 4 plan, step 14): dedupe, the
  * optimistic placeholder replaced in place, the debounced cache flush, the
@@ -38,6 +39,11 @@ export class MessageIngest {
     if (this.deps.moderation.isModerated(groupId, ev.id)) return;
     if (this.deps.moderation.isDeletedByAuthor(groupId, ev.id, ev.pubkey)) return;
     recordMemberActivity(this.ctx.currentRelayUrl.get(), ev.pubkey, ev.created_at);
+    const owner = this.ctx.session()?.pubKeyHex;
+    if (owner) {
+      const participated = ev.pubkey === owner || ev.tags.some(([name, value]) => name === 'p' && value === owner);
+      useChannelPrefsStore.getState().recordActivity(this.ctx.currentRelayUrl.get(), groupId, ev.created_at, participated);
+    }
     const replyTo = ev.tags.find((t) => t[0] === 'e' && t[3] === 'reply')?.[1] ?? null;
     const mentions = extractMentionPubkeysFromMessage(ev.content, ev.tags);
     const msg: JsMessage = {

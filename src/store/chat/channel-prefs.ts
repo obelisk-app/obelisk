@@ -3,7 +3,7 @@
  *
  * Keyed by `relay|channelId`: NIP-29 group ids are only unique per relay.
  *
- *   • **following** (default true). Unfollowing a channel stops it from
+ *   • **following** via participation or a manual choice. Unfollowing stops it from
  *     asking for attention: no unread count, a dimmed row, no "all
  *     messages" pings. `@mentions` and replies STILL ping: being addressed
  *     directly is not "channel activity".
@@ -22,12 +22,17 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { quotaSafeLocalStorage } from '@/services/common/quota-safe-storage';
 import { createEnsureForAccount } from '../common/multi-account';
 import { asRecord, finiteOrUndefined, oneOf, recordOf, versionedPersist } from '../common/persist-version';
+import { normalizeRelayUrl } from '@/utils/relay-url/normalize';
 import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 
 export type ChannelNotifyLevel = 'all' | 'mentions' | 'nothing';
 
 export interface ChannelPref {
   readonly unfollowed?: boolean;
+  readonly followed?: boolean;
+  readonly historyChecked?: true;
+  readonly followRevision?: number;
+  readonly latestMessageAt?: number;
   /** Unix ms, or {@link MUTED_FOREVER}. Absent = not muted. */
   readonly mutedUntil?: number;
   /** Absent = `'mentions'`. */
@@ -37,11 +42,14 @@ export interface ChannelPref {
 export const DEFAULT_CHANNEL_PREF: ChannelPref = Object.freeze({});
 
 export function channelPrefKey(relay: string, channelId: string): string {
-  return `${relay}|${channelId}`;
+  return `${normalizeRelayUrl(relay)}|${channelId}`;
 }
 
 interface ChannelPrefsState {
   prefs: Record<string, ChannelPref>;
+  markHistoryChecked: (relay: string, channelId: string) => void;
+  mergeFollow: (relay: string, channelId: string, revision: number) => void;
+  recordActivity: (relay: string, channelId: string, timestamp: number, participated: boolean) => void;
   setFollowing: (relay: string, channelId: string, following: boolean) => void;
   /** `until`: unix ms, {@link MUTED_FOREVER}, or `null` to unmute. */
   setMutedUntil: (relay: string, channelId: string, until: number | null) => void;
@@ -64,8 +72,8 @@ function patch(
 
 type ChannelPrefsPersisted = Pick<ChannelPrefsState, 'prefs'>;
 
-/** Saved-shape version. 0: before versioning, same fields. */
-export const CHANNEL_PREFS_STORE_VERSION = 1;
+/** Version 2 adds follow participation and revisions to notification preferences. */
+export const CHANNEL_PREFS_STORE_VERSION = 2;
 
 const STORED_NOTIFY_LEVELS: readonly ChannelNotifyLevel[] = ['all', 'nothing'];
 
@@ -76,8 +84,15 @@ const STORED_NOTIFY_LEVELS: readonly ChannelNotifyLevel[] = ['all', 'nothing'];
  */
 function sanitizePref(value: unknown): ChannelPref | undefined {
   const raw = asRecord(value);
-  const pref: { unfollowed?: true; mutedUntil?: number; notify?: ChannelNotifyLevel } = {};
+  const pref: { unfollowed?: true; followed?: true; historyChecked?: true; followRevision?: number; latestMessageAt?: number; mutedUntil?: number; notify?: ChannelNotifyLevel } = {};
+  if (raw.historyChecked === true) pref.historyChecked = true;
+  if (raw.followed === true) pref.followed = true;
+  const latest = finiteOrUndefined(raw.latestMessageAt);
+  if (latest !== undefined) pref.latestMessageAt = latest;
   if (raw.unfollowed === true) pref.unfollowed = true;
+  const revision = finiteOrUndefined(raw.followRevision);
+  if (revision !== undefined && Number.isSafeInteger(revision) && revision > 0) pref.followRevision = revision;
+  else if (pref.unfollowed) pref.followRevision = 3;
   const mutedUntil = finiteOrUndefined(raw.mutedUntil);
   if (mutedUntil !== undefined) pref.mutedUntil = mutedUntil;
   const notify = oneOf(raw.notify, STORED_NOTIFY_LEVELS);
@@ -91,11 +106,41 @@ export function sanitizeChannelPrefsPersisted(raw: Record<string, unknown>): Cha
 
 export const useChannelPrefsStore = create<ChannelPrefsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       prefs: {},
-      setFollowing: (relay, channelId, following) => set((s) => ({
-        prefs: patch(s.prefs, channelPrefKey(relay, channelId), { unfollowed: following ? undefined : true }),
-      })),
+      recordActivity: (relay, channelId, timestamp, participated) => {
+        const key = channelPrefKey(relay, channelId);
+        const pref = get().prefs[key];
+        if (!participated && (!pref?.followed || pref.unfollowed)) return;
+        const latestMessageAt = Math.max(timestamp, pref?.latestMessageAt ?? 0);
+        if (latestMessageAt === pref?.latestMessageAt && pref.followed) return;
+        set((s) => ({
+          prefs: patch(s.prefs, key, { followed: true, latestMessageAt }),
+        }));
+      },
+      markHistoryChecked: (relay, channelId) => set((s) => {
+        const key = channelPrefKey(relay, channelId);
+        if (s.prefs[key]?.historyChecked) return s;
+        return { prefs: patch(s.prefs, key, { historyChecked: true }) };
+      }),
+      mergeFollow: (relay, channelId, revision) => set((s) => {
+        if (!Number.isSafeInteger(revision) || revision <= 0) return s;
+        const key = channelPrefKey(relay, channelId);
+        const pref = s.prefs[key];
+        if (revision <= (pref?.followRevision ?? (pref?.followed ? 1 : 0))) return s;
+        return { prefs: patch(s.prefs, key, {
+          followed: true,
+          followRevision: revision,
+          unfollowed: revision > 1 && revision % 2 === 1 ? true : undefined,
+        }) };
+      }),
+      setFollowing: (relay, channelId, following) => {
+        const revision = get().prefs[channelPrefKey(relay, channelId)]?.followRevision ?? 0;
+        // Manual choices outrank automatic participation (revision 1).
+        // In the same millisecond an unfollow wins the tie.
+        const next = Math.max(Date.now(), Math.floor(revision / 2) + 1) * 2;
+        get().mergeFollow(relay, channelId, next + (following ? 0 : 1));
+      },
       setMutedUntil: (relay, channelId, until) => set((s) => ({
         prefs: patch(s.prefs, channelPrefKey(relay, channelId), { mutedUntil: until ?? undefined }),
       })),

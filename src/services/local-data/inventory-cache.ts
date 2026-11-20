@@ -7,13 +7,14 @@
  * split three ways by `when`: kind 0 and 3 entries are profiles, the two
  * read-state d tags are read positions, everything else is channel cache.
  */
+import { LOCAL_READ_CURSOR_DB } from '@/constants/read-state/sync-options';
 import type { LocalDataEntry } from '@/types/local-data/inventory';
 
 const BRIDGE_CACHE = 'obelisk-cache-v4/';
 /** Kind 0 (profile) and kind 3 (follow list) entries, keyed by a hex pubkey. */
 const PROFILE_CACHE_RE = /\/(?:0|3)\/[0-9a-f]{64}$/;
 /** The read-state sync cursors (`D_TAG_GROUPS`, `D_TAG_DMS` in `read-state/sync-options.ts`). */
-const READ_STATE_CACHE_RE = /\/\d+\/obelisk:(?:dm-)?readstate:v1$/;
+const READ_STATE_CACHE_RE = /\/\d+\/obelisk:(?:dm-)?readstate:v1(?::[0-9a-f]{64})?$/;
 
 export function isProfileCacheKey(key: string): boolean {
   return key.startsWith(BRIDGE_CACHE) && PROFILE_CACHE_RE.test(key);
@@ -103,6 +104,12 @@ export const CACHE_ENTRIES: ReadonlyArray<LocalDataEntry> = [
     perAccount: false, sensitive: false, legacy: true, source: 'node_modules/@nostr-wot/data',
   },
   // ---- read positions, unread counts and alerts ---------------------------
+  {
+    id: 'read-cursor-db', area: 'indexedDB', key: LOCAL_READ_CURSOR_DB, match: 'exact', category: 'readState',
+    holds: 'Read positions and seen mention markers per account.',
+    why: 'Retains concurrent cursor advances from tabs sharing a browser.',
+    perAccount: true, sensitive: true, source: 'src/services/read-state/local-cursors.ts',
+  },
   {
     id: 'read-state', area: LS, key: 'obelisk-read-state:', match: 'prefix', category: 'readState',
     holds: 'Read cursors per channel and per DM peer, and when the inbox was last read.',
