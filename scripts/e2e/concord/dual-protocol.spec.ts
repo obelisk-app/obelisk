@@ -78,9 +78,10 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await expect(member.getByTestId('concord-room')).toBeVisible({ timeout: 60_000 });
     await member.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
     await expect(member.getByTestId('server-settings-item-profile')).toHaveCount(0);
+    await expect(member.getByTestId('server-settings-item-members')).toHaveText('Members');
     await member.getByTestId('server-settings-item-members').click();
-    await expect(member.getByTestId('concord-member-list')).toBeVisible();
-    await member.getByRole('button', { name: 'Hide member list', exact: true }).click();
+    await expect(member.getByRole('dialog').getByTestId('concord-member-list')).toBeVisible();
+    await member.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     if (!administration) {
       await owner.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
       await owner.getByTestId('server-settings-item-invite').click();

@@ -41,7 +41,7 @@ export function useConcordRoom(community: ConcordCommunity) {
   const [searching, setSearching] = useState(false);
   const [invite, setInvite] = useState('');
   const inviteForm = useForm(concordInviteForm(community, setInvite));
-  const [settings, setSettings] = useState<'community' | 'branding' | 'invite' | 'layout' | 'channels' | 'roles' | 'edit-channel' | null>(null);
+  const [settings, setSettings] = useState<'community' | 'branding' | 'invite' | 'layout' | 'channels' | 'roles' | 'members' | 'edit-channel' | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const showMembers = useConcordNavigation(nav => nav.membersOpen);
   const setShowMembers = useConcordNavigation(nav => nav.setMembersOpen);
@@ -101,7 +101,7 @@ export function useConcordRoom(community: ConcordCommunity) {
     searching, openSearch: () => setSearching(true), closeSearch: () => setSearching(false),
     layout, rootChannels, collapsedCategories, toggleCategory: (id: string) => setCollapsedCategories(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; }),
     openBranding: () => setSettings('branding'), openInvite: () => setSettings('invite'),
-    openMemberSettings: () => { setSettings(null); setShowMembers(true); },
+    openMemberSettings: () => setSettings('members'),
     openLayout: () => setSettings('layout'), canManageLayout: !state.dissolved && community.canDo(PERM.MANAGE_METADATA),
     branding: appearance.branding, canEditBranding: appearance.canEdit,
     state, channels, rows, channelId, threadId: thread?.id ?? null, groupsById, childrenByParent, selectChannel, error, invite, protocol, groups, group, messages, messagesById, reactions, scroller,

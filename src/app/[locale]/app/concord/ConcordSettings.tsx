@@ -11,7 +11,7 @@ import ConcordSettingsContent, { type ConcordSettingsProps } from './ConcordSett
 
 export default function ConcordSettings({ community, vm, mobile = false }: ConcordSettingsProps & { mobile?: boolean }) {
   const t = useTranslations();
-  const title = vm.settings === 'edit-channel' ? t('shell.desktop.channel.settings') : vm.settings === 'channels' ? t('chat.concord.createChannel') : vm.settings === 'roles' ? t('chat.concord.createRole') : t('chat.concord.settings');
+  const title = vm.settings === 'members' ? t('mobile.members.members') : vm.settings === 'edit-channel' ? t('shell.desktop.channel.settings') : vm.settings === 'channels' ? t('chat.concord.createChannel') : vm.settings === 'roles' ? t('chat.concord.createRole') : t('chat.concord.settings');
   if (vm.settings === 'community') return <ConcordCommunityMenu community={community} vm={vm} mobile={mobile} />;
   if (vm.settings === 'layout') return mobile
     ? <ManageCategoriesSheet relayUrl={vm.branding.name} layout={vm.layout} channels={vm.rootChannels} close={vm.closeSettings} />

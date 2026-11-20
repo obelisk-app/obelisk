@@ -6,7 +6,7 @@ import { RelayPool } from 'applesauce-relay';
 import type { RelayHub } from '@nostr-wot/relay/hub';
 import type { NipSigner } from '@/types/nostr/nip-signer';
 import { concordSocketConstructor } from './hub-socket';
-import { openConcordStorage } from './storage';
+import type { ConcordStorage } from '@applesauce/concord/client';
 import { concordRumorStore } from './rumor-store';
 import { CONCORD_DEFAULT_RELAYS } from '@/constants/nostr-bridge/concord';
 import { concordUploader } from '@/services/chat/concord/media';
@@ -15,9 +15,8 @@ import { startConcordWithCache } from './startup';
 import { startClientMemberChannelGrants } from '@/services/chat/concord/member-channels';
 
 /** SDK gets Obelisk's signer, encrypted storage, and virtual sockets over the shared hub. */
-export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, generation: number, assertCurrent: () => void, personalRelays: string[] = []) {
+export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, generation: number, assertCurrent: () => void, personalRelays: string[], storage: ConcordStorage) {
   const identityId = `concord:${signer.pubkey}:${generation}`;
-  const storage = await openConcordStorage(signer.pubkey, assertCurrent);
   assertCurrent();
   hub.setIdentity({ id: identityId, pubkey: null, signer: null, authPolicy: 'never-auth' });
   const pool = new RelayPool({ WebSocket: concordSocketConstructor(hub, identityId) });

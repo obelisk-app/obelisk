@@ -1,6 +1,8 @@
 import { accountDataRelays } from '../account-data/relays';
 import type { BridgeImpl } from '../facade/client';
 import { pageRelayHub } from '../facade/page-hub';
+import { openConcordStorage } from './storage';
+import { cachedConcordAccountRelays } from './account-relays';
 import type { createConcordRuntime } from './runtime';
 
 type Runtime = Awaited<ReturnType<typeof createConcordRuntime>>;
@@ -26,10 +28,15 @@ export function getConcordForBridge(bridge: BridgeImpl): Promise<Runtime> {
     runtime?.dispose();
     if (sessions.get(bridge)?.generation === generation) sessions.delete(bridge);
   };
-  const promise = Promise.all([import('./runtime'), accountDataRelays(bridge)]).then(([module, personalRelays]) => module.createConcordRuntime(pageRelayHub(), signer, generation, () => {
+  const assertCurrent = () => {
     guard();
     if (closed) throw new DOMException('Concord session ended', 'AbortError');
-  }, personalRelays)).then(value => {
+  };
+  const promise = Promise.all([import('./runtime'), openConcordStorage(signer.pubkey, assertCurrent)]).then(async ([module, storage]) => {
+    const personalRelays = await cachedConcordAccountRelays(storage, () => accountDataRelays(bridge));
+    assertCurrent();
+    return module.createConcordRuntime(pageRelayHub(), signer, generation, assertCurrent, personalRelays, storage);
+  }).then(value => {
     if (closed) { value.dispose(); throw new DOMException('Concord session ended', 'AbortError'); }
     runtime = value;
     return value;

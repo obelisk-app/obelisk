@@ -17,6 +17,7 @@ export function RelaySettingsModal(props: {
   onEmojis?: () => void;
   onLayout?: () => void;
   onMembers?: () => void;
+  memberDirectory?: boolean;
   onRoles?: () => void;
 }) {
   const t = useTranslations();
@@ -44,8 +45,8 @@ export function RelaySettingsModal(props: {
                       : <StarIcon size={21} />}
             </span>
             <span className="min-w-0 flex-1">
-              <Text size="sm" tone="default" weight="semibold" className="block">{t(`shell.desktop.server.items.${icon}.title`)}</Text>
-              <Text variant="caption" className="mt-1 block">{t(`shell.desktop.server.items.${icon}.description`)}</Text>
+              <Text size="sm" tone="default" weight="semibold" className="block">{icon === 'members' && props.memberDirectory ? t('mobile.members.members') : t(`shell.desktop.server.items.${icon}.title`)}</Text>
+              {(icon !== 'members' || !props.memberDirectory) && <Text variant="caption" className="mt-1 block">{t(`shell.desktop.server.items.${icon}.description`)}</Text>}
             </span>
             <ChevronRightIcon strokeWidth={2} className="shrink-0 text-lc-muted" />
           </Button>

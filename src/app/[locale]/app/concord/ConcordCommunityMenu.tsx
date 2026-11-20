@@ -17,12 +17,12 @@ export default function ConcordCommunityMenu({ vm, mobile }: ConcordSettingsProp
     {vm.canManageLayout && <RelayMenuRow icon={<HashIcon size={20} />} rowLabel={t('mobile.layout.title')} onClick={vm.openLayout} />}
     {vm.canManageChannels && <RelayMenuRow icon={<HashIcon size={20} />} rowLabel={t('chat.concord.createChannel')} onClick={vm.openChannelSettings} />}
     {vm.canManageRoles && <RelayMenuRow icon={<StarIcon size={20} />} rowLabel={t('mobile.space.roles')} onClick={vm.openRoleSettings} />}
-    <RelayMenuRow icon={<UsersIcon size={20} />} rowLabel={t('mobile.space.people')} onClick={vm.openMemberSettings} />
+    <RelayMenuRow icon={<UsersIcon size={20} />} rowLabel={t('mobile.members.members')} onClick={vm.openMemberSettings} />
   </Sheet> : <RelaySettingsModal onClose={vm.closeSettings}
     onBranding={vm.canEditBranding ? vm.openBranding : undefined}
     onLayout={vm.canManageLayout ? vm.openLayout : undefined}
     onRoles={vm.canManageRoles ? vm.openRoleSettings : undefined}
     onCreateChannel={vm.canManageChannels ? vm.openChannelSettings : undefined}
     onInvite={vm.canInvite ? vm.openInvite : undefined}
-    onMembers={vm.openMemberSettings} />;
+    onMembers={vm.openMemberSettings} memberDirectory />;
 }
