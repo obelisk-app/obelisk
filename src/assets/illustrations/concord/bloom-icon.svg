@@ -1,1 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#2A1928" d="M0 0h64v64H0z"/><path d="M32 31C9 26 14 9 26 13c5 1 7 8 6 18Zm0 0c-4-22 14-26 19-15 3 6-4 13-19 15Zm0 0c23-4 28 13 16 19-6 3-13-5-16-19Zm0 0c2 21-15 24-20 13-4-8 7-12 20-13Z" fill="#FF759C"/><circle cx="32" cy="31" r="5" fill="#FFD27D"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    @media (prefers-reduced-motion: no-preference) {
+      .petals { transform-origin: 32px 31px; animation: sway 12s ease-in-out infinite alternate; }
+      @keyframes sway {
+        from { transform: rotate(-5deg); fill: #FF759C; }
+        to { transform: rotate(9deg); fill: #DB8FF4; }
+      }
+    }
+  </style>
+  <path fill="#2A1928" d="M0 0h64v64H0z"/>
+  <path class="petals" d="M32 31C9 26 14 9 26 13c5 1 7 8 6 18Zm0 0c-4-22 14-26 19-15 3 6-4 13-19 15Zm0 0c23-4 28 13 16 19-6 3-13-5-16-19Zm0 0c2 21-15 24-20 13-4-8 7-12 20-13Z" fill="#FF759C"/>
+  <circle cx="32" cy="31" r="5" fill="#FFD27D"/>
+</svg>

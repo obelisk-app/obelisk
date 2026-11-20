@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300"><path fill="#2A1928" d="M0 0h960v300H0z"/><path d="M0 300Q179 151 424 189T960 77v223Z" fill="#FF759C" opacity=".2"/><path d="M480 144c-176-40-138-153-55-136 44 9 60 61 55 136Zm0 0c-24-155 111-186 150-94 20 48-31 91-150 94Zm0 0c169-17 187 98 100 144-44 23-85-42-100-144Zm0 0c15 125-98 153-129 85-25-53 39-77 129-85Z" fill="#FF759C"/><circle cx="480" cy="144" r="32" fill="#FFD27D"/><circle cx="148" cy="91" r="9" fill="#FFD27D"/><circle cx="784" cy="208" r="12" fill="#FFD27D"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300">
+  <style>
+    @media (prefers-reduced-motion: no-preference) {
+      .petals { transform-origin: 480px 144px; animation: sway 12s ease-in-out infinite alternate; }
+      @keyframes sway {
+        from { transform: rotate(-5deg); fill: #FF759C; }
+        to { transform: rotate(9deg); fill: #DB8FF4; }
+      }
+    }
+  </style>
+  <path fill="#2A1928" d="M0 0h960v300H0z"/>
+  <path d="M0 300Q179 151 424 189T960 77v223Z" fill="#FF759C" opacity=".2"/>
+  <path class="petals" d="M480 144c-176-40-138-153-55-136 44 9 60 61 55 136Zm0 0c-24-155 111-186 150-94 20 48-31 91-150 94Zm0 0c169-17 187 98 100 144-44 23-85-42-100-144Zm0 0c15 125-98 153-129 85-25-53 39-77 129-85Z" fill="#FF759C"/>
+  <circle cx="480" cy="144" r="32" fill="#FFD27D"/>
+  <circle cx="148" cy="91" r="9" fill="#FFD27D"/>
+  <circle cx="784" cy="208" r="12" fill="#FFD27D"/>
+</svg>
