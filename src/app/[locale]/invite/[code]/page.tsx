@@ -24,14 +24,15 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const locale = await getLocale();
   const { code } = await params;
   const t = await getTranslations({ locale });
-  const relay = inviteLinkRelay((await searchParams).relay);
-  const title = t('seo.relayInvite.title');
+  const concord = code.startsWith('naddr1');
+  const relay = concord ? null : inviteLinkRelay((await searchParams).relay);
+  const title = t(concord ? 'seo.concordInvite.title' : 'seo.relayInvite.title');
   return noindexMetadata({
     locale,
     path: `/invite/${encodeURIComponent(code)}`,
     title,
-    description: t('seo.relayInvite.description'),
-    image: ogImage(t, locale, { live: 'relay', id: encodeRelayShareCode(relay) }, renderedTitle(title)),
+    description: t(concord ? 'seo.concordInvite.description' : 'seo.relayInvite.description'),
+    image: ogImage(t, locale, relay ? { live: 'relay', id: encodeRelayShareCode(relay) } : { page: 'app' }, renderedTitle(title)),
   });
 }
 

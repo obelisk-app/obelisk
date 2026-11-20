@@ -16,6 +16,7 @@ export function useRelayDeckCard(url: string, active: boolean) {
   return {
     loaded, unread,
     name: branding?.name || info?.name || relayHostLabel(url),
+    icon: branding?.icon || info?.icon,
     banner: branding?.banner && branding.banner !== failedBanner ? branding.banner : null,
     description: branding?.description || info?.description,
     onBannerError: () => setFailedBanner(branding?.banner ?? ''),

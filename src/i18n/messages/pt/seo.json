@@ -132,6 +132,10 @@
       "voice": "Sala de voz"
     }
   },
+  "concordInvite": {
+    "title": "Você recebeu um convite para uma comunidade privada",
+    "description": "Abra o Obelisk para entrar nesta comunidade com criptografia de ponta a ponta."
+  },
   "relayInvite": {
     "title": "Você foi convidado para o Obelisk",
     "description": "Abra o link para entrar neste relay do Obelisk: chat, voz e canais, sem e-mail nem senha."

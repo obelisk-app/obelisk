@@ -21,10 +21,10 @@ export function concordUploader(assertCurrent: () => void): ConcordUploader {
   };
 }
 
-/** User-triggered only. Ciphertext is bounded before decrypting; plaintext is never cached. */
-export async function readConcordAttachment(attachment: MediaAttachment) {
-  if (!attachment.url || new URL(attachment.url).protocol !== 'https:' || attachment.encryptionError || !attachment.encryption) throw new Error('Invalid encrypted attachment');
-  const response = await fetch(attachment.url, { credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(30_000) });
+/** Bounded fetch of opaque bytes for attachments and authenticated branding. */
+export async function fetchConcordCiphertext(url: string, limit = CONCORD_ATTACHMENT_BYTE_LIMIT + 16) {
+  if (new URL(url).protocol !== 'https:') throw new Error('Invalid encrypted attachment');
+  const response = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(30_000) });
   if (!response.ok || !response.body) throw new Error('Attachment unavailable');
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -34,14 +34,20 @@ export async function readConcordAttachment(attachment: MediaAttachment) {
       const next = await reader.read();
       if (next.done) break;
       size += next.value.length;
-      if (size > CONCORD_ATTACHMENT_BYTE_LIMIT + 16) throw new Error('Attachment too large');
+      if (size > limit) throw new Error('Attachment too large');
       chunks.push(next.value);
     }
   } finally { await reader.cancel(); }
   const ciphertext = new Uint8Array(size);
   let offset = 0;
   for (const chunk of chunks) { ciphertext.set(chunk, offset); offset += chunk.length; }
-  return openConcordAttachment(ciphertext, attachment);
+  return ciphertext;
+}
+
+/** User-triggered only. Ciphertext is bounded before decrypting; plaintext is never cached. */
+export async function readConcordAttachment(attachment: MediaAttachment) {
+  if (!attachment.url || attachment.encryptionError || !attachment.encryption) throw new Error('Invalid encrypted attachment');
+  return openConcordAttachment(await fetchConcordCiphertext(attachment.url), attachment);
 }
 
 export async function downloadConcordAttachment(attachment: MediaAttachment) {

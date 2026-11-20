@@ -1,7 +1,8 @@
+import { descendantRows } from '@/utils/shell/panes/sidebar/channel-tree';
 import { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { ConcordCommunity } from '@applesauce/concord/client';
-import type { JsMessage } from '@/services/nostr-bridge';
+import type { JsGroup, JsMessage } from '@/services/nostr-bridge';
 import { nostrActions, useConfiguredRelays } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/hooks/session/useSession';
 import { useChatStore } from '@/store/chat';
@@ -17,6 +18,7 @@ export function useConcordMobileRoom(community: ConcordCommunity) {
   const relays = useConfiguredRelays();
   const channelsOpen = useConcordNavigation(state => state.mobileChannelsOpen);
   const setChannelsOpen = useConcordNavigation(state => state.setMobileChannelsOpen);
+  const [foldedChannels, setFoldedChannels] = useState<Record<string, boolean>>({});
   const [adding, setAdding] = useState(false);
   const [actionMessage, setActionMessage] = useState<JsMessage | null>(null);
   const items = useMemo(() => buildTimeline(room.messages, t, locale), [room.messages, t, locale]);
@@ -25,6 +27,16 @@ export function useConcordMobileRoom(community: ConcordCommunity) {
     header: { category: room.branding.name, channel: room.group?.name ?? '' },
     showChannels: () => { if (room.threadId && room.channelId) room.selectChannel(room.channelId); else setChannelsOpen(true); },
     pickChannel: (id: string) => { room.selectGroup(id); room.closeSearch(); },
+    openChannel: (group: JsGroup) => { room.selectGroup(group.id); room.closeSearch(); },
+    entryFor: (group: JsGroup) => {
+      const childIds = room.childrenByParent[group.id] ?? [];
+      const expanded = childIds.length > 0 && !foldedChannels[group.id];
+      return {
+        live: false, expandable: childIds.length > 0, expanded,
+        threads: expanded ? descendantRows(childIds, room.childrenByParent, room.groupsById).map(({ group: child }) => child) : [],
+        onToggleExpand: () => setFoldedChannels(current => ({ ...current, [group.id]: !current[group.id] })),
+      };
+    },
     selectRelay: (url: string) => { useConcordNavigation.getState().close(); void nostrActions.switchRelay(url); },
     openAdd: () => setAdding(true), closeAdd: () => setAdding(false),
     actionMessage: actionMessage ? { ...actionMessage, groupId: room.group?.id, canDeleteOwn: actionMessage.pubkey === myPubkey } : null,

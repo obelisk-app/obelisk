@@ -119,7 +119,7 @@ export function useConcordRoom(community: ConcordCommunity) {
     publication: channels.find(channel => channel.channel_id === channelId)?.view === 'forum' && !thread,
     download: (attachment: MediaAttachment) => run(() => downloadConcordAttachment(attachment)),
     members: [...state.members],
-    canInvite: !state.dissolved && community.canDo(PERM.CREATE_INVITE),
+    canInvite: !state.dissolved && (community.pubkey === community.material.owner || community.canDo(PERM.CREATE_INVITE)),
     canManageChannels: !state.dissolved && community.canDo(PERM.MANAGE_CHANNELS),
     canManageRoles: !state.dissolved && community.canDo(PERM.MANAGE_ROLES),
     canDelete: (rumor: Rumor) => !state.dissolved && (rumor.pubkey === community.pubkey || refoundAuthority(state, PERM.MANAGE_MESSAGES, rumor.pubkey)(community.pubkey)),

@@ -10,7 +10,7 @@ it('shows pending work, waits for synchronized keys and deduplicates repeated in
   const phase$ = new BehaviorSubject('syncing');
   const createInvite = vi.fn().mockResolvedValue({ url: 'test-invitation' });
   const created = vi.fn();
-  const community = { phase$, createInvite } as unknown as ConcordCommunity;
+  const community = { phase$, createInvite, canDo: () => true } as unknown as ConcordCommunity;
   const { result } = renderHook(() => useForm(concordInviteForm(community, created)), {
     wrapper: ({ children }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>,
   });
@@ -26,7 +26,7 @@ it('shows pending work, waits for synchronized keys and deduplicates repeated in
 
 it('shows an invite failure and permits retry', async () => {
   const createInvite = vi.fn().mockRejectedValueOnce(new Error('Offline')).mockResolvedValue({ url: 'test-invitation' });
-  const community = { phase$: new BehaviorSubject('live'), createInvite } as unknown as ConcordCommunity;
+  const community = { phase$: new BehaviorSubject('live'), createInvite, canDo: () => true } as unknown as ConcordCommunity;
   const created = vi.fn();
   const { result } = renderHook(() => useForm(concordInviteForm(community, created)), {
     wrapper: ({ children }) => <LocaleProvider initialLocale="en">{children}</LocaleProvider>,
@@ -57,4 +57,23 @@ it('revokes the selected invitation only after synchronization and exposes rejec
   expect(revokeInvite).toHaveBeenCalledTimes(2);
   expect(revokeInvite).toHaveBeenLastCalledWith(invite);
   expect(result.current.error).toBeNull();
+});
+
+it('retries the failed community sync when an invite is requested', async () => {
+  const phase$ = new BehaviorSubject('error');
+  const start = vi.fn(async () => { await Promise.resolve(); phase$.next('syncing'); phase$.next('live'); });
+  const createInvite = vi.fn().mockResolvedValue({ url: 'test-invitation' });
+  const community = { phase$, start, createInvite, canDo: () => true } as unknown as ConcordCommunity;
+  const form = concordInviteForm(community, vi.fn());
+  await expect(form.submit({})).resolves.toBe('test-invitation');
+  expect(start).toHaveBeenCalledOnce();
+  expect(createInvite).toHaveBeenCalledOnce();
+});
+
+it('preserves the SDK permission check after synchronization', async () => {
+  const createInvite = vi.fn();
+  const community = { phase$: new BehaviorSubject('live'), createInvite, canDo: () => false } as unknown as ConcordCommunity;
+  const form = concordInviteForm(community, vi.fn());
+  await expect(form.submit({})).rejects.toThrow('chat.concord.invitePermission');
+  expect(createInvite).not.toHaveBeenCalled();
 });

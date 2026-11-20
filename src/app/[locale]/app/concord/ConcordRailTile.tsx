@@ -6,6 +6,7 @@ import AnchoredMenu from '@/components/common/AnchoredMenu';
 import { MENU_PANEL_CLASS, MenuItem } from '@/components/ui/overlays/menu';
 import Text from '@/components/ui/layout/Text';
 import { RailTile } from '@/app/[locale]/app/rail/RailTile';
+import { colorFor, letterFor } from '@/utils/relay-url/relay-tile-style';
 import RemoteImage from '@/components/ui/media/RemoteImage';
 
 export default function ConcordRailTile({ community, active, onClick }: {
@@ -14,9 +15,9 @@ export default function ConcordRailTile({ community, active, onClick }: {
   const t = useTranslations();
   const vm = useConcordRailTile(community, onClick);
   const { branding, anchorRef } = vm;
-  return <div className="relative" ref={anchorRef} onContextMenu={vm.openMenu}><RailTile title={branding.name} active={active} onClick={onClick}
+  return <div className="relative" ref={anchorRef} onContextMenu={vm.openMenu}><RailTile title={branding.name} active={active} onClick={onClick} accent={branding.icon ? undefined : colorFor(community.communityId)}
     icon={branding.icon ? <RemoteImage src={branding.icon} alt="" className="h-full w-full rounded-[inherit] object-cover" data-testid="concord-rail-icon" />
-      : <span className="text-lg font-bold">{branding.name.slice(0, 2).toUpperCase()}</span>} />
+      : <span className="relative text-base font-bold">{letterFor(branding.name)}</span>} />
     {vm.unreadMentions > 0 && <span data-testid="concord-rail-unread" aria-label={t('shell.rail.backgroundUnread', { count: String(vm.unreadMentions) })} className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-lc-green px-1 text-[9px] font-bold text-lc-black ring-2 ring-lc-black">{vm.unreadMentions > 99 ? '99+' : vm.unreadMentions}</span>}
     <AnchoredMenu open={vm.menu} onClose={vm.closeMenu} anchorRef={anchorRef} align="start" width={220} panelClassName={MENU_PANEL_CLASS} testId="concord-rail-menu">
       <Text as="div" size="10" tone="muted" className="truncate px-3 py-2">{branding.name}</Text>

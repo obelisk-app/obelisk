@@ -355,6 +355,10 @@
     "paysWithWebln": "Paga com sua extensão do navegador (WebLN)"
   },
   "concord": {
+    "createInvite": "Criar convite",
+    "inviteSyncFailed": "Não foi possível sincronizar esta comunidade. Confira a conexão e tente novamente.",
+    "invitePermission": "Não foi possível verificar se esta conta pode convidar pessoas.",
+    "invitePublishFailed": "Não foi possível criar o convite. Confira a conexão da comunidade e tente novamente.",
     "title": "Concord",
     "private": "Comunidades com criptografia de ponta a ponta",
     "create": "Criar comunidade Concord",

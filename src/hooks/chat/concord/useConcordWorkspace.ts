@@ -4,7 +4,7 @@ import { useIsLoggedIn, useMyPubkey } from '@/hooks/session/useSession';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { ConcordClient } from '@applesauce/concord/client';
-import type { CommunityState } from '@applesauce/concord';
+import type { BlobPointer, CommunityState } from '@applesauce/concord';
 import { getConcordForBridge, useBridge } from '@/services/nostr-bridge';
 import { useConcordNavigation } from '@/store/chat/concord';
 import { useConcordLocation } from './useConcordLocation';
@@ -18,7 +18,7 @@ export function useConcordWorkspace() {
   useConcordLocation(loggedIn);
   const t = useTranslations();
   const nav = useConcordNavigation();
-  const [client, setClient] = useState<ConcordClient | null>(null);
+  const [connection, setConnection] = useState<{ client: ConcordClient; loadArtwork: (pointer: BlobPointer) => Promise<Blob> } | null>(null);
   const [communities, setCommunities] = useState<CommunityState[]>([]);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -27,10 +27,10 @@ export function useConcordWorkspace() {
     let unsubscribe = () => {};
     let stopNavigation = () => {};
     const initialNavigation = useConcordNavigation.getState();
-    const login = bridge.subscribeIsLoggedIn(value => { if (!value) { useConcordNavigation.getState().reset(); setClient(null); setCommunities([]); setError(null); } });
+    const login = bridge.subscribeIsLoggedIn(value => { if (!value) { useConcordNavigation.getState().reset(); setConnection(null); setCommunities([]); setError(null); } });
     void getConcordForBridge(bridge).then(async runtime => {
       if (!active) return;
-      setClient(runtime.client);
+      setConnection(runtime);
       void runtime.ready.catch(err => { if (active) setError(errorText(t, err, 'chat.concord.failed')); });
       const subscription = runtime.client.communities$.subscribe(setCommunities);
       unsubscribe = () => subscription.unsubscribe();
@@ -56,7 +56,7 @@ export function useConcordWorkspace() {
     });
     return () => { active = false; unsubscribe(); stopNavigation(); login(); };
   }, [bridge, loggedIn, pubkey, t]);
-  const currentClient = loggedIn && client?.pubkey === pubkey ? client : null;
+  const currentClient = loggedIn && connection?.client.pubkey === pubkey ? connection?.client ?? null : null;
   const community = currentClient && nav.communityId ? currentClient.getCommunity(nav.communityId) : undefined;
-  return { ...nav, client: currentClient, communities: currentClient ? communities : [], community, error };
+  return { ...nav, client: currentClient, communities: currentClient ? communities : [], loadArtwork: currentClient ? connection?.loadArtwork : undefined, community, error };
 }

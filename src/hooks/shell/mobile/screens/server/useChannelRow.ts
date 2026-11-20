@@ -1,3 +1,6 @@
+import { useChannelProtocol } from '@/hooks/chat/channel/useChannelProtocol';
+import { useConcordReadStore } from '@/store/chat/concord-read';
+import { EMPTY_HIGHLIGHTS } from '@/constants/read-state/selectors';
 import { useRef, useState, type MouseEvent } from 'react';
 import { useCurrentRelayUrl, type JsGroup } from '@/services/nostr-bridge';
 import { useMyPubkey } from '@/hooks/session/useSession';
@@ -16,6 +19,7 @@ const LONG_PRESS_MS = 500;
  * relay yet, have no menu.
  */
 export function useChannelRow(group: JsGroup, subchannel?: boolean) {
+  const protocol = useChannelProtocol();
   const relay = useCurrentRelayUrl();
   const pref = useChannelPref(relay, group.id);
   const myPubkey = useMyPubkey();
@@ -29,7 +33,7 @@ export function useChannelRow(group: JsGroup, subchannel?: boolean) {
     pressTimer.current = null;
   };
   return {
-    hasMenu: !isVoiceKind(group.kind) && !!relay,
+    hasMenu: !protocol && !isVoiceKind(group.kind) && !!relay,
     target: {
       relay,
       channelId: group.id,
@@ -64,11 +68,14 @@ export function useChannelRow(group: JsGroup, subchannel?: boolean) {
 
 /** One channel row's look: its name, whether it is muted or quiet, and its counts. */
 export function useChannelRowBody(group: JsGroup) {
+  const protocol = useChannelProtocol();
+  const concordHighlights = useConcordReadStore((state) => state.highlights[group.id]);
   const myPubkey = useMyPubkey();
   const relay = useCurrentRelayUrl();
-  const highlights = useCachedChannelHighlights(group.id, myPubkey);
-  const pref = useChannelPref(relay, group.id);
-  const mentionCards = useUnreadMentionCardsForChannel(relay, group.id);
+  const relayHighlights = useCachedChannelHighlights(group.id, myPubkey);
+  const highlights = protocol ? concordHighlights ?? EMPTY_HIGHLIGHTS : relayHighlights;
+  const pref = useChannelPref(protocol ? null : relay, group.id);
+  const mentionCards = useUnreadMentionCardsForChannel(protocol ? null : relay, group.id);
   const muted = isChannelMuted(pref);
   return {
     name: group.name ?? group.id.slice(0, 8),

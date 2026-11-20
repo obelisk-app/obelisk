@@ -1,3 +1,4 @@
+import { createConcordBrandingLoader } from '@/services/chat/concord/branding';
 import { startConcordReadSync } from './read-sync';
 import { startConcordReadHighlights } from '@/services/chat/concord/read-highlights';
 import { ConcordClient } from '@applesauce/concord/client';
@@ -50,7 +51,7 @@ export async function createConcordRuntime(hub: RelayHub, signer: NipSigner, gen
     const { ready } = await startConcordWithCache(client);
     assertCurrent();
     void ready.then(() => { assertCurrent(); if (!disposed) client.schedulePurge(); }).catch(() => {});
-    return { client, ready, dispose, readNavigation: () => storage.getItem('obelisk/navigation'), saveNavigation: (value: string) => storage.setItem('obelisk/navigation', value) };
+    return { client, ready, dispose, loadArtwork: createConcordBrandingLoader(storage, assertCurrent), readNavigation: () => storage.getItem('obelisk/navigation'), saveNavigation: (value: string) => storage.setItem('obelisk/navigation', value) };
   } catch (error) {
     dispose();
     throw error;

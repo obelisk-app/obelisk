@@ -81,7 +81,7 @@ export function useGroupNode({ group, view, depth, childrenByParent, groupsById,
       ? descendantRows(childIds, childrenByParent, groupsById).filter(({ group }) => isVisible(group.id))
       : [],
     menuAt,
-    menuTarget: relay ? {
+    menuTarget: relay && !protocol ? {
       relay,
       channelId: group.id,
       name: groupLabel(group),

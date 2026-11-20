@@ -355,6 +355,10 @@
     "paysWithWebln": "Pays with your browser extension (WebLN)"
   },
   "concord": {
+    "createInvite": "Create invitation",
+    "inviteSyncFailed": "Could not sync this community. Check its connection and try again.",
+    "invitePermission": "This account could not verify its permission to invite people.",
+    "invitePublishFailed": "Could not create the invitation. Check the community connection and try again.",
     "title": "Concord",
     "private": "End-to-end encrypted communities",
     "create": "Create Concord community",

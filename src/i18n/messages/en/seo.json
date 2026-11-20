@@ -132,6 +132,10 @@
       "voice": "Voice room"
     }
   },
+  "concordInvite": {
+    "title": "You’re invited to a private community",
+    "description": "Open Obelisk to join this end-to-end encrypted community."
+  },
   "relayInvite": {
     "title": "You are invited to Obelisk",
     "description": "Open the link to join this Obelisk relay: chat, voice and channels, no email or password."

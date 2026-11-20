@@ -21,6 +21,16 @@ relay configuration under advanced connection settings.
 
 The address bar uses `/app#concord=<community-id>&channel=<channel-id>` (with the current locale prefix when present). Routing identifiers live in the fragment, not the request query; invitation secrets and encryption keys are never included. The old NIP-29 relay/channel coordinates are removed while viewing Concord. Reload and browser Back restore the indicated community and channel, ahead of the encrypted last-view cache. These are navigation links for existing members, not invitations granting membership. Both shells yield URL ownership and clear their watched NIP-29 channel while a Concord community is displayed.
 
+The desktop community rail and mobile switcher use the same tile and card
+presentations for both protocols. Mobile channel rows are also shared.
+Protocol adapters still own selection, unread state and permissions.
+
+The public invite card uses generic Obelisk artwork. Community icon and
+banner pointers remain in encrypted community metadata. After an authorized
+client opens an image, it can retain the authenticated ciphertext in its
+bounded account cache. Blossom retention is independent of encryption.
+Previously deleted blobs require a surviving cached copy or a new upload.
+
 ## Cross-device recovery
 
 The SDK publishes its protocol-standard Community List fragments (kind 33302; legacy kind 13302 is read for interoperability), encrypted to the account itself through NIP-44. The list contains memberships and the key material needed to reopen them, not plaintext messages. Creation/join/leave explicitly save the list; `autoSaveCommunityList` persists subsequent key changes. On startup the SDK reconciles its local encrypted mirror with relay fragments before auto-saving, preserving its own merge and concurrency guards.

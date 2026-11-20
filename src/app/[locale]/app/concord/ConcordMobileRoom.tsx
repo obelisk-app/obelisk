@@ -9,7 +9,7 @@ import { ChannelComposer } from '../mobile/screens/channel/ChannelComposer';
 import { MobileServerBanner } from '../mobile/rail/MobileServerBanner';
 import { MessageActionsSheet } from '../mobile/sheets/message/MessageActionsSheet';
 import { AddRelaySheet } from '../mobile/sheets/relay/AddRelaySheet';
-import { GroupNode } from '../panes/sidebar/GroupNode';
+import { ServerChannelEntry } from '../mobile/screens/server/ServerChannelEntry';
 import { ChannelCategorySection } from '../mobile/screens/server/ChannelCategorySection';
 import Sheet from '@/components/ui/overlays/Sheet';
 import SheetHeader from '@/components/ui/overlays/SheetHeader';
@@ -30,7 +30,7 @@ export default function ConcordMobileRoom({ community }: { community: ConcordCom
           onSelectRelay={vm.selectRelay} onAddRelay={vm.openAdd} onCreateChannel={vm.canManageChannels ? vm.openChannelSettings : undefined} onOpenMenu={vm.openSettings} />
         <div className="channel-list native-scroll-y">
           {vm.categories.map(category => <ChannelCategorySection key={category.id} catId={category.id} label={category.name} collapsed={vm.collapsedCategories.has(category.id)} onToggle={() => vm.toggleCategory(category.id)}>
-            {category.groups.map(group => <GroupNode key={group.id} group={group} depth={0} childrenByParent={vm.childrenByParent} groupsById={vm.groupsById} view={vm.group ? { kind: 'group', groupId: vm.group.id } : { kind: 'empty' }} onSelect={vm.pickChannel} />)}
+            {category.groups.map(group => <ServerChannelEntry key={group.id} group={group} {...vm.entryFor(group)} onOpen={vm.openChannel} />)}
           </ChannelCategorySection>)}
         </div>
         </section></div>
