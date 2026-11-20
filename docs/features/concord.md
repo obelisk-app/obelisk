@@ -30,6 +30,8 @@ banner pointers remain in encrypted community metadata. After an authorized
 client opens an image, it can retain the authenticated ciphertext in its
 bounded account cache. Blossom retention is independent of encryption.
 Previously deleted blobs require a surviving cached copy or a new upload.
+Built-in SVG icon and banner presets record only stable preset IDs in
+encrypted metadata and render bundled artwork without a Blossom blob.
 
 ## Cross-device recovery
 

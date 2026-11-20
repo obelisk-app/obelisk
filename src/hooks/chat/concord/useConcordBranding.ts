@@ -1,3 +1,5 @@
+import { concordArtworkUrl } from '@/assets/illustrations/concord';
+import { parseConcordArtwork } from '@/schemas/chat/concord-artwork';
 import { useContext, useEffect, useState } from 'react';
 import type { BlobPointer } from '@applesauce/concord';
 import type { ConcordCommunity } from '@applesauce/concord/client';
@@ -9,7 +11,10 @@ export function useConcordBranding(community: ConcordCommunity, includeBanner = 
   const [state, setState] = useState(community.state$.value);
   const [images, setImages] = useState<{ key: string; icon: string; banner: string } | null>(null);
   const metadata = state.metadata;
-  const imageKey = JSON.stringify([community.communityId, metadata?.icon, includeBanner ? metadata?.banner : null]);
+  const artwork = parseConcordArtwork(metadata?.custom);
+  const presetIcon = concordArtworkUrl(artwork.icon, 'icon');
+  const presetBanner = includeBanner ? concordArtworkUrl(artwork.banner, 'banner') : '';
+  const imageKey = JSON.stringify([community.communityId, presetIcon ? null : metadata?.icon, includeBanner && !presetBanner ? metadata?.banner : null]);
   useEffect(() => { const sub = community.state$.subscribe(setState); return () => sub.unsubscribe(); }, [community]);
   useEffect(() => {
     let active = true;
@@ -23,7 +28,8 @@ export function useConcordBranding(community: ConcordCommunity, includeBanner = 
     return () => { active = false; urls.forEach(url => URL.revokeObjectURL(url)); };
   }, [imageKey, loadArtwork]);
   return { branding: { name: metadata?.name ?? community.material.name, description: metadata?.description ?? '',
-    icon: images?.key === imageKey ? images.icon : '', banner: images?.key === imageKey ? images.banner : '', updatedAt: 0 },
+    icon: presetIcon || (images?.key === imageKey ? images.icon : ''),
+    banner: presetBanner || (images?.key === imageKey ? images.banner : ''), updatedAt: 0 },
     canEdit: community.canDo(PERM.MANAGE_METADATA),
   };
 }

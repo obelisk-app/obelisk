@@ -355,6 +355,16 @@
     "paysWithWebln": "Pays with your browser extension (WebLN)"
   },
   "concord": {
+    "artwork": {
+      "icon": "Icon presets",
+      "banner": "Banner presets",
+      "orbit": "Orbit",
+      "summit": "Summit",
+      "bloom": "Bloom",
+      "tide": "Tide",
+      "clear": "Clear preset",
+      "hint": "Built-in artwork is saved with your community settings."
+    },
     "createInvite": "Create invitation",
     "inviteSyncFailed": "Could not sync this community. Check its connection and try again.",
     "invitePermission": "This account could not verify its permission to invite people.",

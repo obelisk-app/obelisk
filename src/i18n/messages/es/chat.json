@@ -355,6 +355,16 @@
     "paysWithWebln": "Paga con tu extensión del navegador (WebLN)"
   },
   "concord": {
+    "artwork": {
+      "icon": "Iconos prediseñados",
+      "banner": "Banners prediseñados",
+      "orbit": "Órbita",
+      "summit": "Cumbre",
+      "bloom": "Flor",
+      "tide": "Marea",
+      "clear": "Quitar diseño",
+      "hint": "Los diseños incluidos se guardan con la configuración de tu comunidad."
+    },
     "createInvite": "Crear invitación",
     "inviteSyncFailed": "No pudimos sincronizar esta comunidad. Revisá la conexión y volvé a intentarlo.",
     "invitePermission": "No pudimos verificar que esta cuenta pueda invitar a otras personas.",
