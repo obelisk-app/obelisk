@@ -11,7 +11,7 @@ import { useGroupNode } from '@/hooks/shell/panes/sidebar/useGroupNode';
 import { PublicCallPreview } from '@/components/voice/room/PublicCallPreview';
 import { ActiveCallBadge } from './ActiveCallBadge';
 import { ForumThreadRow } from './ForumThreadRow';
-import { ChevronRightIcon } from '@/assets/icons';
+import { SubchannelIcon } from '@/assets/icons';
 
 /**
  * One channel in the desktop sidebar, with its children under it: a
@@ -65,7 +65,6 @@ export function GroupNode({
             onClose={vm.closeMenu}
           />
         )}
-        {depth > 0 && !vm.isCollapsible && <span className="pl-1 text-lc-muted lc-tree-marker">↳</span>}
         <Button
           variant="bare"
           onClick={() => onSelect(group.id)}
@@ -102,12 +101,12 @@ export function GroupNode({
           <Button
             variant="bare"
             onClick={vm.toggleCollapsed}
-            className="flex shrink-0 items-center justify-center px-2 py-1.5 text-lc-white/70 hover:text-lc-green"
+            className="flex shrink-0 items-center justify-center rounded px-2 py-1.5 text-lc-muted hover:bg-lc-card hover:text-lc-green aria-expanded:text-lc-green focus-visible:outline-2 focus-visible:outline-lc-green"
             aria-label={expandLabel}
             aria-expanded={!vm.collapsed}
             title={expandLabel}
           >
-            <ChevronRightIcon size={null} strokeWidth={2.5} className={`h-3.5 w-3.5 transition-transform duration-150 ${vm.collapsed ? '' : 'rotate-90'}`} />
+            <SubchannelIcon size={null} strokeWidth={2.5} className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -132,7 +131,11 @@ export function GroupNode({
           ))}
         </div>
       ) : (
-        vm.descendants.map((row) => <GroupNode key={row.group.id} group={row.group} {...childProps} depth={row.depth} />)
+        vm.descendants.map((row) => (
+          <div key={row.group.id} className="lc-thread-row" style={{ marginLeft: (row.depth - 1) * 12 }}>
+            <GroupNode group={row.group} {...childProps} depth={1} />
+          </div>
+        ))
       ))}
     </>
   );

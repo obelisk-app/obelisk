@@ -85,24 +85,23 @@ describe('ChannelRow (phone)', () => {
     expect(screen.queryByTestId('channel-sheet')).toBeNull();
   });
 
-  it('splits an expandable forum into the row and a chevron that toggles', () => {
+  it('splits an expandable forum into the row and a curved expand control', () => {
     const onToggle = vi.fn();
     const onClick = vi.fn();
     mount(<ChannelRow group={group({ id: 'f1', name: 'Board', kind: 'forum' })} live={false} onClick={onClick} expandable expanded onToggleExpand={onToggle} />);
-    const chevron = document.querySelector('.ch-chevron-btn')!;
-    expect(chevron).toHaveAttribute('aria-expanded', 'true');
-    expect(chevron.querySelector('.ch-chevron')).toHaveClass('expanded');
-    fireEvent.click(chevron);
+    const expand = screen.getByRole('button', { name: 'Show recent subchannels' });
+    expect(expand).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(expand);
     expect(onToggle).toHaveBeenCalled();
     fireEvent.click(document.querySelector('.ch-row-body')!);
     expect(onClick).toHaveBeenCalled();
-    expect(chevron.closest('.ch-row-split')).not.toBeNull();
+    expect(expand.closest('.ch-row-split')).not.toBeNull();
   });
 
-  it('keeps a forum without threads as one button with a chevron', () => {
+  it('keeps a forum without threads as one button without an expand control', () => {
     mount(<ChannelRow group={group({ id: 'f1', name: 'Board', kind: 'forum' })} live={false} onClick={vi.fn()} />);
-    expect(document.querySelector('.ch-chevron-btn')).toBeNull();
-    expect(screen.getByText('Board').closest('button')!.querySelector('.ch-chevron')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show all subchannels' })).toBeNull();
   });
 });
 

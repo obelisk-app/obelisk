@@ -1122,17 +1122,15 @@ button:not(:disabled),
  * Mirrors the mobile treatment: each thread row paints its own vertical
  * rail (::before, full row height) and L-corner (::after, top half + curve).
  * The last row drops its ::before so the rail terminates inside the corner
- * instead of trailing past it as a stub. The legacy `↳` marker is hidden
- * in-place (visibility: hidden) so it keeps reserving its column width -
- * leaving room for the rail without shifting the channel name. */
+ * instead of trailing past it as a stub. */
 .lc-forum-threads {
   position: relative;
 }
 .lc-thread-row {
   position: relative;
 }
-.lc-thread-row .lc-tree-marker {
-  visibility: hidden;
+.lc-thread-row > div {
+  margin-left: 0.65rem;
 }
 .lc-thread-row::before {
   content: '';

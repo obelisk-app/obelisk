@@ -7,7 +7,7 @@ import { useChannelRowBody } from '@/hooks/shell/mobile/screens/server/useChanne
 import { channelRowClass, isVoiceKind } from '@/utils/shell/mobile/channel-row';
 import { PublicCallPreview } from '@/components/voice/room/PublicCallPreview';
 import { ChannelRowCounts } from './ChannelRowCounts';
-import { ChevronRightIcon, ListIcon, MicIcon } from '@/assets/icons';
+import { SubchannelIcon, ListIcon, MicIcon } from '@/assets/icons';
 
 export type ChannelRowProps = {
   group: JsGroup;
@@ -25,15 +25,12 @@ const FORUM_ICON = (
     <ListIcon size={null} strokeWidth={1.5} />
   </span>
 );
-const CHEVRON = (
-  <ChevronRightIcon size={null} strokeWidth={2.5} />
-);
 
 /**
  * One row in the phone channel list: the icon for text, voice or forum, the
  * live-call marker on voice, and the unread and mention counts derived from
  * the read-state cursor. A forum with threads splits into two click zones:
- * the row opens the forum (as on desktop), the chevron expands its threads.
+ * the row opens the forum (as on desktop), the branch icon expands its threads.
  */
 export function ChannelRowBody({ group, live, active, onClick, expandable, expanded, onToggleExpand, indent }: ChannelRowProps) {
   const t = useTranslations();
@@ -73,12 +70,12 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
           </Button>
           <Button
             variant="bare"
-            className="ch-chevron-btn"
+            className="ch-subchannels-btn"
             onClick={onToggleExpand}
             aria-label={t(expanded ? 'common.subchannels.showRecent' : 'common.subchannels.showAll')}
             aria-expanded={!!expanded}
           >
-            <span className={`ch-chevron ${expanded ? 'expanded' : ''}`} aria-hidden="true">{CHEVRON}</span>
+            <SubchannelIcon size={18} />
           </Button>
         </div>
         {voice && group.isPublic && !group.isHidden && <PublicCallPreview groupId={group.id} menu />}
@@ -91,7 +88,6 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
         {FORUM_ICON}
         <span className="ch-name">{row.name}</span>
         {counts}
-        <span className="ch-chevron" aria-hidden="true">{CHEVRON}</span>
       </Button>
     );
   }
