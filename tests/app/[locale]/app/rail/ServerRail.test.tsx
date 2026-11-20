@@ -156,9 +156,8 @@ describe('add-relay form accessibility', () => {
   it('the URL field is named by its visible label', () => {
     renderRail(<ServerRail mode={{ kind: 'dm' }} onPickDM={() => {}} onPickRelay={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add a community' }));
-    fireEvent.click(screen.getByText('Custom URL'));
-    const field = screen.getByLabelText('Relay URL');
+    const field = screen.getByLabelText('Invitation or community address');
     expect(field.tagName).toBe('INPUT');
-    expect(field).toHaveClass('font-mono', 'rounded-lg');
+    expect(field).toHaveAttribute('inputmode', 'url');
   });
 });

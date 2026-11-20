@@ -12,6 +12,11 @@ Each community uses either NIP-29 or Concord. There is no message bridge between
 
 Creation requires exactly three distinct secure WebSocket relay URLs. Defaults live in `src/constants/nostr-bridge/concord.ts`. Imported communities retain the relay set defined by their protocol state. This is a Concord-specific exception to the NIP-29 single-active-relay rule, not permission to expand existing group subscriptions.
 
+The Add a community dialog and phone sheet accept an invitation link or
+community address in one field, and list suggested communities below it.
+Create a community opens a separate encrypted community form with optional
+relay configuration under advanced connection settings.
+
 ## Navigation
 
 The address bar uses `/app#concord=<community-id>&channel=<channel-id>` (with the current locale prefix when present). Routing identifiers live in the fragment, not the request query; invitation secrets and encryption keys are never included. The old NIP-29 relay/channel coordinates are removed while viewing Concord. Reload and browser Back restore the indicated community and channel, ahead of the encrypted last-view cache. These are navigation links for existing members, not invitations granting membership. Both shells yield URL ownership and clear their watched NIP-29 channel while a Concord community is displayed.

@@ -1,3 +1,6 @@
+import { buildInviteLink } from '@applesauce/concord/helpers';
+import type { ConcordClient } from '@applesauce/concord/client';
+import { ConcordContext } from '@/contexts/chat/concord';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -23,7 +26,7 @@ function mount(methods: Record<string, unknown> = {}) {
   return { onClose };
 }
 
-const rowOf = (url: string) => screen.getByText(url).closest('li')!;
+const rowOf = (url: string) => screen.getByTestId(`suggested-community-${new URL(url).host}`);
 
 describe('AddRelayModal', () => {
   it('opens on the suggestions, named from NIP-11, and marks the ones already added', async () => {
@@ -32,7 +35,6 @@ describe('AddRelayModal', () => {
     expect(screen.getByText('The first relay')).toBeInTheDocument();
     // No NIP-11 name: the host stands in, and the description says there is none.
     expect(screen.getByText('two.example')).toBeInTheDocument();
-    expect(screen.getByText('No description')).toBeInTheDocument();
     const added = rowOf('wss://two.example').querySelector('button')!;
     expect(added).toHaveTextContent('Added');
     expect(added).toBeDisabled();
@@ -60,27 +62,44 @@ describe('AddRelayModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('adds and switches to a typed relay from the custom tab', async () => {
+  it('joins and switches to a typed community address', async () => {
     const addRelay = vi.fn().mockResolvedValue(undefined);
     const switchRelay = vi.fn().mockResolvedValue(undefined);
     const { onClose } = mount({ addRelay, switchRelay });
-    fireEvent.click(screen.getByText('Custom URL'));
-    const field = screen.getByLabelText('Relay URL');
-    expect(field).toHaveValue('wss://');
+    const field = screen.getByLabelText('Invitation or community address');
+    expect(field).toHaveValue('');
     fireEvent.change(field, { target: { value: '' } });
-    expect(screen.getByRole('button', { name: 'Add relay' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Join community' })).toBeDisabled();
     fireEvent.change(field, { target: { value: 'custom.example' } });
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add relay' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Join community' })); });
     expect(addRelay).toHaveBeenCalledWith('wss://custom.example');
     expect(switchRelay).toHaveBeenCalledWith('wss://custom.example');
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('switches back to the suggestions', () => {
+  it('routes a private invitation without asking the user to choose a protocol', async () => {
+    const onClose = vi.fn();
+    const joinByLink = vi.fn().mockResolvedValue({ communityId: 'joined' });
+    renderWithBridge(
+      <ConcordContext.Provider value={{ client: { joinByLink } as unknown as ConcordClient, communities: [], error: null }}>
+        <AddRelayModal onClose={onClose} />
+      </ConcordContext.Provider>,
+      fakeBridge(),
+    );
+    const link = buildInviteLink('https://obelisk.example', 'a'.repeat(64), new Uint8Array(16), ['wss://chat.example']);
+    fireEvent.change(screen.getByTestId('community-join-link'), { target: { value: link } });
+    await act(async () => { fireEvent.click(screen.getByTestId('community-join')); });
+    expect(joinByLink).toHaveBeenCalledWith(link);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('opens a separate creation screen and returns to joining', () => {
     mount();
-    fireEvent.click(screen.getByText('Custom URL'));
-    expect(screen.queryByText('wss://one.example')).toBeNull();
-    fireEvent.click(screen.getByText('Suggested'));
-    expect(screen.getByText('wss://one.example')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('create-community-option'));
+    expect(screen.getByText('Create a community')).toBeInTheDocument();
+    expect(screen.queryByTestId('community-join-link')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByTestId('community-join-link')).toBeInTheDocument();
+    expect(rowOf('wss://one.example')).toBeInTheDocument();
   });
 });

@@ -25,12 +25,12 @@ function mount(close = vi.fn()) {
 }
 
 describe('AddRelaySheet', () => {
-  it('renders the add-relay sheet with its title and the suggested tab', () => {
+  it('renders the add-relay sheet with its title and the suggestions', () => {
     const { container } = mount();
     const host = container.querySelector('[data-screen="add-relay"]');
     expect(host).toHaveClass('sheet-host');
-    expect(screen.getByText('Add a relay')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Suggested' })).toHaveClass('active');
+    expect(screen.getByText('Add a community')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Suggested' })).toBeInTheDocument();
     expect(screen.getAllByText('relay.two.test').length).toBeGreaterThan(0);
   });
 
@@ -42,12 +42,11 @@ describe('AddRelaySheet', () => {
   });
 });
 
-describe('AddRelaySheet custom tab accessibility', () => {
+describe('AddRelaySheet join accessibility', () => {
   it('names the URL field by its visible label', () => {
     mount();
-    fireEvent.click(screen.getByRole('button', { name: 'Custom URL' }));
-    const field = screen.getByLabelText('Relay URL');
+    const field = screen.getByLabelText('Invitation or community address');
     expect(field.tagName).toBe('INPUT');
-    expect(field).toHaveClass('setup-input');
+    expect(field).toHaveAttribute('inputmode', 'url');
   });
 });

@@ -39,10 +39,8 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await owner.goto('/app');
     await owner.getByTestId('analytics-consent').getByRole('button', { name: "Don't allow", exact: true }).click({ noWaitAfter: true });
     await owner.locator('[data-tour=rail-add-relay]').click({ timeout: 60_000 });
-    await owner.getByTestId('add-concord-community').click();
-    await expect(owner.getByRole('button', { name: 'Create Concord community', exact: true })).toBeVisible();
     await owner.getByRole('dialog').screenshot({ path: '/tmp/obelisk-community-picker.png' });
-    await owner.getByRole('button', { name: 'Create Concord community', exact: true }).click();
+    await owner.getByTestId('create-community-option').click();
     const communityName = `Obelisk E2E ${Date.now()}`;
     await owner.getByTestId('concord-name').fill(communityName, { timeout: 60_000 });
     await owner.getByTestId('concord-create').click();
@@ -75,8 +73,8 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await owner.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     await member.goto(invitation);
     await member.getByTestId('analytics-consent').getByRole('button', { name: "Don't allow", exact: true }).click({ noWaitAfter: true });
-    await expect(member.getByTestId('concord-invite-input')).not.toHaveValue('', { timeout: 60_000 });
-    await member.getByTestId('concord-join').click();
+    await expect(member.getByTestId('community-join-link')).not.toHaveValue('', { timeout: 60_000 });
+    await member.getByTestId('community-join').click();
     await expect(member.getByTestId('concord-room')).toBeVisible({ timeout: 60_000 });
     await member.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
     await expect(member.getByTestId('server-settings-item-profile')).toHaveCount(0);

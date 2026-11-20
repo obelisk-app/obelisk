@@ -37,10 +37,13 @@ describe('AddRelaySheet suggestions', () => {
     expect(screen.getByRole('button', { name: 'Add' })).not.toBeDisabled();
   });
 
-  it('switches to the custom URL form', () => {
+  it('keeps creation separate from joining on mobile', () => {
     mount();
-    fireEvent.click(screen.getByRole('button', { name: 'Custom URL' }));
-    expect(screen.getByLabelText('Relay URL')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Custom URL' })).toHaveClass('active');
+    expect(screen.getByLabelText('Invitation or community address')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('create-community-option'));
+    expect(screen.getByText('Create a community')).toBeInTheDocument();
+    expect(screen.queryByTestId('community-join-link')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByTestId('community-join-link')).toBeInTheDocument();
   });
 });

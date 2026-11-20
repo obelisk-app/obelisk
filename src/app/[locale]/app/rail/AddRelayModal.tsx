@@ -1,56 +1,53 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import ConcordAddCommunity from '@/app/[locale]/app/concord/ConcordAddCommunity';
-import Button from '@/components/ui/buttons/Button';
-
-import List from '@/components/ui/layout/List';
-import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
-import { useAddRelay } from '@/hooks/relay/rail/useAddRelay';
 import Modal from '@/components/ui/overlays/Modal';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
-import { useTranslations } from 'next-intl';
-import { AddRelayTabButton } from './AddRelayTabButton';
-import { CustomRelayForm } from '@/components/relay/CustomRelayForm';
+import Heading from '@/components/ui/layout/Heading';
+import List from '@/components/ui/layout/List';
+import { CreateCommunityOption } from '@/components/relay/CreateCommunityOption';
+import { JoinCommunityForm } from '@/components/relay/JoinCommunityForm';
+import { useAddRelay } from '@/hooks/relay/rail/useAddRelay';
+import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
 import { SuggestedRelayItem } from './SuggestedRelayItem';
 
-/** Add a relay to the rail: pick a suggested one, or type a URL. */
-export function AddRelayModal({ onClose, initialConcord = false }: { onClose: () => void; initialConcord?: boolean }) {
-  const t = useTranslations();
-  const vm = useAddRelay(initialConcord);
+export function AddRelayModal({ onClose, fromInvite = false }: { onClose: () => void; fromInvite?: boolean }) {
+  const t = useTranslations('shell.rail.addModal');
+  const vm = useAddRelay();
 
   return (
-    <Modal
-      onClose={onClose}
-      surface="card" panelClassName="flex max-h-[85vh] w-full max-w-lg mx-4 flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark shadow-2xl"
+    <Modal onClose={onClose} surface="card"
+      panelClassName="mx-4 flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-lc-border bg-lc-dark shadow-2xl"
     >
-      <ModalHeader title={t('shell.rail.addModal.title')} subtitle={t('shell.rail.addModal.subtitle')} onClose={onClose} onBack={vm.concord ? vm.backToRelays : undefined} />
-
-
-      {!vm.concord && <div className="flex shrink-0 border-b border-lc-border px-5">
-        <AddRelayTabButton active={vm.tab === 'suggested'} onClick={() => vm.setTab('suggested')}>
-          {t('shell.rail.addModal.suggested')}
-        </AddRelayTabButton>
-        <AddRelayTabButton active={vm.tab === 'custom'} onClick={() => vm.setTab('custom')}>
-          {t('shell.rail.addModal.custom')}
-        </AddRelayTabButton>
-      </div>}
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-        {vm.concord ? <ConcordAddCommunity onClose={onClose} /> : vm.tab === 'suggested' ? (
-          <List marker="none" spacing="none" className="flex flex-col gap-2">
-            {SUGGESTED_RELAYS.map((r) => (
-              <SuggestedRelayItem
-                key={r.url}
-                url={r.url}
-                alreadyAdded={vm.isConfigured(r.url)}
-                onAdded={onClose}
-              />
-            ))}
-          </List>
-        ) : (
-          <CustomRelayForm onAdded={onClose} />
+      <ModalHeader
+        title={t(vm.creating ? 'createCommunity' : fromInvite ? 'join' : 'title')}
+        subtitle={t(vm.creating ? 'createHelp' : fromInvite ? 'inviteHelp' : 'joinHelp')}
+        onClose={onClose}
+        onBack={vm.creating ? vm.backToJoin : undefined}
+      />
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
+        {vm.creating ? <ConcordAddCommunity onClose={onClose} /> : (
+          <>
+            <JoinCommunityForm onClose={onClose} fromInvite={fromInvite} />
+            {!fromInvite && SUGGESTED_RELAYS.length > 0 && (
+              <section className="space-y-2">
+                <Heading as="h2" variant="panel">{t('suggested')}</Heading>
+                <List marker="none" spacing="none" className="flex flex-col gap-2">
+                  {SUGGESTED_RELAYS.map(({ url }) => (
+                    <SuggestedRelayItem key={url} url={url} alreadyAdded={vm.isConfigured(url)} onAdded={onClose} />
+                  ))}
+                </List>
+              </section>
+            )}
+          </>
         )}
       </div>
-      {!vm.concord && <div className="border-t border-lc-border px-5 py-4"><Button variant="outline" data-testid="add-concord-community" onClick={vm.openConcord}>{t('chat.concord.addCommunity')}</Button></div>}
+      {!vm.creating && !fromInvite && (
+        <div className="shrink-0 border-t border-lc-border px-5 py-3">
+          <CreateCommunityOption onOpen={vm.openCreate} />
+        </div>
+      )}
     </Modal>
   );
 }

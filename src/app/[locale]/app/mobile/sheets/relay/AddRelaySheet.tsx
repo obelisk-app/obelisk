@@ -1,53 +1,46 @@
 'use client';
 
-import ConcordAddCommunity from '@/app/[locale]/app/concord/ConcordAddCommunity';
-
-import Button from '@/components/ui/buttons/Button';
-import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
 import { useTranslations } from 'next-intl';
-import { useAddRelay } from '@/hooks/relay/rail/useAddRelay';
+import ConcordAddCommunity from '@/app/[locale]/app/concord/ConcordAddCommunity';
+import { CreateCommunityOption } from '@/components/relay/CreateCommunityOption';
+import { JoinCommunityForm } from '@/components/relay/JoinCommunityForm';
+import Heading from '@/components/ui/layout/Heading';
 import Sheet from '@/components/ui/overlays/Sheet';
 import SheetActions from '@/components/ui/overlays/SheetActions';
 import SheetHeader from '@/components/ui/overlays/SheetHeader';
-import { SuggestedRelayItem } from './SuggestedRelayItem';
-import { CustomRelayForm } from '@/components/relay/CustomRelayForm';
+import { useAddRelay } from '@/hooks/relay/rail/useAddRelay';
+import { SUGGESTED_RELAYS } from '@/services/relay/relay-info';
 import { PlusIcon } from '@/assets/icons';
+import { SuggestedRelayItem } from './SuggestedRelayItem';
 
 export function AddRelaySheet({ close }: { close: () => void }) {
-  const t = useTranslations();
-  const { tab, setTab, isConfigured, concord, openConcord, backToRelays } = useAddRelay();
+  const t = useTranslations('shell.rail.addModal');
+  const vm = useAddRelay();
 
   return (
-    <Sheet onClose={close} screen="add-relay" label={t('mobile.rail.addTitle')} maxHeight="88%">
+    <Sheet onClose={close} screen="add-relay" label={t(vm.creating ? 'createCommunity' : 'title')} maxHeight="88%">
       <SheetHeader
         icon={<PlusIcon size={null} />}
-        title={t('mobile.rail.addTitle')}
-        onBack={concord ? backToRelays : undefined}
+        title={t(vm.creating ? 'createCommunity' : 'title')}
+        subtitle={t(vm.creating ? 'createHelp' : 'joinHelp')}
+        onBack={vm.creating ? vm.backToJoin : undefined}
       />
-
-      {!concord && <div className="dms-tabs native-scroll-x" style={{ padding: 0 }}>
-        <Button variant="bare" className={`filter-tab ${tab === 'suggested' ? 'active' : ''}`} onClick={() => setTab('suggested')}>
-          {t('shell.rail.addModal.suggested')}
-        </Button>
-        <Button variant="bare" className={`filter-tab ${tab === 'custom' ? 'active' : ''}`} onClick={() => setTab('custom')}>
-          {t('shell.rail.addModal.custom')}
-        </Button>
-      </div>}
-      <div style={{ overflowY: 'auto', maxHeight: '54vh', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
-        {concord ? <ConcordAddCommunity onClose={close} /> : tab === 'suggested' ? (
-          SUGGESTED_RELAYS.map((r) => (
-            <SuggestedRelayItem
-              key={r.url}
-              url={r.url}
-              alreadyAdded={isConfigured(r.url)}
-              onAdded={close}
-            />
-          ))
-        ) : (
-          <CustomRelayForm presentation="sheet" onAdded={close} />
+      <div className="max-h-[52dvh] space-y-5 overflow-y-auto">
+        {vm.creating ? <ConcordAddCommunity onClose={close} /> : (
+          <>
+            <JoinCommunityForm onClose={close} />
+            {SUGGESTED_RELAYS.length > 0 && (
+              <section className="space-y-2">
+                <Heading as="h2" variant="panel">{t('suggested')}</Heading>
+                {SUGGESTED_RELAYS.map(({ url }) => (
+                  <SuggestedRelayItem key={url} url={url} alreadyAdded={vm.isConfigured(url)} onAdded={close} />
+                ))}
+              </section>
+            )}
+          </>
         )}
       </div>
-      {!concord && <Button variant="outline" data-testid="add-concord-community" onClick={openConcord}>{t('chat.concord.addCommunity')}</Button>}
+      {!vm.creating && <CreateCommunityOption onOpen={vm.openCreate} />}
       <SheetActions onCancel={close} dismiss="close" />
     </Sheet>
   );

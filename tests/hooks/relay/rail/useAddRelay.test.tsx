@@ -5,12 +5,14 @@ import { bridgeWrapper } from '@tests/support/render-with-bridge';
 import { useAddRelay } from '@/hooks/relay/rail/useAddRelay';
 
 describe('useAddRelay', () => {
-  it('opens on the suggestions and knows which relays are in the rail', () => {
+  it('starts in join mode and switches to creation and back', () => {
     const { result } = renderHook(() => useAddRelay(), { wrapper: bridgeWrapper(fakeBridge({ configuredRelays: ['wss://a'] })) });
-    expect(result.current.tab).toBe('suggested');
+    expect(result.current.creating).toBe(false);
     expect(result.current.isConfigured('wss://a')).toBe(true);
     expect(result.current.isConfigured('wss://b')).toBe(false);
-    act(() => result.current.setTab('custom'));
-    expect(result.current.tab).toBe('custom');
+    act(() => result.current.openCreate());
+    expect(result.current.creating).toBe(true);
+    act(() => result.current.backToJoin());
+    expect(result.current.creating).toBe(false);
   });
 });

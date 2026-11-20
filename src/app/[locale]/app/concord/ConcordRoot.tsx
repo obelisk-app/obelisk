@@ -12,6 +12,6 @@ export default function ConcordRoot({ children }: { children: ReactNode }) {
   useCommunityConnectionsSync();
   return <ConcordContext.Provider value={vm}>
     {children}
-    {vm.open && vm.communityId === '' && <AddRelayModal initialConcord onClose={vm.close} />}
+    {vm.open && vm.communityId === '' && <AddRelayModal fromInvite onClose={vm.close} />}
   </ConcordContext.Provider>;
 }
