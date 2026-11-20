@@ -136,10 +136,10 @@ describe('ChannelTree rows', () => {
 });
 
 describe('ChannelTree publications', () => {
-  it('shows the threads with messages on the rail, and folds them (remembered)', () => {
+  it('shows known threads on the rail and folds them (remembered)', () => {
     mount();
     expect(screen.getByTestId('channel-row-t1').closest('.lc-thread-row')).not.toBeNull();
-    expect(screen.queryByTestId('channel-row-t2')).toBeNull();
+    expect(screen.getByTestId('channel-row-t2')).toBeInTheDocument();
     const fold = screen.getByRole('button', { name: 'Collapse publications' });
     fireEvent.click(fold);
     expect(screen.queryByTestId('channel-row-t1')).toBeNull();
@@ -155,9 +155,9 @@ describe('ChannelTree publications', () => {
     expect(screen.queryByTestId('channel-row-t1')).toBeNull();
   });
 
-  it('a thread appears once it has a message', () => {
+  it('a thread is visible before its messages load and remains visible afterwards', () => {
     const { bridge } = mount();
-    expect(screen.queryByTestId('channel-row-t2')).toBeNull();
+    expect(screen.getByTestId('channel-row-t2')).toBeInTheDocument();
     act(() => bridge.stores.messagesByGroup.set({
       t1: [messageFixture({ id: 'x', pubkey: OTHER, createdAt: 10 })],
       t2: [messageFixture({ id: 'y', pubkey: OTHER, createdAt: 11 })],

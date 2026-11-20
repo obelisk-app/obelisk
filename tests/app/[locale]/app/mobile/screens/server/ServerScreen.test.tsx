@@ -5,7 +5,7 @@ import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { BRIDGE_MOCK_RELAY } from '@tests/support/mocks/nostr-bridge';
 import type { ChannelLayout } from '@/services/relay/channel-layout';
 import { ServerScreen } from '@/app/[locale]/app/mobile/screens/server/ServerScreen';
-import { group, message } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
+import { group } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 
 const operator = vi.hoisted(() => ({
   value: {
@@ -54,7 +54,7 @@ function mount(methods: Record<string, unknown> = {}) {
   const selectGroup = vi.fn();
   renderWithBridge(
     <ServerScreen go={go} selectGroup={selectGroup} />,
-    fakeBridge({ groups: GROUPS, childrenByParent: { f: ['t1'] }, messagesByGroup: { t1: [message({ id: 'm' })] } }, methods as never),
+    fakeBridge({ groups: GROUPS, childrenByParent: { f: ['t1'] } }, methods as never),
   );
   return { go, selectGroup };
 }
@@ -73,7 +73,7 @@ describe('ServerScreen (phone)', () => {
     expect(screen.queryByTestId('mobile-server-rail')).not.toBeInTheDocument();
   });
 
-  it('collapses a forum from its chevron', () => {
+  it('expands a Publication before its discussion messages load and folds it again', () => {
     mount();
     fireEvent.click(screen.getByRole('button', { name: 'Show all subchannels' }));
     expect(names()).toContain('thread one');

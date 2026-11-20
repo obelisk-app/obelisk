@@ -7,7 +7,7 @@ import { useChannelRowBody } from '@/hooks/shell/mobile/screens/server/useChanne
 import { channelRowClass, isVoiceKind } from '@/utils/shell/mobile/channel-row';
 import { PublicCallPreview } from '@/components/voice/room/PublicCallPreview';
 import { ChannelRowCounts } from './ChannelRowCounts';
-import { SubchannelIcon, ListIcon, MicIcon } from '@/assets/icons';
+import { ListIcon, MicIcon } from '@/assets/icons';
 
 export type ChannelRowProps = {
   group: JsGroup;
@@ -30,7 +30,7 @@ const FORUM_ICON = (
  * One row in the phone channel list: the icon for text, voice or forum, the
  * live-call marker on voice, and the unread and mention counts derived from
  * the read-state cursor. A forum with threads splits into two click zones:
- * the row opens the forum (as on desktop), the branch icon expands its threads.
+ * the row opens the forum (as on desktop), the triangle expands its threads.
  */
 export function ChannelRowBody({ group, live, active, onClick, expandable, expanded, onToggleExpand, indent }: ChannelRowProps) {
   const t = useTranslations();
@@ -75,7 +75,7 @@ export function ChannelRowBody({ group, live, active, onClick, expandable, expan
             aria-label={t(expanded ? 'common.subchannels.showRecent' : 'common.subchannels.showAll')}
             aria-expanded={!!expanded}
           >
-            <SubchannelIcon size={18} />
+            <span className="channel-expand-triangle" aria-hidden="true" />
           </Button>
         </div>
         {voice && group.isPublic && !group.isHidden && <PublicCallPreview groupId={group.id} menu />}

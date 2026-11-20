@@ -1118,6 +1118,17 @@ button:not(:disabled),
   background: color-mix(in srgb, var(--cr-turn, #3f3f46) 18%, #0a0a0a 82%);
 }
 
+.channel-expand-triangle {
+  display: block;
+  width: 0;
+  height: 0;
+  border-block: 4px solid transparent;
+  border-left: 6px solid currentColor;
+}
+[aria-expanded="true"] > .channel-expand-triangle {
+  transform: rotate(90deg);
+}
+
 /* Discord-style L-rail for expanded forum threads (desktop sidebar).
  * Mirrors the mobile treatment: each thread row paints its own vertical
  * rail (::before, full row height) and L-corner (::after, top half + curve).
@@ -1129,8 +1140,8 @@ button:not(:disabled),
 .lc-thread-row {
   position: relative;
 }
-.lc-thread-row > div {
-  margin-left: 0.65rem;
+.lc-thread-row .lc-tree-marker {
+  visibility: hidden;
 }
 .lc-thread-row::before {
   content: '';

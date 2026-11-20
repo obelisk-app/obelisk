@@ -1,6 +1,5 @@
 'use client';
 
-import { Fragment } from 'react';
 import Text from '@/components/ui/layout/Text';
 import Button from '@/components/ui/buttons/Button';
 import type { JsGroup } from '@/services/nostr-bridge';
@@ -10,8 +9,6 @@ import type { View } from '@/utils/shell/desktop/view';
 import { useGroupNode } from '@/hooks/shell/panes/sidebar/useGroupNode';
 import { PublicCallPreview } from '@/components/voice/room/PublicCallPreview';
 import { ActiveCallBadge } from './ActiveCallBadge';
-import { ForumThreadRow } from './ForumThreadRow';
-import { SubchannelIcon } from '@/assets/icons';
 
 /**
  * One channel in the desktop sidebar, with its children under it: a
@@ -65,6 +62,7 @@ export function GroupNode({
             onClose={vm.closeMenu}
           />
         )}
+        {depth > 0 && <span aria-hidden="true" className="pl-1 text-lc-muted lc-tree-marker">↳</span>}
         <Button
           variant="bare"
           onClick={() => onSelect(group.id)}
@@ -106,7 +104,7 @@ export function GroupNode({
             aria-expanded={!vm.collapsed}
             title={expandLabel}
           >
-            <SubchannelIcon size={null} strokeWidth={2.5} className="h-4 w-4" />
+            <span className="channel-expand-triangle" aria-hidden="true" />
           </Button>
         )}
       </div>
@@ -118,23 +116,15 @@ export function GroupNode({
         // .lc-forum-threads so each row's ::before/::after can paint a
         // continuous vertical rail terminating in an L-corner at the last row.
         <div className="lc-forum-threads">
-          {vm.children.map(({ child, showAsChannel }) => (
-            <Fragment key={child.id}>
-              {showAsChannel ? (
-                <GroupNode group={child} {...childProps} />
-              ) : (
-                <ForumThreadRow groupId={child.id}>
-                  <GroupNode group={child} {...childProps} />
-                </ForumThreadRow>
-              )}
-            </Fragment>
+          {vm.children.map((child) => (
+            <div key={child.id} className="lc-thread-row">
+              <GroupNode group={child} {...childProps} />
+            </div>
           ))}
         </div>
       ) : (
         vm.descendants.map((row) => (
-          <div key={row.group.id} className="lc-thread-row" style={{ marginLeft: (row.depth - 1) * 12 }}>
-            <GroupNode group={row.group} {...childProps} depth={1} />
-          </div>
+          <GroupNode key={row.group.id} group={row.group} {...childProps} depth={row.depth} />
         ))
       ))}
     </>

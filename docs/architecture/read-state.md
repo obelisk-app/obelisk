@@ -438,8 +438,9 @@ cursor stays advanced and the merged snapshot is queued for another batch.
 Main channels stay in the operator's categories. Up to five followed
 subchannels with activity in the last 72 hours appear under their parents.
 When none qualify, the list shows the latest older followed subchannels. A
-parent's curved arrow reveals its other subchannels. Posting, receiving a mention
-or reply, or choosing Follow starts a follow. Unfollow takes precedence over participation until manually reversed.
+parent's triangle reveals its other subchannels, including ones whose
+messages have yet to load. Posting, receiving a mention or reply, or choosing
+Follow starts a follow. Unfollow takes precedence over participation until manually reversed.
 Follow decisions ride in the encrypted group snapshot. Activity stays local
 and is populated from the active relay's existing live message feed and
 bounded history queries on relay entry and reconnect. The app checks each

@@ -81,7 +81,7 @@ export function useServerScreen(selectGroup: (groupId: string, kind: JsGroup['ki
         expanded,
         threads: descendants
           .filter(({ group }) => expanded || recentSubchannelIds.has(group.id))
-          .map(({ group }) => ({ group, showAsChannel: g.kind !== 'forum' || recentSubchannelIds.has(group.id) })),
+          .map(({ group }) => group),
         onToggleExpand: expandable ? () => setExpandedChannels((current) => toggleKey(current, key)) : undefined,
       };
     },

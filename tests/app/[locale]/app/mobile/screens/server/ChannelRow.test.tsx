@@ -6,8 +6,7 @@ import { BRIDGE_MOCK_RELAY } from '@tests/support/mocks/nostr-bridge';
 import { channelPrefKey, useChannelPrefsStore } from '@/store/chat/channel-prefs';
 import { MUTED_FOREVER } from '@/constants/chat/channel-prefs';
 import { ChannelRow } from '@/app/[locale]/app/mobile/screens/server/ChannelRow';
-import { ForumThreadChildRow } from '@/app/[locale]/app/mobile/screens/server/ForumThreadChildRow';
-import { group, message } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
+import { group } from '@tests/app/[locale]/app/mobile/mobile-fixtures';
 
 vi.mock('@/components/chat/channel/ChannelActionSheet', () => ({
   ChannelActionSheet: ({ target, onClose }: { target: { name: string; hasUnread: boolean }; onClose: () => void }) => (
@@ -85,7 +84,7 @@ describe('ChannelRow (phone)', () => {
     expect(screen.queryByTestId('channel-sheet')).toBeNull();
   });
 
-  it('splits an expandable forum into the row and a curved expand control', () => {
+  it('splits an expandable forum into the row and a triangle expand control', () => {
     const onToggle = vi.fn();
     const onClick = vi.fn();
     mount(<ChannelRow group={group({ id: 'f1', name: 'Board', kind: 'forum' })} live={false} onClick={onClick} expandable expanded onToggleExpand={onToggle} />);
@@ -102,15 +101,5 @@ describe('ChannelRow (phone)', () => {
     mount(<ChannelRow group={group({ id: 'f1', name: 'Board', kind: 'forum' })} live={false} onClick={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Board' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Show all subchannels' })).toBeNull();
-  });
-});
-
-describe('ForumThreadChildRow', () => {
-  it('stays hidden until the thread has a message', () => {
-    const { unmount } = mount(<ForumThreadChildRow group={group({ id: 't1', name: 'Thread' })} active={false} onClick={vi.fn()} />);
-    expect(screen.queryByText('Thread')).toBeNull();
-    unmount();
-    mount(<ForumThreadChildRow group={group({ id: 't1', name: 'Thread' })} active={false} onClick={vi.fn()} />, { messagesByGroup: { t1: [message({ id: 'm' })] } });
-    expect(screen.getByText('Thread').closest('button')).toHaveClass('ch-thread');
   });
 });

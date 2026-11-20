@@ -75,9 +75,7 @@ export function useGroupNode({ group, view, depth, childrenByParent, groupsById,
     },
     /** The child channels this client knows (a publication's threads). */
     children: group.kind === 'forum'
-      ? knownGroups(childIds.filter(isVisible), groupsById).map((child) => ({
-          child, showAsChannel: recentSubchannelIds?.has(child.id) ?? false,
-        }))
+      ? knownGroups(childIds.filter(isVisible), groupsById)
       : [],
     descendants: depth === 0 && group.kind !== 'forum'
       ? descendantRows(childIds, childrenByParent, groupsById).filter(({ group }) => isVisible(group.id))

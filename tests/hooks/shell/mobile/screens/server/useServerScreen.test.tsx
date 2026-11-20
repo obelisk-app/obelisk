@@ -43,7 +43,7 @@ describe('useServerScreen', () => {
     expect(result.current.entryFor(forum).threads).toEqual([]);
     act(() => result.current.entryFor(forum).onToggleExpand!());
     expect(result.current.entryFor(forum)).toMatchObject({ expandable: true, expanded: true, live: false });
-    expect(result.current.entryFor(forum).threads.map(({ group }) => group.id)).toEqual(['t']);
+    expect(result.current.entryFor(forum).threads.map((group) => group.id)).toEqual(['t']);
     act(() => result.current.entryFor(forum).onToggleExpand!());
     expect(result.current.entryFor(forum).expanded).toBe(false);
     expect(result.current.entryFor(result.current.roots[1])).toMatchObject({ live: true, expandable: false, onToggleExpand: undefined });

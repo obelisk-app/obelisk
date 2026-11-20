@@ -93,7 +93,6 @@ export { default as SortIcon } from './SortIcon';
 export { default as SparklesIcon } from './SparklesIcon';
 export { default as StackIcon } from './StackIcon';
 export { default as StarIcon } from './StarIcon';
-export { default as SubchannelIcon } from './SubchannelIcon';
 export { default as StickerIcon } from './StickerIcon';
 export { default as SunIcon } from './SunIcon';
 export { default as SwitchCameraIcon } from './SwitchCameraIcon';
