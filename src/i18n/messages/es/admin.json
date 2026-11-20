@@ -6,11 +6,12 @@
   "adminsOnly": "Solo admins",
   "membersOnly": "Solo miembros",
   "allChannels": "Todos los canales",
+  "colMemberships": "Membresías por canal",
   "colUser": "Usuario",
   "colChannel": "Canal",
   "colRole": "Rol",
   "member": "Miembro",
-  "selectRow": "Seleccionar {user}",
+  "selectRow": "Seleccionar a {user} en {channel}",
   "roles": {
     "newPlaceholder": "Nombre del nuevo rol…",
     "newLabel": "Nombre del nuevo rol",
@@ -70,5 +71,5 @@
   "subtitle": "Seleccioná las filas para expulsar miembros o quitarles el rol de administrador en esos canales.",
   "emptyRelay": "Todavía no hay admins ni miembros en este relay.",
   "emptyFiltered": "Ninguna entrada coincide con los filtros actuales.",
-  "counts": "{selected} seleccionadas · {shown} visibles · {total} en total"
+  "counts": "{selected} seleccionadas · {shown} membresías visibles · {total} en total"
 }

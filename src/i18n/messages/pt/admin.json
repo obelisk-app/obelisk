@@ -6,11 +6,12 @@
   "adminsOnly": "Somente admins",
   "membersOnly": "Somente membros",
   "allChannels": "Todos os canais",
+  "colMemberships": "Participações por canal",
   "colUser": "Usuário",
   "colChannel": "Canal",
   "colRole": "Cargo",
   "member": "Membro",
-  "selectRow": "Selecionar {user}",
+  "selectRow": "Selecionar {user} em {channel}",
   "roles": {
     "newPlaceholder": "Nome do novo cargo…",
     "newLabel": "Nome do novo cargo",
@@ -70,5 +71,5 @@
   "subtitle": "Selecione as linhas para remover membros ou revogar o cargo de administrador nesses canais.",
   "emptyRelay": "Ainda não há admins nem membros neste relay.",
   "emptyFiltered": "Nenhuma entrada corresponde aos filtros atuais.",
-  "counts": "{selected} selecionadas · {shown} visíveis · {total} no total"
+  "counts": "{selected} selecionadas · {shown} participações visíveis · {total} no total"
 }

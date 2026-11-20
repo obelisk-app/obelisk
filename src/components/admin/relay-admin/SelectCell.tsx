@@ -7,14 +7,14 @@ import { profileNameOr } from '@/utils/identity/profile-labels';
 import { shortNpubLabel } from '@/utils/identity/short-npub';
 
 /** The row checkbox, named after the person it selects. */
-export default function SelectCell({ pubkey, selected, onToggle }: { pubkey: string; selected: boolean; onToggle: () => void }) {
+export default function SelectCell({ pubkey, channel, selected, onToggle }: { pubkey: string; channel: string; selected: boolean; onToggle: () => void }) {
   const t = useTranslations();
   const meta = useAuthor(pubkey);
   return (
     <Checkbox
       checked={selected}
       onChange={onToggle}
-      aria-label={t('admin.selectRow', { user: profileNameOr(meta, shortNpubLabel(pubkey)) })}
+      aria-label={t('admin.selectRow', { user: profileNameOr(meta, shortNpubLabel(pubkey)), channel })}
       className="cursor-pointer"
     />
   );

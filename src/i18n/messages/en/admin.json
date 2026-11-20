@@ -6,11 +6,12 @@
   "adminsOnly": "Admins only",
   "membersOnly": "Members only",
   "allChannels": "All channels",
+  "colMemberships": "Channel memberships",
   "colUser": "User",
   "colChannel": "Channel",
   "colRole": "Role",
   "member": "Member",
-  "selectRow": "Select {user}",
+  "selectRow": "Select {user} in {channel}",
   "roles": {
     "newPlaceholder": "New role name…",
     "newLabel": "New role name",
@@ -70,5 +71,5 @@
   "subtitle": "Select channel memberships to remove members or revoke admin access.",
   "emptyRelay": "No admin or member entries on this relay yet.",
   "emptyFiltered": "No entries match the current filters.",
-  "counts": "{selected} selected · {shown} shown · {total} total"
+  "counts": "{selected} selected · {shown} memberships shown · {total} total"
 }

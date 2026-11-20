@@ -1,23 +1,13 @@
 import type { TableColumn } from '@/components/ui/data/Table';
 import type { Translate } from '@/i18n/keys';
 import type { RelayAdminSelection } from '@/hooks/admin/relay-admin/useRelayAdminPanel';
-import type { RelayAdminRow } from '@/utils/admin/relay-admin-rows';
-import SelectCell from './SelectCell';
+import type { RelayAdminPerson } from '@/utils/admin/relay-admin-rows';
 import UserCell from './UserCell';
-import RoleCell from './RoleCell';
+import MembershipsCell from './MembershipsCell';
 
-/** The relay admin table's columns: select, person, channel, role. */
-export function relayAdminColumns(t: Translate, selection: RelayAdminSelection): ReadonlyArray<TableColumn<RelayAdminRow>> {
+export function relayAdminColumns(t: Translate, selection: RelayAdminSelection, groupLabels: ReadonlyMap<string, string>): ReadonlyArray<TableColumn<RelayAdminPerson>> {
   return [
-    {
-      key: 'select',
-      header: '',
-      inset: 'md',
-      className: 'w-10 sm:w-12',
-      cell: (r) => <SelectCell pubkey={r.pubkey} selected={selection.isSelected(r)} onToggle={() => selection.toggle(r)} />,
-    },
-    { key: 'user', header: t('admin.colUser'), cell: (r) => <UserCell pubkey={r.pubkey} /> },
-    { key: 'channel', header: t('admin.colChannel'), className: 'w-[28%] sm:w-[30%]', cell: (r) => <span className="block truncate text-xs text-lc-muted sm:text-sm" title={r.groupName}>{r.groupName}</span> },
-    { key: 'role', header: t('admin.colRole'), className: 'w-16 sm:w-24', cell: (r) => <RoleCell isAdmin={r.isAdmin} /> },
+    { key: 'user', header: t('admin.colUser'), className: 'w-[40%] align-top', cell: person => <UserCell pubkey={person.pubkey} /> },
+    { key: 'memberships', header: t('admin.colMemberships'), className: 'align-top', cell: person => <MembershipsCell memberships={person.memberships} selection={selection} groupLabels={groupLabels} /> },
   ];
 }

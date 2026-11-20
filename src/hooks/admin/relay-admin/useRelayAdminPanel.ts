@@ -3,7 +3,7 @@ import { useTranslations } from 'next-intl';
 import { useAdminsByGroup, useGroups, useRelayPeople } from '@/services/nostr-bridge';
 import { useMembersByGroupBulk } from '@/hooks/chat/members/useMembersByGroupBulk';
 import {
-  buildRelayAdminRows, filterRelayAdminRows, relayAdminGroupName, relayAdminRowKey, selectedRelayAdminRows, toggleKey,
+  buildRelayAdminRows, filterRelayAdminRows, groupRelayAdminPeople, relayAdminChannelOptions, relayAdminRowKey, selectedRelayAdminRows, toggleKey,
   type RelayAdminRoleFilter, type RelayAdminRow,
 } from '@/utils/admin/relay-admin-rows';
 import { confirmAndRunRelayAdminBulk, type RelayAdminBulkAction } from '@/services/admin/relay-admin-bulk';
@@ -33,6 +33,9 @@ export function useRelayAdminPanel() {
     [groups, adminsByGroup, membersByGroup],
   );
   const shown = useMemo(() => filterRelayAdminRows(rows, { text, role, group }, names), [rows, text, role, group, names]);
+  const personRows = useMemo(() => groupRelayAdminPeople(shown), [shown]);
+  const groupOptions = useMemo(() => relayAdminChannelOptions(groups), [groups]);
+  const groupLabels = useMemo(() => new Map(groupOptions.map(option => [option.value, option.label])), [groupOptions]);
   const selectedRows = useMemo(() => selectedRelayAdminRows(shown, selected), [shown, selected]);
 
   const bulk = async (action: RelayAdminBulkAction) => {
@@ -41,11 +44,10 @@ export function useRelayAdminPanel() {
   };
 
   return {
-    /** The channel select's options; a nameless channel shows 12 characters of its id. */
-    groupOptions: groups.map((g) => ({ value: g.id, label: relayAdminGroupName(g, 12) })),
+    groupOptions, groupLabels,
     filters: { text, role, group, setText, setRole, setGroup },
-    rows: shown,
-    rowClassName: (row: RelayAdminRow) => selected.has(relayAdminRowKey(row)) ? 'bg-lc-green/10' : undefined,
+    rows: personRows,
+    shownCount: shown.length,
     totalCount: rows.length,
     selectedCount: selectedRows.length,
     emptyKey: rows.length === 0 ? 'admin.emptyRelay' as const : 'admin.emptyFiltered' as const,

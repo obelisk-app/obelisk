@@ -5,20 +5,20 @@ import { renderWithBridge } from '@tests/support/render-with-bridge';
 import { groupFixture } from '@tests/support/mocks/nostr-bridge';
 import { ConfirmDialogHost } from '@/components/ui/overlays/ConfirmDialog';
 import RelayAdminPanel from '@/components/admin/relay-admin/RelayAdminPanel';
-import { shortNpubLabel } from '@/utils/identity/short-npub';
+import { safeNpub, shortNpubLabel } from '@/utils/identity/short-npub';
 
 const ADMIN = 'a'.repeat(64);
 const MEMBER = 'b'.repeat(64);
 const OTHER = 'c'.repeat(64);
 
-function mount(onClose = vi.fn()) {
+function mount(onClose = vi.fn(), extraMembership = false) {
   const removeUser = vi.fn(async () => {});
   const removePermission = vi.fn(async () => {});
   const bridge = fakeBridge(
     {
       groups: [groupFixture({ id: 'g1', name: 'general' }), groupFixture({ id: 'g2', name: 'random' })],
       adminsByGroup: { g1: [ADMIN] },
-      membersByGroup: { g1: [ADMIN, MEMBER], g2: [OTHER] },
+      membersByGroup: { g1: [ADMIN, MEMBER], g2: extraMembership ? [OTHER, ADMIN] : [OTHER] },
       userMetadata: { [ADMIN]: {
         pubkey: ADMIN, name: 'Fabricio', displayName: null, picture: 'https://images.example/avatar.png',
         about: null, banner: null, nip05: null, lud16: null, website: null,
@@ -58,7 +58,23 @@ describe('RelayAdminPanel', () => {
     expect(within(rows[0]).getByText('admin')).toBeInTheDocument();
     expect(within(rows[1]).getByText('Member')).toBeInTheDocument();
     expect(rows[2]).toHaveTextContent('random');
-    expect(screen.getByText('0 selected · 3 shown · 3 total')).toBeInTheDocument();
+    expect(screen.getByText('0 selected · 3 memberships shown · 3 total')).toBeInTheDocument();
+  });
+
+  it('links to the profile and shows multiple channel roles under one person', () => {
+    mount(vi.fn(), true);
+    expect(bodyRows()).toHaveLength(3);
+    const profile = screen.getByRole('link', { name: /Fabricio/ });
+    expect(profile).toHaveAttribute('href', `/p/${safeNpub(ADMIN)}`);
+    expect(profile).toHaveAttribute('target', '_blank');
+    const row = within(bodyRows()[0]);
+    const admin = row.getByRole('checkbox', { name: 'Select Fabricio in general' });
+    const member = row.getByRole('checkbox', { name: 'Select Fabricio in random' });
+    fireEvent.click(member);
+    expect(admin).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Demote' })).toBeDisabled();
+    fireEvent.click(admin);
+    expect(screen.getByRole('button', { name: 'Demote' })).toBeEnabled();
   });
 
   it('filters by text, by role and by channel', () => {
@@ -95,7 +111,7 @@ describe('RelayAdminPanel', () => {
     const kick = screen.getByRole('button', { name: 'Kick' });
     expect(kick).toBeDisabled();
     fireEvent.click(within(bodyRows()[1]).getByRole('checkbox'));
-    expect(screen.getByText('1 selected · 3 shown · 3 total')).toBeInTheDocument();
+    expect(screen.getByText('1 selected · 3 memberships shown · 3 total')).toBeInTheDocument();
     expect(kick).toBeEnabled();
   });
 
@@ -118,7 +134,7 @@ describe('RelayAdminPanel', () => {
     await waitFor(() => expect(removeUser).toHaveBeenCalledTimes(2));
     expect(removeUser).toHaveBeenCalledWith('g1', MEMBER);
     expect(removeUser).toHaveBeenCalledWith('g2', OTHER);
-    await waitFor(() => expect(screen.getByText('0 selected · 3 shown · 3 total')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('0 selected · 3 memberships shown · 3 total')).toBeInTheDocument());
   });
 
   it('does nothing when the confirmation is cancelled', async () => {
@@ -129,7 +145,7 @@ describe('RelayAdminPanel', () => {
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(removeUser).not.toHaveBeenCalled();
     expect(removePermission).not.toHaveBeenCalled();
-    expect(screen.getByText('1 selected · 3 shown · 3 total')).toBeInTheDocument();
+    expect(screen.getByText('1 selected · 3 memberships shown · 3 total')).toBeInTheDocument();
   });
 });
 

@@ -77,3 +77,30 @@ export function toggleKey(set: ReadonlySet<string>, key: string): Set<string> {
   else next.add(key);
   return next;
 }
+
+export interface RelayAdminPerson {
+  pubkey: string;
+  memberships: RelayAdminRow[];
+}
+
+export function groupRelayAdminPeople(rows: readonly RelayAdminRow[]): RelayAdminPerson[] {
+  const people = new Map<string, RelayAdminPerson>();
+  for (const row of rows) {
+    const person = people.get(row.pubkey);
+    if (person) person.memberships.push(row);
+    else people.set(row.pubkey, { pubkey: row.pubkey, memberships: [row] });
+  }
+  return [...people.values()];
+}
+
+export function relayAdminChannelOptions(groups: readonly Pick<JsGroup, 'id' | 'name'>[]) {
+  const counts = new Map<string, number>();
+  for (const group of groups) {
+    const name = relayAdminGroupName(group, 12);
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return groups.map(group => {
+    const name = relayAdminGroupName(group, 12);
+    return { value: group.id, label: (counts.get(name) ?? 0) > 1 ? `${name} · ${group.id.slice(0, 8)}` : name };
+  });
+}

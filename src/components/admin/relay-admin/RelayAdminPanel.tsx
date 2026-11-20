@@ -5,7 +5,6 @@ import Modal from '@/components/ui/overlays/Modal';
 import ModalHeader from '@/components/ui/overlays/ModalHeader';
 import Table from '@/components/ui/data/Table';
 import { useRelayAdminPanel } from '@/hooks/admin/relay-admin/useRelayAdminPanel';
-import { relayAdminRowKey } from '@/utils/admin/relay-admin-rows';
 import { relayAdminColumns } from './columns';
 import RelayAdminToolbar from './RelayAdminToolbar';
 import RelayAdminFooter from './RelayAdminFooter';
@@ -27,11 +26,10 @@ export default function RelayAdminPanel({ onClose }: { onClose: () => void }) {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <Table
           aria-label={t('admin.title')}
-          columns={relayAdminColumns(t, vm.selection)}
+          columns={relayAdminColumns(t, vm.selection, vm.groupLabels)}
           rows={vm.rows}
-          rowKey={relayAdminRowKey}
+          rowKey={person => person.pubkey}
           className="table-fixed"
-          rowClassName={vm.rowClassName}
           header="sticky"
           emptyPlacement="replace"
           emptyPadding="none"
