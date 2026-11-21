@@ -3,6 +3,7 @@
 import Text from '@/components/ui/layout/Text';
 import { setPreference } from '@/services/preferences/preferences';
 import { usePreferences } from '@/hooks/preferences/usePreferences';
+import ConcordBackup from '@/components/settings/account/ConcordBackup';
 import AccountBackupExport from '@/components/settings/account/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/account/DeveloperSignatureTest';
 import Card from '@/components/ui/layout/Card';
@@ -20,6 +21,7 @@ export function AdvancedSettingsSection() {
           {t("settings.preferences.backup.advanced")}
         </Heading>
         <AccountBackupExport />
+          <ConcordBackup />
       </Card>
       <section className="space-y-3 border-t border-lc-border pt-4" data-testid="desktop-developer-settings">
         <Text as="div" variant="label" size="xs" tone="muted" weight="semibold">{t('settings.developer.section')}</Text>

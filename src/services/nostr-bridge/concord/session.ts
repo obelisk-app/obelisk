@@ -33,6 +33,7 @@ export function getConcordForBridge(bridge: BridgeImpl): Promise<Runtime> {
     if (closed) throw new DOMException('Concord session ended', 'AbortError');
   };
   const promise = Promise.all([import('./runtime'), openConcordStorage(signer.pubkey, assertCurrent)]).then(async ([module, storage]) => {
+    await storage.applyRestore();
     const personalRelays = await cachedConcordAccountRelays(storage, () => accountDataRelays(bridge));
     assertCurrent();
     return module.createConcordRuntime(pageRelayHub(), signer, generation, assertCurrent, personalRelays, storage);

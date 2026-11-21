@@ -70,6 +70,8 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await ownerContext.grantPermissions(['clipboard-read', 'clipboard-write']);
     await owner.getByRole('button', { name: 'Copy invite link', exact: true }).click();
     expect(await owner.evaluate(async value => (await navigator.clipboard.readText()) === value, invitation)).toBe(true);
+    await owner.getByRole('button', { name: 'Share this link with members', exact: true }).click();
+    await expect(owner.getByRole('button', { name: 'Stop sharing with members', exact: true })).toBeVisible({ timeout: 30_000 });
     await owner.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     await member.goto(invitation);
     await member.getByTestId('analytics-consent').getByRole('button', { name: "Don't allow", exact: true }).click({ noWaitAfter: true });
@@ -79,6 +81,12 @@ for (const administration of [false, true]) test(administration ? 'Concord role 
     await member.getByTestId('concord-channels').getByRole('button', { name: 'Server settings', exact: true }).click();
     await expect(member.getByTestId('server-settings-item-profile')).toHaveCount(0);
     await expect(member.getByTestId('server-settings-item-members')).toHaveText('Members');
+    await member.getByTestId('server-settings-item-invite').click();
+    await expect(member.getByTestId('concord-create-invite')).toHaveCount(0);
+    await memberContext.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await member.getByRole('button', { name: 'Copy shared invite', exact: true }).click({ timeout: 30_000 });
+    expect(await member.evaluate(async value => (await navigator.clipboard.readText()) === value, invitation)).toBe(true);
+    await member.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
     await member.getByTestId('server-settings-item-members').click();
     await expect(member.getByRole('dialog').getByTestId('concord-member-list')).toBeVisible();
     await member.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();

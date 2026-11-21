@@ -12,7 +12,7 @@ export default function ConcordCommunityMenu({ vm, mobile }: ConcordSettingsProp
   const t = useTranslations();
   return mobile ? <Sheet onClose={vm.closeSettings} screen="relay-menu" label={vm.branding.name} maxHeight="88%">
     <SheetHeader title={vm.branding.name} onBack={vm.closeSettings} />
-    {vm.canInvite && <RelayMenuRow icon={<UserPlusIcon size={20} />} rowLabel={t('chat.concord.invite')} onClick={vm.openInvite} />}
+    <RelayMenuRow icon={<UserPlusIcon size={20} />} rowLabel={t('chat.concord.invite')} onClick={vm.openInvite} />
     {vm.canEditBranding && <RelayMenuRow icon={<ImageIcon size={20} />} rowLabel={t('mobile.branding.edit')} onClick={vm.openBranding} />}
     {vm.canManageLayout && <RelayMenuRow icon={<HashIcon size={20} />} rowLabel={t('mobile.layout.title')} onClick={vm.openLayout} />}
     {vm.canManageChannels && <RelayMenuRow icon={<HashIcon size={20} />} rowLabel={t('chat.concord.createChannel')} onClick={vm.openChannelSettings} />}
@@ -23,6 +23,6 @@ export default function ConcordCommunityMenu({ vm, mobile }: ConcordSettingsProp
     onLayout={vm.canManageLayout ? vm.openLayout : undefined}
     onRoles={vm.canManageRoles ? vm.openRoleSettings : undefined}
     onCreateChannel={vm.canManageChannels ? vm.openChannelSettings : undefined}
-    onInvite={vm.canInvite ? vm.openInvite : undefined}
+    onInvite={vm.openInvite}
     onMembers={vm.openMemberSettings} memberDirectory />;
 }

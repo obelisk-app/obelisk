@@ -45,7 +45,7 @@ describe('AddRelaySheet', () => {
 describe('AddRelaySheet join accessibility', () => {
   it('names the URL field by its visible label', () => {
     mount();
-    const field = screen.getByLabelText('Invitation or community address');
+    const field = screen.getByLabelText('Relay URL or invite link');
     expect(field.tagName).toBe('INPUT');
     expect(field).toHaveAttribute('inputmode', 'url');
   });

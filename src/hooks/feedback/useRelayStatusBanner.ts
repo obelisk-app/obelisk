@@ -1,3 +1,4 @@
+import { useConcordNavigation } from '@/store/chat/concord';
 import { useTranslations } from 'next-intl';
 import { useConnectionState, useRelayAccess, useCurrentRelayUrl } from '@/services/nostr-bridge';
 import { useIsLoggedIn, useMyLoginMethod } from '@/hooks/session/useSession';
@@ -18,7 +19,8 @@ export function useRelayStatusBanner(hideAuthenticating: boolean) {
   const access = useRelayAccess();
   const loginMethod = useMyLoginMethod();
   const relay = useCurrentRelayUrl();
-  if (!isLoggedIn || !relay) return null;
+  const concordOpen = useConcordNavigation(state => state.open);
+  if (!isLoggedIn || concordOpen || !relay) return null;
   const status = relayStatus(conn, access, loginMethod, shortHost(relay), t);
   if (!status || (hideAuthenticating && (status.state === 'authenticating' || status.state === 'auth-required'))) return null;
   return { ...status, testId: relayBannerTestId(status.state) };

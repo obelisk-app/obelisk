@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { fakeBridge } from '@tests/support/fake-bridge';
 import { bridgeWrapper } from '@tests/support/render-with-bridge';
@@ -29,6 +29,13 @@ describe('useMessageAuthor', () => {
 
   it('settles on the bridge profile for anyone else', () => {
     expect(renders(OTHER).at(-1)).toBe('Bea');
+  });
+
+  it('requests an author profile when a message arrives without bridge ingest', () => {
+    const ensureUserMetadata = vi.fn();
+    const bridge = fakeBridge({ myPubkey: ME }, { ensureUserMetadata });
+    renderHook(() => useMessageAuthor(OTHER), { wrapper: bridgeWrapper(bridge) });
+    expect(ensureUserMetadata).toHaveBeenCalledWith(OTHER);
   });
 
   it('does not lend your profile to someone else on the first render', () => {

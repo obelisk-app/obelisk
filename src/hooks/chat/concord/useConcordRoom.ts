@@ -1,5 +1,6 @@
 'use client';
 
+import { parseConcordSharedInvite } from '@/schemas/chat/concord-shared-invite';
 import { useConcordMarkRead } from './useConcordMarkRead';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
@@ -35,6 +36,7 @@ export function useConcordRoom(community: ConcordCommunity) {
   const threadId = useConcordNavigation(state => state.threadId);
   const selectChannel = useConcordNavigation(state => state.selectChannel);
   const [state, setState] = useState(community.state$.value);
+  const [inviteCheckedAt, setInviteCheckedAt] = useState(() => Date.now() / 1000);
   const [channels, setChannels] = useState<Array<ChannelMetadata & { accessible: boolean }>>([]);
   const [timeline, setTimeline] = useState<{ channelId: string; rumors: Rumor[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,10 @@ export function useConcordRoom(community: ConcordCommunity) {
   const scroller = useRef<HTMLDivElement>(null);
   const channelId = channels.some(channel => channel.accessible && channel.view !== 'voice' && channel.channel_id === selected) ? selected! : channels.find(channel => channel.accessible && channel.view !== 'voice')?.channel_id;
   useEffect(() => {
-    const sub = community.state$.subscribe(setState);
+    const sub = community.state$.subscribe(value => {
+      setState(value);
+      setInviteCheckedAt(Date.now() / 1000);
+    });
     const channelSub = community.channels$.subscribe(setChannels);
     return () => { sub.unsubscribe(); channelSub.unsubscribe(); };
   }, [community]);
@@ -100,10 +105,11 @@ export function useConcordRoom(community: ConcordCommunity) {
   return {
     searching, openSearch: () => setSearching(true), closeSearch: () => setSearching(false),
     layout, rootChannels, collapsedCategories, toggleCategory: (id: string) => setCollapsedCategories(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; }),
-    openBranding: () => setSettings('branding'), openInvite: () => setSettings('invite'),
+    openBranding: () => setSettings('branding'), openInvite: () => { setInviteCheckedAt(Date.now() / 1000); setSettings('invite'); },
     openMemberSettings: () => setSettings('members'),
     openLayout: () => setSettings('layout'), canManageLayout: !state.dissolved && community.canDo(PERM.MANAGE_METADATA),
     branding: appearance.branding, canEditBranding: appearance.canEdit,
+    sharedInvite: parseConcordSharedInvite(state.metadata?.custom, state.inviteLinks, inviteCheckedAt),
     state, channels, rows, channelId, threadId: thread?.id ?? null, groupsById, childrenByParent, selectChannel, error, invite, protocol, groups, group, messages, messagesById, reactions, scroller,
     settings, openSettings: () => setSettings('community'), closeSettings: () => setSettings(null),
     editChannel: () => setSettings('edit-channel'),

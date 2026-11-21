@@ -1,5 +1,14 @@
 {
   "preferences": {
+    "concordBackup": {
+      "title": "Backup do Concord",
+      "description": "Salve uma cópia criptografada das suas participações e do histórico sincronizado, incluindo as mensagens de outros membros. Os arquivos enviados são armazenados separadamente. A restauração exige a mesma conta Nostr.",
+      "export": "Baixar backup do Concord",
+      "file": "Arquivo de backup do Concord",
+      "restore": "Restaurar backup do Concord",
+      "confirm": "Feche as outras abas do Obelisk antes de restaurar. Isso substitui os dados do Concord neste navegador e recarrega o aplicativo. Faça um backup atual se precisar preservar esses dados.",
+      "error": "Não foi possível processar este backup do Concord. Verifique o arquivo, a conta e o assinador."
+    },
     "backup": {
       "advanced": "Avançado",
       "action": "Baixar backup da conta",

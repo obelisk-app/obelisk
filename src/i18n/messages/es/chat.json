@@ -365,6 +365,10 @@
       "clear": "Quitar diseño",
       "hint": "Los diseños incluidos se guardan con la configuración de tu comunidad."
     },
+    "copySharedInvite": "Copiar invitación compartida",
+    "noSharedInvite": "Todavía no hay una invitación compartida. Pedile un enlace a alguien que pueda invitar.",
+    "shareInvite": "Compartir este enlace con los miembros",
+    "stopSharingInvite": "Dejar de compartir con los miembros",
     "createInvite": "Crear invitación",
     "inviteSyncFailed": "No pudimos sincronizar esta comunidad. Revisá la conexión y volvé a intentarlo.",
     "invitePermission": "No pudimos verificar que esta cuenta pueda invitar a otras personas.",

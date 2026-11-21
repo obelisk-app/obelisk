@@ -10,6 +10,7 @@ import SocialRelaySettings from '@/components/settings/social-relays/SocialRelay
 import MutedAndBlocked from '@/components/settings/privacy/MutedAndBlocked';
 import CallSettings from '@/components/settings/notifications/CallSettings';
 import WalletSettings from '@/components/settings/wallet/WalletSettings';
+import ConcordBackup from '@/components/settings/account/ConcordBackup';
 import AccountBackupExport from '@/components/settings/account/AccountBackupExport';
 import DeveloperSignatureTest from '@/components/settings/account/DeveloperSignatureTest';
 import LocalDataPanel from '@/components/settings/privacy/LocalDataPanel';
@@ -123,6 +124,7 @@ export function SettingsPrefsScreen({ go }: { go: (s: ScreenName, dir?: 'forward
         </Section>
         <Section variant="mobile" headingAs="h3" title={t("settings.preferences.backup.advanced")} >
           <AccountBackupExport mobile />
+          <ConcordBackup />
           <Button
             variant="mobileRow"
             type="button"

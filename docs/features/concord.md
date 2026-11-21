@@ -41,6 +41,13 @@ These account recovery events use the signed-in user's discovered inbox/read rel
 
 The last selected channel, open pane, drafts and decrypted media are not synced through this list. Navigation remains sealed locally; decrypted media stays in disposable memory URLs. No new plaintext localStorage backup, custom key-export link or authority-check bypass is introduced.
 
+## Portable backups and shared invites
+
+Settings > Advanced > Concord backup exports the account's locally synced Concord store. It includes the membership and key records and the cached channel, moderation, and message history available to this account, including messages by other members. The backup file uses AES-GCM with a fresh key wrapped to the same Nostr account via NIP-44. Restore requires that account, stages a resealed copy, and atomically replaces that account's Concord browser store on reload. Relay reconciliation still applies current membership and permissions. Back up from a fully synced device and keep the identity key separately. Files hosted on Blossom must be preserved separately.
+
+In community settings, an authorized inviter with permission to edit metadata can choose an existing live invite to share with members. Concord stores the link, without its private revocation key, in encrypted community metadata. Members can copy it from Invite people. Revocation prevents further admissions through previously copied links.
+
+
 ## Storage and lifecycle
 
 The runtime supplies encrypted SDK storage explicitly; it does not use the SDK's default localStorage persistence. IndexedDB `obelisk-concord`, object store `sealed`, holds authenticated ciphertext under an account-specific non-extractable vault key named `concord-key:<pubkey>`. Record names hash SDK keys so community identifiers are not embedded directly in cache addresses. Decrypted community state and timelines stay in runtime memory. The last selected community, channel and whether its pane is open are stored under the encrypted `obelisk/navigation` record. They restore after sign-in without overwriting a new selection or an incoming invitation. Startup exposes the SDK's locally restored communities as soon as they are available instead of awaiting relay reconciliation; encrypted plane snapshots feed the normal state fold and message timelines while synchronization continues. The SDK still owns validation, key transitions and publication guards. A separate readiness promise reports background startup failures. Membership storage is unchanged; a deployment does not clear it.

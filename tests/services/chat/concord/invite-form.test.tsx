@@ -77,3 +77,30 @@ it('preserves the SDK permission check after synchronization', async () => {
   await expect(form.submit({})).rejects.toThrow('chat.concord.invitePermission');
   expect(createInvite).not.toHaveBeenCalled();
 });
+
+it('shares a registered invite without its revocation key and preserves unrelated metadata', async () => {
+  const { concordShareInviteForm } = await import('@/services/chat/concord/invite-form');
+  const { PERM } = await import('@/constants/chat/concord');
+  const publishEdition = vi.fn();
+  const canDo = vi.fn(permission => permission === PERM.MANAGE_METADATA);
+  const community = {
+    communityId: 'community',
+    phase$: new BehaviorSubject('live'),
+    state$: { value: { inviteLinks: new Set(['registered']) } },
+    canDo,
+    admin: {
+      latestEdition: vi.fn().mockResolvedValue({ hash: 'head', content: JSON.stringify({ name: 'Garden', custom: { obelisk: { layout: ['preserved'] } } }) }),
+      publishEdition,
+    },
+  } as unknown as ConcordCommunity;
+  const invite = { signerPubkey: 'registered', url: 'https://obelisk.example/invite/example#token', signerSk: 'revocation-secret' } as import('@applesauce/concord/client').ConcordInviteLink;
+  await concordShareInviteForm(community, invite, false).submit({});
+  const [_kind, _id, content, _stage, options] = publishEdition.mock.calls[0];
+  expect(JSON.parse(content)).toEqual({ name: 'Garden', custom: { obelisk: { layout: ['preserved'], sharedInvite: { url: invite.url } } } });
+  expect(content).not.toContain(invite.signerSk);
+  expect(options).toEqual({ expectedHead: 'head' });
+
+  canDo.mockReturnValue(false);
+  await expect(concordShareInviteForm(community, invite, false).submit({})).rejects.toThrow('metadata permission');
+  expect(publishEdition).toHaveBeenCalledOnce();
+});

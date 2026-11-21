@@ -9,3 +9,4 @@ export const CONCORD_DEFAULT_RELAYS = [
   'wss://relay.ditto.pub',
   'wss://asia.vectorapp.io/nostr',
 ] as const;
+export const CONCORD_BACKUP_MAX_BYTES = 128 * 1024 * 1024;

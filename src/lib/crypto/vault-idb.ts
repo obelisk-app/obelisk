@@ -100,3 +100,34 @@ export async function listKeys(db: IDBDatabase, store: string, prefix: string): 
 export async function deleteRecordsWithPrefix(db: IDBDatabase, store: string, prefix: string): Promise<void> {
   await walkPrefix(db, store, prefix, 'readwrite', (cursor) => { cursor.delete(); });
 }
+
+/** Atomically replace one namespace using an already-encrypted, one-use restore record. */
+export async function applyStagedRecords(
+  db: IDBDatabase, store: string, prefix: string, stageKey: string,
+): Promise<void> {
+  const tx = db.transaction(store, 'readwrite');
+  const finished = done(tx);
+  const records = tx.objectStore(store);
+  const staged = records.get(stageKey);
+  staged.onsuccess = () => {
+    const replacement = staged.result as Array<[string, unknown]> | undefined;
+    if (replacement === undefined) return;
+    if (!Array.isArray(replacement) || !replacement.length || replacement.some(row =>
+      !Array.isArray(row) || row.length !== 2 || typeof row[0] !== 'string' || !row[0].startsWith(prefix))) {
+      tx.abort();
+      return;
+    }
+    const cursorRequest = records.openKeyCursor();
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result;
+      if (cursor) {
+        if (typeof cursor.primaryKey === 'string' && cursor.primaryKey.startsWith(prefix)) records.delete(cursor.primaryKey);
+        cursor.continue();
+        return;
+      }
+      for (const [key, value] of replacement) records.put(value, key);
+      records.delete(stageKey);
+    };
+  };
+  await finished;
+}

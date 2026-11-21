@@ -15,6 +15,7 @@ export function JoinCommunityForm({ onClose, fromInvite = false }: { onClose: ()
     <Form form={form} layout="stack" className="rounded-xl border border-lc-border bg-lc-card/60 p-3 sm:p-4">
       <Input
         label={t('joinLink')}
+        hint={fromInvite ? undefined : t('connectionHint')}
         placeholder={t('pasteLink')}
         prefix={<LinkIcon size={16} />}
         type="text"
@@ -26,7 +27,7 @@ export function JoinCommunityForm({ onClose, fromInvite = false }: { onClose: ()
         {...form.field('link')}
       />
       <FormError>{form.error}</FormError>
-      <FormActions submitLabel={t('join')} submitTestId="community-join" busy={form.submitting} disabled={!form.canSubmit} />
+      <FormActions submitLabel={t('join')} busyLabel={t('joining')} submitTestId="community-join" busy={form.submitting} disabled={!form.canSubmit} />
     </Form>
   );
 }

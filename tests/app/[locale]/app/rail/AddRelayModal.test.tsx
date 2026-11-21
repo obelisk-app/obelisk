@@ -1,8 +1,20 @@
 import { buildInviteLink } from '@applesauce/concord/helpers';
 import type { ConcordClient } from '@applesauce/concord/client';
+import { captureConcordInviteFragment, clearPendingConcordInvite } from '@/services/chat/concord/pending-invite';
 import { ConcordContext } from '@/contexts/chat/concord';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const getConcordForBridge = vi.hoisted(() => vi.fn());
+vi.mock('@/services/nostr-bridge', async importOriginal => ({
+  ...await importOriginal<typeof import('@/services/nostr-bridge')>(),
+  getConcordForBridge,
+}));
+
+afterEach(() => {
+  clearPendingConcordInvite();
+  getConcordForBridge.mockReset();
+});
 
 const info = vi.hoisted(() => ({
   byUrl: {
@@ -66,7 +78,7 @@ describe('AddRelayModal', () => {
     const addRelay = vi.fn().mockResolvedValue(undefined);
     const switchRelay = vi.fn().mockResolvedValue(undefined);
     const { onClose } = mount({ addRelay, switchRelay });
-    const field = screen.getByLabelText('Invitation or community address');
+    const field = screen.getByLabelText('Relay URL or invite link');
     expect(field).toHaveValue('');
     fireEvent.change(field, { target: { value: '' } });
     expect(screen.getByRole('button', { name: 'Join community' })).toBeDisabled();
@@ -90,6 +102,30 @@ describe('AddRelayModal', () => {
     fireEvent.change(screen.getByTestId('community-join-link'), { target: { value: link } });
     await act(async () => { fireEvent.click(screen.getByTestId('community-join')); });
     expect(joinByLink).toHaveBeenCalledWith(link);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it.each([false, true])('joins on the first click while Concord starts (prefilled: %s)', async fromInvite => {
+    const link = buildInviteLink('https://obelisk.example', 'a'.repeat(64), new Uint8Array(16), ['wss://chat.example']);
+    const joinByLink = vi.fn().mockResolvedValue({ communityId: 'joined' });
+    let finishStartup!: (value: { client: { joinByLink: typeof joinByLink } }) => void;
+    getConcordForBridge.mockReturnValue(new Promise(resolve => { finishStartup = resolve; }));
+    if (fromInvite) {
+      window.history.replaceState(null, '', '#' + new URLSearchParams({ 'concord-invite': link }));
+      captureConcordInviteFragment();
+    }
+    const onClose = vi.fn();
+    renderWithBridge(<AddRelayModal onClose={onClose} fromInvite={fromInvite} />, fakeBridge());
+    const field = screen.getByTestId('community-join-link');
+    if (!fromInvite) fireEvent.change(field, { target: { value: link } });
+    expect(field).toHaveValue(link);
+    const submit = screen.getByTestId('community-join');
+    fireEvent.click(submit);
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveTextContent('Connecting…');
+    expect(joinByLink).not.toHaveBeenCalled();
+    await act(async () => { finishStartup({ client: { joinByLink } }); });
+    expect(joinByLink).toHaveBeenCalledExactlyOnceWith(link);
     expect(onClose).toHaveBeenCalled();
   });
 

@@ -7,7 +7,7 @@ import { readPendingConcordInvite } from '@/services/chat/concord/pending-invite
 import { addRelayForm } from './add-relay-form';
 
 export function joinCommunityForm(
-  client: ConcordClient | null,
+  getClient: () => Promise<ConcordClient>,
   onClose: () => void,
   onJoined: (id: string) => void,
   fromInvite: boolean,
@@ -15,11 +15,7 @@ export function joinCommunityForm(
   return {
     initial: { link: fromInvite ? readPendingConcordInvite() : '' },
     ready: ({ link }) => !!link.trim(),
-    validate: ({ link }) => {
-      const target = parseCommunityLink(link);
-      if (!target) return 'shell.rail.addModal.invalidLink';
-      return target.kind === 'concord' && !client ? 'chat.concord.loading' : null;
-    },
+    validate: ({ link }) => parseCommunityLink(link) ? null : 'shell.rail.addModal.invalidLink',
     submit: async ({ link }) => {
       const target = parseCommunityLink(link);
       if (!target) return;
@@ -27,8 +23,8 @@ export function joinCommunityForm(
         // Keep the established invitation landing and its relay confirmation.
         const url = relayInviteLink(window.location.origin, target.code, target.relay);
         window.location.assign(url);
-      } else if (target.kind === 'concord' && client) {
-        const form = concordJoinForm(client, onJoined);
+      } else if (target.kind === 'concord') {
+        const form = concordJoinForm(await getClient(), onJoined);
         const values = { invite: target.url };
         const id = await form.submit(values);
         form.onSuccess?.(id, values);

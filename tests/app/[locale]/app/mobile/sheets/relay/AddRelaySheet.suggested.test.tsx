@@ -39,7 +39,7 @@ describe('AddRelaySheet suggestions', () => {
 
   it('keeps creation separate from joining on mobile', () => {
     mount();
-    expect(screen.getByLabelText('Invitation or community address')).toBeInTheDocument();
+    expect(screen.getByLabelText('Relay URL or invite link')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('create-community-option'));
     expect(screen.getByText('Create a community')).toBeInTheDocument();
     expect(screen.queryByTestId('community-join-link')).toBeNull();

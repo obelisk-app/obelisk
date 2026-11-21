@@ -5,7 +5,7 @@ vi.mock('@/hooks/session/useSession', async () => {
     useMyLoginMethod: () => mockBridge.loginMethod,
   });
 });
-import { render as rtlRender, screen } from '@testing-library/react';
+import { act, render as rtlRender, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { LocaleProvider } from '@tests/support/intl';
 
@@ -32,10 +32,12 @@ vi.mock('@/services/nostr-bridge', async () => {
   });
 });
 
+import { useConcordNavigation } from '@/store/chat/concord';
 import RelayStatusBanner from '@/components/feedback/RelayStatusBanner';
 
 describe('RelayStatusBanner test ids', () => {
   beforeEach(() => {
+    useConcordNavigation.getState().reset();
     mockBridge.isLoggedIn = true;
     mockBridge.connectionState = 'Connected';
     mockBridge.relayAccess = 'ok';
@@ -53,6 +55,21 @@ describe('RelayStatusBanner test ids', () => {
     expect(banner).toHaveTextContent('Not whitelisted');
     expect(banner).toHaveClass('rounded-xl');
     expect(banner).not.toHaveClass('border-b');
+  });
+
+  it('hides the blocked relay notice when entering Concord or switching to an accessible relay', () => {
+    mockBridge.relayAccess = 'restricted';
+    const { rerender } = render(<RelayStatusBanner />);
+    expect(screen.getByTestId('relay-access-banner')).toBeInTheDocument();
+
+    act(() => useConcordNavigation.getState().selectCommunity('private-community'));
+    expect(screen.queryByTestId('relay-access-banner')).toBeNull();
+
+    mockBridge.relayUrl = 'wss://other.example';
+    mockBridge.relayAccess = 'ok';
+    act(() => useConcordNavigation.getState().close());
+    rerender(<RelayStatusBanner />);
+    expect(screen.queryByTestId('relay-access-banner')).toBeNull();
   });
 
   it('lets the mobile top signer status own authentication notices', () => {

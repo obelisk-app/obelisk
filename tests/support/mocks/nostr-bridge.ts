@@ -161,6 +161,8 @@ const hookDefaults = {
     throw new Error('pageRelayHub: the bridge is mocked in this suite');
   },
   startCommunityConnectionsSync: () => () => {},
+  downloadConcordBackup: async () => {},
+  stageConcordBackupRestore: async () => {},
   getConcordForBridge: async () => {
     throw new Error('Concord runtime is unavailable in a module mock');
   },

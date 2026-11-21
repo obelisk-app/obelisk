@@ -365,6 +365,10 @@
       "clear": "Clear preset",
       "hint": "Built-in artwork is saved with your community settings."
     },
+    "copySharedInvite": "Copy shared invite",
+    "noSharedInvite": "No invite link has been shared with members. Ask someone who can create invites for a link.",
+    "shareInvite": "Share this link with members",
+    "stopSharingInvite": "Stop sharing with members",
     "createInvite": "Create invitation",
     "inviteSyncFailed": "Could not sync this community. Check its connection and try again.",
     "invitePermission": "This account could not verify its permission to invite people.",

@@ -1,5 +1,14 @@
 {
   "preferences": {
+    "concordBackup": {
+      "title": "Concord backup",
+      "description": "Save an encrypted copy of your memberships and synced history, including other members’ messages. Uploaded files are stored separately. Restoration requires the same Nostr account.",
+      "export": "Download Concord backup",
+      "file": "Concord backup file",
+      "restore": "Restore Concord backup",
+      "confirm": "Close other Obelisk tabs before restoring. This replaces Concord data saved in this browser and reloads the app. Take a current backup first if you need to keep that data.",
+      "error": "Could not process this Concord backup. Check the file, account, and signer."
+    },
     "backup": {
       "advanced": "Advanced",
       "action": "Download account backup",
