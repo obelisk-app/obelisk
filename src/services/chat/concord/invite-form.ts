@@ -10,20 +10,37 @@ class InviteBlocked extends Error {
   }
 }
 
+const inviteSyncWaitMs = 60_000;
+
+async function awaitInviteReady(community: ConcordCommunity) {
+  const deadline = Date.now() + inviteSyncWaitMs;
+  const start = () => { void community.start().catch(() => {}); };
+  const phase = community.phase$.value;
+  try {
+    if (phase === 'idle') start();
+    if (phase !== 'error') {
+      try {
+        await awaitConcordSendReady(community, false, inviteSyncWaitMs);
+        return;
+      } catch (error) {
+        if (community.phase$.value !== 'error') throw error;
+      }
+    }
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new Error('Community sync deadline reached');
+    const ready = awaitConcordSendReady(community, true, remaining);
+    start();
+    await ready;
+  } catch {
+    throw new InviteBlocked('chat.concord.inviteSyncFailed');
+  }
+}
+
 export function concordInviteForm(community: ConcordCommunity, onCreated: (url: string) => void): FormSpec<Record<string, never>, string> {
   return {
     initial: {},
     submit: async () => {
-      // A failed initial reconciliation otherwise leaves this instance in
-      // the SDK's error phase until a reload.
-      try {
-        const retrying = community.phase$.value === 'error';
-        const ready = awaitConcordSendReady(community, retrying);
-        if (retrying) void community.start().catch(() => {});
-        await ready;
-      } catch {
-        throw new InviteBlocked('chat.concord.inviteSyncFailed');
-      }
+      await awaitInviteReady(community);
       if (!community.canDo(PERM.CREATE_INVITE)) throw new InviteBlocked('chat.concord.invitePermission');
       return (await community.createInvite({ base: window.location.origin, label: 'Obelisk' })).url;
     },
@@ -50,7 +67,7 @@ export function concordShareInviteForm(
   return {
     initial: {},
     submit: async () => {
-      await awaitConcordSendReady(community);
+      await awaitInviteReady(community);
       if (!community.canDo(PERM.MANAGE_METADATA)) throw new Error('Community metadata permission required');
       const state = community.state$.value;
       if (!shared && (!state.inviteLinks.has(invite.signerPubkey) || invite.revoked ||
@@ -67,6 +84,6 @@ export function concordShareInviteForm(
         ...content, custom: { ...custom, obelisk: { ...obelisk, sharedInvite } },
       }), 'community-shared-invite', { expectedHead: head.hash });
     },
-    failure: 'chat.concord.failed',
+    failure: error => error instanceof InviteBlocked ? error.reason : 'chat.concord.failed',
   };
 }

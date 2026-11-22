@@ -369,6 +369,8 @@
     "noSharedInvite": "Todavía no hay una invitación compartida. Pedile un enlace a alguien que pueda invitar.",
     "shareInvite": "Compartir este enlace con los miembros",
     "stopSharingInvite": "Dejar de compartir con los miembros",
+    "creatingInvite": "Preparando invitación…",
+    "updatingSharedInvite": "Actualizando invitación compartida…",
     "createInvite": "Crear invitación",
     "inviteSyncFailed": "No pudimos sincronizar esta comunidad. Revisá la conexión y volvé a intentarlo.",
     "invitePermission": "No pudimos verificar que esta cuenta pueda invitar a otras personas.",

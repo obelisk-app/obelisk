@@ -104,3 +104,15 @@ it('shares a registered invite without its revocation key and preserves unrelate
   await expect(concordShareInviteForm(community, invite, false).submit({})).rejects.toThrow('metadata permission');
   expect(publishEdition).toHaveBeenCalledOnce();
 });
+
+it('continues the same invite action when initial sync fails and a retry recovers', async () => {
+  const phase$ = new BehaviorSubject('syncing');
+  const start = vi.fn(async () => { phase$.next('syncing'); phase$.next('live'); });
+  const createInvite = vi.fn().mockResolvedValue({ url: 'test-invitation' });
+  const community = { phase$, start, createInvite, canDo: () => true } as unknown as ConcordCommunity;
+  const result = concordInviteForm(community, vi.fn()).submit({});
+  phase$.next('error');
+  await expect(result).resolves.toBe('test-invitation');
+  expect(start).toHaveBeenCalledOnce();
+  expect(createInvite).toHaveBeenCalledOnce();
+});

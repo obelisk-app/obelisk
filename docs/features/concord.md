@@ -48,6 +48,18 @@ Settings > Advanced > Concord backup exports the account's locally synced Concor
 In community settings, an authorized inviter with permission to edit metadata can choose an existing live invite to share with members. Concord stores the link, without its private revocation key, in encrypted community metadata. Members can copy it from Invite people. Revocation prevents further admissions through previously copied links.
 
 
+## Invite access, key safety and scale
+
+The founder’s Nostr identity anchors community authority. Clients check signed role grants. A delegated role can grant invite creation without granting moderation or channel management. To delegate in Obelisk, open **Community settings > Roles**, create a role with only **Invite people**, then assign it to the person under **Members**. The recipient must already appear on the member list.
+
+The protocol’s invite registry records link coordinates. It does not carry unlock tokens. To let ordinary members forward an invite, choose **Share this link with members** beside an active link in **Invite people**. If the screen says there is no shared invite, an authorized person needs to share a live link. Treat the full URL as a bearer credential: anyone it reaches can use it while it is live. Its fragment unlocks an encrypted relay bundle containing community access keys and any private-channel keys explicitly included. It carries neither the founder’s Nostr key nor an administrative role.
+
+Relays store encrypted community traffic, but can still observe connections and traffic timing. Members can save or forward what they decrypt. Revoke a leaked link to stop future use of that invitation. Removing an existing member requires rotating the relevant keys to protect future messages. Key rotation cannot erase copies they already made. Keep the founder’s Nostr key protected and backed up separately.
+
+Obelisk has no verified maximum community headcount. The local synced store is capped at **100,000 events or 32 MiB per plane**, whichever comes first. The SDK also caps an invite bundle at **64 held channel keys**. These limits apply to cached history and invite size. As communities grow, test initial sync, relay retention and key rotation with a representative roster. Rotation has to reach the remaining authorized readers. Larger-scale moderation and cross-client rekeying remain unverified in Obelisk.
+
+See [community authority](https://concordprotocol.org/spec/cord-02/), [invitations](https://concordprotocol.org/spec/cord-05/) and [key rotation](https://concordprotocol.org/spec/cord-06/).
+
 ## Storage and lifecycle
 
 The runtime supplies encrypted SDK storage explicitly; it does not use the SDK's default localStorage persistence. IndexedDB `obelisk-concord`, object store `sealed`, holds authenticated ciphertext under an account-specific non-extractable vault key named `concord-key:<pubkey>`. Record names hash SDK keys so community identifiers are not embedded directly in cache addresses. Decrypted community state and timelines stay in runtime memory. The last selected community, channel and whether its pane is open are stored under the encrypted `obelisk/navigation` record. They restore after sign-in without overwriting a new selection or an incoming invitation. Startup exposes the SDK's locally restored communities as soon as they are available instead of awaiting relay reconciliation; encrypted plane snapshots feed the normal state fold and message timelines while synchronization continues. The SDK still owns validation, key transitions and publication guards. A separate readiness promise reports background startup failures. Membership storage is unchanged; a deployment does not clear it.

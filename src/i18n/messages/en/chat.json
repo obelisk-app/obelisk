@@ -369,6 +369,8 @@
     "noSharedInvite": "No invite link has been shared with members. Ask someone who can create invites for a link.",
     "shareInvite": "Share this link with members",
     "stopSharingInvite": "Stop sharing with members",
+    "creatingInvite": "Preparing invitation…",
+    "updatingSharedInvite": "Updating shared invite…",
     "createInvite": "Create invitation",
     "inviteSyncFailed": "Could not sync this community. Check its connection and try again.",
     "invitePermission": "This account could not verify its permission to invite people.",
